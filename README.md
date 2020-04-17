@@ -2,6 +2,7 @@
 | :-: | :-: | :-: | :-: | :-: |
 | cepheus-q-oss | Mi 9, Redmi K20 Pro | Android Q | LA.UM.8.1.r1-08700-sm8150.0 | [cepheus-q-oss](https://github.com/MiCode/vendor_qcom_opensource_wlan/tree/cepheus-q-oss) |
 | crux-p-oss | Mi9 Pro 5G | Android P | LA.UM.7.1.r1-15600-sm8150.0 | [crux-p-oss](https://github.com/MiCode/vendor_qcom_opensource_wlan/tree/crux-p-oss) |
+| curtana-q-oss | Redmi Note 9 Pro,Redmi Note 9 Pro Max | Android Q | LA.UM.8.9.r1-07100-SM6xx.0 | [curtana-q-oss](https://github.com/MiCode/vendor_qcom_opensource_wlan/tree/curtana-q-oss) |
 | daisy-q-oss | Mi A2 Lite| Android Q | LA.UM.8.6.r1-02600-89xx.0 | [daisy-q-oss](https://github.com/MiCode/vendor_qcom_opensource_wlan/tree/daisy-q-oss) |
 | dipper-q-oss | MI 8, MIX2S, POCOPHONE F1, MI 8UD, MIX 3, MI 8 Explorer Edition | Android Q | LA.UM.8.3.r1-05800-sdm845.0 | [dipper-q-oss](https://github.com/MiCode/vendor_qcom_opensource_wlan/tree/dipper-q-oss) |
 | jasmine-q-oss| Mi A2 | Android Q | LA.UM.8.2.r1-04300-sdm660.0 | [jasmine-q-oss](https://github.com/MiCode/vendor_qcom_opensource_wlan/tree/jasmine-q-oss) |
