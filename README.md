@@ -1,5 +1,6 @@
 | Branch | Device | Android version | Base tag | Link |
 | :-: | :-: | :-: | :-: | :-: |
+| apollo-q-oss | Redmi K30S Ultra | Android Q | LA.UM.8.12.r1-10600-sm8250.0 | [apollo-q-oss](https://github.com/MiCode/vendor_qcom_opensource_wlan/tree/apollo-q-oss) |
 | cas-q-oss | Mi 10 Ultra, Mi 10 Pro, Mi 10, Redmi K30 Pro | Android Q | LA.UM.8.12.r1-10600-sm8250.0 | [cas-q-oss](https://github.com/MiCode/vendor_qcom_opensource_wlan/tree/cas-q-oss) |
 | cepheus-q-oss | Mi 9, Redmi K20 Pro | Android Q | LA.UM.8.1.r1-08700-sm8150.0 | [cepheus-q-oss](https://github.com/MiCode/vendor_qcom_opensource_wlan/tree/cepheus-q-oss) |
 | crux-p-oss | Mi9 Pro 5G | Android P | LA.UM.7.1.r1-15600-sm8150.0 | [crux-p-oss](https://github.com/MiCode/vendor_qcom_opensource_wlan/tree/crux-p-oss) |
