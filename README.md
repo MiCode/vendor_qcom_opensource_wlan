@@ -24,4 +24,5 @@
 | tucana-p-oss | Mi CC9 Pro | Android P | LA.UM.7.9.r1-05700-sm6150.0 | [tucana-p-oss](https://github.com/MiCode/vendor_qcom_opensource_wlan/tree/tucana-p-oss) |
 | umi-q-oss | Mi 10 Pro, Mi 10 | Android Q | LA.UM.8.12.r1-06000-sm8250.0 | [umi-q-oss](https://github.com/MiCode/vendor_qcom_opensource_wlan/tree/umi-q-oss) |
 | vangogh-q-oss | Mi 10 Lite 5G, Mi 10 Lite Zoom | Android Q | LA.UM.8.13.r1-04700-SAIPAN.0 | [vangogh-q-oss](https://github.com/MiCode/vendor_qcom_opensource_wlan/tree/vangogh-q-oss) |
+| venus-r-oss | Mi 11 | Android R | LA.UM.9.14.r1-10000-LAHAINA.0 | [venus-r-oss](https://github.com/MiCode/vendor_qcom_opensource_wlan/tree/venus-r-oss) |
 | willow-p-oss | Redmi Note 8T | Android P | LA.UM.7.11.r1-02700-NICOBAR.0 | [willow-p-oss](https://github.com/MiCode/vendor_qcom_opensource_wlan/tree/willow-p-oss) |
