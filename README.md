@@ -20,6 +20,7 @@
 | onc-q-oss | Redmi 7, Redmi Y3 | Android Q | LA.UM.8.6.2.r1-04900-89xx.0 | [onc-q-oss](https://github.com/MiCode/vendor_qcom_opensource_wlan/tree/onc-q-oss) |
 | phoenix-q-oss | Redmi K30, Redmi K20 | Android Q | LA.UM.8.9.r1-03800-sm6150.0 | [phoenix-q-oss](https://github.com/MiCode/vendor_qcom_opensource_wlan/tree/phoenix-q-oss) |
 | picasso-q-oss | Redmi K30 5G | Android Q | LA.UM.8.13.r1-03300-SAIPAN.0 | [picasso-q-oss](https://github.com/MiCode/vendor_qcom_opensource_wlan/tree/picasso-q-oss) |
+| picasso-r-oss | Mi 10 Lite 5G, Redmi K30 5G, Mi 10 Lite Zoom | Android R | LA.UM.9.12.r1-08000-SMxx50.0 | [picasso-r-oss](https://github.com/MiCode/vendor_qcom_opensource_wlan/tree/picasso-r-oss) |
 | sirius-q-oss | MI 8SE, MI 9SE, MI CC 9 and MI CC 9 Meitu Edition | Android Q | LA.UM.8.8.r1-05100-SDM710.0 | [sirius-q-oss](https://github.com/MiCode/vendor_qcom_opensource_wlan/tree/sirius-q-oss) |
 | surya-q-oss | Redmi POCO X3 | Android Q | LA.UM.8.9.r1-09300-SM6xx.0 | [surya-q-oss](https://github.com/MiCode/vendor_qcom_opensource_wlan/tree/surya-q-oss) |
 | tucana-p-oss | Mi CC9 Pro | Android P | LA.UM.7.9.r1-05700-sm6150.0 | [tucana-p-oss](https://github.com/MiCode/vendor_qcom_opensource_wlan/tree/tucana-p-oss) |
