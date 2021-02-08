@@ -28,6 +28,7 @@
 | sirius-q-oss | MI 8SE, MI 9SE, MI CC 9 and MI CC 9 Meitu Edition | Android Q | LA.UM.8.8.r1-05100-SDM710.0 | [sirius-q-oss](https://github.com/MiCode/vendor_qcom_opensource_wlan/tree/sirius-q-oss) |
 | surya-q-oss | Redmi POCO X3 | Android Q | LA.UM.8.9.r1-09300-SM6xx.0 | [surya-q-oss](https://github.com/MiCode/vendor_qcom_opensource_wlan/tree/surya-q-oss) |
 | tucana-p-oss | Mi CC9 Pro | Android P | LA.UM.7.9.r1-05700-sm6150.0 | [tucana-p-oss](https://github.com/MiCode/vendor_qcom_opensource_wlan/tree/tucana-p-oss) |
+| tucana-q-oss | MI CC9 Pro | Android Q | LA.UM.8.9.r1-03800-sm6150.0-1 | [tucana-q-oss](https://github.com/MiCode/vendor_qcom_opensource_wlan/tree/tucana-q-oss) |
 | umi-q-oss | Mi 10 Pro, Mi 10 | Android Q | LA.UM.8.12.r1-06000-sm8250.0 | [umi-q-oss](https://github.com/MiCode/vendor_qcom_opensource_wlan/tree/umi-q-oss) |
 | vangogh-q-oss | Mi 10 Lite 5G, Mi 10 Lite Zoom | Android Q | LA.UM.8.13.r1-04700-SAIPAN.0 | [vangogh-q-oss](https://github.com/MiCode/vendor_qcom_opensource_wlan/tree/vangogh-q-oss) |
 | venus-r-oss | Mi 11 | Android R | LA.UM.9.14.r1-10000-LAHAINA.0 | [venus-r-oss](https://github.com/MiCode/vendor_qcom_opensource_wlan/tree/venus-r-oss) |
