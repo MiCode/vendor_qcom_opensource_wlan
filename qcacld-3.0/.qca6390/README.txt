@@ -1,0 +1,1 @@
+/home/work/ssd1/zhangzhenghao/code/K11A_J2S/vendor/qcom/opensource/wlan/qcacld-3.0/README.txt
