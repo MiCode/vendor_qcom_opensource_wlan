@@ -5,6 +5,7 @@
 | cas-q-oss | Mi 10 Ultra, Mi 10 Pro, Mi 10, Redmi K30 Pro | Android Q | LA.UM.8.12.r1-10600-sm8250.0 | [cas-q-oss](https://github.com/MiCode/vendor_qcom_opensource_wlan/tree/cas-q-oss) |
 | cepheus-q-oss | Mi 9, Redmi K20 Pro | Android Q | LA.UM.8.1.r1-08700-sm8150.0 | [cepheus-q-oss](https://github.com/MiCode/vendor_qcom_opensource_wlan/tree/cepheus-q-oss) |
 | cmi-r-oss | Redmi K30S Ultra, Mi 10 Ultra, Mi 10 Pro, Redmi K30 Pro, Mi 10 | Android R | LA.UM.9.12.r1-08000-SMxx50.0 | [cmi-r-oss](https://github.com/MiCode/vendor_qcom_opensource_wlan/tree/cmi-r-oss) |
+| courbet-r-oss | Mi 11 Lite | Android R | LA.UM.9.1.r1-06700-SMxxx0.0 | [courbet-r-oss](https://github.com/MiCode/vendor_qcom_opensource_wlan/tree/courbet-r-oss) |
 | crux-p-oss | Mi9 Pro 5G | Android P | LA.UM.7.1.r1-15600-sm8150.0 | [crux-p-oss](https://github.com/MiCode/vendor_qcom_opensource_wlan/tree/crux-p-oss) |
 | curtana-q-oss | Redmi Note 9 Pro,Redmi Note 9 Pro Max | Android Q | LA.UM.8.9.r1-07100-SM6xx.0 | [curtana-q-oss](https://github.com/MiCode/vendor_qcom_opensource_wlan/tree/curtana-q-oss) |
 | daisy-q-oss | Mi A2 Lite| Android Q | LA.UM.8.6.r1-02600-89xx.0 | [daisy-q-oss](https://github.com/MiCode/vendor_qcom_opensource_wlan/tree/daisy-q-oss) |
