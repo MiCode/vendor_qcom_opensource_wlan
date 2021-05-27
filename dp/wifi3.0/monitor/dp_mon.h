@@ -653,6 +653,10 @@ struct dp_mon_soc {
 				   uint32_t mac_id,
 				   uint32_t quota);
 #endif
+
+#ifdef WLAN_TX_PKT_CAPTURE_ENH
+	struct dp_soc_tx_capture dp_soc_tx_capt;
+#endif
 };
 
 struct  dp_mon_pdev {

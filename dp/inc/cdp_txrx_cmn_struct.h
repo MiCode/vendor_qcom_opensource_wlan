@@ -1836,6 +1836,7 @@ struct cdp_delayed_tx_completion_ppdu_user {
  * @debug_copied: flag to indicate bar frame copied
  * @peer_last_delayed_ba: flag to indicate peer last delayed ba
  * @phy_tx_time_us: Phy TX duration for the User
+ * @mpdu_bytes: accumulated bytes per mpdu for mem limit feature
  */
 struct cdp_tx_completion_ppdu_user {
 	uint32_t completion_status:8,
@@ -1937,6 +1938,7 @@ struct cdp_tx_completion_ppdu_user {
 	bool peer_last_delayed_ba;
 
 	uint16_t phy_tx_time_us;
+	uint32_t mpdu_bytes;
 };
 
 /**
@@ -2091,6 +2093,7 @@ struct cdp_tx_mgmt_comp_info {
  * @tlv_bitmap: tlv_bitmap for the PPDU
  * @sched_cmdid: schedule command id
  * @phy_ppdu_tx_time_us: Phy per PPDU TX duration
+ * @ppdu_bytes: accumulated bytes per ppdu for mem limit feature
  * @user: per-User stats (array of per-user structures)
  */
 struct cdp_tx_completion_ppdu {
@@ -2135,6 +2138,7 @@ struct cdp_tx_completion_ppdu {
 	uint32_t tlv_bitmap;
 	uint16_t sched_cmdid;
 	uint16_t phy_ppdu_tx_time_us;
+	uint32_t ppdu_bytes;
 	struct cdp_tx_completion_ppdu_user user[];
 };
 
