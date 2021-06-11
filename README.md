@@ -19,6 +19,7 @@
 | laurel-q-oss| Mi A3 | Android Q | LA.UM.8.11.r1-01200-NICOBAR.0 | [laurel-q-oss](https://github.com/MiCode/vendor_qcom_opensource_wlan/tree/laurel-q-oss) |
 | laurus-q-oss | MI CC 9e | Android Q | LA.UM.8.11.r1-01200-NICOBAR.0-2 | [laurus-q-oss](https://github.com/MiCode/vendor_qcom_opensource_wlan/tree/laurus-q-oss) |
 | lavender-q-oss | Redmi Note 7 | Android Q | LA.UM.8.2.r1-04800-sdm660.0-1 | [lavender-q-oss](https://github.com/MiCode/vendor_qcom_opensource_wlan/tree/lavender-q-oss) |
+| laurel-r-oss | Mi A3 | Android R | LA.UM.9.11.r1-02100-NICOBAR.0 | [laurel-r-oss](https://github.com/MiCode/vendor_qcom_opensource_wlan/tree/laurel-r-oss) |
 | lmi-q-oss | Redmi K30 Pro| Android Q | LA.UM.8.12.r1-06000-sm8250.0 | [lmi-q-oss](https://github.com/MiCode/vendor_qcom_opensource_wlan/tree/lmi-q-oss) |
 | lime-q-oss | Redmi Note 9 4G,Redmi POCO M3 | Android Q | LA.UM.8.15.r1-06600-KAMORTA.0 | [lime-q-oss](https://github.com/MiCode/vendor_qcom_opensource_wlan/tree/lime-q-oss) |
 | mojito-r-oss | Redmi Note 10 | Android R | LA.UM.9.1.r1-07700-SMxxx0.0 | [mojito-r-oss](https://github.com/MiCode/vendor_qcom_opensource_wlan/tree/mojito-r-oss) |
