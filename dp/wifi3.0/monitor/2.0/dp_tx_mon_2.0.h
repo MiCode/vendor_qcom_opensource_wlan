@@ -103,6 +103,7 @@ dp_tx_mon_process_2_0(struct dp_soc *soc, struct dp_intr *int_ctx,
 #define MAX_MONITOR_HEADER (512)
 #define MAX_DUMMY_FRM_BODY (128)
 
+#define MAX_STATUS_BUFFER_IN_PPDU (64)
 #define TXMON_NO_BUFFER_SZ (64)
 
 #define TXMON_PPDU(ppdu_info, field) ppdu_info->field
@@ -320,5 +321,94 @@ struct dp_pdev_tx_capture_be {
  */
 struct dp_peer_tx_capture_be {
 };
+#endif /* WLAN_TX_PKT_CAPTURE_ENH_BE */
+
+/*
+ * dp_tx_mon_ppdu_info_free() - API to free dp_tx_ppdu_info
+ * @tx_ppdu_info - pointer to tx_ppdu_info
+ *
+ * Return: void
+ */
+void dp_tx_mon_ppdu_info_free(struct dp_tx_ppdu_info *tx_ppdu_info);
+
+/*
+ * dp_tx_mon_free_usr_mpduq() - API to free user mpduq
+ * @tx_ppdu_info - pointer to tx_ppdu_info
+ * @usr_idx - user index
+ *
+ * Return: void
+ */
+void dp_tx_mon_free_usr_mpduq(struct dp_tx_ppdu_info *tx_ppdu_info,
+			      uint8_t usr_idx);
+
+/*
+ * dp_tx_mon_free_ppdu_info() - API to free dp_tx_ppdu_info
+ * @tx_ppdu_info - pointer to tx_ppdu_info
+ *
+ * Return: void
+ */
+void dp_tx_mon_free_ppdu_info(struct dp_tx_ppdu_info *tx_ppdu_info);
+
+/*
+ * dp_tx_mon_get_ppdu_info() - API to allocate dp_tx_ppdu_info
+ * @pdev - pdev handle
+ * @type - type of ppdu_info data or protection
+ * @num_user - number user in a ppdu_info
+ * @ppdu_id - ppdu_id number
+ *
+ * Return: pointer to dp_tx_ppdu_info
+ */
+struct dp_tx_ppdu_info *dp_tx_mon_get_ppdu_info(struct dp_pdev *pdev,
+						enum tx_ppdu_info_type type,
+						uint8_t num_user,
+						uint32_t ppdu_id);
+
+#ifdef WLAN_TX_PKT_CAPTURE_ENH_BE
+/**
+ * dp_tx_ppdu_stats_attach_2_0 - Initialize Tx PPDU stats and enhanced capture
+ * @pdev: DP PDEV
+ *
+ * Return: none
+ */
+void dp_tx_ppdu_stats_attach_2_0(struct dp_pdev *pdev);
+
+/**
+ * dp_tx_ppdu_stats_detach_2_0 - Cleanup Tx PPDU stats and enhanced capture
+ * @pdev: DP PDEV
+ *
+ * Return: none
+ */
+void dp_tx_ppdu_stats_detach_2_0(struct dp_pdev *pdev);
+
+/*
+ * dp_print_pdev_tx_capture_stats_2_0: print tx capture stats
+ * @pdev: DP PDEV handle
+ *
+ * return: void
+ */
+void dp_print_pdev_tx_capture_stats_2_0(struct dp_pdev *pdev);
+
+/*
+ * dp_config_enh_tx_capture_be()- API to enable/disable enhanced tx capture
+ * @pdev_handle: DP_PDEV handle
+ * @val: user provided value
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS dp_config_enh_tx_capture_2_0(struct dp_pdev *pdev, uint8_t val);
+
+/*
+ * dp_peer_set_tx_capture_enabled_2_0() -  add tx monitor peer filter
+ * @pdev: Datapath PDEV handle
+ * @peer: Datapath PEER handle
+ * @is_tx_pkt_cap_enable: flag for tx capture enable/disable
+ * @peer_mac: peer mac address
+ *
+ * Return: status
+ */
+QDF_STATUS dp_peer_set_tx_capture_enabled_2_0(struct dp_pdev *pdev_handle,
+					      struct dp_peer *peer_handle,
+					      uint8_t is_tx_pkt_cap_enable,
+					      uint8_t *peer_mac);
 #endif /* WLAN_TX_PKT_CAPTURE_ENH_BE */
 #endif /* _DP_TX_MON_2_0_H_ */

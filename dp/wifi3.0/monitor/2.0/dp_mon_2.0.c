@@ -937,31 +937,6 @@ QDF_STATUS dp_mon_pdev_alloc_2_0(struct dp_pdev *pdev)
 	return QDF_STATUS_SUCCESS;
 }
 
-void dp_tx_ppdu_stats_attach_2_0(struct dp_pdev *pdev)
-{
-}
-
-void dp_tx_ppdu_stats_detach_2_0(struct dp_pdev *pdev)
-{
-}
-
-void dp_print_pdev_tx_capture_stats_2_0(struct dp_pdev *pdev)
-{
-}
-
-QDF_STATUS dp_config_enh_tx_capture_2_0(struct dp_pdev *pdev, uint8_t val)
-{
-	return QDF_STATUS_SUCCESS;
-}
-
-QDF_STATUS dp_peer_set_tx_capture_enabled_2_0(struct dp_pdev *pdev_handle,
-					      struct dp_peer *peer_handle,
-					      uint8_t is_tx_pkt_cap_enable,
-					      uint8_t *peer_mac)
-{
-	return QDF_STATUS_SUCCESS;
-}
-
 #else
 static inline
 QDF_STATUS dp_mon_htt_srng_setup_2_0(struct dp_soc *soc,
@@ -1032,17 +1007,6 @@ void dp_vdev_set_monitor_mode_buf_rings_2_0(struct dp_pdev *pdev)
 static inline
 QDF_STATUS dp_vdev_set_monitor_mode_rings_2_0(struct dp_pdev *pdev,
 					      uint8_t delayed_replenish)
-{
-	return QDF_STATUS_SUCCESS;
-}
-
-static inline
-void dp_mon_pdev_free_2_0(struct dp_pdev *pdev)
-{
-}
-
-static inline
-QDF_STATUS dp_mon_pdev_alloc_2_0(struct dp_pdev *pdev)
 {
 	return QDF_STATUS_SUCCESS;
 }

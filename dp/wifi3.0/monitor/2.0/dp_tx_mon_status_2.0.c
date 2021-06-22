@@ -360,13 +360,27 @@ static void
 dp_tx_mon_generate_data_frm(struct dp_pdev *pdev,
 			    struct dp_tx_ppdu_info *tx_ppdu_info)
 {
-	struct dp_pdev_be *be_pdev = dp_get_be_pdev_from_dp_pdev(pdev);
-	struct dp_mon_pdev_be *mpdev = be_pdev->monitor_pdev_be;
-	struct dp_pdev_tx_capture_be *tx_cap_be = &mpdev->tx_capture_be;
+	struct dp_mon_pdev *mon_pdev;
+	struct dp_mon_pdev_be *mon_pdev_be;
+	struct dp_pdev_tx_capture_be *tx_cap_be;
 	struct hal_tx_status_info *tx_status_info;
 	qdf_nbuf_t mpdu_nbuf = NULL;
 	qdf_nbuf_queue_t *usr_mpdu_q = NULL;
 	uint32_t usr_idx = 0;
+
+	/* sanity check */
+	if (qdf_unlikely(!pdev))
+		return;
+
+	mon_pdev = pdev->monitor_pdev;
+	if (qdf_unlikely(!mon_pdev))
+		return;
+
+	mon_pdev_be = dp_get_be_mon_pdev_from_dp_mon_pdev(mon_pdev);
+	if (qdf_unlikely(!mon_pdev_be))
+		return;
+
+	tx_cap_be = &mon_pdev_be->tx_capture_be;
 
 	tx_status_info = &tx_cap_be->data_status_info;
 	usr_idx = TXMON_PPDU(tx_ppdu_info, cur_usr_idx);
@@ -396,11 +410,24 @@ static void
 dp_tx_mon_generate_prot_frm(struct dp_pdev *pdev,
 			    struct dp_tx_ppdu_info *tx_ppdu_info)
 {
-	struct dp_pdev_be *be_pdev = dp_get_be_pdev_from_dp_pdev(pdev);
-	struct dp_mon_pdev_be *mpdev = be_pdev->monitor_pdev_be;
-	struct dp_pdev_tx_capture_be *tx_cap_be = &mpdev->tx_capture_be;
+	struct dp_mon_pdev *mon_pdev;
+	struct dp_mon_pdev_be *mon_pdev_be;
+	struct dp_pdev_tx_capture_be *tx_cap_be;
 	struct hal_tx_status_info *tx_status_info;
 
+	/* sanity check */
+	if (qdf_unlikely(!pdev))
+		return;
+
+	mon_pdev = pdev->monitor_pdev;
+	if (qdf_unlikely(!mon_pdev))
+		return;
+
+	mon_pdev_be = dp_get_be_mon_pdev_from_dp_mon_pdev(mon_pdev);
+	if (qdf_unlikely(!mon_pdev_be))
+		return;
+
+	tx_cap_be = &mon_pdev_be->tx_capture_be;
 	tx_status_info = &tx_cap_be->prot_status_info;
 
 	switch (TXMON_STATUS_INFO(tx_status_info, medium_prot_type)) {
@@ -455,12 +482,25 @@ dp_tx_mon_update_ppdu_info_status(struct dp_pdev *pdev,
 				  qdf_frag_t status_frag,
 				  uint32_t tlv_status)
 {
-	struct dp_pdev_be *be_pdev = dp_get_be_pdev_from_dp_pdev(pdev);
-	struct dp_mon_pdev_be *mpdev = be_pdev->monitor_pdev_be;
-	struct dp_pdev_tx_capture_be *tx_cap_be = &mpdev->tx_capture_be;
+	struct dp_mon_pdev *mon_pdev;
+	struct dp_mon_pdev_be *mon_pdev_be;
+	struct dp_pdev_tx_capture_be *tx_cap_be;
 	struct hal_tx_status_info *tx_status_info;
-
 	QDF_STATUS status = QDF_STATUS_SUCCESS;
+
+	/* sanity check */
+	if (qdf_unlikely(!pdev))
+		return QDF_STATUS_E_NOMEM;
+
+	mon_pdev = pdev->monitor_pdev;
+	if (qdf_unlikely(!mon_pdev))
+		return QDF_STATUS_E_NOMEM;
+
+	mon_pdev_be = dp_get_be_mon_pdev_from_dp_mon_pdev(mon_pdev);
+	if (qdf_unlikely(!mon_pdev_be))
+		return QDF_STATUS_E_NOMEM;
+
+	tx_cap_be = &mon_pdev_be->tx_capture_be;
 
 	switch (tlv_status) {
 	case HAL_MON_TX_FES_SETUP:
@@ -555,9 +595,9 @@ dp_tx_mon_update_ppdu_info_status(struct dp_pdev *pdev,
  */
 QDF_STATUS dp_tx_mon_process_tlv_2_0(struct dp_pdev *pdev)
 {
-	struct dp_pdev_be *be_pdev = dp_get_be_pdev_from_dp_pdev(pdev);
-	struct dp_mon_pdev_be *mpdev = be_pdev->monitor_pdev_be;
-	struct dp_pdev_tx_capture_be *tx_cap_be = &mpdev->tx_capture_be;
+	struct dp_mon_pdev *mon_pdev;
+	struct dp_mon_pdev_be *mon_pdev_be;
+	struct dp_pdev_tx_capture_be *tx_cap_be;
 	struct dp_tx_ppdu_info *tx_prot_ppdu_info = NULL;
 	struct dp_tx_ppdu_info *tx_data_ppdu_info = NULL;
 	struct hal_tx_status_info *tx_status_prot;
@@ -568,7 +608,22 @@ QDF_STATUS dp_tx_mon_process_tlv_2_0(struct dp_pdev *pdev)
 	uint32_t tlv_status;
 	uint32_t status;
 	uint8_t num_users = 0;
-	uint8_t cur_frag_q_idx = tx_cap_be->cur_frag_q_idx;
+	uint8_t cur_frag_q_idx;
+
+	/* sanity check */
+	if (qdf_unlikely(!pdev))
+		return QDF_STATUS_E_NOMEM;
+
+	mon_pdev = pdev->monitor_pdev;
+	if (qdf_unlikely(!mon_pdev))
+		return QDF_STATUS_E_NOMEM;
+
+	mon_pdev_be = dp_get_be_mon_pdev_from_dp_mon_pdev(mon_pdev);
+	if (qdf_unlikely(!mon_pdev_be))
+		return QDF_STATUS_E_NOMEM;
+
+	tx_cap_be = &mon_pdev_be->tx_capture_be;
+	cur_frag_q_idx = tx_cap_be->cur_frag_q_idx;
 
 	tx_status_prot = &tx_cap_be->prot_status_info;
 	tx_status_data = &tx_cap_be->data_status_info;
@@ -725,10 +780,34 @@ QDF_STATUS dp_tx_mon_process_status_tlv(struct dp_soc *soc,
 					struct hal_mon_desc *mon_ring_desc,
 					qdf_dma_addr_t addr)
 {
-	struct dp_pdev_be *be_pdev = dp_get_be_pdev_from_dp_pdev(pdev);
-	struct dp_mon_pdev_be *mpdev = be_pdev->monitor_pdev_be;
-	struct dp_pdev_tx_capture_be *tx_cap_be = &mpdev->tx_capture_be;
-	uint8_t last_frag_q_idx = tx_cap_be->last_frag_q_idx;
+	struct dp_mon_pdev *mon_pdev;
+	struct dp_mon_pdev_be *mon_pdev_be;
+	struct dp_pdev_tx_capture_be *tx_cap_be;
+	uint8_t last_frag_q_idx;
+
+	/* sanity check */
+	if (qdf_unlikely(!pdev))
+		return QDF_STATUS_E_NOMEM;
+
+	mon_pdev = pdev->monitor_pdev;
+	if (qdf_unlikely(!mon_pdev))
+		return QDF_STATUS_E_NOMEM;
+
+	mon_pdev_be = dp_get_be_mon_pdev_from_dp_mon_pdev(mon_pdev);
+	if (qdf_unlikely(!mon_pdev_be))
+		return QDF_STATUS_E_NOMEM;
+
+	tx_cap_be = &mon_pdev_be->tx_capture_be;
+
+	last_frag_q_idx = tx_cap_be->last_frag_q_idx;
+
+	if (qdf_unlikely(last_frag_q_idx > MAX_STATUS_BUFFER_IN_PPDU)) {
+		dp_mon_err("status frag queue for a ppdu[%d] exceed %d\n",
+			   mon_pdev_be->be_ppdu_id,
+			   MAX_STATUS_BUFFER_IN_PPDU);
+		dp_tx_mon_status_queue_free(pdev, tx_cap_be);
+		return QDF_STATUS_E_NOMEM;
+	}
 
 	if (tx_cap_be->mode == TX_MON_BE_DISABLE)
 		return QDF_STATUS_E_INVAL;
