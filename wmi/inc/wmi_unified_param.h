@@ -895,6 +895,7 @@ typedef enum {
 	WMI_HOST_REQUEST_PEER_ADV_STATS = 0x4000,
 	WMI_HOST_REQUEST_PMF_BCN_PROTECT_STAT = 0x8000,
 	WMI_HOST_REQUEST_VDEV_PRB_FILS_STAT = 0x10000,
+	WMI_HOST_REQUEST_PDEV_EXTD_STAT = 0x20000,
 	WMI_HOST_REQUEST_PDEV_TELEMETRY_STAT = 0x40000,
 } wmi_host_stats_id;
 
@@ -4216,6 +4217,14 @@ struct wmi_host_peer_adv_stats {
  * @rx_mcs: RX MCS array
  * @tx_mcs: TX MCS array
  * @ack_rssi: Ack rssi
+ * @my_rx_count: What portion of time, as measured by the MAC HW clock was
+ *               occupied by receiving PPDUs addressed to one of the vdevs
+ *               within this pdev.
+ * @rx_matched_11ax_msdu_cnt: number of Rx 11ax MSDUs with matching BSS color
+ *                            counter updated at EOP (end of packet)
+ * @rx_other_11ax_msdu_cnt: number of Rx 11ax MSDUs with other BSS color counter
+ *                          updated at EOP (end of packet)
+ * @pdev_id: pdev id
  */
 typedef struct {
 	uint32_t	rx_rssi_comb;
@@ -4226,6 +4235,10 @@ typedef struct {
 	uint32_t	rx_mcs[10];
 	uint32_t	tx_mcs[10];
 	uint32_t	ack_rssi;
+	uint32_t	my_rx_count;
+	uint32_t	rx_matched_11ax_msdu_cnt;
+	uint32_t	rx_other_11ax_msdu_cnt;
+	uint32_t	pdev_id;
 } wmi_host_pdev_ext_stats;
 
 /**
