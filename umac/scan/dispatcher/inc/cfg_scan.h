@@ -1068,6 +1068,29 @@ enum scan_mode_6ghz {
 
 /*
  * <ini>
+ * gChlistTrimConc - Enable scan list modification on concurrent mode.
+ * @Min: 0
+ * @Max: 1
+ * @Default: 0
+ *
+ * This ini is used to enable/disable scan list modification
+ * on concurrent mode.
+ *
+ * Related: None.
+ *
+ * Supported Feature: Concurrency, Scan
+ *
+ * Usage: Internal/External
+ *
+ * </ini>
+ */
+#define CFG_CHAN_LIST_TRIM_CONC CFG_INI_BOOL(\
+				"ch_list_trim_conc",\
+				false, \
+				"Enable scan list trim")
+
+/*
+ * <ini>
  * gEnableMacAddrSpoof - Enable mac address randomization feature.
  * @Min: 0
  * @Max: 1
@@ -1438,6 +1461,7 @@ enum scan_mode_6ghz {
 	CFG(CFG_MAX_REST_TIME_CONC) \
 	CFG(CFG_MIN_REST_TIME_CONC) \
 	CFG(CFG_IDLE_TIME_CONC) \
+	CFG(CFG_CHAN_LIST_TRIM_CONC) \
 	CFG(CFG_ENABLE_MAC_ADDR_SPOOFING) \
 	CFG(CFG_SCAN_AGING_TIME) \
 	CFG(CFG_ADAPTIVE_EXTSCAN_DWELL_MODE) \

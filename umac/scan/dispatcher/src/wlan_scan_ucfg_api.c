@@ -734,6 +734,8 @@ wlan_scan_global_init(struct wlan_objmgr_psoc *psoc,
 			cfg_get(psoc, CFG_MIN_REST_TIME_CONC);
 	scan_obj->scan_def.conc_idle_time =
 			cfg_get(psoc, CFG_IDLE_TIME_CONC);
+	scan_obj->scan_def.conc_chlist_trim =
+			cfg_get(psoc, CFG_CHAN_LIST_TRIM_CONC);
 	scan_obj->scan_def.repeat_probe_time =
 			cfg_get(psoc, CFG_SCAN_PROBE_REPEAT_TIME);
 	scan_obj->scan_def.probe_spacing_time = SCAN_PROBE_SPACING_TIME;

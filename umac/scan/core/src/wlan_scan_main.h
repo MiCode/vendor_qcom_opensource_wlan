@@ -322,6 +322,7 @@ struct extscan_def_config {
  * @conc_max_rest_time: default concurrent max rest time
  * @conc_min_rest_time: default concurrent min rest time
  * @conc_idle_time: default concurrent idle time
+ * @conc_chlist_trim: enable to trim concurrent scan channel list
  * @repeat_probe_time: default repeat probe time
  * @probe_spacing_time: default probe spacing time
  * @probe_delay: default probe delay
@@ -412,6 +413,7 @@ struct scan_default_params {
 	uint32_t conc_max_rest_time;
 	uint32_t conc_min_rest_time;
 	uint32_t conc_idle_time;
+	bool conc_chlist_trim;
 	uint32_t repeat_probe_time;
 	uint32_t probe_spacing_time;
 	uint32_t probe_delay;
