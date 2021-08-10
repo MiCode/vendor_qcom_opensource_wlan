@@ -24,6 +24,7 @@
 | lime-q-oss | Redmi Note 9 4G,Redmi POCO M3 | Android Q | LA.UM.8.15.r1-06600-KAMORTA.0 | [lime-q-oss](https://github.com/MiCode/vendor_qcom_opensource_wlan/tree/lime-q-oss) |
 | mojito-r-oss | Redmi Note 10 | Android R | LA.UM.9.1.r1-07700-SMxxx0.0 | [mojito-r-oss](https://github.com/MiCode/vendor_qcom_opensource_wlan/tree/mojito-r-oss) |
 | nitrogen-q-oss | MI MAX3, MI 8Lite| Android Q | LLA.UM.8.2.r1-04300-sdm660.0 | [nitrogen-q-oss](https://github.com/MiCode/vendor_qcom_opensource_wlan/tree/nitrogen-q-oss) |
+| odin-r-oss | MIX 4 | Android R | LA.UM.9.14.r1-16700-LAHAINA.0 | [odin-r-oss](https://github.com/MiCode/vendor_qcom_opensource_wlan/tree/odin-r-oss) |
 | olive-p-oss | Redmi 8, Redmi 8A | Android P | LA.UM.7.6.2.r1-08100-89xx.0 | [olive-p-oss](https://github.com/MiCode/vendor_qcom_opensource_wlan/tree/olive-p-oss) |
 | olive-q-oss | Redmi 7A, Redmi 8, Redmi 8A, Redmi 8A | Android Q | LA.UM.8.6.2.r1-05300-89xx.0 | [olive-q-oss](https://github.com/MiCode/vendor_qcom_opensource_wlan/tree/olive-q-oss) |
 | olivewood-p-oss | Redmi 8A Dual | Android P | LA.UM.7.6.2.r1-08100-89xx.0 | [olivewood-p-oss](https://github.com/MiCode/vendor_qcom_opensource_wlan/tree/olivewood-p-oss) |
