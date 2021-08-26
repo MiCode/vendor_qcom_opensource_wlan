@@ -10,6 +10,7 @@
 | curtana-q-oss | Redmi Note 9 Pro,Redmi Note 9 Pro Max | Android Q | LA.UM.8.9.r1-07100-SM6xx.0 | [curtana-q-oss](https://github.com/MiCode/vendor_qcom_opensource_wlan/tree/curtana-q-oss) |
 | daisy-q-oss | Mi A2 Lite| Android Q | LA.UM.8.6.r1-02600-89xx.0 | [daisy-q-oss](https://github.com/MiCode/vendor_qcom_opensource_wlan/tree/daisy-q-oss) |
 | dipper-q-oss | MI 8, MIX2S, POCOPHONE F1, MI 8UD, MIX 3, MI 8 Explorer Edition | Android Q | LA.UM.8.3.r1-05800-sdm845.0 | [dipper-q-oss](https://github.com/MiCode/vendor_qcom_opensource_wlan/tree/dipper-q-oss) |
+| elish-r-oss | Xiaomi Pad 5 Pro, Xiaomi Pad 5 Pro 5G | Android R | LA.UM.9.12.r1-08000-SMxx50.0 | [elish-r-oss](https://github.com/MiCode/vendor_qcom_opensource_wlan/tree/elish-r-oss) |
 | gauguin-q-oss | Redmi Note 9 Pro | Android Q | LA.UM.8.13.r1-09200-SAIPAN.0 | [gauguin-q-oss](https://github.com/MiCode/vendor_qcom_opensource_wlan/tree/gauguin-q-oss) |
 | gauguin-r-oss | Redmi Note 9 Pro | Android R | LA.UM.9.12.r1-08000-SMxx50.0 | [gauguin-r-oss](https://github.com/MiCode/vendor_qcom_opensource_wlan/tree/gauguin-r-oss) |
 | ginkgo-q-oss | Redmi Note 8, Redmi Note 8T | Android Q | LA.UM.8.11.r1-02400-NICOBAR.0 | [ginkgo-q-oss](https://github.com/MiCode/vendor_qcom_opensource_wlan/tree/ginkgo-q-oss) |
