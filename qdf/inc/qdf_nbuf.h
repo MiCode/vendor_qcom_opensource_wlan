@@ -312,6 +312,8 @@
  * @add_rtap_ext2: add radiotap extension2
  * @mpdu_retry_cnt: Rx mpdu retry count
  * @punctured_bw: puntured bw
+ * @rx_user_status: pointer to mon_rx_user_status, when set update
+ * radiotap header will use userinfo from this structure.
  */
 struct mon_rx_status {
 	uint64_t tsft;
@@ -403,6 +405,7 @@ struct mon_rx_status {
 #ifdef WLAN_FEATURE_11BE
 	uint8_t punctured_bw;
 #endif
+	struct mon_rx_user_status *rx_user_status;
 };
 
 /**
@@ -414,6 +417,7 @@ struct mon_rx_status {
  * @ofdma_ru_start_index: OFDMA RU start index
  * @ofdma_ru_width: OFDMA total RU width
  * @ofdma_ru_size: OFDMA RU size index
+ * @is_ampdu: AMPDU flag
  * @mu_ul_user_v0_word0: MU UL user info word 0
  * @mu_ul_user_v0_word1: MU UL user info word 1
  * @ast_index: AST table hash index
@@ -426,9 +430,24 @@ struct mon_rx_status {
  * @data_sequence_control_info_valid: field to indicate validity of seq control
  * @first_data_seq_ctrl: Sequence ctrl field of first data frame
  * @preamble_type: Preamble type in radio header
+ * @duration: 802.11 Duration
  * @ht_flags: HT flags, only present for HT frames.
  * @vht_flags: VHT flags, only present for VHT frames.
+ * @vht_flag_values1-5: Contains corresponding data for flags field
  * @he_flags: HE (11ax) flags, only present in HE frames
+ * @he_flags1: HE flags
+ * @he_flags2: HE flags
+ * @he_RU[4]: HE RU assignment index
+ * @he_data1: HE property of received frame
+ * @he_data2: HE property of received frame
+ * @he_data3: HE property of received frame
+ * @he_data4: HE property of received frame
+ * @he_data5: HE property of received frame
+ * @he_data6: HE property of received frame
+ * @he_per_user_1: HE per user info1
+ * @he_per_user_2: HE per user info2
+ * @he_per_user_position: HE per user position info
+ * @he_per_user_known: HE per user known info
  * @rtap_flags: Bit map of available fields in the radiotap
  * @rs_flags: Flags to indicate AMPDU or AMSDU aggregation
  * @mpdu_cnt_fcs_ok: mpdu count received with fcs ok
@@ -438,6 +457,10 @@ struct mon_rx_status {
  * @mpdu_err_byte_count: mpdu byte count with fcs err
  * @sw_peer_id: software peer id
  * @retry_mpdu: mpdu retry count
+ * @start_seq: starting sequence number
+ * @ba_control: Block ack control
+ * @ba_bitmap: 256 bit block ack bitmap
+ * @tid: QoS traffic tid number
  */
 struct mon_rx_user_status {
 	uint32_t mcs:4,
@@ -445,7 +468,8 @@ struct mon_rx_user_status {
 		 mu_ul_info_valid:1,
 		 ofdma_ru_start_index:7,
 		 ofdma_ru_width:7,
-		 ofdma_ru_size:8;
+		 ofdma_ru_size:8,
+		 is_ampdu:1;
 	uint32_t mu_ul_user_v0_word0;
 	uint32_t mu_ul_user_v0_word1;
 	uint32_t ast_index;
@@ -458,9 +482,29 @@ struct mon_rx_user_status {
 	uint8_t data_sequence_control_info_valid;
 	uint16_t first_data_seq_ctrl;
 	uint32_t preamble_type;
+	uint16_t duration;
 	uint16_t ht_flags;
 	uint16_t vht_flags;
+	uint8_t  vht_flag_values1;
+	uint8_t  vht_flag_values2;
+	uint8_t  vht_flag_values3[4];
+	uint8_t  vht_flag_values4;
+	uint8_t  vht_flag_values5;
+	uint16_t vht_flag_values6;
 	uint16_t he_flags;
+	uint16_t he_flags1;
+	uint16_t he_flags2;
+	uint8_t he_RU[4];
+	uint16_t he_data1;
+	uint16_t he_data2;
+	uint16_t he_data3;
+	uint16_t he_data4;
+	uint16_t he_data5;
+	uint16_t he_data6;
+	uint16_t he_per_user_1;
+	uint16_t he_per_user_2;
+	uint8_t he_per_user_position;
+	uint8_t he_per_user_known;
 	uint8_t rtap_flags;
 	uint8_t rs_flags;
 	uint32_t mpdu_cnt_fcs_ok;
@@ -470,6 +514,11 @@ struct mon_rx_user_status {
 	uint32_t mpdu_err_byte_count;
 	uint16_t sw_peer_id;
 	uint32_t retry_mpdu;
+	uint16_t start_seq;
+	uint16_t ba_control;
+	uint32_t ba_bitmap[32];
+	uint32_t ba_bitmap_sz;
+	uint16_t aid;
 };
 
 /**
