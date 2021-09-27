@@ -3122,4 +3122,14 @@ dfs_restart_rcac_on_nol_expiry(struct wlan_dfs *dfs)
 	return false;
 }
 #endif
+
+/**
+ * dfs_chan_to_ch_width: Outputs the channel width in MHz of the given input
+ * dfs_channel.
+ *
+ * chan: Pointer to the input dfs_channel structure.
+ *
+ * Return: Channel width in MHz. (uint16) -EINVAL on invalid channel.
+ */
+uint16_t dfs_chan_to_ch_width(struct dfs_channel *chan);
 #endif  /* _DFS_H_ */
