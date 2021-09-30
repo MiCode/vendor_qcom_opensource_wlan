@@ -2119,6 +2119,31 @@ void dp_tx_comp_free_buf(struct dp_soc *soc, struct dp_tx_desc_s *desc)
 			qdf_nbuf_free(nbuf);
 			return;
 		}
+
+		if (qdf_unlikely(desc->frm_type == dp_tx_frm_sg)) {
+			void *msdu_ext_desc = desc->msdu_ext_desc->vaddr;
+			qdf_dma_addr_t iova;
+			uint32_t frag_len;
+			uint32_t i;
+
+			qdf_nbuf_unmap_nbytes_single(soc->osdev, nbuf,
+						     QDF_DMA_TO_DEVICE,
+						     qdf_nbuf_headlen(nbuf));
+
+			for (i = 1; i < DP_TX_MAX_NUM_FRAGS; i++) {
+				hal_tx_ext_desc_get_frag_info(msdu_ext_desc, i,
+							      &iova,
+							      &frag_len);
+				if (!iova || !frag_len)
+					break;
+
+				qdf_mem_unmap_page(soc->osdev, iova, frag_len,
+						   QDF_DMA_TO_DEVICE);
+			}
+
+			qdf_nbuf_free(nbuf);
+			return;
+		}
 	}
 	/* If it's ME frame, dont unmap the cloned nbuf's */
 	if ((desc->flags & DP_TX_DESC_FLAG_ME) && qdf_nbuf_is_cloned(nbuf))
@@ -2131,6 +2156,32 @@ void dp_tx_comp_free_buf(struct dp_soc *soc, struct dp_tx_desc_s *desc)
 		return dp_mesh_tx_comp_free_buff(soc, desc);
 nbuf_free:
 	qdf_nbuf_free(nbuf);
+}
+
+/**
+ * dp_tx_sg_unmap_buf() - Unmap scatter gather fragments
+ * @soc: DP soc handle
+ * @nbuf: skb
+ * @msdu_info: MSDU info
+ *
+ * Return: None
+ */
+static inline void
+dp_tx_sg_unmap_buf(struct dp_soc *soc, qdf_nbuf_t nbuf,
+		   struct dp_tx_msdu_info_s *msdu_info)
+{
+	uint32_t cur_idx;
+	struct dp_tx_seg_info_s *seg = msdu_info->u.sg_info.curr_seg;
+
+	qdf_nbuf_unmap_nbytes_single(soc->osdev, nbuf, QDF_DMA_TO_DEVICE,
+				     qdf_nbuf_headlen(nbuf));
+
+	for (cur_idx = 1; cur_idx < seg->frag_cnt; cur_idx++)
+		qdf_mem_unmap_page(soc->osdev, (qdf_dma_addr_t)
+				   (seg->frags[cur_idx].paddr_lo | ((uint64_t)
+				    seg->frags[cur_idx].paddr_hi) << 32),
+				   seg->frags[cur_idx].len,
+				   QDF_DMA_TO_DEVICE);
 }
 
 /**
@@ -2233,6 +2284,9 @@ qdf_nbuf_t dp_tx_send_msdu_multiple(struct dp_vdev *vdev, qdf_nbuf_t nbuf,
 				}
 			}
 
+			if (msdu_info->frm_type == dp_tx_frm_sg)
+				dp_tx_sg_unmap_buf(soc, nbuf, msdu_info);
+
 			goto done;
 		}
 
@@ -2287,8 +2341,8 @@ qdf_nbuf_t dp_tx_send_msdu_multiple(struct dp_vdev *vdev, qdf_nbuf_t nbuf,
 						     NULL, msdu_info);
 
 		if (status != QDF_STATUS_SUCCESS) {
-			dp_info("Tx_hw_enqueue Fail tx_desc %pK queue %d",
-				tx_desc, tx_q->ring_id);
+			dp_info_rl("Tx_hw_enqueue Fail tx_desc %pK queue %d",
+				   tx_desc, tx_q->ring_id);
 
 			dp_tx_get_tid(vdev, nbuf, msdu_info);
 			tid_stats = &pdev->stats.tid_stats.
@@ -2344,6 +2398,9 @@ qdf_nbuf_t dp_tx_send_msdu_multiple(struct dp_vdev *vdev, qdf_nbuf_t nbuf,
 				dp_tx_desc_release(tx_desc, tx_q->desc_pool_id);
 				continue;
 			}
+
+			if (msdu_info->frm_type == dp_tx_frm_sg)
+				dp_tx_sg_unmap_buf(soc, nbuf, msdu_info);
 
 			dp_tx_desc_release(tx_desc, tx_q->desc_pool_id);
 			goto done;
@@ -2406,7 +2463,6 @@ static qdf_nbuf_t dp_tx_prepare_sg(struct dp_vdev *vdev, qdf_nbuf_t nbuf,
 					   qdf_nbuf_headlen(nbuf))) {
 		dp_tx_err("dma map error");
 		DP_STATS_INC(vdev, tx_i.sg.dma_map_error, 1);
-
 		qdf_nbuf_free(nbuf);
 		return NULL;
 	}
@@ -2418,8 +2474,10 @@ static qdf_nbuf_t dp_tx_prepare_sg(struct dp_vdev *vdev, qdf_nbuf_t nbuf,
 	seg_info->frags[0].vaddr = (void *) nbuf;
 
 	for (cur_frag = 0; cur_frag < nr_frags; cur_frag++) {
-		if (QDF_STATUS_E_FAILURE == qdf_nbuf_frag_map(vdev->osdev,
-					nbuf, 0, QDF_DMA_TO_DEVICE, cur_frag)) {
+		if (QDF_STATUS_SUCCESS != qdf_nbuf_frag_map(vdev->osdev,
+							    nbuf, 0,
+							    QDF_DMA_TO_DEVICE,
+							    cur_frag)) {
 			dp_tx_err("frag dma map error");
 			DP_STATS_INC(vdev, tx_i.sg.dma_map_error, 1);
 			goto map_err;
@@ -3168,18 +3226,24 @@ qdf_nbuf_t dp_tx_send(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
 
 	/* SG */
 	if (qdf_unlikely(qdf_nbuf_is_nonlinear(nbuf))) {
-		struct dp_tx_seg_info_s seg_info = {0};
+		if (qdf_nbuf_get_nr_frags(nbuf) > DP_TX_MAX_NUM_FRAGS - 1) {
+			if (qdf_unlikely(qdf_nbuf_linearize(nbuf)))
+				return nbuf;
+		} else {
+			struct dp_tx_seg_info_s seg_info = {0};
 
-		nbuf = dp_tx_prepare_sg(vdev, nbuf, &seg_info, &msdu_info);
-		if (!nbuf)
-			return NULL;
+			nbuf = dp_tx_prepare_sg(vdev, nbuf, &seg_info,
+						&msdu_info);
+			if (!nbuf)
+				return NULL;
 
-		dp_verbose_debug("non-TSO SG frame %pK", vdev);
+			dp_verbose_debug("non-TSO SG frame %pK", vdev);
 
-		DP_STATS_INC_PKT(vdev, tx_i.sg.sg_pkt, 1,
-				qdf_nbuf_len(nbuf));
+			DP_STATS_INC_PKT(vdev, tx_i.sg.sg_pkt, 1,
+					 qdf_nbuf_len(nbuf));
 
-		goto send_multiple;
+			goto send_multiple;
+		}
 	}
 
 	if (qdf_unlikely(!dp_tx_mcast_enhance(vdev, nbuf)))

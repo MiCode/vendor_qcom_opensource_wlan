@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -66,6 +66,9 @@ do {                                            \
 
 #define HAL_TX_DESC_GET(desc, block, field) \
 	HAL_TX_MS(block, field, HAL_SET_FLD(desc, block, field))
+
+#define HAL_TX_DESC_OFFSET_GET(desc, block, field, offset) \
+	HAL_TX_MS(block, field, HAL_SET_FLD_OFFSET(desc, block, field, offset))
 
 #define HAL_TX_DESC_SUBBLOCK_GET(desc, block, sub, field) \
 	HAL_TX_MS(sub, field, HAL_SET_FLD(desc, block, sub))
@@ -428,6 +431,32 @@ static inline void hal_tx_ext_desc_set_buffer(void *desc,
 	HAL_SET_FLD_OFFSET(desc, HAL_TX_MSDU_EXTENSION, BUF0_LEN,
 			   (frag_num << 3)) |=
 		((HAL_TX_SM(HAL_TX_MSDU_EXTENSION, BUF0_LEN, length)));
+}
+
+/**
+ * hal_tx_ext_desc_get_frag_info() - Get the frag_num'th frag iova and len
+ * @desc: Handle to Tx MSDU Extension Descriptor
+ * @frag_num: fragment number (value can be 0 to 5)
+ * @iova: fragment dma address
+ * @len: fragement Length
+ *
+ * Return: None
+ */
+static inline void hal_tx_ext_desc_get_frag_info(void *desc, uint8_t frag_num,
+						 qdf_dma_addr_t *iova,
+						 uint32_t *len)
+{
+	uint64_t iova_hi;
+
+	*iova = HAL_TX_DESC_OFFSET_GET(desc, HAL_TX_MSDU_EXTENSION,
+				       BUF0_PTR_31_0, (frag_num << 3));
+
+	iova_hi = HAL_TX_DESC_OFFSET_GET(desc, HAL_TX_MSDU_EXTENSION,
+					 BUF0_PTR_39_32, (frag_num << 3));
+	*iova |= (iova_hi << 32);
+
+	*len = HAL_TX_DESC_OFFSET_GET(desc, HAL_TX_MSDU_EXTENSION, BUF0_LEN,
+				      (frag_num << 3));
 }
 
 /**
