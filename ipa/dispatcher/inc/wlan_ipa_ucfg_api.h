@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2018-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -193,6 +194,17 @@ void ucfg_ipa_reg_rps_enable_cb(struct wlan_objmgr_pdev *pdev,
 {
 }
 #endif
+
+/**
+ * ucfg_ipa_reg_is_driver_unloading_cb() - Register cb to check if driver
+ * is unloading
+ * @pdev: pdev obj
+ * @cb: callback
+ *
+ * Return: None
+ */
+void ucfg_ipa_reg_is_driver_unloading_cb(struct wlan_objmgr_pdev *pdev,
+					 wlan_ipa_driver_unloading cb);
 
 /**
  * ucfg_ipa_set_mcc_mode() - Set MCC mode
@@ -516,6 +528,12 @@ void ucfg_ipa_reg_send_to_nw_cb(struct wlan_objmgr_pdev *pdev,
 static inline
 void ucfg_ipa_reg_rps_enable_cb(struct wlan_objmgr_pdev *pdev,
 				wlan_ipa_rps_enable cb)
+{
+}
+
+static inline
+void ucfg_ipa_reg_is_driver_unloading_cb(struct wlan_objmgr_pdev *pdev,
+					 wlan_ipa_driver_unloading cb)
 {
 }
 

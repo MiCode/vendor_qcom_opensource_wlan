@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2018-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -96,12 +97,4 @@ struct ipa_intrabss_control_params {
 	uint32_t vdev_id;
 	uint32_t enable;
 };
-
-/* fp to send IPA UC offload cmd */
-typedef QDF_STATUS (*ipa_uc_offload_control_req)(struct wlan_objmgr_psoc *psoc,
-				struct ipa_uc_offload_control_params *req);
-/* fp to send IPA intrabss cmd */
-typedef QDF_STATUS (*ipa_intrabss_control_req)(struct wlan_objmgr_psoc *psoc,
-				struct ipa_intrabss_control_params *req);
-
 #endif /* end  of _WLAN_IPA_PUBLIC_STRUCT_H_ */

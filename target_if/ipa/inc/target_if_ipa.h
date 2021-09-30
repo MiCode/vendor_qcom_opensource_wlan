@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2018, 2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -27,24 +28,14 @@
 #ifdef IPA_OFFLOAD
 
 #include "wlan_ipa_public_struct.h"
-
 /**
  * target_if_ipa_register_tx_ops() - Register IPA component TX OPS
- * @ipa_tx_op: IPA if transmit op
+ * @tx_ops: pointer to tx_ops structure
  *
- * Return: None
+ * Return: QDF_STATUS
  */
-void target_if_ipa_register_tx_ops(ipa_uc_offload_control_req *ipa_tx_op);
-
-/**
- * target_if_ipa_register_intrabss_ops() - Register IPA component INTRABSS OPS
- * @ipa_intrabss_op: IPA if intrabss transmit op
- *
- * Return: None
- */
-void
-target_if_ipa_register_intrabss_ops(ipa_intrabss_control_req *ipa_intrabss_op);
-
+QDF_STATUS
+target_if_ipa_register_tx_ops(struct wlan_lmac_if_tx_ops *tx_ops);
 #endif /* IPA_OFFLOAD */
 #endif /* _TARGET_IF_IPA_H_ */
 

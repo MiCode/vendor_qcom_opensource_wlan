@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2018, 2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -44,14 +45,7 @@ target_if_ipa_uc_offload_control_req(struct wlan_objmgr_psoc *psoc,
 			get_wmi_unified_hdl_from_psoc(psoc), req);
 }
 
-void target_if_ipa_register_tx_ops(ipa_uc_offload_control_req *ipa_tx_op)
-{
-	*ipa_tx_op = target_if_ipa_uc_offload_control_req;
-}
-
 /**
- * target_if_ipa_intrabss_control_req() - send IPA intrabss control to FW
- * @psoc: pointer to PSOC object
  * @req: IPA intra bss enable/disable control param
  *
  * Return: QDF_STATUS_SUCCESS on success
@@ -69,14 +63,27 @@ target_if_ipa_intrabss_control_req(struct wlan_objmgr_psoc *psoc,
 		return QDF_STATUS_E_FAILURE;
 
 	param.vdev_id = req->vdev_id;
-	param.param_id = WMI_VDEV_PARAM_INTRA_BSS_FWD;
+	param.param_id = wmi_vdev_param_intra_bss_fwd;
 	param.param_value = req->enable;
 
 	return wmi_unified_vdev_set_param_send(wmi_handle, &param);
 }
 
-void
-target_if_ipa_register_intrabss_ops(ipa_intrabss_control_req *ipa_intrabss_op)
+QDF_STATUS
+target_if_ipa_register_tx_ops(struct wlan_lmac_if_tx_ops *tx_ops)
 {
-	*ipa_intrabss_op = target_if_ipa_intrabss_control_req;
+	struct wlan_lmac_if_ipa_tx_ops *ipa_ops;
+
+	if (!tx_ops) {
+		target_if_err("tx ops is NULL!");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	ipa_ops = &tx_ops->ipa_ops;
+
+	ipa_ops->ipa_uc_offload_control_req =
+			target_if_ipa_uc_offload_control_req;
+	ipa_ops->ipa_intrabss_control_req = target_if_ipa_intrabss_control_req;
+
+	return QDF_STATUS_SUCCESS;
 }

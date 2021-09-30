@@ -54,6 +54,10 @@
 #endif
 #include <wlan_mgmt_txrx_rx_reo_public_structs.h>
 
+#ifdef IPA_OFFLOAD
+#include <wlan_ipa_public_struct.h>
+#endif
+
 /* Number of dev type: Direct attach and Offload */
 #define MAX_DEV_TYPE 2
 
@@ -1212,6 +1216,16 @@ struct wlan_lmac_if_gpio_tx_ops {
 };
 #endif
 
+#ifdef IPA_OFFLOAD
+struct wlan_lmac_if_ipa_tx_ops {
+	QDF_STATUS (*ipa_uc_offload_control_req)(
+				struct wlan_objmgr_psoc *psoc,
+				struct ipa_uc_offload_control_params *req);
+	QDF_STATUS (*ipa_intrabss_control_req)(
+				struct wlan_objmgr_psoc *psoc,
+				struct ipa_intrabss_control_params *req);
+};
+#endif
 /**
  * wlan_lmac_if_son_tx_ops: son tx operations
  * son_send_null: send null packet
@@ -1384,6 +1398,10 @@ struct wlan_lmac_if_tx_ops {
 
 #ifdef WLAN_FEATURE_11BE_MLO
 	struct wlan_lmac_if_mlo_tx_ops mlo_ops;
+#endif
+
+#ifdef IPA_OFFLOAD
+	struct wlan_lmac_if_ipa_tx_ops ipa_ops;
 #endif
 };
 

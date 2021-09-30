@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2018, 2020-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -25,6 +26,7 @@
 #include "target_if_ipa.h"
 #include "wlan_ipa_ucfg_api.h"
 #include "qdf_platform.h"
+#include "qdf_module.h"
 
 static bool g_ipa_is_ready;
 static qdf_mutex_t g_init_deinit_lock;
@@ -38,6 +40,8 @@ void ipa_disable_register_cb(void)
 	ipa_debug("Don't register ready cb with IPA driver");
 	g_ipa_is_ready = false;
 }
+
+qdf_export_symbol(ipa_disable_register_cb);
 
 void ipa_init_deinit_lock(void)
 {
@@ -124,8 +128,6 @@ ipa_pdev_obj_create_notification(struct wlan_objmgr_pdev *pdev,
 	}
 
 	ipa_obj->pdev = pdev;
-	target_if_ipa_register_tx_ops(&ipa_obj->ipa_tx_op);
-	target_if_ipa_register_intrabss_ops(&ipa_obj->ipa_intrabss_op);
 
 	ipa_debug("ipa pdev attached");
 
@@ -221,6 +223,8 @@ QDF_STATUS ipa_register_is_ipa_ready(struct wlan_objmgr_pdev *pdev)
 	}
 	return QDF_STATUS_SUCCESS;
 }
+
+qdf_export_symbol(ipa_register_is_ipa_ready);
 
 QDF_STATUS ipa_init(void)
 {

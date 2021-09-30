@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2018-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -377,6 +378,28 @@ void ipa_reg_rps_enable_cb(struct wlan_objmgr_pdev *pdev,
 	return wlan_ipa_reg_rps_enable_cb(ipa_obj, cb);
 }
 #endif
+
+void ipa_reg_is_driver_unloading_cb(struct wlan_objmgr_pdev *pdev,
+				    wlan_ipa_driver_unloading cb)
+{
+	struct wlan_ipa_priv *ipa_obj;
+
+	if (!ipa_config_is_enabled()) {
+		ipa_debug("ipa is disabled");
+		return;
+	}
+
+	if (!ipa_cb_is_ready())
+		return;
+
+	ipa_obj = ipa_pdev_get_priv_obj(pdev);
+	if (!ipa_obj) {
+		ipa_err("IPA object is NULL");
+		return;
+	}
+
+	return wlan_ipa_reg_is_driver_unloading_cb(ipa_obj, cb);
+}
 
 void ipa_set_mcc_mode(struct wlan_objmgr_pdev *pdev, bool mcc_mode)
 {

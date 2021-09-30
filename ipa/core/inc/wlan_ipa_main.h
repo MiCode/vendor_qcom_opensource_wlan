@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2018-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -292,6 +293,16 @@ void ipa_reg_rps_enable_cb(struct wlan_objmgr_pdev *pdev,
 #endif
 
 /**
+ * ipa_reg_is_driver_unloading_cb() - Register cb to check if driver is
+ *                                    unloading
+ * @pdev: pdev obj
+ * @cb: callback
+ *
+ * Return: None
+ */
+void ipa_reg_is_driver_unloading_cb(struct wlan_objmgr_pdev *pdev,
+				    wlan_ipa_driver_unloading cb);
+/**
  * ipa_set_mcc_mode() - Set MCC mode
  * @pdev: pdev obj
  * @mcc_mode: 0=MCC/1=SCC
@@ -543,6 +554,7 @@ void ipa_init_deinit_unlock(void);
 typedef QDF_STATUS (*wlan_ipa_softap_xmit)(qdf_nbuf_t nbuf, qdf_netdev_t dev);
 typedef void (*wlan_ipa_send_to_nw)(qdf_nbuf_t nbuf, qdf_netdev_t dev);
 typedef void (*wlan_ipa_rps_enable)(uint8_t vdev_id, bool enable);
+typedef bool (*wlan_ipa_driver_unloading)(void);
 
 #endif /* IPA_OFFLOAD */
 #endif /* end  of _WLAN_IPA_MAIN_H_ */

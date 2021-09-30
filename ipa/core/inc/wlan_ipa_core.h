@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2013-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -542,6 +543,21 @@ void wlan_ipa_reg_sap_xmit_cb(struct wlan_ipa_priv *ipa_ctx,
 }
 
 /**
+ * wlan_ipa_reg_is_driver_unloading_cb() - Register cb to check if driver
+ * is unloading
+ * @ipa_ctx: IPA context
+ * @cb: callback
+ *
+ * Return: None
+ */
+static inline
+void wlan_ipa_reg_is_driver_unloading_cb(struct wlan_ipa_priv *ipa_ctx,
+					 wlan_ipa_driver_unloading cb)
+{
+	ipa_ctx->driver_is_unloading = cb;
+}
+
+/**
  * wlan_ipa_reg_send_to_nw_cb() - Register cb to send IPA Rx packet to network
  * @ipa_ctx: IPA context
  * @cb: callback
@@ -717,7 +733,7 @@ QDF_STATUS wlan_ipa_suspend(struct wlan_ipa_priv *ipa_ctx);
  */
 QDF_STATUS wlan_ipa_resume(struct wlan_ipa_priv *ipa_ctx);
 
-#ifndef QCA_LL_TX_FLOW_CONTROL_V2
+#if !defined(QCA_LL_TX_FLOW_CONTROL_V2) && !defined(QCA_IPA_LL_TX_FLOW_CONTROL)
 /**
  * wlan_ipa_send_mcc_scc_msg() - Send IPA WLAN_SWITCH_TO_MCC/SCC message
  * @ipa_ctx: IPA context
