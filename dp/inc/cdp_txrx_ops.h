@@ -1665,6 +1665,7 @@ struct cdp_throttle_ops {
  * struct cdp_ipa_ops - mcl ipa data path ops
  * @ipa_get_resource:
  * @ipa_set_doorbell_paddr:
+ * @ipa_iounmap_doorbell_vaddr: I/O unmap ipa doorbell vaddr
  * @ipa_set_active:
  * @ipa_op_response:
  * @ipa_register_op_cb:
@@ -1679,6 +1680,8 @@ struct cdp_ipa_ops {
 				       uint8_t pdev_id);
 	QDF_STATUS (*ipa_set_doorbell_paddr)(struct cdp_soc_t *soc_hdl,
 					     uint8_t pdev_id);
+	QDF_STATUS (*ipa_iounmap_doorbell_vaddr)(struct cdp_soc_t *soc_hdl,
+						 uint8_t pdev_id);
 	QDF_STATUS (*ipa_set_active)(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
 				     bool uc_active, bool is_tx);
 	QDF_STATUS (*ipa_op_response)(struct cdp_soc_t *soc_hdl,

@@ -1137,8 +1137,6 @@ static void dp_tx_ipa_uc_detach(struct dp_soc *soc, struct dp_pdev *pdev)
 	soc->ipa_uc_tx_rsc.tx_buf_pool_vaddr_unaligned = NULL;
 
 	ipa_res = &pdev->ipa_resource;
-	if (!ipa_res->is_db_ddr_mapped)
-		iounmap(ipa_res->tx_comp_doorbell_vaddr);
 
 	qdf_mem_free_sgtable(&ipa_res->tx_ring.sgtable);
 	qdf_mem_free_sgtable(&ipa_res->tx_comp_ring.sgtable);
@@ -1600,6 +1598,29 @@ QDF_STATUS dp_ipa_set_doorbell_paddr(struct cdp_soc_t *soc_hdl, uint8_t pdev_id)
 	 */
 	hal_srng_dst_set_hp_paddr_confirm(reo_srng,
 					  ipa_res->rx_ready_doorbell_paddr);
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS dp_ipa_iounmap_doorbell_vaddr(struct cdp_soc_t *soc_hdl,
+					 uint8_t pdev_id)
+{
+	struct dp_soc *soc = cdp_soc_t_to_dp_soc(soc_hdl);
+	struct dp_pdev *pdev =
+		dp_get_pdev_from_soc_pdev_id_wifi3(soc, pdev_id);
+	struct dp_ipa_resources *ipa_res;
+
+	if (!wlan_cfg_is_ipa_enabled(soc->wlan_cfg_ctx))
+		return QDF_STATUS_SUCCESS;
+
+	if (!pdev) {
+		dp_err("Invalid instance");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	ipa_res = &pdev->ipa_resource;
+	if (!ipa_res->is_db_ddr_mapped)
+		iounmap(ipa_res->tx_comp_doorbell_vaddr);
+
 	return QDF_STATUS_SUCCESS;
 }
 

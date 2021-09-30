@@ -3705,6 +3705,7 @@ QDF_STATUS wlan_ipa_cleanup(struct wlan_ipa_priv *ipa_ctx)
 	if (!ipa_cb_is_ready())
 		return QDF_STATUS_SUCCESS;
 
+	qdf_event_destroy(&ipa_ctx->ipa_resource_comp);
 	if (!wlan_ipa_uc_is_enabled(ipa_ctx->config))
 		wlan_ipa_teardown_sys_pipe(ipa_ctx);
 
@@ -3722,6 +3723,7 @@ QDF_STATUS wlan_ipa_cleanup(struct wlan_ipa_priv *ipa_ctx)
 	qdf_spinlock_destroy(&ipa_ctx->pm_lock);
 	qdf_spinlock_destroy(&ipa_ctx->q_lock);
 	qdf_spinlock_destroy(&ipa_ctx->enable_disable_lock);
+	qdf_destroy_work(0, &ipa_ctx->pm_work);
 
 	/* destroy the interface lock */
 	for (i = 0; i < WLAN_IPA_MAX_IFACE; i++) {
@@ -4173,6 +4175,9 @@ QDF_STATUS wlan_ipa_uc_ol_deinit(struct wlan_ipa_priv *ipa_ctx)
 		qdf_mem_free(ipa_ctx->uc_op_work[i].msg);
 		ipa_ctx->uc_op_work[i].msg = NULL;
 	}
+
+	cdp_ipa_iounmap_doorbell_vaddr(ipa_ctx->dp_soc,
+				       ipa_ctx->dp_pdev_id);
 
 	if (true == ipa_ctx->uc_loaded) {
 		cdp_ipa_tx_buf_smmu_unmapping(ipa_ctx->dp_soc,

@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -77,6 +78,31 @@ cdp_ipa_set_doorbell_paddr(ol_txrx_soc_handle soc, uint8_t pdev_id)
 
 	if (soc->ops->ipa_ops->ipa_set_doorbell_paddr)
 		return soc->ops->ipa_ops->ipa_set_doorbell_paddr(soc, pdev_id);
+
+	return QDF_STATUS_SUCCESS;
+}
+
+/**
+ * cdp_ipa_iounmap_doorbell_vaddr() - unmap IPA RX db vaddr
+ * @soc - data path soc handle
+ * @pdev_id - device instance id
+ *
+ * Unmap IPA RX db vaddr
+ *
+ * return QDF_STATUS_SUCCESS
+ */
+static inline QDF_STATUS
+cdp_ipa_iounmap_doorbell_vaddr(ol_txrx_soc_handle soc, uint8_t pdev_id)
+{
+	if (!soc || !soc->ops || !soc->ops->ipa_ops) {
+		QDF_TRACE(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_FATAL,
+			 "%s invalid instance", __func__);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	if (soc->ops->ipa_ops->ipa_iounmap_doorbell_vaddr)
+		return soc->ops->ipa_ops->ipa_iounmap_doorbell_vaddr(
+					soc, pdev_id);
 
 	return QDF_STATUS_SUCCESS;
 }

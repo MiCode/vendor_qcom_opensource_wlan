@@ -12518,6 +12518,7 @@ static struct cdp_lflowctl_ops dp_ops_l_flowctl = {
 static struct cdp_ipa_ops dp_ops_ipa = {
 	.ipa_get_resource = dp_ipa_get_resource,
 	.ipa_set_doorbell_paddr = dp_ipa_set_doorbell_paddr,
+	.ipa_iounmap_doorbell_vaddr = dp_ipa_iounmap_doorbell_vaddr,
 	.ipa_op_response = dp_ipa_op_response,
 	.ipa_register_op_cb = dp_ipa_register_op_cb,
 	.ipa_deregister_op_cb = dp_ipa_deregister_op_cb,

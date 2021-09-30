@@ -25,6 +25,7 @@
 #include "wlan_ipa_core.h"
 #include "wlan_ipa_tgt_api.h"
 #include "cfg_ucfg_api.h"
+#include "wlan_ipa_obj_mgmt_api.h"
 
 static struct wlan_ipa_config *g_ipa_config;
 static bool g_ipa_hw_support;
@@ -619,6 +620,8 @@ QDF_STATUS ipa_uc_ol_deinit(struct wlan_objmgr_pdev *pdev)
 	}
 
 	status = wlan_ipa_uc_ol_deinit(ipa_obj);
+	ipa_obj_cleanup(ipa_obj);
+	ipa_disable_register_cb();
 
 out:
 	ipa_init_deinit_unlock();

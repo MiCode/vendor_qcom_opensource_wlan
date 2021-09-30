@@ -86,6 +86,17 @@ QDF_STATUS dp_ipa_get_resource(struct cdp_soc_t *soc_hdl, uint8_t pdev_id);
  */
 QDF_STATUS dp_ipa_set_doorbell_paddr(struct cdp_soc_t *soc_hdl,
 				     uint8_t pdev_id);
+
+/**
+ * dp_ipa_iounmap_doorbell_vaddr() - unmap ipa RX db vaddr
+ * @soc_hdl - data path soc handle
+ * @pdev_id - device instance id
+ *
+ * Return: none
+ */
+QDF_STATUS dp_ipa_iounmap_doorbell_vaddr(struct cdp_soc_t *soc_hdl,
+					 uint8_t pdev_id);
+
 QDF_STATUS dp_ipa_uc_set_active(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
 				bool uc_active, bool is_tx);
 

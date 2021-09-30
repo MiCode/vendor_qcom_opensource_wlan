@@ -67,6 +67,7 @@ ipa_pdev_obj_destroy_notification(struct wlan_objmgr_pdev *pdev,
 	QDF_STATUS status;
 	struct wlan_ipa_priv *ipa_obj;
 
+	ipa_debug("ipa pdev destroyed");
 	if (!ipa_config_is_enabled()) {
 		ipa_debug("IPA is disabled");
 		return QDF_STATUS_SUCCESS;
@@ -85,9 +86,7 @@ ipa_pdev_obj_destroy_notification(struct wlan_objmgr_pdev *pdev,
 	if (QDF_IS_STATUS_ERROR(status))
 		ipa_err("Failed to detatch ipa pdev object");
 
-	ipa_obj_cleanup(ipa_obj);
 	qdf_mem_free(ipa_obj);
-	ipa_disable_register_cb();
 
 	return status;
 }
