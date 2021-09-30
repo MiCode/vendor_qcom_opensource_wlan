@@ -128,6 +128,12 @@ enum {
 	DP_VDEV_STATS_TX_ME,
 };
 
+/*
+ * typedef ipa_uc_op_cb_type - Register OP handler function
+ */
+typedef void (*ipa_uc_op_cb_type)(uint8_t *op_msg,
+				  void *osif_ctxt);
+
 static inline QDF_STATUS
 cdp_soc_attach_target(ol_txrx_soc_handle soc)
 {

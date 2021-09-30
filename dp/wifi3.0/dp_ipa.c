@@ -1833,15 +1833,16 @@ QDF_STATUS dp_ipa_disable_autonomy(struct cdp_soc_t *soc_hdl, uint8_t pdev_id)
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)) || \
 	defined(CONFIG_IPA_WDI_UNIFIED_API)
 
-#ifndef QCA_LL_TX_FLOW_CONTROL_V2
+#if !defined(QCA_LL_TX_FLOW_CONTROL_V2) && !defined(QCA_IPA_LL_TX_FLOW_CONTROL)
 static inline void dp_setup_mcc_sys_pipes(
 		qdf_ipa_sys_connect_params_t *sys_in,
 		qdf_ipa_wdi_conn_in_params_t *pipe_in)
 {
+	int i = 0;
 	/* Setup MCC sys pipe */
 	QDF_IPA_WDI_CONN_IN_PARAMS_NUM_SYS_PIPE_NEEDED(pipe_in) =
 			DP_IPA_MAX_IFACE;
-	for (int i = 0; i < DP_IPA_MAX_IFACE; i++)
+	for (i = 0; i < DP_IPA_MAX_IFACE; i++)
 		memcpy(&QDF_IPA_WDI_CONN_IN_PARAMS_SYS_IN(pipe_in)[i],
 		       &sys_in[i], sizeof(qdf_ipa_sys_connect_params_t));
 }

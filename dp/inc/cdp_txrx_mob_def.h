@@ -475,9 +475,6 @@ typedef void (*tx_pause_callback)(uint8_t vdev_id,
 		enum netif_action_type action,
 		enum netif_reason_type reason);
 
-typedef void (*ipa_uc_op_cb_type)(uint8_t *op_msg,
-			void *osif_ctxt);
-
 /**
  * struct ol_rx_inv_peer_params - rx invalid peer data parameters
  * @vdev_id: Virtual device ID
