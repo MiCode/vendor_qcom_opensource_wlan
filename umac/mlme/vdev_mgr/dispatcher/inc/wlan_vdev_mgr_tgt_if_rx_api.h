@@ -1,5 +1,6 @@
 /*
- * Copyright (c) 2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2019,2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -27,6 +28,15 @@
 
 #include <wlan_objmgr_vdev_obj.h>
 #include <wlan_vdev_mgr_tgt_if_rx_defs.h>
+
+/**
+ * tgt_vdev_mgr_reset_response_timer_info() - API to force reset vdev rsp timer
+ * @psoc: objmgr psoc object
+ *
+ * Return: void
+ */
+void
+tgt_vdev_mgr_reset_response_timer_info(struct wlan_objmgr_psoc *psoc);
 
 /**
  * tgt_vdev_mgr_register_rx_ops() - API to register rx ops with lmac

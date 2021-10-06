@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2019-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -24,6 +25,8 @@
 #include <wlan_psoc_mlme_api.h>
 #include <qdf_module.h>
 #include "cfg_ucfg_api.h"
+#include "wlan_vdev_mgr_tgt_if_rx_api.h"
+#include <qdf_platform.h>
 
 struct psoc_mlme_obj *wlan_psoc_mlme_get_cmpt_obj(struct wlan_objmgr_psoc *psoc)
 {
@@ -102,6 +105,8 @@ QDF_STATUS mlme_psoc_open(struct wlan_objmgr_psoc *psoc)
 
 QDF_STATUS mlme_psoc_close(struct wlan_objmgr_psoc *psoc)
 {
+	if (qdf_is_recovering())
+		tgt_vdev_mgr_reset_response_timer_info(psoc);
 	return QDF_STATUS_SUCCESS;
 }
 
