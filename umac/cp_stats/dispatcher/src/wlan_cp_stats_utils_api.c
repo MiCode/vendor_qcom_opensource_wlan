@@ -25,6 +25,7 @@
  */
 #include "../../core/src/wlan_cp_stats_defs.h"
 #include "../../core/src/wlan_cp_stats_obj_mgr_handler.h"
+#include "../../core/src/wlan_cp_stats_comp_handler.h"
 #include <wlan_cp_stats_utils_api.h>
 #include <wlan_cp_stats_ucfg_api.h>
 
@@ -366,3 +367,13 @@ void wlan_cp_stats_peer_rx_pnerr(struct wlan_objmgr_peer *peer)
 	if (peer_cs && peer_cs->rx_pnerr_stats_inc)
 		peer_cs->rx_pnerr_stats_inc(peer, 1);
 }
+
+#if defined(WLAN_SUPPORT_TWT) && defined(WLAN_TWT_CONV_SUPPORTED)
+QDF_STATUS
+tgt_cp_stats_twt_get_session_evt_handler(
+				struct wlan_objmgr_psoc *psoc,
+				struct twt_session_stats_info *twt_params)
+{
+	return wlan_cp_stats_twt_get_session_evt_handler(psoc, twt_params);
+}
+#endif

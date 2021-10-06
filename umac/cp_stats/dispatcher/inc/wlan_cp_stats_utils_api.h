@@ -30,6 +30,7 @@
 
 #ifdef QCA_SUPPORT_CP_STATS
 #include <wlan_objmgr_cmn.h>
+#include <wlan_twt_public_structs.h>
 
 #define cp_stats_debug(args ...) \
 		QDF_TRACE_DEBUG(QDF_MODULE_ID_CP_STATS, ## args)
@@ -164,6 +165,28 @@ void wlan_cp_stats_vdev_ucast_rx_pnerr(struct wlan_objmgr_vdev *vdev);
  * Return: None
  */
 void wlan_cp_stats_peer_rx_pnerr(struct wlan_objmgr_peer *peer);
+
+#if defined(WLAN_SUPPORT_TWT) && defined(WLAN_TWT_CONV_SUPPORTED)
+/**
+ * tgt_cp_stats_twt_get_session_evt_handler() - twt get sessions evt handler
+ * @psoc: pointer to psoc object
+ * @twt_params: twt params
+ *
+ * Return: QDF_STATUS_SUCCESS on success, QDF_STATUS_E_** on error
+ */
+QDF_STATUS
+tgt_cp_stats_twt_get_session_evt_handler(
+				struct wlan_objmgr_psoc *psoc,
+				struct twt_session_stats_info *twt_params);
+#else
+static inline QDF_STATUS
+tgt_cp_stats_twt_get_session_evt_handler(
+				struct wlan_objmgr_psoc *psoc,
+				struct twt_session_stats_info *twt_params)
+{
+	return QDF_STATUS_E_NOSUPPORT;
+}
+#endif
 
 #else /* QCA_SUPPORT_CP_STATS */
 static inline
