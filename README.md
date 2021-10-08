@@ -24,6 +24,7 @@
 | lmi-q-oss | Redmi K30 Pro| Android Q | LA.UM.8.12.r1-06000-sm8250.0 | [lmi-q-oss](https://github.com/MiCode/vendor_qcom_opensource_wlan/tree/lmi-q-oss) |
 | lime-q-oss | Redmi Note 9 4G,Redmi POCO M3 | Android Q | LA.UM.8.15.r1-06600-KAMORTA.0 | [lime-q-oss](https://github.com/MiCode/vendor_qcom_opensource_wlan/tree/lime-q-oss) |
 | mojito-r-oss | Redmi Note 10 | Android R | LA.UM.9.1.r1-07700-SMxxx0.0 | [mojito-r-oss](https://github.com/MiCode/vendor_qcom_opensource_wlan/tree/mojito-r-oss) |
+| mona-r-oss | Xiaomi Civi | Android R | LA.UM.9.14.r1-11500-LAHAINA.0 | [mona-r-oss](https://github.com/MiCode/vendor_qcom_opensource_wlan/tree/mona-r-oss) |
 | nabu-r-oss | Xiaomi Pad 5 | Android R | LA.UM.9.1.r1-07000-SMxxx0.0 | [nabu-r-oss](https://github.com/MiCode/vendor_qcom_opensource_wlan/tree/nabu-r-oss) |
 | nitrogen-q-oss | MI MAX3, MI 8Lite| Android Q | LLA.UM.8.2.r1-04300-sdm660.0 | [nitrogen-q-oss](https://github.com/MiCode/vendor_qcom_opensource_wlan/tree/nitrogen-q-oss) |
 | odin-r-oss | MIX 4 | Android R | LA.UM.9.14.r1-16700-LAHAINA.0 | [odin-r-oss](https://github.com/MiCode/vendor_qcom_opensource_wlan/tree/odin-r-oss) |
