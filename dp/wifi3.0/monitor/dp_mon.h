@@ -50,6 +50,16 @@ struct dp_peer_tx_capture {
 };
 #endif
 
+#ifndef WLAN_TX_PKT_CAPTURE_ENH
+static inline void
+dp_process_ppdu_stats_update_failed_bitmap(struct dp_pdev *pdev,
+					   void *data,
+					   uint32_t ppdu_id,
+					   uint32_t size)
+{
+}
+#endif
+
 /*
  * dp_mon_soc_attach() - DP monitor soc attach
  * @soc: Datapath SOC handle
@@ -352,6 +362,21 @@ dp_vdev_set_monitor_mode_rings(struct dp_pdev *pdev,
 {
 	return QDF_STATUS_SUCCESS;
 }
+#endif
+
+#if defined(WDI_EVENT_ENABLE) &&\
+	(defined(QCA_ENHANCED_STATS_SUPPORT) || !defined(REMOVE_PKT_LOG))
+/*
+ * dp_ppdu_stats_ind_handler() - PPDU stats msg handler
+ * @htt_soc:	 HTT SOC handle
+ * @msg_word:    Pointer to payload
+ * @htt_t2h_msg: HTT msg nbuf
+ *
+ * Return: True if buffer should be freed by caller.
+ */
+bool dp_ppdu_stats_ind_handler(struct htt_soc *soc,
+			       uint32_t *msg_word,
+			       qdf_nbuf_t htt_t2h_msg);
 #endif
 
 struct dp_mon_ops {
