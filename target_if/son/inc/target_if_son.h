@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2017,2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  *
  * Permission to use, copy, modify, and/or distribute this software for
@@ -30,3 +31,8 @@ u_int32_t son_ol_get_peer_rate(struct wlan_objmgr_peer *peer, u_int8_t type);
 QDF_STATUS son_ol_send_null(struct wlan_objmgr_pdev *pdev,
 			    u_int8_t *macaddr,
 			    struct wlan_objmgr_vdev *vdev);
+
+QDF_STATUS son_ol_peer_ext_stats_enable(struct wlan_objmgr_pdev *pdev,
+					uint8_t *peer_addr,
+					struct wlan_objmgr_vdev *vdev,
+					uint32_t stats_count, uint32_t enable);

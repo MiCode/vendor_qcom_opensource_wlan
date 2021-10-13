@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  *
  * Permission to use, copy, modify, and/or distribute this software for
@@ -1332,7 +1332,7 @@ struct wlan_lmac_if_tx_ops {
 #ifdef WLAN_IOT_SIM_SUPPORT
 	struct wlan_lmac_if_iot_sim_tx_ops iot_sim_tx_ops;
 #endif
-#ifdef QCA_SUPPORT_SON
+#if defined(QCA_SUPPORT_SON) || defined(WLAN_FEATURE_SON)
 	struct wlan_lmac_if_son_tx_ops son_tx_ops;
 #endif
 #ifdef WLAN_ATF_ENABLE

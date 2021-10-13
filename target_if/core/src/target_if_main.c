@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2017-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -58,7 +58,7 @@
 #ifdef FEATURE_WLAN_TDLS
 #include "target_if_tdls.h"
 #endif
-#ifdef QCA_SUPPORT_SON
+#if defined(QCA_SUPPORT_SON) || defined(WLAN_FEATURE_SON)
 #include <target_if_son.h>
 #endif
 #ifdef WLAN_OFFCHAN_TXRX_ENABLE
@@ -276,7 +276,7 @@ static void target_if_wifi_pos_tx_ops_register(
 {
 }
 #endif
-#ifdef QCA_SUPPORT_SON
+#if defined(QCA_SUPPORT_SON) || defined(WLAN_FEATURE_SON)
 static void target_if_son_tx_ops_register(
 			struct wlan_lmac_if_tx_ops *tx_ops)
 {
