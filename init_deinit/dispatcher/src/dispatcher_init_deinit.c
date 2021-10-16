@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -93,6 +94,52 @@
  */
 
 struct dispatcher_spectral_ops ops_spectral;
+
+#ifdef WLAN_WIFI_RADAR_ENABLE
+static QDF_STATUS dispatcher_init_wifi_radar(void)
+{
+	return wlan_wifi_radar_init();
+}
+
+static QDF_STATUS dispatcher_deinit_wifi_radar(void)
+{
+	return wlan_wifi_radar_deinit();
+}
+
+static QDF_STATUS dispatcher_wifi_radar_pdev_open
+		(struct wlan_objmgr_pdev *pdev)
+{
+	return wlan_wifi_radar_pdev_open(pdev);
+}
+
+static QDF_STATUS dispatcher_wifi_radar_pdev_close
+		(struct wlan_objmgr_pdev *pdev)
+{
+	return wlan_wifi_radar_pdev_close(pdev);
+}
+#else
+static QDF_STATUS dispatcher_init_wifi_radar(void)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static QDF_STATUS dispatcher_deinit_wifi_radar(void)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static QDF_STATUS dispatcher_wifi_radar_pdev_open
+			(struct wlan_objmgr_pdev *pdev)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static QDF_STATUS dispatcher_wifi_radar_pdev_close
+			(struct wlan_objmgr_pdev *pdev)
+{
+	return QDF_STATUS_SUCCESS;
+}
+#endif
 
 #ifdef WLAN_CFR_ENABLE
 static QDF_STATUS dispatcher_init_cfr(void)
@@ -986,6 +1033,9 @@ QDF_STATUS dispatcher_init(void)
 	if (QDF_STATUS_SUCCESS != dispatcher_init_cfr())
 		goto cfr_init_fail;
 
+	if (QDF_STATUS_SUCCESS != dispatcher_init_wifi_radar())
+		goto wifi_radar_init_fail;
+
 	if (QDF_STATUS_SUCCESS != dispatcher_coex_init())
 		goto coex_init_fail;
 
@@ -1012,6 +1062,8 @@ gpio_init_fail:
 ifmgr_init_fail:
 	dispatcher_coex_deinit();
 coex_init_fail:
+	dispatcher_deinit_wifi_radar();
+wifi_radar_init_fail:
 	dispatcher_deinit_cfr();
 cfr_init_fail:
 	wlan_cmn_mlme_deinit();
@@ -1074,6 +1126,8 @@ QDF_STATUS dispatcher_deinit(void)
 	QDF_BUG(QDF_STATUS_SUCCESS == dispatcher_if_mgr_deinit());
 
 	QDF_BUG(QDF_STATUS_SUCCESS == dispatcher_coex_deinit());
+
+	QDF_BUG(QDF_STATUS_SUCCESS == dispatcher_deinit_wifi_radar());
 
 	QDF_BUG(QDF_STATUS_SUCCESS == dispatcher_deinit_cfr());
 
@@ -1373,6 +1427,10 @@ QDF_STATUS dispatcher_pdev_open(struct wlan_objmgr_pdev *pdev)
 	if (status != QDF_STATUS_SUCCESS && status != QDF_STATUS_COMP_DISABLED)
 		goto cfr_pdev_open_fail;
 
+	status = dispatcher_wifi_radar_pdev_open(pdev);
+	if (status != QDF_STATUS_SUCCESS && status != QDF_STATUS_COMP_DISABLED)
+		goto wifi_radar_pdev_open_fail;
+
 	if (QDF_STATUS_SUCCESS != wlan_mgmt_txrx_pdev_open(pdev))
 		goto mgmt_txrx_pdev_open_fail;
 
@@ -1384,6 +1442,8 @@ QDF_STATUS dispatcher_pdev_open(struct wlan_objmgr_pdev *pdev)
 green_ap_pdev_open_fail:
 	wlan_mgmt_txrx_pdev_close(pdev);
 mgmt_txrx_pdev_open_fail:
+	dispatcher_wifi_radar_pdev_close(pdev);
+wifi_radar_pdev_open_fail:
 	dispatcher_cfr_pdev_close(pdev);
 cfr_pdev_open_fail:
 	dispatcher_spectral_pdev_close(pdev);
@@ -1402,6 +1462,10 @@ QDF_STATUS dispatcher_pdev_close(struct wlan_objmgr_pdev *pdev)
 	QDF_BUG(QDF_STATUS_SUCCESS == dispatcher_green_ap_pdev_close(pdev));
 
 	QDF_BUG(QDF_STATUS_SUCCESS == wlan_mgmt_txrx_pdev_close(pdev));
+
+	status = dispatcher_wifi_radar_pdev_close(pdev);
+	QDF_BUG((QDF_STATUS_SUCCESS == status) ||
+		(QDF_STATUS_COMP_DISABLED == status));
 
 	status = dispatcher_cfr_pdev_close(pdev);
 	QDF_BUG((QDF_STATUS_SUCCESS == status) ||
