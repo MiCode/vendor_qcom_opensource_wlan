@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -109,6 +110,8 @@
 #define WLAN_PDEV_FEXT_AGILE_SPECTRAL_SCAN_80P80_DIS     0x00000080
 /* agile Spectral scan support disable for 320 MHz */
 #define WLAN_PDEV_FEXT_AGILE_SPECTRAL_SCAN_320_DIS     0x00000100
+/* WiFi Radar support enabled */
+#define WLAN_PDEV_FEXT_WIFI_RADAR_ENABLE               0x00000200
 
 /* PDEV op flags */
    /* Enable htrate for wep and tkip */
