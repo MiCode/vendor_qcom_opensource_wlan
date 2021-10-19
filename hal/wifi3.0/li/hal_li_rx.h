@@ -453,13 +453,13 @@ hal_rx_attn_ip_cksum_fail_get(uint8_t *buf)
 		RX_ATTENTION_1_CCE_MATCH_LSB))
 
 /*
- * hal_rx_msdu_cce_match_get(): get CCE match bit
+ * hal_rx_msdu_cce_match_get_li(): get CCE match bit
  * from rx attention
  * @buf: pointer to rx_pkt_tlvs
  * Return: CCE match value
  */
 static inline bool
-hal_rx_msdu_cce_match_get(uint8_t *buf)
+hal_rx_msdu_cce_match_get_li(uint8_t *buf)
 {
 	struct rx_pkt_tlvs *pkt_tlvs = (struct rx_pkt_tlvs *)buf;
 	struct rx_attention *rx_attn = &pkt_tlvs->attn_tlv.rx_attn;

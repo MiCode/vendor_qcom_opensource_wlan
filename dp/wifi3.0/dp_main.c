@@ -14259,6 +14259,7 @@ static void dp_soc_cfg_init(struct dp_soc *soc)
 		soc->num_hw_dscp_tid_map = HAL_MAX_HW_DSCP_TID_V2_MAPS;
 		soc->lmac_polled_mode = 0;
 		soc->wbm_release_desc_rx_sg_support = 1;
+		soc->is_rx_fse_full_cache_invalidate_war_enabled = true;
 		break;
 	case TARGET_TYPE_QCA5018:
 	case TARGET_TYPE_QCN6122:

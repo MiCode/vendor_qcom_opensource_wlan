@@ -1619,4 +1619,106 @@ static void hal_rx_get_tlv_size_generic_be(uint16_t *rx_pkt_tlv_size,
 	/* For now mon pkt tlv is same as rx pkt tlv */
 	*rx_mon_pkt_tlv_size = RX_PKT_TLVS_LEN;
 }
+
+/**
+ * hal_rx_flow_get_tuple_info_be() - Setup a flow search entry in HW FST
+ * @fst: Pointer to the Rx Flow Search Table
+ * @hal_hash: HAL 5 tuple hash
+ * @tuple_info: 5-tuple info of the flow returned to the caller
+ *
+ * Return: Success/Failure
+ */
+static void *
+hal_rx_flow_get_tuple_info_be(uint8_t *rx_fst, uint32_t hal_hash,
+			      uint8_t *flow_tuple_info)
+{
+	struct hal_rx_fst *fst = (struct hal_rx_fst *)rx_fst;
+	void *hal_fse = NULL;
+	struct hal_flow_tuple_info *tuple_info
+		= (struct hal_flow_tuple_info *)flow_tuple_info;
+
+	hal_fse = (uint8_t *)fst->base_vaddr +
+		(hal_hash * HAL_RX_FST_ENTRY_SIZE);
+
+	if (!hal_fse || !tuple_info)
+		return NULL;
+
+	if (!HAL_GET_FLD(hal_fse, RX_FLOW_SEARCH_ENTRY, VALID))
+		return NULL;
+
+	tuple_info->src_ip_127_96 =
+				qdf_ntohl(HAL_GET_FLD(hal_fse,
+						      RX_FLOW_SEARCH_ENTRY,
+						      SRC_IP_127_96));
+	tuple_info->src_ip_95_64 =
+				qdf_ntohl(HAL_GET_FLD(hal_fse,
+						      RX_FLOW_SEARCH_ENTRY,
+						      SRC_IP_95_64));
+	tuple_info->src_ip_63_32 =
+				qdf_ntohl(HAL_GET_FLD(hal_fse,
+						      RX_FLOW_SEARCH_ENTRY,
+						      SRC_IP_63_32));
+	tuple_info->src_ip_31_0 =
+				qdf_ntohl(HAL_GET_FLD(hal_fse,
+						      RX_FLOW_SEARCH_ENTRY,
+						      SRC_IP_31_0));
+	tuple_info->dest_ip_127_96 =
+				qdf_ntohl(HAL_GET_FLD(hal_fse,
+						      RX_FLOW_SEARCH_ENTRY,
+						      DEST_IP_127_96));
+	tuple_info->dest_ip_95_64 =
+				qdf_ntohl(HAL_GET_FLD(hal_fse,
+						      RX_FLOW_SEARCH_ENTRY,
+						      DEST_IP_95_64));
+	tuple_info->dest_ip_63_32 =
+				qdf_ntohl(HAL_GET_FLD(hal_fse,
+						      RX_FLOW_SEARCH_ENTRY,
+						      DEST_IP_63_32));
+	tuple_info->dest_ip_31_0 =
+				qdf_ntohl(HAL_GET_FLD(hal_fse,
+						      RX_FLOW_SEARCH_ENTRY,
+						      DEST_IP_31_0));
+	tuple_info->dest_port = HAL_GET_FLD(hal_fse,
+					    RX_FLOW_SEARCH_ENTRY,
+					    DEST_PORT);
+	tuple_info->src_port = HAL_GET_FLD(hal_fse,
+					   RX_FLOW_SEARCH_ENTRY,
+					   SRC_PORT);
+	tuple_info->l4_protocol = HAL_GET_FLD(hal_fse,
+					      RX_FLOW_SEARCH_ENTRY,
+					      L4_PROTOCOL);
+
+	return hal_fse;
+}
+
+/**
+ * hal_rx_flow_delete_entry_be() - Setup a flow search entry in HW FST
+ * @fst: Pointer to the Rx Flow Search Table
+ * @hal_rx_fse: Pointer to the Rx Flow that is to be deleted from the FST
+ *
+ * Return: Success/Failure
+ */
+static QDF_STATUS
+hal_rx_flow_delete_entry_be(uint8_t *rx_fst, void *hal_rx_fse)
+{
+	uint8_t *fse = (uint8_t *)hal_rx_fse;
+
+	if (!HAL_GET_FLD(fse, RX_FLOW_SEARCH_ENTRY, VALID))
+		return QDF_STATUS_E_NOENT;
+
+	HAL_CLR_FLD(fse, RX_FLOW_SEARCH_ENTRY, VALID);
+
+	return QDF_STATUS_SUCCESS;
+}
+
+/**
+ * hal_rx_fst_get_fse_size_be() - Retrieve the size of each entry in Rx FST
+ *
+ * Return: size of each entry/flow in Rx FST
+ */
+static inline uint32_t
+hal_rx_fst_get_fse_size_be(void)
+{
+	return HAL_RX_FST_ENTRY_SIZE;
+}
 #endif /* _HAL_BE_GENERIC_API_H_ */

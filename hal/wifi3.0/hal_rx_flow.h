@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2019-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -103,28 +104,35 @@ uint32_t hal_rx_flow_get_cmem_fse_timestamp(hal_soc_handle_t hal_soc_hdl,
 
 /**
  * hal_rx_flow_delete_entry() - Delete a flow from the Rx Flow Search Table
+ * @hal_soc_hdl: HAL SOC handle
  * @fst: Pointer to the Rx Flow Search Table
  * @hal_rx_fse: Pointer to the Rx Flow that is to be deleted from the FST
  *
  * Return: Success/Failure
  */
 QDF_STATUS
-hal_rx_flow_delete_entry(struct hal_rx_fst *fst, void *hal_rx_fse);
+hal_rx_flow_delete_entry(hal_soc_handle_t hal_soc_hdl,
+			 struct hal_rx_fst *fst, void *hal_rx_fse);
 
 /**
  * hal_rx_flow_get_tuple_info() - Retrieve the 5-tuple flow info for an entry
- * @hal_fse: Pointer to the Flow in Rx FST
+ * @hal_soc_hdl: HAL SOC handle
+ * @fst: Pointer to the Rx Flow Search Table
+ * @hal_hash: HAL 5 tuple hash
  * @tuple_info: 5-tuple info of the flow returned to the caller
  *
  * Return: Success/Failure
  */
-QDF_STATUS hal_rx_flow_get_tuple_info(void *hal_fse,
-				      struct hal_flow_tuple_info *tuple_info);
-
+void *
+hal_rx_flow_get_tuple_info(hal_soc_handle_t hal_soc_hdl,
+			   struct hal_rx_fst *fst,
+			   uint32_t hal_hash,
+			   struct hal_flow_tuple_info *tuple_info);
 
 /**
  * hal_rx_fst_attach() - Initialize Rx flow search table in HW FST
  *
+ * @hal_soc_hdl: HAL SOC handle
  * @qdf_dev: QDF device handle
  * @hal_fst_base_paddr: Pointer to the physical base address of the Rx FST
  * @max_entries: Max number of flows allowed in the FST
@@ -134,23 +142,26 @@ QDF_STATUS hal_rx_flow_get_tuple_info(void *hal_fse,
  * Return:
  */
 struct hal_rx_fst *
-hal_rx_fst_attach(qdf_device_t qdf_dev,
+hal_rx_fst_attach(hal_soc_handle_t hal_soc_hdl,
+		  qdf_device_t qdf_dev,
 		  uint64_t *hal_fst_base_paddr, uint16_t max_entries,
 		  uint16_t max_search, uint8_t *hash_key);
 
 /**
  * hal_rx_fst_detach() - De-init the Rx flow search table from HW
  *
+ * @hal_soc_hdl: HAL SOC handler
  * @rx_fst: Pointer to the Rx FST
  * @qdf_dev: QDF device handle
  *
  * Return:
  */
-void hal_rx_fst_detach(struct hal_rx_fst *rx_fst, qdf_device_t qdf_dev);
+void hal_rx_fst_detach(hal_soc_handle_t hal_soc_hdl,
+		       struct hal_rx_fst *rx_fst, qdf_device_t qdf_dev);
 
 /**
  * hal_rx_insert_flow_entry() - Add a flow into the FST table
- *
+ * @hal_soc_hdl: HAL SOC handle
  * @hal_fst: HAL Rx FST Handle
  * @flow_hash: Flow hash computed from flow tuple
  * @flow_tuple_info: Flow tuple used to compute the hash
@@ -159,7 +170,8 @@ void hal_rx_fst_detach(struct hal_rx_fst *rx_fst, qdf_device_t qdf_dev);
  * Return: Success if flow is inserted into the table, error otherwise
  */
 QDF_STATUS
-hal_rx_insert_flow_entry(struct hal_rx_fst *fst, uint32_t flow_hash,
+hal_rx_insert_flow_entry(hal_soc_handle_t hal_soc_hdl,
+			 struct hal_rx_fst *fst, uint32_t flow_hash,
 			 void *flow_tuple_info, uint32_t *flow_idx);
 
 /**
@@ -173,7 +185,8 @@ hal_rx_insert_flow_entry(struct hal_rx_fst *fst, uint32_t flow_hash,
  * Return: Success if matching flow is found in the table, error otherwise
  */
 QDF_STATUS
-hal_rx_find_flow_from_tuple(struct hal_rx_fst *fst, uint32_t flow_hash,
+hal_rx_find_flow_from_tuple(hal_soc_handle_t hal_soc_hdl,
+			    struct hal_rx_fst *fst, uint32_t flow_hash,
 			    void *flow_tuple_info, uint32_t *flow_idx);
 
 /**
