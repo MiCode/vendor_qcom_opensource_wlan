@@ -637,6 +637,20 @@ static inline void dp_tx_flow_pool_unmap_handler(struct dp_pdev *pdev,
 {
 }
 
+#ifdef QCA_DP_TX_HW_SW_NBUF_DESC_PREFETCH
+static inline
+void dp_tx_prefetch_desc(struct dp_tx_desc_s *tx_desc)
+{
+	if (tx_desc)
+		prefetch(tx_desc);
+}
+#else
+static inline
+void dp_tx_prefetch_desc(struct dp_tx_desc_s *tx_desc)
+{
+}
+#endif
+
 /**
  * dp_tx_desc_alloc() - Allocate a Software Tx Descriptor from given pool
  *
@@ -664,6 +678,7 @@ static inline struct dp_tx_desc_s *dp_tx_desc_alloc(struct dp_soc *soc,
 	pool->freelist = pool->freelist->next;
 	pool->num_allocated++;
 	pool->num_free--;
+	dp_tx_prefetch_desc(pool->freelist);
 
 	tx_desc->flags = DP_TX_DESC_FLAG_ALLOCATED;
 

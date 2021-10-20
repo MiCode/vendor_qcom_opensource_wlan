@@ -3048,6 +3048,22 @@ void dp_tx_nawds_handler(struct dp_soc *soc, struct dp_vdev *vdev,
 	qdf_spin_unlock_bh(&vdev->peer_list_lock);
 }
 
+#ifdef QCA_DP_TX_NBUF_AND_NBUF_DATA_PREFETCH
+static inline
+void dp_tx_prefetch_nbuf_data(qdf_nbuf_t nbuf)
+{
+	if (nbuf) {
+		qdf_prefetch(&nbuf->len);
+		qdf_prefetch(&nbuf->data);
+	}
+}
+#else
+static inline
+void dp_tx_prefetch_nbuf_data(qdf_nbuf_t nbuf)
+{
+}
+#endif
+
 /**
  * dp_tx_send() - Transmit a frame on a given VAP
  * @soc: DP soc handle
@@ -3200,6 +3216,7 @@ qdf_nbuf_t dp_tx_send(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
 	 * prepare direct-buffer type TCL descriptor and enqueue to TCL
 	 * SRNG. There is no need to setup a MSDU extension descriptor.
 	 */
+	dp_tx_prefetch_nbuf_data(nbuf);
 	nbuf = dp_tx_send_msdu_single(vdev, nbuf, &msdu_info, peer_id, NULL);
 
 	return nbuf;
