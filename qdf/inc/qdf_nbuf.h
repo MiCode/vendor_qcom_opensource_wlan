@@ -4071,6 +4071,19 @@ void qdf_nbuf_add_rx_frag_debug(qdf_frag_t buf, qdf_nbuf_t nbuf,
 				unsigned int truesize, bool take_frag_ref,
 				const char *func, uint32_t line);
 
+#define qdf_nbuf_ref_frag(f) \
+	qdf_nbuf_ref_frag_debug(f, __func__, __LINE__)
+
+/**
+ * qdf_nbuf_ref_frag_debug() - get frag reference
+ * @buf: Frag pointer needs to be taken reference.
+ * @func: Caller function name
+ * @line: Caller function line no.
+ *
+ * Return: none
+ */
+void qdf_nbuf_ref_frag_debug(qdf_frag_t buf, const char *func, uint32_t line);
+
 /**
  * qdf_net_buf_debug_acquire_frag() - Add frag nodes to frag debug tracker
  *	when nbuf is received from network stack
@@ -4154,6 +4167,17 @@ static inline void qdf_nbuf_add_rx_frag(qdf_frag_t buf, qdf_nbuf_t nbuf,
 			       frag_len, truesize, take_frag_ref);
 }
 
+/**
+ * qdf_nbuf_ref_frag() - get frag reference
+ * @buf: Frag pointer needs to be taken reference.
+ *
+ * Return: void
+ */
+static inline void qdf_nbuf_ref_frag(qdf_frag_t buf)
+{
+	__qdf_nbuf_ref_frag(buf);
+}
+
 static inline void qdf_net_buf_debug_acquire_frag(qdf_nbuf_t buf,
 						  const char *func,
 						  uint32_t line)
@@ -4175,6 +4199,41 @@ static inline void qdf_nbuf_frag_count_dec(qdf_nbuf_t buf)
 }
 
 #endif /* NBUF_FRAG_MEMORY_DEBUG */
+
+#define qdf_nbuf_add_frag(dev, f, n, o, f_l, t_sz, f_r, sz) \
+	qdf_nbuf_add_frag_debug(dev, f, n, o, f_l, t_sz,	\
+				f_r, sz, __func__, __LINE__)
+
+/**
+ * qdf_nbuf_add_frag_debug() - Add frag to nbuf
+ * @osdev: Device handle
+ * @buf: Frag pointer needs to be added in nbuf frag
+ * @nbuf: qdf_nbuf_t where frag will be added
+ * @offset: Offset in frag to be added to nbuf_frags
+ * @frag_len: Frag length
+ * @truesize: truesize
+ * @take_frag_ref: Whether to take ref for frag or not
+ *      This bool must be set as per below comdition:
+ *      1. False: If this frag is being added in any nbuf
+ *              for the first time after allocation
+ *      2. True: If frag is already attached part of any
+ *              nbuf
+ * @minsize: Minimum size to allocate
+ * @func: Caller function name
+ * @line: Caller function line no.
+ *
+ * if number of frag exceed maximum frag array. A new nbuf is allocated
+ * with minimum headroom and frag it added to that nbuf.
+ * new nbuf is added as frag_list to the master nbuf.
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+qdf_nbuf_add_frag_debug(qdf_device_t osdev, qdf_frag_t buf,
+			qdf_nbuf_t nbuf, int offset,
+			int frag_len, unsigned int truesize,
+			bool take_frag_ref, unsigned int minsize,
+			const char *func, uint32_t line);
 
 #ifdef MEMORY_DEBUG
 /**

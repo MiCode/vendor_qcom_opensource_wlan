@@ -1986,6 +1986,38 @@ __qdf_nbuf_copy_expand(struct sk_buff *buf, int headroom, int tailroom)
 }
 
 /**
+ * __qdf_nbuf_has_fraglist() - check buf has fraglist
+ * @buf: Network buf instance
+ *
+ * Return: True, if buf has frag_list else return False
+ */
+static inline bool
+__qdf_nbuf_has_fraglist(struct sk_buff *buf)
+{
+	return skb_has_frag_list(buf);
+}
+
+/**
+ * __qdf_nbuf_get_last_frag_list_nbuf() - Get last frag_list nbuf
+ * @buf: Network buf instance
+ *
+ * Return: Network buf instance
+ */
+static inline struct sk_buff *
+__qdf_nbuf_get_last_frag_list_nbuf(struct sk_buff *buf)
+{
+	struct sk_buff *list;
+
+	if (!__qdf_nbuf_has_fraglist(buf))
+		return NULL;
+
+	for (list = skb_shinfo(buf)->frag_list; list->next; list = list->next)
+		;
+
+	return list;
+}
+
+/**
  * __qdf_nbuf_get_ref_fraglist() - get reference to fragments
  * @buf: Network buf instance
  *
@@ -2541,6 +2573,13 @@ QDF_STATUS __qdf_nbuf_move_frag_page_offset(__qdf_nbuf_t nbuf, uint8_t idx,
 void __qdf_nbuf_add_rx_frag(__qdf_frag_t buf, __qdf_nbuf_t nbuf,
 			    int offset, int frag_len,
 			    unsigned int truesize, bool take_frag_ref);
+
+/**
+ * __qdf_nbuf_ref_frag() - get frag reference
+ *
+ * Return: void
+ */
+void __qdf_nbuf_ref_frag(qdf_frag_t buf);
 
 /**
  * __qdf_nbuf_set_mark() - Set nbuf mark

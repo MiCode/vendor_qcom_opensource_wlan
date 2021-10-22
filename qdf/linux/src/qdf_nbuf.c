@@ -5181,6 +5181,24 @@ void __qdf_nbuf_add_rx_frag(__qdf_frag_t buf, __qdf_nbuf_t nbuf,
 
 qdf_export_symbol(__qdf_nbuf_add_rx_frag);
 
+void __qdf_nbuf_ref_frag(__qdf_frag_t buf)
+{
+	struct page *page;
+	skb_frag_t frag = {0};
+
+	page = virt_to_head_page(buf);
+	__skb_frag_set_page(&frag, page);
+
+	/*
+	 * since __skb_frag_ref() just use page to increase ref
+	 * we just decode page alone
+	 */
+	qdf_frag_count_inc(QDF_NBUF_FRAG_DEBUG_COUNT_ONE);
+	__skb_frag_ref(&frag);
+}
+
+qdf_export_symbol(__qdf_nbuf_ref_frag);
+
 #ifdef NBUF_FRAG_MEMORY_DEBUG
 
 QDF_STATUS qdf_nbuf_move_frag_page_offset_debug(qdf_nbuf_t nbuf, uint8_t idx,
@@ -5239,6 +5257,25 @@ void qdf_nbuf_add_rx_frag_debug(qdf_frag_t buf, qdf_nbuf_t nbuf,
 }
 
 qdf_export_symbol(qdf_nbuf_add_rx_frag_debug);
+
+/**
+ * qdf_nbuf_ref_frag_debug() - get frag reference
+ * @buf: Frag pointer needs to be taken reference.
+ *
+ * return: void
+ */
+void qdf_nbuf_ref_frag_debug(qdf_frag_t buf, const char *func, uint32_t line)
+{
+	__qdf_nbuf_ref_frag(buf);
+
+	if (qdf_likely(is_initial_mem_debug_disabled))
+		return;
+
+	/* Update frag refcount in frag debug tracking table */
+	qdf_frag_debug_refcount_inc(buf, func, line);
+}
+
+qdf_export_symbol(qdf_nbuf_ref_frag_debug);
 
 void qdf_net_buf_debug_acquire_frag(qdf_nbuf_t buf, const char *func,
 				    uint32_t line)
@@ -5345,6 +5382,112 @@ void qdf_net_buf_debug_release_frag(qdf_nbuf_t buf, const char *func,
 
 qdf_export_symbol(qdf_net_buf_debug_release_frag);
 #endif /* NBUF_FRAG_MEMORY_DEBUG */
+
+/**
+ * qdf_get_nbuf_valid_frag() - Get nbuf to store frag
+ * @nbuf: qdf_nbuf_t master nbuf
+ *
+ * Return: qdf_nbuf_t
+ */
+static inline qdf_nbuf_t qdf_get_nbuf_valid_frag(qdf_nbuf_t nbuf)
+{
+	qdf_nbuf_t last_nbuf;
+	uint32_t num_frags;
+
+	if (qdf_unlikely(!nbuf))
+		return NULL;
+
+	num_frags = qdf_nbuf_get_nr_frags(nbuf);
+
+	/* Check nbuf has enough memory to store frag memory */
+	if (num_frags <= QDF_NBUF_MAX_FRAGS)
+		return nbuf;
+
+	if (num_frags > QDF_NBUF_MAX_FRAGS && !__qdf_nbuf_has_fraglist(nbuf))
+		return NULL;
+
+	last_nbuf = __qdf_nbuf_get_last_frag_list_nbuf(nbuf);
+	if (qdf_unlikely(!last_nbuf))
+		return NULL;
+
+	num_frags = qdf_nbuf_get_nr_frags(last_nbuf);
+	if (num_frags < QDF_NBUF_MAX_FRAGS)
+		return last_nbuf;
+
+	return NULL;
+}
+
+/**
+ * qdf_nbuf_add_frag_debug() - Add frag to nbuf
+ * @osdev: Device handle
+ * @buf: Frag pointer needs to be added in nbuf frag
+ * @nbuf: qdf_nbuf_t where frag will be added
+ * @offset: Offset in frag to be added to nbuf_frags
+ * @frag_len: Frag length
+ * @truesize: truesize
+ * @take_frag_ref: Whether to take ref for frag or not
+ *      This bool must be set as per below comdition:
+ *      1. False: If this frag is being added in any nbuf
+ *              for the first time after allocation
+ *      2. True: If frag is already attached part of any
+ *              nbuf
+ * @minsize: Minimum size to allocate
+ * @func: Caller function name
+ * @line: Caller function line no.
+ *
+ * if number of frag exceed maximum frag array. A new nbuf is allocated
+ * with minimum headroom and frag it added to that nbuf.
+ * new nbuf is added as frag_list to the master nbuf.
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+qdf_nbuf_add_frag_debug(qdf_device_t osdev, qdf_frag_t buf,
+			qdf_nbuf_t nbuf, int offset,
+			int frag_len, unsigned int truesize,
+			bool take_frag_ref, unsigned int minsize,
+			const char *func, uint32_t line)
+{
+	qdf_nbuf_t cur_nbuf;
+	qdf_nbuf_t this_nbuf;
+
+	cur_nbuf = nbuf;
+	this_nbuf = nbuf;
+
+	if (qdf_unlikely(!frag_len || !buf)) {
+		qdf_nofl_err("%s : %d frag[ buf[%pK] len[%d]] not valid\n",
+			     func, line,
+			     buf, frag_len);
+		return QDF_STATUS_E_INVAL;
+	}
+
+	this_nbuf = qdf_get_nbuf_valid_frag(this_nbuf);
+
+	if (this_nbuf) {
+		cur_nbuf = this_nbuf;
+	} else {
+		/* allocate a dummy mpdu buffer of 64 bytes headroom */
+		this_nbuf = qdf_nbuf_alloc(osdev, minsize, minsize, 4, false);
+		if (qdf_unlikely(!this_nbuf)) {
+			qdf_nofl_err("%s : %d no memory to allocate\n",
+				     func, line);
+			return QDF_STATUS_E_NOMEM;
+		}
+	}
+
+	qdf_nbuf_add_rx_frag(buf, this_nbuf, offset, frag_len, truesize,
+			     take_frag_ref);
+
+	if (this_nbuf != cur_nbuf) {
+		/* add new skb to frag list */
+		qdf_nbuf_append_ext_list(nbuf, this_nbuf,
+					 qdf_nbuf_len(this_nbuf));
+	}
+
+	return QDF_STATUS_SUCCESS;
+}
+
+qdf_export_symbol(qdf_nbuf_add_frag_debug);
 
 #ifdef MEMORY_DEBUG
 void qdf_nbuf_acquire_track_lock(uint32_t index,
