@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2014-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -307,6 +308,8 @@
  * @start_seq: starting sequence number
  * @ba_bitmap: 256 bit block ack bitmap
  * @add_rtap_ext2: add radiotap extension2
+ * @mpdu_retry_cnt: Rx mpdu retry count
+ * @punctured_bw: puntured bw
  */
 struct mon_rx_status {
 	uint64_t tsft;
@@ -394,6 +397,10 @@ struct mon_rx_status {
 	uint16_t start_seq;
 	uint32_t ba_bitmap[8];
 	bool add_rtap_ext2;
+	uint32_t mpdu_retry_cnt;
+#ifdef WLAN_FEATURE_11BE
+	uint8_t punctured_bw;
+#endif
 };
 
 /**
@@ -428,6 +435,7 @@ struct mon_rx_status {
  * @mpdu_ok_byte_count: mpdu byte count with fcs ok
  * @mpdu_err_byte_count: mpdu byte count with fcs err
  * @sw_peer_id: software peer id
+ * @retry_mpdu: mpdu retry count
  */
 struct mon_rx_user_status {
 	uint32_t mcs:4,
@@ -459,6 +467,7 @@ struct mon_rx_user_status {
 	uint32_t mpdu_ok_byte_count;
 	uint32_t mpdu_err_byte_count;
 	uint16_t sw_peer_id;
+	uint32_t retry_mpdu;
 };
 
 /**

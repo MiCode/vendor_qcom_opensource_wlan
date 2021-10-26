@@ -53,6 +53,15 @@ extern enum timer_yield_status
 dp_should_timer_irq_yield(struct dp_soc *soc, uint32_t work_done,
 			  uint64_t start_time);
 
+#ifdef QCA_ENHANCED_STATS_SUPPORT
+void
+dp_mon_populate_ppdu_info_1_0(struct hal_rx_ppdu_info *hal_ppdu_info,
+			      struct cdp_rx_indication_ppdu *ppdu)
+{
+	ppdu->punc_bw = 0;
+}
+#endif
+
 #ifdef QCA_SUPPORT_FULL_MON
 static QDF_STATUS
 dp_config_full_mon_mode(struct cdp_soc_t *soc_handle,
@@ -945,6 +954,11 @@ dp_mon_register_feature_ops_1_0(struct dp_soc *soc)
 				dp_vdev_set_monitor_mode_buf_rings;
 	mon_ops->mon_vdev_set_monitor_mode_rings =
 				dp_vdev_set_monitor_mode_rings;
+#ifdef QCA_ENHANCED_STATS_SUPPORT
+	mon_ops->mon_rx_stats_update = NULL;
+	mon_ops->mon_rx_populate_ppdu_usr_info = NULL;
+	mon_ops->mon_rx_populate_ppdu_info = dp_mon_populate_ppdu_info_1_0;
+#endif
 }
 
 struct dp_mon_ops monitor_ops_1_0 = {

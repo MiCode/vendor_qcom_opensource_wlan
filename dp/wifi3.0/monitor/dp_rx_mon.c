@@ -404,6 +404,7 @@ dp_rx_populate_cdp_indication_ppdu_user(struct dp_pdev *pdev,
 	int ru_size;
 	bool is_data = false;
 	uint32_t num_users;
+	struct dp_mon_ops *mon_ops;
 
 	num_users = ppdu_info->com_info.num_users;
 	for (i = 0; i < num_users; i++) {
@@ -493,6 +494,11 @@ dp_rx_populate_cdp_indication_ppdu_user(struct dp_pdev *pdev,
 		rx_stats_peruser->vdev_id = peer->vdev->vdev_id;
 		rx_stats_peruser->mu_ul_info_valid = 0;
 
+		mon_ops = dp_mon_ops_get(soc);
+		if (mon_ops && mon_ops->mon_rx_populate_ppdu_usr_info)
+			mon_ops->mon_rx_populate_ppdu_usr_info(rx_user_status,
+							       rx_stats_peruser);
+
 		dp_peer_unref_delete(peer, DP_MOD_ID_RX_PPDU_STATS);
 		if (cdp_rx_ppdu->u.ppdu_type == HAL_RX_TYPE_MU_OFDMA ||
 		    cdp_rx_ppdu->u.ppdu_type == HAL_RX_TYPE_MU_MIMO) {
@@ -546,6 +552,7 @@ dp_rx_populate_cdp_indication_ppdu(struct dp_pdev *pdev,
 	struct dp_ast_entry *ast_entry;
 	uint32_t ast_index;
 	uint32_t i;
+	struct dp_mon_ops *mon_ops;
 
 	cdp_rx_ppdu->first_data_seq_ctrl =
 		ppdu_info->rx_status.first_data_seq_ctrl;
@@ -634,6 +641,11 @@ dp_rx_populate_cdp_indication_ppdu(struct dp_pdev *pdev,
 	dp_rx_populate_rx_rssi_chain(ppdu_info, cdp_rx_ppdu);
 	dp_rx_populate_su_evm_details(ppdu_info, cdp_rx_ppdu);
 	cdp_rx_ppdu->rx_antenna = ppdu_info->rx_status.rx_antenna;
+
+	mon_ops = dp_mon_ops_get(pdev->soc);
+	if (mon_ops && mon_ops->mon_rx_populate_ppdu_info)
+		mon_ops->mon_rx_populate_ppdu_info(ppdu_info,
+						   cdp_rx_ppdu);
 
 	cdp_rx_ppdu->nf = ppdu_info->rx_status.chan_noise_floor;
 	for (i = 0; i < MAX_CHAIN; i++)
@@ -724,6 +736,65 @@ static inline void dp_rx_rate_stats_update(struct dp_peer *peer,
 		peer->vdev->stats.rx.last_rx_rate = ratekbps;
 }
 
+#ifdef WLAN_FEATURE_11BE
+static inline uint8_t dp_get_bw_offset_frm_bw(struct dp_soc *soc,
+					      enum CMN_BW_TYPES bw)
+{
+	uint8_t pkt_bw_offset;
+
+	switch (bw) {
+	case CMN_BW_20MHZ:
+		pkt_bw_offset = PKT_BW_GAIN_20MHZ;
+		break;
+	case CMN_BW_40MHZ:
+		pkt_bw_offset = PKT_BW_GAIN_40MHZ;
+		break;
+	case CMN_BW_80MHZ:
+		pkt_bw_offset = PKT_BW_GAIN_80MHZ;
+		break;
+	case CMN_BW_160MHZ:
+		pkt_bw_offset = PKT_BW_GAIN_160MHZ;
+		break;
+	case CMN_BW_320MHZ:
+		pkt_bw_offset = PKT_BW_GAIN_320MHZ;
+		break;
+	default:
+		pkt_bw_offset = 0;
+		dp_rx_mon_status_debug("%pK: Invalid BW index = %d",
+				       soc, bw);
+	}
+
+	return pkt_bw_offset;
+}
+#else
+static inline uint8_t dp_get_bw_offset_frm_bw(struct dp_soc *soc,
+					      enum CMN_BW_TYPES bw)
+{
+	uint8_t pkt_bw_offset;
+
+	switch (bw) {
+	case CMN_BW_20MHZ:
+		pkt_bw_offset = PKT_BW_GAIN_20MHZ;
+		break;
+	case CMN_BW_40MHZ:
+		pkt_bw_offset = PKT_BW_GAIN_40MHZ;
+		break;
+	case CMN_BW_80MHZ:
+		pkt_bw_offset = PKT_BW_GAIN_80MHZ;
+		break;
+	case CMN_BW_160MHZ:
+		pkt_bw_offset = PKT_BW_GAIN_160MHZ;
+		break;
+	default:
+		pkt_bw_offset = 0;
+		dp_rx_mon_status_debug("%pK: Invalid BW index = %d",
+				       soc, bw);
+	}
+
+	return pkt_bw_offset;
+}
+#endif
+
 static void dp_rx_stats_update(struct dp_pdev *pdev,
 			       struct cdp_rx_indication_ppdu *ppdu)
 {
@@ -735,6 +806,7 @@ static void dp_rx_stats_update(struct dp_pdev *pdev,
 	struct cdp_rx_stats_ppdu_user *ppdu_user;
 	uint32_t i;
 	enum cdp_mu_packet_type mu_pkt_type;
+	struct dp_mon_ops *mon_ops;
 
 	if (pdev)
 		soc = pdev->soc;
@@ -768,25 +840,8 @@ static void dp_rx_stats_update(struct dp_pdev *pdev,
 		}
 
 		num_msdu = ppdu_user->num_msdu;
-		switch (ppdu->u.bw) {
-		case CMN_BW_20MHZ:
-			pkt_bw_offset = PKT_BW_GAIN_20MHZ;
-			break;
-		case CMN_BW_40MHZ:
-			pkt_bw_offset = PKT_BW_GAIN_40MHZ;
-			break;
-		case CMN_BW_80MHZ:
-			pkt_bw_offset = PKT_BW_GAIN_80MHZ;
-			break;
-		case CMN_BW_160MHZ:
-			pkt_bw_offset = PKT_BW_GAIN_160MHZ;
-			break;
-		default:
-			pkt_bw_offset = 0;
-			dp_rx_mon_status_debug("%pK: Invalid BW index = %d",
-					       soc, ppdu->u.bw);
-		}
 
+		pkt_bw_offset = dp_get_bw_offset_frm_bw(soc, ppdu->u.bw);
 		DP_STATS_UPD(peer, rx.snr, (ppdu->rssi + pkt_bw_offset));
 
 		if (peer->stats.rx.avg_snr == CDP_INVALID_SNR)
@@ -907,6 +962,11 @@ static void dp_rx_stats_update(struct dp_pdev *pdev,
 
 		if (ppdu->tid != HAL_TID_INVALID)
 			DP_STATS_INC(peer, rx.wme_ac_type[ac], num_msdu);
+
+		mon_ops = dp_mon_ops_get(soc);
+		if (mon_ops && mon_ops->mon_rx_stats_update)
+			mon_ops->mon_rx_stats_update(peer, ppdu, ppdu_user);
+
 		dp_peer_stats_notify(pdev, peer);
 		DP_STATS_UPD(peer, rx.last_snr, ppdu->rssi);
 

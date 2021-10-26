@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -198,3 +199,78 @@ dp_rx_mon_buffers_alloc(struct dp_soc *soc)
 					mon_soc->rx_mon_ring_fill_level,
 					&desc_list, &tail);
 }
+
+#ifdef QCA_ENHANCED_STATS_SUPPORT
+void
+dp_mon_populate_ppdu_usr_info_2_0(struct mon_rx_user_status *rx_user_status,
+				  struct cdp_rx_stats_ppdu_user *ppdu_user)
+{
+	ppdu_user->mpdu_retries = rx_user_status->retry_mpdu;
+}
+
+#ifdef WLAN_FEATURE_11BE
+void dp_mon_rx_stats_update_2_0(struct dp_peer *peer,
+				struct cdp_rx_indication_ppdu *ppdu,
+				struct cdp_rx_stats_ppdu_user *ppdu_user)
+{
+	uint8_t mcs, preamble, ppdu_type;
+
+	preamble = ppdu->u.preamble;
+	ppdu_type = ppdu->u.ppdu_type;
+	if (ppdu_type == HAL_RX_TYPE_SU)
+		mcs = ppdu->u.mcs;
+	else
+		mcs = ppdu_user->mcs;
+
+	DP_STATS_INC(peer, rx.mpdu_retry_cnt, ppdu_user->mpdu_retries);
+	DP_STATS_INCC(peer,
+		      rx.su_be_ppdu_cnt.mcs_count[MAX_MCS - 1], 1,
+		      ((mcs >= (MAX_MCS - 1)) && (preamble == DOT11_BE) &&
+		      (ppdu_type == HAL_RX_TYPE_SU)));
+	DP_STATS_INCC(peer,
+		      rx.su_be_ppdu_cnt.mcs_count[mcs], 1,
+		      ((mcs < (MAX_MCS - 1)) && (preamble == DOT11_BE) &&
+		      (ppdu_type == HAL_RX_TYPE_SU)));
+	DP_STATS_INCC(peer,
+		      rx.rx_mu_be[TXRX_TYPE_MU_OFDMA].ppdu.mcs_count[MAX_MCS - 1],
+		      1, ((mcs >= (MAX_MCS - 1)) &&
+		      (preamble == DOT11_BE) &&
+		      (ppdu_type == HAL_RX_TYPE_MU_OFDMA)));
+	DP_STATS_INCC(peer,
+		      rx.rx_mu_be[TXRX_TYPE_MU_OFDMA].ppdu.mcs_count[mcs],
+		      1, ((mcs < (MAX_MCS - 1)) &&
+		      (preamble == DOT11_BE) &&
+		      (ppdu_type == HAL_RX_TYPE_MU_OFDMA)));
+	DP_STATS_INCC(peer,
+		      rx.rx_mu_be[TXRX_TYPE_MU_MIMO].ppdu.mcs_count[MAX_MCS - 1],
+		      1, ((mcs >= (MAX_MCS - 1)) &&
+		      (preamble == DOT11_BE) &&
+		      (ppdu_type == HAL_RX_TYPE_MU_MIMO)));
+	DP_STATS_INCC(peer,
+		      rx.rx_mu_be[TXRX_TYPE_MU_MIMO].ppdu.mcs_count[mc],
+		      1, ((mcs < (MAX_MCS - 1)) &&
+		      (preamble == DOT11_BE) &&
+		      (ppdu_type == HAL_RX_TYPE_MU_MIMO)));
+}
+
+void
+dp_mon_populate_ppdu_info_2_0(struct hal_rx_ppdu_info *hal_ppdu_info,
+			      struct cdp_rx_indication_ppdu *ppdu)
+{
+	ppdu->punc_bw = hal_ppdu_info->rx_status.punctured_bw;
+}
+#else
+void dp_mon_rx_stats_update_2_0(struct dp_peer *peer,
+				struct cdp_rx_indication_ppdu *ppdu,
+				struct cdp_rx_stats_ppdu_user *ppdu_user)
+{
+	DP_STATS_INC(peer, rx.mpdu_retry_cnt, ppdu_user->mpdu_retries);
+}
+
+void
+dp_mon_populate_ppdu_info_2_0(struct hal_rx_ppdu_info *hal_ppdu_info,
+			      struct cdp_rx_indication_ppdu *ppdu)
+{
+	ppdu->punc_bw = 0;
+}
+#endif

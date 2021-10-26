@@ -926,6 +926,12 @@ dp_mon_register_feature_ops_2_0(struct dp_soc *soc)
 				dp_vdev_set_monitor_mode_buf_rings_2_0;
 	mon_ops->mon_vdev_set_monitor_mode_rings =
 				dp_vdev_set_monitor_mode_rings_2_0;
+#ifdef QCA_ENHANCED_STATS_SUPPORT
+	mon_ops->mon_rx_stats_update = dp_mon_rx_stats_update_2_0;
+	mon_ops->mon_rx_populate_ppdu_usr_info =
+			dp_mon_populate_ppdu_usr_info_2_0;
+	mon_ops->mon_rx_populate_ppdu_info = dp_mon_populate_ppdu_info_2_0;
+#endif
 }
 
 struct dp_mon_ops monitor_ops_2_0 = {

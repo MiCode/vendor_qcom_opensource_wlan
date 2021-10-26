@@ -2248,6 +2248,7 @@ struct cdp_tx_completion_msdu {
  * @mpdu_fcs_ok_bitmap - MPDU with fcs ok bitmap
  * @retries - number of retries
  * @rx_ratekpbs - rx rate in kbps
+ * @mpdu_retries - retries of mpdu in rx
  */
 struct cdp_rx_stats_ppdu_user {
 	uint16_t peer_id;
@@ -2285,6 +2286,7 @@ struct cdp_rx_stats_ppdu_user {
 	uint32_t mpdu_err_byte_count;
 	uint32_t retries;
 	uint32_t rx_ratekbps;
+	uint32_t mpdu_retries;
 };
 
 /**
@@ -2334,6 +2336,7 @@ struct cdp_rx_stats_ppdu_user {
  * @user: per user stats in MU-user case
  * @nf: noise floor
  * @per_chain_rssi: rssi per antenna
+ * @punc_bw: puncered bw
  */
 struct cdp_rx_indication_ppdu {
 	uint32_t ppdu_id;
@@ -2394,6 +2397,7 @@ struct cdp_rx_indication_ppdu {
 #if defined(WLAN_CFR_ENABLE) && defined(WLAN_ENH_CFR_ENABLE)
 	struct cdp_rx_ppdu_cfr_info cfr_info;
 #endif
+	uint8_t punc_bw;
 };
 
 /**

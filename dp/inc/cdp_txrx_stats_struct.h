@@ -1424,6 +1424,9 @@ struct cdp_tx_stats {
  *       <enum 3     3_2_us_sgi > HE
  * @preamble_info: preamble
  * @to_stack_twt: Total packets sent up the stack in TWT session
+ * @mpdu_retry_cnt: retries of mpdu in rx
+ * @su_be_ppdu_cnt: SU Rx packet count for BE
+ * @rx_mu_be: MU rx packet count for BE
  */
 struct cdp_rx_stats {
 	struct cdp_pkt_info to_stack;
@@ -1505,6 +1508,11 @@ struct cdp_rx_stats {
 		 gi_info:4,
 	         preamble_info:4;
 	struct cdp_pkt_info to_stack_twt;
+	uint32_t mpdu_retry_cnt;
+#ifdef WLAN_FEATURE_11BE
+	struct cdp_pkt_type su_be_ppdu_cnt;
+	struct cdp_pkt_type rx_mu_be[TXRX_TYPE_MU_MAX];
+#endif
 };
 
 /* struct cdp_tx_ingress_stats - Tx ingress Stats

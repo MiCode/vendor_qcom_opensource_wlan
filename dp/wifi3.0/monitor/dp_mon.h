@@ -568,6 +568,15 @@ struct dp_mon_ops {
 	void (*mon_register_intr_ops)(struct dp_soc *soc);
 #endif
 	void (*mon_register_feature_ops)(struct dp_soc *soc);
+#ifdef QCA_ENHANCED_STATS_SUPPORT
+	void (*mon_rx_stats_update)(struct dp_peer *peer,
+				    struct cdp_rx_indication_ppdu *ppdu,
+				    struct cdp_rx_stats_ppdu_user *ppdu_user);
+	void (*mon_rx_populate_ppdu_usr_info)(struct mon_rx_user_status *rx_user_status,
+					      struct cdp_rx_stats_ppdu_user *ppdu_user);
+	void (*mon_rx_populate_ppdu_info)(struct hal_rx_ppdu_info *hal_ppdu_info,
+					  struct cdp_rx_indication_ppdu *ppdu);
+#endif
 };
 
 struct dp_mon_soc {
