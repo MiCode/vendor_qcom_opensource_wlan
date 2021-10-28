@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021,2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -66,6 +66,7 @@ struct ast_del_ctxt {
 typedef void dp_peer_iter_func(struct dp_soc *soc, struct dp_peer *peer,
 			       void *arg);
 void dp_peer_unref_delete(struct dp_peer *peer, enum dp_mod_id id);
+void dp_txrx_peer_unref_delete(dp_txrx_ref_handle *handle);
 struct dp_peer *dp_peer_find_hash_find(struct dp_soc *soc,
 				       uint8_t *peer_mac_addr,
 				       int mac_addr_is_aligned,
@@ -157,6 +158,31 @@ struct dp_peer *dp_peer_get_ref_by_id(struct dp_soc *soc,
 	qdf_spin_unlock_bh(&soc->peer_map_lock);
 
 	return peer;
+}
+
+/**
+ * dp_txrx_peer_get_ref_by_id() - Returns txrx peer object given the peer id
+ *
+ * @soc		: core DP soc context
+ * @peer_id	: peer id from peer object can be retrieved
+ * @handle	: reference handle
+ *
+ * Return: struct dp_txrx_peer*: Pointer to txrx DP peer object
+ */
+static inline struct dp_txrx_peer *
+dp_txrx_peer_get_ref_by_id(struct dp_soc *soc,
+			   uint16_t peer_id,
+			   dp_txrx_ref_handle *handle)
+
+{
+	struct dp_peer *peer;
+
+	peer = dp_peer_get_ref_by_id(soc, peer_id, DP_MOD_ID_TX_RX);
+	if (!peer)
+		return NULL;
+
+	*handle = (dp_txrx_ref_handle)peer;
+	return peer->txrx_peer;
 }
 
 #ifdef PEER_CACHE_RX_PKTS
@@ -1041,6 +1067,10 @@ void dp_peer_delete(struct dp_soc *soc,
 /* set peer type */
 #define DP_PEER_SET_TYPE(_peer, _type_val) \
 	((_peer)->peer_type = (_type_val))
+
+/* is legacy peer */
+#define IS_DP_LEGACY_PEER(_peer) \
+	((_peer)->peer_type == CDP_LINK_PEER_TYPE && !((_peer)->mld_peer))
 /* is MLO connection link peer */
 #define IS_MLO_DP_LINK_PEER(_peer) \
 	((_peer)->peer_type == CDP_LINK_PEER_TYPE && (_peer)->mld_peer)
@@ -1398,6 +1428,8 @@ QDF_STATUS dp_peer_mlo_setup(
 
 #else
 #define DP_PEER_SET_TYPE(_peer, _type_val) /* no op */
+/* is legacy peer */
+#define IS_DP_LEGACY_PEER(_peer) true
 #define IS_MLO_DP_LINK_PEER(_peer) false
 #define IS_MLO_DP_MLD_PEER(_peer) false
 

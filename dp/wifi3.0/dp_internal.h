@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021,2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1299,6 +1299,9 @@ void dp_peer_vdev_list_remove(struct dp_soc *soc, struct dp_vdev *vdev,
 void dp_peer_find_id_to_obj_add(struct dp_soc *soc,
 				struct dp_peer *peer,
 				uint16_t peer_id);
+void dp_txrx_peer_attach_add(struct dp_soc *soc,
+			     struct dp_peer *peer,
+			     struct dp_txrx_peer *txrx_peer);
 void dp_peer_find_id_to_obj_remove(struct dp_soc *soc,
 				   uint16_t peer_id);
 void dp_vdev_unref_delete(struct dp_soc *soc, struct dp_vdev *vdev,

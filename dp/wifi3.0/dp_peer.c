@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021,2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -703,6 +703,34 @@ void dp_peer_vdev_list_remove(struct dp_soc *soc, struct dp_vdev *vdev,
 }
 
 /*
+ * dp_txrx_peer_attach_add() - Attach txrx_peer and add it to peer_id table
+ * @soc: SoC handle
+ * @peer: peer handle
+ * @txrx_peer: txrx peer handle
+ *
+ * Return: None
+ */
+void dp_txrx_peer_attach_add(struct dp_soc *soc,
+			     struct dp_peer *peer,
+			     struct dp_txrx_peer *txrx_peer)
+{
+	qdf_spin_lock_bh(&soc->peer_map_lock);
+
+	peer->txrx_peer = txrx_peer;
+
+	if (peer->peer_id == HTT_INVALID_PEER) {
+		qdf_spin_unlock_bh(&soc->peer_map_lock);
+		return;
+	}
+
+	txrx_peer->peer_id = peer->peer_id;
+
+	QDF_ASSERT(soc->peer_id_to_obj_map[peer->peer_id]);
+
+	qdf_spin_unlock_bh(&soc->peer_map_lock);
+}
+
+/*
  * dp_peer_find_id_to_obj_add() - Add peer into peer_id table
  * @soc: SoC handle
  * @peer: peer handle
@@ -718,6 +746,8 @@ void dp_peer_find_id_to_obj_add(struct dp_soc *soc,
 
 	qdf_spin_lock_bh(&soc->peer_map_lock);
 
+	peer->peer_id = peer_id;
+
 	if (QDF_IS_STATUS_ERROR(dp_peer_get_ref(soc, peer, DP_MOD_ID_CONFIG))) {
 		dp_err("unable to get peer ref at MAP mac: "QDF_MAC_ADDR_FMT" peer_id %u",
 		       QDF_MAC_ADDR_REF(peer->mac_addr.raw), peer_id);
@@ -727,6 +757,8 @@ void dp_peer_find_id_to_obj_add(struct dp_soc *soc,
 
 	if (!soc->peer_id_to_obj_map[peer_id]) {
 		soc->peer_id_to_obj_map[peer_id] = peer;
+		if (peer->txrx_peer)
+			peer->txrx_peer->peer_id = peer_id;
 	} else {
 		/* Peer map event came for peer_id which
 		 * is already mapped, this is not expected
@@ -752,6 +784,9 @@ void dp_peer_find_id_to_obj_remove(struct dp_soc *soc,
 
 	qdf_spin_lock_bh(&soc->peer_map_lock);
 	peer = soc->peer_id_to_obj_map[peer_id];
+	peer->peer_id = HTT_INVALID_PEER;
+	if (peer->txrx_peer)
+		peer->txrx_peer->peer_id = HTT_INVALID_PEER;
 	soc->peer_id_to_obj_map[peer_id] = NULL;
 	dp_peer_unref_delete(peer, DP_MOD_ID_CONFIG);
 	qdf_spin_unlock_bh(&soc->peer_map_lock);
@@ -2487,15 +2522,13 @@ static inline struct dp_peer *dp_peer_find_add_id(struct dp_soc *soc,
 				 vdev_id);
 			return NULL;
 		}
+
+		QDF_ASSERT(peer->peer_id == HTT_INVALID_PEER);
+
 		dp_peer_find_id_to_obj_add(soc, peer, peer_id);
 		dp_mlo_partner_chips_map(soc, peer, peer_id);
-		if (peer->peer_id == HTT_INVALID_PEER) {
-			peer->peer_id = peer_id;
-			dp_monitor_peer_tid_peer_id_update(soc, peer,
-							   peer->peer_id);
-		} else {
-			QDF_ASSERT(0);
-		}
+		dp_monitor_peer_tid_peer_id_update(soc, peer,
+						   peer->peer_id);
 
 		dp_peer_update_state(soc, peer, DP_PEER_STATE_ACTIVE);
 		return peer;

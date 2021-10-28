@@ -6778,6 +6778,38 @@ void dp_peer_hw_txrx_stats_init(struct dp_soc *soc, struct dp_peer *peer)
 	peer->hw_txrx_stats_en = 0;
 }
 #endif
+
+static QDF_STATUS dp_txrx_peer_detach(struct dp_soc *soc, struct dp_peer *peer)
+{
+	struct dp_txrx_peer *txrx_peer;
+
+	txrx_peer = peer->txrx_peer;
+	peer->txrx_peer = NULL;
+
+	qdf_mem_free(txrx_peer);
+	return QDF_STATUS_SUCCESS;
+}
+
+static QDF_STATUS dp_txrx_peer_attach(struct dp_soc *soc, struct dp_peer *peer)
+{
+	struct dp_txrx_peer *txrx_peer;
+
+	txrx_peer = (struct dp_txrx_peer *)qdf_mem_malloc(sizeof(*txrx_peer));
+
+	if (!txrx_peer)
+		return QDF_STATUS_E_NOMEM; /* failure */
+
+	txrx_peer->peer_id = HTT_INVALID_PEER;
+	/* initialize the peer_id */
+	txrx_peer->vdev = peer->vdev;
+
+	dp_wds_ext_peer_init(peer);
+
+	dp_txrx_peer_attach_add(soc, peer, txrx_peer);
+
+	return QDF_STATUS_SUCCESS;
+}
+
 /*
  * dp_peer_create_wifi3() - attach txrx peer
  * @soc_hdl: Datapath soc handle
@@ -6890,11 +6922,27 @@ dp_peer_create_wifi3(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
 
 	qdf_mem_zero(peer, sizeof(struct dp_peer));
 
-	TAILQ_INIT(&peer->ast_entry_list);
-
 	/* store provided params */
 	peer->vdev = vdev;
+
+	/* initialize the peer_id */
+	peer->peer_id = HTT_INVALID_PEER;
+
+	qdf_mem_copy(
+		&peer->mac_addr.raw[0], peer_mac_addr, QDF_MAC_ADDR_SIZE);
+
 	DP_PEER_SET_TYPE(peer, peer_type);
+	if (IS_MLO_DP_MLD_PEER(peer)) {
+		dp_mld_peer_init_link_peers_info(peer);
+		if (dp_txrx_peer_attach(soc, peer) !=
+				QDF_STATUS_SUCCESS)
+			goto fail; /* failure */
+	} else if (dp_monitor_peer_attach(soc, peer) !=
+				QDF_STATUS_SUCCESS)
+		dp_warn("peer monitor ctx alloc failed");
+
+	TAILQ_INIT(&peer->ast_entry_list);
+
 	/* get the vdev reference for new peer */
 	dp_vdev_get_ref(soc, vdev, DP_MOD_ID_CHILD);
 
@@ -6909,12 +6957,6 @@ dp_peer_create_wifi3(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
 	dp_wds_ext_peer_init(peer);
 	dp_peer_hw_txrx_stats_init(soc, peer);
 	dp_peer_rx_bufq_resources_init(peer);
-
-	qdf_mem_copy(
-		&peer->mac_addr.raw[0], peer_mac_addr, QDF_MAC_ADDR_SIZE);
-
-	/* initialize the peer_id */
-	peer->peer_id = HTT_INVALID_PEER;
 
 	/* reset the ast index to flowid table */
 	dp_peer_reset_flowq_map(peer);
@@ -6956,8 +6998,6 @@ dp_peer_create_wifi3(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
 	}
 
 	dp_peer_rx_tids_create(peer);
-	if (IS_MLO_DP_MLD_PEER(peer))
-		dp_mld_peer_init_link_peers_info(peer);
 
 	peer->valid = 1;
 	dp_local_peer_id_alloc(pdev, peer);
@@ -6993,15 +7033,27 @@ dp_peer_create_wifi3(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
 			QDF_STATUS_SUCCESS)
 		dp_warn("peer ext_stats ctx alloc failed");
 
-	if (dp_monitor_peer_attach(soc, peer) !=
-	    QDF_STATUS_SUCCESS)
-		dp_warn("peer monitor ctx alloc failed");
-
 	dp_set_peer_isolation(peer, false);
 
 	dp_peer_update_state(soc, peer, DP_PEER_STATE_INIT);
 
 	dp_vdev_unref_delete(soc, vdev, DP_MOD_ID_CDP);
+
+	return QDF_STATUS_SUCCESS;
+fail:
+	qdf_mem_free(peer);
+	dp_vdev_unref_delete(soc, vdev, DP_MOD_ID_CDP);
+
+	return QDF_STATUS_E_FAILURE;
+}
+
+static QDF_STATUS dp_peer_legacy_setup(struct dp_soc *soc, struct dp_peer *peer)
+{
+	if (dp_txrx_peer_attach(soc, peer) !=
+				QDF_STATUS_SUCCESS) {
+		dp_err("peer txrx ctx alloc failed");
+		return QDF_STATUS_E_FAILURE;
+	}
 
 	return QDF_STATUS_SUCCESS;
 }
@@ -7302,6 +7354,12 @@ dp_peer_setup_wifi3(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
 	 * not setup reo_queues and default route for bss_peer.
 	 */
 	dp_monitor_peer_tx_init(pdev, peer);
+
+	if (!setup_info)
+		if (dp_peer_legacy_setup(soc, peer) !=
+				QDF_STATUS_SUCCESS)
+			goto fail;
+
 	if (peer->bss_peer && vdev->opmode == wlan_op_mode_ap) {
 		status = QDF_STATUS_E_FAILURE;
 		goto fail;
@@ -7933,6 +7991,11 @@ void dp_peer_unref_delete(struct dp_peer *peer, enum dp_mod_id mod_id)
 		dp_monitor_peer_detach(soc, peer);
 
 		qdf_spinlock_destroy(&peer->peer_state_lock);
+
+		/* dp_txrx_peer exists for mld peer and legacy peer */
+		if (peer->txrx_peer)
+			dp_txrx_peer_detach(soc, peer);
+
 		qdf_mem_free(peer);
 
 		/*
@@ -7943,6 +8006,18 @@ void dp_peer_unref_delete(struct dp_peer *peer, enum dp_mod_id mod_id)
 }
 
 qdf_export_symbol(dp_peer_unref_delete);
+
+/*
+ * dp_txrx_peer_unref_delete() - unref and delete peer
+ * @handle:    Datapath txrx ref handle
+ *
+ */
+void dp_txrx_peer_unref_delete(dp_txrx_ref_handle *handle)
+{
+	dp_peer_unref_delete((struct dp_peer *)handle, DP_MOD_ID_TX_RX);
+}
+
+qdf_export_symbol(dp_txrx_peer_unref_delete);
 
 #ifdef PEER_CACHE_RX_PKTS
 static inline void dp_peer_rx_bufq_resources_deinit(struct dp_peer *peer)
