@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021,2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -388,6 +388,56 @@ static inline QDF_STATUS dp_tx_pdev_init(struct dp_pdev *pdev)
 	return QDF_STATUS_SUCCESS;
 }
 
+/**
+ * dp_tx_prefetch_hw_sw_nbuf_desc() - function to prefetch HW and SW desc
+ * @soc: Handle to HAL Soc structure
+ * @hal_soc: HAL SOC handle
+ * @num_avail_for_reap: descriptors available for reap
+ * @hal_ring_hdl: ring pointer
+ * @last_prefetched_hw_desc: pointer to the last prefetched HW descriptor
+ * @last_prefetched_sw_desc: pointer to last prefetch SW desc
+ *
+ * Return: None
+ */
+#ifdef QCA_DP_TX_HW_SW_NBUF_DESC_PREFETCH
+static inline
+void dp_tx_prefetch_hw_sw_nbuf_desc(struct dp_soc *soc,
+				    hal_soc_handle_t hal_soc,
+				    uint32_t num_avail_for_reap,
+				    hal_ring_handle_t hal_ring_hdl,
+				    void **last_prefetched_hw_desc,
+				    struct dp_tx_desc_s
+				    **last_prefetched_sw_desc)
+{
+	if (*last_prefetched_sw_desc) {
+		qdf_prefetch((uint8_t *)(*last_prefetched_sw_desc)->nbuf);
+		qdf_prefetch((uint8_t *)(*last_prefetched_sw_desc)->nbuf + 64);
+	}
+
+	if (num_avail_for_reap && *last_prefetched_hw_desc) {
+		dp_tx_comp_get_prefetched_params_from_hal_desc(
+						soc,
+						*last_prefetched_hw_desc,
+						last_prefetched_sw_desc);
+		*last_prefetched_hw_desc =
+			hal_srng_dst_prefetch_next_cached_desc(
+					hal_soc,
+					hal_ring_hdl,
+					(uint8_t *)*last_prefetched_hw_desc);
+	}
+}
+#else
+static inline
+void dp_tx_prefetch_hw_sw_nbuf_desc(struct dp_soc *soc,
+				    hal_soc_handle_t hal_soc,
+				    uint32_t num_avail_for_reap,
+				    hal_ring_handle_t hal_ring_hdl,
+				    void **last_prefetched_hw_desc,
+				    struct dp_tx_desc_s
+				    **last_prefetched_sw_desc)
+{
+}
+#endif
 
 #ifndef FEATURE_WDS
 static inline void dp_tx_mec_handler(struct dp_vdev *vdev, uint8_t *status)

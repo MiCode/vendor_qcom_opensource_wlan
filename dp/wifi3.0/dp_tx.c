@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021,2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -4360,6 +4360,35 @@ void dp_tx_update_peer_basic_stats(struct dp_peer *peer, uint32_t length,
 }
 #endif
 
+/*
+ * dp_tx_prefetch_next_nbuf_data(): Prefetch nbuf and nbuf data
+ * @nbuf: skb buffer
+ *
+ * Return: none
+ */
+#ifdef QCA_DP_RX_NBUF_AND_NBUF_DATA_PREFETCH
+static inline
+void dp_tx_prefetch_next_nbuf_data(struct dp_tx_desc_s *next)
+{
+	qdf_nbuf_t nbuf = NULL;
+
+	if (next)
+		nbuf = next->nbuf;
+	if (nbuf) {
+		/* prefetch skb->next and first few bytes of skb->cb */
+		qdf_prefetch(nbuf);
+		/* prefetch skb fields present in different cachelines */
+		qdf_prefetch(&nbuf->len);
+		qdf_prefetch(&nbuf->users);
+	}
+}
+#else
+static inline
+void dp_tx_prefetch_next_nbuf_data(struct dp_tx_desc_s *next)
+{
+}
+#endif
+
 /**
  * dp_tx_comp_process_desc_list() - Tx complete software descriptor handler
  * @soc: core txrx main context
@@ -4385,6 +4414,9 @@ dp_tx_comp_process_desc_list(struct dp_soc *soc,
 	desc = comp_head;
 
 	while (desc) {
+		next = desc->next;
+		dp_tx_prefetch_next_nbuf_data(next);
+
 		if (peer_id != desc->peer_id) {
 			if (peer)
 				dp_peer_unref_delete(peer,
@@ -4409,7 +4441,6 @@ dp_tx_comp_process_desc_list(struct dp_soc *soc,
 			 * Calling a QDF WRAPPER here is creating signifcant
 			 * performance impact so avoided the wrapper call here
 			 */
-			next = desc->next;
 			dp_tx_desc_history_add(soc, desc->dma_addr, desc->nbuf,
 					       desc->id, DP_TX_COMP_UNMAP);
 			qdf_nbuf_unmap_nbytes_single_paddr(soc->osdev,
@@ -4433,8 +4464,6 @@ dp_tx_comp_process_desc_list(struct dp_soc *soc,
 						netbuf, ts.status);
 
 		dp_tx_comp_process_desc(soc, desc, &ts, peer);
-
-		next = desc->next;
 
 		dp_tx_desc_release(desc, desc->pool_id);
 		desc = next;
@@ -4511,6 +4540,9 @@ uint32_t dp_tx_comp_handler(struct dp_intr *int_ctx, struct dp_soc *soc,
 			    uint32_t quota)
 {
 	void *tx_comp_hal_desc;
+	void *last_prefetched_hw_desc = NULL;
+	struct dp_tx_desc_s *last_prefetched_sw_desc = NULL;
+	hal_soc_handle_t hal_soc;
 	uint8_t buffer_src;
 	struct dp_tx_desc_s *tx_desc = NULL;
 	struct dp_tx_desc_s *head_desc = NULL;
@@ -4525,6 +4557,8 @@ uint32_t dp_tx_comp_handler(struct dp_intr *int_ctx, struct dp_soc *soc,
 	DP_HIST_INIT();
 
 more_data:
+
+	hal_soc = soc->hal_soc;
 	/* Re-initialize local variables to be re-used */
 	head_desc = NULL;
 	tail_desc = NULL;
@@ -4539,12 +4573,14 @@ more_data:
 		return 0;
 	}
 
-	num_avail_for_reap = hal_srng_dst_num_valid(soc->hal_soc, hal_ring_hdl, 0);
+	num_avail_for_reap = hal_srng_dst_num_valid(hal_soc, hal_ring_hdl, 0);
 
 	if (num_avail_for_reap >= quota)
 		num_avail_for_reap = quota;
 
 	dp_srng_dst_inv_cached_descs(soc, hal_ring_hdl, num_avail_for_reap);
+	last_prefetched_hw_desc = dp_srng_dst_prefetch(hal_soc, hal_ring_hdl,
+						       num_avail_for_reap);
 
 	/* Find head descriptor from completion ring */
 	while (qdf_likely(num_avail_for_reap--)) {
@@ -4552,7 +4588,7 @@ more_data:
 		tx_comp_hal_desc =  dp_srng_dst_get_next(soc, hal_ring_hdl);
 		if (qdf_unlikely(!tx_comp_hal_desc))
 			break;
-		buffer_src = hal_tx_comp_get_buffer_source(soc->hal_soc,
+		buffer_src = hal_tx_comp_get_buffer_source(hal_soc,
 							   tx_comp_hal_desc);
 
 		/* If this buffer was not released by TQM or FW, then it is not
@@ -4578,7 +4614,7 @@ more_data:
 			 * Tx completions, and should just be ignored
 			 */
 			wbm_internal_error = hal_get_wbm_internal_error(
-							soc->hal_soc,
+							hal_soc,
 							tx_comp_hal_desc);
 
 			if (wbm_internal_error) {
@@ -4688,6 +4724,12 @@ next_desc:
 		 */
 
 		count++;
+
+		dp_tx_prefetch_hw_sw_nbuf_desc(soc, hal_soc,
+					       num_avail_for_reap,
+					       hal_ring_hdl,
+					       &last_prefetched_hw_desc,
+					       &last_prefetched_sw_desc);
 
 		if (dp_tx_comp_loop_pkt_limit_hit(soc, count, max_reap_limit))
 			break;

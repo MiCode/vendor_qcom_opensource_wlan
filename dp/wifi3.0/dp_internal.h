@@ -2193,7 +2193,9 @@ static inline void dp_srng_dst_inv_cached_descs(struct dp_soc *dp_soc,
 }
 #endif /* QCA_CACHED_RING_DESC */
 
-#if defined(QCA_CACHED_RING_DESC) && defined(QCA_DP_RX_HW_SW_NBUF_DESC_PREFETCH)
+#if defined(QCA_CACHED_RING_DESC) && \
+	(defined(QCA_DP_RX_HW_SW_NBUF_DESC_PREFETCH) || \
+	 defined(QCA_DP_TX_HW_SW_NBUF_DESC_PREFETCH))
 /**
  * dp_srng_dst_prefetch() - Wrapper function to prefetch descs from dest ring
  * @hal_soc_hdl: HAL SOC handle

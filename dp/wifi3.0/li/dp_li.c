@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021,2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -22,6 +22,7 @@
 #include <dp_htt.h>
 #include "dp_li.h"
 #include "dp_li_tx.h"
+#include "dp_tx_desc.h"
 #include "dp_li_rx.h"
 #include "dp_peer.h"
 
@@ -429,3 +430,25 @@ void dp_initialize_arch_ops_li(struct dp_arch_ops *arch_ops)
 	arch_ops->txrx_print_peer_stats = dp_print_peer_txrx_stats_li;
 }
 
+#ifdef QCA_DP_TX_HW_SW_NBUF_DESC_PREFETCH
+void dp_tx_comp_get_prefetched_params_from_hal_desc(
+					struct dp_soc *soc,
+					void *tx_comp_hal_desc,
+					struct dp_tx_desc_s **r_tx_desc)
+{
+	uint8_t pool_id;
+	uint32_t tx_desc_id;
+
+	tx_desc_id = hal_tx_comp_get_desc_id(tx_comp_hal_desc);
+	pool_id = (tx_desc_id & DP_TX_DESC_ID_POOL_MASK) >>
+		DP_TX_DESC_ID_POOL_OS;
+
+	/* Find Tx descriptor */
+	*r_tx_desc = dp_tx_desc_find(soc, pool_id,
+			(tx_desc_id & DP_TX_DESC_ID_PAGE_MASK) >>
+			DP_TX_DESC_ID_PAGE_OS,
+			(tx_desc_id & DP_TX_DESC_ID_OFFSET_MASK) >>
+			DP_TX_DESC_ID_OFFSET_OS);
+	qdf_prefetch((uint8_t *)*r_tx_desc);
+}
+#endif

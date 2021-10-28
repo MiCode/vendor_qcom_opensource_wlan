@@ -1677,6 +1677,7 @@ struct dp_arch_ops {
 					     struct dp_tx_desc_s *tx_desc,
 					     uint8_t *status,
 					     uint8_t ring_id);
+
 	uint32_t (*dp_rx_process)(struct dp_intr *int_ctx,
 				  hal_ring_handle_t hal_ring_hdl,
 				  uint8_t reo_ring_num, uint32_t quota);
@@ -3751,4 +3752,19 @@ void dp_vdev_get_default_reo_hash(struct dp_vdev *vdev,
 
 bool dp_reo_remap_config(struct dp_soc *soc, uint32_t *remap0,
 			 uint32_t *remap1, uint32_t *remap2);
+
+#ifdef QCA_DP_TX_HW_SW_NBUF_DESC_PREFETCH
+/**
+ * dp_tx_comp_get_prefetched_params_from_hal_desc() - Get prefetched TX desc
+ * @soc: DP soc handle
+ * @tx_comp_hal_desc: HAL TX Comp Descriptor
+ * @r_tx_desc: SW Tx Descriptor retrieved from HAL desc.
+ *
+ * Return: None
+ */
+void dp_tx_comp_get_prefetched_params_from_hal_desc(
+					struct dp_soc *soc,
+					void *tx_comp_hal_desc,
+					struct dp_tx_desc_s **r_tx_desc);
+#endif
 #endif /* _DP_TYPES_H_ */
