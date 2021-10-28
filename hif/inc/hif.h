@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2022 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2021 The Linux Foundation. All rights reserved.
  * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
@@ -124,6 +124,7 @@ enum hif_ic_irq {
 	host2tcl_input_ring3,
 	host2tcl_input_ring2,
 	host2tcl_input_ring1,
+	wbm2host_tx_completions_ring4,
 	wbm2host_tx_completions_ring3,
 	wbm2host_tx_completions_ring2,
 	wbm2host_tx_completions_ring1,

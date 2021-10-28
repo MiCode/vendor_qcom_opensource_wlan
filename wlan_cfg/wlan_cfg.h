@@ -132,6 +132,7 @@ struct wlan_srng_cfg {
  *			allocation request for this device
  * @per_pdev_tx_ring: 0: TCL ring is not mapped per radio
  *		       1: Each TCL ring is mapped to one radio/pdev
+ * @num_tx_comp_rings: Number of Tx comp rings supported by device
  * @num_tcl_data_rings: Number of TCL Data rings supported by device
  * @per_pdev_rx_ring: 0: REO ring is not mapped per radio
  *		       1: Each REO ring is mapped to one radio/pdev
@@ -257,6 +258,7 @@ struct wlan_cfg_dp_soc_ctxt {
 	int max_clients;
 	int max_alloc_size;
 	int per_pdev_tx_ring;
+	int num_tx_comp_rings;
 	int num_tcl_data_rings;
 	int num_nss_tcl_data_rings;
 	int per_pdev_rx_ring;
@@ -916,6 +918,14 @@ uint32_t wlan_cfg_max_alloc_size(struct wlan_cfg_dp_soc_ctxt *wlan_cfg_ctx);
  * Return: per_pdev_tx_ring
  */
 int wlan_cfg_per_pdev_tx_ring(struct wlan_cfg_dp_soc_ctxt *wlan_cfg_ctx);
+
+/*
+ * wlan_cfg_num_tx_comp_rings() - Number of Tx comp rings (HOST mode)
+ * @wlan_cfg_ctx
+ *
+ * Return: num_tx_comp_rings
+ */
+int wlan_cfg_num_tx_comp_rings(struct wlan_cfg_dp_soc_ctxt *wlan_cfg_ctx);
 
 /*
  * wlan_cfg_num_tcl_data_rings() - Number of TCL Data rings (HOST mode)

@@ -79,4 +79,5 @@
 
 #define MAX_RX_MAC_RINGS 2
 
+#define WBM2SW_TXCOMP_RING4_NUM 4
 #endif /* __WLAN_INIT_CFG_H */

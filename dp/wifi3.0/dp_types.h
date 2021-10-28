@@ -1930,6 +1930,9 @@ struct dp_soc {
 	/* TCL data ring */
 	struct dp_srng tcl_data_ring[MAX_TCL_DATA_RINGS];
 
+	/* Number of Tx comp rings */
+	uint8_t num_tx_comp_rings;
+
 	/* Number of TCL data rings */
 	uint8_t num_tcl_data_rings;
 
