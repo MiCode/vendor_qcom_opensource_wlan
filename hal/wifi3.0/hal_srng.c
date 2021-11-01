@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1087,6 +1087,8 @@ void *hal_attach(struct hif_opaque_softc *hif_handle, qdf_device_t qdf_dev)
 	qdf_atomic_init(&hal->active_work_cnt);
 	hal_delayed_reg_write_init(hal);
 
+	hal_reo_shared_qaddr_setup((hal_soc_handle_t)hal);
+
 	return (void *)hal;
 fail3:
 	qdf_mem_free_consistent(qdf_dev, qdf_dev->dev,
@@ -1151,6 +1153,9 @@ extern void hal_detach(void *hal_soc)
 		sizeof(*(hal->shadow_wrptr_mem_vaddr)) * HAL_MAX_LMAC_RINGS,
 		hal->shadow_wrptr_mem_vaddr, hal->shadow_wrptr_mem_paddr, 0);
 	qdf_minidump_remove(hal, sizeof(*hal), "hal_soc");
+
+	hal_reo_shared_qaddr_detach((hal_soc_handle_t)hal);
+
 	qdf_mem_free(hal);
 
 	return;

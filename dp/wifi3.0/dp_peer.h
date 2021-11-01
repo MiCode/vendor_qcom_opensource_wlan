@@ -1077,6 +1077,9 @@ void dp_peer_delete(struct dp_soc *soc,
 /* is MLO connection mld peer */
 #define IS_MLO_DP_MLD_PEER(_peer) \
 	((_peer)->peer_type == CDP_MLD_PEER_TYPE)
+/* Get Mld peer from link peer */
+#define DP_GET_MLD_PEER_FROM_PEER(link_peer) \
+	((link_peer)->mld_peer)
 
 #ifdef WLAN_MLO_MULTI_CHIP
 uint8_t dp_mlo_get_chip_id(struct dp_soc *soc);
@@ -1533,6 +1536,7 @@ bool dp_peer_is_primary_link_peer(struct dp_peer *peer)
 #define IS_DP_LEGACY_PEER(_peer) true
 #define IS_MLO_DP_LINK_PEER(_peer) false
 #define IS_MLO_DP_MLD_PEER(_peer) false
+#define DP_GET_MLD_PEER_FROM_PEER(link_peer) NULL
 
 static inline
 struct dp_peer *dp_peer_get_tgt_peer_hash_find(struct dp_soc *soc,
@@ -1714,4 +1718,12 @@ void dp_peer_rx_tids_destroy(struct dp_peer *peer)
 
 	peer->rx_tid = NULL;
 }
+
+#ifdef REO_SHARED_QREF_TABLE_EN
+void dp_peer_rx_reo_shared_qaddr_delete(struct dp_soc *soc,
+					struct dp_peer *peer);
+#else
+static inline void dp_peer_rx_reo_shared_qaddr_delete(struct dp_soc *soc,
+						      struct dp_peer *peer) {}
+#endif
 #endif /* _DP_PEER_H_ */

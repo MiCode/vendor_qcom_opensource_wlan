@@ -5915,6 +5915,38 @@ void dp_print_peer_txrx_stats_li(struct dp_peer *peer,
 	}
 }
 
+#ifdef REO_SHARED_QREF_TABLE_EN
+static void dp_peer_print_reo_qref_table(struct dp_peer *peer)
+{
+	struct hal_soc *hal;
+	struct dp_peer *mld_peer;
+	int i;
+	uint64_t *reo_qref_addr;
+	uint32_t peer_idx;
+
+	hal = (struct hal_soc *)peer->vdev->pdev->soc->hal_soc;
+	peer_idx = (peer->peer_id * DP_MAX_TIDS);
+	reo_qref_addr = &hal->reo_qref.non_mlo_reo_qref_table_vaddr[peer_idx];
+	mld_peer = DP_GET_MLD_PEER_FROM_PEER(peer);
+	if (mld_peer) {
+		peer = mld_peer;
+		hal = (struct hal_soc *)
+			  peer->vdev->pdev->soc->hal_soc;
+		peer_idx = (mld_peer->peer_id - HAL_ML_PEER_ID_START) *
+			    DP_MAX_TIDS;
+		reo_qref_addr = &hal->reo_qref.mlo_reo_qref_table_vaddr[peer_idx];
+	}
+	DP_PRINT_STATS("Reo Qref table for peer_id: %d\n", peer->peer_id);
+
+	for (i = 0; i < DP_MAX_TIDS; i++)
+		DP_PRINT_STATS("    Tid [%d]  :%llx", i, reo_qref_addr[i]);
+}
+#else
+static inline void dp_peer_print_reo_qref_table(struct dp_peer *peer)
+{
+}
+#endif
+
 void dp_print_peer_stats(struct dp_peer *peer)
 {
 	uint8_t i;
@@ -6184,6 +6216,8 @@ void dp_print_peer_stats(struct dp_peer *peer)
 		pdev->soc->arch_ops.txrx_print_peer_stats(peer, PEER_RX_STATS);
 
 	dp_peer_print_rx_delay_stats(pdev, peer);
+
+	dp_peer_print_reo_qref_table(peer);
 }
 
 void dp_print_per_ring_stats(struct dp_soc *soc)

@@ -859,6 +859,7 @@ static inline void hal_rx_dump_mpdu_start_tlv_9224(void *mpdustart,
 #endif
 	QDF_TRACE(dbg_level, QDF_MODULE_ID_HAL,
 		  "rx_mpdu_start tlv (1/5) - "
+		  "rx_reo_queue_desc_addr_31_0 :%x"
 		  "rx_reo_queue_desc_addr_39_32 :%x"
 		  "receive_queue_number:%x "
 		  "pre_delim_err_warning:%x "
@@ -877,6 +878,7 @@ static inline void hal_rx_dump_mpdu_start_tlv_9224(void *mpdustart,
 		  "bssid_number:%x "
 		  "tid:%x "
 		  "reserved_7a:%x ",
+		  mpdu_info->rx_reo_queue_desc_addr_31_0,
 		  mpdu_info->rx_reo_queue_desc_addr_39_32,
 		  mpdu_info->receive_queue_number,
 		  mpdu_info->pre_delim_err_warning,
@@ -1625,6 +1627,8 @@ static void hal_reo_setup_9224(struct hal_soc *soc, void *reoparams)
 	 * GLOBAL_LINK_DESC_COUNT_THRESH_IX_0[1,2]
 	 * GLOBAL_LINK_DESC_COUNT_CTRL
 	 */
+
+	hal_reo_shared_qaddr_init((hal_soc_handle_t)soc);
 }
 
 static void hal_hw_txrx_ops_attach_qcn9224(struct hal_soc *hal_soc)
@@ -1830,6 +1834,12 @@ static void hal_hw_txrx_ops_attach_qcn9224(struct hal_soc *hal_soc)
 			hal_rx_priv_info_get_from_tlv_be;
 	hal_soc->ops->hal_rx_pkt_hdr_get = hal_rx_pkt_hdr_get_be;
 	hal_soc->ops->hal_reo_setup = hal_reo_setup_9224;
+#ifdef REO_SHARED_QREF_TABLE_EN
+	hal_soc->ops->hal_reo_shared_qaddr_setup = hal_reo_shared_qaddr_setup_be;
+	hal_soc->ops->hal_reo_shared_qaddr_init = hal_reo_shared_qaddr_init_be;
+	hal_soc->ops->hal_reo_shared_qaddr_detach = hal_reo_shared_qaddr_detach_be;
+	hal_soc->ops->hal_reo_shared_qaddr_write = hal_reo_shared_qaddr_write_be;
+#endif
 };
 
 struct hal_hw_srng_config hw_srng_table_9224[] = {

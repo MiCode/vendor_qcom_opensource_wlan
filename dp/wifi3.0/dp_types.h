@@ -1760,6 +1760,11 @@ struct dp_arch_ops {
 #endif
 	void (*txrx_print_peer_stats)(struct dp_peer *peer,
 				      enum peer_stats_type stats_type);
+	/* Dp peer reorder queue setup */
+	QDF_STATUS (*dp_peer_rx_reorder_queue_setup)(struct dp_soc *soc,
+						     struct dp_peer *peer,
+						     int tid,
+						     uint32_t ba_window_size);
 };
 
 /**

@@ -2479,6 +2479,22 @@ void dp_rx_tid_stats_cb(struct dp_soc *soc, void *cb_ctxt,
 			rx_tid->pn_size);
 }
 
+#ifdef REO_SHARED_QREF_TABLE_EN
+void dp_peer_rx_reo_shared_qaddr_delete(struct dp_soc *soc,
+					struct dp_peer *peer)
+{
+	uint8_t tid;
+
+	if (IS_MLO_DP_LINK_PEER(peer))
+		return;
+	if (hal_reo_shared_qaddr_is_enable(soc->hal_soc)) {
+		for (tid = 0; tid < DP_MAX_TIDS; tid++)
+			hal_reo_shared_qaddr_write(soc->hal_soc,
+						   peer->peer_id, tid, 0);
+	}
+}
+#endif
+
 /*
  * dp_peer_find_add_id() - map peer_id with peer
  * @soc: soc handle
@@ -2569,6 +2585,7 @@ dp_rx_mlo_peer_map_handler(struct dp_soc *soc, uint16_t peer_id,
 	uint16_t ml_peer_id = dp_gen_ml_peer_id(soc, peer_id);
 	enum cdp_txrx_ast_entry_type type = CDP_TXRX_AST_TYPE_STATIC;
 	QDF_STATUS err = QDF_STATUS_SUCCESS;
+	struct dp_soc *primary_soc;
 
 	dp_info("mlo_peer_map_event (soc:%pK): peer_id %d ml_peer_id %d, peer_mac "QDF_MAC_ADDR_FMT,
 		soc, peer_id, ml_peer_id,
@@ -2605,6 +2622,28 @@ dp_rx_mlo_peer_map_handler(struct dp_soc *soc, uint16_t peer_id,
 			dp_peer_add_ast(soc, peer,
 					peer_mac_addr,
 					type, 0);
+		}
+		/* If peer setup and hence rx_tid setup got called
+		 * before htt peer map then Qref write to LUT did not
+		 * happen in rx_tid setup as peer_id was invalid.
+		 * So defer Qref write to peer map handler. Check if
+		 * rx_tid qdesc for tid 0 is already setup and perform
+		 * qref write to LUT for Tid 0 and 16.
+		 *
+		 * Peer map could be obtained on assoc link, hence
+		 * change to primary link's soc.
+		 */
+		primary_soc = peer->vdev->pdev->soc;
+		if (hal_reo_shared_qaddr_is_enable(primary_soc->hal_soc) &&
+		    peer->rx_tid[0].hw_qdesc_vaddr_unaligned) {
+			hal_reo_shared_qaddr_write(primary_soc->hal_soc,
+						   ml_peer_id,
+						   0,
+						   peer->rx_tid[0].hw_qdesc_paddr);
+			hal_reo_shared_qaddr_write(primary_soc->hal_soc,
+						   ml_peer_id,
+						   DP_NON_QOS_TID,
+						   peer->rx_tid[DP_NON_QOS_TID].hw_qdesc_paddr);
 		}
 	}
 
@@ -2706,7 +2745,28 @@ dp_rx_peer_map_handler(struct dp_soc *soc, uint16_t peer_id,
 						peer_mac_addr,
 						type, 0);
 			}
+
+			/* If peer setup and hence rx_tid setup got called
+			 * before htt peer map then Qref write to LUT did
+			 * not happen in rx_tid setup as peer_id was invalid.
+			 * So defer Qref write to peer map handler. Check if
+			 * rx_tid qdesc for tid 0 is already setup perform qref
+			 * write to LUT for Tid 0 and 16.
+			 */
+			if (hal_reo_shared_qaddr_is_enable(soc->hal_soc) &&
+			    peer->rx_tid[0].hw_qdesc_vaddr_unaligned &&
+			    !IS_MLO_DP_LINK_PEER(peer)) {
+				hal_reo_shared_qaddr_write(soc->hal_soc,
+							   peer_id,
+							   0,
+							   peer->rx_tid[0].hw_qdesc_paddr);
+				hal_reo_shared_qaddr_write(soc->hal_soc,
+							   peer_id,
+							   DP_NON_QOS_TID,
+							   peer->rx_tid[DP_NON_QOS_TID].hw_qdesc_paddr);
+			}
 		}
+
 		err = dp_peer_map_ast(soc, peer, peer_mac_addr, hw_peer_id,
 				      vdev_id, ast_hash, is_wds);
 	}
@@ -2773,6 +2833,14 @@ dp_rx_peer_unmap_handler(struct dp_soc *soc, uint16_t peer_id,
 
 	dp_info("peer_unmap_event (soc:%pK) peer_id %d peer %pK",
 		soc, peer_id, peer);
+
+	/* Clear entries in Qref LUT */
+	/* TODO: Check if this is to be called from
+	 * dp_peer_delete for MLO case if there is race between
+	 * new peer id assignment and still not having received
+	 * peer unmap for MLD peer with same peer id.
+	 */
+	dp_peer_rx_reo_shared_qaddr_delete(soc, peer);
 
 	dp_peer_find_id_to_obj_remove(soc, peer_id);
 	dp_mlo_partner_chips_unmap(soc, peer_id);
@@ -2914,83 +2982,6 @@ bool dp_rx_tid_update_allow(struct dp_peer *peer)
 
 	return true;
 }
-
-/**
- * dp_peer_rx_reorder_queue_setup() - Send reo queue setup wmi cmd to FW
-				      per peer type
- * @soc: DP Soc handle
- * @peer: dp peer to operate on
- * @tid: TID
- * @ba_window_size: BlockAck window size
- *
- * Return: 0 - success, others - failure
- */
-static QDF_STATUS dp_peer_rx_reorder_queue_setup(struct dp_soc *soc,
-						 struct dp_peer *peer,
-						 int tid,
-						 uint32_t ba_window_size)
-{
-	uint8_t i;
-	struct dp_mld_link_peers link_peers_info;
-	struct dp_peer *link_peer;
-	struct dp_rx_tid *rx_tid;
-	struct dp_soc *link_peer_soc;
-
-	rx_tid = &peer->rx_tid[tid];
-	if (!rx_tid->hw_qdesc_paddr)
-		return QDF_STATUS_E_INVAL;
-
-	if (IS_MLO_DP_MLD_PEER(peer)) {
-		/* get link peers with reference */
-		dp_get_link_peers_ref_from_mld_peer(soc, peer,
-						    &link_peers_info,
-						    DP_MOD_ID_CDP);
-		/* send WMI cmd to each link peers */
-		for (i = 0; i < link_peers_info.num_links; i++) {
-			link_peer = link_peers_info.link_peers[i];
-			link_peer_soc = link_peer->vdev->pdev->soc;
-			if (link_peer_soc->cdp_soc.ol_ops->
-					peer_rx_reorder_queue_setup) {
-				if (link_peer_soc->cdp_soc.ol_ops->
-					peer_rx_reorder_queue_setup(
-						link_peer_soc->ctrl_psoc,
-						link_peer->vdev->pdev->pdev_id,
-						link_peer->vdev->vdev_id,
-						link_peer->mac_addr.raw,
-						rx_tid->hw_qdesc_paddr,
-						tid, tid,
-						1, ba_window_size)) {
-					dp_peer_err("%pK: Failed to send reo queue setup to FW - tid %d\n",
-						    link_peer_soc, tid);
-					return QDF_STATUS_E_FAILURE;
-				}
-			}
-		}
-		/* release link peers reference */
-		dp_release_link_peers_ref(&link_peers_info, DP_MOD_ID_CDP);
-	} else if (peer->peer_type == CDP_LINK_PEER_TYPE) {
-			if (soc->cdp_soc.ol_ops->peer_rx_reorder_queue_setup) {
-				if (soc->cdp_soc.ol_ops->
-					peer_rx_reorder_queue_setup(
-						soc->ctrl_psoc,
-						peer->vdev->pdev->pdev_id,
-						peer->vdev->vdev_id,
-						peer->mac_addr.raw,
-						rx_tid->hw_qdesc_paddr,
-						tid, tid,
-						1, ba_window_size)) {
-					dp_peer_err("%pK: Failed to send reo queue setup to FW - tid %d\n",
-						    soc, tid);
-					return QDF_STATUS_E_FAILURE;
-				}
-			}
-	} else {
-		dp_peer_err("invalid peer type %d", peer->peer_type);
-		return QDF_STATUS_E_FAILURE;
-	}
-
-	return QDF_STATUS_SUCCESS;
-}
 #else
 static inline
 bool dp_rx_tid_setup_allow(struct dp_peer *peer)
@@ -3002,32 +2993,6 @@ static inline
 bool dp_rx_tid_update_allow(struct dp_peer *peer)
 {
 	return true;
-}
-
-static QDF_STATUS dp_peer_rx_reorder_queue_setup(struct dp_soc *soc,
-						 struct dp_peer *peer,
-						 int tid,
-						 uint32_t ba_window_size)
-{
-	struct dp_rx_tid *rx_tid = &peer->rx_tid[tid];
-
-	if (!rx_tid->hw_qdesc_paddr)
-		return QDF_STATUS_E_INVAL;
-
-	if (soc->cdp_soc.ol_ops->peer_rx_reorder_queue_setup) {
-		if (soc->cdp_soc.ol_ops->peer_rx_reorder_queue_setup(
-		    soc->ctrl_psoc,
-		    peer->vdev->pdev->pdev_id,
-		    peer->vdev->vdev_id,
-		    peer->mac_addr.raw, rx_tid->hw_qdesc_paddr, tid, tid,
-		    1, ba_window_size)) {
-			dp_peer_err("%pK: Failed to send reo queue setup to FW - tid %d\n",
-				    soc, tid);
-			return QDF_STATUS_E_FAILURE;
-		}
-	}
-
-	return QDF_STATUS_SUCCESS;
 }
 #endif
 
@@ -3753,11 +3718,10 @@ static void dp_peer_rx_tids_init(struct dp_peer *peer)
 	int tid;
 	struct dp_rx_tid *rx_tid;
 
-	/* if not first assoc link peer or MLD peer,
+	/* if not first assoc link peer,
 	 * not to initialize rx_tids again.
 	 */
-	if ((IS_MLO_DP_LINK_PEER(peer) && !peer->first_link) ||
-	    IS_MLO_DP_MLD_PEER(peer))
+	if (IS_MLO_DP_LINK_PEER(peer) && !peer->first_link)
 		return;
 
 	for (tid = 0; tid < DP_MAX_TIDS; tid++) {

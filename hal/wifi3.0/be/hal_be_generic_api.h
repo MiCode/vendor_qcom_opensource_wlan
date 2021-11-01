@@ -1796,4 +1796,155 @@ hal_txmon_status_free_buffer_generic_be(qdf_frag_t status_frag)
 	} while (tlv_status == HAL_MON_TX_STATUS_PPDU_NOT_DONE);
 }
 #endif /* QCA_MONITOR_2_0_SUPPORT */
+
+#ifdef REO_SHARED_QREF_TABLE_EN
+/* hal_reo_shared_qaddr_write(): Write REO tid queue addr
+ * LUT shared by SW and HW at the index given by peer id
+ * and tid.
+ *
+ * @hal_soc: hal soc pointer
+ * @reo_qref_addr: pointer to index pointed to be peer_id
+ * and tid
+ * @tid: tid queue number
+ * @hw_qdesc_paddr: reo queue addr
+ */
+
+static void hal_reo_shared_qaddr_write_be(hal_soc_handle_t hal_soc_hdl,
+					  uint16_t peer_id,
+					  int tid,
+					  qdf_dma_addr_t hw_qdesc_paddr)
+{
+	struct hal_soc *hal = (struct hal_soc *)hal_soc_hdl;
+	struct rx_reo_queue_reference *reo_qref;
+	uint32_t peer_tid_idx;
+
+	/* Plug hw_desc_addr in Host reo queue reference table */
+	if (HAL_PEER_ID_IS_MLO(peer_id)) {
+		peer_tid_idx = ((peer_id - HAL_ML_PEER_ID_START) *
+				DP_MAX_TIDS) + tid;
+		reo_qref = (struct rx_reo_queue_reference *)
+			&hal->reo_qref.mlo_reo_qref_table_vaddr[peer_tid_idx];
+	} else {
+		peer_tid_idx = (peer_id * DP_MAX_TIDS) + tid;
+		reo_qref = (struct rx_reo_queue_reference *)
+			&hal->reo_qref.non_mlo_reo_qref_table_vaddr[peer_tid_idx];
+	}
+	reo_qref->rx_reo_queue_desc_addr_31_0 =
+		hw_qdesc_paddr & 0xffffffff;
+	reo_qref->rx_reo_queue_desc_addr_39_32 =
+		(hw_qdesc_paddr & 0xff00000000) >> 32;
+	if (hw_qdesc_paddr != 0)
+		reo_qref->receive_queue_number = tid;
+	else
+		reo_qref->receive_queue_number = 0;
+
+	hal_verbose_debug("hw_qdesc_paddr: %llx, tid: %d, reo_qref:%pK,"
+			  "rx_reo_queue_desc_addr_31_0: %x,"
+			  "rx_reo_queue_desc_addr_39_32: %x",
+			  hw_qdesc_paddr, tid, reo_qref,
+			  reo_qref->rx_reo_queue_desc_addr_31_0,
+			  reo_qref->rx_reo_queue_desc_addr_39_32);
+}
+
+/**
+ * hal_reo_shared_qaddr_setup() - Allocate MLO and Non MLO reo queue
+ * reference table shared between SW and HW and initialize in Qdesc Base0
+ * base1 registers provided by HW.
+ *
+ * @hal_soc: HAL Soc handle
+ *
+ * Return: None
+ */
+static void hal_reo_shared_qaddr_setup_be(hal_soc_handle_t hal_soc_hdl)
+{
+	struct hal_soc *hal = (struct hal_soc *)hal_soc_hdl;
+
+	hal->reo_qref.reo_qref_table_en = 1;
+
+	hal->reo_qref.mlo_reo_qref_table_vaddr =
+		(uint64_t *)qdf_mem_alloc_consistent(
+				hal->qdf_dev, hal->qdf_dev->dev,
+				REO_QUEUE_REF_ML_TABLE_SIZE,
+				&hal->reo_qref.mlo_reo_qref_table_paddr);
+	hal->reo_qref.non_mlo_reo_qref_table_vaddr =
+		(uint64_t *)qdf_mem_alloc_consistent(
+				hal->qdf_dev, hal->qdf_dev->dev,
+				REO_QUEUE_REF_NON_ML_TABLE_SIZE,
+				&hal->reo_qref.non_mlo_reo_qref_table_paddr);
+
+	hal_verbose_debug("MLO table start paddr:%llx,"
+			  "Non-MLO table start paddr:%llx,"
+			  "MLO table start vaddr: %pK,"
+			  "Non MLO table start vaddr: %pK",
+			  hal->reo_qref.mlo_reo_qref_table_paddr,
+			  hal->reo_qref.non_mlo_reo_qref_table_paddr,
+			  hal->reo_qref.mlo_reo_qref_table_vaddr,
+			  hal->reo_qref.non_mlo_reo_qref_table_vaddr);
+}
+
+/**
+ * hal_reo_shared_qaddr_init() - Zero out REO qref LUT and
+ * write start addr of MLO and Non MLO table in HW
+ *
+ * @hal_soc: HAL Soc handle
+ *
+ * Return: None
+ */
+static void hal_reo_shared_qaddr_init_be(hal_soc_handle_t hal_soc_hdl)
+{
+	struct hal_soc *hal = (struct hal_soc *)hal_soc_hdl;
+
+	qdf_mem_zero(hal->reo_qref.mlo_reo_qref_table_vaddr,
+		     REO_QUEUE_REF_ML_TABLE_SIZE);
+	qdf_mem_zero(hal->reo_qref.non_mlo_reo_qref_table_vaddr,
+		     REO_QUEUE_REF_NON_ML_TABLE_SIZE);
+	/* LUT_BASE0 and BASE1 registers expect upper 32bits of LUT base address
+	 * and lower 8 bits to be 0. Shift the physical address by 8 to plug
+	 * upper 32bits only
+	 */
+	HAL_REG_WRITE(hal,
+		      HWIO_REO_R0_QDESC_LUT_BASE0_ADDR_ADDR(REO_REG_REG_BASE),
+		      hal->reo_qref.non_mlo_reo_qref_table_paddr >> 8);
+	HAL_REG_WRITE(hal,
+		      HWIO_REO_R0_QDESC_LUT_BASE1_ADDR_ADDR(REO_REG_REG_BASE),
+		      hal->reo_qref.mlo_reo_qref_table_paddr >> 8);
+	HAL_REG_WRITE(hal,
+		      HWIO_REO_R0_QDESC_ADDR_READ_ADDR(REO_REG_REG_BASE),
+		      HAL_SM(HWIO_REO_R0_QDESC_ADDR_READ, LUT_FEATURE_ENABLE,
+			     1));
+	HAL_REG_WRITE(hal,
+		      HWIO_REO_R0_QDESC_MAX_SW_PEER_ID_ADDR(REO_REG_REG_BASE),
+		      HAL_MS(HWIO_REO_R0_QDESC, MAX_SW_PEER_ID_MAX_SUPPORTED,
+			     0x1fff));
+}
+
+/**
+ * hal_reo_shared_qaddr_detach() - Free MLO and Non MLO reo queue
+ * reference table shared between SW and HW
+ *
+ * @hal_soc: HAL Soc handle
+ *
+ * Return: None
+ */
+static void hal_reo_shared_qaddr_detach_be(hal_soc_handle_t hal_soc_hdl)
+{
+	struct hal_soc *hal = (struct hal_soc *)hal_soc_hdl;
+
+	HAL_REG_WRITE(hal,
+		      HWIO_REO_R0_QDESC_LUT_BASE0_ADDR_ADDR(REO_REG_REG_BASE),
+		      0);
+	HAL_REG_WRITE(hal,
+		      HWIO_REO_R0_QDESC_LUT_BASE1_ADDR_ADDR(REO_REG_REG_BASE),
+		      0);
+
+	qdf_mem_free_consistent(hal->qdf_dev, hal->qdf_dev->dev,
+				REO_QUEUE_REF_ML_TABLE_SIZE,
+				hal->reo_qref.mlo_reo_qref_table_vaddr,
+				hal->reo_qref.mlo_reo_qref_table_paddr, 0);
+	qdf_mem_free_consistent(hal->qdf_dev, hal->qdf_dev->dev,
+				REO_QUEUE_REF_NON_ML_TABLE_SIZE,
+				hal->reo_qref.non_mlo_reo_qref_table_vaddr,
+				hal->reo_qref.non_mlo_reo_qref_table_paddr, 0);
+}
+#endif
 #endif /* _HAL_BE_GENERIC_API_H_ */

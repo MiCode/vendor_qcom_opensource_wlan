@@ -43,7 +43,9 @@
 
 #include <reo_descriptor_threshold_reached_status.h>
 #include <reo_flush_queue.h>
-
+#ifdef REO_SHARED_QREF_TABLE_EN
+#include "rx_reo_queue_reference.h"
+#endif
 #define HAL_DESC_64_SET_FIELD(_desc, _word, _fld, _value) do { \
 	((uint64_t *)(_desc))[(_word ## _ ## _fld ## _OFFSET) >> 3] &= \
 		~(_word ## _ ## _fld ## _MASK); \
