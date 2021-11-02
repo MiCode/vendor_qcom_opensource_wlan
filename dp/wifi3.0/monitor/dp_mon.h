@@ -586,7 +586,7 @@ struct dp_mon_ops {
 #ifdef QCA_ENHANCED_STATS_SUPPORT
 	void (*mon_filter_setup_enhanced_stats)(struct dp_pdev *pdev);
 	void (*mon_filter_reset_enhanced_stats)(struct dp_pdev *pdev);
-	void (*mon_tx_stats_update)(struct dp_peer *peer,
+	void (*mon_tx_stats_update)(struct dp_mon_peer *mon_peer,
 				    struct cdp_tx_completion_ppdu_user *ppdu);
 #endif
 #ifdef QCA_MCOPY_SUPPORT
@@ -648,7 +648,7 @@ struct dp_mon_ops {
 #endif
 	void (*mon_register_feature_ops)(struct dp_soc *soc);
 #ifdef QCA_ENHANCED_STATS_SUPPORT
-	void (*mon_rx_stats_update)(struct dp_peer *peer,
+	void (*mon_rx_stats_update)(struct dp_mon_peer *mon_peer,
 				    struct cdp_rx_indication_ppdu *ppdu,
 				    struct cdp_rx_stats_ppdu_user *ppdu_user);
 	void (*mon_rx_populate_ppdu_usr_info)(struct mon_rx_user_status *rx_user_status,
@@ -1053,13 +1053,24 @@ dp_pkt_log_init(struct cdp_soc_t *soc_hdl, uint8_t pdev_id, void *scn)
 }
 #endif
 
-#ifdef WDI_EVENT_ENABLE
+#if defined(WDI_EVENT_ENABLE) && defined(QCA_ENHANCED_STATS_SUPPORT)
 QDF_STATUS dp_peer_stats_notify(struct dp_pdev *pdev, struct dp_peer *peer);
 #else
 static inline QDF_STATUS dp_peer_stats_notify(struct dp_pdev *pdev,
 					      struct dp_peer *peer)
 {
 	return QDF_STATUS_SUCCESS;
+}
+#endif
+
+#if defined(FEATURE_PERPKT_INFO) && defined(WDI_EVENT_ENABLE)
+void dp_send_stats_event(struct dp_pdev *pdev, struct dp_peer *peer,
+			 uint16_t peer_id);
+#else
+static inline
+void dp_send_stats_event(struct dp_pdev *pdev, struct dp_peer *peer,
+			 uint16_t peer_id)
+{
 }
 #endif
 

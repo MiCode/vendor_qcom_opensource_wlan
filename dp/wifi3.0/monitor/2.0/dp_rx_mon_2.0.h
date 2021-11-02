@@ -90,13 +90,13 @@ void dp_rx_mon_process_status_tlv(struct dp_soc *soc,
 /**
  * dp_rx_mon_stats_update_2_0 () - update rx stats
  *
- * @peer: peer handle
+ * @peer: monitor peer handle
  * @ppdu: Rx PPDU status metadata object
  * @ppdu_user: Rx PPDU user status metadata object
  *
  * Return: Void
  */
-void dp_rx_mon_stats_update_2_0(struct dp_peer *peer,
+void dp_rx_mon_stats_update_2_0(struct dp_mon_peer *mon_peer,
 				struct cdp_rx_indication_ppdu *ppdu,
 				struct cdp_rx_stats_ppdu_user *ppdu_user);
 

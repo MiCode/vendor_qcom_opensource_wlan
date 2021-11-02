@@ -383,7 +383,7 @@ QDF_STATUS dp_vdev_set_monitor_mode_rings_2_0(struct dp_pdev *pdev,
 
 #if defined(QCA_ENHANCED_STATS_SUPPORT) && defined(WLAN_FEATURE_11BE)
 void
-dp_mon_tx_stats_update_2_0(struct dp_peer *peer,
+dp_mon_tx_stats_update_2_0(struct dp_mon_peer *mon_peer,
 			   struct cdp_tx_completion_ppdu_user *ppdu)
 {
 	uint8_t preamble;
@@ -392,38 +392,38 @@ dp_mon_tx_stats_update_2_0(struct dp_peer *peer,
 	preamble = ppdu->preamble;
 	mcs = ppdu->mcs;
 
-	DP_STATS_INCC(peer,
+	DP_STATS_INCC(mon_peer,
 		      tx.pkt_type[preamble].mcs_count[MAX_MCS - 1],
 		      ppdu->num_msdu,
 		      ((mcs >= (MAX_MCS - 1)) && (preamble == DOT11_BE)));
-	DP_STATS_INCC(peer,
+	DP_STATS_INCC(mon_peer,
 		      tx.pkt_type[preamble].mcs_count[mcs],
 		      ppdu->num_msdu,
 		      ((mcs < (MAX_MCS - 1)) && (preamble == DOT11_BE)));
-	DP_STATS_INCC(peer,
+	DP_STATS_INCC(mon_peer,
 		      tx.su_be_ppdu_cnt.mcs_count[MAX_MCS - 1], 1,
 		      ((mcs >= (MAX_MCS - 1)) && (preamble == DOT11_BE) &&
 		      (ppdu->ppdu_type == HTT_PPDU_STATS_PPDU_TYPE_SU)));
-	DP_STATS_INCC(peer,
+	DP_STATS_INCC(mon_peer,
 		      tx.su_be_ppdu_cnt.mcs_count[mcs], 1,
 		      ((mcs < (MAX_MCS - 1)) && (preamble == DOT11_BE) &&
 		      (ppdu->ppdu_type == HTT_PPDU_STATS_PPDU_TYPE_SU)));
-	DP_STATS_INCC(peer,
+	DP_STATS_INCC(mon_peer,
 		      tx.mu_be_ppdu_cnt[TXRX_TYPE_MU_OFDMA].mcs_count[MAX_MCS - 1],
 		      1, ((mcs >= (MAX_MCS - 1)) &&
 		      (preamble == DOT11_BE) &&
 		      (ppdu->ppdu_type == HTT_PPDU_STATS_PPDU_TYPE_MU_OFDMA)));
-	DP_STATS_INCC(peer,
+	DP_STATS_INCC(mon_peer,
 		      tx.mu_be_ppdu_cnt[TXRX_TYPE_MU_OFDMA].mcs_count[mcs],
 		      1, ((mcs < (MAX_MCS - 1)) &&
 		      (preamble == DOT11_BE) &&
 		      (ppdu->ppdu_type == HTT_PPDU_STATS_PPDU_TYPE_MU_OFDMA)));
-	DP_STATS_INCC(peer,
+	DP_STATS_INCC(mon_peer,
 		      tx.mu_be_ppdu_cnt[TXRX_TYPE_MU_MIMO].mcs_count[MAX_MCS - 1],
 		      1, ((mcs >= (MAX_MCS - 1)) &&
 		      (preamble == DOT11_BE) &&
 		      (ppdu->ppdu_type == HTT_PPDU_STATS_PPDU_TYPE_MU_MIMO)));
-	DP_STATS_INCC(peer,
+	DP_STATS_INCC(mon_peer,
 		      tx.mu_be_ppdu_cnt[TXRX_TYPE_MU_MIMO].mcs_count[mcs],
 		      1, ((mcs < (MAX_MCS - 1)) &&
 		      (preamble == DOT11_BE) &&
@@ -433,7 +433,7 @@ dp_mon_tx_stats_update_2_0(struct dp_peer *peer,
 
 #if defined(QCA_ENHANCED_STATS_SUPPORT) && !defined(WLAN_FEATURE_11BE)
 void
-dp_mon_tx_stats_update_2_0(struct dp_peer *peer,
+dp_mon_tx_stats_update_2_0(struct dp_mon_peer *mon_peer,
 			   struct cdp_tx_completion_ppdu_user *ppdu)
 {
 }
