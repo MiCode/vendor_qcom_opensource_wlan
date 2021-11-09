@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2020-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -18,10 +19,6 @@
 
 #include "dp_rx_buffer_pool.h"
 #include "dp_ipa.h"
-#ifdef WLAN_FEATURE_RX_PREALLOC_BUFFER_POOL
-#include "dp_mon.h"
-#include "dp_rx_mon.h"
-#endif
 
 #ifndef DP_RX_BUFFER_POOL_SIZE
 #define DP_RX_BUFFER_POOL_SIZE 128
@@ -44,8 +41,7 @@ bool dp_rx_buffer_pool_refill(struct dp_soc *soc, qdf_nbuf_t nbuf, u8 mac_id)
 		return consumed;
 
 	/* process only buffers of RXDMA ring */
-	if (qdf_unlikely(rx_desc_pool !=
-			 dp_rx_get_mon_desc_pool(soc, mac_id, pdev->pdev_id)))
+	if (soc->wlan_cfg_ctx->rxdma1_enable)
 		return consumed;
 
 	first_nbuf = nbuf;
