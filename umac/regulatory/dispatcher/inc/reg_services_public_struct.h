@@ -572,11 +572,13 @@ enum reg_6g_ap_type {
  * @REG_SUBORDINATE_CLIENT: Subordinate client
  * @REG_MAX_CLIENT_TYPE: Maximum value possible for max tx-power category
  * (2 bits) sub-field in the TPE (Transmit Power Envelope) IE
+ * REG_INVALID_CLIENT_TYPE: Invalid client type
  */
 enum reg_6g_client_type {
 	REG_DEFAULT_CLIENT = 0,
 	REG_SUBORDINATE_CLIENT = 1,
 	REG_MAX_CLIENT_TYPE = 2,
+	REG_INVALID_CLIENT_TYPE = REG_MAX_CLIENT_TYPE,
 };
 
 /**
@@ -958,6 +960,80 @@ struct regulatory_channel {
 	bool psd_flag;
 	uint16_t psd_eirp;
 #endif
+};
+
+/** struct ap_cli_pwr_mode_info: AP and client power mode information
+ * @is_mode_ap: Is it AP or CLIENT
+ * @cli_type:  Is the client a default or subordinate
+ * @ap_pwr_mode: LPI, SP or VLP
+ */
+struct ap_cli_pwr_mode_info {
+	bool is_mode_ap;
+	enum reg_6g_client_type cli_type;
+	enum reg_6g_ap_type ap_pwr_mode;
+};
+
+/**
+ * enum supported_6g_pwr_types: 6G supported AP and Client power types
+ * @REG_BEST_PWR_MODE: Best power mode
+ * @REG_CURRENT_PWR_MODE: Current power mode
+ * @REG_AP_LPI: LPI AP power mode
+ * @REG_AP_SP: SP AP power mode
+ * @REG_AP_VLP: VLP AP power mode
+ * @REG_CLI_DEF_LPI: LPI default client mode
+ * @REG_CLI_DEF_SP: SP default client mode
+ * @REG_CLI_DEF_VLP: VLP default client mode
+ * @REG_CLI_SUB_LPI: LPI subordinate client mode
+ * @REG_CLI_SUB_SP: SP subordinate client mode
+ * @REG_CLI_SUB_VLP: VLP subordinate client mode
+ */
+enum supported_6g_pwr_types {
+	REG_BEST_PWR_MODE    = -1,
+	REG_CURRENT_PWR_MODE = 0,
+	REG_AP_LPI           = 1,
+	REG_AP_SP            = 2,
+	REG_AP_VLP           = 3,
+	REG_CLI_DEF_LPI      = 4,
+	REG_CLI_DEF_SP       = 5,
+	REG_CLI_DEF_VLP      = 6,
+	REG_CLI_SUB_LPI      = 7,
+	REG_CLI_SUB_SP       = 8,
+	REG_CLI_SUB_VLP      = 9,
+};
+
+#define MAX_PWR_TYPES 10
+/**
+ * struct psd_val: Regulatory power information
+ * @psd_flag: Boolean to indicate if PSD is supported or not
+ * @psd_eirp: PSD power
+ * @tx_power: Maximum EIRP
+ */
+struct psd_val {
+	bool psd_flag;
+	uint16_t psd_eirp;
+	uint32_t tx_power;
+};
+
+/**
+ * struct super_chan_info: Information of a 6G channel for every power
+ * mode
+ * @power_types: Bitmap whose bit positions indicate the power modes supported
+ * by a channel
+ * @best_power_mode: Best power mode of a channel
+ * @min_bw: Array of minimum bandwidths per power mode
+ * @max_bw: Array of maximum bandwidths per power mode
+ * @chan_flags_arr: Array of channel flags
+ * @reg_chan_pwr: Array of powers
+ * @state_arr: Array of states
+ */
+struct super_chan_info {
+	uint16_t power_types;
+	enum supported_6g_pwr_types best_power_mode;
+	uint16_t min_bw[MAX_PWR_TYPES];
+	uint16_t max_bw[MAX_PWR_TYPES];
+	uint32_t chan_flags_arr[MAX_PWR_TYPES];
+	struct psd_val reg_chan_pwr[MAX_PWR_TYPES];
+	enum channel_state state_arr[MAX_PWR_TYPES];
 };
 
 /**
