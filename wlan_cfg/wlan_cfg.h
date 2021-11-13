@@ -90,6 +90,7 @@
 /* Max number of chips that can participate in MLO */
 #if defined(WLAN_FEATURE_11BE_MLO) && defined(WLAN_MLO_MULTI_CHIP)
 #define WLAN_MAX_MLO_CHIPS 3
+#define WLAN_MAX_MLO_LINKS_PER_SOC 2
 #else
 #define WLAN_MAX_MLO_CHIPS 1
 #endif

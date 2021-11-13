@@ -21,7 +21,8 @@
 #include <dp_be.h>
 #include <dp_htt.h>
 #include <dp_internal.h>
-
+#include <wlan_cfg.h>
+#include <wlan_mlo_mgr_cmn.h>
 /*
  * dp_mlo_ctxt_attach_wifi3 () – Attach DP MLO context
  *
@@ -148,9 +149,168 @@ static void dp_mlo_soc_teardown(struct cdp_soc_t *soc_hdl,
 	dp_mlo_set_soc_by_chip_id(mlo_ctxt, NULL, be_soc->mlo_chip_id);
 }
 
+static QDF_STATUS dp_mlo_add_ptnr_vdev(struct dp_vdev *vdev1,
+				       struct dp_vdev *vdev2,
+				       struct dp_soc *soc, uint8_t pdev_id)
+{
+	struct dp_soc_be *soc_be = dp_get_be_soc_from_dp_soc(soc);
+	struct dp_vdev_be *vdev2_be = dp_get_be_vdev_from_dp_vdev(vdev2);
+
+	/* return when valid entry  exists */
+	if (vdev2_be->partner_vdev_list[soc_be->mlo_chip_id][pdev_id] !=
+							CDP_INVALID_VDEV_ID)
+		return QDF_STATUS_SUCCESS;
+
+	if (dp_vdev_get_ref(soc, vdev1, DP_MOD_ID_RX) !=
+	    QDF_STATUS_SUCCESS) {
+		qdf_info("%pK: unable to get vdev reference vdev %pK vdev_id %u",
+			 soc, vdev1, vdev1->vdev_id);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	vdev2_be->partner_vdev_list[soc_be->mlo_chip_id][pdev_id] =
+						vdev1->vdev_id;
+
+	mlo_debug("Add vdev%d to vdev%d list, mlo_chip_id = %d pdev_id = %d\n",
+		  vdev1->vdev_id, vdev2->vdev_id, soc_be->mlo_chip_id, pdev_id);
+
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS dp_update_mlo_ptnr_list(struct cdp_soc_t *soc_hdl,
+				   int8_t partner_vdev_ids[], uint8_t num_vdevs,
+				   uint8_t self_vdev_id)
+{
+	int i, j;
+	struct dp_soc *self_soc = cdp_soc_t_to_dp_soc(soc_hdl);
+	struct dp_vdev *self_vdev;
+	QDF_STATUS ret = QDF_STATUS_SUCCESS;
+	struct dp_soc_be *be_soc = dp_get_be_soc_from_dp_soc(self_soc);
+	struct dp_mlo_ctxt *dp_mlo = be_soc->ml_ctxt;
+
+	if (!dp_mlo)
+		return QDF_STATUS_E_FAILURE;
+
+	self_vdev = dp_vdev_get_ref_by_id(self_soc, self_vdev_id, DP_MOD_ID_RX);
+	if (!self_vdev)
+		return QDF_STATUS_E_FAILURE;
+
+	/* go through the input vdev id list and if there are partner vdevs,
+	 * - then add the current vdev's id to partner vdev's list using pdev_id and
+	 * increase the reference
+	 * - add partner vdev to self list  and increase  the reference
+	 */
+	for (i = 0; i < num_vdevs; i++) {
+		if (partner_vdev_ids[i] == CDP_INVALID_VDEV_ID)
+			continue;
+
+		for (j = 0; j < WLAN_MAX_MLO_CHIPS; j++) {
+			struct dp_soc *soc =
+				dp_mlo_get_soc_ref_by_chip_id(dp_mlo, j);
+			if (soc) {
+				struct dp_vdev *vdev;
+
+				vdev = dp_vdev_get_ref_by_id(soc,
+					partner_vdev_ids[i], DP_MOD_ID_RX);
+				if (vdev) {
+					if (vdev == self_vdev) {
+						dp_vdev_unref_delete(soc,
+							vdev, DP_MOD_ID_RX);
+						/*dp_soc_unref_delete(soc); */
+						continue;
+					}
+					if (qdf_is_macaddr_equal(
+						(struct qdf_mac_addr *)self_vdev->mld_mac_addr.raw,
+						(struct qdf_mac_addr *)vdev->mld_mac_addr.raw)) {
+						if (dp_mlo_add_ptnr_vdev(self_vdev,
+							vdev, self_soc,
+							self_vdev->pdev->pdev_id) !=
+							QDF_STATUS_SUCCESS) {
+							dp_err("Unable to add self to partner vdev's list");
+							dp_vdev_unref_delete(soc,
+								vdev, DP_MOD_ID_RX);
+							/* TODO - release soc ref here */
+							/* dp_soc_unref_delete(soc);*/
+							ret = QDF_STATUS_E_FAILURE;
+							goto exit;
+						}
+						/* add to self list */
+						if (dp_mlo_add_ptnr_vdev(vdev, self_vdev, soc,
+							vdev->pdev->pdev_id) !=
+							QDF_STATUS_SUCCESS) {
+							dp_err("Unable to add vdev to self vdev's list");
+							dp_vdev_unref_delete(self_soc,
+								vdev, DP_MOD_ID_RX);
+							/* TODO - relase soc ref here */
+							/* dp_soc_unref_delete(soc);*/
+							ret = QDF_STATUS_E_FAILURE;
+							goto exit;
+						}
+					}
+					dp_vdev_unref_delete(soc, vdev,
+							     DP_MOD_ID_RX);
+				} /* vdev */
+				/* TODO - release soc ref here */
+				/* dp_soc_unref_delete(soc); */
+			} /* soc */
+		} /* for */
+	} /* for */
+
+exit:
+	dp_vdev_unref_delete(self_soc, self_vdev, DP_MOD_ID_RX);
+	return ret;
+}
+
+void dp_clr_mlo_ptnr_list(struct dp_soc *soc, struct dp_vdev *vdev)
+{
+	struct dp_soc_be *be_soc = dp_get_be_soc_from_dp_soc(soc);
+	struct dp_vdev_be *vdev_be = dp_get_be_vdev_from_dp_vdev(vdev);
+	struct dp_mlo_ctxt *dp_mlo = be_soc->ml_ctxt;
+	uint8_t soc_id = be_soc->mlo_chip_id;
+	uint8_t pdev_id = vdev->pdev->pdev_id;
+	int i, j;
+
+	for (i = 0; i < WLAN_MAX_MLO_CHIPS; i++) {
+		for (j = 0; j < WLAN_MAX_MLO_LINKS_PER_SOC; j++) {
+			struct dp_vdev *pr_vdev;
+			struct dp_soc *pr_soc;
+			struct dp_soc_be *pr_soc_be;
+			struct dp_pdev *pr_pdev;
+			struct dp_vdev_be *pr_vdev_be;
+
+			if (vdev_be->partner_vdev_list[i][j] ==
+			    CDP_INVALID_VDEV_ID)
+				continue;
+
+			pr_soc = dp_mlo_get_soc_ref_by_chip_id(dp_mlo, i);
+			pr_soc_be = dp_get_be_soc_from_dp_soc(pr_soc);
+			pr_vdev = dp_vdev_get_ref_by_id(pr_soc,
+						vdev_be->partner_vdev_list[i][j],
+						DP_MOD_ID_RX);
+			if (!pr_vdev)
+				continue;
+
+			/* release ref and remove self vdev from partner list */
+			pr_vdev_be = dp_get_be_vdev_from_dp_vdev(pr_vdev);
+			dp_vdev_unref_delete(soc, vdev, DP_MOD_ID_RX);
+			pr_vdev_be->partner_vdev_list[soc_id][pdev_id] =
+				CDP_INVALID_VDEV_ID;
+
+			/* release ref and remove partner vdev from self list */
+			dp_vdev_unref_delete(pr_soc, pr_vdev, DP_MOD_ID_RX);
+			pr_pdev = pr_vdev->pdev;
+			vdev_be->partner_vdev_list[pr_soc_be->mlo_chip_id][pr_pdev->pdev_id] =
+				CDP_INVALID_VDEV_ID;
+
+			dp_vdev_unref_delete(pr_soc, pr_vdev, DP_MOD_ID_RX);
+		}
+	}
+}
+
 static struct cdp_mlo_ops dp_mlo_ops = {
 	.mlo_soc_setup = dp_mlo_soc_setup,
 	.mlo_soc_teardown = dp_mlo_soc_teardown,
+	.update_mlo_ptnr_list = dp_update_mlo_ptnr_list,
 };
 
 void dp_soc_mlo_fill_params(struct dp_soc *soc,

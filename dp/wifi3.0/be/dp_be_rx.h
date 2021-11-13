@@ -23,6 +23,17 @@
 #include <dp_types.h>
 #include "dp_be.h"
 
+/*
+ * dp_be_intrabss_params
+ *
+ * @dest_soc: dest soc to forward the packet to
+ * @tx_vdev_id: vdev id retrieved from dest peer
+ */
+struct dp_be_intrabss_params {
+	struct dp_soc *dest_soc;
+	uint8_t tx_vdev_id;
+};
+
 #ifndef QCA_HOST_MODE_WIFI_DISABLED
 
 /*

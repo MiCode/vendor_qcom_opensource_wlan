@@ -116,6 +116,9 @@ struct cdp_mlo_ops {
 			      struct cdp_mlo_ctxt *mlo_ctxt);
 	void (*mlo_soc_teardown)(struct cdp_soc_t *cdp_soc,
 				 struct cdp_mlo_ctxt *mlo_ctxt);
+	QDF_STATUS (*update_mlo_ptnr_list)(struct cdp_soc_t *soc_hdl,
+					   int8_t *vdev_ids, uint8_t num_vdevs,
+					   uint8_t vdev_id);
 };
 #endif
 

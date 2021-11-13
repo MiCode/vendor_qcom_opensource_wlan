@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -21,6 +22,9 @@
 
 #include "hal_be_hw_headers.h"
 #include "hal_rx.h"
+
+#define HAL_RX_DA_IDX_CHIP_ID_OFFSET    14
+#define HAL_RX_DA_IDX_CHIP_ID_MASK      0x3
 
 /*
  * macro to set the cookie into the rxdma ring entry
@@ -181,6 +185,11 @@
 		RX_MSDU_DESC_INFO_INTRA_BSS_OFFSET)) &	\
 		RX_MSDU_DESC_INFO_INTRA_BSS_MASK)
 
+#define HAL_RX_MSDU_DEST_CHIP_ID_GET(msdu_info_ptr) \
+	((*_OFFSET_TO_WORD_PTR(msdu_info_ptr,		\
+		RX_MSDU_DESC_INFO_DEST_CHIP_ID_OFFSET)) & \
+		RX_MSDU_DESC_INFO_DEST_CHIP_ID_MASK)
+
 #define HAL_RX_MPDU_ENCRYPT_TYPE_GET(_rx_mpdu_info)	\
 	(_HAL_MS((*_OFFSET_TO_WORD_PTR(_rx_mpdu_info,	\
 	RX_MPDU_INFO_ENCRYPT_TYPE_OFFSET)),		\
@@ -200,6 +209,9 @@
 	(((struct reo_destination_ring *)	\
 	   reo_desc)->rx_msdu_desc_info_details)))
 
+#define HAL_RX_DEST_CHIP_ID_GET(msdu_metadata) \
+	(((msdu_metadata)->da_idx >> HAL_RX_DA_IDX_CHIP_ID_OFFSET) &	\
+	 HAL_RX_DA_IDX_CHIP_ID_MASK)
 /**
  * enum hal_be_rx_wbm_error_source: Indicates which module initiated the
  * release of this buffer or descriptor

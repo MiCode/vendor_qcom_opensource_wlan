@@ -23,7 +23,56 @@
 #include <wlan_mlo_mgr_cmn.h>
 #include <wlan_mlo_mgr_main.h>
 #include <wlan_utility.h>
+#ifdef WLAN_MLO_MULTI_CHIP
+#include "cdp_txrx_mlo.h"
+#endif
 
+#ifdef WLAN_MLO_MULTI_CHIP
+bool mlo_ap_vdev_attach(struct wlan_objmgr_vdev *vdev,
+			uint8_t link_id,
+			uint16_t vdev_count)
+{
+	struct wlan_mlo_dev_context *dev_ctx;
+	uint8_t pr_vdev_ids[WLAN_UMAC_MLO_MAX_VDEVS] = { CDP_INVALID_VDEV_ID };
+	struct wlan_objmgr_psoc *psoc;
+	int i;
+
+	if (!vdev || !vdev->mlo_dev_ctx || !vdev->mlo_dev_ctx->ap_ctx) {
+		mlo_err("Invalid input");
+		return false;
+	}
+
+	psoc = wlan_vdev_get_psoc(vdev);
+	if (!psoc)
+		return false;
+
+	dev_ctx = vdev->mlo_dev_ctx;
+	wlan_vdev_set_link_id(vdev, link_id);
+	wlan_vdev_mlme_feat_ext2_cap_set(vdev, WLAN_VDEV_FEXT2_MLO);
+
+	/**
+	 * every link will trigger mlo_ap_vdev_attach,
+	 * and they should provide the same vdev_count.
+	 */
+	mlo_dev_lock_acquire(dev_ctx);
+	dev_ctx->ap_ctx->num_ml_vdevs = vdev_count;
+	mlo_dev_lock_release(dev_ctx);
+
+	for (i = 0; i < WLAN_UMAC_MLO_MAX_VDEVS; i++) {
+		if (dev_ctx->wlan_vdev_list[i])
+			pr_vdev_ids[i] = wlan_vdev_get_id(dev_ctx->wlan_vdev_list[i]);
+	}
+
+	if (cdp_update_mlo_ptnr_list(wlan_psoc_get_dp_handle(psoc),
+				pr_vdev_ids, WLAN_UMAC_MLO_MAX_VDEVS,
+				wlan_vdev_get_id(vdev) != QDF_STATUS_SUCCESS)) {
+		mlo_debug("Failed to add vdev to partner vdev list, vdev id:%d",
+			 wlan_vdev_get_id(vdev));
+	}
+
+	return true;
+}
+#else
 bool mlo_ap_vdev_attach(struct wlan_objmgr_vdev *vdev,
 			uint8_t link_id,
 			uint16_t vdev_count)
@@ -49,6 +98,7 @@ bool mlo_ap_vdev_attach(struct wlan_objmgr_vdev *vdev,
 
 	return true;
 }
+#endif
 
 void mlo_ap_get_vdev_list(struct wlan_objmgr_vdev *vdev,
 			  uint16_t *vdev_count,

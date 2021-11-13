@@ -24,6 +24,12 @@
 
 /* Max number of peers supported */
 #define DP_MAX_MLO_PEER 512
+
+/* Max number of chips supported */
+#define DP_MLO_MAX_DEST_CHIP_ID 3
+/* shift value to index into the array, used instead of mult by 2 */
+#define DP_MLO_DEST_CHIP_ID_SHIFT 1
+
 /*
  * dp_mlo_ctxt
  *
@@ -93,4 +99,7 @@ void dp_soc_mlo_fill_params(struct dp_soc *soc,
  */
 void dp_pdev_mlo_fill_params(struct dp_pdev *pdev,
 			     struct cdp_pdev_attach_params *params);
+struct dp_soc*
+dp_mlo_get_soc_ref_by_chip_id(struct dp_mlo_ctxt *ml_ctxt, uint8_t chip_id);
+
 #endif /* __DP_MLO_H */

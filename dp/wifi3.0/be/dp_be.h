@@ -252,6 +252,11 @@ struct dp_vdev_be {
 	struct dp_vdev vdev;
 	int8_t bank_id;
 	uint8_t vdev_id_check_en;
+
+#ifdef WLAN_MLO_MULTI_CHIP
+	/* partner list used for Intra-BSS */
+	uint8_t partner_vdev_list[WLAN_MAX_MLO_CHIPS][WLAN_MAX_MLO_LINKS_PER_SOC];
+#endif
 };
 
 /**
@@ -314,6 +319,7 @@ dp_mlo_get_peer_hash_obj(struct dp_soc *soc)
 	return be_soc->ml_ctxt;
 }
 
+void  dp_clr_mlo_ptnr_list(struct dp_soc *soc, struct dp_vdev *vdev);
 #else
 typedef struct dp_soc_be *dp_mld_peer_hash_obj_t;
 
@@ -321,6 +327,11 @@ static inline dp_mld_peer_hash_obj_t
 dp_mlo_get_peer_hash_obj(struct dp_soc *soc)
 {
 	return dp_get_be_soc_from_dp_soc(soc);
+}
+
+static inline void  dp_clr_mlo_ptnr_list(struct dp_soc *soc,
+					 struct dp_vdev *vdev)
+{
 }
 #endif
 

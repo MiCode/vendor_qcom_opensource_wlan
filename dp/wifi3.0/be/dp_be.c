@@ -371,6 +371,57 @@ static QDF_STATUS dp_soc_detach_be(struct dp_soc *soc)
 	return QDF_STATUS_SUCCESS;
 }
 
+#ifdef WLAN_MLO_MULTI_CHIP
+static QDF_STATUS dp_mlo_peer_find_hash_attach_wrapper(struct dp_soc *soc)
+{
+	/* In case of MULTI chip MLO peer hash table when MLO global object
+	 * is created, avoid from SOC attach path
+	 */
+	return QDF_STATUS_SUCCESS;
+}
+
+static void dp_mlo_peer_find_hash_detach_wrapper(struct dp_soc *soc)
+{
+}
+
+static void dp_mlo_init_ptnr_list(struct dp_vdev *vdev)
+{
+	struct dp_vdev_be *be_vdev = dp_get_be_vdev_from_dp_vdev(vdev);
+
+	qdf_mem_set(be_vdev->partner_vdev_list,
+		    WLAN_MAX_MLO_CHIPS * WLAN_MAX_MLO_LINKS_PER_SOC,
+		    CDP_INVALID_VDEV_ID);
+}
+#else
+static QDF_STATUS dp_mlo_peer_find_hash_attach_wrapper(struct dp_soc *soc)
+{
+	dp_mld_peer_hash_obj_t mld_hash_obj;
+
+	mld_hash_obj = dp_mlo_get_peer_hash_obj(soc);
+
+	if (!mld_hash_obj)
+		return QDF_STATUS_E_FAILURE;
+
+	return dp_mlo_peer_find_hash_attach_be(mld_hash_obj, soc->max_peers);
+}
+
+static void dp_mlo_peer_find_hash_detach_wrapper(struct dp_soc *soc)
+{
+	dp_mld_peer_hash_obj_t mld_hash_obj;
+
+	mld_hash_obj = dp_mlo_get_peer_hash_obj(soc);
+
+	if (!mld_hash_obj)
+		return;
+
+	return dp_mlo_peer_find_hash_detach_be(mld_hash_obj);
+}
+
+static void dp_mlo_init_ptnr_list(struct dp_vdev *vdev)
+{
+}
+#endif
+
 static QDF_STATUS dp_soc_attach_be(struct dp_soc *soc,
 				   struct cdp_soc_attach_params *params)
 {
@@ -520,6 +571,8 @@ static QDF_STATUS dp_vdev_attach_be(struct dp_soc *soc, struct dp_vdev *vdev)
 					   HAL_TX_MCAST_CTRL_MEC_NOTIFY);
 	}
 
+	dp_mlo_init_ptnr_list(vdev);
+
 	return QDF_STATUS_SUCCESS;
 }
 
@@ -529,6 +582,8 @@ static QDF_STATUS dp_vdev_detach_be(struct dp_soc *soc, struct dp_vdev *vdev)
 	struct dp_vdev_be *be_vdev = dp_get_be_vdev_from_dp_vdev(vdev);
 
 	dp_tx_put_bank_profile(be_soc, be_vdev);
+	dp_clr_mlo_ptnr_list(soc, vdev);
+
 	return QDF_STATUS_SUCCESS;
 }
 
@@ -1074,44 +1129,6 @@ dp_mlo_peer_find_hash_detach_be(dp_mld_peer_hash_obj_t mld_hash_obj)
 		qdf_spinlock_destroy(&mld_hash_obj->mld_peer_hash_lock);
 	}
 }
-
-#ifdef WLAN_MLO_MULTI_CHIP
-static QDF_STATUS dp_mlo_peer_find_hash_attach_wrapper(struct dp_soc *soc)
-{
-	/* In case of MULTI chip MLO peer hash table when MLO global object
-	 * is created, avoid from SOC attach path
-	 */
-	return QDF_STATUS_SUCCESS;
-}
-
-static void dp_mlo_peer_find_hash_detach_wrapper(struct dp_soc *soc)
-{
-}
-#else
-static QDF_STATUS dp_mlo_peer_find_hash_attach_wrapper(struct dp_soc *soc)
-{
-	dp_mld_peer_hash_obj_t mld_hash_obj;
-
-	mld_hash_obj = dp_mlo_get_peer_hash_obj(soc);
-
-	if (!mld_hash_obj)
-		return QDF_STATUS_E_FAILURE;
-
-	return dp_mlo_peer_find_hash_attach_be(mld_hash_obj, soc->max_peers);
-}
-
-static void dp_mlo_peer_find_hash_detach_wrapper(struct dp_soc *soc)
-{
-	dp_mld_peer_hash_obj_t mld_hash_obj;
-
-	mld_hash_obj = dp_mlo_get_peer_hash_obj(soc);
-
-	if (!mld_hash_obj)
-		return;
-
-	return dp_mlo_peer_find_hash_detach_be(mld_hash_obj);
-}
-#endif
 
 static struct dp_peer *
 dp_mlo_peer_find_hash_find_be(struct dp_soc *soc,

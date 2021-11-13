@@ -176,6 +176,10 @@ dp_rx_intrabss_fwd_li(struct dp_soc *soc,
 		return dp_rx_intrabss_mcbc_fwd(soc, ta_peer, rx_tlv_hdr,
 					       nbuf, tid_stats);
 
+	if (dp_rx_intrabss_eapol_drop_check(soc, ta_peer, rx_tlv_hdr,
+					    nbuf))
+		return true;
+
 	if (dp_rx_intrabss_ucast_check_li(soc, nbuf, ta_peer,
 					  &msdu_metadata, &tx_vdev_id))
 		return dp_rx_intrabss_ucast_fwd(soc, ta_peer, tx_vdev_id,

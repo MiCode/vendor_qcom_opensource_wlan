@@ -576,10 +576,6 @@ bool dp_rx_intrabss_ucast_fwd(struct dp_soc *soc, struct dp_peer *ta_peer,
 {
 	uint16_t len;
 
-	if (dp_rx_intrabss_eapol_drop_check(soc, ta_peer, rx_tlv_hdr,
-					    nbuf))
-		return true;
-
 	len = QDF_NBUF_CB_RX_PKT_LEN(nbuf);
 
 	/* linearize the nbuf just before we send to
