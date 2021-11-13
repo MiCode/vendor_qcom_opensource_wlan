@@ -238,6 +238,10 @@ QDF_STATUS dp_reset_monitor_mode(struct cdp_soc_t *soc_hdl,
 #if defined(ATH_SUPPORT_NAC)
 		dp_mon_filter_reset_smart_monitor(pdev);
 #endif /* ATH_SUPPORT_NAC */
+		/* for mon 2.0 we make use of lite mon to
+		 * set filters for smart monitor use case.
+		 */
+		dp_monitor_lite_mon_disable_rx(pdev);
 	} else if (mon_pdev->undecoded_metadata_capture) {
 #ifdef QCA_UNDECODED_METADATA_SUPPORT
 		dp_reset_undecoded_metadata_capture(pdev);
@@ -502,6 +506,12 @@ static QDF_STATUS dp_vdev_set_monitor_mode(struct cdp_soc_t *dp_soc,
 	}
 
 	mon_pdev->monitor_configured = true;
+
+	/* disable lite mon if configured, monitor vap takes
+	 * priority over lite mon when its created. Lite mon
+	 * can be configured later again.
+	 */
+	dp_monitor_lite_mon_disable_rx(pdev);
 
 	cdp_ops = dp_mon_cdp_ops_get(soc);
 	if (cdp_ops  && cdp_ops->soc_config_full_mon_mode)
@@ -5679,6 +5689,7 @@ void dp_mon_feature_ops_deregister(struct dp_soc *soc)
 #if defined(DP_CON_MON) && !defined(REMOVE_PKT_LOG)
 	mon_ops->mon_pktlogmod_exit = NULL;
 #endif
+	mon_ops->rx_hdr_length_set = NULL;
 	mon_ops->rx_packet_length_set = NULL;
 	mon_ops->rx_wmask_subscribe = NULL;
 	mon_ops->rx_enable_mpdu_logging = NULL;

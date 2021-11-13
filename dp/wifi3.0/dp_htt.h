@@ -613,6 +613,7 @@ struct htt_tx_ring_tlv_filter {
  * @mgmt_dma_length: configure length for mgmt packet
  * @ctrl_dma_length: configure length for ctrl packet
  * @data_dma_length: configure length for data packet
+ * @rx_hdr_length: configure length for rx header tlv
  * @mgmt_mpdu_log: enable mgmt mpdu level logging
  * @ctrl_mpdu_log: enable ctrl mpdu level logging
  * @data_mpdu_log: enable data mpdu level logging
@@ -671,6 +672,7 @@ struct htt_rx_ring_tlv_filter {
 	uint16_t mgmt_dma_length:3,
 		 ctrl_dma_length:3,
 		 data_dma_length:3,
+		 rx_hdr_length:3,
 		 mgmt_mpdu_log:1,
 		 ctrl_mpdu_log:1,
 		 data_mpdu_log:1,

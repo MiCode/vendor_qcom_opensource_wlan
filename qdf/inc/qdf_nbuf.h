@@ -522,6 +522,7 @@ struct mon_rx_status {
  * @ba_control: Block ack control
  * @ba_bitmap: 256 bit block ack bitmap
  * @tid: QoS traffic tid number
+ * @filter_category: mpdu filter category
  * @mpdu_q: user mpdu_queue used for monitor
  */
 struct mon_rx_user_status {
@@ -581,6 +582,7 @@ struct mon_rx_user_status {
 	uint32_t ba_bitmap[32];
 	uint32_t ba_bitmap_sz;
 	uint16_t aid;
+	uint8_t filter_category;
 	qdf_nbuf_queue_t mpdu_q;
 };
 

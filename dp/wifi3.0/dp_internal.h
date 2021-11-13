@@ -697,6 +697,12 @@ static inline bool dp_monitor_is_configured(struct dp_pdev *pdev)
 {
 	return false;
 }
+
+static inline void
+dp_mon_rx_hdr_length_set(struct dp_soc *soc, uint32_t *msg_word,
+			 struct htt_rx_ring_tlv_filter *tlv_filter)
+{
+}
 #endif
 
 /**

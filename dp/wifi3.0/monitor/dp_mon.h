@@ -741,6 +741,8 @@ struct dp_mon_ops {
 	void (*tx_mon_desc_pool_free)(struct dp_pdev *pdev);
 	void (*rx_mon_enable)(uint32_t *msg_word,
 			      struct htt_rx_ring_tlv_filter *tlv_filter);
+	void (*rx_hdr_length_set)(uint32_t *msg_word,
+				  struct htt_rx_ring_tlv_filter *tlv_filter);
 	void (*rx_packet_length_set)(uint32_t *msg_word,
 				     struct htt_rx_ring_tlv_filter *tlv_filter);
 	void (*rx_wmask_subscribe)(uint32_t *msg_word,
@@ -776,6 +778,7 @@ struct dp_mon_ops {
 	void (*mon_lite_mon_dealloc)(struct dp_pdev *pdev);
 	void (*mon_lite_mon_vdev_delete)(struct dp_pdev *pdev,
 					 struct dp_vdev *vdev);
+	void (*mon_lite_mon_disable_rx)(struct dp_pdev *pdev);
 };
 
 struct dp_mon_soc {
@@ -3679,6 +3682,35 @@ dp_mon_rx_enable_mpdu_logging(struct dp_soc *soc, uint32_t *msg_word,
 	monitor_ops->rx_enable_mpdu_logging(msg_word, tlv_filter);
 }
 
+/*
+ * dp_mon_rx_hdr_length_set() - set rx hdr tlv length
+ * @soc: dp soc handle
+ * @msg_word: msg word
+ * @tlv_filter: rx fing filter config
+ *
+ * Return: void
+ */
+static inline void
+dp_mon_rx_hdr_length_set(struct dp_soc *soc, uint32_t *msg_word,
+			 struct htt_rx_ring_tlv_filter *tlv_filter)
+{
+	struct dp_mon_soc *mon_soc = soc->monitor_soc;
+	struct dp_mon_ops *monitor_ops;
+
+	if (!mon_soc) {
+		dp_mon_debug("mon soc is NULL");
+		return;
+	}
+
+	monitor_ops = mon_soc->mon_ops;
+	if (!monitor_ops || !monitor_ops->rx_hdr_length_set) {
+		dp_mon_debug("callback not registered");
+		return;
+	}
+
+	monitor_ops->rx_hdr_length_set(msg_word, tlv_filter);
+}
+
 static inline void
 dp_mon_rx_packet_length_set(struct dp_soc *soc, uint32_t *msg_word,
 			    struct htt_rx_ring_tlv_filter *tlv_filter)
@@ -3930,7 +3962,45 @@ QDF_STATUS dp_pdev_get_rx_mon_stats(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
 void dp_enable_mon_reap_timer(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
 			      bool enable);
 
+/*
+ * dp_monitor_lite_mon_disable_rx() - disables rx lite mon
+ * @pdev: dp pdev
+ *
+ * Return: void
+ */
+static inline void
+dp_monitor_lite_mon_disable_rx(struct dp_pdev *pdev)
+{
+	struct dp_mon_ops *monitor_ops;
+	struct dp_mon_soc *mon_soc = pdev->soc->monitor_soc;
+
+	if (!mon_soc) {
+		dp_mon_debug("monitor soc is NULL");
+		return;
+}
+
+	monitor_ops = mon_soc->mon_ops;
+	if (!monitor_ops ||
+	    !monitor_ops->mon_lite_mon_disable_rx) {
+		dp_mon_debug("callback not registered");
+		return;
+}
+
+	return monitor_ops->mon_lite_mon_disable_rx(pdev);
+}
+
 #ifndef QCA_SUPPORT_LITE_MONITOR
+static inline void
+dp_lite_mon_disable_rx(struct dp_pdev *pdev)
+{
+}
+
+static inline int
+dp_lite_mon_is_level_msdu(struct dp_mon_pdev *mon_pdev)
+{
+	return 0;
+}
+
 static inline int
 dp_lite_mon_is_rx_enabled(struct dp_mon_pdev *mon_pdev)
 {

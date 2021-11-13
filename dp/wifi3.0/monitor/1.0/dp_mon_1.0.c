@@ -1128,6 +1128,7 @@ dp_mon_register_feature_ops_1_0(struct dp_soc *soc)
 #if defined(DP_CON_MON) && !defined(REMOVE_PKT_LOG)
 	mon_ops->mon_pktlogmod_exit = dp_pktlogmod_exit;
 #endif
+	mon_ops->rx_hdr_length_set = NULL;
 	mon_ops->rx_packet_length_set = NULL;
 	mon_ops->rx_mon_enable = NULL;
 	mon_ops->rx_wmask_subscribe = NULL;
@@ -1229,6 +1230,7 @@ struct dp_mon_ops monitor_ops_1_0 = {
 	.mon_lite_mon_alloc = NULL,
 	.mon_lite_mon_dealloc = NULL,
 	.mon_lite_mon_vdev_delete = NULL,
+	.mon_lite_mon_disable_rx = NULL,
 };
 
 struct cdp_mon_ops dp_ops_mon_1_0 = {

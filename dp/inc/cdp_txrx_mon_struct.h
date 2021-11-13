@@ -27,31 +27,84 @@
 #define _CDP_TXRX_MON_STRUCT_H_
 
 #ifdef QCA_SUPPORT_LITE_MONITOR
-#define CDP_LITE_MON_MODE_MAX 3
-#define CDP_LITE_MON_FRM_TYPE_MAX 3
+
 #define CDP_LITE_MON_PEER_MAX 16
+
+#define CDP_LITE_MON_LEN_64B 0x40
+#define CDP_LITE_MON_LEN_128B 0x80
+#define CDP_LITE_MON_LEN_256B 0x100
+#define CDP_LITE_MON_LEN_FULL 0xFFFF
+
+#define CDP_LITE_MON_FILTER_ALL 0xFFFF
+
+#define CDP_LITE_MON_RX_PACKET_OFFSET 8
+
+/* This should align with nac mac type enumerations in ieee80211_ioctl.h */
+#define CDP_LITE_MON_PEER_MAC_TYPE_CLIENT 2
+
+/* lite mon filter modes */
+enum cdp_lite_mon_filter_mode {
+	/* mode filter pass */
+	CDP_LITE_MON_MODE_FP = 0,
+	/* mode monitor direct */
+	CDP_LITE_MON_MODE_MD = 1,
+	/* mode monitor other */
+	CDP_LITE_MON_MODE_MO = 2,
+	/* mode filter pass monitor other */
+	CDP_LITE_MON_MODE_FP_MO = 3,
+	/* max filter modes */
+	CDP_LITE_MON_MODE_MAX = 4,
+};
+
+/* lite mon frame levels */
+enum cdp_lite_mon_level {
+	/* level invalid */
+	CDP_LITE_MON_LEVEL_INVALID = 0,
+	/* level msdu */
+	CDP_LITE_MON_LEVEL_MSDU = 1,
+	/* level mpdu */
+	CDP_LITE_MON_LEVEL_MPDU = 2,
+	/* level ppdu */
+	CDP_LITE_MON_LEVEL_PPDU = 3,
+};
+
+/* lite mon frame types */
+enum cdp_lite_mon_frm_type {
+	/* frm type mgmt */
+	CDP_LITE_MON_FRM_TYPE_MGMT = 0,
+	/* frm type ctrl */
+	CDP_LITE_MON_FRM_TYPE_CTRL = 1,
+	/* frm type data */
+	CDP_LITE_MON_FRM_TYPE_DATA = 2,
+	/* max frame types */
+	CDP_LITE_MON_FRM_TYPE_MAX = 3,
+};
 
 /* lite mon peer action */
 enum cdp_lite_mon_peer_action {
+	/* peer add */
 	CDP_LITE_MON_PEER_ADD = 0,
+	/* peer remove */
 	CDP_LITE_MON_PEER_REMOVE = 1,
 };
 
 /* lite mon peer types */
 enum cdp_lite_mon_peer_type {
+	/* associated peer */
 	CDP_LITE_MON_PEER_TYPE_ASSOCIATED = 0,
+	/* non associated peer */
 	CDP_LITE_MON_PEER_TYPE_NON_ASSOCIATED = 1,
+	/* max peer types */
 	CDP_LITE_MON_PEER_TYPE_MAX = 2,
 };
 
 /* lite mon config direction */
 enum cdp_lite_mon_direction {
+	/* lite mon config direction rx */
 	CDP_LITE_MON_DIRECTION_RX = 1,
+	/* lite mon config direction tx */
 	CDP_LITE_MON_DIRECTION_TX = 2,
 };
-
-/* This should align with nac mac type enumerations in ieee80211_ioctl.h */
-#define CDP_LITE_MON_PEER_MAC_TYPE_CLIENT 2
 #endif
 
 /* XXX not really a mode; there are really multiple PHY's */

@@ -30,6 +30,9 @@
 #include <dp_rx_mon_2.0.h>
 #include <dp_mon_filter_2.0.h>
 #include <dp_be.h>
+#ifdef QCA_SUPPORT_LITE_MONITOR
+#include "dp_lite_mon.h"
+#endif
 
 #define HTT_MSG_BUF_SIZE(msg_bytes) \
    ((msg_bytes) + HTC_HEADER_LEN + HTC_HDR_ALIGNMENT_PADDING)
@@ -101,6 +104,18 @@ QDF_STATUS dp_mon_filter_alloc_2_0(struct dp_pdev *pdev)
 fail:
 	dp_mon_filter_dealloc(mon_pdev);
 	return QDF_STATUS_E_FAILURE;
+}
+
+void dp_rx_mon_hdr_length_set(uint32_t *msg_word,
+			      struct htt_rx_ring_tlv_filter *tlv_filter)
+{
+#ifdef FW_SUPPORT_NOT_YET
+	if (!msg_word || !tlv_filter)
+		return;
+
+	HTT_RX_RING_SELECTION_CFG_RX_HDR_LEN_SET(*msg_word,
+						 tlv_filter->rx_hdr_length);
+#endif
 }
 
 void dp_rx_mon_packet_length_set(uint32_t *msg_word,
@@ -1368,6 +1383,8 @@ static void dp_rx_mon_filter_show_filter(struct dp_mon_filter_be *filter)
 			    rx_tlv_filter->rx_mpdu_start_wmask);
 	DP_MON_FILTER_PRINT("rx_msdu_end_wmask: 0x%x",
 			    rx_tlv_filter->rx_msdu_end_wmask);
+	DP_MON_FILTER_PRINT("rx_hdr_length: %d",
+			    rx_tlv_filter->rx_hdr_length);
 }
 
 static void dp_tx_mon_filter_show_filter(struct dp_mon_filter_be *filter)
@@ -2054,6 +2071,14 @@ dp_rx_mon_filter_h2t_setup(struct dp_soc *soc, struct dp_pdev *pdev,
 			tlv_filter->rx_msdu_end_wmask =
 				src_tlv_filter->rx_msdu_end_wmask;
 
+		/*
+		 * set hdr tlv length
+		 */
+		if (src_tlv_filter->rx_hdr_length &&
+		    !tlv_filter->rx_hdr_length)
+			tlv_filter->rx_hdr_length =
+				src_tlv_filter->rx_hdr_length;
+
 		dp_mon_filter_show_filter_be(current_mode, mon_filter);
 	}
 }
@@ -2207,3 +2232,147 @@ QDF_STATUS dp_rx_mon_filter_update_2_0(struct dp_pdev *pdev)
 				     &filter);
 	return QDF_STATUS_SUCCESS;
 }
+
+#ifdef QCA_SUPPORT_LITE_MONITOR
+void
+dp_mon_filter_reset_rx_lite_mon(struct dp_mon_pdev_be *be_mon_pdev)
+{
+	struct dp_mon_filter_be filter = {0};
+	enum dp_mon_filter_mode filter_mode =
+				DP_MON_FILTER_LITE_MON_MODE;
+	enum dp_mon_filter_srng_type srng_type =
+				DP_MON_FILTER_SRNG_TYPE_RXMON_DEST;
+
+	be_mon_pdev->mon_pdev.current_filter_mode = filter_mode;
+	be_mon_pdev->filter_be[filter_mode][srng_type] = filter;
+}
+
+void
+dp_mon_filter_setup_rx_lite_mon(struct dp_mon_pdev_be *be_mon_pdev)
+{
+	struct dp_mon_filter_be filter = {0};
+	struct dp_mon_filter *rx_tlv_filter;
+	enum dp_mon_filter_mode filter_mode =
+				DP_MON_FILTER_LITE_MON_MODE;
+	enum dp_mon_filter_srng_type srng_type =
+				DP_MON_FILTER_SRNG_TYPE_RXMON_DEST;
+	struct dp_lite_mon_rx_config *config = NULL;
+	uint16_t max_custom_len = 0;
+	uint16_t mgmt_len = 0;
+	uint16_t ctrl_len = 0;
+	uint16_t data_len = 0;
+
+	config = be_mon_pdev->lite_mon_rx_config;
+	if (!config)
+		return;
+
+	rx_tlv_filter = &filter.rx_tlv_filter;
+	rx_tlv_filter->valid = true;
+	/* configure fp filters if enabled */
+	if (config->rx_config.fp_enabled) {
+		rx_tlv_filter->tlv_filter.enable_fp = 1;
+		rx_tlv_filter->tlv_filter.fp_mgmt_filter =
+			config->rx_config.mgmt_filter[CDP_LITE_MON_MODE_FP];
+		rx_tlv_filter->tlv_filter.fp_ctrl_filter =
+			config->rx_config.ctrl_filter[CDP_LITE_MON_MODE_FP];
+		rx_tlv_filter->tlv_filter.fp_data_filter =
+			config->rx_config.data_filter[CDP_LITE_MON_MODE_FP];
+	}
+
+	/* configure md filters if enabled */
+	if (config->rx_config.md_enabled) {
+		rx_tlv_filter->tlv_filter.enable_md = 1;
+		rx_tlv_filter->tlv_filter.md_mgmt_filter =
+			config->rx_config.mgmt_filter[CDP_LITE_MON_MODE_MD];
+		rx_tlv_filter->tlv_filter.md_ctrl_filter =
+			config->rx_config.ctrl_filter[CDP_LITE_MON_MODE_MD];
+		rx_tlv_filter->tlv_filter.md_data_filter =
+			config->rx_config.data_filter[CDP_LITE_MON_MODE_MD];
+	}
+
+	/* configure mo filters if enabled */
+	if (config->rx_config.mo_enabled) {
+		rx_tlv_filter->tlv_filter.enable_mo = 1;
+		rx_tlv_filter->tlv_filter.mo_mgmt_filter =
+			config->rx_config.mgmt_filter[CDP_LITE_MON_MODE_MO];
+		rx_tlv_filter->tlv_filter.mo_ctrl_filter =
+			config->rx_config.ctrl_filter[CDP_LITE_MON_MODE_MO];
+		rx_tlv_filter->tlv_filter.mo_data_filter =
+			config->rx_config.data_filter[CDP_LITE_MON_MODE_MO];
+	}
+
+	mgmt_len = config->rx_config.len[CDP_LITE_MON_FRM_TYPE_MGMT];
+	ctrl_len = config->rx_config.len[CDP_LITE_MON_FRM_TYPE_CTRL];
+	data_len = config->rx_config.len[CDP_LITE_MON_FRM_TYPE_DATA];
+	/* if full len is configured for any of the types, subscribe
+	 * for full dma length else set it to min dma length(fw sets
+	 * full length by default) to avoid unnecessary dma since we
+	 * do not have hw support to control rx pkt tlvs per type. To
+	 * get custom len pkt we make use of rx hdr tlv instead.
+	 */
+	if (dp_lite_mon_is_full_len_configured(mgmt_len,
+					       ctrl_len,
+					       data_len)) {
+		rx_tlv_filter->tlv_filter.packet = 1;
+		rx_tlv_filter->tlv_filter.rx_packet_offset =
+					CDP_LITE_MON_RX_PACKET_OFFSET;
+		if (mgmt_len == CDP_LITE_MON_LEN_FULL)
+			rx_tlv_filter->tlv_filter.mgmt_dma_length =
+							DEFAULT_DMA_LENGTH;
+		else
+			rx_tlv_filter->tlv_filter.mgmt_dma_length =
+							DMA_LENGTH_64B;
+
+		if (ctrl_len == CDP_LITE_MON_LEN_FULL)
+			rx_tlv_filter->tlv_filter.ctrl_dma_length =
+							DEFAULT_DMA_LENGTH;
+		else
+			rx_tlv_filter->tlv_filter.ctrl_dma_length =
+							DMA_LENGTH_64B;
+
+		if (data_len == CDP_LITE_MON_LEN_FULL)
+			rx_tlv_filter->tlv_filter.data_dma_length =
+							DEFAULT_DMA_LENGTH;
+		else
+			rx_tlv_filter->tlv_filter.data_dma_length =
+							DMA_LENGTH_64B;
+	} else  {
+		/* if full len not configured set to min len */
+		rx_tlv_filter->tlv_filter.mgmt_dma_length = DMA_LENGTH_64B;
+		rx_tlv_filter->tlv_filter.ctrl_dma_length = DMA_LENGTH_64B;
+		rx_tlv_filter->tlv_filter.data_dma_length = DMA_LENGTH_64B;
+	}
+
+	rx_tlv_filter->tlv_filter.packet_header = 1;
+	/* set rx hdr tlv len, default len is 128B */
+	max_custom_len = dp_lite_mon_get_max_custom_len(mgmt_len, ctrl_len,
+							data_len);
+	if (max_custom_len == CDP_LITE_MON_LEN_64B)
+		rx_tlv_filter->tlv_filter.rx_hdr_length =
+						RX_HDR_DMA_LENGTH_64B;
+	else if (max_custom_len == CDP_LITE_MON_LEN_128B)
+		rx_tlv_filter->tlv_filter.rx_hdr_length =
+						RX_HDR_DMA_LENGTH_128B;
+	else if (max_custom_len == CDP_LITE_MON_LEN_256B)
+		rx_tlv_filter->tlv_filter.rx_hdr_length =
+						RX_HDR_DMA_LENGTH_256B;
+
+	if ((config->rx_config.level == CDP_LITE_MON_LEVEL_MSDU) ||
+	    dp_lite_mon_is_full_len_configured(mgmt_len, ctrl_len, data_len)) {
+		rx_tlv_filter->tlv_filter.header_per_msdu = 1;
+		rx_tlv_filter->tlv_filter.msdu_end = 1;
+	}
+
+	rx_tlv_filter->tlv_filter.ppdu_start = 1;
+	rx_tlv_filter->tlv_filter.ppdu_end = 1;
+	rx_tlv_filter->tlv_filter.mpdu_start = 1;
+	rx_tlv_filter->tlv_filter.mpdu_end = 1;
+
+	rx_tlv_filter->tlv_filter.ppdu_end_user_stats = 1;
+	rx_tlv_filter->tlv_filter.ppdu_end_user_stats_ext = 1;
+	rx_tlv_filter->tlv_filter.ppdu_end_status_done = 1;
+
+	be_mon_pdev->mon_pdev.current_filter_mode = filter_mode;
+	be_mon_pdev->filter_be[filter_mode][srng_type] = filter;
+}
+#endif /* QCA_SUPPORT_LITE_MONITOR */
