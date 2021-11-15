@@ -1089,6 +1089,14 @@ struct cdp_host_stats_ops {
 	(*get_pdev_tx_capture_stats)(struct cdp_soc_t *soc, uint8_t pdev_id,
 				     struct cdp_pdev_tx_capture_stats *stats);
 #endif /* WLAN_TX_PKT_CAPTURE_ENH */
+#ifdef HW_TX_DELAY_STATS_ENABLE
+	void
+	(*enable_disable_vdev_tx_delay_stats)(struct cdp_soc_t *soc,
+					      uint8_t vdev_id,
+					      uint8_t value);
+	uint8_t (*is_tx_delay_stats_enabled)(struct cdp_soc_t *soc_hdl,
+					     uint8_t vdev_id);
+#endif
 };
 
 struct cdp_wds_ops {

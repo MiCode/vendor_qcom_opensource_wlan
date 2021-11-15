@@ -1781,6 +1781,7 @@ struct cdp_rx_ingress_stats {
  * @tx: cdp tx stats
  * @rx: cdp rx stats
  * @tso_stats: tso stats
+ * @tid_tx_stats: tid tx stats
  */
 struct cdp_vdev_stats {
 	struct cdp_tx_ingress_stats tx_i;
@@ -1788,6 +1789,10 @@ struct cdp_vdev_stats {
 	struct cdp_tx_stats tx;
 	struct cdp_rx_stats rx;
 	struct cdp_tso_stats tso_stats;
+#ifdef HW_TX_DELAY_STATS_ENABLE
+	struct cdp_tid_tx_stats tid_tx_stats[CDP_MAX_TX_COMP_RINGS]
+					    [CDP_MAX_DATA_TIDS];
+#endif
 };
 
 /* struct cdp_calibr_stats - Calibrated stats

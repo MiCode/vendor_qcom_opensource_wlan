@@ -1618,8 +1618,10 @@ void dp_rx_compute_delay(struct dp_vdev *vdev, qdf_nbuf_t nbuf)
 	uint8_t tid = qdf_nbuf_get_tid_val(nbuf);
 	uint32_t interframe_delay =
 		(uint32_t)(current_ts - vdev->prev_rx_deliver_tstamp);
+	struct cdp_tid_rx_stats *rstats =
+		&vdev->pdev->stats.tid_stats.tid_rx_stats[ring_id][tid];
 
-	dp_update_delay_stats(vdev->pdev, to_stack, tid,
+	dp_update_delay_stats(NULL, rstats, to_stack, tid,
 			      CDP_DELAY_STATS_REAP_STACK, ring_id);
 	/*
 	 * Update interframe delay stats calculated at deliver_data_ol point.
@@ -1628,7 +1630,7 @@ void dp_rx_compute_delay(struct dp_vdev *vdev, qdf_nbuf_t nbuf)
 	 * On the other side, this will help in avoiding extra per packet check
 	 * of vdev->prev_rx_deliver_tstamp.
 	 */
-	dp_update_delay_stats(vdev->pdev, interframe_delay, tid,
+	dp_update_delay_stats(NULL, rstats, interframe_delay, tid,
 			      CDP_DELAY_STATS_RX_INTERFRAME, ring_id);
 	vdev->prev_rx_deliver_tstamp = current_ts;
 }
