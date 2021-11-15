@@ -2911,21 +2911,46 @@ void dp_peer_flush_frags(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
  */
 void dp_soc_reset_mon_intr_mask(struct dp_soc *soc);
 
-#ifdef QCA_PEER_EXT_STATS
-/*
- * dp_accumulate_delay_tid_stats(): Accumulate the tid stats to the
- *                                  hist stats.
- * @soc: DP SoC handle
- * @stats: cdp_delay_tid stats
- * @dst_hstats: Destination histogram to copy tid stats
- * @tid: TID value
+/**
+ * dp_txrx_get_soc_stats() - will return cdp_soc_stats
+ * @soc_hdl: soc handle
+ * @soc_stats: buffer to hold the values
  *
- * Return: void
+ * Return: QDF_STATUS_SUCCESS: Success
+ *         QDF_STATUS_E_FAILURE: Error
  */
-void dp_accumulate_delay_tid_stats(struct dp_soc *soc,
-				   struct cdp_delay_tid_stats stats[]
-				   [CDP_MAX_TXRX_CTX],
-				   struct cdp_hist_stats *dst_hstats,
-				   uint8_t tid, uint32_t mode);
-#endif /* QCA_PEER_EXT_STATS */
+QDF_STATUS dp_txrx_get_soc_stats(struct cdp_soc_t *soc_hdl,
+				 struct cdp_soc_stats *soc_stats);
+
+/**
+ * dp_txrx_get_peer_delay_stats() - to get peer delay stats per TIDs
+ * @soc: soc handle
+ * @vdev_id: id of vdev handle
+ * @peer_mac: mac of DP_PEER handle
+ * @delay_stats: pointer to delay stats array
+ *
+ * Return: QDF_STATUS_SUCCESS: Success
+ *         QDF_STATUS_E_FAILURE: Error
+ */
+QDF_STATUS
+dp_txrx_get_peer_delay_stats(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
+			     uint8_t *peer_mac,
+			     struct cdp_delay_tid_stats *delay_stats);
+
+/**
+ * dp_txrx_get_peer_jitter_stats() - to get peer jitter stats per TIDs
+ * @soc: soc handle
+ * @pdev_id: id of pdev handle
+ * @vdev_id: id of vdev handle
+ * @peer_mac: mac of DP_PEER handle
+ * @tid_stats: pointer to jitter stats array
+ *
+ * Return: QDF_STATUS_SUCCESS: Success
+ *         QDF_STATUS_E_FAILURE: Error
+ */
+QDF_STATUS
+dp_txrx_get_peer_jitter_stats(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
+			      uint8_t vdev_id, uint8_t *peer_mac,
+			      struct cdp_peer_tid_stats *tid_stats);
+
 #endif /* #ifndef _DP_INTERNAL_H_ */

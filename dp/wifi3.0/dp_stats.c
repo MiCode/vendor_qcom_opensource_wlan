@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2017-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -5692,11 +5692,21 @@ static void dp_print_hist_stats(struct cdp_hist_stats *hstats,
 	DP_PRINT_STATS("Avg = %u\n", hstats->avg);
 }
 
-void dp_accumulate_delay_tid_stats(struct dp_soc *soc,
-				   struct cdp_delay_tid_stats stats[]
-				   [CDP_MAX_TXRX_CTX],
-				   struct cdp_hist_stats *dst_hstats,
-				   uint8_t tid, uint32_t mode)
+/*
+ * dp_accumulate_delay_tid_stats(): Accumulate the tid stats to the
+ *                                  hist stats.
+ * @soc: DP SoC handle
+ * @stats: cdp_delay_tid stats
+ * @dst_hstats: Destination histogram to copy tid stats
+ * @tid: TID value
+ *
+ * Return: void
+ */
+static void dp_accumulate_delay_tid_stats(struct dp_soc *soc,
+					  struct cdp_delay_tid_stats stats[]
+					  [CDP_MAX_TXRX_CTX],
+					  struct cdp_hist_stats *dst_hstats,
+					  uint8_t tid, uint32_t mode)
 {
 	uint8_t ring_id;
 
@@ -7559,3 +7569,250 @@ void dp_update_pdev_ingress_stats(struct dp_pdev *tgtobj,
 		tgtobj->stats.tx_i.dropped.res_full +
 		tgtobj->stats.tx_i.dropped.headroom_insufficient;
 }
+
+QDF_STATUS dp_txrx_get_soc_stats(struct cdp_soc_t *soc_hdl,
+				 struct cdp_soc_stats *soc_stats)
+{
+	struct dp_soc *soc = (struct dp_soc *)soc_hdl;
+	uint8_t inx;
+	uint8_t cpus;
+
+	/* soc tx stats */
+	soc_stats->tx.egress = soc->stats.tx.egress;
+	soc_stats->tx.tx_invalid_peer = soc->stats.tx.tx_invalid_peer;
+	for (inx = 0; inx < CDP_MAX_TX_DATA_RINGS; inx++) {
+		soc_stats->tx.tx_hw_enq[inx] = soc->stats.tx.tcl_enq[inx];
+		soc_stats->tx.tx_hw_ring_full[inx] =
+					soc->stats.tx.tcl_ring_full[inx];
+	}
+	soc_stats->tx.desc_in_use = soc->stats.tx.desc_in_use;
+	soc_stats->tx.dropped_fw_removed = soc->stats.tx.dropped_fw_removed;
+	soc_stats->tx.invalid_release_source =
+					soc->stats.tx.invalid_release_source;
+	for (inx = 0; inx < CDP_MAX_WIFI_INT_ERROR_REASONS; inx++)
+		soc_stats->tx.wifi_internal_error[inx] =
+					soc->stats.tx.wbm_internal_error[inx];
+	soc_stats->tx.non_wifi_internal_err =
+					soc->stats.tx.non_wbm_internal_err;
+	soc_stats->tx.tx_comp_loop_pkt_limit_hit =
+				soc->stats.tx.tx_comp_loop_pkt_limit_hit;
+	soc_stats->tx.hp_oos2 = soc->stats.tx.hp_oos2;
+	soc_stats->tx.tx_comp_exception = soc->stats.tx.tx_comp_exception;
+	/* soc rx stats */
+	soc_stats->rx.ingress = soc->stats.rx.ingress;
+	soc_stats->rx.err_ring_pkts = soc->stats.rx.err_ring_pkts;
+	soc_stats->rx.rx_frags = soc->stats.rx.rx_frags;
+	soc_stats->rx.rx_hw_reinject = soc->stats.rx.reo_reinject;
+	soc_stats->rx.bar_frame = soc->stats.rx.bar_frame;
+	soc_stats->rx.rx_frag_err_len_error =
+					soc->stats.rx.rx_frag_err_len_error;
+	soc_stats->rx.rx_frag_err_no_peer = soc->stats.rx.rx_frag_err_no_peer;
+	soc_stats->rx.rx_frag_wait = soc->stats.rx.rx_frag_wait;
+	soc_stats->rx.rx_frag_err = soc->stats.rx.rx_frag_err;
+	soc_stats->rx.rx_frag_oor = soc->stats.rx.rx_frag_oor;
+	soc_stats->rx.reap_loop_pkt_limit_hit =
+					soc->stats.rx.reap_loop_pkt_limit_hit;
+	soc_stats->rx.hp_oos2 = soc->stats.rx.hp_oos2;
+	soc_stats->rx.near_full = soc->stats.rx.near_full;
+	soc_stats->rx.msdu_scatter_wait_break =
+					soc->stats.rx.msdu_scatter_wait_break;
+	soc_stats->rx.rx_sw_route_drop = soc->stats.rx.rxdma2rel_route_drop;
+	soc_stats->rx.rx_hw_route_drop = soc->stats.rx.reo2rel_route_drop;
+	soc_stats->rx.rx_packets.num_cpus = qdf_min((uint32_t)CDP_NR_CPUS,
+						    num_possible_cpus());
+	for (cpus = 0; cpus < soc_stats->rx.rx_packets.num_cpus; cpus++) {
+		for (inx = 0; inx < CDP_MAX_RX_DEST_RINGS; inx++)
+			soc_stats->rx.rx_packets.pkts[cpus][inx] =
+					soc->stats.rx.ring_packets[cpus][inx];
+	}
+	soc_stats->rx.err.rx_rejected = soc->stats.rx.err.rejected;
+	soc_stats->rx.err.rx_raw_frm_drop = soc->stats.rx.err.raw_frm_drop;
+	soc_stats->rx.err.phy_ring_access_fail =
+					soc->stats.rx.err.hal_ring_access_fail;
+	soc_stats->rx.err.phy_ring_access_full_fail =
+				soc->stats.rx.err.hal_ring_access_full_fail;
+	for (inx = 0; inx < CDP_MAX_RX_DEST_RINGS; inx++)
+		soc_stats->rx.err.phy_rx_hw_error[inx] =
+					soc->stats.rx.err.hal_reo_error[inx];
+	soc_stats->rx.err.phy_rx_hw_dest_dup =
+					soc->stats.rx.err.hal_reo_dest_dup;
+	soc_stats->rx.err.phy_wifi_rel_dup = soc->stats.rx.err.hal_wbm_rel_dup;
+	soc_stats->rx.err.phy_rx_sw_err_dup =
+					soc->stats.rx.err.hal_rxdma_err_dup;
+	soc_stats->rx.err.invalid_rbm = soc->stats.rx.err.invalid_rbm;
+	soc_stats->rx.err.invalid_vdev = soc->stats.rx.err.invalid_vdev;
+	soc_stats->rx.err.invalid_pdev = soc->stats.rx.err.invalid_pdev;
+	soc_stats->rx.err.pkt_delivered_no_peer =
+					soc->stats.rx.err.pkt_delivered_no_peer;
+	soc_stats->rx.err.defrag_peer_uninit =
+					soc->stats.rx.err.defrag_peer_uninit;
+	soc_stats->rx.err.invalid_sa_da_idx =
+					soc->stats.rx.err.invalid_sa_da_idx;
+	soc_stats->rx.err.msdu_done_fail = soc->stats.rx.err.msdu_done_fail;
+	soc_stats->rx.err.rx_invalid_peer = soc->stats.rx.err.rx_invalid_peer;
+	soc_stats->rx.err.rx_invalid_peer_id =
+					soc->stats.rx.err.rx_invalid_peer_id;
+	soc_stats->rx.err.rx_invalid_pkt_len =
+					soc->stats.rx.err.rx_invalid_pkt_len;
+	for (inx = 0; inx < qdf_min((uint32_t)CDP_WIFI_ERR_MAX,
+				    (uint32_t)HAL_RXDMA_ERR_MAX); inx++)
+		soc_stats->rx.err.rx_sw_error[inx] =
+					soc->stats.rx.err.rxdma_error[inx];
+	for (inx = 0; inx < qdf_min((uint32_t)CDP_RX_ERR_MAX,
+				    (uint32_t)HAL_REO_ERR_MAX); inx++)
+		soc_stats->rx.err.rx_hw_error[inx] =
+					soc->stats.rx.err.reo_error[inx];
+	soc_stats->rx.err.rx_desc_invalid_magic =
+					soc->stats.rx.err.rx_desc_invalid_magic;
+	soc_stats->rx.err.rx_hw_cmd_send_fail =
+					soc->stats.rx.err.reo_cmd_send_fail;
+	soc_stats->rx.err.rx_hw_cmd_send_drain =
+					soc->stats.rx.err.reo_cmd_send_drain;
+	soc_stats->rx.err.scatter_msdu = soc->stats.rx.err.scatter_msdu;
+	soc_stats->rx.err.invalid_cookie = soc->stats.rx.err.invalid_cookie;
+	soc_stats->rx.err.stale_cookie = soc->stats.rx.err.stale_cookie;
+	soc_stats->rx.err.rx_2k_jump_delba_sent =
+					soc->stats.rx.err.rx_2k_jump_delba_sent;
+	soc_stats->rx.err.rx_2k_jump_to_stack =
+					soc->stats.rx.err.rx_2k_jump_to_stack;
+	soc_stats->rx.err.rx_2k_jump_drop = soc->stats.rx.err.rx_2k_jump_drop;
+	soc_stats->rx.err.rx_hw_err_msdu_buf_rcved =
+				soc->stats.rx.err.reo_err_msdu_buf_rcved;
+	soc_stats->rx.err.rx_hw_err_msdu_buf_invalid_cookie =
+			soc->stats.rx.err.reo_err_msdu_buf_invalid_cookie;
+	soc_stats->rx.err.rx_hw_err_oor_drop =
+					soc->stats.rx.err.reo_err_oor_drop;
+	soc_stats->rx.err.rx_hw_err_oor_to_stack =
+					soc->stats.rx.err.reo_err_oor_to_stack;
+	soc_stats->rx.err.rx_hw_err_oor_sg_count =
+					soc->stats.rx.err.reo_err_oor_sg_count;
+	soc_stats->rx.err.msdu_count_mismatch =
+					soc->stats.rx.err.msdu_count_mismatch;
+	soc_stats->rx.err.invalid_link_cookie =
+					soc->stats.rx.err.invalid_link_cookie;
+	soc_stats->rx.err.nbuf_sanity_fail = soc->stats.rx.err.nbuf_sanity_fail;
+	soc_stats->rx.err.dup_refill_link_desc =
+					soc->stats.rx.err.dup_refill_link_desc;
+	soc_stats->rx.err.msdu_continuation_err =
+					soc->stats.rx.err.msdu_continuation_err;
+	soc_stats->rx.err.ssn_update_count = soc->stats.rx.err.ssn_update_count;
+	soc_stats->rx.err.bar_handle_fail_count =
+					soc->stats.rx.err.bar_handle_fail_count;
+	soc_stats->rx.err.intrabss_eapol_drop =
+					soc->stats.rx.err.intrabss_eapol_drop;
+	soc_stats->rx.err.pn_in_dest_check_fail =
+					soc->stats.rx.err.pn_in_dest_check_fail;
+	soc_stats->rx.err.msdu_len_err = soc->stats.rx.err.msdu_len_err;
+	soc_stats->rx.err.rx_flush_count = soc->stats.rx.err.rx_flush_count;
+	/* soc ast stats */
+	soc_stats->ast.added = soc->stats.ast.added;
+	soc_stats->ast.deleted = soc->stats.ast.deleted;
+	soc_stats->ast.aged_out = soc->stats.ast.aged_out;
+	soc_stats->ast.map_err = soc->stats.ast.map_err;
+	soc_stats->ast.ast_mismatch = soc->stats.ast.ast_mismatch;
+	/* soc mec stats */
+	soc_stats->mec.added = soc->stats.mec.added;
+	soc_stats->mec.deleted = soc->stats.mec.deleted;
+
+	return QDF_STATUS_SUCCESS;
+}
+
+#ifdef QCA_PEER_EXT_STATS
+QDF_STATUS
+dp_txrx_get_peer_delay_stats(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
+			     uint8_t *peer_mac,
+			     struct cdp_delay_tid_stats *delay_stats)
+{
+	struct dp_soc *soc = (struct dp_soc *)soc_hdl;
+	struct dp_peer *peer = dp_peer_find_hash_find(soc, peer_mac, 0, vdev_id,
+						      DP_MOD_ID_CDP);
+	struct cdp_peer_ext_stats *pext_stats;
+	struct cdp_delay_rx_stats *rx_delay;
+	struct cdp_delay_tx_stats *tx_delay;
+	uint8_t tid;
+
+	if (!peer)
+		return QDF_STATUS_E_FAILURE;
+
+	if (!wlan_cfg_is_peer_ext_stats_enabled(soc->wlan_cfg_ctx)) {
+		dp_peer_unref_delete(peer, DP_MOD_ID_CDP);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	pext_stats = peer->pext_stats;
+	if (!pext_stats) {
+		dp_peer_unref_delete(peer, DP_MOD_ID_CDP);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	for (tid = 0; tid < CDP_MAX_DATA_TIDS; tid++) {
+		rx_delay = &delay_stats[tid].rx_delay;
+		dp_accumulate_delay_tid_stats(soc, pext_stats->delay_stats,
+					      &rx_delay->to_stack_delay, tid,
+					      CDP_HIST_TYPE_REAP_STACK);
+		tx_delay = &delay_stats[tid].tx_delay;
+		dp_accumulate_delay_tid_stats(soc, pext_stats->delay_stats,
+					      &tx_delay->tx_swq_delay, tid,
+					      CDP_HIST_TYPE_SW_ENQEUE_DELAY);
+		dp_accumulate_delay_tid_stats(soc, pext_stats->delay_stats,
+					      &tx_delay->hwtx_delay, tid,
+					      CDP_HIST_TYPE_HW_COMP_DELAY);
+	}
+	dp_peer_unref_delete(peer, DP_MOD_ID_CDP);
+
+	return QDF_STATUS_SUCCESS;
+}
+#else
+QDF_STATUS
+dp_txrx_get_peer_delay_stats(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
+			     uint8_t *peer_mac,
+			     struct cdp_delay_tid_stats *delay_stats)
+{
+	return QDF_STATUS_E_FAILURE;
+}
+#endif /* QCA_PEER_EXT_STATS */
+
+#ifdef WLAN_PEER_JITTER
+QDF_STATUS
+dp_txrx_get_peer_jitter_stats(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
+			      uint8_t vdev_id, uint8_t *peer_mac,
+			      struct cdp_peer_tid_stats *tid_stats)
+{
+	struct dp_soc *soc = (struct dp_soc *)soc_hdl;
+	struct dp_pdev *pdev = dp_get_pdev_from_soc_pdev_id_wifi3(soc, pdev_id);
+	struct dp_peer *peer;
+	uint8_t tid;
+
+	if (!pdev)
+		return QDF_STATUS_E_FAILURE;
+
+	if (!wlan_cfg_get_dp_pdev_nss_enabled(pdev->wlan_cfg_ctx))
+		return QDF_STATUS_E_FAILURE;
+
+	peer = dp_peer_find_hash_find(soc, peer_mac, 0, vdev_id, DP_MOD_ID_CDP);
+	if (!peer)
+		return QDF_STATUS_E_FAILURE;
+
+	for (tid = 0; tid < qdf_min(CDP_DATA_TID_MAX, DP_MAX_TIDS); tid++) {
+		struct dp_rx_tid *rx_tid = &peer->rx_tid[tid];
+
+		tid_stats[tid].tx_avg_jitter = rx_tid->stats.tx_avg_jitter;
+		tid_stats[tid].tx_avg_delay = rx_tid->stats.tx_avg_delay;
+		tid_stats[tid].tx_avg_err = rx_tid->stats.tx_avg_err;
+		tid_stats[tid].tx_total_success =
+					rx_tid->stats.tx_total_success;
+		tid_stats[tid].tx_drop = rx_tid->stats.tx_drop;
+	}
+	dp_peer_unref_delete(peer, DP_MOD_ID_CDP);
+
+	return QDF_STATUS_SUCCESS;
+}
+#else
+QDF_STATUS
+dp_txrx_get_peer_jitter_stats(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
+			      uint8_t vdev_id, uint8_t *peer_mac,
+			      struct cdp_peer_tid_stats *tid_stats)
+{
+	return QDF_STATUS_E_FAILURE;
+}
+#endif /* WLAN_PEER_JITTER */
