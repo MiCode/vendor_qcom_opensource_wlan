@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2016-2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2021,2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -658,6 +658,26 @@ void dp_htt_ppdu_stats_detach(struct dp_pdev *pdev)
 
 	if (mon_pdev->ppdu_tlv_buf)
 		qdf_mem_free(mon_pdev->ppdu_tlv_buf);
+}
+
+QDF_STATUS dp_pdev_get_rx_mon_stats(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
+				    struct cdp_pdev_mon_stats *stats)
+{
+	struct dp_soc *soc = (struct dp_soc *)soc_hdl;
+	struct dp_pdev *pdev = dp_get_pdev_from_soc_pdev_id_wifi3(soc, pdev_id);
+	struct dp_mon_pdev *mon_pdev;
+
+	if (!pdev)
+		return QDF_STATUS_E_FAILURE;
+
+	mon_pdev = pdev->monitor_pdev;
+	if (!mon_pdev)
+		return QDF_STATUS_E_FAILURE;
+
+	qdf_mem_copy(stats, &mon_pdev->rx_mon_stats,
+		     sizeof(struct cdp_pdev_mon_stats));
+
+	return QDF_STATUS_SUCCESS;
 }
 
 void

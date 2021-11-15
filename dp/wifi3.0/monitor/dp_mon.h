@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2016-2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2021,2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -3422,4 +3422,14 @@ void dp_mon_register_feature_ops(struct dp_soc *soc)
 		mon_ops->mon_register_feature_ops(soc);
 }
 
+/**
+ * dp_pdev_get_rx_mon_stats(): Get pdev Rx monitor stats
+ * @soc_hdl: soc handle
+ * @pdev_id: id of pdev handle
+ * @stats: User allocated stats buffer
+ *
+ * return: status success/failure
+ */
+QDF_STATUS dp_pdev_get_rx_mon_stats(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
+				    struct cdp_pdev_mon_stats *stats);
 #endif /* _DP_MON_H_ */

@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2021,2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -1039,6 +1039,7 @@ struct cdp_mon_ops dp_ops_mon_1_0 = {
 	.txrx_deliver_tx_mgmt = dp_deliver_tx_mgmt,
 	.config_full_mon_mode = dp_config_full_mon_mode,
 	.soc_config_full_mon_mode = dp_soc_config_full_mon_mode,
+	.get_mon_pdev_rx_stats = dp_pdev_get_rx_mon_stats,
 };
 
 #ifdef QCA_MONITOR_OPS_PER_SOC_SUPPORT

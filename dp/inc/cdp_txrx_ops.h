@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2017-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -895,6 +895,11 @@ struct cdp_mon_ops {
 		(*config_full_mon_mode)(struct cdp_soc_t *soc, uint8_t val);
 	QDF_STATUS (*soc_config_full_mon_mode)(struct cdp_pdev *cdp_pdev,
 					       uint8_t val);
+
+	/* Get monitor mode pdev stats */
+	QDF_STATUS
+		(*get_mon_pdev_rx_stats)(struct cdp_soc_t *soc, uint8_t pdev_id,
+					 struct cdp_pdev_mon_stats *stats);
 };
 
 struct cdp_host_stats_ops {
