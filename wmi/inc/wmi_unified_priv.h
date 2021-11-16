@@ -99,6 +99,10 @@
 #include "wlan_mlo_mgr_public_structs.h"
 #endif
 
+#if defined(WLAN_SUPPORT_TWT) && defined(WLAN_TWT_CONV_SUPPORTED)
+#include <wlan_twt_public_structs.h>
+#endif
+
 #define WMI_UNIFIED_MAX_EVENT 0x100
 
 #ifdef WMI_EXT_DBG
@@ -2390,8 +2394,102 @@ int (*wmi_check_and_pad_event)(void *os_handle, void *param_struc_ptr,
 int (*wmi_check_command_params)(void *os_handle, void *param_struc_ptr,
 				uint32_t param_buf_len,
 				uint32_t wmi_cmd_event_id);
+#if defined(WLAN_SUPPORT_TWT) && defined(WLAN_TWT_CONV_SUPPORTED)
+QDF_STATUS (*send_twt_enable_cmd)(wmi_unified_t wmi_handle,
+			struct twt_enable_param *params);
 
-#ifdef WLAN_SUPPORT_TWT
+QDF_STATUS (*send_twt_disable_cmd)(wmi_unified_t wmi_handle,
+			struct twt_disable_param *params);
+
+QDF_STATUS (*send_twt_add_dialog_cmd)(wmi_unified_t wmi_handle,
+			struct twt_add_dialog_param *params);
+
+QDF_STATUS (*send_twt_del_dialog_cmd)(wmi_unified_t wmi_handle,
+			struct twt_del_dialog_param *params);
+
+QDF_STATUS (*send_twt_pause_dialog_cmd)(wmi_unified_t wmi_handle,
+			struct twt_pause_dialog_cmd_param *params);
+
+QDF_STATUS (*send_twt_nudge_dialog_cmd)(wmi_unified_t wmi_handle,
+			struct twt_nudge_dialog_cmd_param *params);
+
+QDF_STATUS (*send_twt_resume_dialog_cmd)(wmi_unified_t wmi_handle,
+			struct twt_resume_dialog_cmd_param *params);
+#ifdef WLAN_SUPPORT_BCAST_TWT
+QDF_STATUS (*send_twt_btwt_invite_sta_cmd)(wmi_unified_t wmi_handle,
+			struct twt_btwt_invite_sta_cmd_param *params);
+
+QDF_STATUS (*send_twt_btwt_remove_sta_cmd)(wmi_unified_t wmi_handle,
+			struct twt_btwt_remove_sta_cmd_param *params);
+#endif
+
+QDF_STATUS (*extract_twt_enable_comp_event)(wmi_unified_t wmi_handle,
+		uint8_t *evt_buf,
+		struct twt_enable_complete_event_param *params);
+
+QDF_STATUS (*extract_twt_disable_comp_event)(wmi_unified_t wmi_handle,
+		uint8_t *evt_buf,
+		struct twt_disable_complete_event_param *params);
+
+QDF_STATUS (*extract_twt_add_dialog_comp_event)(wmi_unified_t wmi_handle,
+		uint8_t *evt_buf,
+		struct twt_add_dialog_complete_event_param *params);
+
+QDF_STATUS (*extract_twt_add_dialog_comp_additional_params)
+		(
+		 wmi_unified_t wmi_handle, uint8_t *evt_buf,
+		 uint32_t evt_buf_len, uint32_t idx,
+		 struct twt_add_dialog_additional_params *additional_params
+		);
+
+QDF_STATUS (*extract_twt_del_dialog_comp_event)(wmi_unified_t wmi_handle,
+		uint8_t *evt_buf,
+		struct twt_del_dialog_complete_event_param *params);
+
+QDF_STATUS (*extract_twt_pause_dialog_comp_event)(wmi_unified_t wmi_handle,
+		uint8_t *evt_buf,
+		struct twt_pause_dialog_complete_event_param *params);
+
+QDF_STATUS (*extract_twt_nudge_dialog_comp_event)(wmi_unified_t wmi_handle,
+		uint8_t *evt_buf,
+		struct twt_nudge_dialog_complete_event_param *params);
+
+QDF_STATUS (*extract_twt_resume_dialog_comp_event)(wmi_unified_t wmi_handle,
+		uint8_t *evt_buf,
+		struct twt_resume_dialog_complete_event_param *params);
+
+QDF_STATUS (*extract_twt_notify_event)(wmi_unified_t wmi_handle,
+		uint8_t *evt_buf,
+		struct twt_notify_event_param *params);
+QDF_STATUS (*extract_twt_ack_comp_event)(wmi_unified_t wmi_handle,
+		uint8_t *evt_buf,
+		struct twt_ack_complete_event_param *params);
+#ifdef WLAN_SUPPORT_BCAST_TWT
+QDF_STATUS (*extract_twt_btwt_invite_sta_comp_event)(wmi_unified_t wmi_handle,
+		uint8_t *evt_buf,
+		struct twt_btwt_invite_sta_complete_event_param *params);
+
+QDF_STATUS (*extract_twt_btwt_remove_sta_comp_event)(wmi_unified_t wmi_handle,
+		uint8_t *evt_buf,
+		struct twt_btwt_remove_sta_complete_event_param *params);
+#endif
+
+QDF_STATUS(*extract_twt_session_stats_event)
+		(
+		 wmi_unified_t wmi_handle,
+		 uint8_t *evt_buf,
+		 struct twt_session_stats_event_param *params
+		);
+QDF_STATUS(*extract_twt_session_stats_data)
+		(
+		 wmi_unified_t wmi_handle,
+		 uint8_t *evt_buf,
+		 struct twt_session_stats_event_param *params,
+		 struct twt_session_stats_info *session,
+		 uint32_t idx
+		);
+
+#elif defined(WLAN_SUPPORT_TWT)
 QDF_STATUS (*send_twt_enable_cmd)(wmi_unified_t wmi_handle,
 			struct wmi_twt_enable_param *params);
 
