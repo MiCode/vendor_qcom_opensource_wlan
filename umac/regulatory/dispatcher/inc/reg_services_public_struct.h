@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2017-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -2051,9 +2051,11 @@ enum {
 #ifdef CONFIG_AFC_SUPPORT
 /* enum reg_afc_cmd_type - Type of AFC command sent to FW
  * @REG_AFC_CMD_SERV_RESP_READY : Server response is ready
+ * @REG_AFC_CMD_RESET_AFC: Indicate the target to reset AFC
  */
 enum reg_afc_cmd_type {
 	REG_AFC_CMD_SERV_RESP_READY = 1,
+	REG_AFC_CMD_RESET_AFC = 2,
 };
 
 /* enum reg_afc_serv_resp_format - Indicate the format in which afc_serv_format
