@@ -25,6 +25,35 @@
 
 #ifndef _CDP_TXRX_MON_STRUCT_H_
 #define _CDP_TXRX_MON_STRUCT_H_
+
+#ifdef QCA_SUPPORT_LITE_MONITOR
+#define CDP_LITE_MON_MODE_MAX 3
+#define CDP_LITE_MON_FRM_TYPE_MAX 3
+#define CDP_LITE_MON_PEER_MAX 16
+
+/* lite mon peer action */
+enum cdp_lite_mon_peer_action {
+	CDP_LITE_MON_PEER_ADD = 0,
+	CDP_LITE_MON_PEER_REMOVE = 1,
+};
+
+/* lite mon peer types */
+enum cdp_lite_mon_peer_type {
+	CDP_LITE_MON_PEER_TYPE_ASSOCIATED = 0,
+	CDP_LITE_MON_PEER_TYPE_NON_ASSOCIATED = 1,
+	CDP_LITE_MON_PEER_TYPE_MAX = 2,
+};
+
+/* lite mon config direction */
+enum cdp_lite_mon_direction {
+	CDP_LITE_MON_DIRECTION_RX = 1,
+	CDP_LITE_MON_DIRECTION_TX = 2,
+};
+
+/* This should align with nac mac type enumerations in ieee80211_ioctl.h */
+#define CDP_LITE_MON_PEER_MAC_TYPE_CLIENT 2
+#endif
+
 /* XXX not really a mode; there are really multiple PHY's */
 enum cdp_mon_phymode {
 	/* autoselect */
@@ -354,4 +383,62 @@ struct cdp_pdev_mon_stats {
 	uint32_t rx_undecoded_error[CDP_PHYRX_ERR_MAX];
 #endif
 };
+
+#ifdef QCA_SUPPORT_LITE_MONITOR
+/**
+ * cdp_lite_mon_filter_config - lite mon set/get filter config
+ * @direction: direction tx/rx
+ * @disable: disables lite mon
+ * @level: MSDU/MPDU/PPDU levels
+ * @metadata: meta information to be added
+ * @mgmt_filter: mgmt filter for modes fp,md,mo
+ * @ctrl_filter: ctrl filter for modes fp,md,mo
+ * @data_filter: data filter for modes fp,md,mo
+ * @len: mgmt/ctrl/data frame lens
+ * @debug: debug options
+ * @vdev_id: output vdev id
+ */
+struct cdp_lite_mon_filter_config {
+	uint8_t direction;
+	uint8_t disable;
+	uint8_t level;
+	uint8_t metadata;
+	uint16_t mgmt_filter[CDP_LITE_MON_MODE_MAX];
+	uint16_t ctrl_filter[CDP_LITE_MON_MODE_MAX];
+	uint16_t data_filter[CDP_LITE_MON_MODE_MAX];
+	uint16_t len[CDP_LITE_MON_FRM_TYPE_MAX];
+	uint8_t debug;
+	uint8_t vdev_id;
+};
+
+/**
+ * cdp_lite_mon_peer_config - lite mon set peer config
+ * @direction: direction tx/rx
+ * @action: add/del
+ * @type: assoc/non-assoc
+ * @vdev_id: peer vdev id
+ * @mac: peer mac
+ */
+struct cdp_lite_mon_peer_config {
+	uint8_t direction;
+	uint8_t action;
+	uint8_t type;
+	uint8_t vdev_id;
+	uint8_t mac[QDF_MAC_ADDR_SIZE];
+};
+
+/**
+ * cdp_lite_mon_peer_info - lite mon get peer config
+ * @direction: direction tx/rx
+ * @type: assoc/non-assoc
+ * @count: no of peers
+ * @mac: peer macs
+ */
+struct cdp_lite_mon_peer_info {
+	uint8_t direction;
+	uint8_t type;
+	uint8_t count;
+	uint8_t mac[CDP_LITE_MON_PEER_MAX][QDF_MAC_ADDR_SIZE];
+};
+#endif
 #endif

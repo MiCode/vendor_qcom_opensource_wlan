@@ -28,6 +28,10 @@
 #include "dp_tx_capture.h"
 #endif
 
+#ifdef QCA_SUPPORT_LITE_MONITOR
+#include "dp_lite_mon.h"
+#endif
+
 #define DP_INTR_POLL_TIMER_MS	5
 
 #define MON_VDEV_TIMER_INIT 0x1
@@ -765,6 +769,10 @@ struct dp_mon_ops {
 #endif
 	QDF_STATUS (*mon_pdev_ext_init)(struct dp_pdev *pdev);
 	QDF_STATUS (*mon_pdev_ext_deinit)(struct dp_pdev *pdev);
+	QDF_STATUS (*mon_lite_mon_alloc)(struct dp_pdev *pdev);
+	void (*mon_lite_mon_dealloc)(struct dp_pdev *pdev);
+	void (*mon_lite_mon_vdev_delete)(struct dp_pdev *pdev,
+					 struct dp_vdev *vdev);
 };
 
 struct dp_mon_soc {
@@ -3907,6 +3915,7 @@ void dp_mon_register_feature_ops(struct dp_soc *soc)
  */
 QDF_STATUS dp_pdev_get_rx_mon_stats(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
 				    struct cdp_pdev_mon_stats *stats);
+
 /*
  * dp_enable_mon_reap_timer() - enable/disable reap timer
  * @soc_hdl: Datapath soc handle
@@ -3917,4 +3926,34 @@ QDF_STATUS dp_pdev_get_rx_mon_stats(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
  */
 void dp_enable_mon_reap_timer(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
 			      bool enable);
+
+#ifndef QCA_SUPPORT_LITE_MONITOR
+static inline int
+dp_lite_mon_is_rx_enabled(struct dp_mon_pdev *mon_pdev)
+{
+	return 0;
+}
+
+static inline int
+dp_lite_mon_is_tx_enabled(struct dp_mon_pdev *mon_pdev)
+{
+	return 0;
+}
+
+static inline QDF_STATUS
+dp_lite_mon_alloc(struct dp_pdev *pdev)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static inline void
+dp_lite_mon_dealloc(struct dp_pdev *pdev)
+{
+}
+
+static inline void
+dp_lite_mon_vdev_delete(struct dp_pdev *pdev, struct dp_vdev *vdev)
+{
+}
+#endif
 #endif /* _DP_MON_H_ */

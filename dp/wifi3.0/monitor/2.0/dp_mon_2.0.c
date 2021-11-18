@@ -29,6 +29,9 @@
 #include <hal_be_api_mon.h>
 #include <dp_be.h>
 #include <htt_ppdu_stats.h>
+#ifdef QCA_SUPPORT_LITE_MONITOR
+#include "dp_lite_mon.h"
+#endif
 
 #if !defined(DISABLE_MON_CONFIG)
 
@@ -1317,6 +1320,9 @@ struct dp_mon_ops monitor_ops_2_0 = {
 #endif
 	.mon_pdev_ext_init = dp_mon_pdev_ext_init_2_0,
 	.mon_pdev_ext_deinit = dp_mon_pdev_ext_deinit_2_0,
+	.mon_lite_mon_alloc = dp_lite_mon_alloc,
+	.mon_lite_mon_dealloc = dp_lite_mon_dealloc,
+	.mon_lite_mon_vdev_delete = dp_lite_mon_vdev_delete,
 };
 
 struct cdp_mon_ops dp_ops_mon_2_0 = {
@@ -1328,6 +1334,13 @@ struct cdp_mon_ops dp_ops_mon_2_0 = {
 	.soc_config_full_mon_mode = NULL,
 	.get_mon_pdev_rx_stats = dp_pdev_get_rx_mon_stats,
 	.txrx_enable_mon_reap_timer = dp_enable_mon_reap_timer,
+#ifdef QCA_SUPPORT_LITE_MONITOR
+	.txrx_set_lite_mon_config = dp_lite_mon_set_config,
+	.txrx_get_lite_mon_config = dp_lite_mon_get_config,
+	.txrx_set_lite_mon_peer_config = dp_lite_mon_set_peer_config,
+	.txrx_get_lite_mon_peer_config = dp_lite_mon_get_peer_config,
+	.txrx_is_lite_mon_enabled = dp_lite_mon_is_enabled,
+#endif
 };
 
 #ifdef QCA_MONITOR_OPS_PER_SOC_SUPPORT

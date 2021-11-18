@@ -930,6 +930,42 @@ struct cdp_mon_ops {
 	 void (*txrx_enable_mon_reap_timer)(struct cdp_soc_t *soc_hdl,
 					    uint8_t pdev_id,
 					    bool enable);
+
+#ifdef QCA_SUPPORT_LITE_MONITOR
+	/* set lite monitor config */
+	QDF_STATUS
+	(*txrx_set_lite_mon_config)(
+			struct cdp_soc_t *soc,
+			struct cdp_lite_mon_filter_config *mon_config,
+			uint8_t pdev_id);
+
+	/* get lite monitor config */
+	QDF_STATUS
+	(*txrx_get_lite_mon_config)(
+			struct cdp_soc_t *soc,
+			struct cdp_lite_mon_filter_config *mon_config,
+			uint8_t pdev_id);
+
+	/* set lite monitor peer config */
+	QDF_STATUS
+	(*txrx_set_lite_mon_peer_config)(
+			struct cdp_soc_t *soc,
+			struct cdp_lite_mon_peer_config *peer_config,
+			uint8_t pdev_id);
+
+	/* get lite monitor peer list */
+	QDF_STATUS
+	(*txrx_get_lite_mon_peer_config)(
+			struct cdp_soc_t *soc,
+			struct cdp_lite_mon_peer_info *info,
+			uint8_t pdev_id);
+
+	/* get lite monitor enable/disable status */
+	int
+	(*txrx_is_lite_mon_enabled)(struct cdp_soc_t *soc,
+				    uint8_t pdev_id,
+				    uint8_t direction);
+#endif
 };
 
 struct cdp_host_stats_ops {
@@ -1344,6 +1380,13 @@ struct ol_if_ops {
 					   uint32_t module_id,
 					   uint32_t arg_count, uint32_t *arg);
 
+#ifdef QCA_SUPPORT_LITE_MONITOR
+	int (*config_lite_mon_peer)(struct cdp_ctrl_objmgr_psoc *psoc,
+				    uint8_t pdev_id,
+				    uint8_t vdev_id,
+				    enum cdp_nac_param_cmd cmd,
+				    uint8_t *peer_mac);
+#endif
 };
 
 #ifdef DP_PEER_EXTENDED_API

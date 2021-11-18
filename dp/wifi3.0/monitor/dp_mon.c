@@ -4974,10 +4974,17 @@ QDF_STATUS dp_mon_pdev_init(struct dp_pdev *pdev)
 	if (dp_htt_ppdu_stats_attach(pdev) != QDF_STATUS_SUCCESS)
 		goto fail2;
 
+	if (mon_ops->mon_lite_mon_alloc) {
+		if (mon_ops->mon_lite_mon_alloc(pdev) != QDF_STATUS_SUCCESS) {
+			dp_mon_err("%pK: lite mon alloc failed", pdev);
+			goto fail3;
+		}
+	}
+
 	if (mon_ops->mon_rings_init) {
 		if (mon_ops->mon_rings_init(pdev)) {
 			dp_mon_err("%pK: MONITOR rings setup failed", pdev);
-			goto fail3;
+			goto fail4;
 		}
 	}
 
@@ -4989,7 +4996,7 @@ QDF_STATUS dp_mon_pdev_init(struct dp_pdev *pdev)
 	if (mon_ops->rx_mon_buffers_alloc) {
 		if (mon_ops->rx_mon_buffers_alloc(pdev)) {
 			dp_mon_err("%pK: rx mon buffers alloc failed", pdev);
-			goto fail4;
+			goto fail5;
 		}
 	}
 
@@ -5004,13 +5011,15 @@ QDF_STATUS dp_mon_pdev_init(struct dp_pdev *pdev)
 
 	return QDF_STATUS_SUCCESS;
 
-fail4:
+fail5:
 	if (mon_ops->rx_mon_desc_pool_deinit)
 		mon_ops->rx_mon_desc_pool_deinit(pdev);
 
 	if (mon_ops->mon_rings_deinit)
 		mon_ops->mon_rings_deinit(pdev);
-
+fail4:
+	if (mon_ops->mon_lite_mon_dealloc)
+		mon_ops->mon_lite_mon_dealloc(pdev);
 fail3:
 	dp_htt_ppdu_stats_detach(pdev);
 fail2:
@@ -5050,6 +5059,8 @@ QDF_STATUS dp_mon_pdev_deinit(struct dp_pdev *pdev)
 	if (mon_ops->mon_rings_deinit)
 		mon_ops->mon_rings_deinit(pdev);
 	dp_cal_client_detach(&mon_pdev->cal_client_ctx);
+	if (mon_ops->mon_lite_mon_dealloc)
+		mon_ops->mon_lite_mon_dealloc(pdev);
 	dp_htt_ppdu_stats_detach(pdev);
 	qdf_spinlock_destroy(&mon_pdev->ppdu_stats_lock);
 	dp_neighbour_peers_detach(pdev);
@@ -5090,6 +5101,10 @@ QDF_STATUS dp_mon_vdev_detach(struct dp_vdev *vdev)
 {
 	struct dp_mon_vdev *mon_vdev = vdev->monitor_vdev;
 	struct dp_pdev *pdev = vdev->pdev;
+	struct dp_mon_ops *mon_ops = dp_mon_ops_get(pdev->soc);
+
+	if (!mon_ops)
+		return QDF_STATUS_E_FAILURE;
 
 	if (!mon_vdev)
 		return QDF_STATUS_E_FAILURE;
@@ -5103,6 +5118,9 @@ QDF_STATUS dp_mon_vdev_detach(struct dp_vdev *vdev)
 	 */
 	if (pdev->monitor_pdev->mvdev == vdev)
 		pdev->monitor_pdev->mvdev = NULL;
+
+	if (mon_ops->mon_lite_mon_vdev_delete)
+		mon_ops->mon_lite_mon_vdev_delete(pdev, vdev);
 
 	return QDF_STATUS_SUCCESS;
 }

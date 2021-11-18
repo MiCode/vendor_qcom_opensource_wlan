@@ -1211,6 +1211,9 @@ struct dp_mon_ops monitor_ops_1_0 = {
 	.mon_tx_ppdu_stats_detach = NULL,
 	.mon_peer_tx_capture_filter_check = NULL,
 #endif
+	.mon_lite_mon_alloc = NULL,
+	.mon_lite_mon_dealloc = NULL,
+	.mon_lite_mon_vdev_delete = NULL,
 };
 
 struct cdp_mon_ops dp_ops_mon_1_0 = {
@@ -1222,6 +1225,13 @@ struct cdp_mon_ops dp_ops_mon_1_0 = {
 	.soc_config_full_mon_mode = dp_soc_config_full_mon_mode,
 	.get_mon_pdev_rx_stats = dp_pdev_get_rx_mon_stats,
 	.txrx_enable_mon_reap_timer = dp_enable_mon_reap_timer,
+#ifdef QCA_SUPPORT_LITE_MONITOR
+	.txrx_set_lite_mon_config = NULL,
+	.txrx_get_lite_mon_config = NULL,
+	.txrx_set_lite_mon_peer_config = NULL,
+	.txrx_get_lite_mon_peer_config = NULL,
+	.txrx_is_lite_mon_enabled = NULL,
+#endif
 };
 
 #ifdef QCA_MONITOR_OPS_PER_SOC_SUPPORT
