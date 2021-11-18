@@ -384,6 +384,12 @@ struct rx_pkt_tlvs {
 #define HAL_RX_MSDU_END_SA_SW_PEER_ID_GET(_rx_pkt_tlv)	\
 	HAL_RX_MSDU_END(_rx_pkt_tlv).sa_sw_peer_id
 
+#define HAL_RX_REO_QUEUE_DESC_ADDR_31_0_GET(_rx_pkt_tlv)	\
+	HAL_RX_MPDU_START(_rx_pkt_tlv).rx_reo_queue_desc_addr_31_0
+
+#define HAL_RX_REO_QUEUE_DESC_ADDR_39_32_GET(_rx_pkt_tlv)	\
+	HAL_RX_MPDU_START(_rx_pkt_tlv).rx_reo_queue_desc_addr_39_32
+
 /* used by monitor mode for parsing from full TLV */
 #define HAL_RX_MON_GET_FC_VALID(_rx_mpdu_start)	\
 	HAL_RX_GET(rx_mpdu_start, RX_MPDU_INFO, MPDU_FRAME_CONTROL_VALID)
@@ -728,13 +734,12 @@ static inline uint8_t *hal_get_reo_ent_desc_qdesc_addr_be(uint8_t *desc)
  * @buf: pointer to the start of RX PKT TLV headers
  * Return: qdesc adrress in reo destination ring buffer
  */
-static inline uint8_t *hal_rx_get_qdesc_addr_be(uint8_t *dst_ring_desc,
+static inline uint64_t hal_rx_get_qdesc_addr_be(uint8_t *dst_ring_desc,
 						uint8_t *buf)
 {
 	struct rx_pkt_tlvs *rx_pkt_tlvs = (struct rx_pkt_tlvs *)buf;
 
-	return (uint8_t *)(&HAL_RX_MPDU_START(rx_pkt_tlvs) +
-			RX_MPDU_INFO_RX_REO_QUEUE_DESC_ADDR_31_0_OFFSET);
+	return (uint64_t)HAL_RX_REO_QUEUE_DESC_ADDR_31_0_GET(rx_pkt_tlvs);
 }
 
 /**

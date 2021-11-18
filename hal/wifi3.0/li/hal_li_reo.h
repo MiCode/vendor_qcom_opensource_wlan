@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2017-2019, 2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -77,5 +78,5 @@ void hal_reo_init_cmd_ring_li(hal_soc_handle_t hal_soc_hdl,
 
 uint8_t hal_get_tlv_hdr_size_li(void);
 
-uint8_t *hal_rx_get_qdesc_addr_li(uint8_t *dst_ring_desc, uint8_t *buf);
+uint64_t hal_rx_get_qdesc_addr_li(uint8_t *dst_ring_desc, uint8_t *buf);
 #endif /* _HAL_LI_REO_H_ */

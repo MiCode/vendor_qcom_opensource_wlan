@@ -1240,7 +1240,8 @@ static QDF_STATUS dp_rx_defrag_reo_reinject(struct dp_peer *peer,
 	void *link_desc_va;
 	void *msdu0, *msdu_desc_info;
 	void *ent_ring_desc, *ent_mpdu_desc_info, *ent_qdesc_addr;
-	void *dst_mpdu_desc_info, *dst_qdesc_addr;
+	void *dst_mpdu_desc_info;
+	uint64_t dst_qdesc_addr;
 	qdf_dma_addr_t paddr;
 	uint32_t nbuf_len, seq_no, dst_ind;
 	uint32_t *mpdu_wrd;
@@ -1388,7 +1389,7 @@ static QDF_STATUS dp_rx_defrag_reo_reinject(struct dp_peer *peer,
 					       (uint8_t *)dst_ring_desc,
 					       qdf_nbuf_data(head));
 
-	qdf_mem_copy(ent_qdesc_addr, dst_qdesc_addr, 5);
+	qdf_mem_copy(ent_qdesc_addr, &dst_qdesc_addr, 5);
 
 	hal_set_reo_ent_desc_reo_dest_ind(soc->hal_soc,
 					  (uint8_t *)ent_ring_desc, dst_ind);

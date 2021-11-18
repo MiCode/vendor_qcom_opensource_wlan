@@ -2583,7 +2583,7 @@ hal_get_reo_ent_desc_qdesc_addr(hal_soc_handle_t hal_soc_hdl, uint8_t *desc)
 	return NULL;
 }
 
-static inline uint8_t *
+static inline uint64_t
 hal_rx_get_qdesc_addr(hal_soc_handle_t hal_soc_hdl, uint8_t *dst_ring_desc,
 		      uint8_t *buf)
 {
@@ -2592,7 +2592,7 @@ hal_rx_get_qdesc_addr(hal_soc_handle_t hal_soc_hdl, uint8_t *dst_ring_desc,
 	if (hal_soc->ops->hal_rx_get_qdesc_addr)
 		return hal_soc->ops->hal_rx_get_qdesc_addr(dst_ring_desc, buf);
 
-	return NULL;
+	return 0;
 }
 
 static inline void

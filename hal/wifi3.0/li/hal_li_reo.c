@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1355,8 +1356,8 @@ uint8_t hal_get_tlv_hdr_size_li(void)
 	return sizeof(struct tlv_32_hdr);
 }
 
-uint8_t *hal_rx_get_qdesc_addr_li(uint8_t *dst_ring_desc, uint8_t *buf)
+uint64_t hal_rx_get_qdesc_addr_li(uint8_t *dst_ring_desc, uint8_t *buf)
 {
-	return dst_ring_desc +
+	return *(uint64_t *)dst_ring_desc +
 		REO_DESTINATION_RING_6_RX_REO_QUEUE_DESC_ADDR_31_0_OFFSET;
 }
