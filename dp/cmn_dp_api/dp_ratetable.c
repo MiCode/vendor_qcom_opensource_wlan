@@ -1,5 +1,6 @@
 /*
- * Copyright (c) 2016-2019, 2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2019, 2022 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -66,6 +67,9 @@ enum DP_CMN_RATECODE_PREAM_TYPE {
 	DP_CMN_RATECODE_PREAM_HT,
 	DP_CMN_RATECODE_PREAM_VHT,
 	DP_CMN_RATECODE_PREAM_HE,
+#ifdef WLAN_FEATURE_11BE
+	DP_CMN_RATECODE_PREAM_EHT,
+#endif
 	DP_CMN_RATECODE_PREAM_COUNT,
 };
 
@@ -3368,18 +3372,140 @@ static const uint16_t _rc_idx[DP_CMN_MOD_IEEE80211_T_MAX_PHY] = {
 	HE_40_RATE_TABLE_INDEX,
 	HE_80_RATE_TABLE_INDEX,
 	HE_160_RATE_TABLE_INDEX,
+#ifdef WLAN_FEATURE_11BE
+	EHT_20_RATE_TABLE_INDEX,
+	EHT_40_RATE_TABLE_INDEX,
+	EHT_60_RATE_TABLE_INDEX,
+	EHT_80_RATE_TABLE_INDEX,
+	EHT_120_RATE_TABLE_INDEX,
+	EHT_140_RATE_TABLE_INDEX,
+	EHT_160_RATE_TABLE_INDEX,
+	EHT_200_RATE_TABLE_INDEX,
+	EHT_240_RATE_TABLE_INDEX,
+	EHT_280_RATE_TABLE_INDEX,
+	EHT_320_RATE_TABLE_INDEX,
+#endif
 };
+
+#ifdef WLAN_FEATURE_11BE
+static inline
+enum BW_TYPES_FP dp_get_bw_fp_from_full_bw_pmode(uint8_t bw,
+						 uint8_t punc_mode)
+{
+	CMN_DP_ASSERT(punc_mode < PUNCTURED_MODE_CNT);
+
+	switch (bw) {
+	case CMN_BW_80MHZ:
+		if (punc_mode == PUNCTURED_20MHZ)
+			return BW_60MHZ_P;
+		else
+			return BW_80MHZ_F;
+	case CMN_BW_160MHZ:
+		if (punc_mode == PUNCTURED_40MHZ)
+			return BW_120MHZ_P;
+		else if (punc_mode == PUNCTURED_20MHZ)
+			return BW_140MHZ_P;
+		else
+			return BW_160MHZ_F;
+	case CMN_BW_320MHZ:
+		if (punc_mode == PUNCTURED_120MHZ)
+			return BW_200MHZ_P;
+		else if (punc_mode == PUNCTURED_80MHZ)
+			return BW_240MHZ_P;
+		else if (punc_mode == PUNCTURED_40MHZ)
+			return BW_280MHZ_P;
+		else
+			return BW_320MHZ_F;
+	default:
+		return (enum BW_TYPES_FP)bw;
+	}
+}
+#endif
 
 /*
  * dp_getmodulation - return rate modulation given code spatial width
  * @pream_type - preamble type
  * @width - bandwidth
+ * @punc_mode - punctered bandwidth
  *
  * return - modulation type
  */
-enum DP_CMN_MODULATION_TYPE dp_getmodulation(
-		uint16_t pream_type,
-		uint8_t width)
+#ifdef WLAN_FEATURE_11BE
+enum DP_CMN_MODULATION_TYPE dp_getmodulation(uint16_t pream_type,
+					     uint8_t width,
+					     uint8_t punc_mode)
+{
+	static const enum DP_CMN_MODULATION_TYPE _vht_bw_mod[] = {
+		DP_CMN_MOD_IEEE80211_T_VHT_20,
+		DP_CMN_MOD_IEEE80211_T_VHT_40,
+		DP_CMN_MOD_IEEE80211_T_VHT_80,
+		DP_CMN_MOD_IEEE80211_T_VHT_160
+	};
+
+	static const enum DP_CMN_MODULATION_TYPE _he_bw_mod[] = {
+		DP_CMN_MOD_IEEE80211_T_HE_20,
+		DP_CMN_MOD_IEEE80211_T_HE_40,
+		DP_CMN_MOD_IEEE80211_T_HE_80,
+		DP_CMN_MOD_IEEE80211_T_HE_160
+	};
+
+	static const enum DP_CMN_MODULATION_TYPE _eht_bw_mod[] = {
+		DP_CMN_MOD_IEEE80211_T_EHT_20,
+		DP_CMN_MOD_IEEE80211_T_EHT_40,
+		DP_CMN_MOD_IEEE80211_T_EHT_60,
+		DP_CMN_MOD_IEEE80211_T_EHT_80,
+		DP_CMN_MOD_IEEE80211_T_EHT_120,
+		DP_CMN_MOD_IEEE80211_T_EHT_140,
+		DP_CMN_MOD_IEEE80211_T_EHT_160,
+		DP_CMN_MOD_IEEE80211_T_EHT_200,
+		DP_CMN_MOD_IEEE80211_T_EHT_240,
+		DP_CMN_MOD_IEEE80211_T_EHT_280,
+		DP_CMN_MOD_IEEE80211_T_EHT_320,
+	};
+
+	enum DP_CMN_MODULATION_TYPE modulation;
+
+	CMN_DP_ASSERT(width < CMN_BW_CNT);
+
+	switch (pream_type) {
+	case DP_CMN_RATECODE_PREAM_HT:
+		if (width)
+			modulation = DP_CMN_MOD_IEEE80211_T_HT_40;
+		else
+			modulation = DP_CMN_MOD_IEEE80211_T_HT_20;
+		break;
+
+	case DP_CMN_RATECODE_PREAM_CCK:
+		modulation = DP_CMN_MOD_IEEE80211_T_CCK;
+		break;
+
+	case DP_CMN_RATECODE_PREAM_VHT:
+		modulation = _vht_bw_mod[width];
+		break;
+
+	case DP_CMN_RATECODE_PREAM_HE:
+		modulation = _he_bw_mod[width];
+		break;
+
+	case DP_CMN_RATECODE_PREAM_EHT:
+		{
+			enum BW_TYPES_FP bw_fp =
+				dp_get_bw_fp_from_full_bw_pmode(width,
+								punc_mode);
+			modulation = _eht_bw_mod[bw_fp];
+			break;
+		}
+
+	default:
+		modulation = DP_CMN_MOD_IEEE80211_T_OFDM;
+	}
+
+	return modulation;
+}
+#else
+enum DP_CMN_MODULATION_TYPE dp_getmodulation(uint16_t pream_type,
+					     uint8_t width,
+					     uint8_t punc_mode)
 {
 	static const enum DP_CMN_MODULATION_TYPE _vht_bw_mod[] = {
 		DP_CMN_MOD_IEEE80211_T_VHT_20,
@@ -3421,11 +3547,11 @@ enum DP_CMN_MODULATION_TYPE dp_getmodulation(
 
 	default:
 		modulation = DP_CMN_MOD_IEEE80211_T_OFDM;
-		break;
 	}
 
 	return modulation;
 }
+#endif /* WLAN_FEATURE_11BE */
 
 /* dp_getrateindex - calculate ratekbps
  * @mcs - MCS index
@@ -3437,9 +3563,10 @@ enum DP_CMN_MODULATION_TYPE dp_getmodulation(
  *
  * return - rate in kbps
  */
+#ifdef WLAN_FEATURE_11BE
 uint32_t
 dp_getrateindex(uint32_t gi, uint16_t mcs, uint8_t nss, uint8_t preamble,
-		uint8_t bw, uint32_t *rix, uint16_t *ratecode)
+		uint8_t bw, uint8_t punc_bw, uint32_t *rix, uint16_t *ratecode)
 {
 	uint32_t ratekbps = 0, res = RT_INVALID_INDEX; /* represents failure */
 	uint16_t rc;
@@ -3447,7 +3574,77 @@ dp_getrateindex(uint32_t gi, uint16_t mcs, uint8_t nss, uint8_t preamble,
 
 	/* For error case, where idx exceeds bountry limit */
 	*ratecode = 0;
-	mod = dp_getmodulation(preamble, bw);
+	mod = dp_getmodulation(preamble, bw, punc_bw);
+	rc = mcs;
+
+	/* get the base of corresponding rate table  entry */
+	res = _rc_idx[mod];
+
+	switch (preamble) {
+	case DP_CMN_RATECODE_PREAM_EHT:
+		res += ((rc + 2) % NUM_EHT_MCS) + nss * NUM_EHT_MCS;
+		break;
+
+	case DP_CMN_RATECODE_PREAM_HE:
+		res += rc + nss * NUM_HE_MCS;
+		break;
+
+	case DP_CMN_RATECODE_PREAM_VHT:
+		res += rc + nss * NUM_VHT_MCS;
+		break;
+
+	case DP_CMN_RATECODE_PREAM_HT:
+		res += rc + nss * NUM_HT_MCS;
+		break;
+
+	case DP_CMN_RATECODE_PREAM_CCK:
+		rc  &= ~HW_RATECODE_CCK_SHORT_PREAM_MASK;
+		res += rc;
+		break;
+
+	case DP_CMN_RATECODE_PREAM_OFDM:
+		res += rc;
+		break;
+
+	default:
+		break;
+	}
+	if (res >= DP_RATE_TABLE_SIZE)
+		goto done;
+
+	if (!gi) {
+		ratekbps = dp_11abgnratetable.info[res].userratekbps;
+	} else {
+		switch (gi) {
+		case CDP_SGI_0_4_US:
+			ratekbps = dp_11abgnratetable.info[res].ratekbpssgi;
+			break;
+		case CDP_SGI_1_6_US:
+			ratekbps = dp_11abgnratetable.info[res].ratekbpsdgi;
+			break;
+		case CDP_SGI_3_2_US:
+			ratekbps = dp_11abgnratetable.info[res].ratekbpsqgi;
+			break;
+		}
+	}
+	*ratecode = dp_11abgnratetable.info[res].ratecode;
+done:
+	*rix = res;
+
+	return ratekbps;
+}
+#else
+uint32_t
+dp_getrateindex(uint32_t gi, uint16_t mcs, uint8_t nss, uint8_t preamble,
+		uint8_t bw, uint8_t punc_bw, uint32_t *rix, uint16_t *ratecode)
+{
+	uint32_t ratekbps = 0, res = RT_INVALID_INDEX; /* represents failure */
+	uint16_t rc;
+	enum DP_CMN_MODULATION_TYPE mod;
+
+	/* For error case, where idx exceeds bountry limit */
+	*ratecode = 0;
+	mod = dp_getmodulation(preamble, bw, punc_bw);
 	rc = mcs;
 
 	/* get the base of corresponding rate table  entry */
@@ -3502,7 +3699,7 @@ done:
 
 	return ratekbps;
 }
-
+#endif
 qdf_export_symbol(dp_getrateindex);
 
 /* dp_rate_idx_to_kbps - get rate kbps from index

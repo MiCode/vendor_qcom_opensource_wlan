@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021,2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -54,6 +54,10 @@ enum CMN_MODE_TYPES {
 	CMN_IEEE80211_MODE_AXA,
 	CMN_IEEE80211_MODE_AXG,
 	CMN_IEEE80211_MODE_AX,
+#ifdef WLAN_FEATURE_11BE
+	CMN_IEEE80211_MODE_BEA,
+	CMN_IEEE80211_MODE_BEG,
+#endif
 	CMN_IEEE80211_MODE_MAX
 };
 
@@ -65,6 +69,9 @@ enum CMN_MODE_TYPES {
 #define NUM_VHT_MCS 12
 
 #define NUM_HE_MCS 14
+#ifdef WLAN_FEATURE_11BE
+#define NUM_EHT_MCS 16
+#endif
 
 #define NUM_SPATIAL_STREAM 4
 #define NUM_SPATIAL_STREAMS 8
@@ -152,7 +159,30 @@ static inline int dp_ath_rate_out(uint64_t _i)
 #define HE_80_RATE_TABLE_INDEX (HE_40_RATE_TABLE_INDEX + NUM_HE_RIX_PER_BW)
 
 #define HE_160_RATE_TABLE_INDEX (HE_80_RATE_TABLE_INDEX + NUM_HE_RIX_PER_BW)
-#define DP_RATE_TABLE_SIZE (HE_160_RATE_TABLE_INDEX + NUM_HE_RIX_FOR_160MHZ)
+#define HE_LAST_RIX_PLUS_ONE (HE_160_RATE_TABLE_INDEX + NUM_HE_RIX_FOR_160MHZ)
+
+#ifdef WLAN_FEATURE_11BE
+#define NUM_EHT_RIX_PER_BW (NUM_EHT_MCS * NUM_SPATIAL_STREAMS)
+
+#define EHT_20_RATE_TABLE_INDEX HE_LAST_RIX_PLUS_ONE
+#define EHT_40_RATE_TABLE_INDEX (EHT_20_RATE_TABLE_INDEX + NUM_EHT_RIX_PER_BW)
+#define EHT_60_RATE_TABLE_INDEX (EHT_40_RATE_TABLE_INDEX + NUM_EHT_RIX_PER_BW)
+#define EHT_80_RATE_TABLE_INDEX (EHT_60_RATE_TABLE_INDEX + NUM_EHT_RIX_PER_BW)
+#define EHT_120_RATE_TABLE_INDEX (EHT_80_RATE_TABLE_INDEX + NUM_EHT_RIX_PER_BW)
+#define EHT_140_RATE_TABLE_INDEX (EHT_120_RATE_TABLE_INDEX + NUM_EHT_RIX_PER_BW)
+#define EHT_160_RATE_TABLE_INDEX (EHT_140_RATE_TABLE_INDEX + NUM_EHT_RIX_PER_BW)
+#define EHT_200_RATE_TABLE_INDEX (EHT_160_RATE_TABLE_INDEX + NUM_EHT_RIX_PER_BW)
+#define EHT_240_RATE_TABLE_INDEX (EHT_200_RATE_TABLE_INDEX + NUM_EHT_RIX_PER_BW)
+#define EHT_280_RATE_TABLE_INDEX (EHT_240_RATE_TABLE_INDEX + NUM_EHT_RIX_PER_BW)
+#define EHT_320_RATE_TABLE_INDEX (EHT_280_RATE_TABLE_INDEX + NUM_EHT_RIX_PER_BW)
+#define EHT_LAST_RIX_PLUS_ONE (EHT_320_RATE_TABLE_INDEX + NUM_EHT_RIX_PER_BW)
+#endif
+
+#ifdef WLAN_FEATURE_11BE
+#define DP_RATE_TABLE_SIZE EHT_LAST_RIX_PLUS_ONE
+#else
+#define DP_RATE_TABLE_SIZE HE_LAST_RIX_PLUS_ONE
+#endif
 
 /* The following would span more than one octet
  * when 160MHz BW defined for VHT
@@ -172,6 +202,19 @@ enum DP_CMN_MODULATION_TYPE {
 	   DP_CMN_MOD_IEEE80211_T_HE_40,
 	   DP_CMN_MOD_IEEE80211_T_HE_80,
 	   DP_CMN_MOD_IEEE80211_T_HE_160,
+#ifdef WLAN_FEATURE_11BE
+	   DP_CMN_MOD_IEEE80211_T_EHT_20,
+	   DP_CMN_MOD_IEEE80211_T_EHT_40,
+	   DP_CMN_MOD_IEEE80211_T_EHT_60,
+	   DP_CMN_MOD_IEEE80211_T_EHT_80,
+	   DP_CMN_MOD_IEEE80211_T_EHT_120,
+	   DP_CMN_MOD_IEEE80211_T_EHT_140,
+	   DP_CMN_MOD_IEEE80211_T_EHT_160,
+	   DP_CMN_MOD_IEEE80211_T_EHT_200,
+	   DP_CMN_MOD_IEEE80211_T_EHT_240,
+	   DP_CMN_MOD_IEEE80211_T_EHT_280,
+	   DP_CMN_MOD_IEEE80211_T_EHT_320,
+#endif
 	   DP_CMN_MOD_IEEE80211_T_MAX_PHY
 };
 
@@ -184,15 +227,47 @@ enum HW_RATECODE_PREAM_TYPE {
 	HW_RATECODE_PREAM_HT,
 	HW_RATECODE_PREAM_VHT,
 	HW_RATECODE_PREAM_HE,
+#ifdef WLAN_FEATURE_11BE
+	HW_RATECODE_PREAM_EHT,
+#endif
 };
 
-enum DP_CMN_MODULATION_TYPE dp_getmodulation(
-		uint16_t pream_type,
-		uint8_t width);
+#ifdef WLAN_FEATURE_11BE
+enum BW_TYPES_FP {
+	BW_20MHZ_F = 0,
+	BW_40MHZ_F,
+	BW_60MHZ_P,
+	BW_80MHZ_F,
+	BW_120MHZ_P,
+	BW_140MHZ_P,
+	BW_160MHZ_F,
+	BW_200MHZ_P,
+	BW_240MHZ_P,
+	BW_280MHZ_P,
+	BW_320MHZ_F,
+	BW_FP_CNT,
+	BW_FP_LAST = BW_320MHZ_F,
+};
+#endif
+
+enum PUNCTURED_MODES {
+	NO_PUNCTURE,
+#ifdef WLAN_FEATURE_11BE
+	PUNCTURED_20MHZ,
+	PUNCTURED_40MHZ,
+	PUNCTURED_80MHZ,
+	PUNCTURED_120MHZ,
+	PUNCTURED_MODE_CNT,
+#endif
+};
+
+enum DP_CMN_MODULATION_TYPE dp_getmodulation(uint16_t pream_type,
+					     uint8_t width,
+					     uint8_t punc_mode);
 
 uint32_t
 dp_getrateindex(uint32_t gi, uint16_t mcs, uint8_t nss, uint8_t preamble,
-		uint8_t bw, uint32_t *rix, uint16_t *ratecode);
+		uint8_t bw, uint8_t punc_bw, uint32_t *rix, uint16_t *ratecode);
 
 int dp_rate_idx_to_kbps(uint8_t rate_idx, uint8_t gintval);
 

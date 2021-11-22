@@ -9737,7 +9737,8 @@ static int dp_txrx_get_ratekbps(int preamb, int mcs,
 	uint16_t ratecode;
 
 	return dp_getrateindex((uint32_t)gintval, (uint16_t)mcs, 1,
-			       (uint8_t)preamb, 1, &rix, &ratecode);
+			       (uint8_t)preamb, 1, NO_PUNCTURE,
+			       &rix, &ratecode);
 }
 #else
 static int dp_txrx_get_ratekbps(int preamb, int mcs,
