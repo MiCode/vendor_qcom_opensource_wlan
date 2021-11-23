@@ -179,6 +179,8 @@ struct dp_tx_queue {
  * @exception_fw: Duplicate frame to be sent to firmware
  * @ppdu_cookie: 16-bit ppdu_cookie that has to be replayed back in completions
  * @ix_tx_sniffer: Indicates if the packet has to be sniffed
+ * @gsn: global sequence for reinjected mcast packets
+ * @vdev_id : vdev_id for reinjected mcast packets
  *
  * This structure holds the complete MSDU information needed to program the
  * Hardware TCL and MSDU extension descriptors for different frame types
@@ -197,6 +199,12 @@ struct dp_tx_msdu_info_s {
 	} u;
 	uint32_t meta_data[DP_TX_MSDU_INFO_META_DATA_DWORDS];
 	uint16_t ppdu_cookie;
+#if defined(WLAN_FEATURE_11BE_MLO) && defined(WLAN_MLO_MULTI_CHIP)
+#ifdef WLAN_MCAST_MLO
+	uint16_t gsn;
+	uint8_t vdev_id;
+#endif
+#endif
 };
 
 #ifndef QCA_HOST_MODE_WIFI_DISABLED

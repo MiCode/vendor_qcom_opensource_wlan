@@ -472,3 +472,77 @@ dp_rx_replensih_soc_get(struct dp_soc *soc, uint8_t reo_ring_num)
 
 	return soc;
 }
+
+#ifdef WLAN_MCAST_MLO
+void dp_mcast_mlo_iter_ptnr_vdev(struct dp_soc_be *be_soc,
+				 struct dp_vdev_be *be_vdev,
+				 dp_ptnr_vdev_iter_func func,
+				 void *arg,
+				 enum dp_mod_id mod_id)
+{
+	int i = 0;
+	int j = 0;
+	struct dp_mlo_ctxt *dp_mlo = be_soc->ml_ctxt;
+
+	for (i = 0; i < WLAN_MAX_MLO_CHIPS ; i++) {
+		struct dp_soc *ptnr_soc =
+				dp_mlo_get_soc_ref_by_chip_id(dp_mlo, i);
+
+		if (!ptnr_soc)
+			continue;
+		for (j = 0 ; j < WLAN_MAX_MLO_LINKS_PER_SOC ; j++) {
+			struct dp_vdev *ptnr_vdev;
+
+			ptnr_vdev = dp_vdev_get_ref_by_id(
+					ptnr_soc,
+					be_vdev->partner_vdev_list[i][j],
+					mod_id);
+			if (!ptnr_vdev)
+				continue;
+			(*func)(be_vdev, ptnr_vdev, arg);
+			dp_vdev_unref_delete(ptnr_vdev->pdev->soc,
+					     ptnr_vdev,
+					     mod_id);
+		}
+	}
+}
+
+qdf_export_symbol(dp_mcast_mlo_iter_ptnr_vdev);
+
+struct dp_vdev *dp_mlo_get_mcast_primary_vdev(struct dp_soc_be *be_soc,
+					      struct dp_vdev_be *be_vdev,
+					      enum dp_mod_id mod_id)
+{
+	int i = 0;
+	int j = 0;
+	struct dp_mlo_ctxt *dp_mlo = be_soc->ml_ctxt;
+
+	for (i = 0; i < WLAN_MAX_MLO_CHIPS ; i++) {
+		struct dp_soc *ptnr_soc =
+				dp_mlo_get_soc_ref_by_chip_id(dp_mlo, i);
+
+		if (!ptnr_soc)
+			continue;
+		for (j = 0 ; j < WLAN_MAX_MLO_LINKS_PER_SOC ; j++) {
+			struct dp_vdev *ptnr_vdev = NULL;
+			struct dp_vdev_be *be_ptnr_vdev = NULL;
+
+			ptnr_vdev = dp_vdev_get_ref_by_id(
+					ptnr_soc,
+					be_vdev->partner_vdev_list[i][j],
+					mod_id);
+			if (!ptnr_vdev)
+				continue;
+			be_ptnr_vdev = dp_get_be_vdev_from_dp_vdev(ptnr_vdev);
+			if (be_ptnr_vdev->mcast_primary)
+				return ptnr_vdev;
+			dp_vdev_unref_delete(be_ptnr_vdev->vdev.pdev->soc,
+					     &be_ptnr_vdev->vdev,
+					     mod_id);
+		}
+	}
+	return NULL;
+}
+
+qdf_export_symbol(dp_mlo_get_mcast_primary_vdev);
+#endif

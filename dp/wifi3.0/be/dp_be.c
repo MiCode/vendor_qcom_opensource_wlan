@@ -1238,6 +1238,22 @@ dp_mlo_peer_find_hash_add_be(struct dp_soc *soc, struct dp_peer *peer)
 }
 #endif
 
+#if defined(WLAN_FEATURE_11BE_MLO) && defined(WLAN_MLO_MULTI_CHIP) && \
+	defined(WLAN_MCAST_MLO)
+static void dp_txrx_set_mlo_mcast_primary_vdev_param_be(
+					struct dp_vdev_be *be_vdev,
+					cdp_config_param_type val)
+{
+	be_vdev->mcast_primary = val.cdp_vdev_param_mcast_vdev;
+}
+#else
+static void dp_txrx_set_mlo_mcast_primary_vdev_param_be(
+					struct dp_vdev_be *be_vdev,
+					cdp_config_param_type val)
+{
+}
+#endif
+
 #ifdef DP_TX_IMPLICIT_RBM_MAPPING
 static void dp_tx_implicit_rbm_set_be(struct dp_soc *soc,
 				      uint8_t tx_ring_id,
@@ -1348,6 +1364,9 @@ QDF_STATUS dp_txrx_set_vdev_param_be(struct dp_soc *soc,
 		if (vdev->tx_encap_type == htt_cmn_pkt_type_raw)
 			dp_tx_update_bank_profile(be_soc, be_vdev);
 		break;
+	case CDP_SET_MCAST_VDEV:
+		dp_txrx_set_mlo_mcast_primary_vdev_param_be(be_vdev, val);
+		break;
 	default:
 		dp_warn("invalid param %d", param);
 		break;
@@ -1438,6 +1457,10 @@ void dp_initialize_arch_ops_be(struct dp_arch_ops *arch_ops)
 	arch_ops->txrx_set_vdev_param = dp_txrx_set_vdev_param_be;
 
 #ifdef WLAN_FEATURE_11BE_MLO
+#ifdef WLAN_MCAST_MLO
+	arch_ops->dp_tx_mcast_handler = dp_tx_mlo_mcast_handler_be;
+	arch_ops->dp_rx_mcast_handler = dp_rx_mlo_igmp_handler;
+#endif
 	arch_ops->mlo_peer_find_hash_detach =
 		dp_mlo_peer_find_hash_detach_wrapper;
 	arch_ops->mlo_peer_find_hash_attach =

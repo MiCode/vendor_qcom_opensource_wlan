@@ -38,6 +38,14 @@
 #define DP_TX_BANK_LOCK_RELEASE(lock) qdf_spin_unlock_bh(lock)
 #endif
 
+#if defined(WLAN_FEATURE_11BE_MLO) && defined(WLAN_MLO_MULTI_CHIP)
+#ifdef WLAN_MCAST_MLO
+/* MLO peer id for reinject*/
+#define DP_MLO_MCAST_REINJECT_PEER_ID 0XFFFD
+#define MAX_GSN_NUM 0x0FFF
+#endif
+#endif
+
 extern uint8_t sec_type_map[MAX_CDP_SEC_TYPE];
 
 #ifdef DP_USE_REDUCED_PEER_ID_FIELD_WIDTH
@@ -156,6 +164,93 @@ static inline uint8_t dp_tx_get_rbm_id_be(struct dp_soc *soc,
 }
 #endif
 
+#if defined(WLAN_FEATURE_11BE_MLO) && defined(WLAN_MLO_MULTI_CHIP) && \
+	defined(WLAN_MCAST_MLO)
+void
+dp_tx_mlo_mcast_pkt_send(struct dp_vdev_be *be_vdev,
+			 struct dp_vdev *ptnr_vdev,
+			 void *arg)
+{
+	qdf_nbuf_t  nbuf = (qdf_nbuf_t)arg;
+	qdf_nbuf_t  nbuf_clone;
+	struct dp_vdev_be *be_ptnr_vdev = NULL;
+	struct dp_tx_msdu_info_s msdu_info;
+
+	be_ptnr_vdev = dp_get_be_vdev_from_dp_vdev(ptnr_vdev);
+	if (be_vdev != be_ptnr_vdev) {
+		nbuf_clone = qdf_nbuf_clone(nbuf);
+		if (qdf_unlikely(!nbuf_clone)) {
+			dp_tx_debug("nbuf clone failed");
+			return;
+		}
+	} else {
+		nbuf_clone = nbuf;
+	}
+
+	qdf_mem_zero(&msdu_info, sizeof(msdu_info));
+	dp_tx_get_queue(ptnr_vdev, nbuf_clone, &msdu_info.tx_queue);
+	msdu_info.gsn = be_vdev->seq_num;
+	be_ptnr_vdev->seq_num = be_vdev->seq_num;
+
+	nbuf_clone = dp_tx_send_msdu_single(
+					ptnr_vdev,
+					nbuf_clone,
+					&msdu_info,
+					DP_MLO_MCAST_REINJECT_PEER_ID,
+					NULL);
+	if (qdf_unlikely(nbuf_clone)) {
+		dp_info("pkt send failed");
+		qdf_nbuf_free(nbuf_clone);
+		return;
+	}
+}
+
+static inline void
+dp_tx_vdev_id_set_hal_tx_desc(uint32_t *hal_tx_desc_cached,
+			      struct dp_vdev *vdev,
+			      struct dp_tx_msdu_info_s *msdu_info)
+{
+	hal_tx_desc_set_vdev_id(hal_tx_desc_cached, msdu_info->vdev_id);
+}
+
+void dp_tx_mlo_mcast_handler_be(struct dp_soc *soc,
+				struct dp_vdev *vdev,
+				qdf_nbuf_t nbuf)
+{
+	struct dp_vdev_be *be_vdev = dp_get_be_vdev_from_dp_vdev(vdev);
+	struct dp_soc_be *be_soc = dp_get_be_soc_from_dp_soc(soc);
+
+	/* send frame on partner vdevs */
+	dp_mcast_mlo_iter_ptnr_vdev(be_soc, be_vdev,
+				    dp_tx_mlo_mcast_pkt_send,
+				    nbuf, DP_MOD_ID_TX);
+
+	/* send frame on mcast primary vdev */
+	dp_tx_mlo_mcast_pkt_send(be_vdev, vdev, nbuf);
+
+	if (qdf_unlikely(be_vdev->seq_num > MAX_GSN_NUM))
+		be_vdev->seq_num = 0;
+	else
+		be_vdev->seq_num++;
+}
+#else
+static inline void
+dp_tx_vdev_id_set_hal_tx_desc(uint32_t *hal_tx_desc_cached,
+			      struct dp_vdev *vdev,
+			      struct dp_tx_msdu_info_s *msdu_info)
+{
+	hal_tx_desc_set_vdev_id(hal_tx_desc_cached, vdev->vdev_id);
+}
+#endif
+#if defined(WLAN_FEATURE_11BE_MLO) && !defined(WLAN_MLO_MULTI_CHIP) && \
+	!defined(WLAN_MCAST_MLO)
+void dp_tx_mlo_mcast_handler_be(struct dp_soc *soc,
+				struct dp_vdev *vdev,
+				qdf_nbuf_t nbuf)
+{
+}
+#endif
+
 QDF_STATUS
 dp_tx_hw_enqueue_be(struct dp_soc *soc, struct dp_vdev *vdev,
 		    struct dp_tx_desc_s *tx_desc, uint16_t fw_metadata,
@@ -229,7 +324,7 @@ dp_tx_hw_enqueue_be(struct dp_soc *soc, struct dp_vdev *vdev,
 
 	hal_tx_desc_set_bank_id(hal_tx_desc_cached, be_vdev->bank_id);
 
-	hal_tx_desc_set_vdev_id(hal_tx_desc_cached, vdev->vdev_id);
+	dp_tx_vdev_id_set_hal_tx_desc(hal_tx_desc_cached, vdev, msdu_info);
 
 	if (tid != HTT_TX_EXT_TID_INVALID)
 		hal_tx_desc_set_hlos_tid(hal_tx_desc_cached, tid);

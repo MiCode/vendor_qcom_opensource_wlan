@@ -75,6 +75,7 @@
 #define QDF_NBUF_TRAC_IPV6_OFFSET		14
 #define QDF_NBUF_TRAC_IPV6_HEADER_SIZE   40
 #define QDF_NBUF_TRAC_ICMP_TYPE         1
+#define QDF_NBUF_TRAC_IGMP_TYPE         2
 #define QDF_NBUF_TRAC_TCP_TYPE          6
 #define QDF_NBUF_TRAC_TCP_FLAGS_OFFSET       (47 - 34)
 #define QDF_NBUF_TRAC_TCP_ACK_OFFSET         (42 - 34)
@@ -84,6 +85,7 @@
 #define QDF_NBUF_TRAC_TCP_DPORT_OFFSET       (36 - 34)
 #define QDF_NBUF_TRAC_UDP_TYPE          17
 #define QDF_NBUF_TRAC_ICMPV6_TYPE       0x3a
+#define QDF_NBUF_TRAC_HOPOPTS_TYPE      0
 #define QDF_NBUF_TRAC_DHCP6_SRV_PORT		547
 #define QDF_NBUF_TRAC_DHCP6_CLI_PORT		546
 #define QDF_NBUF_TRAC_MDNS_SRC_N_DST_PORT	5353
@@ -2884,6 +2886,34 @@ static inline
 bool qdf_nbuf_is_ipv4_wapi_pkt(qdf_nbuf_t buf)
 {
 	return __qdf_nbuf_is_ipv4_wapi_pkt(buf);
+}
+
+/**
+ * qdf_nbuf_is_ipv4_igmp_pkt() - check if packet is a igmp packet or not
+ * @buf:  buffer
+ *
+ * This api is for ipv4 packet.
+ *
+ * Return: true if packet is igmp packet
+ */
+static inline
+bool qdf_nbuf_is_ipv4_igmp_pkt(qdf_nbuf_t buf)
+{
+	return __qdf_nbuf_data_is_ipv4_igmp_pkt(qdf_nbuf_data(buf));
+}
+
+/**
+ * qdf_nbuf_is_ipv6_igmp_pkt() - check if packet is a igmp packet or not
+ * @buf:  buffer
+ *
+ * This api is for ipv6 packet.
+ *
+ * Return: true if packet is igmp packet
+ */
+static inline
+bool qdf_nbuf_is_ipv6_igmp_pkt(qdf_nbuf_t buf)
+{
+	return __qdf_nbuf_data_is_ipv6_igmp_pkt(qdf_nbuf_data(buf));
 }
 
 /**

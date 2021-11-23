@@ -1072,6 +1072,72 @@ struct dp_rx_desc *dp_rx_desc_cookie_2_va_be(struct dp_soc *soc,
 	return (struct dp_rx_desc *)dp_cc_desc_find(soc, cookie);
 }
 
+#if defined(WLAN_FEATURE_11BE_MLO)
+#if defined(WLAN_MLO_MULTI_CHIP) && defined(WLAN_MCAST_MLO)
+static inline void dp_rx_dummy_src_mac(qdf_nbuf_t nbuf)
+{
+	qdf_ether_header_t *eh =
+			(qdf_ether_header_t *)qdf_nbuf_data(nbuf);
+
+	eh->ether_shost[0] = 0x4d;	/* M */
+	eh->ether_shost[1] = 0x4c;	/* L */
+	eh->ether_shost[2] = 0x4d;	/* M */
+	eh->ether_shost[3] = 0x43;	/* C */
+	eh->ether_shost[4] = 0x41;	/* A */
+	eh->ether_shost[5] = 0x53;	/* S */
+}
+
+bool dp_rx_mlo_igmp_handler(struct dp_soc *soc,
+			    struct dp_vdev *vdev,
+			    struct dp_peer *peer,
+			    qdf_nbuf_t nbuf)
+{
+	struct dp_vdev *mcast_primary_vdev = NULL;
+	struct dp_vdev_be *be_vdev = dp_get_be_vdev_from_dp_vdev(vdev);
+	struct dp_soc_be *be_soc = dp_get_be_soc_from_dp_soc(soc);
+
+	if (!(qdf_nbuf_is_ipv4_igmp_pkt(buf) ||
+	      qdf_nbuf_is_ipv6_igmp_pkt(buf)))
+		return false;
+
+	if (vdev->mcast_enhancement_en || be_vdev->mcast_primary)
+		goto send_pkt;
+
+	mcast_primary_vdev = dp_mlo_get_mcast_primary_vdev(be_soc, be_vdev,
+							   DP_MOD_ID_RX);
+	if (!mcast_primary_vdev) {
+		dp_rx_debug("Non mlo vdev");
+		goto send_pkt;
+	}
+	dp_rx_dummy_src_mac(nbuf);
+	dp_rx_deliver_to_stack(mcast_primary_vdev->pdev->soc,
+			       mcast_primary_vdev,
+			       peer,
+			       nbuf,
+			       NULL);
+	dp_vdev_unref_delete(mcast_primary_vdev->pdev->soc,
+			     mcast_primary_vdev,
+			     DP_MOD_ID_RX);
+	return true;
+send_pkt:
+	dp_rx_deliver_to_stack(be_vdev->vdev.pdev->soc,
+			       &be_vdev->vdev,
+			       peer,
+			       nbuf,
+			       NULL);
+	return true;
+}
+#else
+bool dp_rx_mlo_igmp_handler(struct dp_soc *soc,
+			    struct dp_vdev *vdev,
+			    struct dp_peer *peer,
+			    qdf_nbuf_t nbuf)
+{
+	return false;
+}
+#endif
+#endif
+
 #ifdef WLAN_FEATURE_NEAR_FULL_IRQ
 uint32_t dp_rx_nf_process(struct dp_intr *int_ctx,
 			  hal_ring_handle_t hal_ring_hdl,

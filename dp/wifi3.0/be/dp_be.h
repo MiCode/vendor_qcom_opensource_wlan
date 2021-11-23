@@ -256,6 +256,14 @@ struct dp_vdev_be {
 #ifdef WLAN_MLO_MULTI_CHIP
 	/* partner list used for Intra-BSS */
 	uint8_t partner_vdev_list[WLAN_MAX_MLO_CHIPS][WLAN_MAX_MLO_LINKS_PER_SOC];
+#ifdef WLAN_FEATURE_11BE_MLO
+#ifdef WLAN_MCAST_MLO
+	/* DP MLO seq number */
+	uint16_t seq_num;
+	/* MLO Mcast primary vdev */
+	bool mcast_primary;
+#endif
+#endif
 #endif
 };
 
@@ -320,6 +328,39 @@ dp_mlo_get_peer_hash_obj(struct dp_soc *soc)
 }
 
 void  dp_clr_mlo_ptnr_list(struct dp_soc *soc, struct dp_vdev *vdev);
+
+#if defined(WLAN_FEATURE_11BE_MLO) && defined(WLAN_MCAST_MLO)
+typedef void dp_ptnr_vdev_iter_func(struct dp_vdev_be *be_vdev,
+				    struct dp_vdev *ptnr_vdev,
+				    void *arg);
+/*
+ * dp_mcast_mlo_iter_ptnr_vdev - API to iterate through ptnr vdev list
+ * @be_soc: dp_soc_be pointer
+ * @be_vdev: dp_vdev_be pointer
+ * @func        : function to be called for each peer
+ * @arg         : argument need to be passed to func
+ * @mod_id: module id
+ *
+ * Return: None
+ */
+void dp_mcast_mlo_iter_ptnr_vdev(struct dp_soc_be *be_soc,
+				 struct dp_vdev_be *be_vdev,
+				 dp_ptnr_vdev_iter_func func,
+				 void *arg,
+				 enum dp_mod_id mod_id);
+/*
+ * dp_mlo_get_mcast_primary_vdev- get ref to mcast primary vdev
+ * @be_soc: dp_soc_be pointer
+ * @be_vdev: dp_vdev_be pointer
+ * @mod_id: module id
+ *
+ * Return: mcast primary DP VDEV handle on success, NULL on failure
+ */
+struct dp_vdev *dp_mlo_get_mcast_primary_vdev(struct dp_soc_be *be_soc,
+					      struct dp_vdev_be *be_vdev,
+					      enum dp_mod_id mod_id);
+#endif
+
 #else
 typedef struct dp_soc_be *dp_mld_peer_hash_obj_t;
 

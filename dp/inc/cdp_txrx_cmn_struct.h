@@ -1243,6 +1243,7 @@ enum cdp_pdev_param_type {
  * @cdp_vdev_param_peer_tid_latency_enable: set peer tid latency enable flag
  * @cdp_vdev_param_mesh_tid: config tatency tid on vdev
  * @cdp_vdev_param_dscp_tid_map_id: set dscp to tid map id
+ * @cdp_vdev_param_mcast_vdev: set mcast vdev params
  *
  * @cdp_pdev_param_dbg_snf: Enable debug sniffer feature
  * @cdp_pdev_param_bpr_enable: Enable bcast probe feature
@@ -1314,6 +1315,7 @@ typedef union cdp_config_param_t {
 	uint8_t cdp_vdev_param_peer_tid_latency_enable;
 	uint8_t cdp_vdev_param_mesh_tid;
 	uint8_t cdp_vdev_param_dscp_tid_map_id;
+	bool cdp_vdev_param_mcast_vdev;
 
 	/* pdev params */
 	bool cdp_pdev_param_cptr_latcy;
@@ -1433,6 +1435,7 @@ enum cdp_pdev_bpr_param {
  * @CDP_ENABLE_PEER_TID_LATENCY: set peer tid latency enable flag
  * @CDP_SET_VAP_MESH_TID : Set latency tid in vap
  * @CDP_UPDATE_DSCP_TO_TID_MAP: Set DSCP to TID map id
+ * @CDP_SET_MCAST_VDEV : Set primary mcast vdev
  */
 enum cdp_vdev_param_type {
 	CDP_ENABLE_NAWDS,
@@ -1470,7 +1473,8 @@ enum cdp_vdev_param_type {
 #ifdef WLAN_VENDOR_SPECIFIC_BAR_UPDATE
 	CDP_SKIP_BAR_UPDATE_AP,
 #endif
-	CDP_UPDATE_DSCP_TO_TID_MAP
+	CDP_UPDATE_DSCP_TO_TID_MAP,
+	CDP_SET_MCAST_VDEV,
 };
 
 /*

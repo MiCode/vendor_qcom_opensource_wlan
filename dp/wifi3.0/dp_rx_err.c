@@ -1764,6 +1764,29 @@ dp_rx_deliver_to_osif_stack(struct dp_soc *soc,
 #endif
 
 #ifdef WLAN_SUPPORT_RX_PROTOCOL_TYPE_TAG
+#if defined(WLAN_FEATURE_11BE_MLO) && defined(WLAN_MLO_MULTI_CHIP) && \
+	defined(WLAN_MCAST_MLO)
+static bool dp_rx_igmp_handler(struct dp_soc *soc,
+			       struct dp_vdev *vdev,
+			       struct dp_peer *peer,
+			       qdf_nbuf_t nbuf)
+{
+	if (soc->arch_ops.dp_rx_mcast_handler) {
+		if (soc->arch_ops.dp_rx_mcast_handler(soc, vdev, peer, nbuf))
+			return true;
+	}
+	return false;
+}
+#else
+static bool dp_rx_igmp_handler(struct dp_soc *soc,
+			       struct dp_vdev *vdev,
+			       struct dp_peer *peer,
+			       qdf_nbuf_t nbuf)
+{
+	return false;
+}
+#endif
+
 /**
  * dp_rx_err_route_hdl() - Function to send EAPOL frames to stack
  *                            Free any other packet which comes in
@@ -1835,6 +1858,9 @@ dp_rx_err_route_hdl(struct dp_soc *soc, qdf_nbuf_t nbuf,
 	else
 		qdf_nbuf_pull_head(nbuf, (msdu_metadata.l3_hdr_pad +
 				   soc->rx_pkt_tlv_size));
+
+	if (dp_rx_igmp_handler(soc, vdev, peer, nbuf))
+		return;
 
 	dp_vdev_peer_stats_update_protocol_cnt(vdev, nbuf, NULL, 0, 1);
 

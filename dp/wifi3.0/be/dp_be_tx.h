@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -138,6 +139,35 @@ QDF_STATUS dp_tx_desc_pool_init_be(struct dp_soc *soc,
 void dp_tx_desc_pool_deinit_be(struct dp_soc *soc,
 			       struct dp_tx_desc_pool_s *tx_desc_pool,
 			       uint8_t pool_id);
+
+#ifdef WLAN_FEATURE_11BE_MLO
+#ifdef WLAN_MCAST_MLO
+/**
+ * dp_tx_mlo_mcast_handler_be() - Tx handler for Mcast packets
+ * @soc: Handle to DP Soc structure
+ * @vdev: DP vdev handle
+ * @nbuf: nbuf to be enqueued
+ *
+ * Return: None
+ */
+void dp_tx_mlo_mcast_handler_be(struct dp_soc *soc,
+				struct dp_vdev *vdev,
+				qdf_nbuf_t nbuf);
+#ifdef WLAN_MLO_MULTI_CHIP
+/**
+ * dp_tx_mlo_mcast_pkt_send() - handler to send MLO Mcast packets
+ * @be_vdev: Handle to DP be_vdev structure
+ * @ptnr_vdev: DP ptnr_vdev handle
+ * @nbuf: nbuf to be enqueued
+ *
+ * Return: None
+ */
+void dp_tx_mlo_mcast_pkt_send(struct dp_vdev_be *be_vdev,
+			      struct dp_vdev *ptnr_vdev,
+			      void *arg);
+#endif
+#endif
+#endif
 
 #ifdef WLAN_FEATURE_NEAR_FULL_IRQ
 /**

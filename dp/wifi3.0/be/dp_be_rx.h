@@ -209,4 +209,23 @@ dp_rx_replensih_soc_get(struct dp_soc *soc, uint8_t reo_ring_num)
 	return soc;
 }
 #endif
+
+#ifdef WLAN_FEATURE_11BE_MLO
+#ifdef WLAN_MCAST_MLO
+/**
+ * dp_rx_mlo_igmp_handler() - Rx handler for Mcast packets
+ * @soc: Handle to DP Soc structure
+ * @vdev: DP vdev handle
+ * @peer: DP peer handle
+ * @nbuf: nbuf to be enqueued
+ *
+ * Return: true when packet sent to stack, false failure
+ */
+bool dp_rx_mlo_igmp_handler(struct dp_soc *soc,
+			    struct dp_vdev *vdev,
+			    struct dp_peer *peer,
+			    qdf_nbuf_t nbuf);
+#endif
+#endif
+
 #endif

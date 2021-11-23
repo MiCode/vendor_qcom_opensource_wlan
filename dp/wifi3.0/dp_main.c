@@ -111,6 +111,14 @@ cdp_dump_flow_pool_info(struct cdp_soc_t *soc)
 #define WLAN_SYSFS_STAT_REQ_WAIT_MS 3000
 #endif
 
+#ifdef WLAN_MCAST_MLO
+#define DP_TX_TCL_METADATA_PDEV_ID_SET(_var, _val) \
+		HTT_TX_TCL_METADATA_V2_PDEV_ID_SET(_var, _val)
+#else
+#define DP_TX_TCL_METADATA_PDEV_ID_SET(_var, _val) \
+		HTT_TX_TCL_METADATA_PDEV_ID_SET(_var, _val)
+#endif
+
 QDF_COMPILE_TIME_ASSERT(max_rx_rings_check,
 			MAX_REO_DEST_RINGS == CDP_MAX_RX_RINGS);
 
@@ -11136,8 +11144,8 @@ dp_soc_handle_pdev_mode_change
 
 	qdf_spin_lock_bh(&pdev->vdev_list_lock);
 	TAILQ_FOREACH(vdev, &pdev->vdev_list, vdev_list_elem) {
-		HTT_TX_TCL_METADATA_PDEV_ID_SET(vdev->htt_tcl_metadata,
-						hw_pdev_id);
+		DP_TX_TCL_METADATA_PDEV_ID_SET(vdev->htt_tcl_metadata,
+					       hw_pdev_id);
 		vdev->lmac_id = pdev->lmac_id;
 	}
 	qdf_spin_unlock_bh(&pdev->vdev_list_lock);

@@ -65,6 +65,42 @@
 
 #define DP_RETRY_COUNT 7
 
+#ifdef WLAN_MCAST_MLO
+#define DP_TX_TCL_METADATA_PDEV_ID_SET(_var, _val)\
+	HTT_TX_TCL_METADATA_V2_PDEV_ID_SET(_var, _val)
+#define DP_TX_TCL_METADATA_VALID_HTT_SET(_var, _val) \
+	HTT_TX_TCL_METADATA_V2_VALID_HTT_SET(_var, _val)
+#define DP_TX_TCL_METADATA_TYPE_SET(_var, _val) \
+	HTT_TX_TCL_METADATA_TYPE_V2_SET(_var, _val)
+#define DP_TX_TCL_METADATA_HOST_INSPECTED_SET(_var, _val) \
+	HTT_TX_TCL_METADATA_V2_HOST_INSPECTED_SET(_var, _val)
+#define DP_TX_TCL_METADATA_PEER_ID_SET(_var, _val) \
+	 HTT_TX_TCL_METADATA_V2_PEER_ID_SET(_var, _val)
+#define DP_TX_TCL_METADATA_VDEV_ID_SET(_var, _val) \
+	HTT_TX_TCL_METADATA_V2_VDEV_ID_SET(_var, _val)
+#define DP_TCL_METADATA_TYPE_PEER_BASED \
+	HTT_TCL_METADATA_V2_TYPE_PEER_BASED
+#define DP_TCL_METADATA_TYPE_VDEV_BASED \
+	HTT_TCL_METADATA_V2_TYPE_VDEV_BASED
+#else
+#define DP_TX_TCL_METADATA_PDEV_ID_SET(_var, _val)\
+	HTT_TX_TCL_METADATA_PDEV_ID_SET(_var, _val)
+#define DP_TX_TCL_METADATA_VALID_HTT_SET(_var, _val) \
+	HTT_TX_TCL_METADATA_VALID_HTT_SET(_var, _val)
+#define DP_TX_TCL_METADATA_TYPE_SET(_var, _val) \
+	HTT_TX_TCL_METADATA_TYPE_SET(_var, _val)
+#define DP_TX_TCL_METADATA_HOST_INSPECTED_SET(_var, _val) \
+	HTT_TX_TCL_METADATA_HOST_INSPECTED_SET(_var, _val)
+#define DP_TX_TCL_METADATA_PEER_ID_SET(_var, _val) \
+	HTT_TX_TCL_METADATA_PEER_ID_SET(_var, _val)
+#define DP_TX_TCL_METADATA_VDEV_ID_SET(_var, _val) \
+	HTT_TX_TCL_METADATA_VDEV_ID_SET(_var, _val)
+#define DP_TCL_METADATA_TYPE_PEER_BASED \
+	HTT_TCL_METADATA_TYPE_PEER_BASED
+#define DP_TCL_METADATA_TYPE_VDEV_BASED \
+	HTT_TCL_METADATA_TYPE_VDEV_BASED
+#endif
+
 /*mapping between hal encrypt type and cdp_sec_type*/
 uint8_t sec_type_map[MAX_CDP_SEC_TYPE] = {HAL_TX_ENCRYPT_TYPE_NO_CIPHER,
 					  HAL_TX_ENCRYPT_TYPE_WEP_128,
@@ -1908,6 +1944,41 @@ int dp_tx_frame_is_drop(struct dp_vdev *vdev, uint8_t *srcmac, uint8_t *dstmac)
 	return 0;
 }
 
+#if defined(WLAN_FEATURE_11BE_MLO) && defined(WLAN_MLO_MULTI_CHIP) && \
+	defined(WLAN_MCAST_MLO)
+/* MLO peer id for reinject*/
+#define DP_MLO_MCAST_REINJECT_PEER_ID 0XFFFD
+/* MLO vdev id inc offset */
+#define DP_MLO_VDEV_ID_OFFSET 0x80
+
+static inline void
+dp_tx_update_mcast_param(uint16_t peer_id,
+			 uint16_t *htt_tcl_metadata,
+			 struct dp_vdev *vdev,
+			 struct dp_tx_msdu_info_s *msdu_info)
+{
+	if (peer_id == DP_MLO_MCAST_REINJECT_PEER_ID) {
+		*htt_tcl_metadata = 0;
+		DP_TX_TCL_METADATA_TYPE_SET(
+				*htt_tcl_metadata,
+				HTT_TCL_METADATA_V2_TYPE_GLOBAL_SEQ_BASED);
+		HTT_TX_TCL_METADATA_GLBL_SEQ_NO_SET(*htt_tcl_metadata,
+						    msdu_info->gsn);
+
+		msdu_info->vdev_id = vdev->vdev_id + DP_MLO_VDEV_ID_OFFSET;
+	} else {
+		msdu_info->vdev_id = vdev->vdev_id;
+	}
+}
+#else
+static inline void
+dp_tx_update_mcast_param(uint16_t peer_id,
+			 uint16_t *htt_tcl_metadata,
+			 struct dp_vdev *vdev,
+			 struct dp_tx_msdu_info_s *msdu_info)
+{
+}
+#endif
 /**
  * dp_tx_send_msdu_single() - Setup descriptor and enqueue single MSDU to TCL
  * @vdev: DP vdev handle
@@ -1950,17 +2021,17 @@ dp_tx_send_msdu_single(struct dp_vdev *vdev, qdf_nbuf_t nbuf,
 
 	if (qdf_unlikely(peer_id == DP_INVALID_PEER)) {
 		htt_tcl_metadata = vdev->htt_tcl_metadata;
-		HTT_TX_TCL_METADATA_HOST_INSPECTED_SET(htt_tcl_metadata, 1);
+		DP_TX_TCL_METADATA_HOST_INSPECTED_SET(htt_tcl_metadata, 1);
 	} else if (qdf_unlikely(peer_id != HTT_INVALID_PEER)) {
-		HTT_TX_TCL_METADATA_TYPE_SET(htt_tcl_metadata,
-				HTT_TCL_METADATA_TYPE_PEER_BASED);
-		HTT_TX_TCL_METADATA_PEER_ID_SET(htt_tcl_metadata,
-				peer_id);
+		DP_TX_TCL_METADATA_TYPE_SET(htt_tcl_metadata,
+					    DP_TCL_METADATA_TYPE_PEER_BASED);
+		DP_TX_TCL_METADATA_PEER_ID_SET(htt_tcl_metadata,
+					       peer_id);
 	} else
 		htt_tcl_metadata = vdev->htt_tcl_metadata;
 
 	if (msdu_info->exception_fw)
-		HTT_TX_TCL_METADATA_VALID_HTT_SET(htt_tcl_metadata, 1);
+		DP_TX_TCL_METADATA_VALID_HTT_SET(htt_tcl_metadata, 1);
 
 	dp_tx_desc_update_fast_comp_flag(soc, tx_desc,
 					 !pdev->enhanced_stats_en);
@@ -1979,6 +2050,7 @@ dp_tx_send_msdu_single(struct dp_vdev *vdev, qdf_nbuf_t nbuf,
 	tx_desc->dma_addr = qdf_nbuf_mapped_paddr_get(tx_desc->nbuf);
 	dp_tx_desc_history_add(soc, tx_desc->dma_addr, nbuf,
 			       tx_desc->id, DP_TX_DESC_MAP);
+	dp_tx_update_mcast_param(peer_id, &htt_tcl_metadata, vdev, msdu_info);
 	/* Enqueue the Tx MSDU descriptor to HW for transmit */
 	status = soc->arch_ops.tx_hw_enqueue(soc, vdev, tx_desc,
 					     htt_tcl_metadata,
@@ -2177,7 +2249,7 @@ qdf_nbuf_t dp_tx_send_msdu_multiple(struct dp_vdev *vdev, qdf_nbuf_t nbuf,
 
 		htt_tcl_metadata = vdev->htt_tcl_metadata;
 		if (msdu_info->exception_fw) {
-			HTT_TX_TCL_METADATA_VALID_HTT_SET(htt_tcl_metadata, 1);
+			DP_TX_TCL_METADATA_VALID_HTT_SET(htt_tcl_metadata, 1);
 		}
 
 		/*
@@ -2204,6 +2276,10 @@ qdf_nbuf_t dp_tx_send_msdu_multiple(struct dp_vdev *vdev, qdf_nbuf_t nbuf,
 			}
 		}
 
+		dp_tx_update_mcast_param(DP_INVALID_PEER,
+					 &htt_tcl_metadata,
+					 vdev,
+					 msdu_info);
 		/*
 		 * Enqueue the Tx MSDU descriptor to HW for transmit
 		 */
@@ -3226,6 +3302,7 @@ int dp_tx_proxy_arp(struct dp_vdev *vdev, qdf_nbuf_t nbuf)
  * @vdev: datapath vdev handle
  * @tx_desc: software descriptor head pointer
  * @status : Tx completion status from HTT descriptor
+ * @reinject_reason : reinject reason from HTT descriptor
  *
  * This function reinjects frames back to Target.
  * Todo - Host queue needs to be added
@@ -3236,7 +3313,8 @@ static
 void dp_tx_reinject_handler(struct dp_soc *soc,
 			    struct dp_vdev *vdev,
 			    struct dp_tx_desc_s *tx_desc,
-			    uint8_t *status)
+			    uint8_t *status,
+			    uint8_t reinject_reason)
 {
 	struct dp_peer *peer = NULL;
 	uint32_t peer_id = HTT_INVALID_PEER;
@@ -3252,14 +3330,22 @@ void dp_tx_reinject_handler(struct dp_soc *soc,
 
 	qdf_assert(vdev);
 
-	qdf_mem_zero(&msdu_info, sizeof(msdu_info));
-
-	dp_tx_get_queue(vdev, nbuf, &msdu_info.tx_queue);
-
 	dp_tx_debug("Tx reinject path");
 
 	DP_STATS_INC_PKT(vdev, tx_i.reinject_pkts, 1,
 			qdf_nbuf_len(tx_desc->nbuf));
+
+#if defined(WLAN_FEATURE_11BE_MLO) && defined(WLAN_MLO_MULTI_CHIP)
+#ifdef WLAN_MCAST_MLO
+	if (reinject_reason == HTT_TX_FW2WBM_REINJECT_REASON_MLO_MCAST) {
+		if (soc->arch_ops.dp_tx_mcast_handler)
+			soc->arch_ops.dp_tx_mcast_handler(soc, vdev, nbuf);
+
+		dp_tx_desc_release(tx_desc, tx_desc->pool_id);
+		return;
+	}
+#endif
+#endif
 
 #ifdef WDS_VENDOR_EXTENSION
 	if (qdf_unlikely(vdev->tx_encap_type != htt_cmn_pkt_type_raw)) {
@@ -3318,6 +3404,9 @@ void dp_tx_reinject_handler(struct dp_soc *soc,
 					dp_tx_debug("nbuf copy failed");
 					break;
 				}
+				qdf_mem_zero(&msdu_info, sizeof(msdu_info));
+				dp_tx_get_queue(vdev, nbuf,
+						&msdu_info.tx_queue);
 
 				nbuf_copy = dp_tx_send_msdu_single(vdev,
 						nbuf_copy,
@@ -4498,7 +4587,13 @@ void dp_tx_process_htt_completion(struct dp_soc *soc,
 	}
 	case HTT_TX_FW2WBM_TX_STATUS_REINJECT:
 	{
-		dp_tx_reinject_handler(soc, vdev, tx_desc, status);
+		uint8_t reinject_reason;
+
+		reinject_reason =
+			HTT_TX_WBM_COMPLETION_V2_REINJECT_REASON_GET(
+								htt_desc[0]);
+		dp_tx_reinject_handler(soc, vdev, tx_desc,
+				       status, reinject_reason);
 		break;
 	}
 	case HTT_TX_FW2WBM_TX_STATUS_INSPECT:
@@ -4843,21 +4938,21 @@ QDF_STATUS dp_tx_vdev_attach(struct dp_vdev *vdev)
 	/*
 	 * Fill HTT TCL Metadata with Vdev ID and MAC ID
 	 */
-	HTT_TX_TCL_METADATA_TYPE_SET(vdev->htt_tcl_metadata,
-				     HTT_TCL_METADATA_TYPE_VDEV_BASED);
+	DP_TX_TCL_METADATA_TYPE_SET(vdev->htt_tcl_metadata,
+				    DP_TCL_METADATA_TYPE_VDEV_BASED);
 
-	HTT_TX_TCL_METADATA_VDEV_ID_SET(vdev->htt_tcl_metadata,
-					vdev->vdev_id);
+	DP_TX_TCL_METADATA_VDEV_ID_SET(vdev->htt_tcl_metadata,
+				       vdev->vdev_id);
 
 	pdev_id =
 		dp_get_target_pdev_id_for_host_pdev_id(vdev->pdev->soc,
 						       vdev->pdev->pdev_id);
-	HTT_TX_TCL_METADATA_PDEV_ID_SET(vdev->htt_tcl_metadata, pdev_id);
+	DP_TX_TCL_METADATA_PDEV_ID_SET(vdev->htt_tcl_metadata, pdev_id);
 
 	/*
 	 * Set HTT Extension Valid bit to 0 by default
 	 */
-	HTT_TX_TCL_METADATA_VALID_HTT_SET(vdev->htt_tcl_metadata, 0);
+	DP_TX_TCL_METADATA_VALID_HTT_SET(vdev->htt_tcl_metadata, 0);
 
 	dp_tx_vdev_update_search_flags(vdev);
 

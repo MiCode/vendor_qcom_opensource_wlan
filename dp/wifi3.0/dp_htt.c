@@ -327,6 +327,105 @@ dp_htt_h2t_send_complete(void *context, HTC_PACKET *htc_pkt)
 
 #endif /* ENABLE_CE4_COMP_DISABLE_HTT_HTC_MISC_LIST */
 
+#ifdef WLAN_MCAST_MLO
+/*
+ * dp_htt_h2t_add_tcl_metadata_verg() - Add tcl_metadata verion
+ * @htt_soc:	HTT SOC handle
+ * @msg:	Pointer to nbuf
+ *
+ * Return: 0 on success; error code on failure
+ */
+static int dp_htt_h2t_add_tcl_metadata_ver(struct htt_soc *soc, qdf_nbuf_t *msg)
+{
+	uint32_t *msg_word;
+
+	*msg = qdf_nbuf_alloc(
+		soc->osdev,
+		HTT_MSG_BUF_SIZE(HTT_VER_REQ_BYTES + HTT_TCL_METADATA_VER_SZ),
+		/* reserve room for the HTC header */
+		HTC_HEADER_LEN + HTC_HDR_ALIGNMENT_PADDING, 4, TRUE);
+	if (!*msg)
+		return QDF_STATUS_E_NOMEM;
+
+	/*
+	 * Set the length of the message.
+	 * The contribution from the HTC_HDR_ALIGNMENT_PADDING is added
+	 * separately during the below call to qdf_nbuf_push_head.
+	 * The contribution from the HTC header is added separately inside HTC.
+	 */
+	if (!qdf_nbuf_put_tail(*msg,
+			       HTT_VER_REQ_BYTES + HTT_TCL_METADATA_VER_SZ)) {
+		QDF_TRACE(QDF_MODULE_ID_TXRX, QDF_TRACE_LEVEL_ERROR,
+			  "%s: Failed to expand head for HTT_H2T_MSG_TYPE_VERSION_REQ msg",
+			  __func__);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	/* fill in the message contents */
+	msg_word = (u_int32_t *)qdf_nbuf_data(*msg);
+
+	/* rewind beyond alignment pad to get to the HTC header reserved area */
+	qdf_nbuf_push_head(*msg, HTC_HDR_ALIGNMENT_PADDING);
+
+	*msg_word = 0;
+	HTT_H2T_MSG_TYPE_SET(*msg_word, HTT_H2T_MSG_TYPE_VERSION_REQ);
+
+	/* word 1 */
+	msg_word++;
+	*msg_word = 0;
+	HTT_OPTION_TLV_TAG_SET(*msg_word, HTT_OPTION_TLV_TAG_TCL_METADATA_VER);
+	HTT_OPTION_TLV_LENGTH_SET(*msg_word, HTT_TCL_METADATA_VER_SZ);
+	HTT_OPTION_TLV_TCL_METADATA_VER_SET(*msg_word,
+					    HTT_OPTION_TLV_TCL_METADATA_V2);
+
+	return QDF_STATUS_SUCCESS;
+}
+#else
+/*
+ * dp_htt_h2t_add_tcl_metadata_verg() - Add tcl_metadata verion
+ * @htt_soc:	HTT SOC handle
+ * @msg:	Pointer to nbuf
+ *
+ * Return: 0 on success; error code on failure
+ */
+static int dp_htt_h2t_add_tcl_metadata_ver(struct htt_soc *soc, qdf_nbuf_t *msg)
+{
+	uint32_t *msg_word;
+
+	*msg = qdf_nbuf_alloc(
+		soc->osdev,
+		HTT_MSG_BUF_SIZE(HTT_VER_REQ_BYTES),
+		/* reserve room for the HTC header */
+		HTC_HEADER_LEN + HTC_HDR_ALIGNMENT_PADDING, 4, TRUE);
+	if (!*msg)
+		return QDF_STATUS_E_NOMEM;
+
+	/*
+	 * Set the length of the message.
+	 * The contribution from the HTC_HDR_ALIGNMENT_PADDING is added
+	 * separately during the below call to qdf_nbuf_push_head.
+	 * The contribution from the HTC header is added separately inside HTC.
+	 */
+	if (!qdf_nbuf_put_tail(*msg, HTT_VER_REQ_BYTES)) {
+		QDF_TRACE(QDF_MODULE_ID_TXRX, QDF_TRACE_LEVEL_ERROR,
+			  "%s: Failed to expand head for HTT_H2T_MSG_TYPE_VERSION_REQ msg",
+			  __func__);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	/* fill in the message contents */
+	msg_word = (u_int32_t *)qdf_nbuf_data(*msg);
+
+	/* rewind beyond alignment pad to get to the HTC header reserved area */
+	qdf_nbuf_push_head(*msg, HTC_HDR_ALIGNMENT_PADDING);
+
+	*msg_word = 0;
+	HTT_H2T_MSG_TYPE_SET(*msg_word, HTT_H2T_MSG_TYPE_VERSION_REQ);
+
+	return QDF_STATUS_SUCCESS;
+}
+#endif
+
 /*
  * htt_h2t_ver_req_msg() - Send HTT version request message to target
  * @htt_soc:	HTT SOC handle
@@ -336,39 +435,12 @@ dp_htt_h2t_send_complete(void *context, HTC_PACKET *htc_pkt)
 static int htt_h2t_ver_req_msg(struct htt_soc *soc)
 {
 	struct dp_htt_htc_pkt *pkt;
-	qdf_nbuf_t msg;
-	uint32_t *msg_word;
+	qdf_nbuf_t msg = NULL;
 	QDF_STATUS status;
 
-	msg = qdf_nbuf_alloc(
-		soc->osdev,
-		HTT_MSG_BUF_SIZE(HTT_VER_REQ_BYTES),
-		/* reserve room for the HTC header */
-		HTC_HEADER_LEN + HTC_HDR_ALIGNMENT_PADDING, 4, TRUE);
-	if (!msg)
-		return QDF_STATUS_E_NOMEM;
-
-	/*
-	 * Set the length of the message.
-	 * The contribution from the HTC_HDR_ALIGNMENT_PADDING is added
-	 * separately during the below call to qdf_nbuf_push_head.
-	 * The contribution from the HTC header is added separately inside HTC.
-	 */
-	if (qdf_nbuf_put_tail(msg, HTT_VER_REQ_BYTES) == NULL) {
-		QDF_TRACE(QDF_MODULE_ID_TXRX, QDF_TRACE_LEVEL_ERROR,
-			"%s: Failed to expand head for HTT_H2T_MSG_TYPE_VERSION_REQ msg",
-			__func__);
-		return QDF_STATUS_E_FAILURE;
-	}
-
-	/* fill in the message contents */
-	msg_word = (u_int32_t *) qdf_nbuf_data(msg);
-
-	/* rewind beyond alignment pad to get to the HTC header reserved area */
-	qdf_nbuf_push_head(msg, HTC_HDR_ALIGNMENT_PADDING);
-
-	*msg_word = 0;
-	HTT_H2T_MSG_TYPE_SET(*msg_word, HTT_H2T_MSG_TYPE_VERSION_REQ);
+	status = dp_htt_h2t_add_tcl_metadata_ver(soc, &msg);
+	if (status != QDF_STATUS_SUCCESS)
+		return status;
 
 	pkt = htt_htc_pkt_alloc(soc);
 	if (!pkt) {

@@ -1615,6 +1615,62 @@ bool __qdf_nbuf_is_ipv4_wapi_pkt(struct sk_buff *skb)
 qdf_export_symbol(__qdf_nbuf_is_ipv4_wapi_pkt);
 
 /**
+ * __qdf_nbuf_data_is_ipv4_igmp_pkt() - check if skb data is a igmp packet
+ * @data: Pointer to network data buffer
+ *
+ * This api is for ipv4 packet.
+ *
+ * Return: true if packet is igmp packet
+ *	   false otherwise.
+ */
+bool __qdf_nbuf_data_is_ipv4_igmp_pkt(uint8_t *data)
+{
+	if (__qdf_nbuf_data_is_ipv4_pkt(data)) {
+		uint8_t pkt_type;
+
+		pkt_type = (uint8_t)(*(uint8_t *)(data +
+				QDF_NBUF_TRAC_IPV4_PROTO_TYPE_OFFSET));
+
+		if (pkt_type == QDF_NBUF_TRAC_IGMP_TYPE)
+			return true;
+	}
+	return false;
+}
+
+qdf_export_symbol(__qdf_nbuf_data_is_ipv4_igmp_pkt);
+
+/**
+ * __qdf_nbuf_data_is_ipv6_igmp_pkt() - check if skb data is a igmp packet
+ * @data: Pointer to network data buffer
+ *
+ * This api is for ipv6 packet.
+ *
+ * Return: true if packet is igmp packet
+ *	   false otherwise.
+ */
+bool __qdf_nbuf_data_is_ipv6_igmp_pkt(uint8_t *data)
+{
+	if (__qdf_nbuf_data_is_ipv6_pkt(data)) {
+		uint8_t pkt_type;
+		uint8_t next_hdr;
+
+		pkt_type = (uint8_t)(*(uint8_t *)(data +
+				QDF_NBUF_TRAC_IPV6_PROTO_TYPE_OFFSET));
+		next_hdr = (uint8_t)(*(uint8_t *)(data +
+				QDF_NBUF_TRAC_IPV6_HEADER_SIZE));
+
+		if (pkt_type == QDF_NBUF_TRAC_ICMPV6_TYPE)
+			return true;
+		if ((pkt_type == QDF_NBUF_TRAC_HOPOPTS_TYPE) &&
+		    (next_hdr == QDF_NBUF_TRAC_HOPOPTS_TYPE))
+			return true;
+	}
+	return false;
+}
+
+qdf_export_symbol(__qdf_nbuf_data_is_ipv6_igmp_pkt);
+
+/**
  * __qdf_nbuf_is_ipv4_tdls_pkt() - check if skb data is a tdls packet
  * @skb: Pointer to network buffer
  *
