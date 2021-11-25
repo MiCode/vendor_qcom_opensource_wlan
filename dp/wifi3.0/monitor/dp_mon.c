@@ -2275,6 +2275,106 @@ static inline void dp_send_stats_event(struct dp_pdev *pdev,
 #endif
 
 /*
+ * dp_get_ru_index_frm_ru_tones() - get ru index
+ * @ru_tones: ru tones
+ *
+ * Return: ru index
+ */
+#ifdef WLAN_FEATURE_11BE
+static inline enum cdp_ru_index dp_get_ru_index_frm_ru_tones(uint16_t ru_tones)
+{
+	enum cdp_ru_index ru_index;
+
+	switch (ru_tones) {
+	case RU_26:
+		ru_index = RU_26_INDEX;
+		break;
+	case RU_52:
+		ru_index = RU_52_INDEX;
+		break;
+	case RU_52_26:
+		ru_index = RU_52_26_INDEX;
+		break;
+	case RU_106:
+		ru_index = RU_106_INDEX;
+		break;
+	case RU_106_26:
+		ru_index = RU_106_26_INDEX;
+		break;
+	case RU_242:
+		ru_index = RU_242_INDEX;
+		break;
+	case RU_484:
+		ru_index = RU_484_INDEX;
+		break;
+	case RU_484_242:
+		ru_index = RU_484_242_INDEX;
+		break;
+	case RU_996:
+		ru_index = RU_996_INDEX;
+		break;
+	case RU_996_484:
+		ru_index = RU_996_484_INDEX;
+		break;
+	case RU_996_484_242:
+		ru_index = RU_996_484_242_INDEX;
+		break;
+	case RU_2X996:
+		ru_index = RU_2X996_INDEX;
+		break;
+	case RU_2X996_484:
+		ru_index = RU_2X996_484_INDEX;
+		break;
+	case RU_3X996:
+		ru_index = RU_3X996_INDEX;
+		break;
+	case RU_3X996_484:
+		ru_index = RU_2X996_484_INDEX;
+		break;
+	case RU_4X996:
+		ru_index = RU_4X996_INDEX;
+		break;
+	default:
+		ru_index = RU_INDEX_MAX;
+		break;
+	}
+
+	return ru_index;
+}
+#else
+static inline enum cdp_ru_index dp_get_ru_index_frm_ru_tones(uint16_t ru_tones)
+{
+	enum cdp_ru_index ru_index;
+
+	switch (ru_tones) {
+	case RU_26:
+		ru_index = RU_26_INDEX;
+		break;
+	case RU_52:
+		ru_index = RU_52_INDEX;
+		break;
+	case RU_106:
+		ru_index = RU_106_INDEX;
+		break;
+	case RU_242:
+		ru_index = RU_242_INDEX;
+		break;
+	case RU_484:
+		ru_index = RU_484_INDEX;
+		break;
+	case RU_996:
+		ru_index = RU_996_INDEX;
+		break;
+	default:
+		ru_index = RU_INDEX_MAX;
+		break;
+	}
+
+	return ru_index;
+}
+#endif
+
+/*
  * dp_tx_stats_update() - Update per-peer statistics
  * @pdev: Datapath pdev handle
  * @peer: Datapath peer handle
@@ -2293,6 +2393,8 @@ dp_tx_stats_update(struct dp_pdev *pdev, struct dp_peer *peer,
 	uint16_t num_mpdu;
 	uint16_t mpdu_tried;
 	uint16_t mpdu_failed;
+	struct dp_mon_ops *mon_ops;
+	enum cdp_ru_index ru_index;
 
 	preamble = ppdu->preamble;
 	mcs = ppdu->mcs;
@@ -2337,55 +2439,14 @@ dp_tx_stats_update(struct dp_pdev *pdev, struct dp_peer *peer,
 	    ppdu->ppdu_type == HTT_PPDU_STATS_PPDU_TYPE_MU_MIMO_OFDMA) {
 		DP_STATS_UPD(peer, tx.ru_tones, ppdu->ru_tones);
 		DP_STATS_UPD(peer, tx.ru_start, ppdu->ru_start);
-		switch (ppdu->ru_tones) {
-		case RU_26:
-			DP_STATS_INC(peer, tx.ru_loc[RU_26_INDEX].num_msdu,
+		ru_index = dp_get_ru_index_frm_ru_tones(ppdu->ru_tones);
+		if (ru_index != RU_INDEX_MAX) {
+			DP_STATS_INC(peer, tx.ru_loc[ru_index].num_msdu,
 				     num_msdu);
-			DP_STATS_INC(peer, tx.ru_loc[RU_26_INDEX].num_mpdu,
+			DP_STATS_INC(peer, tx.ru_loc[ru_index].num_mpdu,
 				     num_mpdu);
-			DP_STATS_INC(peer, tx.ru_loc[RU_26_INDEX].mpdu_tried,
+			DP_STATS_INC(peer, tx.ru_loc[ru_index].mpdu_tried,
 				     mpdu_tried);
-		break;
-		case RU_52:
-			DP_STATS_INC(peer, tx.ru_loc[RU_52_INDEX].num_msdu,
-				     num_msdu);
-			DP_STATS_INC(peer, tx.ru_loc[RU_52_INDEX].num_mpdu,
-				     num_mpdu);
-			DP_STATS_INC(peer, tx.ru_loc[RU_52_INDEX].mpdu_tried,
-				     mpdu_tried);
-		break;
-		case RU_106:
-			DP_STATS_INC(peer, tx.ru_loc[RU_106_INDEX].num_msdu,
-				     num_msdu);
-			DP_STATS_INC(peer, tx.ru_loc[RU_106_INDEX].num_mpdu,
-				     num_mpdu);
-			DP_STATS_INC(peer, tx.ru_loc[RU_106_INDEX].mpdu_tried,
-				     mpdu_tried);
-		break;
-		case RU_242:
-			DP_STATS_INC(peer, tx.ru_loc[RU_242_INDEX].num_msdu,
-				     num_msdu);
-			DP_STATS_INC(peer, tx.ru_loc[RU_242_INDEX].num_mpdu,
-				     num_mpdu);
-			DP_STATS_INC(peer, tx.ru_loc[RU_242_INDEX].mpdu_tried,
-				     mpdu_tried);
-		break;
-		case RU_484:
-			DP_STATS_INC(peer, tx.ru_loc[RU_484_INDEX].num_msdu,
-				     num_msdu);
-			DP_STATS_INC(peer, tx.ru_loc[RU_484_INDEX].num_mpdu,
-				     num_mpdu);
-			DP_STATS_INC(peer, tx.ru_loc[RU_484_INDEX].mpdu_tried,
-				     mpdu_tried);
-		break;
-		case RU_996:
-			DP_STATS_INC(peer, tx.ru_loc[RU_996_INDEX].num_msdu,
-				     num_msdu);
-			DP_STATS_INC(peer, tx.ru_loc[RU_996_INDEX].num_mpdu,
-				     num_mpdu);
-			DP_STATS_INC(peer, tx.ru_loc[RU_996_INDEX].mpdu_tried,
-				     mpdu_tried);
-		break;
 		}
 	}
 
@@ -2450,6 +2511,10 @@ dp_tx_stats_update(struct dp_pdev *pdev, struct dp_peer *peer,
 	DP_STATS_INCC(peer, tx.ampdu_cnt, num_mpdu, ppdu->is_ampdu);
 	DP_STATS_INCC(peer, tx.non_ampdu_cnt, num_mpdu, !(ppdu->is_ampdu));
 	DP_STATS_INCC(peer, tx.pream_punct_cnt, 1, ppdu->pream_punct);
+
+	mon_ops = dp_mon_ops_get(pdev->soc);
+	if (mon_ops && mon_ops->mon_tx_stats_update)
+		mon_ops->mon_tx_stats_update(peer, ppdu);
 
 	dp_peer_stats_notify(pdev, peer);
 

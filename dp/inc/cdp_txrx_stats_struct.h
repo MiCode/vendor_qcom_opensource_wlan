@@ -74,6 +74,19 @@
 #define RU_242			9
 #define RU_484			18
 #define RU_996			37
+#ifdef WLAN_FEATURE_11BE
+#define RU_2X996		74
+#define RU_3X996		111
+#define RU_4X996		148
+#define RU_52_26		RU_52 + RU_26
+#define RU_106_26		RU_106 + RU_26
+#define RU_484_242		RU_484 + RU_242
+#define RU_996_484		RU_996 + RU_484
+#define RU_996_484_242		RU_996 + RU_484_242
+#define RU_2X996_484		RU_2X996 + RU_484
+#define RU_3X996_484		RU_3X996 + RU_484
+#endif
+
 
 /* WME stream classes */
 #define WME_AC_BE    0    /* best effort */
@@ -516,15 +529,15 @@ static const struct cdp_rate_debug cdp_rate_string[DOT11_MAX][MAX_MCS] = {
 #endif
 
 /*
- * cdp_mu_packet_type: MU Rx type index
- * RX_TYPE_MU_MIMO: MU MIMO Rx type index
- * RX_TYPE_MU_OFDMA: MU OFDMA Rx type index
- * MU_MIMO_OFDMA: MU Rx MAX type index
+ * cdp_mu_packet_type: MU type index
+ * TXRX_TYPE_MU_MIMO: MU MIMO type index
+ * TXRX_TYPE_MU_OFDMA: MU OFDMA type index
+ * TXRX_TYPE_MU_MAX: MU MAX type index
  */
 enum cdp_mu_packet_type {
-	RX_TYPE_MU_MIMO = 0,
-	RX_TYPE_MU_OFDMA = 1,
-	RX_TYPE_MU_MAX = 2,
+	TXRX_TYPE_MU_MIMO = 0,
+	TXRX_TYPE_MU_OFDMA = 1,
+	TXRX_TYPE_MU_MAX = 2,
 };
 
 enum WDI_EVENT {
@@ -1220,6 +1233,8 @@ struct protocol_trace_count {
  *       <enum 3     3_2_us_sgi > HE
  * @preamble_info: preamble
  * @last_tx_ts: last timestamp in jiffies when tx comp occurred
+ * @su_be_ppdu_cnt: SU Tx packet count
+ * @mu_be_ppdu_cnt: MU Tx packet count
  */
 struct cdp_tx_stats {
 	struct cdp_pkt_info comp_pkt;
@@ -1321,6 +1336,10 @@ struct cdp_tx_stats {
 	/* mpdu retry count in case of successful transmission */
 	uint32_t mpdu_success_with_retries;
 	unsigned long last_tx_ts;
+#ifdef WLAN_FEATURE_11BE
+	struct cdp_pkt_type su_be_ppdu_cnt;
+	struct cdp_pkt_type mu_be_ppdu_cnt[TXRX_TYPE_MU_MAX];
+#endif
 };
 
 /* struct cdp_rx_stats - rx Level Stats
@@ -1354,7 +1373,7 @@ struct cdp_tx_stats {
  * @mpdu_cnt_fcs_err: SU Rx fail mpdu count
  * @su_ax_ppdu_cnt: SU Rx packet count
  * @ppdu_cnt[MAX_RECEPTION_TYPES]: PPDU packet count in reception type
- * @rx_mu[RX_TYPE_MU_MAX]: Rx MU stats
+ * @rx_mu[TXRX_TYPE_MU_MAX]: Rx MU stats
  * @bw[MAX_BW]:  Packet Count in different bandwidths
  * @non_ampdu_cnt: Number of MSDUs with no MPDU level aggregation
  * @ampdu_cnt: Number of MSDUs part of AMSPU
@@ -1445,7 +1464,7 @@ struct cdp_rx_stats {
 	uint32_t mpdu_cnt_fcs_err;
 	struct cdp_pkt_type su_ax_ppdu_cnt;
 	uint32_t ppdu_cnt[MAX_RECEPTION_TYPES];
-	struct cdp_rx_mu rx_mu[RX_TYPE_MU_MAX];
+	struct cdp_rx_mu rx_mu[TXRX_TYPE_MU_MAX];
 	uint32_t bw[MAX_BW];
 	uint32_t non_ampdu_cnt;
 	uint32_t ampdu_cnt;

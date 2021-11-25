@@ -332,6 +332,62 @@ QDF_STATUS dp_vdev_set_monitor_mode_rings_2_0(struct dp_pdev *pdev,
 }
 #endif
 
+#if defined(QCA_ENHANCED_STATS_SUPPORT) && defined(WLAN_FEATURE_11BE)
+void
+dp_mon_tx_stats_update_2_0(struct dp_peer *peer,
+			   struct cdp_tx_completion_ppdu_user *ppdu)
+{
+	uint8_t preamble;
+	uint8_t mcs;
+
+	preamble = ppdu->preamble;
+	mcs = ppdu->mcs;
+
+	DP_STATS_INCC(peer,
+		      tx.pkt_type[preamble].mcs_count[MAX_MCS - 1], num_msdu,
+		      ((mcs >= (MAX_MCS - 1)) && (preamble == DOT11_BE)));
+	DP_STATS_INCC(peer,
+		      tx.pkt_type[preamble].mcs_count[mcs], num_msdu,
+		      ((mcs < (MAX_MCS - 1)) && (preamble == DOT11_BE)));
+	DP_STATS_INCC(peer,
+		      tx.su_be_ppdu_cnt.mcs_count[MAX_MCS - 1], 1,
+		      ((mcs >= (MAX_MCS - 1)) && (preamble == DOT11_BE) &&
+		      (ppdu->ppdu_type == HTT_PPDU_STATS_PPDU_TYPE_SU)));
+	DP_STATS_INCC(peer,
+		      tx.su_be_ppdu_cnt.mcs_count[mcs], 1,
+		      ((mcs < (MAX_MCS - 1)) && (preamble == DOT11_BE) &&
+		      (ppdu->ppdu_type == HTT_PPDU_STATS_PPDU_TYPE_SU)));
+	DP_STATS_INCC(peer,
+		      tx.mu_be_ppdu_cnt[TXRX_TYPE_MU_OFDMA].ppdu.mcs_count[MAX_MCS - 1],
+		      1, ((mcs >= (MAX_MCS - 1)) &&
+		      (preamble == DOT11_BE) &&
+		      (ppdu->ppdu_type == HTT_PPDU_STATS_PPDU_TYPE_MU_OFDMA)));
+	DP_STATS_INCC(peer,
+		      tx.mu_be_ppdu_cnt[TXRX_TYPE_MU_OFDMA].ppdu.mcs_count[mcs],
+		      1, ((mcs < (MAX_MCS - 1)) &&
+		      (preamble == DOT11_BE) &&
+		      (ppdu->ppdu_type == HTT_PPDU_STATS_PPDU_TYPE_MU_OFDMA)));
+	DP_STATS_INCC(peer,
+		      tx.mu_be_ppdu_cnt[TXRX_TYPE_MU_MIMO].ppdu.mcs_count[MAX_MCS - 1],
+		      1, ((mcs >= (MAX_MCS - 1)) &&
+		      (preamble == DOT11_BE) &&
+		      (ppdu->ppdu_type == HTT_PPDU_STATS_PPDU_TYPE_MU_MIMO)));
+	DP_STATS_INCC(peer,
+		      tx.mu_be_ppdu_cnt[TXRX_TYPE_MU_MIMO].ppdu.mcs_count[mcs],
+		      1, ((mcs < (MAX_MCS - 1)) &&
+		      (preamble == DOT11_BE) &&
+		      (ppdu->ppdu_type == HTT_PPDU_STATS_PPDU_TYPE_MU_MIMO)));
+}
+#endif
+
+#if defined(QCA_ENHANCED_STATS_SUPPORT) && !defined(WLAN_FEATURE_11BE)
+void
+dp_mon_tx_stats_update_2_0(struct dp_peer *peer,
+			   struct cdp_tx_completion_ppdu_user *ppdu)
+{
+}
+#endif
+
 #ifdef QCA_SUPPORT_BPR
 static QDF_STATUS
 dp_set_bpr_enable_2_0(struct dp_pdev *pdev, int val)
@@ -830,6 +886,7 @@ dp_mon_register_feature_ops_2_0(struct dp_soc *soc)
 				dp_mon_filter_setup_enhanced_stats_2_0;
 	mon_ops->mon_filter_reset_enhanced_stats =
 				dp_mon_filter_reset_enhanced_stats_2_0;
+	mon_ops->mon_tx_stats_update = dp_mon_tx_stats_update_2_0;
 #endif
 #if defined(ATH_SUPPORT_NAC_RSSI) || defined(ATH_SUPPORT_NAC)
 	mon_ops->mon_filter_setup_smart_monitor =

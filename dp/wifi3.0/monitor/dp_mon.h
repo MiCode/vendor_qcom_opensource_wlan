@@ -512,6 +512,8 @@ struct dp_mon_ops {
 #ifdef QCA_ENHANCED_STATS_SUPPORT
 	void (*mon_filter_setup_enhanced_stats)(struct dp_pdev *pdev);
 	void (*mon_filter_reset_enhanced_stats)(struct dp_pdev *pdev);
+	void (*mon_tx_stats_update)(struct dp_peer *peer,
+				    struct cdp_tx_completion_ppdu_user *ppdu);
 #endif
 #ifdef QCA_MCOPY_SUPPORT
 	void (*mon_filter_setup_mcopy_mode)(struct dp_pdev *pdev);

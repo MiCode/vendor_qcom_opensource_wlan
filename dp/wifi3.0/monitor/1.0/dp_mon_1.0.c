@@ -901,6 +901,9 @@ dp_mon_register_feature_ops_1_0(struct dp_soc *soc)
 				dp_mon_filter_setup_enhanced_stats_1_0;
 	mon_ops->mon_filter_reset_enhanced_stats =
 				dp_mon_filter_reset_enhanced_stats_1_0;
+#ifdef WLAN_FEATURE_11BE
+	mon_ops->mon_tx_stats_update = NULL;
+#endif
 #endif
 #if defined(ATH_SUPPORT_NAC_RSSI) || defined(ATH_SUPPORT_NAC)
 	mon_ops->mon_filter_setup_smart_monitor =

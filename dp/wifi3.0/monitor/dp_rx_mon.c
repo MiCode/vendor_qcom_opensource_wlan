@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -810,9 +811,9 @@ static void dp_rx_stats_update(struct dp_pdev *pdev,
 		if (ppdu_type >= HAL_RX_TYPE_MU_MIMO &&
 		    ppdu_type <= HAL_RX_TYPE_MU_OFDMA) {
 			if (ppdu_type == HAL_RX_TYPE_MU_MIMO)
-				mu_pkt_type = RX_TYPE_MU_MIMO;
+				mu_pkt_type = TXRX_TYPE_MU_MIMO;
 			else
-				mu_pkt_type = RX_TYPE_MU_OFDMA;
+				mu_pkt_type = TXRX_TYPE_MU_OFDMA;
 
 			if (nss) {
 				DP_STATS_INC(peer, rx.nss[nss - 1], num_msdu);
@@ -878,22 +879,22 @@ static void dp_rx_stats_update(struct dp_pdev *pdev,
 			((mcs < (MAX_MCS - 1)) && (preamble == DOT11_AX) &&
 			(ppdu_type == HAL_RX_TYPE_SU)));
 		DP_STATS_INCC(peer,
-			rx.rx_mu[RX_TYPE_MU_OFDMA].ppdu.mcs_count[MAX_MCS - 1],
+			rx.rx_mu[TXRX_TYPE_MU_OFDMA].ppdu.mcs_count[MAX_MCS - 1],
 			1, ((mcs >= (MAX_MCS - 1)) &&
 			(preamble == DOT11_AX) &&
 			(ppdu_type == HAL_RX_TYPE_MU_OFDMA)));
 		DP_STATS_INCC(peer,
-			rx.rx_mu[RX_TYPE_MU_OFDMA].ppdu.mcs_count[mcs],
+			rx.rx_mu[TXRX_TYPE_MU_OFDMA].ppdu.mcs_count[mcs],
 			1, ((mcs < (MAX_MCS - 1)) &&
 			(preamble == DOT11_AX) &&
 			(ppdu_type == HAL_RX_TYPE_MU_OFDMA)));
 		DP_STATS_INCC(peer,
-			rx.rx_mu[RX_TYPE_MU_MIMO].ppdu.mcs_count[MAX_MCS - 1],
+			rx.rx_mu[TXRX_TYPE_MU_MIMO].ppdu.mcs_count[MAX_MCS - 1],
 			1, ((mcs >= (MAX_MCS - 1)) &&
 			(preamble == DOT11_AX) &&
 			(ppdu_type == HAL_RX_TYPE_MU_MIMO)));
 		DP_STATS_INCC(peer,
-			rx.rx_mu[RX_TYPE_MU_MIMO].ppdu.mcs_count[mcs],
+			rx.rx_mu[TXRX_TYPE_MU_MIMO].ppdu.mcs_count[mcs],
 			1, ((mcs < (MAX_MCS - 1)) &&
 			(preamble == DOT11_AX) &&
 			(ppdu_type == HAL_RX_TYPE_MU_MIMO)));

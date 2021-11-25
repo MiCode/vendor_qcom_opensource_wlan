@@ -101,7 +101,7 @@ static const struct cdp_rate_debug dp_ppdu_rate_string[DOT11_MAX][MAX_MCS] = {
 };
 
 static const struct cdp_rate_debug
-dp_mu_rate_string[RX_TYPE_MU_MAX][MAX_MCS] = {
+dp_mu_rate_string[TXRX_TYPE_MU_MAX][MAX_MCS] = {
 	{
 		{"HE MU-MIMO MCS 0 (BPSK 1/2)     ", MCS_VALID},
 		{"HE MU-MIMO MCS 1 (QPSK 1/2)     ", MCS_VALID},
@@ -138,7 +138,7 @@ dp_mu_rate_string[RX_TYPE_MU_MAX][MAX_MCS] = {
 	},
 };
 
-const char *mu_reception_mode[RX_TYPE_MU_MAX] = {
+const char *mu_reception_mode[TXRX_TYPE_MU_MAX] = {
 	"MU MIMO", "MU OFDMA"
 };
 
@@ -5318,7 +5318,7 @@ dp_print_mu_ppdu_rates_info(struct cdp_rx_mu *rx_mu)
 	uint8_t mcs, pkt_type;
 
 	DP_PRINT_STATS("PPDU Count");
-	for (pkt_type = 0; pkt_type < RX_TYPE_MU_MAX; pkt_type++) {
+	for (pkt_type = 0; pkt_type < TXRX_TYPE_MU_MAX; pkt_type++) {
 		for (mcs = 0; mcs < MAX_MCS; mcs++) {
 			if (!dp_mu_rate_string[pkt_type][mcs].valid)
 				continue;
@@ -5891,7 +5891,7 @@ void dp_print_peer_stats(struct dp_peer *peer)
 		       peer->stats.rx.mpdu_cnt_fcs_ok,
 		       peer->stats.rx.mpdu_cnt_fcs_err);
 
-	for (rx_mu_type = 0; rx_mu_type < RX_TYPE_MU_MAX; rx_mu_type++) {
+	for (rx_mu_type = 0; rx_mu_type < TXRX_TYPE_MU_MAX; rx_mu_type++) {
 		DP_PRINT_STATS("reception mode %s",
 			       mu_reception_mode[rx_mu_type]);
 		rx_mu = &peer->stats.rx.rx_mu[rx_mu_type];
