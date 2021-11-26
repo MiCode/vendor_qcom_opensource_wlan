@@ -474,6 +474,12 @@ struct dp_mon_ops {
 					      struct dp_peer *peer,
 					      struct hal_tx_completion_status *ts,
 					      qdf_nbuf_t netbuf);
+	QDF_STATUS
+	(*mon_peer_tx_capture_get_stats)(struct dp_peer *peer,
+					 struct cdp_peer_tx_capture_stats *sts);
+	QDF_STATUS
+	(*mon_pdev_tx_capture_get_stats)(struct dp_pdev *pdev,
+					 struct cdp_pdev_tx_capture_stats *sts);
 #endif
 #if defined(WDI_EVENT_ENABLE) &&\
 	(defined(QCA_ENHANCED_STATS_SUPPORT) || !defined(REMOVE_PKT_LOG))
@@ -1025,6 +1031,34 @@ void dp_peer_tx_capture_filter_check(struct dp_pdev *pdev,
  */
 static inline
 QDF_STATUS dp_tx_capture_debugfs_init(struct dp_pdev *pdev)
+{
+	return QDF_STATUS_E_FAILURE;
+}
+
+/**
+ * dp_get_peer_tx_capture_stats: to get peer tx capture stats
+ * @peer: DP PEER handle
+ * @stats: pointor to peer tx capture stats
+ *
+ * return: QDF_STATUS
+ */
+static inline QDF_STATUS
+dp_get_peer_tx_capture_stats(struct dp_peer *peer,
+			     struct cdp_peer_tx_capture_stats *stats)
+{
+	return QDF_STATUS_E_FAILURE;
+}
+
+/**
+ * dp_get_pdev_tx_capture_stats: to get pdev tx capture stats
+ * @pdev: DP PDEV handle
+ * @stats: pointor to pdev tx capture stats
+ *
+ * return: QDF_STATUS
+ */
+static inline QDF_STATUS
+dp_get_pdev_tx_capture_stats(struct dp_pdev *pdev,
+			     struct cdp_pdev_tx_capture_stats *stats)
 {
 	return QDF_STATUS_E_FAILURE;
 }
@@ -2277,6 +2311,63 @@ QDF_STATUS monitor_update_msdu_to_list(struct dp_soc *soc,
 						    peer, ts, netbuf);
 }
 
+/*
+ * dp_monitor_peer_tx_capture_get_stats - to get Peer Tx Capture stats
+ * @soc: DP SOC handle
+ * @peer: DP PEER handle
+ * @stats: Pointer Peer tx capture stats
+ *
+ * Return: QDF_STATUS_E_FAILURE or QDF_STATUS_SUCCESS
+ */
+static inline QDF_STATUS
+dp_monitor_peer_tx_capture_get_stats(struct dp_soc *soc, struct dp_peer *peer,
+				     struct cdp_peer_tx_capture_stats *stats)
+{
+	struct dp_mon_ops *monitor_ops;
+	struct dp_mon_soc *mon_soc = soc->monitor_soc;
+
+	if (!mon_soc) {
+		dp_mon_debug("monitor soc is NULL");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	monitor_ops = mon_soc->mon_ops;
+	if (!monitor_ops || !monitor_ops->mon_peer_tx_capture_get_stats) {
+		dp_mon_debug("callback not registered");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	return monitor_ops->mon_peer_tx_capture_get_stats(peer, stats);
+}
+
+/*
+ * dp_monitor_pdev_tx_capture_get_stats - to get pdev tx capture stats
+ * @soc: DP SOC handle
+ * @pdev: DP PDEV handle
+ * @stats: Pointer to pdev tx capture stats
+ *
+ * Return: QDF_STATUS_E_FAILURE or QDF_STATUS_SUCCESS
+ */
+static inline QDF_STATUS
+dp_monitor_pdev_tx_capture_get_stats(struct dp_soc *soc, struct dp_pdev *pdev,
+				     struct cdp_pdev_tx_capture_stats *stats)
+{
+	struct dp_mon_ops *monitor_ops;
+	struct dp_mon_soc *mon_soc = soc->monitor_soc;
+
+	if (!mon_soc) {
+		dp_mon_debug("monitor soc is NULL");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	monitor_ops = mon_soc->mon_ops;
+	if (!monitor_ops || !monitor_ops->mon_pdev_tx_capture_get_stats) {
+		dp_mon_debug("callback not registered");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	return monitor_ops->mon_pdev_tx_capture_get_stats(pdev, stats);
+}
 #else
 static inline
 void dp_monitor_peer_tid_peer_id_update(struct dp_soc *soc,
@@ -2319,6 +2410,20 @@ QDF_STATUS monitor_update_msdu_to_list(struct dp_soc *soc,
 				       struct dp_peer *peer,
 				       struct hal_tx_completion_status *ts,
 				       qdf_nbuf_t netbuf)
+{
+	return QDF_STATUS_E_FAILURE;
+}
+
+static inline QDF_STATUS
+dp_monitor_peer_tx_capture_get_stats(struct dp_soc *soc, struct dp_peer *peer,
+				     struct cdp_peer_tx_capture_stats *stats)
+{
+	return QDF_STATUS_E_FAILURE;
+}
+
+static inline QDF_STATUS
+dp_monitor_pdev_tx_capture_get_stats(struct dp_soc *soc, struct dp_pdev *pdev,
+				     struct cdp_pdev_tx_capture_stats *stats)
 {
 	return QDF_STATUS_E_FAILURE;
 }

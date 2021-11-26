@@ -2714,4 +2714,92 @@ enum _dp_param_t {
 #endif
 /* Bitmasks for stats that can block */
 #define EXT_TXRX_FW_STATS		0x0001
+
+#define CDP_TX_CAP_HTT_MAX_FTYPE 19
+#define CDP_FC0_TYPE_SHIFT 2
+#define CDP_FC0_SUBTYPE_SHIFT 4
+#define CDP_FC0_TYPE_DATA 0x08
+#define CDP_FC0_SUBTYPE_MASK 0xf0
+
+#define CDP_TXCAP_MAX_TYPE \
+	((CDP_FC0_TYPE_DATA >> CDP_FC0_TYPE_SHIFT) + 1)
+#define CDP_TXCAP_MAX_SUBTYPE \
+	((CDP_FC0_SUBTYPE_MASK >> CDP_FC0_SUBTYPE_SHIFT) + 1)
+
+enum CDP_PEER_MSDU_DESC {
+	PEER_MSDU_SUCC,
+	PEER_MSDU_ENQ,
+	PEER_MSDU_DEQ,
+	PEER_MSDU_FLUSH,
+	PEER_MSDU_DROP,
+	PEER_MSDU_XRETRY,
+	PEER_MSDU_DESC_MAX,
+};
+
+enum CDP_PEER_MPDU_DESC {
+	PEER_MPDU_TRI,
+	PEER_MPDU_SUCC,
+	PEER_MPDU_RESTITCH,
+	PEER_MPDU_ARR,
+	PEER_MPDU_CLONE,
+	PEER_MPDU_TO_STACK,
+	PEER_MPDU_DESC_MAX,
+};
+
+/**
+ * struct cdp_tid_q_len - Structure to hold consolidated queue length
+ * @defer_msdu_len: Defered MSDU queue length
+ * @tasklet_msdu_len: MSDU complete queue length
+ * @pending_q_len: MSDU pending queue length
+ */
+struct cdp_tid_q_len {
+	uint64_t defer_msdu_len;
+	uint64_t tasklet_msdu_len;
+	uint64_t pending_q_len;
+};
+
+/**
+ * struct cdp_peer_tx_capture_stats - Structure to hold peer tx capture stats
+ * @len_stats: Per TID defered, pending and completed msdu queue length
+ * @mpdu: Mpdu success and restich count
+ * @msdu: Msdu success and restich count
+ */
+struct cdp_peer_tx_capture_stats {
+	struct cdp_tid_q_len len_stats[CDP_MAX_TIDS];
+#ifdef WLAN_TX_PKT_CAPTURE_ENH_DEBUG
+	uint32_t mpdu[PEER_MPDU_DESC_MAX];
+	uint32_t msdu[PEER_MSDU_DESC_MAX];
+#endif
+};
+
+/**
+ * struct cdp_pdev_tx_capture_stats - Structure to hold pdev tx capture stats
+ * @peer_mismatch: Peer mismatched
+ * @last_rcv_ppdu: Last received PPDU stats in ms
+ * @ppdu_stats_queue_depth: PPDU stats queue depth
+ * @ppdu_stats_defer_queue_depth: PPDU stats defered queue depth
+ * @ppdu_dropped: PPDU dropped count
+ * @pend_ppdu_dropped: Pending PPDU dropped count
+ * @ppdu_flush_count: PPDU flush count
+ * @msdu_threshold_drop: MSDU threshold drop count
+ * @ctl_mgmt_q_len: Control management queue length
+ * @retries_ctl_mgmt_q_len: Control management retries queue length
+ * @htt_frame_type: HTT frame type
+ * @len_stats: Consolidated msdu, ppdu and pending queue length
+ */
+struct cdp_pdev_tx_capture_stats {
+	uint64_t peer_mismatch;
+	uint32_t last_rcv_ppdu;
+	uint32_t ppdu_stats_queue_depth;
+	uint32_t ppdu_stats_defer_queue_depth;
+	uint32_t ppdu_dropped;
+	uint32_t pend_ppdu_dropped;
+	uint32_t ppdu_flush_count;
+	uint32_t msdu_threshold_drop;
+	unsigned int ctl_mgmt_q_len[CDP_TXCAP_MAX_TYPE][CDP_TXCAP_MAX_SUBTYPE];
+	unsigned int retries_ctl_mgmt_q_len[CDP_TXCAP_MAX_TYPE]
+					   [CDP_TXCAP_MAX_SUBTYPE];
+	uint32_t htt_frame_type[CDP_TX_CAP_HTT_MAX_FTYPE];
+	struct cdp_tid_q_len len_stats;
+};
 #endif

@@ -614,6 +614,20 @@ void dp_monitor_pdev_reset_scan_spcl_vap_stats_enable(struct dp_pdev *pdev,
 						      bool val)
 {
 }
+
+static inline QDF_STATUS
+dp_monitor_peer_tx_capture_get_stats(struct dp_soc *soc, struct dp_peer *peer,
+				     struct cdp_peer_tx_capture_stats *stats)
+{
+	return QDF_STATUS_E_FAILURE;
+}
+
+static inline QDF_STATUS
+dp_monitor_pdev_tx_capture_get_stats(struct dp_soc *soc, struct dp_pdev *pdev,
+				     struct cdp_pdev_tx_capture_stats *stats)
+{
+	return QDF_STATUS_E_FAILURE;
+}
 #endif
 
 /**
@@ -2953,4 +2967,29 @@ dp_txrx_get_peer_jitter_stats(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
 			      uint8_t vdev_id, uint8_t *peer_mac,
 			      struct cdp_peer_tid_stats *tid_stats);
 
+/* dp_peer_get_tx_capture_stats - to get peer Tx Capture stats
+ * @soc_hdl: soc handle
+ * @vdev_id: id of vdev handle
+ * @peer_mac: mac of DP_PEER handle
+ * @stats: pointer to peer tx capture stats
+ *
+ * Return: QDF_STATUS_SUCCESS: Success
+ *         QDF_STATUS_E_FAILURE: Error
+ */
+QDF_STATUS
+dp_peer_get_tx_capture_stats(struct cdp_soc_t *soc_hdl,
+			     uint8_t vdev_id, uint8_t *peer_mac,
+			     struct cdp_peer_tx_capture_stats *stats);
+
+/* dp_pdev_get_tx_capture_stats - to get pdev Tx Capture stats
+ * @soc_hdl: soc handle
+ * @pdev_id: id of pdev handle
+ * @stats: pointer to pdev tx capture stats
+ *
+ * Return: QDF_STATUS_SUCCESS: Success
+ *         QDF_STATUS_E_FAILURE: Error
+ */
+QDF_STATUS
+dp_pdev_get_tx_capture_stats(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
+			     struct cdp_pdev_tx_capture_stats *stats);
 #endif /* #ifndef _DP_INTERNAL_H_ */

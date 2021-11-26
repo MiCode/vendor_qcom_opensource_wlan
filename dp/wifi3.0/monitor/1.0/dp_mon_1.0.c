@@ -889,6 +889,8 @@ dp_mon_register_feature_ops_1_0(struct dp_soc *soc)
 	mon_ops->mon_print_pdev_tx_capture_stats =
 				dp_print_pdev_tx_capture_stats;
 	mon_ops->mon_config_enh_tx_capture = dp_config_enh_tx_capture;
+	mon_ops->mon_peer_tx_capture_get_stats = dp_get_peer_tx_capture_stats;
+	mon_ops->mon_pdev_tx_capture_get_stats = dp_get_pdev_tx_capture_stats;
 #endif
 #if defined(WDI_EVENT_ENABLE) &&\
 	(defined(QCA_ENHANCED_STATS_SUPPORT) || !defined(REMOVE_PKT_LOG))

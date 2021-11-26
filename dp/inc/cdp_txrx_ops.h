@@ -1053,6 +1053,17 @@ struct cdp_host_stats_ops {
 
 	void (*txrx_reset_vdev_stats_id)(struct cdp_soc_t *soc,
 					 uint8_t vdev_stats_id);
+
+#ifdef WLAN_TX_PKT_CAPTURE_ENH
+	QDF_STATUS
+	(*get_peer_tx_capture_stats)(struct cdp_soc_t *soc, uint8_t vdev_id,
+				     uint8_t *peer_mac,
+				     struct cdp_peer_tx_capture_stats *stats);
+
+	QDF_STATUS
+	(*get_pdev_tx_capture_stats)(struct cdp_soc_t *soc, uint8_t pdev_id,
+				     struct cdp_pdev_tx_capture_stats *stats);
+#endif /* WLAN_TX_PKT_CAPTURE_ENH */
 };
 
 struct cdp_wds_ops {
