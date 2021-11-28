@@ -43,13 +43,12 @@
 #include "dp_rx_buffer_pool.h"
 
 static inline
-bool is_sa_da_idx_valid(struct dp_soc *soc, uint8_t *rx_tlv_hdr,
+bool is_sa_da_idx_valid(uint32_t max_ast,
 			qdf_nbuf_t nbuf, struct hal_rx_msdu_metadata msdu_info)
 {
-	if ((qdf_nbuf_is_sa_valid(nbuf) &&
-	    (msdu_info.sa_idx > wlan_cfg_get_max_ast_idx(soc->wlan_cfg_ctx))) ||
+	if ((qdf_nbuf_is_sa_valid(nbuf) && (msdu_info.sa_idx > max_ast)) ||
 	    (!qdf_nbuf_is_da_mcbc(nbuf) && qdf_nbuf_is_da_valid(nbuf) &&
-	     (msdu_info.da_idx > wlan_cfg_get_max_ast_idx(soc->wlan_cfg_ctx))))
+	     (msdu_info.da_idx > max_ast)))
 		return false;
 
 	return true;
@@ -156,13 +155,10 @@ dp_rx_intrabss_fwd_li(struct dp_soc *soc,
 		      struct dp_peer *ta_peer,
 		      uint8_t *rx_tlv_hdr,
 		      qdf_nbuf_t nbuf,
-		      struct hal_rx_msdu_metadata msdu_metadata)
+		      struct hal_rx_msdu_metadata msdu_metadata,
+		      struct cdp_tid_rx_stats *tid_stats)
 {
 	uint8_t tx_vdev_id;
-	uint8_t tid = qdf_nbuf_get_tid_val(nbuf);
-	uint8_t ring_id = QDF_NBUF_CB_RX_CTX_ID(nbuf);
-	struct cdp_tid_rx_stats *tid_stats = &ta_peer->vdev->pdev->stats.
-					tid_stats.tid_rx_stats[ring_id][tid];
 
 	/* if it is a broadcast pkt (eg: ARP) and it is not its own
 	 * source, then clone the pkt and send the cloned pkt for
@@ -252,6 +248,10 @@ uint32_t dp_rx_process_li(struct dp_intr *int_ctx,
 	qdf_nbuf_t ebuf_tail;
 	uint8_t pkt_capture_offload = 0;
 	int max_reap_limit;
+	uint32_t old_tid;
+	uint32_t peer_ext_stats;
+	uint32_t dsf;
+	uint32_t max_ast;
 
 	DP_HIST_INIT();
 
@@ -282,6 +282,12 @@ more_data:
 	qdf_mem_zero(&msdu_desc_info, sizeof(msdu_desc_info));
 	qdf_mem_zero(head, sizeof(head));
 	qdf_mem_zero(tail, sizeof(tail));
+	old_tid = 0xff;
+	dsf = 0;
+	peer_ext_stats = 0;
+	max_ast = 0;
+	rx_pdev = NULL;
+	tid_stats = NULL;
 
 	if (qdf_unlikely(dp_rx_srng_access_start(int_ctx, soc, hal_ring_hdl))) {
 		/*
@@ -305,6 +311,8 @@ more_data:
 	last_prefetched_hw_desc = dp_srng_dst_prefetch(hal_soc, hal_ring_hdl,
 						       num_pending);
 
+	peer_ext_stats = wlan_cfg_is_peer_ext_stats_enabled(soc->wlan_cfg_ctx);
+	max_ast = wlan_cfg_get_max_ast_idx(soc->wlan_cfg_ctx);
 	/*
 	 * start reaping the buffers from reo ring and queue
 	 * them in per vdev queue.
@@ -607,12 +615,27 @@ done:
 		}
 
 		if (qdf_unlikely(!peer)) {
-			peer = dp_peer_get_ref_by_id(soc, peer_id,
-						     DP_MOD_ID_RX);
+			peer = dp_rx_get_peer_and_vdev(soc, nbuf, peer_id,
+						       pkt_capture_offload,
+						       &vdev,
+						       &rx_pdev, &dsf,
+						       &old_tid);
+			if (qdf_unlikely(!peer) || qdf_unlikely(!vdev)) {
+				nbuf = next;
+				continue;
+			}
 		} else if (peer && peer->peer_id != peer_id) {
 			dp_peer_unref_delete(peer, DP_MOD_ID_RX);
-			peer = dp_peer_get_ref_by_id(soc, peer_id,
-						     DP_MOD_ID_RX);
+
+			peer = dp_rx_get_peer_and_vdev(soc, nbuf, peer_id,
+						       pkt_capture_offload,
+						       &vdev,
+						       &rx_pdev, &dsf,
+						       &old_tid);
+			if (qdf_unlikely(!peer) || qdf_unlikely(!vdev)) {
+				nbuf = next;
+				continue;
+			}
 		}
 
 		if (peer) {
@@ -625,25 +648,6 @@ done:
 
 		rx_bufs_used++;
 
-		if (qdf_likely(peer)) {
-			vdev = peer->vdev;
-		} else {
-			nbuf->next = NULL;
-			dp_rx_deliver_to_pkt_capture_no_peer(
-					soc, nbuf, pkt_capture_offload);
-			if (!pkt_capture_offload)
-				dp_rx_deliver_to_stack_no_peer(soc, nbuf);
-			nbuf = next;
-			continue;
-		}
-
-		if (qdf_unlikely(!vdev)) {
-			qdf_nbuf_free(nbuf);
-			nbuf = next;
-			DP_STATS_INC(soc, rx.err.invalid_vdev, 1);
-			continue;
-		}
-
 		/* when hlos tid override is enabled, save tid in
 		 * skb->priority
 		 */
@@ -651,16 +655,16 @@ done:
 					DP_TXRX_HLOS_TID_OVERRIDE_ENABLED))
 			qdf_nbuf_set_priority(nbuf, tid);
 
-		rx_pdev = vdev->pdev;
 		DP_RX_TID_SAVE(nbuf, tid);
-		if (qdf_unlikely(rx_pdev->delay_stats_flag) ||
-		    qdf_unlikely(wlan_cfg_is_peer_ext_stats_enabled(
-				 soc->wlan_cfg_ctx)) ||
+		if (qdf_unlikely(dsf) || qdf_unlikely(peer_ext_stats) ||
 		    dp_rx_pkt_tracepoints_enabled())
 			qdf_nbuf_set_timestamp(nbuf);
 
-		tid_stats =
+		if (qdf_likely(old_tid != tid)) {
+			tid_stats =
 		&rx_pdev->stats.tid_stats.tid_rx_stats[reo_ring_num][tid];
+			old_tid = tid;
+		}
 
 		/*
 		 * Check if DMA completed -- msdu_done is the last bit
@@ -850,7 +854,7 @@ done:
 			 * Drop the packet if sa_idx and da_idx OOB or
 			 * sa_sw_peerid is 0
 			 */
-			if (!is_sa_da_idx_valid(soc, rx_tlv_hdr, nbuf,
+			if (!is_sa_da_idx_valid(max_ast, nbuf,
 						msdu_metadata)) {
 				qdf_nbuf_free(nbuf);
 				nbuf = next;
@@ -880,7 +884,8 @@ done:
 			if (dp_rx_check_ap_bridge(vdev))
 				if (dp_rx_intrabss_fwd_li(soc, peer, rx_tlv_hdr,
 							  nbuf,
-							  msdu_metadata)) {
+							  msdu_metadata,
+							  tid_stats)) {
 					nbuf = next;
 					tid_stats->intrabss_cnt++;
 					continue; /* Get next desc */

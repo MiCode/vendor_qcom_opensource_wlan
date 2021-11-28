@@ -1,6 +1,6 @@
-
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -157,31 +157,10 @@ dp_rx_wds_add_or_update_ast(struct dp_soc *soc, struct dp_peer *ta_peer,
 	struct dp_ast_entry *ast;
 	uint32_t flags = DP_AST_FLAGS_HM;
 	uint32_t ret = 0;
-	struct dp_pdev *pdev = ta_peer->vdev->pdev;
 	uint8_t wds_src_mac[QDF_MAC_ADDR_SIZE];
 
-	/* For AP mode : Do wds source port learning only if it is a
-	 * 4-address mpdu
-	 *
-	 * For STA mode : Frames from RootAP backend will be in 3-address mode,
-	 * till RootAP does the WDS source port learning; Hence in repeater/STA
-	 * mode, we enable learning even in 3-address mode , to avoid RootAP
-	 * backbone getting wrongly learnt as MEC on repeater
-	 */
-	if (ta_peer->vdev->opmode != wlan_op_mode_sta) {
-		if (!(is_chfrag_start && is_ad4_valid))
-			return;
-	} else {
-		/* For HKv2 Source port learing is not needed in STA mode
-		 * as we have support in HW
-		 *
-		 * if sa_valid bit is set there is a AST entry added on AP VAP
-		 * and this peer has roamed behind ROOT AP in this case proceed
-		 * further to check for roaming
-		 */
-		if (soc->ast_override_support && !is_sa_valid)
-			return;
-	}
+	if (!(is_chfrag_start && is_ad4_valid))
+		return;
 
 	if (qdf_unlikely(!is_sa_valid)) {
 		qdf_mem_copy(wds_src_mac,
@@ -234,18 +213,12 @@ dp_rx_wds_add_or_update_ast(struct dp_soc *soc, struct dp_peer *ta_peer,
 			 * smart monitor is enabled and send add_ast command
 			 * to FW.
 			 */
-			dp_monitor_neighbour_peer_add_ast(pdev, ta_peer,
+			dp_monitor_neighbour_peer_add_ast(ta_peer->vdev->pdev,
+							  ta_peer,
 							  wds_src_mac, nbuf,
 							  flags);
 			return;
 		}
-	}
-
-
-	if ((ast->type == CDP_TXRX_AST_TYPE_WDS_HM) ||
-	    (ast->type == CDP_TXRX_AST_TYPE_WDS_HM_SEC)) {
-		qdf_spin_unlock_bh(&soc->ast_lock);
-		return;
 	}
 
 	/*
@@ -257,7 +230,12 @@ dp_rx_wds_add_or_update_ast(struct dp_soc *soc, struct dp_peer *ta_peer,
 	if (ast->is_mapped && (ast->ast_idx == sa_idx))
 		ast->is_active = TRUE;
 
-	if (sa_sw_peer_id != ta_peer->peer_id) {
+	if (ast->peer_id != ta_peer->peer_id) {
+		if ((ast->type == CDP_TXRX_AST_TYPE_WDS_HM) ||
+		    (ast->type == CDP_TXRX_AST_TYPE_WDS_HM_SEC)) {
+			qdf_spin_unlock_bh(&soc->ast_lock);
+			return;
+		}
 
 		if ((ast->type != CDP_TXRX_AST_TYPE_STATIC) &&
 		    (ast->type != CDP_TXRX_AST_TYPE_SELF) &&

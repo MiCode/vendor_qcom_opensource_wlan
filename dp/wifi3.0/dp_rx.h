@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2016-2022 The Linux Foundation. All rights reserved.
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -2342,4 +2342,45 @@ qdf_nbuf_t dp_rx_nbuf_alloc(struct dp_soc *soc,
 			      rx_desc_pool->buf_alignment, FALSE);
 }
 #endif
+
+static inline
+struct dp_peer *dp_rx_get_peer_and_vdev(struct dp_soc *soc,
+					qdf_nbuf_t nbuf,
+					uint16_t peer_id,
+					bool pkt_capture_offload,
+					struct dp_vdev **vdev,
+					struct dp_pdev **rx_pdev,
+					uint32_t *dsf,
+					uint32_t *old_tid)
+{
+	struct dp_peer *peer = NULL;
+
+	peer = dp_peer_get_ref_by_id(soc, peer_id, DP_MOD_ID_RX);
+
+	if (qdf_likely(peer)) {
+		*vdev = peer->vdev;
+	} else {
+		nbuf->next = NULL;
+		dp_rx_deliver_to_pkt_capture_no_peer(soc, nbuf,
+						     pkt_capture_offload);
+		if (!pkt_capture_offload)
+			dp_rx_deliver_to_stack_no_peer(soc, nbuf);
+
+		goto end;
+	}
+
+	if (qdf_unlikely(!(*vdev))) {
+		qdf_nbuf_free(nbuf);
+		DP_STATS_INC(soc, rx.err.invalid_vdev, 1);
+		goto end;
+	}
+
+	*rx_pdev = (*vdev)->pdev;
+	*dsf = (*rx_pdev)->delay_stats_flag;
+	*old_tid = 0xff;
+
+end:
+	return peer;
+}
+
 #endif /* _DP_RX_H */
