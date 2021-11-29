@@ -123,6 +123,37 @@ dp_mlo_get_soc_ref_by_chip_id(struct dp_mlo_ctxt *ml_ctxt,
 	return soc;
 }
 
+static QDF_STATUS dp_partner_soc_rx_hw_cc_init(struct dp_mlo_ctxt *mlo_ctxt,
+					       struct dp_soc_be *be_soc)
+{
+	uint8_t i;
+	struct dp_soc *partner_soc;
+	struct dp_soc_be *be_partner_soc;
+	uint8_t pool_id;
+	QDF_STATUS qdf_status;
+
+	for (i = 0; i < WLAN_MAX_MLO_CHIPS; i++) {
+		partner_soc = dp_mlo_get_soc_ref_by_chip_id(mlo_ctxt, i);
+		if (!partner_soc)
+			continue;
+
+		be_partner_soc = dp_get_be_soc_from_dp_soc(partner_soc);
+
+		for (pool_id = 0; pool_id < MAX_RXDESC_POOLS; pool_id++) {
+			qdf_status =
+				dp_hw_cookie_conversion_init
+					(be_soc,
+					 &be_partner_soc->rx_cc_ctx[pool_id]);
+			if (!QDF_IS_STATUS_SUCCESS(qdf_status)) {
+				dp_alert("MLO partner soc RX CC init failed");
+				return qdf_status;
+			}
+		}
+	}
+
+	return qdf_status;
+}
+
 static void dp_mlo_soc_setup(struct cdp_soc_t *soc_hdl,
 			     struct cdp_mlo_ctxt *cdp_ml_ctxt)
 {
@@ -307,10 +338,38 @@ void dp_clr_mlo_ptnr_list(struct dp_soc *soc, struct dp_vdev *vdev)
 	}
 }
 
+static void dp_mlo_setup_complete(struct cdp_mlo_ctxt *cdp_ml_ctxt)
+{
+	struct dp_mlo_ctxt *mlo_ctxt = cdp_mlo_ctx_to_dp(cdp_ml_ctxt);
+	int i;
+	struct dp_soc *soc;
+	struct dp_soc_be *be_soc;
+	QDF_STATUS qdf_status;
+
+	if (!cdp_ml_ctxt)
+		return;
+
+	for (i = 0; i < WLAN_MAX_MLO_CHIPS; i++) {
+		soc = dp_mlo_get_soc_ref_by_chip_id(mlo_ctxt, i);
+
+		if (!soc)
+			continue;
+		be_soc = dp_get_be_soc_from_dp_soc(soc);
+
+		qdf_status = dp_partner_soc_rx_hw_cc_init(mlo_ctxt, be_soc);
+
+		if (!QDF_IS_STATUS_SUCCESS(qdf_status)) {
+			dp_alert("MLO partner SOC Rx desc CC init failed");
+			qdf_assert_always(0);
+		}
+	}
+}
+
 static struct cdp_mlo_ops dp_mlo_ops = {
 	.mlo_soc_setup = dp_mlo_soc_setup,
 	.mlo_soc_teardown = dp_mlo_soc_teardown,
 	.update_mlo_ptnr_list = dp_update_mlo_ptnr_list,
+	.mlo_setup_complete = dp_mlo_setup_complete,
 };
 
 void dp_soc_mlo_fill_params(struct dp_soc *soc,

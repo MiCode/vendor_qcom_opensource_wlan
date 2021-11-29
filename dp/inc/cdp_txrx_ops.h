@@ -109,6 +109,7 @@ enum vdev_ll_conn_actions {
  * struct cdp_mlo_ops - MLO ops for multichip
  * @mlo_soc_setup: setup DP mlo for SOC
  * @mlo_soc_teardown: teardown DP mlo for SOC
+ * @mlo_setup_complete: indication to DP that all SOCs mlo is setup
  */
 #if defined(WLAN_FEATURE_11BE_MLO) && defined(WLAN_MLO_MULTI_CHIP)
 struct cdp_mlo_ops {
@@ -119,6 +120,7 @@ struct cdp_mlo_ops {
 	QDF_STATUS (*update_mlo_ptnr_list)(struct cdp_soc_t *soc_hdl,
 					   int8_t *vdev_ids, uint8_t num_vdevs,
 					   uint8_t vdev_id);
+	void (*mlo_setup_complete)(struct cdp_mlo_ctxt *mlo_ctxt);
 };
 #endif
 

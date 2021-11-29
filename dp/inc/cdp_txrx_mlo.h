@@ -93,4 +93,18 @@ cdp_update_mlo_ptnr_list(ol_txrx_soc_handle soc, int8_t vdev_ids[],
 	return QDF_STATUS_SUCCESS;
 }
 
+static inline void cdp_mlo_setup_complete(ol_txrx_soc_handle soc,
+					  struct cdp_mlo_ctxt *mlo_ctx)
+{
+	if (!soc || !soc->ops) {
+		QDF_BUG(0);
+		return;
+	}
+
+	if (!soc->ops->mlo_ops ||
+	    !soc->ops->mlo_ops->mlo_setup_complete)
+		return;
+
+	soc->ops->mlo_ops->mlo_setup_complete(mlo_ctx);
+}
 #endif /*_CDP_TXRX_MLO_H_*/

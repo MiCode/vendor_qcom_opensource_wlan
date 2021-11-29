@@ -1289,12 +1289,7 @@ static void dp_peer_get_reo_hash_be(struct dp_vdev *vdev,
 		return dp_vdev_get_default_reo_hash(vdev, reo_dest,
 						    hash_based);
 
-	/* Not a ML link peer configure local chip*/
-	if (!setup_info)
-		chip_id = be_soc->mlo_chip_id;
-	else
-		chip_id = setup_info->primary_umac_id;
-
+	chip_id = be_soc->mlo_chip_id;
 	default_rx_ring_id =
 		wlan_cfg_mlo_default_rx_ring_get_by_chip_id(soc->wlan_cfg_ctx,
 							    chip_id);

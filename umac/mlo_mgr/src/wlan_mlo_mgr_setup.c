@@ -73,6 +73,9 @@ void mlo_setup_update_soc_ready(struct wlan_objmgr_psoc *psoc)
 		cdp_soc_mlo_soc_setup(wlan_psoc_get_dp_handle(tmp_soc),
 				      mlo_ctx->dp_handle);
 	}
+
+	cdp_mlo_setup_complete(wlan_psoc_get_dp_handle(psoc),
+			       mlo_ctx->dp_handle);
 }
 
 qdf_export_symbol(mlo_setup_update_soc_ready);
