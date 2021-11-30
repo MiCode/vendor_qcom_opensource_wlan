@@ -104,6 +104,7 @@
 #endif /* WLAN_MGMT_RX_REO_SUPPORT */
 
 #include "wmi_unified_api.h"
+#include <target_if_twt.h>
 
 #ifdef WLAN_FEATURE_11BE_MLO
 #include <target_if_mlo_mgr.h>
@@ -529,6 +530,19 @@ static void target_if_ipa_tx_ops_register(struct wlan_lmac_if_tx_ops *tx_ops)
 { }
 #endif
 
+#if defined(WLAN_SUPPORT_TWT) && defined(WLAN_TWT_CONV_SUPPORTED)
+static
+void target_if_twt_tx_ops_register(struct wlan_lmac_if_tx_ops *tx_ops)
+{
+	target_if_twt_register_tx_ops(tx_ops);
+}
+#else
+static
+void target_if_twt_tx_ops_register(struct wlan_lmac_if_tx_ops *tx_ops)
+{
+}
+#endif /* WLAN_SUPPORT_TWT && WLAN_TWT_CONV_SUPPORTED */
+
 static
 QDF_STATUS target_if_register_umac_tx_ops(struct wlan_lmac_if_tx_ops *tx_ops)
 {
@@ -582,6 +596,9 @@ QDF_STATUS target_if_register_umac_tx_ops(struct wlan_lmac_if_tx_ops *tx_ops)
 	target_if_mlo_tx_ops_register(tx_ops);
 
 	target_if_ipa_tx_ops_register(tx_ops);
+
+	target_if_twt_tx_ops_register(tx_ops);
+
 	/* Converged UMAC components to register their TX-ops here */
 	return QDF_STATUS_SUCCESS;
 }
