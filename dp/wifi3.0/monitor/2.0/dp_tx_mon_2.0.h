@@ -106,11 +106,95 @@ dp_tx_mon_process_2_0(struct dp_soc *soc, struct dp_intr *int_ctx,
 #define MAX_STATUS_BUFFER_IN_PPDU (64)
 #define TXMON_NO_BUFFER_SZ (64)
 
-#define TXMON_PPDU(ppdu_info, field) ppdu_info->field
-#define TXMON_PPDU_USR(ppdu_info, user_index, field) \
+#define DP_BA_ACK_FRAME_SIZE (sizeof(struct ieee80211_ctlframe_addr2) + 36)
+#define DP_ACK_FRAME_SIZE (sizeof(struct ieee80211_frame_min_one))
+#define DP_CTS_FRAME_SIZE (sizeof(struct ieee80211_frame_min_one))
+#define DP_ACKNOACK_FRAME_SIZE (sizeof(struct ieee80211_frame) + 16)
+
+#define DP_IEEE80211_BAR_CTL_TID_S 12
+#define DP_IEEE80211_BAR_CTL_TID_M 0xf
+#define DP_IEEE80211_BAR_CTL_POLICY_S 0
+#define DP_IEEE80211_BAR_CTL_POLICY_M 0x1
+#define DP_IEEE80211_BA_S_SEQ_S 4
+#define DP_IEEE80211_BAR_CTL_COMBA 0x0004
+
+#define TXMON_PPDU(ppdu_info, field)	ppdu_info->field
+#define TXMON_PPDU_USR(ppdu_info, user_index, field)	\
 			ppdu_info->hal_txmon.rx_user_status[user_index].field
 #define TXMON_PPDU_COM(ppdu_info, field) ppdu_info->hal_txmon.rx_status.field
 #define TXMON_PPDU_HAL(ppdu_info, field) ppdu_info->hal_txmon.field
+
+#define HE_DATA_CNT	6
+
+/**
+ * bf_type -  tx monitor supported Beamformed type
+ */
+enum bf_type {
+	NO_BF = 0,
+	LEGACY_BF,
+	SU_BF,
+	MU_BF
+};
+
+/**
+ * dot11b_preamble_type - tx monitor supported 11b preamble type
+ */
+enum dot11b_preamble_type {
+	SHORT_PREAMBLE = 0,
+	LONG_PREAMBLE,
+};
+
+/**
+ * bw_type - tx monitor supported bandwidth type
+ */
+enum bw_type {
+	TXMON_BW_20_MHZ = 0,
+	TXMON_BW_40_MHZ,
+	TXMON_BW_80_MHZ,
+	TXMON_BW_160_MHZ,
+	TXMON_BW_240_MHZ,
+	TXMON_BW_320_MHZ
+};
+
+/**
+ * ppdu_start_reason - tx monitor supported PPDU start reason type
+ */
+enum ppdu_start_reason {
+	TXMON_FES_PROTECTION_FRAME,
+	TXMON_FES_AFTER_PROTECTION,
+	TXMON_FES_ONLY,
+	TXMON_RESPONSE_FRAME,
+	TXMON_TRIG_RESPONSE_FRAME,
+	TXMON_DYNAMIC_PROTECTION_FES_ONLY
+};
+
+/**
+ * guard_interval - tx monitor supported Guard interval type
+ */
+enum guard_interval {
+	TXMON_GI_0_8_US = 0,
+	TXMON_GI_0_4_US,
+	TXMON_GI_1_6_US,
+	TXMON_GI_3_2_US
+};
+
+/**
+ * RU_size_start - tx monitor supported RU size start type
+ */
+enum RU_size_start {
+	TXMON_RU_26 = 0,
+	TXMON_RU_52,
+	TXMON_RU_106,
+	TXMON_RU_242,
+	TXMON_RU_484,
+	TXMON_RU_996,
+	TXMON_RU_1992,
+	TXMON_RU_FULLBW_240,
+	TXMON_RU_FULLBW_320,
+	TXMON_RU_MULTI_LARGE,
+	TXMON_RU_78,
+	TXMON_RU_132
+};
 
 /**
  * response_type_expected - expected response type
@@ -145,6 +229,16 @@ enum response_type_expected {
 };
 
 /**
+ * resposne_to_respone - tx monitor supported response to response type
+ */
+enum resposne_to_respone {
+	TXMON_RESP_TO_RESP_NONE = 0,
+	TXMON_RESP_TO_RESP_SU_BA,
+	TXMON_RESP_TO_RESP_MU_BA,
+	TXMON_RESP_TO_RESP_CMD
+};
+
+/**
  * medium_protection_type - tx monitor supported protection type
  */
 enum medium_protection_type {
@@ -158,11 +252,21 @@ enum medium_protection_type {
 };
 
 /**
+ * ndp_frame - tx monitor supported ndp frame type
+ */
+enum ndp_frame {
+	TXMON_NO_NDP_TRANSMISSION,
+	TXMON_BEAMFORMING_NDP,
+	TXMON_HE_RANGING_NDP,
+	TXMON_HE_FEEDBACK_NDP,
+};
+
+/**
  * tx_ppdu_info_type - tx monitor supported ppdu type
  */
 enum tx_ppdu_info_type {
 	TX_PROT_PPDU_INFO,
-	TX_DATA_PPDU_INFO
+	TX_DATA_PPDU_INFO,
 };
 
 /**

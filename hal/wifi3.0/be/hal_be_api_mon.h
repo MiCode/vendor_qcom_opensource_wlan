@@ -238,12 +238,39 @@ enum hal_tx_tlv_status {
 	HAL_MON_TX_STATUS_PPDU_NOT_DONE,
 };
 
+enum txmon_coex_tx_status_reason {
+	COEX_FES_TX_START,
+	COEX_FES_TX_END,
+	COEX_FES_END,
+	COEX_RESPONSE_TX_START,
+	COEX_RESPONSE_TX_END,
+	COEX_NO_TX_ONGOING,
+};
+
 enum txmon_transmission_type {
 	TXMON_SU_TRANSMISSION = 0,
 	TXMON_MU_TRANSMISSION,
 	TXMON_MU_SU_TRANSMISSION,
 	TXMON_MU_MIMO_TRANSMISSION = 1,
 	TXMON_MU_OFDMA_TRANMISSION
+};
+
+enum txmon_he_ppdu_subtype {
+	TXMON_HE_SUBTYPE_SU = 0,
+	TXMON_HE_SUBTYPE_TRIG,
+	TXMON_HE_SUBTYPE_MU,
+	TXMON_HE_SUBTYPE_EXT_SU
+};
+
+enum txmon_pkt_type {
+	TXMON_PKT_TYPE_11A = 0,
+	TXMON_PKT_TYPE_11B,
+	TXMON_PKT_TYPE_11N_MM,
+	TXMON_PKT_TYPE_11AC,
+	TXMON_PKT_TYPE_11AX,
+	TXMON_PKT_TYPE_11BA,
+	TXMON_PKT_TYPE_11BE,
+	TXMON_PKT_TYPE_11AZ
 };
 
 #define TXMON_HAL(hal_tx_ppdu_info, field)		\
@@ -261,18 +288,37 @@ struct hal_tx_status_info {
 	uint8_t transmission_type;
 	uint8_t medium_prot_type;
 
+	uint32_t no_bitmap_avail	:1,
+		explicit_ack		:1,
+		explicit_ack_type	:4,
+		r2r_end_status_follow	:1,
+		response_type		:5,
+		ndp_frame		:2,
+		num_users		:8,
+		reserved		:10;
+
+	uint8_t sw_frame_group_id;
+	uint32_t r2r_to_follow;
+	uint32_t prot_tlv_status;
+
 	void *buffer;
 	uint32_t offset;
-	uint32_t len_bytes;
+	uint32_t length;
+
+	uint8_t addr1[QDF_MAC_ADDR_SIZE];
+	uint8_t addr2[QDF_MAC_ADDR_SIZE];
+	uint8_t addr3[QDF_MAC_ADDR_SIZE];
+	uint8_t addr4[QDF_MAC_ADDR_SIZE];
+
 };
 
 struct hal_tx_ppdu_info {
 	uint32_t ppdu_id;
-
 	uint32_t num_users	:8,
 		 is_used	:1,
 		 is_data	:1,
-		 reserved	:23;
+		 cur_usr_idx	:8,
+		 reserved	:15;
 
 	uint32_t prot_tlv_status;
 
