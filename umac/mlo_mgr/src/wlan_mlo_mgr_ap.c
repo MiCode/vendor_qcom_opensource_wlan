@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -314,6 +314,12 @@ void mlo_ap_ml_peerid_free(uint16_t mlo_peer_id)
 
 	if (mlo_peer_id == MLO_INVALID_PEER_ID)
 		return;
+
+	if (mlo_peer_id > mlo_ctx->max_mlo_peer_id) {
+		mlo_err(" ML peee id %d is invalid", mlo_peer_id);
+		QDF_BUG(0);
+		return;
+	}
 
 	ml_peerid_lock_acquire(mlo_ctx);
 	if (qdf_test_bit(mlo_peer_id - 1, mlo_ctx->mlo_peer_id_bmap))

@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -130,6 +130,40 @@ static void mlo_link_peer_deauth_init(struct wlan_mlo_dev_context *ml_dev,
 	if (status != QDF_STATUS_SUCCESS)
 		wlan_objmgr_peer_release_ref(peer, WLAN_MLO_MGR_ID);
 }
+
+#ifdef UMAC_MLO_AUTH_DEFER
+static void mlo_peer_process_pending_auth(struct wlan_mlo_dev_context *ml_dev,
+					  struct wlan_mlo_peer_context *ml_peer)
+{
+	struct peer_auth_process_notif_s peer_auth;
+	struct mlpeer_auth_params *recv_auth;
+	uint8_t i;
+	QDF_STATUS status;
+
+	for (i = 0; i < MAX_MLO_LINK_PEERS; i++) {
+		mlo_peer_lock_acquire(ml_peer);
+		recv_auth = ml_peer->pending_auth[i];
+		if (!recv_auth) {
+			mlo_peer_lock_release(ml_peer);
+			continue;
+		}
+		peer_auth.auth_params = recv_auth;
+		ml_peer->pending_auth[i] = NULL;
+
+		mlo_peer_lock_release(ml_peer);
+
+		status = mlo_msgq_post(MLO_PEER_PENDING_AUTH, ml_dev,
+				       &peer_auth);
+		if (QDF_IS_STATUS_ERROR(status))
+			mlo_peer_free_auth_param(peer_auth.auth_params);
+	}
+}
+#else
+static void mlo_peer_process_pending_auth(struct wlan_mlo_dev_context *ml_dev,
+					  struct wlan_mlo_peer_context *ml_peer)
+{
+}
+#endif
 
 QDF_STATUS
 wlan_mlo_peer_is_disconnect_progress(struct wlan_mlo_peer_context *ml_peer)
@@ -471,6 +505,8 @@ void mlo_peer_cleanup(struct wlan_mlo_peer_context *ml_peer)
 	}
 
 	mlo_dev_mlpeer_detach(ml_dev, ml_peer);
+	/* If any Auth req is received during ML peer delete */
+	mlo_peer_process_pending_auth(ml_dev, ml_peer);
 	mlo_peer_free(ml_peer);
 }
 
@@ -1039,4 +1075,61 @@ bool wlan_mlo_peer_is_nawds(struct wlan_mlo_peer_context *ml_peer)
 }
 
 qdf_export_symbol(wlan_mlo_peer_is_nawds);
+#endif
+
+#ifdef UMAC_MLO_AUTH_DEFER
+void mlo_peer_free_auth_param(struct mlpeer_auth_params *auth_params)
+{
+	if (auth_params->rs)
+		qdf_mem_free(auth_params->rs);
+
+	if (auth_params->wbuf)
+		qdf_nbuf_free(auth_params->wbuf);
+
+	qdf_mem_free(auth_params);
+}
+
+QDF_STATUS mlo_peer_link_auth_defer(struct wlan_mlo_peer_context *ml_peer,
+				    struct qdf_mac_addr *link_mac,
+				    struct mlpeer_auth_params *auth_params)
+{
+	uint8_t i;
+	uint8_t free_entries = 0;
+	struct mlpeer_auth_params *recv_auth;
+	QDF_STATUS status = QDF_STATUS_E_FAILURE;
+
+	mlo_peer_lock_acquire(ml_peer);
+	for (i = 0; i < MAX_MLO_LINK_PEERS; i++) {
+		recv_auth = ml_peer->pending_auth[i];
+		if (!recv_auth) {
+			free_entries++;
+			continue;
+		}
+		/* overwrite the entry with latest entry */
+		if (qdf_is_macaddr_equal(link_mac, &recv_auth->link_addr)) {
+			mlo_peer_free_auth_param(recv_auth);
+			ml_peer->pending_auth[i] = auth_params;
+			mlo_peer_lock_release(ml_peer);
+
+			return QDF_STATUS_SUCCESS;
+		}
+	}
+
+	if (!free_entries) {
+		mlo_peer_lock_release(ml_peer);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	for (i = 0; i < MAX_MLO_LINK_PEERS; i++) {
+		recv_auth = ml_peer->pending_auth[i];
+		if (!recv_auth) {
+			ml_peer->pending_auth[i] = auth_params;
+			status = QDF_STATUS_SUCCESS;
+			break;
+		}
+	}
+	mlo_peer_lock_release(ml_peer);
+
+	return status;
+}
 #endif

@@ -305,6 +305,32 @@ struct mlnawds_config {
 #endif
 
 /*
+ * struct mlpeer_auth_params - Deferred Auth params
+ * @vdev_id:  VDEV ID
+ * @psoc_id:  PSOC ID
+ * @link_addr: MAC address
+ * @algo:  Auth algorithm
+ * @seq: Auth sequence number
+ * @status_code: Auth status
+ * @challenge: Auth Challenge
+ * @challenge_length: Auth Challenge length
+ * @wbuf:  Auth wbuf
+ * @rs: Rx stats
+ */
+struct mlpeer_auth_params {
+	uint8_t vdev_id;
+	uint8_t psoc_id;
+	struct qdf_mac_addr link_addr;
+	uint16_t algo;
+	uint16_t seq;
+	uint16_t status_code;
+	uint8_t *challenge;
+	uint8_t challenge_length;
+	qdf_nbuf_t wbuf;
+	void *rs;
+};
+
+/*
  * struct wlan_mlo_peer_context - MLO peer context
  *
  * @peer_node:     peer list node for ml_dev qdf list
@@ -322,6 +348,7 @@ struct mlnawds_config {
  * @avg_link_rssi: avg RSSI of ML peer
  * @is_nawds_ml_peer: flag to indicate if ml_peer is NAWDS configured
  * @nawds_config: eack link peer's NAWDS configuration
+ * @pending_auth: Holds pending auth request
  */
 struct wlan_mlo_peer_context {
 	qdf_list_node_t peer_node;
@@ -345,6 +372,9 @@ struct wlan_mlo_peer_context {
 #ifdef UMAC_SUPPORT_MLNAWDS
 	bool is_nawds_ml_peer;
 	struct mlnawds_config nawds_config[MAX_MLO_LINK_PEERS];
+#endif
+#ifdef UMAC_MLO_AUTH_DEFER
+	struct mlpeer_auth_params *pending_auth[MAX_MLO_LINK_PEERS];
 #endif
 };
 
@@ -406,6 +436,7 @@ struct mlo_tgt_partner_info {
  * @mlo_mlme_get_link_assoc_req: Calback to get link assoc req buffer
  * @mlo_mlme_ext_deauth: Callback to initiate deauth
  * @mlo_mlme_ext_clone_security_param: Callback to clone mlo security params
+ * @mlo_mlme_ext_peer_process_auth: Callback to process pending auth
  */
 struct mlo_mlme_ext_ops {
 	QDF_STATUS (*mlo_mlme_ext_validate_conn_req)(
@@ -426,6 +457,10 @@ struct mlo_mlme_ext_ops {
 	QDF_STATUS (*mlo_mlme_ext_clone_security_param)(
 		    struct vdev_mlme_obj *vdev_mlme,
 		    struct wlan_cm_connect_req *req);
+#ifdef UMAC_MLO_AUTH_DEFER
+	void (*mlo_mlme_ext_peer_process_auth)(
+	      struct mlpeer_auth_params *auth_param);
+#endif
 };
 
 /* maximum size of vdev bitmap array for MLO link set active command */

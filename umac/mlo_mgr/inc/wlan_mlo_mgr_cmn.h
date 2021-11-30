@@ -238,6 +238,21 @@ qdf_nbuf_t mlo_mlme_get_link_assoc_req(struct wlan_objmgr_peer *peer,
  */
 void mlo_mlme_peer_deauth(struct wlan_objmgr_peer *peer);
 
+#ifdef UMAC_MLO_AUTH_DEFER
+/**
+ * mlo_mlme_peer_process_auth() - Process deferred auth request
+ * @auth_params: deferred auth params
+ *
+ * Return: void
+ */
+void mlo_mlme_peer_process_auth(struct mlpeer_auth_params *auth_param);
+#else
+static inline void
+mlo_mlme_peer_process_auth(struct mlpeer_auth_params *auth_param)
+{
+}
+#endif
+
 /**
  * mlo_get_link_vdev_ix() - Get index of link VDEV in MLD
  * @ml_dev: ML device context
