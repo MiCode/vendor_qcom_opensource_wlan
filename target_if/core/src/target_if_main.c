@@ -1016,4 +1016,33 @@ QDF_STATUS target_if_mlo_ready(struct wlan_objmgr_pdev **pdev,
 
 	return QDF_STATUS_SUCCESS;
 }
+
+static QDF_STATUS
+target_if_mlo_teardown_send(struct wlan_objmgr_pdev *pdev,
+			    enum wmi_mlo_teardown_reason reason)
+{
+	wmi_unified_t wmi_handle;
+	struct wmi_mlo_teardown_params params = {0};
+
+	wmi_handle = lmac_get_pdev_wmi_handle(pdev);
+	if (!wmi_handle)
+		return QDF_STATUS_E_INVAL;
+
+	params.pdev_id = wlan_objmgr_pdev_get_pdev_id(pdev);
+	params.reason = reason;
+
+	return wmi_mlo_teardown_cmd_send(wmi_handle, &params);
+}
+
+QDF_STATUS target_if_mlo_teardown_req(struct wlan_objmgr_pdev **pdev,
+				      uint8_t num_pdevs,
+				      enum wmi_mlo_teardown_reason reason)
+{
+	uint8_t idx;
+
+	for (idx = 0; idx < num_pdevs; idx++)
+		target_if_mlo_teardown_send(pdev[idx], reason);
+
+	return QDF_STATUS_SUCCESS;
+}
 #endif /*WLAN_FEATURE_11BE_MLO && WLAN_MLO_MULTI_CHIP*/

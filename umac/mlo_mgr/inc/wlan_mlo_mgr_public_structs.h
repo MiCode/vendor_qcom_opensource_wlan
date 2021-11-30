@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -28,6 +28,9 @@
 #include <wlan_cmn_ieee80211.h>
 #include <wlan_cmn.h>
 #include <wlan_objmgr_global_obj.h>
+#if defined(WLAN_FEATURE_11BE_MLO) && defined(WLAN_MLO_MULTI_CHIP)
+#include <qdf_event.h>
+#endif
 
 /* MAX MLO dev support */
 #define WLAN_UMAC_MLO_MAX_VDEVS 2
@@ -85,6 +88,7 @@ enum MLO_LINK_STATE {
  * @soc_list[MAX_MLO_CHIPS]: psoc pointers belonging to this group
  * @state[MAX_MLO_LINKS]: MLO link state
  * @state_lock: lock to protect access to link state
+ * @qdf_event_t: event for tearodwn completion
  */
 #define MAX_MLO_LINKS 6
 #define MAX_MLO_CHIPS 3
@@ -98,6 +102,7 @@ struct mlo_setup_info {
 	struct wlan_objmgr_psoc *soc_list[MAX_MLO_CHIPS];
 	enum MLO_LINK_STATE state[MAX_MLO_LINKS];
 	qdf_spinlock_t state_lock;
+	qdf_event_t event;
 };
 
 #define MAX_MLO_GROUP 1
