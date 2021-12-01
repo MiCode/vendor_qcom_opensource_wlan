@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021,2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -22,6 +23,8 @@
 #include <dp_mon.h>
 #include <dp_mon_2.0.h>
 #include <dp_rx_mon_2.0.h>
+#include <dp_rx.h>
+#include <dp_rx_mon.h>
 
 void dp_rx_mon_process_status_tlv(struct dp_soc *soc,
 				  struct dp_pdev *pdev,
@@ -38,6 +41,7 @@ dp_rx_process_pktlog(struct dp_soc *soc,
 {
 	struct dp_mon_pdev *mon_pdev;
 	qdf_nbuf_t nbuf = NULL;
+	enum WDI_EVENT pktlog_mode = WDI_NO_VAL;
 
 	nbuf = qdf_nbuf_alloc(soc->osdev, RX_MON_MIN_HEAD_ROOM,
 			      RX_BUFFER_RESERVATION, 0, FALSE);

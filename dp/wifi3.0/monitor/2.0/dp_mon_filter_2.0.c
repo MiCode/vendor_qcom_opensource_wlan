@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021,2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -28,6 +29,7 @@
 #include <dp_mon_2.0.h>
 #include <dp_rx_mon_2.0.h>
 #include <dp_mon_filter_2.0.h>
+#include <dp_be.h>
 
 #define HTT_MSG_BUF_SIZE(msg_bytes) \
    ((msg_bytes) + HTC_HEADER_LEN + HTC_HDR_ALIGNMENT_PADDING)
@@ -1061,7 +1063,7 @@ void dp_mon_filter_setup_rx_pkt_log_full_2_0(struct dp_pdev *pdev)
 	enum dp_mon_filter_mode mode = DP_MON_FILTER_PKT_LOG_FULL_MODE;
 	enum dp_mon_filter_srng_type srng_type =
 		DP_MON_FILTER_SRNG_TYPE_RXDMA_MONITOR_STATUS;
-	struct dp_pdev_be *pdev_be;
+	struct dp_pdev_be *pdev_be = dp_get_be_pdev_from_dp_pdev(pdev);
 	struct dp_mon_pdev_be *mon_pdev_be;
 	struct htt_rx_ring_tlv_filter *rx_tlv_filter =
 		&filter.rx_tlv_filter.tlv_filter;
@@ -1071,11 +1073,10 @@ void dp_mon_filter_setup_rx_pkt_log_full_2_0(struct dp_pdev *pdev)
 		return;
 	}
 
-	pdev_be = (struct dp_pdev_be *)pdev;
 	mon_pdev_be = pdev_be->monitor_pdev_be;
 	/* Enabled the filter */
 	filter.rx_tlv_filter.valid = true;
-	dp_mon_filter_set_status_cmn(mon_pdev_be->mon_pdev,
+	dp_mon_filter_set_status_cmn(&mon_pdev_be->mon_pdev,
 				     &filter.rx_tlv_filter);
 
 	/* Setup the filter */
@@ -1095,7 +1096,7 @@ void dp_mon_filter_reset_rx_pkt_log_full_2_0(struct dp_pdev *pdev)
 	enum dp_mon_filter_mode mode = DP_MON_FILTER_PKT_LOG_FULL_MODE;
 	enum dp_mon_filter_srng_type srng_type =
 		DP_MON_FILTER_SRNG_TYPE_RXDMA_MONITOR_STATUS;
-	struct dp_pdev_be *pdev_be;
+	struct dp_pdev_be *pdev_be = dp_get_be_pdev_from_dp_pdev(pdev);
 	struct dp_mon_pdev_be *mon_pdev_be;
 
 	if (!pdev) {
@@ -1103,7 +1104,6 @@ void dp_mon_filter_reset_rx_pkt_log_full_2_0(struct dp_pdev *pdev)
 		return;
 	}
 
-	pdev_be = (struct dp_pdev_be *)pdev;
 	mon_pdev_be = pdev_be->monitor_pdev_be;
 
 	mon_pdev_be->filter_be[mode][srng_type] = filter;
@@ -1115,7 +1115,7 @@ void dp_mon_filter_setup_rx_pkt_log_lite_2_0(struct dp_pdev *pdev)
 	enum dp_mon_filter_mode mode = DP_MON_FILTER_PKT_LOG_LITE_MODE;
 	enum dp_mon_filter_srng_type srng_type =
 		DP_MON_FILTER_SRNG_TYPE_RXDMA_MONITOR_STATUS;
-	struct dp_pdev_be *pdev_be;
+	struct dp_pdev_be *pdev_be = dp_get_be_pdev_from_dp_pdev(pdev);
 	struct dp_mon_pdev_be *mon_pdev_be;
 
 	if (!pdev) {
@@ -1123,15 +1123,14 @@ void dp_mon_filter_setup_rx_pkt_log_lite_2_0(struct dp_pdev *pdev)
 		return;
 	}
 
-	pdev_be = (struct dp_pdev_be *)pdev;
 	mon_pdev_be = pdev_be->monitor_pdev_be;
 	/* Enabled the filter */
 	filter.rx_tlv_filter.valid = true;
-	dp_mon_filter_set_status_cmn(mon_pdev_be->mon_pdev,
+	dp_mon_filter_set_status_cmn(&mon_pdev_be->mon_pdev,
 				     &filter.rx_tlv_filter);
 
 	dp_mon_filter_show_filter_be(mon_pdev_be, mode, &filter);
-	mon_pdev_be->filter[mode][srng_type] = filter;
+	mon_pdev_be->filter_be[mode][srng_type] = filter;
 }
 
 void dp_mon_filter_reset_rx_pkt_log_lite_2_0(struct dp_pdev *pdev)
@@ -1140,7 +1139,7 @@ void dp_mon_filter_reset_rx_pkt_log_lite_2_0(struct dp_pdev *pdev)
 	enum dp_mon_filter_mode mode = DP_MON_FILTER_PKT_LOG_LITE_MODE;
 	enum dp_mon_filter_srng_type srng_type =
 		DP_MON_FILTER_SRNG_TYPE_RXDMA_MONITOR_STATUS;
-	struct dp_pdev_be *pdev_be;
+	struct dp_pdev_be *pdev_be = dp_get_be_pdev_from_dp_pdev(pdev);
 	struct dp_mon_pdev_be *mon_pdev_be;
 
 	if (!pdev) {
@@ -1159,25 +1158,24 @@ static void
 dp_mon_filter_set_reset_rx_pkt_log_cbf_dest_2_0(struct dp_pdev_be *pdev_be,
 						struct dp_mon_filter_be *filter)
 {
-	struct dp_soc *soc = pdev_be->pdev->soc;
+	struct dp_soc *soc = pdev_be->pdev.soc;
 	enum dp_mon_filter_mode mode = DP_MON_FILTER_PKT_LOG_CBF_MODE;
 	enum dp_mon_filter_srng_type srng_type;
 	struct dp_mon_pdev_be *mon_pdev_be;
-	struct htt_rx_ring_tlv_filter *rx_tlv_filter =
-		&filter->rx_tlv_filter->tlv_filter;
 
 	srng_type = ((soc->wlan_cfg_ctx->rxdma1_enable) ?
 		     DP_MON_FILTER_SRNG_TYPE_RXDMA_MON_BUF :
 		     DP_MON_FILTER_SRNG_TYPE_RXDMA_BUF);
 
 	/*set the filter */
-	if (filter->rx_tlv_filter->valid) {
-		dp_mon_filter_set_cbf_cmn(pdev_be->pdev, filter->rx_tlv_filter);
+	if (filter->rx_tlv_filter.valid) {
+		dp_mon_filter_set_cbf_cmn(&pdev_be->pdev,
+					  &filter->rx_tlv_filter);
 
 		dp_mon_filter_show_filter_be(mon_pdev_be, mode, filter);
-		mon_pdev_be->filter[mode][srng_type] = *filter;
+		mon_pdev_be->filter_be[mode][srng_type] = *filter;
 	} else /* reset the filter */
-		mon_pdev_be->filter[mode][srng_type] = *filter;
+		mon_pdev_be->filter_be[mode][srng_type] = *filter;
 }
 #else
 static void
@@ -1194,7 +1192,7 @@ void dp_mon_filter_setup_rx_pkt_log_cbf_2_0(struct dp_pdev *pdev)
 	enum dp_mon_filter_mode mode = DP_MON_FILTER_PKT_LOG_CBF_MODE;
 	enum dp_mon_filter_srng_type srng_type =
 		DP_MON_FILTER_SRNG_TYPE_RXDMA_MONITOR_STATUS;
-	struct dp_pdev_be *pdev_be;
+	struct dp_pdev_be *pdev_be = dp_get_be_pdev_from_dp_pdev(pdev);
 	struct dp_mon_pdev_be *mon_pdev_be;
 
 	if (!pdev) {
@@ -1208,14 +1206,13 @@ void dp_mon_filter_setup_rx_pkt_log_cbf_2_0(struct dp_pdev *pdev)
 		return;
 	}
 
-	pdev_be = (struct dp_pdev_be *)pdev;
 	mon_pdev_be = pdev_be->monitor_pdev_be;
 	/* Enabled the filter */
 	filter.rx_tlv_filter.valid = true;
 
-	dp_mon_filter_set_status_cbf(pdev_be->pdev, &filter.rx_tlv_filter);
+	dp_mon_filter_set_status_cbf(&pdev_be->pdev, &filter.rx_tlv_filter);
 	dp_mon_filter_show_filter_be(mon_pdev_be, mode, &filter);
-	mon_pdev_be->filter[mode][srng_type] = filter;
+	mon_pdev_be->filter_be[mode][srng_type] = filter;
 
 	/* Clear the filter as the same filter will be used to set the
 	 * monitor status ring
@@ -1234,6 +1231,7 @@ void dp_mon_filter_reset_rx_pktlog_cbf_2_0(struct dp_pdev *pdev)
 	enum dp_mon_filter_srng_type srng_type =
 		DP_MON_FILTER_SRNG_TYPE_RXDMA_BUF;
 	struct dp_mon_pdev_be *mon_pdev_be;
+	struct dp_pdev_be *pdev_be = dp_get_be_pdev_from_dp_pdev(pdev);
 
 	if (!pdev) {
 		QDF_TRACE(QDF_MODULE_ID_MON_FILTER, QDF_TRACE_LEVEL_ERROR,
@@ -1247,7 +1245,6 @@ void dp_mon_filter_reset_rx_pktlog_cbf_2_0(struct dp_pdev *pdev)
 		return;
 	}
 
-	pdev_be = (struct dp_pdev_be *)pdev;
 	mon_pdev_be = pdev_be->monitor_pdev_be;
 	/* Enabled the filter */
 	filter.rx_tlv_filter.valid = true;
@@ -1255,7 +1252,7 @@ void dp_mon_filter_reset_rx_pktlog_cbf_2_0(struct dp_pdev *pdev)
 	dp_mon_filter_set_reset_rx_pkt_log_cbf_dest_2_0(pdev_be, &filter);
 
 	srng_type = DP_MON_FILTER_SRNG_TYPE_RXDMA_MONITOR_STATUS;
-	mon_pdev_be->filter[mode][srng_type] = filter;
+	mon_pdev_be->filter_be[mode][srng_type] = filter;
 }
 
 void dp_mon_filter_setup_pktlog_hybrid_2_0(struct dp_pdev *pdev)
@@ -1264,7 +1261,7 @@ void dp_mon_filter_setup_pktlog_hybrid_2_0(struct dp_pdev *pdev)
 	enum dp_mon_filter_mode mode = DP_MON_FILTER_PKT_LOG_HYBRID_MODE;
 	enum dp_mon_filter_srng_type srng_type =
 		DP_MON_FILTER_SRNG_TYPE_TXMON_DEST;
-	struct dp_pdev_be *pdev_be;
+	struct dp_pdev_be *pdev_be = dp_get_be_pdev_from_dp_pdev(pdev);
 	struct dp_mon_pdev_be *mon_pdev_be;
 	struct htt_tx_ring_tlv_filter *tlv_filter = &filter.tx_tlv_filter;
 
@@ -1273,7 +1270,6 @@ void dp_mon_filter_setup_pktlog_hybrid_2_0(struct dp_pdev *pdev)
 		return;
 	}
 
-	pdev_be = (struct dp_pdev_be *)pdev;
 	mon_pdev_be = pdev_be->monitor_pdev_be;
 	/* Enabled the filter */
 	filter.tx_valid = true;
@@ -1303,7 +1299,7 @@ void dp_mon_filter_reset_pktlog_hybrid_2_0(struct dp_pdev *pdev)
 	enum dp_mon_filter_mode mode = DP_MON_FILTER_PKT_LOG_HYBRID_MODE;
 	enum dp_mon_filter_srng_type srng_type =
 		DP_MON_FILTER_SRNG_TYPE_TXMON_DEST;
-	struct dp_pdev_be *pdev_be;
+	struct dp_pdev_be *pdev_be = dp_get_be_pdev_from_dp_pdev(pdev);
 	struct dp_mon_pdev_be *mon_pdev_be;
 
 	if (!pdev) {
@@ -1311,7 +1307,6 @@ void dp_mon_filter_reset_pktlog_hybrid_2_0(struct dp_pdev *pdev)
 		return;
 	}
 
-	pdev_be = (struct dp_pdev_be *)pdev;
 	mon_pdev_be = pdev_be->monitor_pdev_be;
 
 	mon_pdev_be->filter_be[mode][srng_type] = filter;

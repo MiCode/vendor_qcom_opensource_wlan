@@ -4599,7 +4599,13 @@ QDF_STATUS dp_mon_pdev_detach(struct dp_pdev *pdev)
 		dp_mon_err("pdev is NULL");
 		return QDF_STATUS_E_FAILURE;
 	}
+
 	mon_pdev = pdev->monitor_pdev;
+	if (!mon_pdev) {
+		dp_mon_err("Monitor pdev is NULL");
+		return QDF_STATUS_E_FAILURE;
+	}
+
 	mon_ops = dp_mon_ops_get(pdev->soc);
 	if (!mon_ops) {
 		dp_mon_err("Monitor ops is NULL");

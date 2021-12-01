@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021,2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -26,6 +26,7 @@
 #else
 #include <dp_peer.h>
 #endif
+#include <dp_mon.h>
 
 /* maximum number of entries in one page of secondary page table */
 #define DP_CC_SPT_PAGE_MAX_ENTRIES 512
@@ -202,9 +203,6 @@ struct dp_soc_be {
 	struct dp_srng ppe2tcl_ring;
 	struct dp_srng ppe_release_ring;
 #endif
-#if !defined(DISABLE_MON_CONFIG)
-	struct dp_mon_soc_be *monitor_soc_be;
-#endif
 #ifdef WLAN_FEATURE_11BE_MLO
 #ifdef WLAN_MLO_MULTI_CHIP
 	uint8_t mlo_enabled;
@@ -234,9 +232,6 @@ struct dp_soc_be {
  */
 struct dp_pdev_be {
 	struct dp_pdev pdev;
-#if !defined(DISABLE_MON_CONFIG)
-	struct dp_mon_pdev_be *monitor_pdev_be;
-#endif
 #ifdef WLAN_MLO_MULTI_CHIP
 	uint8_t mlo_link_id;
 #endif
@@ -688,4 +683,30 @@ QDF_STATUS dp_txrx_set_vdev_param_be(struct dp_soc *soc,
 				     enum cdp_vdev_param_type param,
 				     cdp_config_param_type val);
 
+/*
+ * dp_get_mon_obj_be_size: get monitor context size
+ * @context_type: context type
+ *
+ * return: size of context
+ */
+#ifdef QCA_MONITOR_2_0_SUPPORT
+static inline qdf_size_t
+dp_get_mon_obj_be_size(enum dp_context_type context_type)
+{
+	switch (context_type) {
+	case DP_CONTEXT_TYPE_MON_PDEV:
+		return sizeof(struct dp_mon_pdev_be);
+	break;
+
+	default:
+		return 0;
+	}
+}
+#else
+static inline qdf_size_t
+dp_get_mon_obj_be_size(enum dp_context_type context_type)
+{
+	return sizeof(struct dp_mon_pdev);
+}
+#endif
 #endif

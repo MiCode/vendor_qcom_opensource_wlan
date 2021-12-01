@@ -5117,7 +5117,9 @@ QDF_STATUS dp_pdev_attach_wifi3(struct cdp_soc_t *txrx_soc,
 
 	pdev_context_size =
 		soc->arch_ops.txrx_get_context_size(DP_CONTEXT_TYPE_PDEV);
-	pdev = dp_context_alloc_mem(soc, DP_PDEV_TYPE, pdev_context_size);
+	if (pdev_context_size)
+		pdev = dp_context_alloc_mem(soc, DP_PDEV_TYPE, pdev_context_size);
+
 	if (!pdev) {
 		dp_init_err("%pK: DP PDEV memory allocation failed",
 			    soc);
@@ -12927,7 +12929,7 @@ dp_soc_attach(struct cdp_ctrl_objmgr_psoc *ctrl_psoc,
 		goto fail0;
 	}
 
-	dp_info("soc memory allocated %pk", soc);
+	dp_info("soc memory allocated %pK", soc);
 	soc->hif_handle = hif_handle;
 	soc->hal_soc = hif_get_hal_handle(soc->hif_handle);
 	if (!soc->hal_soc)

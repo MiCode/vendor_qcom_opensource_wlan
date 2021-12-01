@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021,2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -23,6 +23,9 @@
 #include "dp_be.h"
 #include "dp_be_tx.h"
 #include "dp_be_rx.h"
+#ifdef QCA_MONITOR_2_0_SUPPORT
+#include "dp_mon_2.0.h"
+#endif
 #include <hal_be_api.h>
 
 /* Generic AST entry aging timer value */
@@ -73,6 +76,8 @@ qdf_size_t dp_get_context_size_be(enum dp_context_type context_type)
 		return sizeof(struct dp_vdev_be);
 	case DP_CONTEXT_TYPE_PEER:
 		return sizeof(struct dp_peer_be);
+	case DP_CONTEXT_TYPE_MON_PDEV:
+		return dp_get_mon_obj_be_size(DP_CONTEXT_TYPE_MON_PDEV);
 	default:
 		return 0;
 	}
