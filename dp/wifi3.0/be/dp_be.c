@@ -1429,6 +1429,6 @@ void dp_initialize_arch_ops_be(struct dp_arch_ops *arch_ops)
 	arch_ops->mlo_peer_find_hash_remove = dp_mlo_peer_find_hash_remove_be;
 	arch_ops->mlo_peer_find_hash_find = dp_mlo_peer_find_hash_find_be;
 #endif
-
+	arch_ops->txrx_print_peer_stats = dp_print_peer_txrx_stats_be;
 	dp_init_near_full_arch_ops_be(arch_ops);
 }

@@ -80,6 +80,48 @@
 	__QDF_TRACE_FL(QDF_TRACE_LEVEL_INFO_HIGH, QDF_MODULE_ID_DP_STATS, ## params)
 #define dp_stats_debug(params...) QDF_TRACE_DEBUG(QDF_MODULE_ID_DP_STATS, params)
 
+#ifdef WLAN_FEATURE_11BE
+static const struct cdp_rate_debug dp_ppdu_rate_string[DOT11_MAX][MAX_MCS] = {
+	{
+		{"HE MCS 0 (BPSK 1/2)     ", MCS_VALID},
+		{"HE MCS 1 (QPSK 1/2)     ", MCS_VALID},
+		{"HE MCS 2 (QPSK 3/4)     ", MCS_VALID},
+		{"HE MCS 3 (16-QAM 1/2)   ", MCS_VALID},
+		{"HE MCS 4 (16-QAM 3/4)   ", MCS_VALID},
+		{"HE MCS 5 (64-QAM 2/3)   ", MCS_VALID},
+		{"HE MCS 6 (64-QAM 3/4)   ", MCS_VALID},
+		{"HE MCS 7 (64-QAM 5/6)   ", MCS_VALID},
+		{"HE MCS 8 (256-QAM 3/4)  ", MCS_VALID},
+		{"HE MCS 9 (256-QAM 5/6)  ", MCS_VALID},
+		{"HE MCS 10 (1024-QAM 3/4)", MCS_VALID},
+		{"HE MCS 11 (1024-QAM 5/6)", MCS_VALID},
+		{"HE MCS 12 (4096-QAM 3/4)", MCS_VALID},
+		{"HE MCS 13 (4096-QAM 5/6)", MCS_VALID},
+		{"INVALID ", MCS_VALID},
+		{"INVALID ", MCS_VALID},
+		{"INVALID ", MCS_VALID},
+	},
+	{
+		{"EHT MCS 0 (BPSK 1/2)     ", MCS_VALID},
+		{"EHT MCS 1 (QPSK 1/2)     ", MCS_VALID},
+		{"EHT MCS 2 (QPSK 3/4)     ", MCS_VALID},
+		{"EHT MCS 3 (16-QAM 1/2)   ", MCS_VALID},
+		{"EHT MCS 4 (16-QAM 3/4)   ", MCS_VALID},
+		{"EHT MCS 5 (64-QAM 2/3)   ", MCS_VALID},
+		{"EHT MCS 6 (64-QAM 3/4)   ", MCS_VALID},
+		{"EHT MCS 7 (64-QAM 5/6)   ", MCS_VALID},
+		{"EHT MCS 8 (256-QAM 3/4)  ", MCS_VALID},
+		{"EHT MCS 9 (256-QAM 5/6)  ", MCS_VALID},
+		{"EHT MCS 10 (1024-QAM 3/4)", MCS_VALID},
+		{"EHT MCS 11 (1024-QAM 5/6)", MCS_VALID},
+		{"EHT MCS 12 (4096-QAM 3/4)", MCS_VALID},
+		{"EHT MCS 13 (4096-QAM 5/6)", MCS_VALID},
+		{"EHT MCS 14 (BPSK-DCM 1/2)", MCS_VALID},
+		{"EHT MCS 15 (BPSK-DCM 1/2)", MCS_VALID},
+		{"INVALID ", MCS_INVALID},
+	}
+};
+#else
 static const struct cdp_rate_debug dp_ppdu_rate_string[DOT11_MAX][MAX_MCS] = {
 	{
 		{"HE MCS 0 (BPSK 1/2)     ", MCS_VALID},
@@ -99,7 +141,93 @@ static const struct cdp_rate_debug dp_ppdu_rate_string[DOT11_MAX][MAX_MCS] = {
 		{"INVALID ", MCS_VALID},
 	}
 };
+#endif
 
+#ifdef WLAN_FEATURE_11BE
+static const struct cdp_rate_debug
+dp_mu_rate_string[TXRX_TYPE_MU_MAX][MAX_MCS] = {
+	{
+		{"HE MU-MIMO MCS 0 (BPSK 1/2)     ", MCS_VALID},
+		{"HE MU-MIMO MCS 1 (QPSK 1/2)     ", MCS_VALID},
+		{"HE MU-MIMO MCS 2 (QPSK 3/4)     ", MCS_VALID},
+		{"HE MU-MIMO MCS 3 (16-QAM 1/2)   ", MCS_VALID},
+		{"HE MU-MIMO MCS 4 (16-QAM 3/4)   ", MCS_VALID},
+		{"HE MU-MIMO MCS 5 (64-QAM 2/3)   ", MCS_VALID},
+		{"HE MU-MIMO MCS 6 (64-QAM 3/4)   ", MCS_VALID},
+		{"HE MU-MIMO MCS 7 (64-QAM 5/6)   ", MCS_VALID},
+		{"HE MU-MIMO MCS 8 (256-QAM 3/4)  ", MCS_VALID},
+		{"HE MU-MIMO MCS 9 (256-QAM 5/6)  ", MCS_VALID},
+		{"HE MU-MIMO MCS 10 (1024-QAM 3/4)", MCS_VALID},
+		{"HE MU-MIMO MCS 11 (1024-QAM 5/6)", MCS_VALID},
+		{"HE MU-MIMO MCS 12 (4096-QAM 3/4)", MCS_VALID},
+		{"HE MU-MIMO MCS 13 (4096-QAM 5/6)", MCS_VALID},
+		{"INVALID ", MCS_VALID},
+		{"INVALID ", MCS_VALID},
+		{"INVALID ", MCS_VALID},
+	},
+	{
+		{"HE OFDMA MCS 0 (BPSK 1/2)     ", MCS_VALID},
+		{"HE OFDMA MCS 1 (QPSK 1/2)     ", MCS_VALID},
+		{"HE OFDMA MCS 2 (QPSK 3/4)     ", MCS_VALID},
+		{"HE OFDMA MCS 3 (16-QAM 1/2)   ", MCS_VALID},
+		{"HE OFDMA MCS 4 (16-QAM 3/4)   ", MCS_VALID},
+		{"HE OFDMA MCS 5 (64-QAM 2/3)   ", MCS_VALID},
+		{"HE OFDMA MCS 6 (64-QAM 3/4)   ", MCS_VALID},
+		{"HE OFDMA MCS 7 (64-QAM 5/6)   ", MCS_VALID},
+		{"HE OFDMA MCS 8 (256-QAM 3/4)  ", MCS_VALID},
+		{"HE OFDMA MCS 9 (256-QAM 5/6)  ", MCS_VALID},
+		{"HE OFDMA MCS 10 (1024-QAM 3/4)", MCS_VALID},
+		{"HE OFDMA MCS 11 (1024-QAM 5/6)", MCS_VALID},
+		{"HE OFDMA MCS 12 (4096-QAM 3/4)", MCS_VALID},
+		{"HE OFDMA MCS 13 (4096-QAM 5/6)", MCS_VALID},
+		{"INVALID ", MCS_VALID},
+		{"INVALID ", MCS_VALID},
+		{"INVALID ", MCS_VALID},
+	}
+};
+
+static const struct cdp_rate_debug
+dp_mu_be_rate_string[TXRX_TYPE_MU_MAX][MAX_MCS] = {
+	{
+		{"EHT MU-MIMO MCS 0 (BPSK 1/2)     ", MCS_VALID},
+		{"EHT MU-MIMO MCS 1 (QPSK 1/2)     ", MCS_VALID},
+		{"EHT MU-MIMO MCS 2 (QPSK 3/4)     ", MCS_VALID},
+		{"EHT MU-MIMO MCS 3 (16-QAM 1/2)   ", MCS_VALID},
+		{"EHT MU-MIMO MCS 4 (16-QAM 3/4)   ", MCS_VALID},
+		{"EHT MU-MIMO MCS 5 (64-QAM 2/3)   ", MCS_VALID},
+		{"EHT MU-MIMO MCS 6 (64-QAM 3/4)   ", MCS_VALID},
+		{"EHT MU-MIMO MCS 7 (64-QAM 5/6)   ", MCS_VALID},
+		{"EHT MU-MIMO MCS 8 (256-QAM 3/4)  ", MCS_VALID},
+		{"EHT MU-MIMO MCS 9 (256-QAM 5/6)  ", MCS_VALID},
+		{"EHT MU-MIMO MCS 10 (1024-QAM 3/4)", MCS_VALID},
+		{"EHT MU-MIMO MCS 11 (1024-QAM 5/6)", MCS_VALID},
+		{"EHT MU-MIMO MCS 12 (4096-QAM 3/4)", MCS_VALID},
+		{"EHT MU-MIMO MCS 13 (4096-QAM 5/6)", MCS_VALID},
+		{"EHT MU-MINO MCS 14 (BPSK-DCM 1/2)", MCS_VALID},
+		{"EHT MU-MIMO MCS 15 (BPSK-DCM 1/2)", MCS_VALID},
+		{"INVALID ", MCS_VALID},
+	},
+	{
+		{"EHT OFDMA MCS 0 (BPSK 1/2)     ", MCS_VALID},
+		{"EHT OFDMA MCS 1 (QPSK 1/2)     ", MCS_VALID},
+		{"EHT OFDMA MCS 2 (QPSK 3/4)     ", MCS_VALID},
+		{"EHT OFDMA MCS 3 (16-QAM 1/2)   ", MCS_VALID},
+		{"EHT OFDMA MCS 4 (16-QAM 3/4)   ", MCS_VALID},
+		{"EHT OFDMA MCS 5 (64-QAM 2/3)   ", MCS_VALID},
+		{"EHT OFDMA MCS 6 (64-QAM 3/4)   ", MCS_VALID},
+		{"EHT OFDMA MCS 7 (64-QAM 5/6)   ", MCS_VALID},
+		{"EHT OFDMA MCS 8 (256-QAM 3/4)  ", MCS_VALID},
+		{"EHT OFDMA MCS 9 (256-QAM 5/6)  ", MCS_VALID},
+		{"EHT OFDMA MCS 10 (1024-QAM 3/4)", MCS_VALID},
+		{"EHT OFDMA MCS 11 (1024-QAM 5/6)", MCS_VALID},
+		{"EHT OFDMA MCS 12 (4096-QAM 3/4)", MCS_VALID},
+		{"EHT OFDMA MCS 13 (4096-QAM 5/6)", MCS_VALID},
+		{"EHT OFDMA MCS 14 (BPSK-DCM 1/2)", MCS_VALID},
+		{"EHT OFDMA MCS 15 (BPSK-DCM 1/2)", MCS_VALID},
+		{"INVALID ", MCS_VALID},
+	}
+};
+#else
 static const struct cdp_rate_debug
 dp_mu_rate_string[TXRX_TYPE_MU_MAX][MAX_MCS] = {
 	{
@@ -135,8 +263,9 @@ dp_mu_rate_string[TXRX_TYPE_MU_MAX][MAX_MCS] = {
 		{"HE OFDMA MCS 12 (4096-QAM 3/4)", MCS_VALID},
 		{"HE OFDMA MCS 13 (4096-QAM 5/6)", MCS_VALID},
 		{"INVALID ", MCS_VALID},
-	},
+	}
 };
+#endif
 
 const char *mu_reception_mode[TXRX_TYPE_MU_MAX] = {
 	"MU MIMO", "MU OFDMA"
@@ -5283,13 +5412,44 @@ dp_print_common_rates_info(struct cdp_pkt_type *pkt_type_array)
 }
 
 /**
- * dp_print_common_ppdu_rates_info(): Print common rate for tx or rx
+ * dp_print_common_ppdu_rates_info(): Print ppdu rate for tx or rx
  * @pkt_type_array: rate type array contains rate info
+ * @pkt_type: packet type
  *
  * Return:void
  */
+#ifdef WLAN_FEATURE_11BE
 static inline void
-dp_print_common_ppdu_rates_info(struct cdp_pkt_type *pkt_type_array)
+dp_print_common_ppdu_rates_info(struct cdp_pkt_type *pkt_type_array,
+				enum cdp_packet_type pkt_type)
+{
+	uint8_t mcs;
+
+	DP_PRINT_STATS("PPDU Count");
+	for (mcs = 0; mcs < MAX_MCS; mcs++) {
+		if (pkt_type == DOT11_AX) {
+			if (!dp_ppdu_rate_string[0][mcs].valid)
+				continue;
+
+			DP_PRINT_STATS("	%s = %d",
+				       dp_ppdu_rate_string[0][mcs].mcs_type,
+				       pkt_type_array->mcs_count[mcs]);
+		} else if (pkt_type == DOT11_BE) {
+			if (!dp_ppdu_rate_string[1][mcs].valid)
+				continue;
+
+			DP_PRINT_STATS("	%s = %d",
+				       dp_ppdu_rate_string[1][mcs].mcs_type,
+				       pkt_type_array->mcs_count[mcs]);
+		}
+	}
+
+	DP_PRINT_STATS("\n");
+}
+#else
+static inline void
+dp_print_common_ppdu_rates_info(struct cdp_pkt_type *pkt_type_array,
+				enum cdp_packet_type pkt_type)
 {
 	uint8_t mcs;
 
@@ -5305,13 +5465,36 @@ dp_print_common_ppdu_rates_info(struct cdp_pkt_type *pkt_type_array)
 
 	DP_PRINT_STATS("\n");
 }
+#endif
 
 /**
- * dp_print_mu_ppdu_rates_info(): Print mu rate for tx or rx
- * @rx_mu: rx MU stats array
+ * dp_print_mu_be_ppdu_rates_info(): Print mu be rate for tx or rx
+ * @pkt_type_array: rate type array contains rate info
  *
  * Return:void
  */
+#ifdef WLAN_FEATURE_11BE
+static inline void
+dp_print_mu_be_ppdu_rates_info(struct cdp_pkt_type *pkt_type_array)
+{
+	uint8_t mcs, pkt_type;
+
+	DP_PRINT_STATS("PPDU Count");
+	for (pkt_type = 0; pkt_type < TXRX_TYPE_MU_MAX; pkt_type++) {
+		for (mcs = 0; mcs < MAX_MCS; mcs++) {
+			if (!dp_mu_rate_string[pkt_type][mcs].valid)
+				continue;
+
+			DP_PRINT_STATS("	%s = %d",
+				       dp_mu_be_rate_string[pkt_type][mcs].mcs_type,
+				       pkt_type_array->mcs_count[mcs]);
+		}
+
+		DP_PRINT_STATS("\n");
+	}
+}
+#endif
+
 static inline void
 dp_print_mu_ppdu_rates_info(struct cdp_rx_mu *rx_mu)
 {
@@ -5656,6 +5839,69 @@ static inline void dp_peer_print_rx_delay_stats(struct dp_pdev *pdev,
 }
 #endif
 
+#ifdef WLAN_FEATURE_11BE
+void dp_print_peer_txrx_stats_be(struct dp_peer *peer,
+				 enum peer_stats_type stats_type)
+{
+	uint8_t i;
+
+	if (stats_type == PEER_TX_STATS) {
+		DP_PRINT_STATS("BW Counts = 20MHZ %d 40MHZ %d 80MHZ %d 160MHZ %d 320MHZ %d\n",
+			       peer->stats.tx.bw[0], peer->stats.tx.bw[1],
+			       peer->stats.tx.bw[2], peer->stats.tx.bw[3],
+			       peer->stats.tx.bw[4]);
+		DP_PRINT_STATS("RU Locations RU[26 52 52_26 106 106_26 242 484 484_242 996 996_484 996_484_242 2X996 2X996_484 3X996 3X996_484 4X996]:");
+		for (i = 0; i < RU_INDEX_MAX; i++)
+			DP_PRINT_STATS("%s:  %d", cdp_ru_string[i].ru_type,
+				       peer->stats.tx.ru_loc[i].num_msdu);
+		dp_print_common_ppdu_rates_info(&peer->stats.tx.su_be_ppdu_cnt,
+						DOT11_BE);
+		dp_print_mu_be_ppdu_rates_info(&peer->stats.tx.mu_be_ppdu_cnt[0]);
+
+	} else {
+		DP_PRINT_STATS("BW Counts = 20MHZ %d 40MHZ %d 80MHZ %d 160MHZ %d 320MHZ %d",
+			       peer->stats.rx.bw[0], peer->stats.rx.bw[1],
+			       peer->stats.rx.bw[2], peer->stats.rx.bw[3],
+			       peer->stats.rx.bw[4]);
+		dp_print_common_ppdu_rates_info(&peer->stats.rx.su_be_ppdu_cnt,
+						DOT11_BE);
+		dp_print_mu_be_ppdu_rates_info(&peer->stats.rx.rx_mu_be[0]);
+	}
+}
+#else
+void dp_print_peer_txrx_stats_be(struct dp_peer *peer,
+				 enum peer_stats_type stats_type)
+{
+}
+#endif
+
+void dp_print_peer_txrx_stats_li(struct dp_peer *peer,
+				 enum peer_stats_type stats_type)
+{
+	if (stats_type == PEER_TX_STATS) {
+		DP_PRINT_STATS("BW Counts = 20MHZ %d 40MHZ %d 80MHZ %d 160MHZ %d\n",
+			       peer->stats.tx.bw[0], peer->stats.tx.bw[1],
+			       peer->stats.tx.bw[2], peer->stats.tx.bw[3]);
+		DP_PRINT_STATS("RU Locations RU[26 52 106 242 484 996]:");
+		DP_PRINT_STATS("%s:  %d", cdp_ru_string[RU_26_INDEX].ru_type,
+			       peer->stats.tx.ru_loc[RU_26_INDEX].num_msdu);
+		DP_PRINT_STATS("%s:  %d", cdp_ru_string[RU_52_INDEX].ru_type,
+			       peer->stats.tx.ru_loc[RU_52_INDEX].num_msdu);
+		DP_PRINT_STATS("%s:  %d", cdp_ru_string[RU_106_INDEX].ru_type,
+			       peer->stats.tx.ru_loc[RU_106_INDEX].num_msdu);
+		DP_PRINT_STATS("%s:  %d", cdp_ru_string[RU_242_INDEX].ru_type,
+			       peer->stats.tx.ru_loc[RU_242_INDEX].num_msdu);
+		DP_PRINT_STATS("%s:  %d", cdp_ru_string[RU_484_INDEX].ru_type,
+			       peer->stats.tx.ru_loc[RU_484_INDEX].num_msdu);
+		DP_PRINT_STATS("%s:  %d", cdp_ru_string[RU_996_INDEX].ru_type,
+			       peer->stats.tx.ru_loc[RU_996_INDEX].num_msdu);
+	} else {
+		DP_PRINT_STATS("BW Counts = 20MHZ %d 40MHZ %d 80MHZ %d 160MHZ %d",
+			       peer->stats.rx.bw[0], peer->stats.rx.bw[1],
+			       peer->stats.rx.bw[2], peer->stats.rx.bw[3]);
+	}
+}
+
 void dp_print_peer_stats(struct dp_peer *peer)
 {
 	uint8_t i;
@@ -5746,9 +5992,6 @@ void dp_print_peer_stats(struct dp_peer *peer)
 		       peer->stats.tx.excess_retries_per_ac[2]);
 	DP_PRINT_STATS("	 Voice = %d",
 		       peer->stats.tx.excess_retries_per_ac[3]);
-	DP_PRINT_STATS("BW Counts = 20MHZ %d 40MHZ %d 80MHZ %d 160MHZ %d\n",
-		       peer->stats.tx.bw[0], peer->stats.tx.bw[1],
-		       peer->stats.tx.bw[2], peer->stats.tx.bw[3]);
 
 	pnss = &peer->stats.tx.nss[0];
 	dp_print_nss(nss, pnss, SS_COUNT);
@@ -5779,10 +6022,6 @@ void dp_print_peer_stats(struct dp_peer *peer)
 
 	DP_PRINT_STATS("Last Packet RU index [%d], Size [%d]",
 		       peer->stats.tx.ru_start, peer->stats.tx.ru_tones);
-	DP_PRINT_STATS("RU Locations RU[26 52 106 242 484 996]:");
-	for (i = 0; i < RU_INDEX_MAX; i++)
-		DP_PRINT_STATS("%s:  %d", cdp_ru_string[i].ru_type,
-			       peer->stats.tx.ru_loc[i].num_msdu);
 
 	DP_PRINT_STATS("Aggregation:");
 	DP_PRINT_STATS("Number of Msdu's Part of Amsdu = %d",
@@ -5795,6 +6034,9 @@ void dp_print_peer_stats(struct dp_peer *peer)
 		       peer->stats.tx.tx_byte_rate);
 	DP_PRINT_STATS("	Data transmitted in last sec: %d",
 		       peer->stats.tx.tx_data_rate);
+
+	if (pdev && pdev->soc->arch_ops.txrx_print_peer_stats)
+		pdev->soc->arch_ops.txrx_print_peer_stats(peer, PEER_TX_STATS);
 
 	dp_print_jitter_stats(peer, pdev);
 	dp_peer_print_tx_delay_stats(pdev, peer);
@@ -5855,9 +6097,6 @@ void dp_print_peer_stats(struct dp_peer *peer)
 		       peer->stats.rx.sgi_count[1],
 		       peer->stats.rx.sgi_count[2],
 		       peer->stats.rx.sgi_count[3]);
-	DP_PRINT_STATS("BW Counts = 20MHZ %d 40MHZ %d 80MHZ %d 160MHZ %d",
-		       peer->stats.rx.bw[0], peer->stats.rx.bw[1],
-		       peer->stats.rx.bw[2], peer->stats.rx.bw[3]);
 	DP_PRINT_STATS("MSDU Reception Type");
 	DP_PRINT_STATS("SU %d MU_MIMO %d MU_OFDMA %d MU_OFDMA_MIMO %d",
 		       peer->stats.rx.reception_type[0],
@@ -5872,7 +6111,8 @@ void dp_print_peer_stats(struct dp_peer *peer)
 		       peer->stats.rx.ppdu_cnt[3]);
 
 	dp_print_common_rates_info(peer->stats.rx.pkt_type);
-	dp_print_common_ppdu_rates_info(&peer->stats.rx.su_ax_ppdu_cnt);
+	dp_print_common_ppdu_rates_info(&peer->stats.rx.su_ax_ppdu_cnt,
+					DOT11_AX);
 	dp_print_mu_ppdu_rates_info(&peer->stats.rx.rx_mu[0]);
 
 	pnss = &peer->stats.rx.nss[0];
@@ -5927,6 +6167,8 @@ void dp_print_peer_stats(struct dp_peer *peer)
 		       peer->stats.rx.peer_unauth_rx_pkt_drop);
 	DP_PRINT_STATS("Policy Check Rx Packet Drop = %d",
 		       peer->stats.rx.policy_check_drop);
+	if (pdev && pdev->soc->arch_ops.txrx_print_peer_stats)
+		pdev->soc->arch_ops.txrx_print_peer_stats(peer, PEER_RX_STATS);
 
 	dp_peer_print_rx_delay_stats(pdev, peer);
 }

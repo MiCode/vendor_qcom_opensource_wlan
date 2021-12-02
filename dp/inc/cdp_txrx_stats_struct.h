@@ -540,6 +540,16 @@ enum cdp_mu_packet_type {
 	TXRX_TYPE_MU_MAX = 2,
 };
 
+/*
+ * peer_stats_type: peer stats type
+ * PEER_TX_STATS: stats type for tx
+ * PEER_RX_STATS: stats type for rx
+ */
+enum peer_stats_type {
+	PEER_TX_STATS,
+	PEER_RX_STATS,
+};
+
 enum WDI_EVENT {
 	WDI_EVENT_TX_STATUS = WDI_EVENT_BASE,
 	WDI_EVENT_OFFLOAD_ALL,

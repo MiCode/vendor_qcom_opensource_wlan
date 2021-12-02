@@ -1724,6 +1724,8 @@ struct dp_arch_ops {
 						   int mac_addr_is_aligned,
 						   enum dp_mod_id mod_id);
 #endif
+	void (*txrx_print_peer_stats)(struct dp_peer *peer,
+				      enum peer_stats_type stats_type);
 };
 
 /**
@@ -3678,6 +3680,10 @@ QDF_STATUS dp_srng_init(struct dp_soc *soc, struct dp_srng *srng,
 			int ring_type, int ring_num, int mac_id);
 void dp_srng_deinit(struct dp_soc *soc, struct dp_srng *srng,
 		    int ring_type, int ring_num);
+void dp_print_peer_txrx_stats_be(struct dp_peer *peer,
+				 enum peer_stats_type stats_type);
+void dp_print_peer_txrx_stats_li(struct dp_peer *peer,
+				 enum peer_stats_type stats_type);
 
 enum timer_yield_status
 dp_should_timer_irq_yield(struct dp_soc *soc, uint32_t work_done,
