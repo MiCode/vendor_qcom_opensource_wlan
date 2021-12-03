@@ -139,6 +139,12 @@ typedef struct hal_buf_info *hal_buf_info_t;
 struct rx_msdu_desc_info;
 typedef struct rx_msdu_desc_info *rx_msdu_desc_info_t;
 
+/**
+ * Opaque hanlder for PPE VP config.
+ */
+union hal_tx_ppe_vp_config;
+union hal_tx_cmn_config_ppe;
+
 /* TBD: This should be movded to shared HW header file */
 enum hal_srng_ring_id {
 	/* UMAC rings */
@@ -778,6 +784,22 @@ struct hal_hw_txrx_ops {
 	void (*hal_tx_init_cmd_credit_ring)(hal_soc_handle_t hal_soc_hdl,
 					    hal_ring_handle_t hal_ring_hdl);
 	uint32_t (*hal_tx_comp_get_buffer_source)(void *hal_desc);
+	uint32_t (*hal_tx_get_num_ppe_vp_tbl_entries)(
+					hal_soc_handle_t hal_soc_hdl);
+	void (*hal_tx_set_ppe_cmn_cfg)(hal_soc_handle_t hal_soc_hdl,
+				       union hal_tx_cmn_config_ppe *cmn_cfg);
+	void (*hal_tx_set_ppe_vp_entry)(hal_soc_handle_t hal_soc_hdl,
+					union hal_tx_ppe_vp_config *vp_cfg,
+					int ppe_vp_idx);
+	void (*hal_tx_set_ppe_pri2tid)(hal_soc_handle_t hal_soc_hdl,
+				       uint32_t val,
+				       uint8_t map_no);
+	void (*hal_tx_update_ppe_pri2tid)(hal_soc_handle_t hal_soc_hdl,
+					  uint8_t pri,
+					  uint8_t tid);
+	void (*hal_tx_dump_ppe_vp_entry)(hal_soc_handle_t hal_soc_hdl);
+	void (*hal_tx_enable_pri2tid_map)(hal_soc_handle_t hal_soc_hdl,
+					  bool value, uint8_t ppe_vp_idx);
 
 	/* rx */
 	uint32_t (*hal_rx_msdu_start_nss_get)(uint8_t *);

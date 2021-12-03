@@ -691,6 +691,7 @@ typedef struct rx_msdu_end_compact_qca9224 hal_rx_msdu_end_t;
 #include <hal_be_generic_api.h>
 
 #define LINK_DESC_SIZE (NUM_OF_DWORDS_RX_MSDU_LINK << 2)
+#define HAL_PPE_VP_ENTRIES_MAX 32
 /**
  * hal_get_link_desc_size_9224(): API to get the link desc size
  *
@@ -1478,6 +1479,28 @@ static inline void hal_rx_dump_pkt_hdr_tlv_9224(struct rx_pkt_tlvs *pkt_tlvs,
 			     sizeof(pkt_hdr_tlv->rx_pkt_hdr));
 }
 
+/*
+ * hal_tx_dump_ppe_vp_entry_9224()
+ * @hal_soc_hdl: HAL SoC handle
+ *
+ * Return: void
+ */
+static inline
+void hal_tx_dump_ppe_vp_entry_9224(hal_soc_handle_t hal_soc_hdl)
+{
+	struct hal_soc *soc = (struct hal_soc *)hal_soc_hdl;
+	uint32_t reg_addr, reg_val = 0, i;
+
+	for (i = 0; i < HAL_PPE_VP_ENTRIES_MAX; i++) {
+		reg_addr =
+			HWIO_TCL_R0_PPE_VP_CONFIG_TABLE_n_ADDR(
+				MAC_TCL_REG_REG_BASE,
+				i);
+		reg_val = HAL_REG_READ(soc, reg_addr);
+		hal_verbose_debug("%d: 0x%x\n", i, reg_val);
+	}
+}
+
 /**
  * hal_rx_dump_pkt_tlvs_9224(): API to print RX Pkt TLVS QCN9224
  * @hal_soc_hdl: hal_soc handle
@@ -1676,6 +1699,18 @@ static uint32_t hal_qcn9224_get_reo_qdesc_size(uint32_t ba_window_size, int tid)
 		sizeof(struct rx_reo_queue_1k);
 }
 
+/*
+ * hal_tx_dump_ppe_vp_entry_9224()
+ * @hal_soc_hdl: HAL SoC handle
+ *
+ * Return: Number of PPE VP entries
+ */
+static
+uint32_t hal_tx_get_num_ppe_vp_tbl_entries_9224(hal_soc_handle_t hal_soc_hdl)
+{
+	return HAL_PPE_VP_ENTRIES_MAX;
+}
+
 static void hal_hw_txrx_ops_attach_qcn9224(struct hal_soc *hal_soc)
 {
 	/* init and setup */
@@ -1689,9 +1724,23 @@ static void hal_hw_txrx_ops_attach_qcn9224(struct hal_soc *hal_soc)
 	hal_soc->ops->hal_tx_set_dscp_tid_map = hal_tx_set_dscp_tid_map_9224;
 	hal_soc->ops->hal_tx_update_dscp_tid = hal_tx_update_dscp_tid_9224;
 	hal_soc->ops->hal_tx_comp_get_status =
-					hal_tx_comp_get_status_generic_be;
+			hal_tx_comp_get_status_generic_be;
 	hal_soc->ops->hal_tx_init_cmd_credit_ring =
-					hal_tx_init_cmd_credit_ring_9224;
+			hal_tx_init_cmd_credit_ring_9224;
+	hal_soc->ops->hal_tx_set_ppe_cmn_cfg =
+			hal_tx_set_ppe_cmn_config_9224;
+	hal_soc->ops->hal_tx_set_ppe_vp_entry =
+			hal_tx_set_ppe_vp_entry_9224;
+	hal_soc->ops->hal_tx_set_ppe_pri2tid =
+			hal_tx_set_ppe_pri2tid_map_9224;
+	hal_soc->ops->hal_tx_update_ppe_pri2tid =
+			hal_tx_update_ppe_pri2tid_9224;
+	hal_soc->ops->hal_tx_dump_ppe_vp_entry =
+			hal_tx_dump_ppe_vp_entry_9224;
+	hal_soc->ops->hal_tx_get_num_ppe_vp_tbl_entries =
+			hal_tx_get_num_ppe_vp_tbl_entries_9224;
+	hal_soc->ops->hal_tx_enable_pri2tid_map =
+			hal_tx_enable_pri2tid_map_9224;
 
 	/* rx */
 	hal_soc->ops->hal_rx_msdu_start_nss_get = hal_rx_tlv_nss_get_be;

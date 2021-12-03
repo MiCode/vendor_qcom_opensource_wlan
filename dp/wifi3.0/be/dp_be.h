@@ -107,6 +107,12 @@
 /* get ppt_id from CMEM_OFFSET */
 #define DP_CMEM_OFFSET_TO_PPT_ID(offset) \
 	((offset) / DP_CC_PPT_ENTRY_SIZE_4K_ALIGNED)
+
+/* The MAX PPE PRI2TID */
+#ifdef WLAN_SUPPORT_PPEDS
+#define DP_TX_INT_PRI2TID_MAX 15
+#endif
+
 /**
  * struct dp_spt_page_desc - secondary page table page descriptors
  * @next: pointer to next linked SPT page Desc
@@ -169,6 +175,34 @@ struct dp_tx_bank_profile {
 	union hal_tx_bank_config bank_config;
 };
 
+#ifdef WLAN_SUPPORT_PPEDS
+/**
+ * struct dp_ppe_vp_tbl_entry - PPE Virtual table entry
+ * @is_configured: Boolean that the entry is configured.
+ */
+struct dp_ppe_vp_tbl_entry {
+	bool is_configured;
+};
+
+/**
+ * struct dp_ppe_vp_profile - PPE direct switch profiler per vdev
+ * @vp_num: Virtual port number
+ * @ppe_vp_num_idx: Index to the PPE VP table entry
+ * @search_idx_reg_num: Address search Index register number
+ * @drop_prec_enable: Drop precedance enable
+ * @to_fw: To FW exception enable/disable.
+ * @use_ppe_int_pri: Use PPE INT_PRI to TID mapping table
+ */
+struct dp_ppe_vp_profile {
+	uint8_t vp_num;
+	uint8_t ppe_vp_num_idx;
+	uint8_t search_idx_reg_num;
+	uint8_t drop_prec_enable;
+	uint8_t to_fw;
+	uint8_t use_ppe_int_pri;
+};
+#endif
+
 /**
  * struct dp_soc_be - Extended DP soc for BE targets
  * @soc: dp soc structure
@@ -184,6 +218,12 @@ struct dp_tx_bank_profile {
  * @mld_peer_hash: peer hash table for ML peers
  *           Associated peer with this MAC address)
  * @mld_peer_hash_lock: lock to protect mld_peer_hash
+ * @reo2ppe_ring: REO2PPE ring
+ * @ppe2tcl_ring: PPE2TCL ring
+ * @ppe_release_ring: PPE release ring
+ * @ppe_vp_tbl: PPE VP table
+ * @ppe_vp_tbl_lock: PPE VP table lock
+ * @num_ppe_vp_entries : Number of PPE VP entries
  */
 struct dp_soc_be {
 	struct dp_soc soc;
@@ -202,6 +242,9 @@ struct dp_soc_be {
 	struct dp_srng reo2ppe_ring;
 	struct dp_srng ppe2tcl_ring;
 	struct dp_srng ppe_release_ring;
+	struct dp_ppe_vp_tbl_entry *ppe_vp_tbl;
+	qdf_mutex_t ppe_vp_tbl_lock;
+	uint8_t num_ppe_vp_entries;
 #endif
 #ifdef WLAN_FEATURE_11BE_MLO
 #ifdef WLAN_MLO_MULTI_CHIP
@@ -242,12 +285,13 @@ struct dp_pdev_be {
  * @vdev: dp vdev structure
  * @bank_id: bank_id to be used for TX
  * @vdev_id_check_en: flag if HW vdev_id check is enabled for vdev
+ * @ppe_vp_enabled: flag to check if PPE VP is enabled for vdev
+ * @ppe_vp_profile: PPE VP profile
  */
 struct dp_vdev_be {
 	struct dp_vdev vdev;
 	int8_t bank_id;
 	uint8_t vdev_id_check_en;
-
 #ifdef WLAN_MLO_MULTI_CHIP
 	/* partner list used for Intra-BSS */
 	uint8_t partner_vdev_list[WLAN_MAX_MLO_CHIPS][WLAN_MAX_MLO_LINKS_PER_SOC];
@@ -259,6 +303,10 @@ struct dp_vdev_be {
 	bool mcast_primary;
 #endif
 #endif
+#endif
+	unsigned long ppe_vp_enabled;
+#ifdef WLAN_SUPPORT_PPEDS
+	struct dp_ppe_vp_profile ppe_vp_profile;
 #endif
 };
 
