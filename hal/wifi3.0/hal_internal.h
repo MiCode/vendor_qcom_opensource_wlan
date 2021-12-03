@@ -1069,6 +1069,9 @@ struct hal_hw_txrx_ops {
 					   uint16_t peer_id,
 					   int tid,
 					   qdf_dma_addr_t hw_qdesc_paddr);
+#ifdef WLAN_FEATURE_MARK_FIRST_WAKEUP_PACKET
+	uint8_t (*hal_get_first_wow_wakeup_packet)(uint8_t *buf);
+#endif
 };
 
 /**

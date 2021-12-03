@@ -2952,4 +2952,15 @@ hal_reo_shared_qaddr_is_enable(hal_soc_handle_t hal_soc_hdl)
 
 	return hal->reo_qref.reo_qref_table_en;
 }
+
+#ifdef WLAN_FEATURE_MARK_FIRST_WAKEUP_PACKET
+static inline uint8_t
+hal_get_first_wow_wakeup_packet(hal_soc_handle_t hal_soc_hdl, uint8_t *buf)
+{
+	struct hal_soc *hal_soc = (struct hal_soc *)hal_soc_hdl;
+
+	return hal_soc->ops->hal_get_first_wow_wakeup_packet(buf);
+}
+#endif
+
 #endif /* _HAL_RX_H */

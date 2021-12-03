@@ -2866,6 +2866,9 @@ struct dp_pdev {
 #endif
 	/* Is isolation mode enabled */
 	bool  isolation;
+#ifdef WLAN_FEATURE_MARK_FIRST_WAKEUP_PACKET
+	uint8_t is_first_wakeup_packet;
+#endif
 };
 
 struct dp_peer;
