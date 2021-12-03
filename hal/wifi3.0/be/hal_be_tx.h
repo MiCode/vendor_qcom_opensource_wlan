@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2016-2022 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -100,6 +100,117 @@ union hal_tx_bank_config {
 			 mcast_pkt_ctrl:2,
 			 dscp_tid_map_id:6,
 			 reserved:7;
+	};
+	uint32_t val;
+};
+
+/**
+ * struct hal_tx_cmn_config_ppe - SW config exception related parameters
+ * @drop_prec_err - Exception drop_prec errors.
+ * @fake_mac_hdr - Exception fake mac header.
+ * @cpu_code_inv - Exception cpu code invalid.
+ * @data_buff_err - Exception buffer length/offset erorors.
+ * @l3_l4_err - Exception m3_l4 checksum errors
+ * @data_offset_max - Maximum data offset allowed.
+ * @data_len_max - Maximum data length allowed.
+ */
+union hal_tx_cmn_config_ppe {
+	struct {
+		uint32_t drop_prec_err:1,
+			 fake_mac_hdr:1,
+			 cpu_code_inv:1,
+			 data_buff_err:1,
+			 l3_l4_err:1,
+			 data_offset_max:12,
+			 data_len_max:14;
+	};
+	uint32_t val;
+};
+
+/**
+ * hal_tx_ppe_vp_config - SW config PPE VP table
+ * @vp_num - Virtual port number
+ * @pmac_id - Lmac ID
+ * @bank_id: Bank ID correspondig to this I/F.
+ * @vdev_id: VDEV ID of the I/F.
+ * @search_idx_reg_num: Register number of this SI.
+ * @use_ppe_int_pri: Use the PPE INT_PRI to TID table
+ * @to_fw: Use FW
+ * @drop_prec_enable: Enable precendance drop.
+ */
+union hal_tx_ppe_vp_config {
+	struct {
+		uint32_t vp_num:8,
+			 pmac_id:2,
+			 bank_id:6,
+			 vdev_id:8,
+			 search_idx_reg_num:3,
+			 use_ppe_int_pri:1,
+			 to_fw:1,
+			 drop_prec_enable:1;
+	};
+	uint32_t val;
+};
+
+/**
+ * hal_tx_cmn_ppe_idx_map_config: Use ppe index mapping table
+ * @search_idx: Search index
+ * @cache_set: Cache set number
+ */
+union hal_tx_ppe_idx_map_config {
+	struct {
+		uint32_t search_idx:20,
+			 cache_set:4;
+	};
+	uint32_t val;
+};
+
+/**
+ * hal_tx_ppe_pri2tid_map0_config : Configure ppe INT_PRI to tid map
+ * @int_pri0: INT_PRI_0
+ * @int_pri1: INT_PRI_1
+ * @int_pri2: INT_PRI_2
+ * @int_pri3: INT_PRI_3
+ * @int_pri4: INT_PRI_4
+ * @int_pri5: INT_PRI_5
+ * @int_pri6: INT_PRI_6
+ * @int_pri7: INT_PRI_7
+ * @int_pri8: INT_PRI_8
+ * @int_pri9: INT_PRI_9
+ */
+union hal_tx_ppe_pri2tid_map0_config {
+	struct {
+		uint32_t int_pri0:3,
+			 int_pri1:3,
+			 int_pri2:3,
+			 int_pri3:3,
+			 int_pri4:3,
+			 int_pri5:3,
+			 int_pri6:3,
+			 int_pri7:3,
+			 int_pri8:3,
+			 int_pri9:3;
+	};
+	uint32_t val;
+};
+
+/**
+ * hal_tx_ppe_pri2tid_map1_config : Configure ppe INT_PRI to tid map
+ * @int_pri0: INT_PRI_10
+ * @int_pri1: INT_PRI_11
+ * @int_pri2: INT_PRI_12
+ * @int_pri3: INT_PRI_13
+ * @int_pri4: INT_PRI_14
+ * @int_pri5: INT_PRI_15
+ */
+union hal_tx_ppe_pri2tid_map1_config {
+	struct {
+		uint32_t int_pri10:3,
+			 int_pri11:3,
+			 int_pri12:3,
+			 int_pri13:3,
+			 int_pri14:3,
+			 int_pri15:3;
 	};
 	uint32_t val;
 };
