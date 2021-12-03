@@ -191,8 +191,10 @@ void dp_mon_filter_setup_mon_mode(struct dp_pdev *pdev)
 	struct dp_mon_ops *mon_ops = NULL;
 
 	mon_ops = dp_mon_ops_get(pdev->soc);
-	if (mon_ops && mon_ops->mon_filter_setup_mon_mode)
-		mon_ops->mon_filter_setup_mon_mode(pdev);
+	if (mon_ops && mon_ops->mon_filter_setup_rx_mon_mode)
+		mon_ops->mon_filter_setup_rx_mon_mode(pdev);
+	if (mon_ops && mon_ops->mon_filter_setup_tx_mon_mode)
+		mon_ops->mon_filter_setup_tx_mon_mode(pdev);
 }
 
 void dp_mon_filter_reset_mon_mode(struct dp_pdev *pdev)
@@ -200,8 +202,10 @@ void dp_mon_filter_reset_mon_mode(struct dp_pdev *pdev)
 	struct dp_mon_ops *mon_ops = NULL;
 
 	mon_ops = dp_mon_ops_get(pdev->soc);
-	if (mon_ops && mon_ops->mon_filter_reset_mon_mode)
-		mon_ops->mon_filter_reset_mon_mode(pdev);
+	if (mon_ops && mon_ops->mon_filter_reset_rx_mon_mode)
+		mon_ops->mon_filter_reset_rx_mon_mode(pdev);
+	if (mon_ops && mon_ops->mon_filter_reset_tx_mon_mode)
+		mon_ops->mon_filter_reset_tx_mon_mode(pdev);
 }
 
 #ifdef WDI_EVENT_ENABLE
@@ -285,10 +289,18 @@ QDF_STATUS dp_mon_filter_update(struct dp_pdev *pdev)
 	struct dp_mon_ops *mon_ops = NULL;
 
 	mon_ops = dp_mon_ops_get(pdev->soc);
-	if (mon_ops && mon_ops->mon_filter_update)
-		return mon_ops->mon_filter_update(pdev);
+	if (!mon_ops) {
+		dp_mon_filter_err("Mon ops uninitialized");
+		return QDF_STATUS_E_FAILURE;
+	}
 
-	return QDF_STATUS_E_FAILURE;
+	if (mon_ops && mon_ops->tx_mon_filter_update)
+		mon_ops->tx_mon_filter_update(pdev);
+
+	if (mon_ops && mon_ops->rx_mon_filter_update)
+		mon_ops->rx_mon_filter_update(pdev);
+
+	return QDF_STATUS_SUCCESS;
 }
 
 #ifdef QCA_ENHANCED_STATS_SUPPORT

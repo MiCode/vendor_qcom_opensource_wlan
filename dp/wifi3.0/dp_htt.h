@@ -503,7 +503,7 @@ struct dp_tx_mon_wordmask_config {
 	uint16_t tx_queue_ext;
 	uint16_t tx_msdu_start;
 	uint16_t tx_mpdu_start;
-	uint16_t pcu_ppdu_setup_init;
+	uint32_t pcu_ppdu_setup_init;
 	uint16_t rxpcu_user_setup;
 };
 

@@ -559,8 +559,10 @@ struct dp_mon_ops {
 	void (*mon_filter_setup_rx_enh_capture)(struct dp_pdev *pdev);
 	void (*mon_filter_reset_rx_enh_capture)(struct dp_pdev *pdev);
 #endif
-	void (*mon_filter_setup_mon_mode)(struct dp_pdev *pdev);
-	void (*mon_filter_reset_mon_mode)(struct dp_pdev *pdev);
+	void (*mon_filter_setup_rx_mon_mode)(struct dp_pdev *pdev);
+	void (*mon_filter_reset_rx_mon_mode)(struct dp_pdev *pdev);
+	void (*mon_filter_setup_tx_mon_mode)(struct dp_pdev *pdev);
+	void (*mon_filter_reset_tx_mon_mode)(struct dp_pdev *pdev);
 #ifdef WDI_EVENT_ENABLE
 	void (*mon_filter_setup_rx_pkt_log_full)(struct dp_pdev *pdev);
 	void (*mon_filter_reset_rx_pkt_log_full)(struct dp_pdev *pdev);
@@ -573,8 +575,11 @@ struct dp_mon_ops {
 	void (*mon_filter_reset_pktlog_hybrid)(struct dp_pdev *pdev);
 #endif
 #endif
-	QDF_STATUS (*mon_filter_update)(struct dp_pdev *pdev);
+	QDF_STATUS (*rx_mon_filter_update)(struct dp_pdev *pdev);
+	QDF_STATUS (*tx_mon_filter_update)(struct dp_pdev *pdev);
 
+	QDF_STATUS (*tx_mon_filter_alloc)(struct dp_pdev *pdev);
+	void (*tx_mon_filter_dealloc)(struct dp_pdev *pdev);
 	QDF_STATUS (*mon_rings_alloc)(struct dp_pdev *pdev);
 	void (*mon_rings_free)(struct dp_pdev *pdev);
 	QDF_STATUS (*mon_rings_init)(struct dp_pdev *pdev);

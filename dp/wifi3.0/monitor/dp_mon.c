@@ -4641,11 +4641,25 @@ QDF_STATUS dp_mon_pdev_init(struct dp_pdev *pdev)
 	soc = pdev->soc;
 	mon_pdev = pdev->monitor_pdev;
 
+	mon_ops = dp_mon_ops_get(pdev->soc);
+	if (!mon_ops) {
+		dp_mon_err("Monitor ops is NULL");
+		return QDF_STATUS_E_FAILURE;
+	}
+
 	mon_pdev->filter = dp_mon_filter_alloc(mon_pdev);
 	if (!mon_pdev->filter) {
 		dp_mon_err("%pK: Memory allocation failed for monitor filter",
 			   pdev);
 		return QDF_STATUS_E_NOMEM;
+	}
+
+	if (mon_ops->tx_mon_filter_alloc) {
+		if (mon_ops->tx_mon_filter_alloc(pdev)) {
+		dp_mon_err("%pK: Memory allocation failed for tx monitor filter",
+			   pdev);
+		return QDF_STATUS_E_NOMEM;
+		}
 	}
 
 	qdf_spinlock_create(&mon_pdev->ppdu_stats_lock);
@@ -4681,12 +4695,6 @@ QDF_STATUS dp_mon_pdev_init(struct dp_pdev *pdev)
 	if (dp_htt_ppdu_stats_attach(pdev) != QDF_STATUS_SUCCESS)
 		goto fail0;
 
-	mon_ops = dp_mon_ops_get(pdev->soc);
-	if (!mon_ops) {
-		dp_mon_err("Monitor ops is NULL");
-		goto fail1;
-	}
-
 	if (mon_ops->mon_rings_init) {
 		if (mon_ops->mon_rings_init(pdev)) {
 			dp_mon_err("%pK: MONITOR rings setup failed", pdev);
@@ -4721,6 +4729,8 @@ fail1:
 fail0:
 	qdf_spinlock_destroy(&mon_pdev->neighbour_peer_mutex);
 	qdf_spinlock_destroy(&mon_pdev->ppdu_stats_lock);
+	if (mon_ops->tx_mon_filter_dealloc)
+		mon_ops->tx_mon_filter_dealloc(pdev);
 	dp_mon_filter_dealloc(mon_pdev);
 	return QDF_STATUS_E_FAILURE;
 }
@@ -4753,6 +4763,8 @@ QDF_STATUS dp_mon_pdev_deinit(struct dp_pdev *pdev)
 	qdf_spinlock_destroy(&mon_pdev->ppdu_stats_lock);
 	dp_neighbour_peers_detach(pdev);
 	dp_pktlogmod_exit(pdev);
+	if (mon_ops->tx_mon_filter_dealloc)
+		mon_ops->tx_mon_filter_dealloc(pdev);
 	if (mon_pdev->filter)
 		dp_mon_filter_dealloc(mon_pdev);
 	if (mon_ops->mon_rings_deinit)

@@ -20,6 +20,8 @@
 
 #include <dp_htt.h>
 
+#define DEFAULT_DMA_LENGTH 7
+
 /**
  * dp_rx_mon_packet_length_set() - Setup rx monitor per packet type length
  * @msg_word: msg word
@@ -144,16 +146,28 @@ dp_mon_filter_reset_rx_enh_capture_2_0(struct dp_pdev *pdev)
 #endif
 
 /**
- * dp_mon_filter_setup_mon_mode() - Setup the Rx monitor mode filter
+ * dp_mon_filter_setup_rx_mon_mode() - Setup the Rx monitor mode filter
  * @pdev: DP pdev handle
  */
-void dp_mon_filter_setup_mon_mode_2_0(struct dp_pdev *pdev);
+void dp_mon_filter_setup_rx_mon_mode_2_0(struct dp_pdev *pdev);
 
 /**
  * dp_mon_filter_reset_mon_mode() - Reset the Rx monitor mode filter
  * @pdev: DP pdev handle
  */
-void dp_mon_filter_reset_mon_mode_2_0(struct dp_pdev *pdev);
+void dp_mon_filter_reset_rx_mon_mode_2_0(struct dp_pdev *pdev);
+
+/**
+ * dp_mon_filter_setup_tx_mon_mode() - Setup the Tx monitor mode filter
+ * @pdev: DP pdev handle
+ */
+void dp_mon_filter_setup_tx_mon_mode_2_0(struct dp_pdev *pdev);
+
+/**
+ * dp_mon_filter_reset_tx_mon_mode() - Reset the Tx monitor mode filter
+ * @pdev: DP pdev handle
+ */
+void dp_mon_filter_reset_tx_mon_mode_2_0(struct dp_pdev *pdev);
 
 #ifdef WDI_EVENT_ENABLE
 /**
@@ -248,11 +262,35 @@ dp_mon_filter_reset_pktlog_hybrid_2_0(struct dp_pdev *pdev)
 #endif
 
 /**
- * dp_mon_filter_update_2_0() - Update monitor filter configuration
+ * dp_tx_mon_filter_update_2_0() - Update monitor filter configuration
  * @pdev: physical device handle
  *
  * Return: non-zero for failure, zero for success
  */
-QDF_STATUS dp_mon_filter_update_2_0(struct dp_pdev *pdev);
+QDF_STATUS dp_tx_mon_filter_update_2_0(struct dp_pdev *pdev);
+
+/**
+ * dp_rx_mon_filter_update_2_0() - Update monitor filter configuration
+ * @pdev: physical device handle
+ *
+ * Return: non-zero for failure, zero for success
+ */
+QDF_STATUS dp_rx_mon_filter_update_2_0(struct dp_pdev *pdev);
+
+/**
+ * dp_mon_filter_dealloc_2_0() - free tx monitor filter memory
+ * @pdev: physical device handle
+ *
+ * Return: non-zero for failure, zero for success
+ */
+void dp_mon_filter_dealloc_2_0(struct dp_pdev *pdev);
+
+/**
+ * dp_mon_filter_alloc_2_0() - tx monitor filter allocation
+ * @pdev: physical device handle
+ *
+ * Return: non-zero for failure, zero for success
+ */
+QDF_STATUS dp_mon_filter_alloc_2_0(struct dp_pdev *pdev);
 
 #endif /* _DP_MON_FILTER_2_0_H_ */
