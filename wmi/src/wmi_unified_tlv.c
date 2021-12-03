@@ -8857,15 +8857,18 @@ send_pdev_fips_extend_cmd_tlv(wmi_unified_t wmi_handle,
 
 		if (param->data_len)
 			buf_ptr += param->data_len;
-
-		wmi_mtrace(WMI_PDEV_FIPS_EXTEND_CMDID, NO_SESSION, 0);
-		retval = wmi_unified_cmd_send(wmi_handle, buf, len,
-					      WMI_PDEV_FIPS_EXTEND_CMDID);
-		wmi_debug("return value %d", retval);
 	} else {
-		wmi_debug("Key or Data is NULL");
+		WMITLV_SET_HDR(buf_ptr, WMITLV_TAG_ARRAY_BYTE, 0);
+		buf_ptr += WMI_TLV_HDR_SIZE;
+	}
+
+	wmi_mtrace(WMI_PDEV_FIPS_EXTEND_CMDID, NO_SESSION, 0);
+	retval = wmi_unified_cmd_send(wmi_handle, buf, len,
+				      WMI_PDEV_FIPS_EXTEND_CMDID);
+
+	if (retval) {
+		wmi_err("Failed to send FIPS cmd");
 		wmi_buf_free(buf);
-		retval = QDF_STATUS_E_BADMSG;
 	}
 
 	return retval;
