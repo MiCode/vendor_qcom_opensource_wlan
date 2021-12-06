@@ -8325,6 +8325,7 @@ void dp_aggregate_pdev_stats(struct dp_pdev *pdev)
 	qdf_mem_zero(&pdev->stats.tx, sizeof(pdev->stats.tx));
 	qdf_mem_zero(&pdev->stats.rx, sizeof(pdev->stats.rx));
 	qdf_mem_zero(&pdev->stats.tx_i, sizeof(pdev->stats.tx_i));
+	qdf_mem_zero(&pdev->stats.rx_i, sizeof(pdev->stats.rx_i));
 
 	if (dp_monitor_is_enable_mcopy_mode(pdev))
 		DP_UPDATE_STATS(pdev, pdev->invalid_peer);
@@ -8467,9 +8468,7 @@ static void dp_pdev_getstats(struct cdp_pdev *pdev_handle,
 		pdev->stats.rx.err.pn_err +
 		pdev->stats.rx.err.oor_err +
 		pdev->stats.rx.err.jump_2k_err +
-		pdev->stats.rx.err.rxdma_wifi_parse_err +
-		pdev->stats.err.rxdma_error +
-		pdev->stats.err.reo_error;
+		pdev->stats.rx.err.rxdma_wifi_parse_err;
 	stats->rx_dropped = pdev->stats.dropped.msdu_not_done +
 		pdev->stats.dropped.mec +
 		pdev->stats.dropped.mesh_filter +
