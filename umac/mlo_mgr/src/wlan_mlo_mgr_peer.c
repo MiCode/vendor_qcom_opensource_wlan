@@ -720,7 +720,7 @@ QDF_STATUS wlan_mlo_peer_create(struct wlan_objmgr_vdev *vdev,
 				continue;
 			}
 
-			if (wlan_vdev_is_peer_create_allowed(vdev_link)
+			if (wlan_vdev_is_mlo_peer_create_allowed(vdev_link)
 					!= QDF_STATUS_SUCCESS) {
 				mlo_dev_release_link_vdevs(link_vdevs);
 				return QDF_STATUS_E_INVAL;

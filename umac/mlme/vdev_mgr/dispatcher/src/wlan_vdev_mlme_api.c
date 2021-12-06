@@ -227,7 +227,7 @@ QDF_STATUS wlan_vdev_is_going_down(struct wlan_objmgr_vdev *vdev)
 	return QDF_STATUS_E_FAILURE;
 }
 
-QDF_STATUS wlan_vdev_is_peer_create_allowed(struct wlan_objmgr_vdev *vdev)
+QDF_STATUS wlan_vdev_is_mlo_peer_create_allowed(struct wlan_objmgr_vdev *vdev)
 {
 	enum wlan_vdev_state state;
 	enum wlan_vdev_state substate;
