@@ -9397,6 +9397,9 @@ static QDF_STATUS dp_set_pdev_param(struct cdp_soc_t *cdp_soc, uint8_t pdev_id,
 		dp_monitor_pdev_reset_scan_spcl_vap_stats_enable(pdev,
 				val.cdp_pdev_param_reset_scan_spcl_vap_stats_enable);
 		break;
+	case CDP_CONFIG_ENHANCED_STATS_ENABLE:
+		pdev->enhanced_stats_en = val.cdp_pdev_param_enhanced_stats_enable;
+		break;
 	default:
 		return QDF_STATUS_E_INVAL;
 	}

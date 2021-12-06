@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2011-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1210,6 +1210,7 @@ enum cdp_pdev_param_type {
 	CDP_SET_ATF_STATS_ENABLE,
 	CDP_CONFIG_SPECIAL_VAP,
 	CDP_RESET_SCAN_SPCL_VAP_STATS_ENABLE,
+	CDP_CONFIG_ENHANCED_STATS_ENABLE,
 };
 
 /*
@@ -1348,6 +1349,7 @@ typedef union cdp_config_param_t {
 	bool cdp_pdev_param_atf_stats_enable;
 	bool cdp_pdev_param_config_special_vap;
 	bool cdp_pdev_param_reset_scan_spcl_vap_stats_enable;
+	bool cdp_pdev_param_enhanced_stats_enable;
 
 	/* psoc params */
 	bool cdp_psoc_param_en_rate_stats;
