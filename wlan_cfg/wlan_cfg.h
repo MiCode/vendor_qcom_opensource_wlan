@@ -162,6 +162,8 @@ struct wlan_srng_cfg {
  *				mapped to each NAPI/INTR context
  * @int_tx_ring_near_full_irq_mask: Bitmap of Tx completion ring near full
  *				interrupt mapped to each NAPI/INTR context
+ * @int_host2txmon_ring_mask: Bitmap of Tx monitor source ring interrupt
+ *				mapped to each NAPI/INTR context
  * @int_ce_ring_mask: Bitmap of CE interrupts mapped to each NAPI/Intr context
  * @lro_enabled: enable/disable lro feature
  * @rx_hash: Enable hash based steering of rx packets
@@ -247,6 +249,7 @@ struct wlan_srng_cfg {
  * @lmac_peer_id_msb: value used for hash based routing
  * @vdev_stats_hw_offload_config: HW vdev stats config
  * @vdev_stats_hw_offload_timer: HW vdev stats timer duration
+ * @txmon_hw_support: TxMON HW support
  */
 struct wlan_cfg_dp_soc_ctxt {
 	int num_int_ctxts;
@@ -291,6 +294,7 @@ struct wlan_cfg_dp_soc_ctxt {
 	uint8_t int_rx_ring_near_full_irq_1_mask[WLAN_CFG_INT_NUM_CONTEXTS];
 	uint8_t int_rx_ring_near_full_irq_2_mask[WLAN_CFG_INT_NUM_CONTEXTS];
 	uint8_t int_tx_ring_near_full_irq_mask[WLAN_CFG_INT_NUM_CONTEXTS];
+	uint8_t int_host2txmon_ring_mask[WLAN_CFG_INT_NUM_CONTEXTS];
 	int hw_macid[MAX_PDEV_CNT];
 	int hw_macid_pdev_id_map[MAX_NUM_LMAC_HW];
 	int base_hw_macid;
@@ -405,6 +409,7 @@ struct wlan_cfg_dp_soc_ctxt {
 	int vdev_stats_hw_offload_timer;
 #endif
 	uint8_t num_rxdma_dst_rings_per_pdev;
+	bool txmon_hw_support;
 };
 
 /**
@@ -2019,5 +2024,43 @@ wlan_cfg_mlo_default_rx_ring_get_by_chip_id(struct wlan_cfg_dp_soc_ctxt *cfg,
 uint8_t
 wlan_cfg_mlo_lmac_peer_id_msb_get_by_chip_id(struct wlan_cfg_dp_soc_ctxt *cfg,
 					     uint8_t chip_id);
+
 #endif
+
+/*
+ * wlan_cfg_set_host2txmon_ring_mask() - Set host2txmon ring
+ *                               interrupt mask mapped to an interrupt context
+ * @wlan_cfg_ctx - Configuration Handle
+ *
+ * Return: None
+ */
+void wlan_cfg_set_host2txmon_ring_mask(struct wlan_cfg_dp_soc_ctxt *cfg,
+				       int context, int mask);
+/**
+ * wlan_cfg_get_host2txmon_ring_mask() - Return host2txmon ring
+ *                               interrupt mask mapped to an interrupt context
+ * @wlan_cfg_ctx - Configuration Handle
+ * @context - Numerical ID identifying the Interrupt/NAPI context
+ *
+ * Return: int_host2txmon_ring_mask[context]
+ */
+int wlan_cfg_get_host2txmon_ring_mask(struct wlan_cfg_dp_soc_ctxt *cfg,
+				      int context);
+/**
+ * wlan_cfg_set_txmon_hw_support () - Set txmon hw support
+ * @cfg:  Configuration Handle
+ * @txmon_hw_support: value to set
+ *
+ * Return: None
+ */
+void wlan_cfg_set_txmon_hw_support(struct wlan_cfg_dp_soc_ctxt *cfg,
+				   bool txmon_hw_support);
+
+/**
+ * wlan_cfg_get_txmon_hw_support () - Get txmon hw support
+ * @cfg:  Configuration Handle
+ *
+ * Return: txmon_hw_support
+ */
+bool wlan_cfg_get_txmon_hw_support(struct wlan_cfg_dp_soc_ctxt *cfg);
 #endif /*__WLAN_CFG_H*/

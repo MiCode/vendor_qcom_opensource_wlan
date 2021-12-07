@@ -589,6 +589,9 @@ struct dp_mon_ops {
 	void (*mon_rx_populate_ppdu_info)(struct hal_rx_ppdu_info *hal_ppdu_info,
 					  struct cdp_rx_indication_ppdu *ppdu);
 #endif
+	QDF_STATUS (*rx_mon_refill_buf_ring)(struct dp_intr *int_ctx);
+	QDF_STATUS (*tx_mon_refill_buf_ring)(struct dp_intr *int_ctx);
+
 };
 
 struct dp_mon_soc {
@@ -1838,7 +1841,7 @@ void dp_monitor_service_mon_rings(struct dp_soc *soc, uint32_t quota)
 #endif
 
 /*
- * dp_monitor_process() - Process monitor
+ * dp_rx_monitor_process() - Process monitor
  * @soc: point to soc
  * @int_ctx: interrupt ctx
  * @mac_id: lma
@@ -1849,7 +1852,7 @@ void dp_monitor_service_mon_rings(struct dp_soc *soc, uint32_t quota)
 #ifndef DISABLE_MON_CONFIG
 static inline
 uint32_t dp_monitor_process(struct dp_soc *soc, struct dp_intr *int_ctx,
-			    uint32_t mac_id, uint32_t quota)
+			       uint32_t mac_id, uint32_t quota)
 {
 	struct dp_mon_soc *mon_soc = soc->monitor_soc;
 
@@ -1866,16 +1869,58 @@ uint32_t dp_monitor_process(struct dp_soc *soc, struct dp_intr *int_ctx,
 	return mon_soc->mon_rx_process(soc, int_ctx, mac_id, quota);
 }
 
-static inline uint32_t
-dp_tx_mon_process(struct dp_soc *soc, struct dp_intr *int_ctx,
-		  uint32_t mac_id, uint32_t quota)
+static inline
+uint32_t dp_tx_mon_process(struct dp_soc *soc, struct dp_intr *int_ctx,
+			   uint32_t mac_id, uint32_t quota)
 {
 	return 0;
+}
+
+static inline
+uint32_t dp_tx_mon_buf_refill(struct dp_intr *int_ctx)
+{
+	struct dp_soc *soc = int_ctx->soc;
+	struct dp_mon_ops *monitor_ops;
+	struct dp_mon_soc *mon_soc = soc->monitor_soc;
+
+	if (!mon_soc) {
+		dp_mon_debug("monitor soc is NULL");
+		return 0;
+	}
+
+	monitor_ops = mon_soc->mon_ops;
+	if (!monitor_ops || !monitor_ops->tx_mon_refill_buf_ring) {
+		dp_mon_debug("callback not registered");
+		return 0;
+	}
+
+	return monitor_ops->tx_mon_refill_buf_ring(int_ctx);
+}
+
+static inline
+uint32_t dp_rx_mon_buf_refill(struct dp_intr *int_ctx)
+{
+	struct dp_soc *soc = int_ctx->soc;
+	struct dp_mon_ops *monitor_ops;
+	struct dp_mon_soc *mon_soc = soc->monitor_soc;
+
+	if (!mon_soc) {
+		dp_mon_debug("monitor soc is NULL");
+		return 0;
+	}
+
+	monitor_ops = mon_soc->mon_ops;
+	if (!monitor_ops || !monitor_ops->rx_mon_refill_buf_ring) {
+		dp_mon_debug("callback not registered");
+		return 0;
+	}
+
+	return monitor_ops->rx_mon_refill_buf_ring(int_ctx);
 }
 #else
 static inline
 uint32_t dp_monitor_process(struct dp_soc *soc, struct dp_intr *int_ctx,
-			    uint32_t mac_id, uint32_t quota)
+			       uint32_t mac_id, uint32_t quota)
 {
 	return 0;
 }
@@ -1885,6 +1930,16 @@ dp_tx_mon_process(struct dp_soc *soc, struct dp_intr *int_ctx,
 		  uint32_t mac_id, uint32_t quota)
 {
 	return 0;
+}
+
+static inline
+uint32_t dp_tx_mon_buf_refill(struct dp_intr *int_ctx)
+{
+}
+
+static inline
+uint32_t dp_rx_mon_buf_refill(struct dp_intr *int_ctx)
+{
 }
 #endif
 
