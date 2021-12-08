@@ -25,6 +25,7 @@
 #include <dp_mon_filter.h>
 #include <dp_htt.h>
 #include <dp_mon.h>
+#include <dp_tx_mon_2.0.h>
 
 #define DP_MON_RING_FILL_LEVEL_DEFAULT 2048
 #define DP_MON_DATA_BUFFER_SIZE     2048

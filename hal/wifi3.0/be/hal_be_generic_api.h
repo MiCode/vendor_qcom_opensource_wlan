@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -25,6 +25,7 @@
 #include "hal_be_reo.h"
 #include <hal_api_mon.h>
 #include <hal_generic_api.h>
+#include <hal_be_api_mon.h>
 
 /**
  * hal_tx_comp_get_status() - TQM Release reason
@@ -1719,4 +1720,80 @@ hal_rx_fst_get_fse_size_be(void)
 {
 	return HAL_RX_FST_ENTRY_SIZE;
 }
+
+/*
+ * TX MONITOR
+ */
+
+#ifdef QCA_MONITOR_2_0_SUPPORT
+/**
+ * hal_txmon_get_buffer_addr_generic_be() - api to get buffer address
+ * @tx_tlv: pointer to TLV header
+ * @status: hal mon buffer address status
+ *
+ * Return: Address to qdf_frag_t
+ */
+static inline qdf_frag_t
+hal_txmon_get_buffer_addr_generic_be(void *tx_tlv,
+				     struct hal_mon_buf_addr_status *status)
+{
+	struct mon_buffer_addr *hal_buffer_addr =
+			(struct mon_buffer_addr *)((uint8_t *)tx_tlv +
+						   HAL_RX_TLV32_HDR_SIZE);
+	qdf_frag_t buf_addr = NULL;
+
+	buf_addr = (qdf_frag_t)((u64)hal_buffer_addr->buffer_virt_addr_31_0 |
+				((u64)hal_buffer_addr->buffer_virt_addr_63_32 <<
+				 32));
+
+	/* qdf_frag_t is derived from buffer address tlv */
+	if (qdf_unlikely(status)) {
+		qdf_mem_copy(status,
+			     (uint8_t *)tx_tlv + HAL_RX_TLV32_HDR_SIZE,
+			     sizeof(struct hal_mon_buf_addr_status));
+		/* update hal_mon_buf_addr_status */
+	}
+
+	return buf_addr;
+}
+
+/**
+ * hal_txmon_free_status_buffer() - api to free status buffer
+ * @pdev_handle: DP_PDEV handle
+ * @status_frag: qdf_frag_t buffer
+ *
+ * Return void
+ */
+static inline void
+hal_txmon_status_free_buffer_generic_be(qdf_frag_t status_frag)
+{
+	uint32_t tlv_tag, tlv_len;
+	uint32_t tlv_status = HAL_MON_TX_STATUS_PPDU_NOT_DONE;
+	uint8_t *tx_tlv;
+	uint8_t *tx_tlv_start;
+	qdf_frag_t frag_buf = NULL;
+
+	tx_tlv = (uint8_t *)status_frag;
+	tx_tlv_start = tx_tlv;
+	/* parse tlv and populate tx_ppdu_info */
+	do {
+		/* TODO: check config_length is full monitor mode */
+		tlv_tag = HAL_RX_GET_USER_TLV32_TYPE(tx_tlv);
+		tlv_len = HAL_RX_GET_USER_TLV32_LEN(tx_tlv);
+
+		if (tlv_tag == WIFIMON_BUFFER_ADDR_E) {
+			frag_buf = hal_txmon_get_buffer_addr_generic_be(tx_tlv,
+									NULL);
+			if (frag_buf)
+				qdf_frag_free(frag_buf);
+
+			frag_buf = NULL;
+		}
+		/* need api definition for hal_tx_status_get_next_tlv */
+		tx_tlv = hal_tx_status_get_next_tlv(tx_tlv);
+		if ((tx_tlv - tx_tlv_start) >= TX_MON_STATUS_BUF_SIZE)
+			break;
+	} while (tlv_status == HAL_MON_TX_STATUS_PPDU_NOT_DONE);
+}
+#endif /* QCA_MONITOR_2_0_SUPPORT */
 #endif /* _HAL_BE_GENERIC_API_H_ */

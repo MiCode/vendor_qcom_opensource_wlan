@@ -197,6 +197,11 @@
 #define QDF_MON_STATUS_MPDU_FCS_BMAP_NWORDS 8
 
 /**
+ * @qdf_nbuf_queue_t - Platform independent packet queue abstraction
+ */
+typedef __qdf_nbuf_queue_t qdf_nbuf_queue_t;
+
+/**
  * This is the length for radiotap, combined length
  * (Mandatory part struct ieee80211_radiotap_header + RADIOTAP_HEADER_LEN)
  * cannot be more than available headroom_sz.
@@ -461,6 +466,7 @@ struct mon_rx_status {
  * @ba_control: Block ack control
  * @ba_bitmap: 256 bit block ack bitmap
  * @tid: QoS traffic tid number
+ * @mpdu_q: user mpdu_queue used for monitor
  */
 struct mon_rx_user_status {
 	uint32_t mcs:4,
@@ -519,6 +525,7 @@ struct mon_rx_user_status {
 	uint32_t ba_bitmap[32];
 	uint32_t ba_bitmap_sz;
 	uint16_t aid;
+	qdf_nbuf_queue_t mpdu_q;
 };
 
 /**
@@ -842,11 +849,6 @@ typedef __qdf_nbuf_queue_head_t qdf_nbuf_queue_head_t;
  */
 typedef void (*qdf_dma_map_cb_t)(void *arg, qdf_nbuf_t buf,
 				 qdf_dma_map_t dmap);
-
-/**
- * @qdf_nbuf_queue_t - Platform independent packet queue abstraction
- */
-typedef __qdf_nbuf_queue_t qdf_nbuf_queue_t;
 
 /* BUS/DMA mapping routines */
 

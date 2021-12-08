@@ -39,6 +39,13 @@
   ---------------------------------------------------------------------------*/
 #define HAL_OFFSET(block, field) block ## _ ## field ## _OFFSET
 
+#define HAL_TX_LSB(block, field) block ## _ ## field ## _LSB
+
+#define HAL_TX_MASK(block, field) block ## _ ## field ## _MASK
+
+#define HAL_TX_DESC_OFFSET(desc, block, field) \
+	(((uint8_t *)desc) + HAL_OFFSET(block, field))
+
 #define HAL_SET_FLD(desc, block , field) \
 	(*(uint32_t *) ((uint8_t *) desc + HAL_OFFSET(block, field)))
 

@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -85,7 +86,7 @@ static inline void hal_get_radiotap_he_gi_ltf(uint16_t *he_gi, uint16_t *he_ltf)
  *
  * Return - Channel frequency in Mhz
  */
-static uint16_t
+static inline uint16_t
 hal_rx_radiotap_num_to_freq(uint16_t chan_num, qdf_freq_t center_freq)
 {
 	if (center_freq > CHANNEL_FREQ_5920 && center_freq < CHANNEL_FREQ_5950)

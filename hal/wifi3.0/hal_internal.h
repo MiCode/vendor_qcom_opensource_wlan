@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021,2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1023,6 +1023,11 @@ struct hal_hw_txrx_ops {
 					    uint32_t tlv, int *num_ref);
 	uint8_t (*hal_get_tlv_hdr_size)(void);
 	uint8_t (*hal_get_idle_link_bm_id)(uint8_t chip_id);
+
+	/* TX MONITOR */
+#ifdef QCA_MONITOR_2_0_SUPPORT
+	void (*hal_txmon_status_free_buffer)(qdf_frag_t status_frag);
+#endif /* QCA_MONITOR_2_0_SUPPORT */
 };
 
 /**

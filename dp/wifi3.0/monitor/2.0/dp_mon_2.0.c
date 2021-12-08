@@ -827,6 +827,32 @@ QDF_STATUS dp_mon_pdev_alloc_2_0(struct dp_pdev *pdev)
 
 	return QDF_STATUS_SUCCESS;
 }
+
+void dp_tx_ppdu_stats_attach_2_0(struct dp_pdev *pdev)
+{
+}
+
+void dp_tx_ppdu_stats_detach_2_0(struct dp_pdev *pdev)
+{
+}
+
+void dp_print_pdev_tx_capture_stats_2_0(struct dp_pdev *pdev)
+{
+}
+
+QDF_STATUS dp_config_enh_tx_capture_2_0(struct dp_pdev *pdev, uint8_t val)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS dp_peer_set_tx_capture_enabled_2_0(struct dp_pdev *pdev_handle,
+					      struct dp_peer *peer_handle,
+					      uint8_t is_tx_pkt_cap_enable,
+					      uint8_t *peer_mac)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
 #else
 static inline
 QDF_STATUS dp_mon_htt_srng_setup_2_0(struct dp_soc *soc,
@@ -900,6 +926,17 @@ QDF_STATUS dp_vdev_set_monitor_mode_rings_2_0(struct dp_pdev *pdev,
 {
 	return QDF_STATUS_SUCCESS;
 }
+
+static inline
+void dp_mon_pdev_free_2_0(struct dp_pdev *pdev)
+{
+}
+
+static inline
+QDF_STATUS dp_mon_pdev_alloc_2_0(struct dp_pdev *pdev)
+{
+	return QDF_STATUS_SUCCESS;
+}
 #endif
 
 static void dp_mon_register_intr_ops_2_0(struct dp_soc *soc)
@@ -946,15 +983,22 @@ dp_mon_register_feature_ops_2_0(struct dp_soc *soc)
 #ifndef DISABLE_MON_CONFIG
 	mon_ops->mon_tx_process = dp_tx_mon_process_2_0;
 #endif
-#ifdef WLAN_TX_PKT_CAPTURE_ENH
+#ifdef WLAN_TX_PKT_CAPTURE_ENH_BE
 	mon_ops->mon_peer_tid_peer_id_update = NULL;
-	mon_ops->mon_tx_ppdu_stats_attach = dp_tx_ppdu_stats_attach;
-	mon_ops->mon_tx_ppdu_stats_detach = dp_tx_ppdu_stats_detach;
 	mon_ops->mon_tx_capture_debugfs_init = NULL;
 	mon_ops->mon_tx_add_to_comp_queue = NULL;
-	mon_ops->mon_peer_tx_capture_filter_check = NULL;
+	mon_ops->mon_print_pdev_tx_capture_stats =
+					dp_print_pdev_tx_capture_stats_2_0;
+	mon_ops->mon_config_enh_tx_capture = dp_config_enh_tx_capture_2_0;
+	mon_ops->mon_tx_peer_filter = dp_peer_set_tx_capture_enabled_2_0;
+#endif
+#if (defined(WIFI_MONITOR_SUPPORT) && !defined(WLAN_TX_PKT_CAPTURE_ENH_BE))
+	mon_ops->mon_peer_tid_peer_id_update = NULL;
+	mon_ops->mon_tx_capture_debugfs_init = NULL;
+	mon_ops->mon_tx_add_to_comp_queue = NULL;
 	mon_ops->mon_print_pdev_tx_capture_stats = NULL;
-	mon_ops->mon_config_enh_tx_capture = dp_config_enh_tx_capture;
+	mon_ops->mon_config_enh_tx_capture = NULL;
+	mon_ops->mon_tx_peer_filter = NULL;
 #endif
 #if defined(WDI_EVENT_ENABLE) &&\
 	(defined(QCA_ENHANCED_STATS_SUPPORT) || !defined(REMOVE_PKT_LOG))
@@ -1099,6 +1143,16 @@ struct dp_mon_ops monitor_ops_2_0 = {
 	.mon_register_intr_ops = dp_mon_register_intr_ops_2_0,
 #endif
 	.mon_register_feature_ops = dp_mon_register_feature_ops_2_0,
+#ifdef WLAN_TX_PKT_CAPTURE_ENH_BE
+	.mon_tx_ppdu_stats_attach = dp_tx_ppdu_stats_attach_2_0,
+	.mon_tx_ppdu_stats_detach = dp_tx_ppdu_stats_detach_2_0,
+	.mon_peer_tx_capture_filter_check = NULL,
+#endif
+#if (defined(WIFI_MONITOR_SUPPORT) && !defined(WLAN_TX_PKT_CAPTURE_ENH_BE))
+	.mon_tx_ppdu_stats_attach = NULL,
+	.mon_tx_ppdu_stats_detach = NULL,
+	.mon_peer_tx_capture_filter_check = NULL,
+#endif
 };
 
 struct cdp_mon_ops dp_ops_mon_2_0 = {

@@ -2030,11 +2030,15 @@ struct cdp_tx_indication_mpdu_info {
 
 /**
  * struct cdp_tx_indication_info - Tx capture information
+ * @radiotap_done: Flag to say radiotap already done or not
+ *			0 - radiotap not updated
+ *			1 - radiotap header updated
  * @mpdu_info: Tx MPDU completion information
  * @mpdu_nbuf: reconstructed mpdu packet
  * @ppdu_desc: tx completion ppdu
  */
 struct cdp_tx_indication_info {
+	bool radiotap_done;
 	struct cdp_tx_indication_mpdu_info mpdu_info;
 	qdf_nbuf_t mpdu_nbuf;
 	struct cdp_tx_completion_ppdu *ppdu_desc;

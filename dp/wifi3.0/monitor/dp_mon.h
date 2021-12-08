@@ -459,7 +459,7 @@ struct dp_mon_ops {
 	void (*mon_peer_tx_init)(struct dp_pdev *pdev, struct dp_peer *peer);
 	void (*mon_peer_tx_cleanup)(struct dp_vdev *vdev,
 				    struct dp_peer *peer);
-#ifdef WLAN_TX_PKT_CAPTURE_ENH
+#ifdef WIFI_MONITOR_SUPPORT
 	void (*mon_peer_tid_peer_id_update)(struct dp_peer *peer,
 					    uint16_t peer_id);
 	void (*mon_tx_ppdu_stats_attach)(struct dp_pdev *pdev);
@@ -493,10 +493,14 @@ struct dp_mon_ops {
 	void (*mon_htt_ppdu_stats_detach)(struct dp_pdev *pdev);
 	void (*mon_print_pdev_rx_mon_stats)(struct dp_pdev *pdev);
 
-#ifdef WLAN_TX_PKT_CAPTURE_ENH
+#ifdef WIFI_MONITOR_SUPPORT
 	void (*mon_print_pdev_tx_capture_stats)(struct dp_pdev *pdev);
 	QDF_STATUS (*mon_config_enh_tx_capture)(struct dp_pdev *pdev,
 						uint8_t val);
+	QDF_STATUS (*mon_tx_peer_filter)(struct dp_pdev *pdev_handle,
+					 struct dp_peer *peer_handle,
+					 uint8_t is_tx_pkt_cap_enable,
+					 uint8_t *peer_mac);
 #endif
 #ifdef WLAN_RX_PKT_CAPTURE_ENH
 	QDF_STATUS (*mon_config_enh_rx_capture)(struct dp_pdev *pdev,
@@ -917,14 +921,6 @@ void dp_rx_mon_update_protocol_flow_tag(struct dp_soc *soc,
 #endif /* WLAN_SUPPORT_RX_PROTOCOL_TYPE_TAG || WLAN_SUPPORT_RX_FLOW_TAG */
 
 #ifndef WLAN_TX_PKT_CAPTURE_ENH
-static inline
-QDF_STATUS dp_peer_set_tx_capture_enabled(struct dp_pdev *pdev,
-					  struct dp_peer *peer_handle,
-					  uint8_t value, uint8_t *peer_mac)
-{
-	return QDF_STATUS_SUCCESS;
-}
-
 /**
  * dp_peer_tid_queue_init() – Initialize ppdu stats queue per TID
  * @peer: Datapath peer
@@ -952,89 +948,6 @@ static inline void dp_peer_tid_queue_cleanup(struct dp_peer *peer)
 static inline void
 dp_peer_update_80211_hdr(struct dp_vdev *vdev, struct dp_peer *peer)
 {
-}
-
-/**
- * dp_tx_ppdu_stats_attach - Initialize Tx PPDU stats and enhanced capture
- * @pdev: DP PDEV
- *
- * Return: none
- */
-static inline void dp_tx_ppdu_stats_attach(struct dp_pdev *pdev)
-{
-}
-
-/**
- * dp_tx_ppdu_stats_detach - Cleanup Tx PPDU stats and enhanced capture
- * @pdev: DP PDEV
- *
- * Return: none
- */
-static inline void dp_tx_ppdu_stats_detach(struct dp_pdev *pdev)
-{
-}
-
-/**
- * dp_tx_add_to_comp_queue() - add completion msdu to queue
- * @soc: DP Soc handle
- * @tx_desc: software Tx descriptor
- * @ts : Tx completion status from HAL/HTT descriptor
- * @peer: DP peer
- *
- * Return: none
- */
-static inline
-QDF_STATUS dp_tx_add_to_comp_queue(struct dp_soc *soc,
-				   struct dp_tx_desc_s *desc,
-				   struct hal_tx_completion_status *ts,
-				   struct dp_peer *peer)
-{
-	return QDF_STATUS_E_FAILURE;
-}
-
-/**
- * dp_update_msdu_to_list(): Function to queue msdu from wbm
- * @pdev: dp_pdev
- * @peer: dp_peer
- * @ts: hal tx completion status
- * @netbuf: msdu
- *
- * return: status
- */
-static inline
-QDF_STATUS dp_update_msdu_to_list(struct dp_soc *soc,
-				  struct dp_pdev *pdev,
-				  struct dp_peer *peer,
-				  struct hal_tx_completion_status *ts,
-				  qdf_nbuf_t netbuf)
-{
-	return QDF_STATUS_E_FAILURE;
-}
-
-/*
- * dp_peer_tx_capture_filter_check: check filter is enable for the filter
- * and update tx_cap_enabled flag
- * @pdev: DP PDEV handle
- * @peer: DP PEER handle
- *
- * return: void
- */
-static inline
-void dp_peer_tx_capture_filter_check(struct dp_pdev *pdev,
-				     struct dp_peer *peer)
-{
-}
-
-/*
- * dp_tx_capture_debugfs_init: tx capture debugfs init
- * @pdev: DP PDEV handle
- *
- * return: QDF_STATUS
- */
-static inline
-QDF_STATUS dp_tx_capture_debugfs_init(struct dp_pdev *pdev)
-{
-	return QDF_STATUS_E_FAILURE;
 }
 
 /**
@@ -1117,16 +1030,6 @@ void dp_tx_capture_htt_frame_counter(struct dp_pdev *pdev,
 {
 }
 
-/*
- * dp_tx_cature_stats: print tx capture stats
- * @pdev: DP PDEV handle
- *
- * return: void
- */
-static inline
-void dp_print_pdev_tx_capture_stats(struct dp_pdev *pdev)
-{
-}
 #endif
 
 /**
@@ -2115,8 +2018,8 @@ static inline void dp_monitor_peer_tx_cleanup(struct dp_vdev *vdev,
 	return monitor_ops->mon_peer_tx_cleanup(vdev, peer);
 }
 
-#ifdef WLAN_TX_PKT_CAPTURE_ENH
-/*
+#ifdef WIFI_MONITOR_SUPPORT
+/**
  * dp_monitor_peer_tid_peer_id_update() - peer tid update
  * @soc: point to soc
  * @peer: point to peer
@@ -2547,13 +2450,13 @@ static inline void dp_monitor_print_pdev_rx_mon_stats(struct dp_pdev *pdev)
 	return monitor_ops->mon_print_pdev_rx_mon_stats(pdev);
 }
 
+#ifdef WIFI_MONITOR_SUPPORT
 /*
  * dp_monitor_print_pdev_tx_capture_stats() - print tx capture stats
  * @pdev: Datapath PDEV handle
  *
  * Return: void
  */
-#ifdef WLAN_TX_PKT_CAPTURE_ENH
 static inline void dp_monitor_print_pdev_tx_capture_stats(struct dp_pdev *pdev)
 {
 	struct dp_mon_ops *monitor_ops;
@@ -2573,6 +2476,13 @@ static inline void dp_monitor_print_pdev_tx_capture_stats(struct dp_pdev *pdev)
 	return monitor_ops->mon_print_pdev_tx_capture_stats(pdev);
 }
 
+/**
+ * dp_monitor_config_enh_tx_capture() - configure tx capture
+ * @pdev: Datapath PDEV handle
+ * @val: mode
+ *
+ * Return: status
+ */
 static inline QDF_STATUS dp_monitor_config_enh_tx_capture(struct dp_pdev *pdev,
 							  uint32_t val)
 {
@@ -2592,15 +2502,37 @@ static inline QDF_STATUS dp_monitor_config_enh_tx_capture(struct dp_pdev *pdev,
 
 	return monitor_ops->mon_config_enh_tx_capture(pdev, val);
 }
-#else
-static inline void dp_monitor_print_pdev_tx_capture_stats(struct dp_pdev *pdev)
-{
-}
 
-static inline QDF_STATUS dp_monitor_config_enh_tx_capture(struct dp_pdev *pdev,
-							  uint32_t val)
+/**
+ * dp_monitor_tx_peer_filter() -  add tx monitor peer filter
+ * @pdev: Datapath PDEV handle
+ * @peer: Datapath PEER handle
+ * @is_tx_pkt_cap_enable: flag for tx capture enable/disable
+ * @peer_mac: peer mac address
+ *
+ * Return: status
+ */
+static inline QDF_STATUS dp_monitor_tx_peer_filter(struct dp_pdev *pdev,
+						   struct dp_peer *peer,
+						   uint8_t is_tx_pkt_cap_enable,
+						   uint8_t *peer_mac)
 {
-	return QDF_STATUS_E_INVAL;
+	struct dp_mon_ops *monitor_ops;
+	struct dp_mon_soc *mon_soc = pdev->soc->monitor_soc;
+
+	if (!mon_soc) {
+		qdf_err("monitor soc is NULL");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	monitor_ops = mon_soc->mon_ops;
+	if (!monitor_ops || !monitor_ops->mon_tx_peer_filter) {
+		qdf_err("callback not registered");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	return monitor_ops->mon_tx_peer_filter(pdev, peer, is_tx_pkt_cap_enable,
+					       peer_mac);
 }
 #endif
 

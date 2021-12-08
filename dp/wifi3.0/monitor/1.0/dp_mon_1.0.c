@@ -879,18 +879,23 @@ dp_mon_register_feature_ops_1_0(struct dp_soc *soc)
 	mon_ops->mon_pdev_get_filter_non_data = dp_pdev_get_filter_non_data;
 	mon_ops->mon_neighbour_peer_add_ast = dp_mon_neighbour_peer_add_ast;
 #ifdef WLAN_TX_PKT_CAPTURE_ENH
-	mon_ops->mon_peer_tid_peer_id_update = dp_peer_tid_peer_id_update;
-	mon_ops->mon_tx_ppdu_stats_attach = dp_tx_ppdu_stats_attach;
-	mon_ops->mon_tx_ppdu_stats_detach = dp_tx_ppdu_stats_detach;
-	mon_ops->mon_tx_capture_debugfs_init = dp_tx_capture_debugfs_init;
-	mon_ops->mon_tx_add_to_comp_queue = dp_tx_add_to_comp_queue;
-	mon_ops->mon_peer_tx_capture_filter_check =
-				dp_peer_tx_capture_filter_check;
+	mon_ops->mon_peer_tid_peer_id_update = dp_peer_tid_peer_id_update_1_0;
+	mon_ops->mon_tx_capture_debugfs_init = dp_tx_capture_debugfs_init_1_0;
+	mon_ops->mon_tx_add_to_comp_queue = dp_tx_add_to_comp_queue_1_0;
 	mon_ops->mon_print_pdev_tx_capture_stats =
-				dp_print_pdev_tx_capture_stats;
-	mon_ops->mon_config_enh_tx_capture = dp_config_enh_tx_capture;
+				dp_print_pdev_tx_capture_stats_1_0;
+	mon_ops->mon_config_enh_tx_capture = dp_config_enh_tx_capture_1_0;
+	mon_ops->mon_tx_peer_filter = dp_peer_set_tx_capture_enabled_1_0;
 	mon_ops->mon_peer_tx_capture_get_stats = dp_get_peer_tx_capture_stats;
 	mon_ops->mon_pdev_tx_capture_get_stats = dp_get_pdev_tx_capture_stats;
+#endif
+#if (defined(WIFI_MONITOR_SUPPORT) && !defined(WLAN_TX_PKT_CAPTURE_ENH))
+	mon_ops->mon_peer_tid_peer_id_update = NULL;
+	mon_ops->mon_tx_capture_debugfs_init = NULL;
+	mon_ops->mon_tx_add_to_comp_queue = NULL;
+	mon_ops->mon_print_pdev_tx_capture_stats = NULL;
+	mon_ops->mon_config_enh_tx_capture = NULL;
+	mon_ops->mon_tx_peer_filter = NULL;
 #endif
 #if defined(WDI_EVENT_ENABLE) &&\
 	(defined(QCA_ENHANCED_STATS_SUPPORT) || !defined(REMOVE_PKT_LOG))
@@ -1030,6 +1035,16 @@ struct dp_mon_ops monitor_ops_1_0 = {
 	.mon_register_intr_ops = dp_mon_register_intr_ops_1_0,
 #endif
 	.mon_register_feature_ops = dp_mon_register_feature_ops_1_0,
+#ifdef WLAN_TX_PKT_CAPTURE_ENH
+	.mon_tx_ppdu_stats_attach = dp_tx_ppdu_stats_attach_1_0,
+	.mon_tx_ppdu_stats_detach = dp_tx_ppdu_stats_detach_1_0,
+	.mon_peer_tx_capture_filter_check = dp_peer_tx_capture_filter_check_1_0,
+#endif
+#if (defined(WIFI_MONITOR_SUPPORT) && !defined(WLAN_TX_PKT_CAPTURE_ENH))
+	.mon_tx_ppdu_stats_attach = NULL,
+	.mon_tx_ppdu_stats_detach = NULL,
+	.mon_peer_tx_capture_filter_check = NULL,
+#endif
 };
 
 struct cdp_mon_ops dp_ops_mon_1_0 = {

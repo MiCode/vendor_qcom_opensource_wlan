@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -17,16 +18,28 @@
 #include "qdf_nbuf.h"
 #include "dp_internal.h"
 #include "qdf_mem.h"   /* qdf_mem_malloc,free */
+#include <dp_be.h>
 #include <qdf_nbuf_frag.h>
 #include <hal_be_api_mon.h>
 #include <dp_mon.h>
 #include <dp_mon_2.0.h>
 #include <dp_tx_mon_2.0.h>
 
-void dp_tx_mon_process_status_tlv(struct dp_soc *soc,
-				  struct dp_pdev *pdev,
-				  struct hal_mon_desc *mon_ring_desc,
-				  qdf_dma_addr_t addr)
+/**
+ * dp_tx_mon_process_status_tlv() - API to processed TLV
+ * invoked from interrupt handler
+ *
+ * @soc - DP_SOC handle
+ * @pdev - DP_PDEV handle
+ * @mon_ring_desc - descriptor status info
+ * @addr - status buffer frag address
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS dp_tx_mon_process_status_tlv(struct dp_soc *soc,
+					struct dp_pdev *pdev,
+					struct hal_mon_desc *mon_ring_desc,
+					qdf_dma_addr_t addr)
 {
-	/* API to process tlv */
+	return QDF_STATUS_E_INVAL;
 }

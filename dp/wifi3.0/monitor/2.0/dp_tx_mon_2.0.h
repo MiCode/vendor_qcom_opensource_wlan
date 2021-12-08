@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2021,2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -82,10 +82,10 @@ dp_tx_mon_buf_desc_pool_alloc(struct dp_soc *soc);
  * @frag_addr: frag address
  *
  */
-void dp_tx_mon_process_status_tlv(struct dp_soc *soc,
-				  struct dp_pdev *pdev,
-				  struct hal_mon_desc *mon_ring_desc,
-				  qdf_dma_addr_t addr);
+QDF_STATUS dp_tx_mon_process_status_tlv(struct dp_soc *soc,
+					struct dp_pdev *pdev,
+					struct hal_mon_desc *mon_ring_desc,
+					qdf_dma_addr_t addr);
 
 /*
  * dp_tx_mon_process_2_0() - tx monitor interrupt process

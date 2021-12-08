@@ -22,6 +22,7 @@
 #include <dp_htt.h>
 #include <dp_mon.h>
 #include <dp_rx_mon.h>
+#include <dp_internal.h>
 #include "htt_ppdu_stats.h"
 #include "dp_cal_client_api.h"
 #if defined(DP_CON_MON)
@@ -1848,9 +1849,8 @@ dp_peer_update_pkt_capture_params(ol_txrx_soc_handle soc,
 		return QDF_STATUS_E_FAILURE;
 
 	/* we need to set tx pkt capture for non associated peer */
-	status = dp_peer_set_tx_capture_enabled(pdev, peer,
-						is_tx_pkt_cap_enable,
-						peer_mac);
+	status = dp_monitor_tx_peer_filter(pdev, peer, is_tx_pkt_cap_enable,
+					   peer_mac);
 
 	status = dp_peer_set_rx_capture_enabled(pdev, peer,
 						is_rx_pkt_cap_enable,
@@ -4760,7 +4760,8 @@ QDF_STATUS dp_mon_pdev_init(struct dp_pdev *pdev)
 	if (mon_ops->rx_mon_buffers_alloc)
 		mon_ops->rx_mon_buffers_alloc(pdev);
 
-	dp_tx_ppdu_stats_attach(pdev);
+	/* attach monitor function */
+	dp_monitor_tx_ppdu_stats_attach(pdev);
 	mon_pdev->is_dp_mon_pdev_initialized = true;
 
 	return QDF_STATUS_SUCCESS;
@@ -4790,7 +4791,8 @@ QDF_STATUS dp_mon_pdev_deinit(struct dp_pdev *pdev)
 		return QDF_STATUS_SUCCESS;
 
 	dp_mon_filters_reset(pdev);
-	dp_tx_ppdu_stats_detach(pdev);
+	/* detach monitor function */
+	dp_monitor_tx_ppdu_stats_detach(pdev);
 
 	if (mon_ops->rx_mon_buffers_free)
 		mon_ops->rx_mon_buffers_free(pdev);
@@ -4873,7 +4875,7 @@ QDF_STATUS dp_mon_peer_attach(struct dp_peer *peer)
 	 * when unassociated peer get associated peer need to
 	 * update tx_cap_enabled flag to support peer filter.
 	 */
-	dp_peer_tx_capture_filter_check(pdev, peer);
+	dp_monitor_peer_tx_capture_filter_check(pdev, peer);
 
 	return QDF_STATUS_SUCCESS;
 }
