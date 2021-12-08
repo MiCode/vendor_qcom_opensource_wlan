@@ -1627,6 +1627,8 @@ struct wlan_ie_hecaps {
 #define EHTCAP_PHY_MUBFMR320MHZ_IDX                     62
 #define EHTCAP_PHY_MUBFMR320MHZ_BITS                    1
 
+#define MAX_EHT_MCS_NSS_MAP_LEN 9
+
 /**
  * struct wlan_ie_ehtcaps - EHT capabilities
  * @elem_id: EHT caps IE
@@ -1652,10 +1654,20 @@ struct wlan_ie_ehtcaps {
 			uint32_t supported_ch_width_set:7;
 		} qdf_packed;
 	} qdf_packed eht_phy_cap;
-	struct {
-		uint16_t rx_mcs_map;
-		uint16_t tx_mcs_map;
-	} qdf_packed mcs_bw_map[WLAN_EHT_MAX_MCS_MAPS];
+	union {
+		struct {
+			uint8_t max_nss_mcs_0_9;
+			uint8_t max_nss_mcs_10_11;
+			uint8_t max_nss_mcs_12_13;
+		} qdf_packed mcs_bw_map[WLAN_EHT_MAX_MCS_MAPS];
+		struct {
+			uint8_t max_nss_mcs_0_7;
+			uint8_t max_nss_mcs_8_9;
+			uint8_t max_nss_mcs_10_11;
+			uint8_t max_nss_mcs_12_13;
+		} qdf_packed mcs_bw_map_20_sta;
+		uint8_t mcs_nss_map_bytes[MAX_EHT_MCS_NSS_MAP_LEN];
+	} qdf_packed;
 } qdf_packed;
 
 /**
