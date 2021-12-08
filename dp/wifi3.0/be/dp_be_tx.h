@@ -71,6 +71,22 @@ void dp_tx_comp_get_params_from_hal_desc_be(struct dp_soc *soc,
 					    struct dp_tx_desc_s **r_tx_desc);
 
 /**
+ * dp_tx_process_htt_completion_be() - Tx HTT Completion Indication Handler
+ * @soc: Handle to DP soc structure
+ * @tx_desc: software descriptor head pointer
+ * @status : Tx completion status from HTT descriptor
+ * @ring_id: ring number
+ *
+ * This function will process HTT Tx indication messages from Target
+ *
+ * Return: none
+ */
+void dp_tx_process_htt_completion_be(struct dp_soc *soc,
+				     struct dp_tx_desc_s *tx_desc,
+				     uint8_t *status,
+				     uint8_t ring_id);
+
+/**
  * dp_tx_init_bank_profiles() - Init TX bank profiles
  * @soc: DP soc handle
  *
