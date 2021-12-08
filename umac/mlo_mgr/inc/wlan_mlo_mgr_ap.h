@@ -23,6 +23,7 @@
 
 #include <wlan_mlo_mgr_cmn.h>
 #include <wlan_mlo_mgr_public_structs.h>
+#include "wlan_mlo_mgr_msgq.h"
 
 #define WLAN_RESV_AID_BITS 0xc000
 #define WLAN_AID(b)    ((b) & ~0xc000)
@@ -404,4 +405,39 @@ void mlo_ap_vdev_quiet_clear(struct wlan_objmgr_vdev *vdev);
  * Return: true, if any index is set, else false
  */
 bool mlo_ap_vdev_quiet_is_any_idx_set(struct wlan_objmgr_vdev *vdev);
+
+#ifdef UMAC_SUPPORT_MLNAWDS
+/**
+ * mlo_peer_populate_nawds_params() - Populate nawds parameters in ml_peer
+ * @ml_peer: ml_peer to which nawds config parameters need to be populated
+ * @ml_info: ml_info with nawds config associated with this link
+ *
+ * Return: void
+ */
+void mlo_peer_populate_nawds_params(
+		struct wlan_mlo_peer_context *ml_peer,
+		struct mlo_partner_info *ml_info);
+#else
+static inline
+void mlo_peer_populate_nawds_params(
+		struct wlan_mlo_peer_context *ml_peer,
+		struct mlo_partner_info *ml_info)
+{
+}
+#endif
+
+/**
+ * mlo_peer_create_get_frm_buf() - get frm_buf to peer_create
+ * @ml_peer: MLO peer
+ * @peer_create: pointer to peer_create_notif context
+ * @frm_buf: pointer to frame buffer to be cloned to peer_create
+ *
+ * Return: SUCCESS if
+ * - peer_create frame buffer cloned successfully in non NAWDS case Or
+ * - ml_peer is in NAWDS mode.
+ */
+QDF_STATUS mlo_peer_create_get_frm_buf(
+		struct wlan_mlo_peer_context *ml_peer,
+		struct peer_create_notif_s *peer_create,
+		qdf_nbuf_t frm_buf);
 #endif

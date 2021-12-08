@@ -56,8 +56,9 @@ static void mlo_partner_peer_create_post(struct wlan_mlo_dev_context *ml_dev,
 		break;
 	}
 
-	peer_create.frm_buf = qdf_nbuf_clone(frm_buf);
-	if (!peer_create.frm_buf) {
+	status = mlo_peer_create_get_frm_buf(ml_peer, &peer_create, frm_buf);
+
+	if (QDF_IS_STATUS_ERROR(status)) {
 		wlan_mlo_peer_release_ref(ml_peer);
 		wlan_objmgr_vdev_release_ref(vdev_link, WLAN_MLO_MGR_ID);
 		mlo_err("nbuf clone is failed");
@@ -786,6 +787,8 @@ QDF_STATUS wlan_mlo_peer_create(struct wlan_objmgr_vdev *vdev,
 	/* Store AID, MLO Peer pointer in link peer, take link peer ref count */
 	mlo_peer_populate_link_peer(ml_peer, link_peer);
 
+	mlo_peer_populate_nawds_params(ml_peer, ml_info);
+
 	if ((wlan_vdev_mlme_get_opmode(vdev) == QDF_SAP_MODE) ||
 		((wlan_vdev_mlme_get_opmode(vdev) == QDF_STA_MODE) &&
 			!wlan_vdev_mlme_is_mlo_link_vdev(vdev))) {
@@ -934,3 +937,19 @@ void wlan_mlo_peer_get_links_info(struct wlan_objmgr_peer *peer,
 }
 
 qdf_export_symbol(wlan_mlo_peer_get_links_info);
+
+#ifdef UMAC_SUPPORT_MLNAWDS
+bool wlan_mlo_peer_is_nawds(struct wlan_mlo_peer_context *ml_peer)
+{
+	bool status = false;
+
+	mlo_peer_lock_acquire(ml_peer);
+	if (ml_peer->is_nawds_ml_peer)
+		status = true;
+	mlo_peer_lock_release(ml_peer);
+
+	return status;
+}
+
+qdf_export_symbol(wlan_mlo_peer_is_nawds);
+#endif

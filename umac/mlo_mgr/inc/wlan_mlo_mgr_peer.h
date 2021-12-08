@@ -505,4 +505,20 @@ static inline void wlan_peer_clear_mlo(struct wlan_objmgr_peer *peer)
 {
 	return wlan_peer_mlme_flag_ext_clear(peer, WLAN_PEER_FEXT_MLO);
 }
+
+#ifdef UMAC_SUPPORT_MLNAWDS
+/**
+ * wlan_mlo_peer_is_nawds() - Check if ml_peer is configured to operate as NAWDS
+ * @ml_peer: MLO peer
+ *
+ * Return TRUE if ml peer is configured as NAWDS
+ */
+bool wlan_mlo_peer_is_nawds(struct wlan_mlo_peer_context *ml_peer);
+#else
+static inline
+bool wlan_mlo_peer_is_nawds(struct wlan_mlo_peer_context *ml_peer)
+{
+	return false;
+}
+#endif
 #endif

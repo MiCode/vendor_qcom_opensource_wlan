@@ -274,6 +274,21 @@ enum mlo_peer_state {
 	ML_PEER_DISCONN_INITIATED,
 };
 
+#ifdef UMAC_SUPPORT_MLNAWDS
+/*
+ * struct mlnawds_config - MLO NAWDS configuration
+ * @caps: Bandwidth & NSS capabilities to be configured on NAWDS peer
+ * @puncture_bitmap: puncture bitmap to be configured on NAWDS peer
+ * @mac: MAC address of the NAWDS peer to which the caps & puncture bitmap is
+ * to be configured.
+ */
+struct mlnawds_config {
+	uint64_t caps;
+	uint16_t puncture_bitmap;
+	uint8_t  mac[QDF_MAC_ADDR_SIZE];
+};
+#endif
+
 /*
  * struct wlan_mlo_peer_context - MLO peer context
  *
@@ -290,6 +305,8 @@ enum mlo_peer_state {
  * @ml_dev: MLO dev context
  * @mlpeer_state: MLO peer state
  * @avg_link_rssi: avg RSSI of ML peer
+ * @is_nawds_ml_peer: flag to indicate if ml_peer is NAWDS configured
+ * @nawds_config: eack link peer's NAWDS configuration
  */
 struct wlan_mlo_peer_context {
 	qdf_list_node_t peer_node;
@@ -310,6 +327,10 @@ struct wlan_mlo_peer_context {
 	struct wlan_mlo_dev_context *ml_dev;
 	enum mlo_peer_state mlpeer_state;
 	int8_t avg_link_rssi;
+#ifdef UMAC_SUPPORT_MLNAWDS
+	bool is_nawds_ml_peer;
+	struct mlnawds_config nawds_config[MAX_MLO_LINK_PEERS];
+#endif
 };
 
 /*
@@ -317,11 +338,15 @@ struct wlan_mlo_peer_context {
  * @link_addr: link mac address
  * @link_id: link index
  * @chan_freq: Operating channel frequency
+ * @nawds_config: peer's NAWDS configurarion
  */
 struct mlo_link_info {
 	struct qdf_mac_addr link_addr;
 	uint8_t link_id;
 	uint16_t chan_freq;
+#ifdef UMAC_SUPPORT_MLNAWDS
+	struct mlnawds_config nawds_config;
+#endif
 };
 
 /*
