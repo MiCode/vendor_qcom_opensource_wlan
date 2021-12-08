@@ -1784,12 +1784,14 @@ wlan_mgmt_rx_reo_update_host_snapshot(struct wlan_objmgr_pdev *pdev,
  * the reorder algorithm.
  * @reo_ctx: management rx reorder context
  * @desc: Pointer to frame descriptor
+ * @is_queued: Indicates whether this frame is queued to reorder list
  *
  * Return: QDF_STATUS of operation
  */
 static QDF_STATUS
 mgmt_rx_reo_log_ingress_frame(struct mgmt_rx_reo_context *reo_ctx,
-			      struct mgmt_rx_reo_frame_descriptor *desc)
+			      struct mgmt_rx_reo_frame_descriptor *desc,
+			      bool is_queued)
 {
 	struct reo_ingress_debug_info *ingress_frame_debug_info;
 	struct reo_ingress_debug_frame_info *cur_frame_debug_info;
@@ -1811,6 +1813,10 @@ mgmt_rx_reo_log_ingress_frame(struct mgmt_rx_reo_context *reo_ctx,
 	cur_frame_debug_info->type = desc->type;
 	cur_frame_debug_info->wait_count = desc->wait_count;
 	cur_frame_debug_info->ingress_timestamp = desc->ingress_timestamp;
+	cur_frame_debug_info->is_queued = is_queued;
+	cur_frame_debug_info->is_stale = desc->is_stale;
+	cur_frame_debug_info->ts_last_released_frame =
+				reo_ctx->reo_list.ts_last_released_frame;
 
 	ingress_frame_debug_info->next_index++;
 	ingress_frame_debug_info->next_index %=
@@ -1824,12 +1830,14 @@ mgmt_rx_reo_log_ingress_frame(struct mgmt_rx_reo_context *reo_ctx,
  * the reorder algorithm.
  * @reo_ctx: management rx reorder context
  * @desc: Pointer to frame descriptor
+ * @is_queued: Indicates whether this frame is queued to reorder list
  *
  * Return: QDF_STATUS of operation
  */
 static QDF_STATUS
 mgmt_rx_reo_log_ingress_frame(struct mgmt_rx_reo_context *reo_ctx,
-			      struct mgmt_rx_reo_frame_descriptor *desc)
+			      struct mgmt_rx_reo_frame_descriptor *desc,
+			      bool is_queued)
 {
 	return QDF_STATUS_SUCCESS;
 }
@@ -1981,7 +1989,7 @@ wlan_mgmt_rx_reo_algo_entry(struct wlan_objmgr_pdev *pdev,
 		return QDF_STATUS_E_FAILURE;
 	}
 
-	status = mgmt_rx_reo_log_ingress_frame(reo_ctx, desc);
+	status = mgmt_rx_reo_log_ingress_frame(reo_ctx, desc, *is_queued);
 	if (QDF_IS_STATUS_ERROR(status)) {
 		qdf_spin_unlock(&reo_ctx->reo_algo_entry_lock);
 		return QDF_STATUS_E_FAILURE;

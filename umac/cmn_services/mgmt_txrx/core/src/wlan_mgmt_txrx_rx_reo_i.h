@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -378,6 +379,10 @@ struct mgmt_rx_reo_sim_context {
  * @ingress_timestamp: Host time stamp when the frames enters the reorder
  * algorithm
  * @wait_count: Wait count calculated for the current frame
+ * @is_queued: Indicates whether this frame is queued to reorder list
+ * @is_stale: Indicates whether this frame is stale.
+ * @ts_last_released_frame: Stores the global time stamp for the last frame
+ * removed from the reorder list
  */
 struct reo_ingress_debug_frame_info {
 	uint8_t link_id;
@@ -386,6 +391,9 @@ struct reo_ingress_debug_frame_info {
 	enum mgmt_rx_reo_frame_descriptor_type type;
 	uint64_t ingress_timestamp;
 	struct mgmt_rx_reo_wait_count wait_count;
+	bool is_queued;
+	bool is_stale;
+	struct mgmt_rx_reo_global_ts_info ts_last_released_frame;
 };
 
 /**
