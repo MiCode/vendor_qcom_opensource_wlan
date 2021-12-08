@@ -2947,6 +2947,12 @@ QDF_STATUS (*extract_quiet_offload_event)(
 				wmi_unified_t wmi_handle, void *evt_buf,
 				struct vdev_sta_quiet_event *quiet_event);
 #endif
+
+#ifdef WLAN_SUPPORT_PPEDS
+QDF_STATUS
+(*peer_ppe_ds_param_send)(wmi_unified_t wmi_handle,
+			  struct peer_ppe_ds_param *param);
+#endif /* WLAN_SUPPORT_PPEDS */
 };
 
 /* Forward declartion for psoc*/

@@ -3732,3 +3732,16 @@ QDF_STATUS wmi_extract_quiet_offload_event(
 	return QDF_STATUS_E_FAILURE;
 }
 #endif
+
+#ifdef WLAN_SUPPORT_PPEDS
+QDF_STATUS
+wmi_unified_peer_ppe_ds_param_send(wmi_unified_t wmi_handle,
+				   struct peer_ppe_ds_param *param)
+{
+	if (wmi_handle->ops->peer_ppe_ds_param_send)
+		return wmi_handle->ops->peer_ppe_ds_param_send(
+				wmi_handle, param);
+
+	return QDF_STATUS_E_FAILURE;
+}
+#endif /* WLAN_SUPPORT_PPEDS */

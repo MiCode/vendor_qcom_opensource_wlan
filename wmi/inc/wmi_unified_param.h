@@ -825,6 +825,28 @@ struct peer_create_params {
 #endif
 };
 
+#ifdef WLAN_SUPPORT_PPEDS
+/**
+ * struct peer_ppe_ds_param - Per peer PPE Direct Switch parameter
+ * @peer_macaddr: PPE mac address
+ * @ppe_routing_enabled: Master flag for PPE routing
+ * @use_ppe: Use PPE command for the peer entry
+ * @service_code: Service code
+ * @priority_valid: If PRI to TID conversion is enabled
+ * @src_info: Source info/PPE port of the interface
+ * @vdev_id: VAP ID
+ */
+struct peer_ppe_ds_param {
+	uint8_t peer_macaddr[QDF_MAC_ADDR_SIZE];
+	bool ppe_routing_enabled;
+	bool use_ppe;
+	uint16_t service_code;
+	uint16_t src_info;
+	uint8_t priority_valid;
+	uint8_t vdev_id;
+};
+#endif
+
 /**
  * struct peer_remove_params - peer remove cmd parameter
  * @bssid: bss id

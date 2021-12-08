@@ -4660,4 +4660,17 @@ QDF_STATUS wmi_extract_quiet_offload_event(
 				struct wmi_unified *wmi_handle, void *evt_buf,
 				struct vdev_sta_quiet_event *quiet_event);
 #endif
+
+#ifdef WLAN_SUPPORT_PPEDS
+/**
+ * wmi_unified_peer_ppe_ds_param_send - Set the PPEDS configs
+ * @wmi_handle: WMI handle
+ * @param: Peer PPE DS param
+ *
+ * Return: QDF_STATUS_SUCCESS for success or error code.
+ */
+QDF_STATUS
+wmi_unified_peer_ppe_ds_param_send(wmi_unified_t wmi_handle,
+				   struct peer_ppe_ds_param *param);
+#endif /* WLAN_SUPPORT_PPEDS */
 #endif /* _WMI_UNIFIED_API_H_ */

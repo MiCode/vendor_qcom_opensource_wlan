@@ -1360,6 +1360,69 @@ static inline uint32_t convert_host_peer_param_id_to_target_id_tlv(
 }
 #endif
 
+#ifdef WLAN_SUPPORT_PPEDS
+/**
+ * peer_ppe_ds_param_send_tlv() - Set peer PPE DS config
+ * @wmi: wmi handle
+ * @param: pointer to hold PPE DS config
+ *
+ * Return: QDF_STATUS_SUCCESS for success or error code
+ */
+static QDF_STATUS peer_ppe_ds_param_send_tlv(wmi_unified_t wmi,
+					     struct peer_ppe_ds_param *param)
+{
+	wmi_peer_config_ppe_ds_cmd_fixed_param *cmd;
+	wmi_buf_t buf;
+	int32_t err;
+	uint32_t len = sizeof(wmi_peer_config_ppe_ds_cmd_fixed_param);
+
+	buf = wmi_buf_alloc(wmi, sizeof(*cmd));
+	if (!buf)
+		return QDF_STATUS_E_NOMEM;
+
+	cmd = (wmi_peer_config_ppe_ds_cmd_fixed_param *)wmi_buf_data(buf);
+	WMITLV_SET_HDR(&cmd->tlv_header,
+		       WMITLV_TAG_STRUC_wmi_peer_config_ppe_ds_cmd_fixed_param,
+		       WMITLV_GET_STRUCT_TLVLEN
+				(wmi_peer_config_ppe_ds_cmd_fixed_param));
+
+	WMI_CHAR_ARRAY_TO_MAC_ADDR(param->peer_macaddr, &cmd->peer_macaddr);
+
+	if (param->ppe_routing_enabled)
+		cmd->ppe_routing_enable = param->use_ppe ?
+			WMI_AST_USE_PPE_ENABLED :  WMI_AST_USE_PPE_DISABLED;
+	else
+		cmd->ppe_routing_enable = WMI_PPE_ROUTING_DISABLED;
+
+	cmd->service_code = param->service_code;
+	cmd->priority_valid = param->priority_valid;
+	cmd->src_info = param->src_info;
+	cmd->vdev_id = param->vdev_id;
+
+	wmi_debug("vdev_id %d peer_mac: QDF_MAC_ADDR_FMT\n"
+		  "ppe_routing_enable: %u service_code: %u\n"
+		  "priority_valid:%d src_info:%u",
+		  param->vdev_id,
+		  QDF_MAC_ADDR_REF(param->peer_macaddr),
+		  param->ppe_routing_enabled,
+		  param->service_code,
+		  param->priority_valid,
+		  param->src_info);
+
+	wmi_mtrace(WMI_PEER_CONFIG_PPE_DS_CMDID, cmd->vdev_id, 0);
+	err = wmi_unified_cmd_send(wmi, buf,
+				   len,
+				   WMI_PEER_CONFIG_PPE_DS_CMDID);
+	if (err) {
+		wmi_err("Failed to send ppeds config cmd");
+		wmi_buf_free(buf);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	return 0;
+}
+#endif /* WLAN_SUPPORT_PPEDS */
+
 /**
  * send_peer_param_cmd_tlv() - set peer parameter in fw
  * @wmi: wmi handle
@@ -17561,6 +17624,10 @@ struct wmi_ops tlv_ops =  {
 	.extract_quiet_offload_event =
 				extract_quiet_offload_event_tlv,
 #endif
+
+#ifdef WLAN_SUPPORT_PPEDS
+	.peer_ppe_ds_param_send = peer_ppe_ds_param_send_tlv,
+#endif /* WLAN_SUPPORT_PPEDS */
 };
 
 /**
