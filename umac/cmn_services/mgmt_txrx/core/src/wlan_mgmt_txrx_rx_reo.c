@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -1534,7 +1535,7 @@ mgmt_rx_reo_update_list(struct mgmt_rx_reo_list *reo_list,
 			bool *is_queued)
 {
 	struct mgmt_rx_reo_list_entry *cur_entry;
-	struct mgmt_rx_reo_list_entry *least_greater_entry;
+	struct mgmt_rx_reo_list_entry *least_greater_entry = NULL;
 	bool least_greater_entry_found = false;
 	QDF_STATUS status;
 	uint32_t new_frame_global_ts;
@@ -1622,26 +1623,37 @@ mgmt_rx_reo_update_list(struct mgmt_rx_reo_list *reo_list,
 		new_entry->insertion_ts = qdf_get_log_timestamp();
 		new_entry->ingress_timestamp = frame_desc->ingress_timestamp;
 
-		status = qdf_list_insert_before(&reo_list->list,
-						&new_entry->node,
-						&least_greater_entry->node);
+		if (least_greater_entry_found)
+			status = qdf_list_insert_before(
+					&reo_list->list, &new_entry->node,
+					&least_greater_entry->node);
+		else
+			status = qdf_list_insert_back(
+					&reo_list->list, &new_entry->node);
+
 		if (QDF_IS_STATUS_ERROR(status))
 			goto error;
 
 		*is_queued = true;
 	}
 
-	cur_entry = least_greater_entry;
-	qdf_list_for_each_from(&reo_list->list, cur_entry, node) {
-		uint8_t frame_link_id;
+	if (least_greater_entry_found) {
+		cur_entry = least_greater_entry;
 
-		frame_link_id = mgmt_rx_reo_get_link_id(frame_desc->rx_params);
-		if (cur_entry->wait_count.per_link_count[frame_link_id]) {
-			cur_entry->wait_count.per_link_count[frame_link_id]--;
-			cur_entry->wait_count.total_count--;
-			if (cur_entry->wait_count.total_count == 0)
-				cur_entry->status &=
-					~MGMT_RX_REO_STATUS_WAIT_FOR_FRAME_ON_OTHER_LINKS;
+		qdf_list_for_each_from(&reo_list->list, cur_entry, node) {
+			uint8_t frame_link_id;
+			struct mgmt_rx_reo_wait_count *wait_count;
+
+			frame_link_id =
+				mgmt_rx_reo_get_link_id(frame_desc->rx_params);
+			wait_count = &cur_entry->wait_count;
+			if (wait_count->per_link_count[frame_link_id]) {
+				wait_count->per_link_count[frame_link_id]--;
+				wait_count->total_count--;
+				if (wait_count->total_count == 0)
+					cur_entry->status &=
+						~MGMT_RX_REO_STATUS_WAIT_FOR_FRAME_ON_OTHER_LINKS;
+			}
 		}
 	}
 
@@ -1752,6 +1764,13 @@ wlan_mgmt_rx_reo_update_host_snapshot(struct wlan_objmgr_pdev *pdev,
 	}
 
 	host_ss = &rx_reo_pdev_ctx->host_snapshot;
+
+	/* There should not be any holes in the packet counter */
+	qdf_assert_always(!host_ss->valid ||
+			  mgmt_rx_reo_subtract_pkt_ctrs(
+				  reo_params->mgmt_pkt_ctr,
+				  host_ss->mgmt_pkt_ctr) == 1);
+
 	host_ss->valid = true;
 	host_ss->global_timestamp = reo_params->global_timestamp;
 	host_ss->mgmt_pkt_ctr = reo_params->mgmt_pkt_ctr;

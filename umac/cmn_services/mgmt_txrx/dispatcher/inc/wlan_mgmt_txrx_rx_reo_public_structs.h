@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -62,8 +63,18 @@ struct mgmt_rx_reo_snapshot_params {
  * @mgmt_rx_reo_snapshot_high: Higher 32 bits of the reo snapshot
  */
 struct mgmt_rx_reo_snapshot {
-	uint32_t mgmt_rx_reo_snapshot_low;
-	uint32_t mgmt_rx_reo_snapshot_high;
+	union {
+		uint32_t mgmt_rx_reo_snapshot_low;
+		uint32_t valid:1,
+			 mgmt_pkt_ctr:16,
+			 global_timestamp_low:15;
+	};
+
+	union {
+		uint32_t mgmt_rx_reo_snapshot_high;
+		uint32_t global_timestamp_high:17,
+			 mgmt_pkt_ctr_redundant:15;
+	};
 };
 
 /*
