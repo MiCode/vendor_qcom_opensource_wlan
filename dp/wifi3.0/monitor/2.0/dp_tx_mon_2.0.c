@@ -39,8 +39,8 @@ dp_tx_mon_srng_process_2_0(struct dp_soc *soc, struct dp_intr *int_ctx,
 	void *mon_dst_srng;
 	struct dp_mon_pdev *mon_pdev;
 	uint32_t work_done = 0;
-	struct dp_soc_be *be_soc = dp_get_be_soc_from_dp_soc(soc);
-	struct dp_mon_soc_be *monitor_soc = be_soc->monitor_soc_be;
+	struct dp_mon_soc *mon_soc = soc->monitor_soc;
+	struct dp_mon_soc_be *mon_soc_be = dp_get_be_mon_soc_from_dp_mon_soc(mon_soc);
 
 	if (!pdev) {
 		dp_mon_err("%pK: pdev is null for mac_id = %d", soc, mac_id);
@@ -48,7 +48,7 @@ dp_tx_mon_srng_process_2_0(struct dp_soc *soc, struct dp_intr *int_ctx,
 	}
 
 	mon_pdev = pdev->monitor_pdev;
-	mon_dst_srng = monitor_soc->tx_mon_dst_ring[mac_id].hal_srng;
+	mon_dst_srng = mon_soc_be->tx_mon_dst_ring[mac_id].hal_srng;
 
 	if (!mon_dst_srng || !hal_srng_initialized(mon_dst_srng)) {
 		dp_mon_err("%pK: : HAL Monitor Destination Ring Init Failed -- %pK",
@@ -76,7 +76,7 @@ dp_tx_mon_srng_process_2_0(struct dp_soc *soc, struct dp_intr *int_ctx,
 		struct dp_mon_desc *mon_desc;
 		struct dp_mon_desc_pool *tx_desc_pool;
 
-		tx_desc_pool = &monitor_soc->tx_desc_mon;
+		tx_desc_pool = &mon_soc_be->tx_desc_mon;
 		hal_be_get_mon_dest_status(soc->hal_soc,
 					   tx_mon_dst_ring_desc,
 					   &hal_mon_tx_desc);
@@ -118,28 +118,28 @@ dp_tx_mon_process_2_0(struct dp_soc *soc, struct dp_intr *int_ctx,
 void
 dp_tx_mon_buf_desc_pool_deinit(struct dp_soc *soc)
 {
-	struct dp_soc_be *be_soc = dp_get_be_soc_from_dp_soc(soc);
-	struct dp_mon_soc_be *mon_soc = be_soc->monitor_soc_be;
+	struct dp_mon_soc *mon_soc = soc->monitor_soc;
+	struct dp_mon_soc_be *mon_soc_be = dp_get_be_mon_soc_from_dp_mon_soc(mon_soc);
 
-	dp_mon_desc_pool_deinit(&mon_soc->tx_desc_mon);
+	dp_mon_desc_pool_deinit(&mon_soc_be->tx_desc_mon);
 }
 
 QDF_STATUS
 dp_tx_mon_buf_desc_pool_init(struct dp_soc *soc)
 {
-	struct dp_soc_be *be_soc = dp_get_be_soc_from_dp_soc(soc);
-	struct dp_mon_soc_be *mon_soc = be_soc->monitor_soc_be;
+	struct dp_mon_soc *mon_soc = soc->monitor_soc;
+	struct dp_mon_soc_be *mon_soc_be = dp_get_be_mon_soc_from_dp_mon_soc(mon_soc);
 
-	return dp_mon_desc_pool_init(&mon_soc->tx_desc_mon);
+	return dp_mon_desc_pool_init(&mon_soc_be->tx_desc_mon);
 }
 
 void dp_tx_mon_buf_desc_pool_free(struct dp_soc *soc)
 {
-	struct dp_soc_be *be_soc = dp_get_be_soc_from_dp_soc(soc);
-	struct dp_mon_soc_be *mon_soc = be_soc->monitor_soc_be;
+	struct dp_mon_soc *mon_soc = soc->monitor_soc;
+	struct dp_mon_soc_be *mon_soc_be = dp_get_be_mon_soc_from_dp_mon_soc(mon_soc);
 
-	if (mon_soc)
-		dp_mon_desc_pool_free(&mon_soc->tx_desc_mon);
+	if (mon_soc_be)
+		dp_mon_desc_pool_free(&mon_soc_be->tx_desc_mon);
 }
 
 QDF_STATUS
@@ -147,19 +147,20 @@ dp_tx_mon_buf_desc_pool_alloc(struct dp_soc *soc)
 {
 	struct dp_srng *mon_buf_ring;
 	struct dp_mon_desc_pool *tx_mon_desc_pool;
-	struct dp_soc_be *be_soc = dp_get_be_soc_from_dp_soc(soc);
-	struct dp_mon_soc_be *mon_soc = be_soc->monitor_soc_be;
 	int entries;
 	struct wlan_cfg_dp_soc_ctxt *soc_cfg_ctx;
+	struct dp_mon_soc *mon_soc = soc->monitor_soc;
+	struct dp_mon_soc_be *mon_soc_be = dp_get_be_mon_soc_from_dp_mon_soc(mon_soc);
 
 	soc_cfg_ctx = soc->wlan_cfg_ctx;
 
 	entries = wlan_cfg_get_dp_soc_tx_mon_buf_ring_size(soc_cfg_ctx);
 
-	mon_buf_ring = &mon_soc->tx_mon_buf_ring;
+	mon_buf_ring = &mon_soc_be->tx_mon_buf_ring;
 
-	tx_mon_desc_pool = &mon_soc->tx_desc_mon;
+	tx_mon_desc_pool = &mon_soc_be->tx_desc_mon;
 
+	qdf_print("%s:%d tx mon buf desc pool entries: %d", __func__, __LINE__, entries);
 	return dp_mon_desc_pool_alloc(entries, tx_mon_desc_pool);
 }
 
@@ -167,10 +168,10 @@ void
 dp_tx_mon_buffers_free(struct dp_soc *soc)
 {
 	struct dp_mon_desc_pool *tx_mon_desc_pool;
-	struct dp_soc_be *be_soc = dp_get_be_soc_from_dp_soc(soc);
-	struct dp_mon_soc_be *mon_soc = be_soc->monitor_soc_be;
+	struct dp_mon_soc *mon_soc = soc->monitor_soc;
+	struct dp_mon_soc_be *mon_soc_be = dp_get_be_mon_soc_from_dp_mon_soc(mon_soc);
 
-	tx_mon_desc_pool = &mon_soc->tx_desc_mon;
+	tx_mon_desc_pool = &mon_soc_be->tx_desc_mon;
 
 	dp_mon_pool_frag_unmap_and_free(soc, tx_mon_desc_pool);
 }
@@ -182,12 +183,12 @@ dp_tx_mon_buffers_alloc(struct dp_soc *soc, uint32_t size)
 	struct dp_mon_desc_pool *tx_mon_desc_pool;
 	union dp_mon_desc_list_elem_t *desc_list = NULL;
 	union dp_mon_desc_list_elem_t *tail = NULL;
-	struct dp_soc_be *be_soc = dp_get_be_soc_from_dp_soc(soc);
-	struct dp_mon_soc_be *mon_soc = be_soc->monitor_soc_be;
+	struct dp_mon_soc *mon_soc = soc->monitor_soc;
+	struct dp_mon_soc_be *mon_soc_be = dp_get_be_mon_soc_from_dp_mon_soc(mon_soc);
 
-	mon_buf_ring = &mon_soc->tx_mon_buf_ring;
+	mon_buf_ring = &mon_soc_be->tx_mon_buf_ring;
 
-	tx_mon_desc_pool = &mon_soc->tx_desc_mon;
+	tx_mon_desc_pool = &mon_soc_be->tx_desc_mon;
 
 	return dp_mon_buffers_replenish(soc, mon_buf_ring,
 					tx_mon_desc_pool,

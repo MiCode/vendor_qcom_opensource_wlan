@@ -23,6 +23,7 @@
 #include "dp_be.h"
 #include "dp_be_tx.h"
 #include "dp_be_rx.h"
+#if !defined(DISABLE_MON_CONFIG) && defined(QCA_MONITOR_2_0_SUPPORT)
 #ifdef QCA_MONITOR_2_0_SUPPORT
 #include "dp_mon_2.0.h"
 #endif
@@ -81,7 +82,7 @@ qdf_size_t dp_get_context_size_be(enum dp_context_type context_type)
 	}
 }
 
-#ifdef QCA_MONITOR_2_0_SUPPORT
+#if !defined(DISABLE_MON_CONFIG) && defined(QCA_MONITOR_2_0_SUPPORT)
 qdf_size_t dp_mon_get_context_size_be(enum dp_context_type context_type)
 {
 	switch (context_type) {
