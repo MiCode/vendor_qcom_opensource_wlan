@@ -264,6 +264,85 @@ static void reg_update_max_bw_per_rule(uint32_t num_reg_rules,
 			min(reg_rule_start[count].max_bw, max_bw);
 }
 
+#ifdef CONFIG_REG_CLIENT
+/**
+ * reg_bw_floor() - Calculate floor of a given bandwidth. Find the nearest
+ * bandwidth, from the set = {5, 10, 20, 40, 80, 160, 320}, which is less
+ * than or  equal to the given bandwidth. Any input bandwidth less than 5MHz
+ * is converted to 0.
+ * @in_bw: A positive bandwidth value
+ *
+ * Return: The floor of the given bandwidth.
+ */
+static uint16_t reg_bw_floor(uint16_t in_bw)
+{
+	static const uint16_t chwidth_array[] = {5, 10, 20, 40, 80, 160, 320};
+	int16_t i;
+
+	for (i = QDF_ARRAY_SIZE(chwidth_array) - 1; i >= 0; i--) {
+		if (in_bw >= chwidth_array[i])
+			return chwidth_array[i];
+	}
+	return 0;
+}
+
+/**
+ * reg_find_enhanced_bw() - Given two adjacent reg rules, it first finds the
+ * coalesced bandwidth limited by the country/regulatory domain bandwidth. Then
+ * it finds the nearest discrete bandwidth from the discrete
+ * set = {5, 10, 20, 40, 80, 160, 320} of bandwidths.
+ * @reg_rule_ptr: Pointer to reg rule
+ * @cur_idx: Current index to be considered
+ * @max_reg_bw: Maximum bandwidth of the country/regulatory domain
+ *
+ * Return: Return enhanced bandwidth of the coalesced band
+ */
+static uint16_t reg_find_enhanced_bw(struct cur_reg_rule *reg_rule_ptr,
+				     uint32_t cur_idx,
+				     uint16_t max_reg_bw)
+{
+	uint16_t cur_rule_diff_freq;
+	uint16_t next_rule_diff_freq;
+	uint16_t new_bw;
+	uint16_t enhanced_bw;
+
+	cur_rule_diff_freq = reg_rule_ptr[cur_idx].end_freq -
+			reg_rule_ptr[cur_idx].start_freq;
+	next_rule_diff_freq = reg_rule_ptr[cur_idx + 1].end_freq -
+			reg_rule_ptr[cur_idx + 1].start_freq;
+
+	new_bw = QDF_MIN(max_reg_bw, cur_rule_diff_freq + next_rule_diff_freq);
+	enhanced_bw = reg_bw_floor(new_bw);
+
+	return enhanced_bw;
+}
+
+/**
+ * reg_do_auto_bw_correction() - Calculate and update the maximum bandwidth
+ * value.
+ * @num_reg_rules: Number of regulatory rules.
+ * @reg_rule_ptr: Pointer to regulatory rules.
+ * @max_bw: Maximum bandwidth
+ */
+static void reg_do_auto_bw_correction(uint32_t num_reg_rules,
+				      struct cur_reg_rule *reg_rule_ptr,
+				      uint16_t max_bw)
+{
+	uint32_t count;
+	uint16_t enhanced_bw;
+
+	for (count = 0; count < num_reg_rules - 1; count++) {
+		if (reg_rule_ptr[count].end_freq ==
+		    reg_rule_ptr[count + 1].start_freq) {
+			enhanced_bw = reg_find_enhanced_bw(reg_rule_ptr,
+							   count,
+							   max_bw);
+			reg_rule_ptr[count].max_bw = enhanced_bw;
+			reg_rule_ptr[count + 1].max_bw = enhanced_bw;
+		}
+	}
+}
+#else
 /**
  * reg_do_auto_bw_correction() - Calculate and update the maximum bandwidth
  * value.
@@ -288,6 +367,7 @@ static void reg_do_auto_bw_correction(uint32_t num_reg_rules,
 		}
 	}
 }
+#endif
 
 /**
  * reg_modify_chan_list_for_dfs_channels() - disable the DFS channels if
