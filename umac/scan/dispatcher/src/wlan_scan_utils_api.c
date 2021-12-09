@@ -1780,21 +1780,72 @@ static void util_scan_set_security(struct scan_cache_entry *scan_params)
 #define CMN_INFO_LINK_ID_PRESENT_BIT      BIT(5)
 #define LINK_INFO_MAC_ADDR_PRESENT_BIT    BIT(5)
 
+/* This function is implemented as per IEEE802.11be D1.0, there is no difference
+ * in presence bitmap for beacon, probe response and probe request frames.
+ * This code is to be revisited for future drafts if the presence bitmap values
+ * changes for the beacon, probe response and probe request frames.
+ */
 static uint8_t util_get_link_info_offset(uint8_t *ml_ie)
 {
-	uint8_t offset = ML_CMN_INFO_OFFSET;
-	uint8_t ml_ie_len = ml_ie[1];
-	uint16_t multi_link_ctrl = *(uint16_t *)(ml_ie + ML_CONTROL_OFFSET);
+	qdf_size_t ml_ie_len = 0;
+	qdf_size_t parsed_ie_len = 0;
+	struct wlan_ie_multilink *mlie_fixed;
+	uint16_t mlcontrol;
+	uint16_t presencebm;
 
-	offset += (BIT(4) & multi_link_ctrl) * 6 +
-		  (BIT(5) & multi_link_ctrl) * 1 +
-		  (BIT(6) & multi_link_ctrl) * 1 +
-		  (BIT(7) & multi_link_ctrl) * 2 +
-		  (BIT(8) & multi_link_ctrl) * 2 +
-		  (BIT(9) & multi_link_ctrl) * 2;
+	if (!ml_ie) {
+		scm_err("ml_ie is null");
+		return 0;
+	}
 
-	if (offset < ml_ie_len)
-		return offset;
+	ml_ie_len = ml_ie[TAG_LEN_POS];
+	if (!ml_ie_len) {
+		scm_err("ml_ie_len is zero");
+		return 0;
+	}
+
+	if (ml_ie_len < sizeof(struct wlan_ie_multilink)) {
+		scm_err_rl("Length %zu octets is smaller than required for the fixed portion of Multi-Link element (%zu octets)",
+			   ml_ie_len, sizeof(struct wlan_ie_multilink));
+		return 0;
+	}
+
+	mlie_fixed = (struct wlan_ie_multilink *)ml_ie;
+	mlcontrol = le16toh(mlie_fixed->mlcontrol);
+	presencebm = QDF_GET_BITS(mlcontrol, WLAN_ML_CTRL_PBM_IDX,
+				  WLAN_ML_CTRL_PBM_BITS);
+
+	parsed_ie_len += sizeof(*mlie_fixed);
+
+	/* Check if MLD MAC address is present */
+	if (presencebm & WLAN_ML_BV_CTRL_PBM_MLDMACADDR_P)
+		parsed_ie_len += QDF_MAC_ADDR_SIZE;
+
+	/* Check if Link ID info is present */
+	if (presencebm & WLAN_ML_BV_CTRL_PBM_LINKIDINFO_P)
+		parsed_ie_len += WLAN_ML_BV_CINFO_LINKIDINFO_SIZE;
+
+	/* Check if BSS parameter change count is present */
+	if (presencebm & WLAN_ML_BV_CTRL_PBM_BSSPARAMCHANGECNT_P)
+		parsed_ie_len += WLAN_ML_BV_CINFO_BSSPARAMCHNGCNT_SIZE;
+
+	/* Check if Medium Sync Delay Info is present */
+	if (presencebm & WLAN_ML_BV_CTRL_PBM_MEDIUMSYNCDELAYINFO_P)
+		parsed_ie_len += WLAN_ML_BV_CINFO_MEDMSYNCDELAYINFO_SIZE;
+
+	/* Check if EML cap is present */
+	if (presencebm & WLAN_ML_BV_CTRL_PBM_EMLCAP_P)
+		parsed_ie_len += WLAN_ML_BV_CINFO_EMLCAP_SIZE;
+
+	/* Check if MLD cap is present */
+	if (presencebm & WLAN_ML_BV_CTRL_PBM_MLDCAP_P)
+		parsed_ie_len += WLAN_ML_BV_CINFO_MLDCAP_SIZE;
+
+	/* Offset calculation starts from the beginning of the ML IE (including
+	 * EID) hence, adding the size of IE header to ML IE length.
+	 */
+	if (parsed_ie_len < (ml_ie_len + sizeof(struct ie_header)))
+		return parsed_ie_len;
 
 	return 0;
 }
