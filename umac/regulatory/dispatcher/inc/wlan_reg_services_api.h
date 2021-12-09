@@ -1142,16 +1142,6 @@ void wlan_reg_update_nol_history_ch_for_freq(struct wlan_objmgr_pdev *pdev,
 					     uint16_t *ch_list,
 					     uint8_t num_ch,
 					     bool nol_history_ch);
-/**
- * wlan_reg_is_frequency_valid_5g_sbs() Check if the given frequency is 5G SBS.
- * @curfreq: current channel center frequency
- * @newfreq:new channel center frequency
- *
- * Return: true if the given frequency is a valid 5G SBS
- */
-#define WLAN_REG_IS_FREQUENCY_VALID_5G_SBS(curfreq, newfreq) \
-	wlan_reg_is_frequency_valid_5g_sbs(curfreq, newfreq)
-bool wlan_reg_is_frequency_valid_5g_sbs(qdf_freq_t curfreq, qdf_freq_t newfreq);
 
 /**
  * wlan_reg_chan_has_dfs_attribute_for_freq() - check channel has dfs

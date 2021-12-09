@@ -949,11 +949,6 @@ bool wlan_reg_is_same_band_freqs(qdf_freq_t freq1, qdf_freq_t freq2)
 	return reg_is_same_band_freqs(freq1, freq2);
 }
 
-bool wlan_reg_is_frequency_valid_5g_sbs(qdf_freq_t curfreq, qdf_freq_t newfreq)
-{
-	return reg_is_frequency_valid_5g_sbs(curfreq, newfreq);
-}
-
 enum channel_enum wlan_reg_get_chan_enum_for_freq(qdf_freq_t freq)
 {
 	return reg_get_chan_enum_for_freq(freq);

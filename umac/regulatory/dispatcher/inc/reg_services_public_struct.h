@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2017-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -27,8 +28,6 @@
 #ifdef CONFIG_AFC_SUPPORT
 #include <wlan_reg_afc.h>
 #endif
-
-#define REG_SBS_SEPARATION_THRESHOLD 100
 
 #ifdef CONFIG_BAND_6GHZ
 #define REG_MAX_CHANNELS_PER_OPERATING_CLASS        70

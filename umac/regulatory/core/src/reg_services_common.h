@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2017-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  *
  * Permission to use, copy, modify, and/or distribute this software for
@@ -998,15 +999,6 @@ void reg_update_nol_history_ch_for_freq(struct wlan_objmgr_pdev *pdev,
  * Return: true if both the frequencies has the same band.
  */
 bool reg_is_same_band_freqs(qdf_freq_t freq1, qdf_freq_t freq2);
-
-/**
- * reg_is_frequency_valid_5g_sbs() Check if the given frequency is 5G SBS.
- * @curfreq: current channel frequency
- * @newfreq: new channel center frequency
- *
- * Return: true if the given center frequency is a valid 5G SBS
- */
-bool reg_is_frequency_valid_5g_sbs(qdf_freq_t curfreq, qdf_freq_t newfreq);
 
 /**
  * reg_freq_to_band() - Get band from channel frequency

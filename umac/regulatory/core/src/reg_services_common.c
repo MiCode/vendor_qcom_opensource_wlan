@@ -4488,23 +4488,6 @@ void reg_update_nol_history_ch_for_freq(struct wlan_objmgr_pdev *pdev,
 	}
 }
 
-static inline bool REG_IS_FREQUENCY_VALID_5G_SBS(qdf_freq_t curfreq,
-						 qdf_freq_t newfreq)
-{
-	return ((curfreq) > (newfreq) ?
-	REG_CH_TO_FREQ(reg_get_chan_enum_for_freq(curfreq))
-	- REG_CH_TO_FREQ(reg_get_chan_enum_for_freq(newfreq))
-	> REG_SBS_SEPARATION_THRESHOLD :
-	REG_CH_TO_FREQ(reg_get_chan_enum_for_freq(newfreq))
-	- REG_CH_TO_FREQ(reg_get_chan_enum_for_freq(curfreq))
-	> REG_SBS_SEPARATION_THRESHOLD);
-}
-
-bool reg_is_frequency_valid_5g_sbs(qdf_freq_t curfreq, qdf_freq_t newfreq)
-{
-	return REG_IS_FREQUENCY_VALID_5G_SBS(curfreq, newfreq);
-}
-
 qdf_freq_t reg_min_chan_freq(void)
 {
 	return channel_map[MIN_24GHZ_CHANNEL].center_freq;
