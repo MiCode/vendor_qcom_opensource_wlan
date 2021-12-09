@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -16,6 +16,9 @@
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
  */
+#ifndef _HAL_9224_TX_H_
+#define _HAL_9224_TX_H_
+
 #include "tcl_data_cmd.h"
 #include "phyrx_rssi_legacy.h"
 #include "hal_internal.h"
@@ -189,3 +192,38 @@ hal_tx_init_cmd_credit_ring_9224(hal_soc_handle_t hal_soc_hdl,
 				 hal_ring_handle_t hal_ring_hdl)
 {
 }
+
+/* TX MONITOR */
+#ifdef QCA_MONITOR_2_0_SUPPORT
+
+#if defined(TX_MONITOR_WORD_MASK)
+typedef struct tx_fes_setup_compact_9224 hal_tx_fes_setup_t;
+struct tx_fes_setup_compact_9224 {
+	/* DWORD - 0 */
+	uint32_t schedule_id;
+	/* DWORD - 1 */
+	uint32_t reserved_1a			: 7,  // [0: 6]
+		transmit_start_reason		: 3,  // [7: 9]
+		reserved_1b			: 13, // [10: 22]
+		number_of_users			: 6,  // [28: 23]
+		MU_type				: 1,  // [29]
+		reserved_1c			: 2;  // [30]
+	/* DWORD - 2 */
+	uint32_t reserved_2a			: 4,  // [0: 3]
+		ndp_frame			: 2,  // [4: 5]
+		txbf				: 1,  // [6]
+		reserved_2b			: 3,  // [7: 9]
+		static_bandwidth		: 3,  // [12: 10]
+		reserved_2c			: 1,  // [13]
+		transmission_contains_MU_RTS	: 1,  // [14]
+		reserved_2d			: 17; // [15: 31]
+	/* DWORD - 3 */
+	uint32_t reserved_3a			: 15, // [0: 14]
+		mu_ndp				: 1,  // [15]
+		reserved_3b			: 11, // [16: 26]
+		ndpa				: 1,  // [27]
+		reserved_3c			: 4;  // [28: 31]
+};
+#endif
+#endif /* QCA_MONITOR_2_0_SUPPORT */
+#endif /* _HAL_9224_TX_H_ */

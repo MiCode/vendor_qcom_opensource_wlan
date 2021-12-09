@@ -2564,6 +2564,116 @@ hal_txmon_get_buffer_addr_generic_be(void *tx_tlv,
 	return buf_addr;
 }
 
+#if defined(TX_MONITOR_WORD_MASK)
+/**
+ * hal_txmon_get_num_users() - get num users from tx_fes_setup tlv
+ *
+ * @tx_tlv: pointer to tx_fes_setup tlv header
+ *
+ * Return: number of users
+ */
+static inline uint8_t
+hal_txmon_get_num_users(void *tx_tlv)
+{
+	hal_tx_fes_setup_t *tx_fes_setup = (hal_tx_fes_setup_t *)tx_tlv;
+
+	return tx_fes_setup->number_of_users;
+}
+
+/**
+ * hal_txmon_parse_tx_fes_setup() - parse tx_fes_setup tlv
+ *
+ * @tx_tlv: pointer to tx_fes_setup tlv header
+ * @ppdu_info: pointer to hal_tx_ppdu_info
+ *
+ * Return: void
+ */
+static inline void
+hal_txmon_parse_tx_fes_setup(void *tx_tlv,
+			     struct hal_tx_ppdu_info *tx_ppdu_info)
+{
+	hal_tx_fes_setup_t *tx_fes_setup = (hal_tx_fes_setup_t *)tx_tlv;
+
+	tx_ppdu_info->num_users = tx_fes_setup->number_of_users;
+}
+#else
+/**
+ * hal_txmon_get_num_users() - get num users from tx_fes_setup tlv
+ *
+ * @tx_tlv: pointer to tx_fes_setup tlv header
+ *
+ * Return: number of users
+ */
+static inline uint8_t
+hal_txmon_get_num_users(void *tx_tlv)
+{
+	uint8_t num_users = HAL_TX_DESC_GET(tx_tlv,
+					    TX_FES_SETUP, NUMBER_OF_USERS);
+
+	return num_users;
+}
+
+/**
+ * hal_txmon_parse_tx_fes_setup() - parse tx_fes_setup tlv
+ *
+ * @tx_tlv: pointer to tx_fes_setup tlv header
+ * @ppdu_info: pointer to hal_tx_ppdu_info
+ *
+ * Return: void
+ */
+static inline void
+hal_txmon_parse_tx_fes_setup(void *tx_tlv,
+			     struct hal_tx_ppdu_info *tx_ppdu_info)
+{
+	tx_ppdu_info->num_users = HAL_TX_DESC_GET(tx_tlv,
+						  TX_FES_SETUP,
+						  NUMBER_OF_USERS);
+}
+#endif
+
+/**
+ * hal_txmon_status_get_num_users_generic_be() - api to get num users
+ * from start of fes window
+ *
+ * @tx_tlv_hdr: pointer to TLV header
+ * @num_users: reference to number of user
+ *
+ * Return: status
+ */
+static inline uint32_t
+hal_txmon_status_get_num_users_generic_be(void *tx_tlv_hdr, uint8_t *num_users)
+{
+	uint32_t tlv_tag, user_id, tlv_len;
+	uint32_t tlv_status = HAL_MON_TX_STATUS_PPDU_NOT_DONE;
+	void *tx_tlv;
+
+	tlv_tag = HAL_RX_GET_USER_TLV32_TYPE(tx_tlv_hdr);
+	user_id = HAL_RX_GET_USER_TLV32_USERID(tx_tlv_hdr);
+	tlv_len = HAL_RX_GET_USER_TLV32_LEN(tx_tlv_hdr);
+
+	tx_tlv = (uint8_t *)tx_tlv_hdr + HAL_RX_TLV32_HDR_SIZE;
+	/* window starts with either initiator or response */
+	switch (tlv_tag) {
+	case WIFITX_FES_SETUP_E:
+	{
+		*num_users = hal_txmon_get_num_users(tx_tlv);
+
+		tlv_status = HAL_MON_TX_FES_SETUP;
+		break;
+	}
+	case WIFIRX_RESPONSE_REQUIRED_INFO_E:
+	{
+		*num_users = HAL_TX_DESC_GET(tx_tlv,
+					     RX_RESPONSE_REQUIRED_INFO,
+					     RESPONSE_STA_COUNT);
+		tlv_status = HAL_MON_RX_RESPONSE_REQUIRED_INFO;
+		break;
+	}
+	};
+
+	return tlv_status;
+}
+
 /**
  * hal_txmon_free_status_buffer() - api to free status buffer
  * @pdev_handle: DP_PDEV handle
@@ -2601,6 +2711,124 @@ hal_txmon_status_free_buffer_generic_be(qdf_frag_t status_frag)
 		if ((tx_tlv - tx_tlv_start) >= TX_MON_STATUS_BUF_SIZE)
 			break;
 	} while (tlv_status == HAL_MON_TX_STATUS_PPDU_NOT_DONE);
+}
+
+/**
+ * hal_tx_get_ppdu_info() - api to get tx ppdu info
+ * @pdev_handle: DP_PDEV handle
+ * @prot_ppdu_info: populate dp_ppdu_info protection
+ * @tx_data_ppdu_info: populate dp_ppdu_info data
+ * @tlv_tag: Tag
+ *
+ * Return: dp_tx_ppdu_info pointer
+ */
+static inline void *
+hal_tx_get_ppdu_info(void *data_info, void *prot_info, uint32_t tlv_tag)
+{
+	struct hal_tx_ppdu_info *prot_ppdu_info = prot_info;
+
+	switch (tlv_tag) {
+	case WIFITX_FES_SETUP_E:/* DOWNSTREAM */
+	case WIFITX_FLUSH_E:/* DOWNSTREAM */
+	case WIFIPCU_PPDU_SETUP_INIT_E:/* DOWNSTREAM */
+	case WIFITX_PEER_ENTRY_E:/* DOWNSTREAM */
+	case WIFITX_QUEUE_EXTENSION_E:/* DOWNSTREAM */
+	case WIFITX_MPDU_START_E:/* DOWNSTREAM */
+	case WIFITX_MSDU_START_E:/* DOWNSTREAM */
+	case WIFITX_DATA_E:/* DOWNSTREAM */
+	case WIFIMON_BUFFER_ADDR_E:/* DOWNSTREAM */
+	case WIFITX_MPDU_END_E:/* DOWNSTREAM */
+	case WIFITX_MSDU_END_E:/* DOWNSTREAM */
+	case WIFITX_LAST_MPDU_FETCHED_E:/* DOWNSTREAM */
+	case WIFITX_LAST_MPDU_END_E:/* DOWNSTREAM */
+	case WIFICOEX_TX_REQ_E:/* DOWNSTREAM */
+	case WIFITX_RAW_OR_NATIVE_FRAME_SETUP_E:/* DOWNSTREAM */
+	case WIFINDP_PREAMBLE_DONE_E:/* DOWNSTREAM */
+	case WIFISCH_CRITICAL_TLV_REFERENCE_E:/* DOWNSTREAM */
+	case WIFITX_LOOPBACK_SETUP_E:/* DOWNSTREAM */
+	case WIFITX_FES_SETUP_COMPLETE_E:/* DOWNSTREAM */
+	case WIFITQM_MPDU_GLOBAL_START_E:/* DOWNSTREAM */
+	case WIFITX_WUR_DATA_E:/* DOWNSTREAM */
+	case WIFISCHEDULER_END_E:/* DOWNSTREAM */
+	{
+		return data_info;
+	}
+	}
+
+	/*
+	 * check current prot_tlv_status is start protection
+	 * check current tlv_tag is either start protection or end protection
+	 */
+	if (TXMON_HAL(prot_ppdu_info,
+		      prot_tlv_status) == WIFITX_FES_STATUS_START_PROT_E) {
+		return prot_info;
+	} else if (tlv_tag == WIFITX_FES_STATUS_PROT_E ||
+		   tlv_tag == WIFITX_FES_STATUS_START_PROT_E) {
+		TXMON_HAL(prot_ppdu_info, prot_tlv_status) = tlv_tag;
+		return prot_info;
+	} else {
+		return data_info;
+	}
+
+	return data_info;
+}
+
+/**
+ * hal_txmon_status_parse_tlv_generic_be() - api to parse status tlv.
+ * @data_ppdu_info: hal_txmon data ppdu info
+ * @prot_ppdu_info: hal_txmon prot ppdu info
+ * @data_status_info: pointer to data status info
+ * @prot_status_info: pointer to prot status info
+ * @tx_tlv_hdr: fragment of tx_tlv_hdr
+ * @status_frag: qdf_frag_t buffer
+ *
+ * Return: status
+ */
+static inline uint32_t
+hal_txmon_status_parse_tlv_generic_be(void *data_ppdu_info,
+				      void *prot_ppdu_info,
+				      void *data_status_info,
+				      void *prot_status_info,
+				      void *tx_tlv_hdr,
+				      qdf_frag_t status_frag)
+{
+	struct hal_tx_ppdu_info *tx_ppdu_info;
+	struct hal_tx_status_info *tx_status_info;
+	uint32_t tlv_tag, user_id, tlv_len;
+	qdf_frag_t frag_buf = NULL;
+	uint32_t status = HAL_MON_TX_STATUS_PPDU_NOT_DONE;
+	void *tx_tlv;
+
+	tlv_tag = HAL_RX_GET_USER_TLV32_TYPE(tx_tlv_hdr);
+	user_id = HAL_RX_GET_USER_TLV32_USERID(tx_tlv_hdr);
+	tlv_len = HAL_RX_GET_USER_TLV32_LEN(tx_tlv_hdr);
+
+	tx_tlv = (uint8_t *)tx_tlv_hdr + HAL_RX_TLV32_HDR_SIZE;
+
+	tx_ppdu_info = hal_tx_get_ppdu_info(data_ppdu_info,
+					    prot_ppdu_info, tlv_tag);
+	tx_status_info = (tx_ppdu_info->is_data ? data_status_info :
+			  prot_status_info);
+
+	/* parse tlv and populate tx_ppdu_info */
+	switch (tlv_tag) {
+	case WIFIMON_BUFFER_ADDR_E:
+	{
+		frag_buf = hal_txmon_get_buffer_addr_generic_be(tx_tlv, NULL);
+		if (frag_buf)
+			qdf_frag_free(frag_buf);
+		frag_buf = NULL;
+		status = HAL_MON_TX_BUFFER_ADDR;
+		break;
+	}
+	case WIFITX_FES_STATUS_START_PROT_E:
+	{
+		TXMON_HAL(tx_ppdu_info, prot_tlv_status) = tlv_tag;
+		break;
+	}
+	}
+
+	return status;
 }
 #endif /* QCA_MONITOR_2_0_SUPPORT */
 

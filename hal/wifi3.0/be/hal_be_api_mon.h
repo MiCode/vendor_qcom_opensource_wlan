@@ -238,6 +238,48 @@ enum hal_tx_tlv_status {
 	HAL_MON_TX_STATUS_PPDU_NOT_DONE,
 };
 
+enum txmon_transmission_type {
+	TXMON_SU_TRANSMISSION = 0,
+	TXMON_MU_TRANSMISSION,
+	TXMON_MU_SU_TRANSMISSION,
+	TXMON_MU_MIMO_TRANSMISSION = 1,
+	TXMON_MU_OFDMA_TRANMISSION
+};
+
+#define TXMON_HAL(hal_tx_ppdu_info, field)		\
+			hal_tx_ppdu_info->field
+#define TXMON_HAL_STATUS(hal_tx_ppdu_info, field)	\
+			hal_tx_ppdu_info->rx_status.field
+#define TXMON_HAL_USER(hal_tx_ppdu_info, user_id, field)		\
+			hal_tx_ppdu_info->rx_user_status[user_id].field
+
+#define TXMON_STATUS_INFO(hal_tx_status_info, field)	\
+			hal_tx_status_info->field
+
+struct hal_tx_status_info {
+	uint8_t reception_type;
+	uint8_t transmission_type;
+	uint8_t medium_prot_type;
+
+	void *buffer;
+	uint32_t offset;
+	uint32_t len_bytes;
+};
+
+struct hal_tx_ppdu_info {
+	uint32_t ppdu_id;
+
+	uint32_t num_users	:8,
+		 is_used	:1,
+		 is_data	:1,
+		 reserved	:23;
+
+	uint32_t prot_tlv_status;
+
+	struct mon_rx_status rx_status;
+	struct mon_rx_user_status rx_user_status[];
+};
+
 /**
  * hal_tx_status_get_next_tlv() - get next tx status TLV
  * @tx_tlv: pointer to TLV header
@@ -255,7 +297,57 @@ hal_tx_status_get_next_tlv(uint8_t *tx_tlv) {
 					    HAL_RX_TLV32_HDR_SIZE + 3)) & (~3));
 }
 
-/*
+/**
+ * hal_txmon_status_parse_tlv() - process transmit info TLV
+ * @hal_soc: HAL soc handle
+ * @data_ppdu_info: pointer to hal data ppdu info
+ * @prot_ppdu_info: pointer to hal prot ppdu info
+ * @data_status_info: pointer to data status info
+ * @prot_status_info: pointer to prot status info
+ * @tx_tlv_hdr: pointer to TLV header
+ * @status_frag: pointer to status frag
+ *
+ * Return: HAL_TLV_STATUS_PPDU_NOT_DONE
+ */
+static inline uint32_t
+hal_txmon_status_parse_tlv(hal_soc_handle_t hal_soc_hdl,
+			   void *data_ppdu_info,
+			   void *prot_ppdu_info,
+			   void *data_status_info,
+			   void *prot_status_info,
+			   void *tx_tlv_hdr,
+			   qdf_frag_t status_frag)
+{
+	struct hal_soc *hal_soc = (struct hal_soc *)hal_soc_hdl;
+
+	return hal_soc->ops->hal_txmon_status_parse_tlv(data_ppdu_info,
+							prot_ppdu_info,
+							data_status_info,
+							prot_status_info,
+							tx_tlv_hdr,
+							status_frag);
+}
+
+/**
+ * hal_txmon_status_get_num_users() - api to get num users from start of fes
+ * window
+ * @hal_soc: HAL soc handle
+ * @tx_tlv_hdr: pointer to TLV header
+ * @num_users: reference to number of user
+ *
+ * Return: status
+ */
+static inline uint32_t
+hal_txmon_status_get_num_users(hal_soc_handle_t hal_soc_hdl,
+			       void *tx_tlv_hdr, uint8_t *num_users)
+{
+	struct hal_soc *hal_soc = (struct hal_soc *)hal_soc_hdl;
+
+	return hal_soc->ops->hal_txmon_status_get_num_users(tx_tlv_hdr,
+							    num_users);
+}
+
+/**
  * hal_txmon_status_free_buffer() - api to free status buffer
  * @hal_soc: HAL soc handle
  * @status_frag: qdf_frag_t buffer
@@ -270,6 +362,22 @@ hal_txmon_status_free_buffer(hal_soc_handle_t hal_soc_hdl,
 
 	if (hal_soc->ops->hal_txmon_status_free_buffer)
 		hal_soc->ops->hal_txmon_status_free_buffer(status_frag);
+}
+
+/**
+ * hal_tx_status_get_tlv_tag() - api to get tlv tag
+ * @tx_tlv_hdr: pointer to TLV header
+ *
+ * Return tlv_tag
+ */
+static inline uint32_t
+hal_tx_status_get_tlv_tag(void *tx_tlv_hdr)
+{
+	uint32_t tlv_tag = 0;
+
+	tlv_tag = HAL_RX_GET_USER_TLV32_TYPE(tx_tlv_hdr);
+
+	return tlv_tag;
 }
 #endif /* QCA_MONITOR_2_0_SUPPORT */
 #endif /* _HAL_BE_API_MON_H_ */

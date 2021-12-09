@@ -1026,6 +1026,14 @@ struct hal_hw_txrx_ops {
 
 	/* TX MONITOR */
 #ifdef QCA_MONITOR_2_0_SUPPORT
+	uint32_t (*hal_txmon_status_parse_tlv)(void *data_ppdu_info,
+					       void *prot_ppdu_info,
+					       void *data_status_info,
+					       void *prot_status_info,
+					       void *tx_tlv_hdr,
+					       qdf_frag_t status_frag);
+	uint32_t (*hal_txmon_status_get_num_users)(void *tx_tlv_hdr,
+						   uint8_t *num_users);
 	void (*hal_txmon_status_free_buffer)(qdf_frag_t status_frag);
 #endif /* QCA_MONITOR_2_0_SUPPORT */
 	void (*hal_reo_shared_qaddr_setup)(hal_soc_handle_t hal_soc_hdl);

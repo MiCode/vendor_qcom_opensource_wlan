@@ -1840,6 +1840,15 @@ static void hal_hw_txrx_ops_attach_qcn9224(struct hal_soc *hal_soc)
 	hal_soc->ops->hal_reo_shared_qaddr_detach = hal_reo_shared_qaddr_detach_be;
 	hal_soc->ops->hal_reo_shared_qaddr_write = hal_reo_shared_qaddr_write_be;
 #endif
+	/* TX MONITOR */
+#ifdef QCA_MONITOR_2_0_SUPPORT
+	hal_soc->ops->hal_txmon_status_parse_tlv =
+				hal_txmon_status_parse_tlv_generic_be;
+	hal_soc->ops->hal_txmon_status_get_num_users =
+				hal_txmon_status_get_num_users_generic_be;
+	hal_soc->ops->hal_txmon_status_free_buffer =
+				hal_txmon_status_free_buffer_generic_be;
+#endif /* QCA_MONITOR_2_0_SUPPORT */
 };
 
 struct hal_hw_srng_config hw_srng_table_9224[] = {
