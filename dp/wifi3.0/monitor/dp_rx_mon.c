@@ -725,7 +725,8 @@ static inline void dp_rx_rate_stats_update(struct dp_peer *peer,
 
 	ppdu->rix = rix;
 	DP_STATS_UPD(peer, rx.last_rx_rate, ratekbps);
-	dp_ath_rate_lpf(peer->stats.rx.avg_rx_rate, ratekbps);
+	peer->stats.rx.avg_rx_rate =
+			dp_ath_rate_lpf(peer->stats.rx.avg_rx_rate, ratekbps);
 	ppdu_rx_rate = dp_ath_rate_out(peer->stats.rx.avg_rx_rate);
 	DP_STATS_UPD(peer, rx.rnd_avg_rx_rate, ppdu_rx_rate);
 	ppdu->rx_ratekbps = ratekbps;
@@ -968,7 +969,7 @@ static void dp_rx_stats_update(struct dp_pdev *pdev,
 			mon_ops->mon_rx_stats_update(peer, ppdu, ppdu_user);
 
 		dp_peer_stats_notify(pdev, peer);
-		DP_STATS_UPD(peer, rx.last_snr, ppdu->rssi);
+		DP_STATS_UPD(peer, rx.last_snr, (ppdu->rssi + pkt_bw_offset));
 
 		dp_peer_qos_stats_notify(pdev, ppdu_user);
 		if (peer == pdev->invalid_peer)
