@@ -174,8 +174,10 @@ struct dfs_to_mlme {
 					     uint64_t dfs_ch_flags,
 					     int *cac_timeout);
 #endif
+#if defined(WLAN_DFS_PARTIAL_OFFLOAD) && defined(HOST_DFS_SPOOF_TEST)
 	QDF_STATUS (*mlme_rebuild_chan_list_with_non_dfs_channels)
 			(struct wlan_objmgr_pdev *pdev);
+#endif
 	QDF_STATUS (*mlme_restart_vaps_with_non_dfs_chan)
 			(struct wlan_objmgr_pdev *pdev, int no_chans_avail);
 	bool (*mlme_check_allowed_prim_chanlist)
@@ -194,8 +196,10 @@ struct dfs_to_mlme {
 			(struct wlan_objmgr_pdev *pdev);
 	void (*mlme_release_radar_mode_switch_lock)
 			(struct wlan_objmgr_pdev *pdev);
+#if defined(WLAN_DFS_PARTIAL_OFFLOAD) && defined(HOST_DFS_SPOOF_TEST)
 	QDF_STATUS (*mlme_proc_spoof_success)
 			(struct wlan_objmgr_pdev *pdev);
+#endif
 };
 
 extern struct dfs_to_mlme global_dfs_to_mlme;

@@ -638,6 +638,19 @@ wlan_lmac_if_mgmt_txrx_rx_ops_register(struct wlan_lmac_if_rx_ops *rx_ops)
 	return wlan_lmac_if_mgmt_rx_reo_rx_ops_register(mgmt_txrx_rx_ops);
 }
 
+#if defined(WLAN_DFS_PARTIAL_OFFLOAD) && defined(HOST_DFS_SPOOF_TEST)
+static void dfs_action_on_status_assign(
+		struct wlan_lmac_if_dfs_rx_ops *dfs_rx_ops)
+{
+	dfs_rx_ops->dfs_action_on_status = tgt_dfs_action_on_status_from_fw;
+}
+#else
+static inline void dfs_action_on_status_assign(
+		struct wlan_lmac_if_dfs_rx_ops *dfs_rx_ops)
+{
+}
+#endif
+
 static QDF_STATUS
 wlan_lmac_if_umac_dfs_rx_ops_register(struct wlan_lmac_if_rx_ops *rx_ops)
 {
@@ -678,7 +691,9 @@ wlan_lmac_if_umac_dfs_rx_ops_register(struct wlan_lmac_if_rx_ops *rx_ops)
 		tgt_dfs_process_phyerr_filter_offload;
 	dfs_rx_ops->dfs_is_phyerr_filter_offload =
 		tgt_dfs_is_phyerr_filter_offload;
-	dfs_rx_ops->dfs_action_on_status = tgt_dfs_action_on_status_from_fw;
+
+	dfs_action_on_status_assign(dfs_rx_ops);
+
 	dfs_rx_ops->dfs_override_status_timeout =
 		ucfg_dfs_set_override_status_timeout;
 	dfs_rx_ops->dfs_get_override_status_timeout =

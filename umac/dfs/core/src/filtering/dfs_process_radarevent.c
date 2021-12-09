@@ -1421,6 +1421,20 @@ void dfs_radarfound_action_generic(struct wlan_dfs *dfs, uint8_t seg_id)
 	qdf_mem_free(radar_found);
 }
 
+#if defined(WLAN_DFS_PARTIAL_OFFLOAD) && defined(HOST_DFS_SPOOF_TEST)
+static bool dfs_is_spoof_needed(struct wlan_dfs *dfs)
+{
+	return ((utils_get_dfsdomain(dfs->dfs_pdev_obj) == DFS_FCC_DOMAIN) &&
+		(lmac_is_host_dfs_check_support_enabled(dfs->dfs_pdev_obj)) &&
+		(dfs->dfs_spoof_test_done ? dfs->dfs_use_nol : 1));
+}
+#else
+static inline bool dfs_is_spoof_needed(struct wlan_dfs *dfs)
+{
+	return false;
+}
+#endif
+
 /**
  * dfs_radar_found_action() - Radar found action
  * @dfs: Pointer to wlan_dfs structure.
@@ -1436,10 +1450,7 @@ static void dfs_radar_found_action(struct wlan_dfs *dfs,
 	 * average radar parameters to FW and start the host status
 	 * wait timer.
 	 */
-	if (!bangradar &&
-	   (utils_get_dfsdomain(dfs->dfs_pdev_obj) == DFS_FCC_DOMAIN) &&
-	   lmac_is_host_dfs_check_support_enabled(dfs->dfs_pdev_obj) &&
-	   (dfs->dfs_spoof_test_done ? dfs->dfs_use_nol : 1)) {
+	if (!bangradar && dfs_is_spoof_needed(dfs)) {
 		dfs_radarfound_action_fcc(dfs, seg_id);
 	} else {
 		dfs_radarfound_action_generic(dfs, seg_id);

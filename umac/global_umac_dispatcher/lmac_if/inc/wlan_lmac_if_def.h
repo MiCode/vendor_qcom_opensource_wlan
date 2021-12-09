@@ -1922,8 +1922,10 @@ struct wlan_lmac_if_dfs_rx_ops {
 	QDF_STATUS (*dfs_is_phyerr_filter_offload)(
 			struct wlan_objmgr_psoc *psoc,
 			bool *is_phyerr_filter_offload);
+#if defined(WLAN_DFS_PARTIAL_OFFLOAD) && defined(HOST_DFS_SPOOF_TEST)
 	QDF_STATUS (*dfs_action_on_status)(struct wlan_objmgr_pdev *pdev,
 			u_int32_t *dfs_status_check);
+#endif
 	QDF_STATUS (*dfs_override_status_timeout)(
 			struct wlan_objmgr_pdev *pdev,
 			int status_timeout);
