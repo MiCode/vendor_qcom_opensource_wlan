@@ -7158,6 +7158,22 @@ static bool dp_is_wds_extended(struct dp_peer *peer)
 }
 #endif /* QCA_SUPPORT_WDS_EXTENDED */
 
+#ifdef WLAN_FEATURE_11BE_MLO
+static inline struct dp_peer *dp_get_stats_peer(struct dp_peer *peer)
+{
+	/* ML primay link peer return mld_peer */
+	if (IS_MLO_DP_LINK_PEER(peer) && peer->primary_link)
+		return peer->mld_peer;
+
+	return peer;
+}
+#else
+static inline struct dp_peer *dp_get_stats_peer(struct dp_peer *peer)
+{
+	return peer;
+}
+#endif
+
 void dp_update_vdev_stats(struct dp_soc *soc,
 			  struct dp_peer *srcobj,
 			  void *arg)
@@ -7168,6 +7184,8 @@ void dp_update_vdev_stats(struct dp_soc *soc,
 
 	if (qdf_unlikely(dp_is_wds_extended(srcobj)))
 		return;
+
+	srcobj = dp_get_stats_peer(srcobj);
 
 	for (pream_type = 0; pream_type < DOT11_MAX; pream_type++) {
 		for (i = 0; i < MAX_MCS; i++) {
