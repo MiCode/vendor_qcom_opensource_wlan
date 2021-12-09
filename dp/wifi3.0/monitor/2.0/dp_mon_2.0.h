@@ -99,10 +99,16 @@ struct dp_mon_desc_pool {
  * struct dp_mon_pdev_be - BE specific monitor pdev object
  * @mon_pdev: monitor pdev structure
  * @filter_be: filters sent to fw
+ * @tx_capture: pointer to tx capture function
+ * @tx_stats: tx monitor drop stats
  */
 struct dp_mon_pdev_be {
 	struct dp_mon_pdev mon_pdev;
 	struct dp_mon_filter_be **filter_be;
+#ifdef WLAN_TX_PKT_CAPTURE_ENH_BE
+	struct dp_pdev_tx_capture_be tx_capture_be;
+#endif
+	struct dp_tx_monitor_drop_stats tx_stats;
 };
 
 /**
