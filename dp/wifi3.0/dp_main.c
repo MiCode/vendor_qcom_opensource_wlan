@@ -9977,7 +9977,7 @@ dp_set_psoc_param(struct cdp_soc_t *cdp_soc,
 	case CDP_IPA_ENABLE:
 		soc->wlan_cfg_ctx->ipa_enabled = val.cdp_ipa_enabled;
 		break;
-	case CDP_SET_VDEV_STATS_HW_OFFLOAD:
+	case CDP_CFG_VDEV_STATS_HW_OFFLOAD:
 		wlan_cfg_set_vdev_stats_hw_offload_config(wlan_cfg_ctx,
 				val.cdp_psoc_param_vdev_stats_hw_offload);
 		break;
@@ -10012,6 +10012,10 @@ static QDF_STATUS dp_get_psoc_param(struct cdp_soc_t *cdp_soc,
 	case CDP_CFG_PEER_EXT_STATS:
 		val->cdp_psoc_param_pext_stats =
 			wlan_cfg_is_peer_ext_stats_enabled(soc->wlan_cfg_ctx);
+		break;
+	case CDP_CFG_VDEV_STATS_HW_OFFLOAD:
+		val->cdp_psoc_param_vdev_stats_hw_offload =
+			wlan_cfg_get_vdev_stats_hw_offload_config(soc->wlan_cfg_ctx);
 		break;
 	default:
 		dp_warn("Invalid param");

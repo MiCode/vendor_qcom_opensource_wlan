@@ -1498,7 +1498,7 @@ enum cdp_vdev_param_type {
  * @CDP_SET_PREFERRED_HW_MODE: set preferred hw mode
  * @CDP_CFG_PEER_EXT_STATS: Peer extended stats mode.
  * @CDP_IPA_ENABLE : set IPA enable mode.
- * @CDP_SET_VDEV_STATS_HW_OFFLOAD: HW Vdev stats enable/disable
+ * @CDP_CFG_VDEV_STATS_HW_OFFLOAD: HW Vdev stats config
  */
 enum cdp_psoc_param_type {
 	CDP_ENABLE_RATE_STATS,
@@ -1506,7 +1506,7 @@ enum cdp_psoc_param_type {
 	CDP_SET_PREFERRED_HW_MODE,
 	CDP_CFG_PEER_EXT_STATS,
 	CDP_IPA_ENABLE,
-	CDP_SET_VDEV_STATS_HW_OFFLOAD,
+	CDP_CFG_VDEV_STATS_HW_OFFLOAD,
 	CDP_SAWF_ENABLE,
 };
 
