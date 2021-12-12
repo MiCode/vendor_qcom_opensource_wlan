@@ -250,6 +250,7 @@ struct wlan_srng_cfg {
  * @vdev_stats_hw_offload_config: HW vdev stats config
  * @vdev_stats_hw_offload_timer: HW vdev stats timer duration
  * @txmon_hw_support: TxMON HW support
+ * @num_rxdma_status_rings_per_pdev: Num RXDMA status rings
  */
 struct wlan_cfg_dp_soc_ctxt {
 	int num_int_ctxts;
@@ -410,6 +411,7 @@ struct wlan_cfg_dp_soc_ctxt {
 #endif
 	uint8_t num_rxdma_dst_rings_per_pdev;
 	bool txmon_hw_support;
+	uint8_t num_rxdma_status_rings_per_pdev;
 };
 
 /**
