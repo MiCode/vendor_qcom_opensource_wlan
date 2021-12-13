@@ -459,24 +459,41 @@ static void wlan_lmac_if_umac_reg_rx_ops_register(
 }
 
 #ifdef CONVERGED_P2P_ENABLE
-#ifdef FEATURE_P2P_LISTEN_OFFLOAD
-static void wlan_lmac_if_umac_rx_ops_register_p2p(
-				struct wlan_lmac_if_rx_ops *rx_ops)
+#ifdef WLAN_FEATURE_MCC_QUOTA
+static inline void
+wlan_lmac_if_umac_rx_ops_register_p2p_mcc_quota(struct wlan_lmac_if_rx_ops *rx_ops)
 {
-	rx_ops->p2p.lo_ev_handler = tgt_p2p_lo_event_cb;
-	rx_ops->p2p.noa_ev_handler = tgt_p2p_noa_event_cb;
-	rx_ops->p2p.add_mac_addr_filter_evt_handler =
-		tgt_p2p_add_mac_addr_status_event_cb;
+	rx_ops->p2p.mcc_quota_ev_handler = tgt_p2p_mcc_quota_event_cb;
 }
 #else
+static inline void wlan_lmac_if_umac_rx_ops_register_p2p_mcc_quota(
+				struct wlan_lmac_if_rx_ops *rx_ops)
+{
+}
+#endif
+
+#ifdef FEATURE_P2P_LISTEN_OFFLOAD
+static inline void
+wlan_lmac_if_umac_rx_ops_register_p2p_listen_offload(struct wlan_lmac_if_rx_ops *rx_ops)
+{
+	rx_ops->p2p.lo_ev_handler = tgt_p2p_lo_event_cb;
+}
+#else
+static inline void
+wlan_lmac_if_umac_rx_ops_register_p2p_listen_offload(struct wlan_lmac_if_rx_ops *rx_ops)
+{
+}
+#endif
+
 static void wlan_lmac_if_umac_rx_ops_register_p2p(
 				struct wlan_lmac_if_rx_ops *rx_ops)
 {
+	wlan_lmac_if_umac_rx_ops_register_p2p_listen_offload(rx_ops);
 	rx_ops->p2p.noa_ev_handler = tgt_p2p_noa_event_cb;
 	rx_ops->p2p.add_mac_addr_filter_evt_handler =
 		tgt_p2p_add_mac_addr_status_event_cb;
+	wlan_lmac_if_umac_rx_ops_register_p2p_mcc_quota(rx_ops);
 }
-#endif
 #else
 static void wlan_lmac_if_umac_rx_ops_register_p2p(
 				struct wlan_lmac_if_rx_ops *rx_ops)

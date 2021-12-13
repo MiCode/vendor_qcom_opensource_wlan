@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2013-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -59,3 +60,20 @@ QDF_STATUS wmi_unified_set_mcc_channel_time_quota_cmd(
 	return QDF_STATUS_E_FAILURE;
 }
 
+#ifdef WLAN_FEATURE_MCC_QUOTA
+QDF_STATUS wmi_extract_mcc_quota_ev_param(wmi_unified_t wmi_handle,
+					  void *evt_buf,
+					  struct mcc_quota_info *param)
+{
+	if (!wmi_handle) {
+		wmi_err("wmi handle is null");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	if (wmi_handle->ops->extract_mcc_quota_ev_param)
+		return wmi_handle->ops->extract_mcc_quota_ev_param(
+				wmi_handle, evt_buf, param);
+
+	return QDF_STATUS_E_FAILURE;
+}
+#endif

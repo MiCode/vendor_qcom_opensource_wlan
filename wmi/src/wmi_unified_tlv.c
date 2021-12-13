@@ -17998,6 +17998,10 @@ event_ids[wmi_roam_scan_chan_list_id] =
 	event_ids[wmi_vdev_quiet_offload_eventid] =
 			WMI_QUIET_HANDLING_EVENTID;
 #endif
+#ifdef WLAN_FEATURE_MCC_QUOTA
+	event_ids[wmi_resmgr_chan_time_quota_changed_eventid] =
+			WMI_RESMGR_CHAN_TIME_QUOTA_CHANGED_EVENTID;
+#endif
 }
 
 #ifdef WLAN_FEATURE_LINK_LAYER_STATS

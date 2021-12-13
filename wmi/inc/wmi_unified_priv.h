@@ -720,6 +720,12 @@ QDF_STATUS (*send_set_mcc_channel_time_latency_cmd)
 QDF_STATUS (*send_set_enable_disable_mcc_adaptive_scheduler_cmd)(
 		  wmi_unified_t wmi_handle, uint32_t mcc_adaptive_scheduler,
 		  uint32_t pdev_id);
+
+#ifdef WLAN_FEATURE_MCC_QUOTA
+QDF_STATUS (*extract_mcc_quota_ev_param)(wmi_unified_t wmi_handle,
+					 void *evt_buf,
+					 struct mcc_quota_info *param);
+#endif
 #endif /* WMI_CONCURRENCY_SUPPORT */
 
 QDF_STATUS (*send_p2p_go_set_beacon_ie_cmd)(wmi_unified_t wmi_handle,

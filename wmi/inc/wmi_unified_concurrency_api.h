@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2013-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -35,6 +36,20 @@ QDF_STATUS wmi_unified_set_mcc_channel_time_quota_cmd(
 	wmi_unified_t wmi_handle,
 	uint32_t adapter_1_chan_freq,
 	uint32_t adapter_1_quota, uint32_t adapter_2_chan_freq);
+
+#ifdef WLAN_FEATURE_MCC_QUOTA
+/**
+ * wmi_extract_mcc_quota_ev_param() - extract mcc_quota param from wmi event
+ * @wmi_handle: wmi handle
+ * @evt_buf: pointer to event buffer
+ * @param: Pointer to hold mcc_quota param
+ *
+ * Return: QDF_STATUS_SUCCESS on success or error code
+ */
+QDF_STATUS wmi_extract_mcc_quota_ev_param(wmi_unified_t wmi_handle,
+					  void *evt_buf,
+					  struct mcc_quota_info *param);
+#endif
 
 /**
  * wmi_unified_set_mcc_channel_time_latency_cmd() - set MCC channel time latency

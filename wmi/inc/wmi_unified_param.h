@@ -4895,6 +4895,9 @@ typedef enum {
 #ifdef WLAN_FEATURE_11BE_MLO
 	wmi_vdev_quiet_offload_eventid,
 #endif
+#ifdef WLAN_FEATURE_MCC_QUOTA
+	wmi_resmgr_chan_time_quota_changed_eventid,
+#endif
 	wmi_events_max,
 } wmi_conv_event_id;
 

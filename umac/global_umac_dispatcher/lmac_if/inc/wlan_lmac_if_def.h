@@ -551,6 +551,7 @@ struct p2p_set_mac_filter;
  * @reg_mac_addr_rx_filter_handler: function pointer to register/unregister
  *    set mac addr status event callback.
  * @set_mac_addr_rx_filter_cmd: function pointer to set mac addr rx filter
+ * @reg_mcc_quota_ev_handler: function to register mcc_quota event handler
  */
 struct wlan_lmac_if_p2p_tx_ops {
 	QDF_STATUS (*set_ps)(struct wlan_objmgr_psoc *psoc,
@@ -576,6 +577,10 @@ struct wlan_lmac_if_p2p_tx_ops {
 	QDF_STATUS (*set_mac_addr_rx_filter_cmd)(
 			struct wlan_objmgr_psoc *psoc,
 			struct p2p_set_mac_filter *param);
+#ifdef WLAN_FEATURE_MCC_QUOTA
+	QDF_STATUS (*reg_mcc_quota_ev_handler)(struct wlan_objmgr_psoc *psoc,
+					       bool reg);
+#endif
 };
 #endif
 
@@ -1598,6 +1603,7 @@ struct wlan_lmac_if_reg_rx_ops {
 struct p2p_noa_info;
 struct p2p_lo_event;
 struct p2p_set_mac_filter_evt;
+struct mcc_quota_info;
 
 /**
  * struct wlan_lmac_if_p2p_rx_ops - structure of rx function pointers
@@ -1606,6 +1612,7 @@ struct p2p_set_mac_filter_evt;
  * @noa_ev_handler:   function pointer to give noa event
  * @add_mac_addr_filter_evt_handler: function pointer to process add mac addr
  *    rx filter event
+ * @mcc_quota_ev_handler:   function pointer to receive mcc quota event
  */
 struct wlan_lmac_if_p2p_rx_ops {
 #ifdef FEATURE_P2P_LISTEN_OFFLOAD
@@ -1617,7 +1624,10 @@ struct wlan_lmac_if_p2p_rx_ops {
 	QDF_STATUS (*add_mac_addr_filter_evt_handler)(
 		struct wlan_objmgr_psoc *psoc,
 		struct p2p_set_mac_filter_evt *event_info);
-
+#ifdef WLAN_FEATURE_MCC_QUOTA
+	QDF_STATUS (*mcc_quota_ev_handler)(struct wlan_objmgr_psoc *psoc,
+					   struct mcc_quota_info *event_info);
+#endif
 };
 #endif
 
