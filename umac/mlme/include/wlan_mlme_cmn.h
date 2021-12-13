@@ -758,7 +758,7 @@ void mlme_set_osif_cm_cb(osif_cm_get_global_ops_cb cm_osif_ops);
  *
  * Return: True if max chan switch is enabled else false
  */
-bool mlme_max_chan_switch_is_set(struct wlan_objmgr_vdev *vdev);
+bool mlme_max_chan_switch_is_set(struct wlan_objmgr_psoc *psoc);
 
 #ifdef WLAN_FEATURE_DYNAMIC_MAC_ADDR_UPDATE
 /**

@@ -557,9 +557,8 @@ void mlme_set_ops_register_cb(mlme_get_global_ops_cb ops_cb)
 	glbl_ops_cb = ops_cb;
 }
 
-bool mlme_max_chan_switch_is_set(struct wlan_objmgr_vdev *vdev)
+bool mlme_max_chan_switch_is_set(struct wlan_objmgr_psoc *psoc)
 {
-	struct wlan_objmgr_psoc *psoc = wlan_vdev_get_psoc(vdev);
 	struct psoc_mlme_obj *mlme_psoc_obj;
 	struct psoc_phy_config *phy_config;
 

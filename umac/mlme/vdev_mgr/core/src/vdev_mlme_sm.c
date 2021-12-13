@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2018-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -1349,6 +1350,7 @@ static bool mlme_vdev_subst_suspend_csa_restart_event(void *ctx,
 		uint16_t event, uint16_t event_data_len, void *event_data)
 {
 	struct vdev_mlme_obj *vdev_mlme = (struct vdev_mlme_obj *)ctx;
+	struct wlan_objmgr_psoc *psoc = wlan_vdev_get_psoc(vdev_mlme->vdev);
 	bool status;
 
 	switch (event) {
@@ -1373,7 +1375,7 @@ static bool mlme_vdev_subst_suspend_csa_restart_event(void *ctx,
 	case WLAN_VDEV_SM_EV_CSA_COMPLETE:
 		if ((mlme_vdev_is_newchan_no_cac(vdev_mlme) ==
 		    QDF_STATUS_SUCCESS) ||
-		    mlme_max_chan_switch_is_set(vdev_mlme->vdev)) {
+		    mlme_max_chan_switch_is_set(psoc)) {
 			mlme_vdev_sm_transition_to(vdev_mlme,
 						   WLAN_VDEV_S_START);
 			mlme_vdev_sm_deliver_event(vdev_mlme,
