@@ -886,19 +886,21 @@ void dp_rx_tid_delete_cb(struct dp_soc *soc,
 			 union hal_reo_status *reo_status);
 
 #ifdef QCA_PEER_EXT_STATS
-QDF_STATUS dp_peer_ext_stats_ctx_alloc(struct dp_soc *soc,
-				       struct dp_peer *peer);
-void dp_peer_ext_stats_ctx_dealloc(struct dp_soc *soc,
-				   struct dp_peer *peer);
+QDF_STATUS dp_peer_delay_stats_ctx_alloc(struct dp_soc *soc,
+					 struct dp_txrx_peer *txrx_peer);
+void dp_peer_delay_stats_ctx_dealloc(struct dp_soc *soc,
+				     struct dp_txrx_peer *txrx_peer);
 #else
-static inline QDF_STATUS dp_peer_ext_stats_ctx_alloc(struct dp_soc *soc,
-						     struct dp_peer *peer)
+static inline
+QDF_STATUS dp_peer_delay_stats_ctx_alloc(struct dp_soc *soc,
+					 struct dp_txrx_peer *txrx_peer)
 {
 	return QDF_STATUS_SUCCESS;
 }
 
-static inline void dp_peer_ext_stats_ctx_dealloc(struct dp_soc *soc,
-						 struct dp_peer *peer)
+static inline
+void dp_peer_delay_stats_ctx_dealloc(struct dp_soc *soc,
+				     struct dp_txrx_peer *txrx_peer)
 {
 }
 #endif

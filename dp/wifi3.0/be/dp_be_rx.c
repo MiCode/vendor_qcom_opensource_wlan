@@ -729,7 +729,7 @@ done:
 		/* Update the flow tag in SKB based on FSE metadata */
 		dp_rx_update_flow_tag(soc, vdev, nbuf, rx_tlv_hdr, true);
 
-		dp_rx_msdu_stats_update(soc, nbuf, rx_tlv_hdr, peer,
+		dp_rx_msdu_stats_update(soc, nbuf, rx_tlv_hdr, txrx_peer,
 					reo_ring_num, tid_stats);
 
 		if (qdf_unlikely(vdev->mesh_vdev)) {
@@ -744,7 +744,8 @@ done:
 				nbuf = next;
 				continue;
 			}
-			dp_rx_fill_mesh_stats(vdev, nbuf, rx_tlv_hdr, peer);
+			dp_rx_fill_mesh_stats(vdev, nbuf, rx_tlv_hdr,
+					      txrx_peer);
 		}
 
 		if (qdf_likely(vdev->rx_decap_type ==
@@ -774,7 +775,9 @@ done:
 		DP_RX_LIST_APPEND(deliver_list_head,
 				  deliver_list_tail,
 				  nbuf);
-		DP_PEER_TO_STACK_INCC_PKT(peer, 1, QDF_NBUF_CB_RX_PKT_LEN(nbuf),
+
+		DP_PEER_TO_STACK_INCC_PKT(txrx_peer, 1,
+					  QDF_NBUF_CB_RX_PKT_LEN(nbuf),
 					  enh_flag);
 		if (qdf_unlikely(txrx_peer->in_twt))
 			DP_STATS_INC_PKT(peer, rx.to_stack_twt, 1,

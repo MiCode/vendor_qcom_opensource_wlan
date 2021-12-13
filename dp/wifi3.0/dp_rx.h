@@ -1491,7 +1491,7 @@ dp_rxdma_err_process(struct dp_intr *int_ctx, struct dp_soc *soc,
 		     uint32_t mac_id, uint32_t quota);
 
 void dp_rx_fill_mesh_stats(struct dp_vdev *vdev, qdf_nbuf_t nbuf,
-				uint8_t *rx_tlv_hdr, struct dp_peer *peer);
+				uint8_t *rx_tlv_hdr, struct dp_txrx_peer *peer);
 QDF_STATUS dp_rx_filter_mesh_packets(struct dp_vdev *vdev, qdf_nbuf_t nbuf,
 					uint8_t *rx_tlv_hdr);
 
@@ -1899,7 +1899,7 @@ void dp_rx_fill_gro_info(struct dp_soc *soc, uint8_t *rx_tlv,
 #endif
 
 void dp_rx_msdu_stats_update(struct dp_soc *soc, qdf_nbuf_t nbuf,
-			     uint8_t *rx_tlv_hdr, struct dp_peer *peer,
+			     uint8_t *rx_tlv_hdr, struct dp_txrx_peer *peer,
 			     uint8_t ring_id,
 			     struct cdp_tid_rx_stats *tid_stats);
 

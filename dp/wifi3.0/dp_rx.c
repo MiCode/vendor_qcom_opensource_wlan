@@ -774,7 +774,7 @@ dp_rx_deliver_raw(struct dp_vdev *vdev, qdf_nbuf_t nbuf_list,
 		DP_RX_LIST_APPEND(deliver_list_head, deliver_list_tail, nbuf);
 
 		DP_STATS_INC(vdev->pdev, rx_raw_pkts, 1);
-		DP_STATS_INC_PKT(peer, rx.raw, 1, qdf_nbuf_len(nbuf));
+		DP_STATS_INC_PKT(txrx_peer, rx.raw, 1, qdf_nbuf_len(nbuf));
 		/*
 		 * reset the chfrag_start and chfrag_end bits in nbuf cb
 		 * as this is a non-amsdu pkt and RAW mode simulation expects
@@ -1077,7 +1077,7 @@ QDF_STATUS dp_rx_filter_mesh_packets(struct dp_vdev *vdev, qdf_nbuf_t nbuf,
 
 #else
 void dp_rx_fill_mesh_stats(struct dp_vdev *vdev, qdf_nbuf_t nbuf,
-				uint8_t *rx_tlv_hdr, struct dp_peer *peer)
+				uint8_t *rx_tlv_hdr, struct dp_txrx_peer *peer)
 {
 }
 
@@ -1917,7 +1917,7 @@ dp_rx_validate_rx_callbacks(struct dp_soc *soc,
 		} else {
 			num_nbuf = dp_rx_drop_nbuf_list(vdev->pdev,
 							nbuf_head);
-			DP_PEER_TO_STACK_DECC(peer, num_nbuf,
+			DP_PEER_TO_STACK_DECC(txrx_peer, num_nbuf,
 					      vdev->pdev->enhanced_stats_en);
 		}
 		return QDF_STATUS_E_FAILURE;
@@ -1994,7 +1994,7 @@ QDF_STATUS dp_rx_eapol_deliver_to_stack(struct dp_soc *soc,
  * @soc: core txrx main context
  * @nbuf: pointer to the first msdu of an amsdu.
  * @rx_tlv_hdr: pointer to the start of RX TLV headers.
- * @peer: pointer to the peer object.
+ * @txrx_peer: pointer to the txrx peer object.
  * @ring_id: reo dest ring number on which pkt is reaped.
  * @tid_stats: per tid rx stats.
  *
@@ -2002,26 +2002,25 @@ QDF_STATUS dp_rx_eapol_deliver_to_stack(struct dp_soc *soc,
  * Return: void
  */
 void dp_rx_msdu_stats_update(struct dp_soc *soc, qdf_nbuf_t nbuf,
-			     uint8_t *rx_tlv_hdr, struct dp_peer *peer,
+			     uint8_t *rx_tlv_hdr,
+			     struct dp_txrx_peer *txrx_peer,
 			     uint8_t ring_id,
 			     struct cdp_tid_rx_stats *tid_stats)
 {
 	bool is_ampdu, is_not_amsdu;
 	uint32_t sgi, mcs, tid, nss, bw, reception_type, pkt_type;
-	struct dp_vdev *vdev = peer->vdev;
+	struct dp_vdev *vdev = txrx_peer->vdev;
 	bool enh_flag;
 	qdf_ether_header_t *eh;
 	uint16_t msdu_len = QDF_NBUF_CB_RX_PKT_LEN(nbuf);
 
-	dp_rx_msdu_stats_update_prot_cnts(vdev, nbuf, peer);
+	dp_rx_msdu_stats_update_prot_cnts(vdev, nbuf, txrx_peer);
 	is_not_amsdu = qdf_nbuf_is_rx_chfrag_start(nbuf) &
 			qdf_nbuf_is_rx_chfrag_end(nbuf);
-
-	DP_STATS_INC_PKT(peer, rx.rcvd_reo[ring_id], 1, msdu_len);
-	DP_STATS_INCC(peer, rx.non_amsdu_cnt, 1, is_not_amsdu);
-	DP_STATS_INCC(peer, rx.amsdu_cnt, 1, !is_not_amsdu);
+	DP_STATS_INC_PKT(txrx_peer, rx.rcvd_reo[ring_id], 1, msdu_len);
+	DP_STATS_INCC(txrx_peer, rx.non_amsdu_cnt, 1, is_not_amsdu);
+	DP_STATS_INCC(txrx_peer, rx.amsdu_cnt, 1, !is_not_amsdu);
 	DP_STATS_INCC(peer, rx.rx_retries, 1, qdf_nbuf_is_rx_retry_flag(nbuf));
-
 	tid_stats->msdu_cnt++;
 	if (qdf_unlikely(qdf_nbuf_is_da_mcbc(nbuf) &&
 			 (vdev->rx_decap_type == htt_cmn_pkt_type_ethernet))) {
@@ -2051,7 +2050,6 @@ void dp_rx_msdu_stats_update(struct dp_soc *soc, qdf_nbuf_t nbuf,
 	is_ampdu = hal_rx_mpdu_info_ampdu_flag_get(soc->hal_soc, rx_tlv_hdr);
 	DP_STATS_INCC(peer, rx.ampdu_cnt, 1, is_ampdu);
 	DP_STATS_INCC(peer, rx.non_ampdu_cnt, 1, !(is_ampdu));
-
 	sgi = hal_rx_tlv_sgi_get(soc->hal_soc, rx_tlv_hdr);
 	mcs = hal_rx_tlv_rate_mcs_get(soc->hal_soc, rx_tlv_hdr);
 	tid = qdf_nbuf_get_tid_val(nbuf);
@@ -2060,7 +2058,6 @@ void dp_rx_msdu_stats_update(struct dp_soc *soc, qdf_nbuf_t nbuf,
 							      rx_tlv_hdr);
 	nss = hal_rx_msdu_start_nss_get(soc->hal_soc, rx_tlv_hdr);
 	pkt_type = hal_rx_tlv_get_pkt_type(soc->hal_soc, rx_tlv_hdr);
-
 	DP_STATS_INCC(peer, rx.rx_mpdu_cnt[mcs], 1,
 		      ((mcs < MAX_MCS) && QDF_NBUF_CB_RX_CHFRAG_START(nbuf)));
 	DP_STATS_INCC(peer, rx.rx_mpdu_cnt[MAX_MCS - 1], 1,
@@ -2074,7 +2071,6 @@ void dp_rx_msdu_stats_update(struct dp_soc *soc, qdf_nbuf_t nbuf,
 			pkt_type == DOT11_AC ||
 			pkt_type == DOT11_AX))
 		DP_STATS_INC(peer, rx.nss[nss - 1], 1);
-
 	DP_STATS_INC(peer, rx.sgi_count[sgi], 1);
 	DP_STATS_INCC(peer, rx.err.mic_err, 1,
 		      hal_rx_tlv_mic_err_get(soc->hal_soc, rx_tlv_hdr));

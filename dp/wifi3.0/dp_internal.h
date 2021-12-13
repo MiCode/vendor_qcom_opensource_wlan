@@ -743,6 +743,12 @@ void DP_PRINT_STATS(const char *fmt, ...);
 		_handle->stats._field += _delta; \
 }
 
+#define DP_STATS_FLAT_INC(_handle, _field, _delta) \
+{ \
+	if (likely(_handle)) \
+		_handle->_field += _delta; \
+}
+
 #define DP_STATS_INCC(_handle, _field, _delta, _cond) \
 { \
 	if (_cond && likely(_handle)) \
@@ -755,6 +761,12 @@ void DP_PRINT_STATS(const char *fmt, ...);
 		_handle->stats._field -= _delta; \
 }
 
+#define DP_STATS_FLAT_DEC(_handle, _field, _delta) \
+{ \
+	if (likely(_handle)) \
+		_handle->_field -= _delta; \
+}
+
 #define DP_STATS_UPD(_handle, _field, _delta) \
 { \
 	if (likely(_handle)) \
@@ -765,6 +777,12 @@ void DP_PRINT_STATS(const char *fmt, ...);
 { \
 	DP_STATS_INC(_handle, _field.num, _count); \
 	DP_STATS_INC(_handle, _field.bytes, _bytes) \
+}
+
+#define DP_STATS_FLAT_INC_PKT(_handle, _field, _count, _bytes) \
+{ \
+	DP_STATS_FLAT_INC(_handle, _field.num, _count); \
+	DP_STATS_FLAT_INC(_handle, _field.bytes, _bytes) \
 }
 
 #define DP_STATS_INCC_PKT(_handle, _field, _count, _bytes, _cond) \
@@ -791,10 +809,13 @@ void DP_PRINT_STATS(const char *fmt, ...);
 
 #else
 #define DP_STATS_INC(_handle, _field, _delta)
+#define DP_STATS_FLAT_INC(_handle, _field, _delta)
 #define DP_STATS_INCC(_handle, _field, _delta, _cond)
 #define DP_STATS_DEC(_handle, _field, _delta)
+#define DP_STATS_FLAT_DEC(_handle, _field, _delta)
 #define DP_STATS_UPD(_handle, _field, _delta)
 #define DP_STATS_INC_PKT(_handle, _field, _count, _bytes)
+#define DP_STATS_FLAT_INC_PKT(_handle, _field, _count, _bytes)
 #define DP_STATS_INCC_PKT(_handle, _field, _count, _bytes, _cond)
 #define DP_STATS_AGGR(_handle_a, _handle_b, _field)
 #define DP_STATS_AGGR_PKT(_handle_a, _handle_b, _field)
@@ -805,62 +826,62 @@ void DP_PRINT_STATS(const char *fmt, ...);
 #define DP_PEER_TO_STACK_INCC_PKT(_handle, _count, _bytes, _cond) \
 { \
 	if (!(_handle->hw_txrx_stats_en) || _cond) \
-		DP_STATS_INC_PKT(_handle, rx.to_stack, _count, _bytes); \
+		DP_STATS_FLAT_INC_PKT(_handle, to_stack, _count, _bytes); \
 }
 
 #define DP_PEER_TO_STACK_DECC(_handle, _count, _cond) \
 { \
 	if (!(_handle->hw_txrx_stats_en) || _cond) \
-		DP_STATS_DEC(_handle, rx.to_stack.num, _count); \
+		DP_STATS_FLAT_DEC(_handle, to_stack.num, _count); \
 }
 
 #define DP_PEER_MC_INCC_PKT(_handle, _count, _bytes, _cond) \
 { \
 	if (!(_handle->hw_txrx_stats_en) || _cond) \
-		DP_STATS_INC_PKT(_handle, rx.multicast, _count, _bytes); \
+		DP_STATS_FLAT_INC_PKT(_handle, multicast, _count, _bytes); \
 }
 
 #define DP_PEER_BC_INCC_PKT(_handle, _count, _bytes, _cond) \
 { \
 	if (!(_handle->hw_txrx_stats_en) || _cond) \
-		DP_STATS_INC_PKT(_handle, rx.bcast, _count, _bytes); \
+		DP_STATS_FLAT_INC_PKT(_handle, bcast, _count, _bytes); \
 }
 #elif defined(QCA_VDEV_STATS_HW_OFFLOAD_SUPPORT)
 #define DP_PEER_TO_STACK_INCC_PKT(_handle, _count, _bytes, _cond) \
 { \
 	if (!(_handle->hw_txrx_stats_en)) \
-		DP_STATS_INC_PKT(_handle, rx.to_stack, _count, _bytes); \
+		DP_STATS_FLAT_INC_PKT(_handle, to_stack, _count, _bytes); \
 }
 
 #define DP_PEER_TO_STACK_DECC(_handle, _count, _cond) \
 { \
 	if (!(_handle->hw_txrx_stats_en)) \
-		DP_STATS_DEC(_handle, rx.to_stack.num, _count); \
+		DP_STATS_FLAT_DEC(_handle, to_stack.num, _count); \
 }
 
 #define DP_PEER_MC_INCC_PKT(_handle, _count, _bytes, _cond) \
 { \
 	if (!(_handle->hw_txrx_stats_en)) \
-		DP_STATS_INC_PKT(_handle, rx.multicast, _count, _bytes); \
+		DP_STATS_FLAT_INC_PKT(_handle, multicast, _count, _bytes); \
 }
 
 #define DP_PEER_BC_INCC_PKT(_handle, _count, _bytes, _cond) \
 { \
 	if (!(_handle->hw_txrx_stats_en)) \
-		DP_STATS_INC_PKT(_handle, rx.bcast, _count, _bytes); \
+		DP_STATS_FLAT_INC_PKT(_handle, bcast, _count, _bytes); \
 }
 #else
 #define DP_PEER_TO_STACK_INCC_PKT(_handle, _count, _bytes, _cond) \
-	DP_STATS_INC_PKT(_handle, rx.to_stack, _count, _bytes);
+	DP_STATS_FLAT_INC_PKT(_handle, to_stack, _count, _bytes);
 
 #define DP_PEER_TO_STACK_DECC(_handle, _count, _cond) \
-	DP_STATS_DEC(_handle, rx.to_stack.num, _count);
+	DP_STATS_FLAT_DEC(_handle, to_stack.num, _count);
 
 #define DP_PEER_MC_INCC_PKT(_handle, _count, _bytes, _cond) \
-	DP_STATS_INC_PKT(_handle, rx.multicast, _count, _bytes);
+	DP_STATS_FLAT_INC_PKT(_handle, multicast, _count, _bytes);
 
 #define DP_PEER_BC_INCC_PKT(_handle, _count, _bytes, _cond) \
-	DP_STATS_INC_PKT(_handle, rx.bcast, _count, _bytes);
+	DP_STATS_FLAT_INC_PKT(_handle, bcast, _count, _bytes);
 #endif
 
 #ifdef ENABLE_DP_HIST_STATS

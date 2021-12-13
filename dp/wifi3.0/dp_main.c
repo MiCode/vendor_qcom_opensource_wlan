@@ -6823,6 +6823,10 @@ static QDF_STATUS dp_txrx_peer_detach(struct dp_soc *soc, struct dp_peer *peer)
 		peer->txrx_peer = NULL;
 
 		dp_peer_defrag_rx_tids_deinit(txrx_peer);
+		/*
+		 * Deallocate the extended stats contenxt
+		 */
+		dp_peer_delay_stats_ctx_dealloc(soc, txrx_peer);
 		dp_peer_rx_bufq_resources_deinit(txrx_peer);
 
 		qdf_mem_free(txrx_peer);
@@ -6844,8 +6848,20 @@ static QDF_STATUS dp_txrx_peer_attach(struct dp_soc *soc, struct dp_peer *peer)
 	/* initialize the peer_id */
 	txrx_peer->vdev = peer->vdev;
 
-	dp_wds_ext_peer_init(peer);
+	dp_wds_ext_peer_init(txrx_peer);
 	dp_peer_rx_bufq_resources_init(txrx_peer);
+	dp_peer_hw_txrx_stats_init(soc, txrx_peer);
+	/*
+	 * Allocate peer extended stats context. Fall through in
+	 * case of failure as its not an implicit requirement to have
+	 * this object for regular statistics updates.
+	 */
+	if (dp_peer_delay_stats_ctx_alloc(soc, txrx_peer) !=
+					  QDF_STATUS_SUCCESS)
+		dp_warn("peer ext_stats ctx alloc failed");
+
+	dp_set_peer_isolation(txrx_peer, false);
+
 	dp_peer_defrag_rx_tids_init(txrx_peer);
 	dp_txrx_peer_attach_add(soc, peer, txrx_peer);
 
@@ -8818,16 +8834,17 @@ void dp_print_napi_stats(struct dp_soc *soc)
 
 #ifdef QCA_PEER_EXT_STATS
 /**
- * dp_txrx_host_peer_ext_stats_clr: Reinitialize the txrx peer ext stats
+ * dp_txrx_host_peer_delay_stats_clr: Reinitialize the txrx peer delay stats
  *
  */
-static inline void dp_txrx_host_peer_ext_stats_clr(struct dp_peer *peer)
+static inline void dp_txrx_host_peer_delay_stats_clr(struct dp_peer *peer)
 {
-	if (peer->pext_stats)
-		qdf_mem_zero(peer->pext_stats, sizeof(*peer->pext_stats));
+	if (peer->txrx_peer->delay_stats)
+		qdf_mem_zero(peer->txrx_peer->delay_stats,
+			     sizeof(struct dp_peer_delay_stats));
 }
 #else
-static inline void dp_txrx_host_peer_ext_stats_clr(struct dp_peer *peer)
+static inline void dp_txrx_host_peer_delay_stats_clr(struct dp_peer *peer)
 {
 }
 #endif
@@ -8855,7 +8872,7 @@ dp_txrx_host_peer_stats_clr(struct dp_soc *soc,
 
 	DP_STATS_CLR(peer);
 
-	dp_txrx_host_peer_ext_stats_clr(peer);
+	dp_txrx_host_peer_delay_stats_clr(peer);
 
 #if defined(FEATURE_PERPKT_INFO) && WDI_EVENT_ENABLE
 	dp_wdi_event_handler(WDI_EVENT_UPDATE_DP_STATS, peer->vdev->pdev->soc,
@@ -9465,7 +9482,7 @@ static void dp_rx_update_peer_delay_stats(struct dp_soc *soc,
 	struct dp_peer *peer = NULL;
 	uint16_t peer_id, ring_id;
 	uint8_t tid = qdf_nbuf_get_tid_val(nbuf);
-	struct cdp_peer_ext_stats *pext_stats = NULL;
+	struct dp_peer_delay_stats *delay_stats = NULL;
 
 	peer_id = QDF_NBUF_CB_RX_PEER_ID(nbuf);
 	if (peer_id > soc->max_peer_id)
@@ -9475,10 +9492,10 @@ static void dp_rx_update_peer_delay_stats(struct dp_soc *soc,
 	if (qdf_unlikely(!peer))
 		return;
 
-	if (qdf_likely(peer->pext_stats)) {
-		pext_stats = peer->pext_stats;
+	if (qdf_likely(peer->txrx_peer->delay_stats)) {
+		delay_stats = peer->txrx_peer->delay_stats;
 		ring_id = QDF_NBUF_CB_RX_CTX_ID(nbuf);
-		dp_rx_compute_tid_delay(&pext_stats->delay_stats[tid][ring_id],
+		dp_rx_compute_tid_delay(&delay_stats->delay_tid_stats[tid][ring_id],
 					nbuf);
 	}
 	dp_peer_unref_delete(peer, DP_MOD_ID_CDP);

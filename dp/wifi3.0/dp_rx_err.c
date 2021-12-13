@@ -1065,7 +1065,8 @@ dp_2k_jump_handle(struct dp_soc *soc,
 			IEEE80211_REASON_QOS_SETUP_REQUIRED;
 		qdf_spin_unlock_bh(&rx_tid->tid_lock);
 		if (soc->cdp_soc.ol_ops->send_delba) {
-			DP_STATS_INC(soc, rx.err.rx_2k_jump_delba_sent, 1);
+			DP_STATS_INC(soc, rx.err.rx_2k_jump_delba_sent,
+				     1);
 			soc->cdp_soc.ol_ops->send_delba(
 					peer->vdev->pdev->soc->ctrl_psoc,
 					peer->vdev->vdev_id,
@@ -1403,8 +1404,7 @@ dp_rx_null_q_desc_handle(struct dp_soc *soc, qdf_nbuf_t nbuf,
 	if ((!soc->mec_fw_offload) &&
 	    dp_rx_mcast_echo_check(soc, txrx_peer, rx_tlv_hdr, nbuf)) {
 		/* this is a looped back MCBC pkt, drop it */
-		DP_STATS_INC_PKT(peer, rx.mec_drop, 1,
-				 qdf_nbuf_len(nbuf));
+		DP_STATS_INC_PKT(peer, rx.mec_drop, 1, qdf_nbuf_len(nbuf));
 		goto drop_nbuf;
 	}
 
@@ -1488,7 +1488,7 @@ dp_rx_null_q_desc_handle(struct dp_soc *soc, qdf_nbuf_t nbuf,
 	} else {
 		enh_flag = vdev->pdev->enhanced_stats_en;
 		qdf_nbuf_set_next(nbuf, NULL);
-		DP_PEER_TO_STACK_INCC_PKT(peer, 1, qdf_nbuf_len(nbuf),
+		DP_PEER_TO_STACK_INCC_PKT(txrx_peer, 1, qdf_nbuf_len(nbuf),
 					  enh_flag);
 		/*
 		 * Update the protocol tag in SKB based on
@@ -1506,7 +1506,7 @@ dp_rx_null_q_desc_handle(struct dp_soc *soc, qdf_nbuf_t nbuf,
 				 soc->hal_soc, rx_tlv_hdr) &&
 				 (vdev->rx_decap_type ==
 				  htt_cmn_pkt_type_ethernet))) {
-			DP_PEER_MC_INCC_PKT(peer, 1, qdf_nbuf_len(nbuf),
+			DP_PEER_MC_INCC_PKT(txrx_peer, 1, qdf_nbuf_len(nbuf),
 					    enh_flag);
 
 			if (QDF_IS_ADDR_BROADCAST(eh->ether_dhost))
@@ -1659,7 +1659,7 @@ process_mesh:
 			dp_rx_nbuf_free(nbuf);
 			return;
 		}
-		dp_rx_fill_mesh_stats(vdev, nbuf, rx_tlv_hdr, peer);
+		dp_rx_fill_mesh_stats(vdev, nbuf, rx_tlv_hdr, txrx_peer);
 	}
 process_rx:
 	if (qdf_unlikely(hal_rx_msdu_end_da_is_mcbc_get(soc->hal_soc,
@@ -1684,7 +1684,7 @@ process_rx:
 					  EXCEPTION_DEST_RING_ID, true, true);
 		/* Update the flow tag in SKB based on FSE metadata */
 		dp_rx_update_flow_tag(soc, vdev, nbuf, rx_tlv_hdr, true);
-		DP_STATS_INC(peer, rx.to_stack.num, 1);
+		DP_STATS_FLAT_INC(txrx_peer, to_stack.num, 1);
 		qdf_nbuf_set_exc_frame(nbuf, 1);
 		dp_rx_deliver_to_stack(soc, vdev, txrx_peer, nbuf, NULL);
 	}
@@ -1906,7 +1906,8 @@ dp_rx_err_route_hdl(struct dp_soc *soc, qdf_nbuf_t nbuf,
 			/* Update the flow tag in SKB based on FSE metadata */
 			dp_rx_update_flow_tag(soc, vdev, nbuf, rx_tlv_hdr,
 					      true);
-			DP_PEER_TO_STACK_INCC_PKT(peer, 1, qdf_nbuf_len(nbuf),
+			DP_PEER_TO_STACK_INCC_PKT(txrx_peer, 1,
+						  qdf_nbuf_len(nbuf),
 						  vdev->pdev->enhanced_stats_en);
 			qdf_nbuf_set_exc_frame(nbuf, 1);
 			qdf_nbuf_set_next(nbuf, NULL);
@@ -2809,8 +2810,8 @@ done:
 
 				case HAL_REO_ERR_PN_CHECK_FAILED:
 				case HAL_REO_ERR_PN_ERROR_HANDLING_FLAG_SET:
-					if (peer)
-						DP_STATS_INC(peer,
+					if (txrx_peer)
+						DP_STATS_INC(txrx_peer,
 							     rx.err.pn_err, 1);
 					dp_rx_nbuf_free(nbuf);
 					break;

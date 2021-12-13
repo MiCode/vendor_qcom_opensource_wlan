@@ -280,9 +280,9 @@ void dp_tx_process_htt_completion_be(struct dp_soc *soc,
 		txrx_peer = dp_txrx_peer_get_ref_by_id(soc, ts.peer_id,
 						       &txrx_ref_handle,
 						       DP_MOD_ID_HTT_COMP);
-		if (qdf_likely(peer))
+		if (qdf_likely(txrx_peer))
 			dp_tx_update_peer_basic_stats(
-						peer,
+						txrx_peer,
 						qdf_nbuf_len(tx_desc->nbuf),
 						tx_status,
 						pdev->enhanced_stats_en);

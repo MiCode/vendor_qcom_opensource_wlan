@@ -262,8 +262,9 @@ void dp_tx_inspect_handler(struct dp_soc *soc,
 			   struct dp_vdev *vdev,
 			   struct dp_tx_desc_s *tx_desc,
 			   uint8_t *status);
-void dp_tx_update_peer_basic_stats(struct dp_peer *peer, uint32_t length,
-				   uint8_t tx_status, bool update);
+void dp_tx_update_peer_basic_stats(struct dp_txrx_peer *txrx_peer,
+				   uint32_t length, uint8_t tx_status,
+				   bool update);
 
 #ifndef QCA_HOST_MODE_WIFI_DISABLED
 /**

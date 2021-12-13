@@ -766,6 +766,11 @@ struct dp_reo_cmd_info {
 	TAILQ_ENTRY(dp_reo_cmd_info) reo_cmd_list_elem;
 };
 
+struct dp_peer_delay_stats {
+	struct cdp_delay_tid_stats delay_tid_stats[CDP_MAX_DATA_TIDS]
+						  [CDP_MAX_TXRX_CTX];
+};
+
 /* Rx TID defrag*/
 struct dp_rx_tid_defrag {
 	/* TID */
@@ -3367,6 +3372,9 @@ struct dp_txrx_peer {
 		mld_peer:1; /* MLD peer*/
 
 	uint32_t tx_failed;
+	struct cdp_pkt_info comp_pkt;
+	struct cdp_pkt_info to_stack;
+	struct dp_peer_delay_stats *delay_stats;
 
 	struct {
 		enum cdp_sec_type sec_type;
@@ -3449,9 +3457,6 @@ struct dp_peer {
 
 	/* Peer Stats */
 	struct cdp_peer_stats stats;
-
-	/* Peer extended stats */
-	struct cdp_peer_ext_stats *pext_stats;
 
 	TAILQ_HEAD(, dp_ast_entry) ast_entry_list;
 	/* TBD */

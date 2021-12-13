@@ -4637,23 +4637,23 @@ dp_rx_sec_ind_handler(struct dp_soc *soc, uint16_t peer_id,
 
 #ifdef QCA_PEER_EXT_STATS
 /*
- * dp_peer_ext_stats_ctx_alloc() - Allocate peer ext
+ * dp_peer_delay_stats_ctx_alloc() - Allocate peer delay
  *                                 stats content
  * @soc: DP SoC context
- * @peer: DP peer context
+ * @txrx_peer: DP txrx peer context
  *
- * Allocate the peer extended stats context
+ * Allocate the peer delay stats context
  *
  * Return: QDF_STATUS_SUCCESS if allocation is
  *	   successful
  */
-QDF_STATUS dp_peer_ext_stats_ctx_alloc(struct dp_soc *soc,
-				       struct dp_peer *peer)
+QDF_STATUS dp_peer_delay_stats_ctx_alloc(struct dp_soc *soc,
+					 struct dp_txrx_peer *txrx_peer)
 {
 	uint8_t tid, ctx_id;
 
-	if (!soc || !peer) {
-		dp_warn("Null soc%pK or peer%pK", soc, peer);
+	if (!soc || !txrx_peer) {
+		dp_warn("Null soc%pK or peer%pK", soc, txrx_peer);
 		return QDF_STATUS_E_INVAL;
 	}
 
@@ -4663,8 +4663,9 @@ QDF_STATUS dp_peer_ext_stats_ctx_alloc(struct dp_soc *soc,
 	/*
 	 * Allocate memory for peer extended stats.
 	 */
-	peer->pext_stats = qdf_mem_malloc(sizeof(struct cdp_peer_ext_stats));
-	if (!peer->pext_stats) {
+	txrx_peer->delay_stats =
+			qdf_mem_malloc(sizeof(struct dp_peer_delay_stats));
+	if (!txrx_peer->delay_stats) {
 		dp_err("Peer extended stats obj alloc failed!!");
 		return QDF_STATUS_E_NOMEM;
 	}
@@ -4672,9 +4673,9 @@ QDF_STATUS dp_peer_ext_stats_ctx_alloc(struct dp_soc *soc,
 	for (tid = 0; tid < CDP_MAX_DATA_TIDS; tid++) {
 		for (ctx_id = 0; ctx_id < CDP_MAX_TXRX_CTX; ctx_id++) {
 			struct cdp_delay_tx_stats *tx_delay =
-			&peer->pext_stats->delay_stats[tid][ctx_id].tx_delay;
+			&txrx_peer->delay_stats->delay_tid_stats[tid][ctx_id].tx_delay;
 			struct cdp_delay_rx_stats *rx_delay =
-			&peer->pext_stats->delay_stats[tid][ctx_id].rx_delay;
+			&txrx_peer->delay_stats->delay_tid_stats[tid][ctx_id].rx_delay;
 
 			dp_hist_init(&tx_delay->tx_swq_delay,
 				     CDP_HIST_TYPE_SW_ENQEUE_DELAY);
@@ -4689,16 +4690,17 @@ QDF_STATUS dp_peer_ext_stats_ctx_alloc(struct dp_soc *soc,
 }
 
 /*
- * dp_peer_ext_stats_ctx_dealloc() - Dealloc the peer context
- * @peer: DP peer context
+ * dp_peer_delay_stats_ctx_dealloc() - Dealloc the peer delay stats context
+ * @txrx_peer: txrx DP peer context
  *
- * Free the peer extended stats context
+ * Free the peer delay stats context
  *
  * Return: Void
  */
-void dp_peer_ext_stats_ctx_dealloc(struct dp_soc *soc, struct dp_peer *peer)
+void dp_peer_delay_stats_ctx_dealloc(struct dp_soc *soc,
+				     struct dp_txrx_peer *txrx_peer)
 {
-	if (!peer) {
+	if (!txrx_peer) {
 		dp_warn("peer_ext dealloc failed due to NULL peer object");
 		return;
 	}
@@ -4706,11 +4708,11 @@ void dp_peer_ext_stats_ctx_dealloc(struct dp_soc *soc, struct dp_peer *peer)
 	if (!wlan_cfg_is_peer_ext_stats_enabled(soc->wlan_cfg_ctx))
 		return;
 
-	if (!peer->pext_stats)
+	if (!txrx_peer->delay_stats)
 		return;
 
-	qdf_mem_free(peer->pext_stats);
-	peer->pext_stats = NULL;
+	qdf_mem_free(txrx_peer->delay_stats);
+	txrx_peer->delay_stats = NULL;
 }
 #endif
 

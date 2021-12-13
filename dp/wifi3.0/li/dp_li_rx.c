@@ -838,7 +838,8 @@ done:
 				nbuf = next;
 				continue;
 			}
-			dp_rx_fill_mesh_stats(vdev, nbuf, rx_tlv_hdr, peer);
+			dp_rx_fill_mesh_stats(vdev, nbuf, rx_tlv_hdr,
+					      txrx_peer);
 		}
 
 		if (qdf_likely(vdev->rx_decap_type ==
@@ -903,8 +904,8 @@ done:
 		DP_RX_LIST_APPEND(deliver_list_head,
 				  deliver_list_tail,
 				  nbuf);
-		DP_STATS_INC_PKT(peer, rx.to_stack, 1,
-				 QDF_NBUF_CB_RX_PKT_LEN(nbuf));
+		DP_STATS_FLAT_INC_PKT(txrx_peer, to_stack, 1,
+				      QDF_NBUF_CB_RX_PKT_LEN(nbuf));
 		if (qdf_unlikely(txrx_peer->in_twt))
 			DP_STATS_INC_PKT(peer, rx.to_stack_twt, 1,
 					 QDF_NBUF_CB_RX_PKT_LEN(nbuf));

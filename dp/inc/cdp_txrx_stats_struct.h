@@ -1062,17 +1062,6 @@ struct cdp_delay_tid_stats {
 	struct cdp_delay_rx_stats  rx_delay;
 };
 
-/*
- * cdp_peer_ext_stats: Peer extended stats
- * @delay_stats: Per TID delay stats
- */
-struct cdp_peer_ext_stats {
-	struct cdp_delay_tid_stats delay_stats[CDP_MAX_DATA_TIDS]
-						[CDP_MAX_TXRX_CTX];
-
-	/*Customer can add MSDU level Tx/Rx stats */
-};
-
 /* struct cdp_pkt_info - packet info
  * @num: no of packets
  * @bytes: total no of bytes
