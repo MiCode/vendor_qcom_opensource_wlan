@@ -274,3 +274,4 @@ dp_mon_populate_ppdu_info_2_0(struct hal_rx_ppdu_info *hal_ppdu_info,
 	ppdu->punc_bw = 0;
 }
 #endif
+#endif
