@@ -519,12 +519,18 @@ struct reduced_neighbor_report {
  * @freq: center frequency in MHz
  * @cfreq2: center frequency of the secondary channel in MHz
  * @link_id: Link id advertised by the AP
+ * @csa_ie: Pointer to CSA IE
+ * @ecsa_ie: Pointer to eCSA IE
+ * @max_cst_ie: Pointer to Max Channel Switch Time IE
  */
 struct partner_link_info {
 	struct qdf_mac_addr link_addr;
 	uint16_t freq;
 	uint16_t cfreq2;
 	uint8_t link_id;
+	const uint8_t *csa_ie;
+	const uint8_t *ecsa_ie;
+	const uint8_t *max_cst_ie;
 };
 
 /**

@@ -30,6 +30,9 @@
 #if defined(WLAN_SAE_SINGLE_PMK) && defined(WLAN_FEATURE_ROAM_OFFLOAD)
 #include <wlan_mlme_api.h>
 #endif
+#ifdef WLAN_FEATURE_11BE_MLO
+#include <wlan_utility.h>
+#endif
 
 #define MAX_IE_LEN 1024
 #define SHORT_SSID_LEN 4
@@ -1801,6 +1804,10 @@ static void util_get_partner_link_info(struct scan_cache_entry *scan_entry)
 	uint8_t *ml_ie = scan_entry->ie_list.multi_link;
 	uint8_t offset = util_get_link_info_offset(ml_ie);
 	uint16_t sta_ctrl;
+	uint8_t *stactrl_offset = NULL;
+	uint8_t perstaprof_len = 0;
+	struct partner_link_info *link_info = NULL;
+	uint8_t eid = 0;
 
 	/* Update partner info  from RNR IE */
 	qdf_mem_copy(&scan_entry->ml_info.link_info[0].link_addr,
@@ -1816,8 +1823,12 @@ static void util_get_partner_link_info(struct scan_cache_entry *scan_entry)
 
 	/* Sub element ID 0 represents Per-STA Profile */
 	if (ml_ie[offset] == 0) {
+		perstaprof_len = ml_ie[offset + 1];
+		stactrl_offset = &ml_ie[offset + 2];
+
 		/* Skip sub element ID and length fields */
 		offset += 2;
+
 		sta_ctrl = *(uint16_t *)(ml_ie + offset);
 		/* Skip STA control field */
 		offset += 2;
@@ -1828,8 +1839,24 @@ static void util_get_partner_link_info(struct scan_cache_entry *scan_entry)
 				&scan_entry->ml_info.link_info[0].link_addr,
 				ml_ie + offset, 6);
 			scm_debug("Found partner info in ML IE");
-			return;
 		}
+
+		/* Get the pointers to CSA, ECSA, Max Channel Switch Time IE. */
+		link_info = &scan_entry->ml_info.link_info[0];
+
+		link_info->csa_ie = wlan_get_ie_ptr_from_eid
+			(WLAN_ELEMID_CHANSWITCHANN, stactrl_offset,
+			 perstaprof_len);
+
+		link_info->ecsa_ie = wlan_get_ie_ptr_from_eid
+			(WLAN_ELEMID_EXTCHANSWITCHANN, stactrl_offset,
+			 perstaprof_len);
+
+		eid = WLAN_EXTN_ELEMID_MAX_CHAN_SWITCH_TIME;
+		link_info->max_cst_ie = wlan_get_ext_ie_ptr_from_ext_id
+			(&eid, 1, stactrl_offset, perstaprof_len);
+
+		scan_entry->ml_info.num_links++;
 	}
 }
 
