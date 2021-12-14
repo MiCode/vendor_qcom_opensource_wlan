@@ -74,19 +74,6 @@ void dp_rx_mon_buf_desc_pool_free(struct dp_soc *soc);
 QDF_STATUS
 dp_rx_mon_buf_desc_pool_alloc(struct dp_soc *soc);
 
-/*
- * dp_rx_mon_process_status_tlv() - process status tlv
- * @soc: dp soc handle
- * @pdev: dp pdev handle
- * @mon_ring_desc: HAL monitor ring descriptor
- * @frag_addr: frag address
- *
- */
-void dp_rx_mon_process_status_tlv(struct dp_soc *soc,
-				  struct dp_pdev *pdev,
-				  struct hal_mon_desc *mon_ring_desc,
-				  qdf_dma_addr_t addr);
-
 /**
  * dp_rx_mon_stats_update_2_0 () - update rx stats
  *
