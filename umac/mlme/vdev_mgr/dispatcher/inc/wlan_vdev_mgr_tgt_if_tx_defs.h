@@ -206,6 +206,11 @@ struct tbttoffset_params {
  * @beacon_interval: Beacon interval
  * @csa_switch_count_offset: CSA swith count offset in beacon frame
  * @ext_csa_switch_count_offset: ECSA switch count offset in beacon frame
+ * @per_sta_profile_offset: Pointer to per-STA profile info
+ * @quiet_ie_offset: Quiet IE offset
+ * @is_other_ie_present: Set true if other IEs are present in per-STA profile.
+ *                       If the flag is set to false, FW will remove per-STA
+ *                       profile IE when Quiet count reaches to 0.
  */
 struct ml_bcn_partner_info {
 	uint32_t vdev_id;
@@ -213,6 +218,9 @@ struct ml_bcn_partner_info {
 	uint32_t beacon_interval;
 	uint32_t csa_switch_count_offset;
 	uint32_t ext_csa_switch_count_offset;
+	uint32_t per_sta_profile_offset;
+	uint32_t quiet_ie_offset;
+	uint32_t is_other_ie_present;
 };
 
 /**

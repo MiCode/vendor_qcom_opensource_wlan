@@ -164,6 +164,12 @@ uint8_t *bcn_tmpl_add_ml_partner_links(uint8_t *buf_ptr,
 			ml_bcn_tmpl->partner_info[i].csa_switch_count_offset;
 		ml_partner_link->ext_csa_switch_count_offset =
 			ml_bcn_tmpl->partner_info[i].ext_csa_switch_count_offset;
+		ml_partner_link->per_sta_profile_offset =
+			ml_bcn_tmpl->partner_info[i].per_sta_profile_offset;
+		ml_partner_link->quiet_ie_offset =
+			ml_bcn_tmpl->partner_info[i].quiet_ie_offset;
+		ml_partner_link->is_other_ie_present =
+			ml_bcn_tmpl->partner_info[i].is_other_ie_present;
 		ml_partner_link++;
 	}
 
