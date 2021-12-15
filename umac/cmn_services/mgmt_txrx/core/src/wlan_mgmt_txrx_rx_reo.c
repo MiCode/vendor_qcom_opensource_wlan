@@ -938,23 +938,72 @@ mgmt_rx_reo_list_display(struct mgmt_rx_reo_list *reo_list,
 
 #ifdef WLAN_MGMT_RX_REO_DEBUG_SUPPORT
 /**
+ * mgmt_rx_reo_print_egress_frame_stats() - API to print the stats
+ * related to frames going out of the reorder module
+ * @reo_ctx: Pointer to reorder context
+ *
+ * API to print the stats related to frames going out of the management
+ * Rx reorder module.
+ *
+ * Return: QDF_STATUS
+ */
+static QDF_STATUS
+mgmt_rx_reo_print_egress_frame_stats(struct mgmt_rx_reo_context *reo_ctx)
+{
+	struct reo_egress_frame_stats *stats;
+	uint8_t link_id;
+	uint8_t reason;
+	int8_t num_mlo_links;
+
+	if (!reo_ctx)
+		return QDF_STATUS_E_NULL_VALUE;
+
+	stats = &reo_ctx->egress_frame_debug_info.stats;
+
+	num_mlo_links = mgmt_rx_reo_get_num_mlo_links(reo_ctx);
+	qdf_assert_always(num_mlo_links > 0);
+	qdf_assert_always(num_mlo_links <= MGMT_RX_REO_MAX_LINKS);
+
+	mgmt_rx_reo_err("Egress frame stats:");
+	mgmt_rx_reo_err("Total frame count = %llu", stats->total_count);
+	mgmt_rx_reo_err("Total delivered frame count = %llu",
+			stats->total_delivered_count);
+	mgmt_rx_reo_err("Total prematurely delivered frame count = %llu",
+			stats->total_premature_delivery_count);
+
+	mgmt_rx_reo_err("Per link stats:-");
+	for (link_id = 0; link_id < num_mlo_links; link_id++) {
+		mgmt_rx_reo_err("Link id = %u", link_id);
+		mgmt_rx_reo_err("Total frames = %llu",
+				stats->per_link_count[link_id]);
+	}
+
+	mgmt_rx_reo_err("Per release reason stats:-");
+	for (reason = 0; reason < MGMT_RX_REO_RELEASE_REASON_MAX; reason++)
+		mgmt_rx_reo_err("Release reason = %u, Total frames = %llu",
+				reason,
+				stats->per_release_reason_count[reason]);
+
+	return QDF_STATUS_SUCCESS;
+}
+
+/**
  * mgmt_rx_reo_log_egress_frame_before_delivery() - Log the information about a
  * frame exiting the reorder module. Logging is done before attempting the frame
  * delivery to upper layers.
  * @reo_ctx: management rx reorder context
  * @entry: Pointer to reorder list entry
- * @release_reason: Reason to release the frame to upper layers
  *
  * Return: QDF_STATUS of operation
  */
 static QDF_STATUS
 mgmt_rx_reo_log_egress_frame_before_delivery(
 					struct mgmt_rx_reo_context *reo_ctx,
-					struct mgmt_rx_reo_list_entry *entry,
-					uint8_t release_reason)
+					struct mgmt_rx_reo_list_entry *entry)
 {
 	struct reo_egress_debug_info *egress_frame_debug_info;
 	struct reo_egress_debug_frame_info *cur_frame_debug_info;
+	struct reo_egress_frame_stats *stats;
 
 	if (!reo_ctx || !entry)
 		return QDF_STATUS_E_NULL_VALUE;
@@ -973,8 +1022,18 @@ mgmt_rx_reo_log_egress_frame_before_delivery(
 	cur_frame_debug_info->wait_count = entry->wait_count;
 	cur_frame_debug_info->insertion_ts = entry->insertion_ts;
 	cur_frame_debug_info->ingress_timestamp = entry->ingress_timestamp;
-	cur_frame_debug_info->egress_begin_timestamp = qdf_get_log_timestamp();
-	cur_frame_debug_info->release_reason = release_reason;
+	cur_frame_debug_info->removal_ts =  entry->removal_ts;
+	cur_frame_debug_info->egress_timestamp = qdf_get_log_timestamp();
+	cur_frame_debug_info->release_reason = entry->release_reason;
+	cur_frame_debug_info->is_premature_delivery =
+						entry->is_premature_delivery;
+
+	stats = &egress_frame_debug_info->stats;
+	stats->total_count++;
+	stats->per_link_count[cur_frame_debug_info->link_id]++;
+	stats->per_release_reason_count[entry->release_reason]++;
+	if (entry->is_premature_delivery)
+		stats->total_premature_delivery_count++;
 
 	return QDF_STATUS_SUCCESS;
 }
@@ -984,18 +1043,18 @@ mgmt_rx_reo_log_egress_frame_before_delivery(
  * frame exiting the reorder module. Logging is done after attempting the frame
  * delivery to upper layer.
  * @reo_ctx: management rx reorder context
- * @is_delivered: Flag to indicate whether the frame is delivered to upper
- * layers
+ * @entry: Pointer to reorder list entry
  *
  * Return: QDF_STATUS of operation
  */
 static QDF_STATUS
 mgmt_rx_reo_log_egress_frame_after_delivery(
 					struct mgmt_rx_reo_context *reo_ctx,
-					bool is_delivered)
+					struct mgmt_rx_reo_list_entry *entry)
 {
 	struct reo_egress_debug_info *egress_frame_debug_info;
 	struct reo_egress_debug_frame_info *cur_frame_debug_info;
+	struct reo_egress_frame_stats *stats;
 
 	if (!reo_ctx)
 		return QDF_STATUS_E_NULL_VALUE;
@@ -1005,31 +1064,50 @@ mgmt_rx_reo_log_egress_frame_after_delivery(
 	cur_frame_debug_info = &egress_frame_debug_info->debug_info
 			[egress_frame_debug_info->next_index];
 
-	cur_frame_debug_info->is_delivered = is_delivered;
-	cur_frame_debug_info->egress_end_timestamp = qdf_get_log_timestamp();
+	cur_frame_debug_info->is_delivered = entry->is_delivered;
+	cur_frame_debug_info->egress_duration = qdf_get_log_timestamp() -
+					cur_frame_debug_info->egress_timestamp;
 
 	egress_frame_debug_info->next_index++;
 	egress_frame_debug_info->next_index %=
 				MGMT_RX_REO_EGRESS_FRAME_DEBUG_ENTRIES_MAX;
 
+	stats = &egress_frame_debug_info->stats;
+	if (entry->is_delivered)
+		stats->total_delivered_count++;
+
 	return QDF_STATUS_SUCCESS;
 }
 #else
+/**
+ * mgmt_rx_reo_print_egress_frame_stats() - API to print the stats
+ * related to frames going out of the reorder module
+ * @reo_ctx: Pointer to reorder context
+ *
+ * API to print the stats related to frames going out of the management
+ * Rx reorder module.
+ *
+ * Return: QDF_STATUS
+ */
+static QDF_STATUS
+mgmt_rx_reo_print_egress_frame_stats(struct mgmt_rx_reo_context *reo_ctx)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
 /**
  * mgmt_rx_reo_log_egress_frame_before_delivery() - Log the information about a
  * frame exiting the reorder module. Logging is done before attempting the frame
  * delivery to upper layers.
  * @reo_ctx: management rx reorder context
  * @entry: Pointer to reorder list entry
- * @release_reason: Reason to release the frame to upper layers
  *
  * Return: QDF_STATUS of operation
  */
 static QDF_STATUS
 mgmt_rx_reo_log_egress_frame_before_delivery(
 					struct mgmt_rx_reo_context *reo_ctx,
-					struct mgmt_rx_reo_list_entry *entry,
-					uint8_t release_reason)
+					struct mgmt_rx_reo_list_entry *entry)
 {
 	return QDF_STATUS_SUCCESS;
 }
@@ -1057,7 +1135,6 @@ mgmt_rx_reo_log_egress_frame_after_delivery(
  * mgmt_rx_reo_list_entry_get_release_reason() - Helper API to get the reason
  * for releasing the reorder list entry to upper layer.
  * reorder list.
- * @reo_list: Pointer to reorder list
  * @entry: List entry
  *
  * This API expects the caller to acquire the spin lock protecting the reorder
@@ -1066,13 +1143,11 @@ mgmt_rx_reo_log_egress_frame_after_delivery(
  * Return: Reason for releasing the frame.
  */
 static uint8_t
-mgmt_rx_reo_list_entry_get_release_reason(
-		struct mgmt_rx_reo_list *reo_list,
-		struct mgmt_rx_reo_list_entry *entry)
+mgmt_rx_reo_list_entry_get_release_reason(struct mgmt_rx_reo_list_entry *entry)
 {
 	uint8_t release_reason = 0;
 
-	if (!reo_list || !entry)
+	if (!entry)
 		return 0;
 
 	if (MGMT_RX_REO_LIST_ENTRY_IS_MAX_SIZE_EXCEEDED(entry))
@@ -1113,12 +1188,10 @@ mgmt_rx_reo_list_entry_send_up(const struct mgmt_rx_reo_list *reo_list,
 {
 	uint8_t release_reason;
 	uint8_t link_id;
-	struct wlan_objmgr_pdev *pdev;
 	uint32_t entry_global_ts;
-	struct mgmt_rx_reo_global_ts_info *ts_last_delivered_frame;
 	QDF_STATUS status;
+	QDF_STATUS temp;
 	struct mgmt_rx_reo_context *reo_context;
-	bool is_delivered = false;
 
 	qdf_assert_always(reo_list);
 	qdf_assert_always(entry);
@@ -1128,57 +1201,51 @@ mgmt_rx_reo_list_entry_send_up(const struct mgmt_rx_reo_list *reo_list,
 
 	link_id = mgmt_rx_reo_get_link_id(entry->rx_params);
 	entry_global_ts = mgmt_rx_reo_get_global_ts(entry->rx_params);
-	ts_last_delivered_frame = &reo_list->ts_last_delivered_frame;
 
-	release_reason = mgmt_rx_reo_list_entry_get_release_reason(
-					reo_list, entry);
+	release_reason = mgmt_rx_reo_list_entry_get_release_reason(entry);
 
 	qdf_assert_always(release_reason != 0);
 
-	pdev = wlan_get_pdev_from_mlo_link_id(link_id);
-	if (!pdev) {
-		mgmt_rx_reo_err("Unable to get pdev corresponding to entry %pK",
-				entry);
-		return QDF_STATUS_E_FAILURE;
-	}
-
-	status = mgmt_rx_reo_log_egress_frame_before_delivery(reo_context,
-							      entry,
-							      release_reason);
-	if (QDF_IS_STATUS_ERROR(status))
-		goto exit;
+	entry->is_delivered = false;
+	entry->is_premature_delivery = false;
+	entry->release_reason = release_reason;
 
 	if (mgmt_rx_reo_is_potential_premature_delivery(release_reason)) {
+		entry->is_premature_delivery = true;
 		status = mgmt_rx_reo_handle_potential_premature_delivery(
 						reo_context, entry_global_ts);
 		if (QDF_IS_STATUS_ERROR(status))
 			goto exit;
 	}
 
-	status = wlan_mgmt_txrx_process_rx_frame(pdev, entry->nbuf,
+	status = mgmt_rx_reo_log_egress_frame_before_delivery(reo_context,
+							      entry);
+	if (QDF_IS_STATUS_ERROR(status))
+		goto exit;
+
+	status = wlan_mgmt_txrx_process_rx_frame(entry->pdev, entry->nbuf,
 						 entry->rx_params);
 	/* Above call frees nbuf and rx_params, make it null explicitly */
 	entry->nbuf = NULL;
 	entry->rx_params = NULL;
 
 	if (QDF_IS_STATUS_ERROR(status))
-		goto exit;
+		goto exit_log;
 
-	is_delivered = true;
-
-	status = mgmt_rx_reo_log_egress_frame_after_delivery(reo_context,
-							     is_delivered);
-	if (QDF_IS_STATUS_ERROR(status))
-		goto exit;
+	entry->is_delivered = true;
 
 	status = QDF_STATUS_SUCCESS;
 
+exit_log:
+	temp = mgmt_rx_reo_log_egress_frame_after_delivery(reo_context, entry);
+	if (QDF_IS_STATUS_ERROR(temp))
+		status = temp;
 exit:
 	/**
 	 * Release the reference taken when the entry is inserted into
 	 * the reorder list
 	 */
-	wlan_objmgr_pdev_release_ref(pdev, WLAN_MGMT_RX_REO_ID);
+	wlan_objmgr_pdev_release_ref(entry->pdev, WLAN_MGMT_RX_REO_ID);
 
 	return status;
 }
@@ -1269,6 +1336,7 @@ mgmt_rx_reo_list_release_entries(struct mgmt_rx_reo_context *reo_context)
 			status = QDF_STATUS_E_FAILURE;
 			goto exit_unlock_list_lock;
 		}
+		first_entry->removal_ts = qdf_get_log_timestamp();
 
 		/**
 		 * Last released frame global time stamp is invalid means that
@@ -1400,7 +1468,6 @@ mgmt_rx_reo_prepare_list_entry(
 {
 	struct mgmt_rx_reo_list_entry *list_entry;
 	struct wlan_objmgr_pdev *pdev;
-	QDF_STATUS status;
 	uint8_t link_id;
 
 	if (!frame_desc) {
@@ -1782,28 +1849,78 @@ wlan_mgmt_rx_reo_update_host_snapshot(struct wlan_objmgr_pdev *pdev,
 
 #ifdef WLAN_MGMT_RX_REO_DEBUG_SUPPORT
 /**
+ * mgmt_rx_reo_print_ingress_frame_stats() - API to print the stats
+ * related to frames going into the reorder module
+ * @reo_ctx: Pointer to reorder context
+ *
+ * API to print the stats related to frames going into the management
+ * Rx reorder module.
+ *
+ * Return: QDF_STATUS
+ */
+static QDF_STATUS
+mgmt_rx_reo_print_ingress_frame_stats(struct mgmt_rx_reo_context *reo_ctx)
+{
+	struct reo_ingress_frame_stats *stats;
+	uint8_t link_id;
+	uint8_t type;
+	int8_t num_mlo_links;
+
+	if (!reo_ctx)
+		return QDF_STATUS_E_NULL_VALUE;
+
+	stats = &reo_ctx->ingress_frame_debug_info.stats;
+
+	num_mlo_links = mgmt_rx_reo_get_num_mlo_links(reo_ctx);
+	qdf_assert_always(num_mlo_links > 0);
+	qdf_assert_always(num_mlo_links <= MGMT_RX_REO_MAX_LINKS);
+
+	mgmt_rx_reo_err("Ingress frame stats:");
+	mgmt_rx_reo_err("Total frame count = %llu", stats->total_count);
+	mgmt_rx_reo_err("Total queued frame count = %llu",
+			stats->queued_count);
+	mgmt_rx_reo_err("Total stale frame count = %llu",
+			stats->stale_count);
+	mgmt_rx_reo_err("Per link stats:-");
+	for (link_id = 0; link_id < num_mlo_links; link_id++) {
+		mgmt_rx_reo_err("Link id = %u", link_id);
+		mgmt_rx_reo_err("Total frames = %llu",
+				stats->per_link_count[link_id]);
+	}
+
+	mgmt_rx_reo_err("Per descriptor type stats:-");
+	for (type = 0; type < MGMT_RX_REO_FRAME_DESC_TYPE_MAX; type++)
+		mgmt_rx_reo_err("Frame type = %u, Total frames = %llu",
+				type, stats->per_type_count[type]);
+
+	return QDF_STATUS_SUCCESS;
+}
+
+/**
  * mgmt_rx_reo_log_ingress_frame() - Log the information about a frame entering
  * the reorder algorithm.
  * @reo_ctx: management rx reorder context
  * @desc: Pointer to frame descriptor
  * @is_queued: Indicates whether this frame is queued to reorder list
+ * @is_error: Indicates whether any error occurred during processing this frame
  *
  * Return: QDF_STATUS of operation
  */
 static QDF_STATUS
 mgmt_rx_reo_log_ingress_frame(struct mgmt_rx_reo_context *reo_ctx,
 			      struct mgmt_rx_reo_frame_descriptor *desc,
-			      bool is_queued)
+			      bool is_queued, bool is_error)
 {
 	struct reo_ingress_debug_info *ingress_frame_debug_info;
 	struct reo_ingress_debug_frame_info *cur_frame_debug_info;
+	struct reo_ingress_frame_stats *stats;
 
 	if (!reo_ctx || !desc)
 		return QDF_STATUS_E_NULL_VALUE;
 
 	ingress_frame_debug_info = &reo_ctx->ingress_frame_debug_info;
 
-	cur_frame_debug_info = &ingress_frame_debug_info->debug_info
+	cur_frame_debug_info = &ingress_frame_debug_info->frame_list
 			[ingress_frame_debug_info->next_index];
 
 	cur_frame_debug_info->link_id =
@@ -1814,32 +1931,61 @@ mgmt_rx_reo_log_ingress_frame(struct mgmt_rx_reo_context *reo_ctx,
 				mgmt_rx_reo_get_global_ts(desc->rx_params);
 	cur_frame_debug_info->type = desc->type;
 	cur_frame_debug_info->wait_count = desc->wait_count;
-	cur_frame_debug_info->ingress_timestamp = desc->ingress_timestamp;
 	cur_frame_debug_info->is_queued = is_queued;
 	cur_frame_debug_info->is_stale = desc->is_stale;
+	cur_frame_debug_info->is_error = is_error;
 	cur_frame_debug_info->ts_last_released_frame =
 				reo_ctx->reo_list.ts_last_released_frame;
+	cur_frame_debug_info->ingress_timestamp = desc->ingress_timestamp;
+	cur_frame_debug_info->ingress_duration =
+			qdf_get_log_timestamp() - desc->ingress_timestamp;
 
 	ingress_frame_debug_info->next_index++;
 	ingress_frame_debug_info->next_index %=
 				MGMT_RX_REO_INGRESS_FRAME_DEBUG_ENTRIES_MAX;
 
+	stats = &ingress_frame_debug_info->stats;
+	stats->total_count++;
+	stats->per_link_count[cur_frame_debug_info->link_id]++;
+	stats->per_type_count[desc->type]++;
+	if (is_queued)
+		stats->queued_count++;
+	if (desc->is_stale)
+		stats->stale_count++;
+
 	return QDF_STATUS_SUCCESS;
 }
 #else
+/**
+ * mgmt_rx_reo_print_ingress_frame_stats() - API to print the stats
+ * related to frames going into the reorder module
+ * @reo_ctx: Pointer to reorder context
+ *
+ * API to print the stats related to frames going into the management
+ * Rx reorder module.
+ *
+ * Return: QDF_STATUS
+ */
+static QDF_STATUS
+mgmt_rx_reo_print_ingress_frame_stats(struct mgmt_rx_reo_context *reo_ctx)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
 /**
  * mgmt_rx_reo_log_ingress_frame() - Log the information about a frame entering
  * the reorder algorithm.
  * @reo_ctx: management rx reorder context
  * @desc: Pointer to frame descriptor
  * @is_queued: Indicates whether this frame is queued to reorder list
+ * @is_error: Indicates whether any error occurred during processing this frame
  *
  * Return: QDF_STATUS of operation
  */
 static QDF_STATUS
 mgmt_rx_reo_log_ingress_frame(struct mgmt_rx_reo_context *reo_ctx,
 			      struct mgmt_rx_reo_frame_descriptor *desc,
-			      bool is_queued)
+			      bool is_queued, bool is_error)
 {
 	return QDF_STATUS_SUCCESS;
 }
@@ -1851,7 +1997,7 @@ wlan_mgmt_rx_reo_algo_entry(struct wlan_objmgr_pdev *pdev,
 			    bool *is_queued)
 {
 	struct mgmt_rx_reo_context *reo_ctx;
-	QDF_STATUS status;
+	QDF_STATUS ret;
 	int8_t num_mlo_links;
 
 	if (!is_queued)
@@ -1964,43 +2110,49 @@ wlan_mgmt_rx_reo_algo_entry(struct wlan_objmgr_pdev *pdev,
 	qdf_spin_lock(&reo_ctx->reo_algo_entry_lock);
 
 	/* Update the Host snapshot */
-	status = wlan_mgmt_rx_reo_update_host_snapshot(
+	ret = wlan_mgmt_rx_reo_update_host_snapshot(
 						pdev,
 						desc->rx_params->reo_params);
-	if (QDF_IS_STATUS_ERROR(status)) {
-		qdf_spin_unlock(&reo_ctx->reo_algo_entry_lock);
-		return QDF_STATUS_E_FAILURE;
-	}
+	if (QDF_IS_STATUS_ERROR(ret))
+		goto failure;
 
 	/* Compute wait count for this frame/event */
-	status = wlan_mgmt_rx_reo_algo_calculate_wait_count(
+	ret = wlan_mgmt_rx_reo_algo_calculate_wait_count(
 						pdev,
 						desc->rx_params->reo_params,
 						num_mlo_links,
 						&desc->wait_count);
-	if (QDF_IS_STATUS_ERROR(status)) {
-		qdf_spin_unlock(&reo_ctx->reo_algo_entry_lock);
-		return QDF_STATUS_E_FAILURE;
-	}
+	if (QDF_IS_STATUS_ERROR(ret))
+		goto failure;
 
 	/* Update the REO list */
-	status = mgmt_rx_reo_update_list(&reo_ctx->reo_list, num_mlo_links,
-					 desc, is_queued);
-	if (QDF_IS_STATUS_ERROR(status)) {
-		qdf_spin_unlock(&reo_ctx->reo_algo_entry_lock);
-		return QDF_STATUS_E_FAILURE;
-	}
+	ret = mgmt_rx_reo_update_list(&reo_ctx->reo_list, num_mlo_links,
+				      desc, is_queued);
+	if (QDF_IS_STATUS_ERROR(ret))
+		goto failure;
 
-	status = mgmt_rx_reo_log_ingress_frame(reo_ctx, desc, *is_queued);
-	if (QDF_IS_STATUS_ERROR(status)) {
+	ret = mgmt_rx_reo_log_ingress_frame(reo_ctx, desc,
+					    *is_queued, false);
+	if (QDF_IS_STATUS_ERROR(ret)) {
 		qdf_spin_unlock(&reo_ctx->reo_algo_entry_lock);
-		return QDF_STATUS_E_FAILURE;
+		return ret;
 	}
 
 	qdf_spin_unlock(&reo_ctx->reo_algo_entry_lock);
 
 	/* Finally, release the entries for which pending frame is received */
 	return mgmt_rx_reo_list_release_entries(reo_ctx);
+
+failure:
+	/**
+	 * Ignore the return value of this function call, return
+	 * the actual reason for failure.
+	 */
+	mgmt_rx_reo_log_ingress_frame(reo_ctx, desc, *is_queued, true);
+
+	qdf_spin_unlock(&reo_ctx->reo_algo_entry_lock);
+
+	return ret;
 }
 
 #ifndef WLAN_MGMT_RX_REO_SIM_SUPPORT
@@ -3288,6 +3440,18 @@ mgmt_rx_reo_sim_stop(void)
 		drain_workqueue(sim_context->host_mgmt_frame_handler[link_id]);
 		destroy_workqueue(
 				sim_context->host_mgmt_frame_handler[link_id]);
+	}
+
+	status = mgmt_rx_reo_print_ingress_frame_stats(reo_context);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		mgmt_rx_reo_err("Failed to print ingress frame stats");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	status = mgmt_rx_reo_print_egress_frame_stats(reo_context);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		mgmt_rx_reo_err("Failed to print egress frame stats");
+		return QDF_STATUS_E_FAILURE;
 	}
 
 	master_frame_list = &sim_context->master_frame_list;

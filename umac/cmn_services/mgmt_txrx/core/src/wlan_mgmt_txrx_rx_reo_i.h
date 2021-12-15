@@ -190,11 +190,18 @@ struct mgmt_rx_reo_wait_count {
  * @nbuf: nbuf corresponding to this frame
  * @rx_params: Management rx event parameters
  * @wait_count: Wait counts for the frame
- * @insertion_ts: Host time stamp when this entry is inserted to
- * the list.
+ * @insertion_ts: Host time stamp when this entry is inserted to the list.
+ * @removal_ts: Host time stamp when this entry is removed from the list
  * @ingress_timestamp: Host time stamp when this frame has arrived reorder
  * module
+ * @egress_timestamp: Host time stamp when this frame has exited reorder
+ * module
  * @status: Status for this entry
+ * @pdev: Pointer to pdev object corresponding to this frame
+ * @release_reason: Release reason
+ * @is_delivered: Indicates whether the frame is delivered successfully
+ * @is_premature_delivery: Indicates whether the frame is delivered
+ * prematurely
  */
 struct mgmt_rx_reo_list_entry {
 	qdf_list_node_t node;
@@ -202,8 +209,14 @@ struct mgmt_rx_reo_list_entry {
 	struct mgmt_rx_event_params *rx_params;
 	struct mgmt_rx_reo_wait_count wait_count;
 	uint64_t insertion_ts;
+	uint64_t removal_ts;
 	uint64_t ingress_timestamp;
+	uint64_t egress_timestamp;
 	uint32_t status;
+	struct wlan_objmgr_pdev *pdev;
+	uint8_t release_reason;
+	bool is_delivered;
+	bool is_premature_delivery;
 };
 
 #ifdef WLAN_MGMT_RX_REO_SIM_SUPPORT
@@ -372,9 +385,13 @@ struct mgmt_rx_reo_sim_context {
  * @type: Type of the frame descriptor
  * @ingress_timestamp: Host time stamp when the frames enters the reorder
  * algorithm
+ * @ingress_duration: Duration in us for processing the incoming frame.
+ * ingress_duration = Time stamp at which reorder list update is done -
+ * Time stamp at which frame has entered the reorder module
  * @wait_count: Wait count calculated for the current frame
  * @is_queued: Indicates whether this frame is queued to reorder list
  * @is_stale: Indicates whether this frame is stale.
+ * @is_error: Indicates whether any error occurred during processing this frame
  * @ts_last_released_frame: Stores the global time stamp for the last frame
  * removed from the reorder list
  */
@@ -384,9 +401,11 @@ struct reo_ingress_debug_frame_info {
 	uint32_t global_timestamp;
 	enum mgmt_rx_reo_frame_descriptor_type type;
 	uint64_t ingress_timestamp;
+	uint64_t ingress_duration;
 	struct mgmt_rx_reo_wait_count wait_count;
 	bool is_queued;
 	bool is_stale;
+	bool is_error;
 	struct mgmt_rx_reo_global_ts_info ts_last_released_frame;
 };
 
@@ -394,30 +413,73 @@ struct reo_ingress_debug_frame_info {
  * struct reo_egress_debug_frame_info - Debug information about a frame
  * leaving the reorder module
  * @is_delivered: Indicates whether the frame is delivered to upper layers
+ * @is_premature_delivery: Indicates whether the frame is delivered
+ * prematurely
  * @link_id: link id
  * @mgmt_pkt_ctr: management packet counter
  * @global_timestamp: MLO global time stamp
  * @ingress_timestamp: Host time stamp when the frame enters the reorder module
  * @insertion_ts: Host time stamp when the frame is inserted into the reorder
  * list
- * @egress_begin_timestamp: Host time stamp just before delivery of the frame
- * to upper layer
- * @egress_end_timestamp: Host time stamp just after delivery of the frame
- * to upper layer
+ * @egress_timestamp: Host time stamp just before delivery of the frame to upper
+ * layer
+ * @egress_duration: Duration in us taken by the upper layer to process
+ * the frame.
+ * @removal_ts: Host time stamp when this entry is removed from the list
  * @wait_count: Wait count calculated for the current frame
  * @release_reason: Reason for delivering the frame to upper layers
  */
 struct reo_egress_debug_frame_info {
 	bool is_delivered;
+	bool is_premature_delivery;
 	uint8_t link_id;
 	uint16_t mgmt_pkt_ctr;
 	uint32_t global_timestamp;
 	uint64_t ingress_timestamp;
 	uint64_t insertion_ts;
-	uint64_t egress_begin_timestamp;
-	uint64_t egress_end_timestamp;
+	uint64_t egress_timestamp;
+	uint64_t egress_duration;
+	uint64_t removal_ts;
 	struct mgmt_rx_reo_wait_count wait_count;
 	uint8_t release_reason;
+};
+
+/**
+ * struct reo_ingress_frame_stats - Structure to store statistics related to
+ * incoming frames
+ * @total_count: Total number of frames entering reo module
+ * @per_link_count: Total number of frames for each link
+ * @per_type_count: Total number of frames for each frame type
+ * @queued_count: Total number of frames queued to reorder list
+ * @stale_count: Total number of stale frames. Any frame older than the
+ * last frame delivered to upper layer is a stale frame.
+ */
+struct reo_ingress_frame_stats {
+	uint64_t total_count;
+	uint64_t per_link_count[MGMT_RX_REO_MAX_LINKS];
+	uint64_t per_type_count[MGMT_RX_REO_FRAME_DESC_TYPE_MAX];
+	uint64_t queued_count;
+	uint64_t stale_count;
+};
+
+/**
+ * struct reo_egress_frame_stats - Structure to store statistics related to
+ * outgoing frames
+ * @total_count: Total number of frames entering reo module
+ * @per_link_count: Total number of frames for each link
+ * @per_release_reason_count: Total number frames delivered corresponding to
+ * each release reason
+ * @total_delivered_count: Total number of frames delivered successfully
+ * @total_premature_delivery_count:  Total number of frames delivered
+ * prematurely. Premature delivery is the delivery of a management frame
+ * to the upper layers even before its wait count is reaching zero.
+ */
+struct reo_egress_frame_stats {
+	uint64_t total_count;
+	uint64_t per_link_count[MGMT_RX_REO_MAX_LINKS];
+	uint64_t per_release_reason_count[MGMT_RX_REO_RELEASE_REASON_MAX];
+	uint64_t total_delivered_count;
+	uint64_t total_premature_delivery_count;
 };
 
 /**
@@ -425,11 +487,13 @@ struct reo_egress_debug_frame_info {
  * debug information about the frames entering the reorder algorithm.
  * @frame_list: Circular array to store the debug info about frames
  * @next_index: The index at which information about next frame will be logged
+ * @stats: Stats related to incoming frames
  */
 struct reo_ingress_debug_info {
 	struct reo_ingress_debug_frame_info
 			frame_list[MGMT_RX_REO_INGRESS_FRAME_DEBUG_ENTRIES_MAX];
 	uint32_t next_index;
+	struct reo_ingress_frame_stats stats;
 };
 
 /**
@@ -437,11 +501,13 @@ struct reo_ingress_debug_info {
  * debug information about the frames leaving the reorder module.
  * @debug_info: Circular array to store the debug info
  * @next_index: The index at which information about next frame will be logged
+ * @stats: Stats related to outgoing frames
  */
 struct reo_egress_debug_info {
-	struct reo_egress_frame_debug_info
+	struct reo_egress_debug_frame_info
 			debug_info[MGMT_RX_REO_EGRESS_FRAME_DEBUG_ENTRIES_MAX];
 	uint32_t next_index;
+	struct reo_egress_frame_stats stats;
 };
 #endif /* WLAN_MGMT_RX_REO_DEBUG_SUPPORT */
 
