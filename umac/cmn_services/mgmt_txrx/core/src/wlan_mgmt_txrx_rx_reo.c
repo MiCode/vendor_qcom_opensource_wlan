@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -2581,13 +2581,10 @@ mgmt_rx_reo_sim_frame_handler_host(void *arg)
 	struct mgmt_rx_frame_fw *frame_fw = (struct mgmt_rx_frame_fw *)arg;
 	uint32_t fw_to_host_delay_us;
 	bool is_error_frame = false;
-	struct mgmt_rx_reo_frame_descriptor *frame_descriptor;
 	int8_t link_id = -1;
 	struct mgmt_rx_event_params *rx_params;
-	enum mgmt_rx_reo_frame_descriptor_type frame_type;
 	QDF_STATUS status;
 	struct mgmt_rx_reo_sim_context *sim_context;
-	bool is_queued = false;
 	struct wlan_objmgr_pdev *pdev;
 
 	if (!frame_fw) {
@@ -2639,18 +2636,11 @@ mgmt_rx_reo_sim_frame_handler_host(void *arg)
 			  frame_fw->params.mgmt_pkt_ctr,
 			  frame_fw->is_consumed_by_fw, is_error_frame);
 
-	frame_descriptor = qdf_mem_malloc(sizeof(*frame_descriptor));
-	if (!frame_descriptor) {
-		mgmt_rx_reo_err("HOST-%d : Failed to allocate descriptor",
-				link_id);
-		goto error_free_fw_frame;
-	}
-
 	rx_params = alloc_mgmt_rx_event_params();
 	if (!rx_params) {
 		mgmt_rx_reo_err("HOST-%d : Failed to allocate event params",
 				link_id);
-		goto error_free_frame_descriptor;
+		goto error_free_fw_frame;
 	}
 
 	rx_params->reo_params->link_id = frame_fw->params.link_id;
@@ -2659,45 +2649,37 @@ mgmt_rx_reo_sim_frame_handler_host(void *arg)
 	rx_params->reo_params->mgmt_pkt_ctr = frame_fw->params.mgmt_pkt_ctr;
 	rx_params->reo_params->valid = true;
 
-	frame_descriptor->nbuf = NULL;
-	frame_descriptor->rx_params = rx_params;
-	frame_descriptor->ingress_timestamp = qdf_get_log_timestamp();
-
-	if (is_error_frame)
-		frame_type = MGMT_RX_REO_FRAME_DESC_ERROR_FRAME;
-	else
-		if (frame_fw->is_consumed_by_fw)
-			frame_type = MGMT_RX_REO_FRAME_DESC_FW_CONSUMED_FRAME;
-		else
-			frame_type = MGMT_RX_REO_FRAME_DESC_HOST_CONSUMED_FRAME;
-	frame_descriptor->type = frame_type;
-
-	pdev = wlan_get_pdev_from_mlo_link_id(link_id);
+	pdev = wlan_get_pdev_from_mlo_link_id(link_id, WLAN_MGMT_RX_REO_SIM_ID);
 	if (!pdev) {
 		mgmt_rx_reo_err("No pdev corresponding to link_id %d", link_id);
 		goto error_free_mgmt_rx_event_params;
 	}
 
-	status = wlan_mgmt_rx_reo_algo_entry(pdev, frame_descriptor,
-					     &is_queued);
+	if (is_error_frame) {
+		status = tgt_mgmt_rx_reo_host_drop_handler(
+						pdev, rx_params->reo_params);
+		free_mgmt_rx_event_params(rx_params);
+	} else if (frame_fw->is_consumed_by_fw) {
+		status = tgt_mgmt_rx_reo_fw_consumed_event_handler(
+						pdev, rx_params->reo_params);
+		free_mgmt_rx_event_params(rx_params);
+	} else {
+		status = tgt_mgmt_rx_reo_frame_handler(pdev, NULL, rx_params);
+	}
+
+	wlan_objmgr_pdev_release_ref(pdev, WLAN_MGMT_RX_REO_SIM_ID);
 
 	if (QDF_IS_STATUS_ERROR(status)) {
 		mgmt_rx_reo_err("Failed to execute reo algorithm");
-		goto error_free_mgmt_rx_event_params;
+		goto error_free_fw_frame;
 	}
 
-	if (!is_queued)
-		free_mgmt_rx_event_params(frame_descriptor->rx_params);
-	qdf_mem_free(frame_descriptor);
 	qdf_mem_free(frame_fw);
 
 	return;
 
 error_free_mgmt_rx_event_params:
-	if (!is_queued)
-		free_mgmt_rx_event_params(frame_descriptor->rx_params);
-error_free_frame_descriptor:
-	qdf_mem_free(frame_descriptor);
+	free_mgmt_rx_event_params(rx_params);
 error_free_fw_frame:
 	qdf_mem_free(frame_fw);
 error_print:
@@ -3326,6 +3308,7 @@ mgmt_rx_reo_sim_pdev_object_destroy_notification(struct wlan_objmgr_pdev *pdev)
 QDF_STATUS
 mgmt_rx_reo_sim_start(void)
 {
+	struct mgmt_rx_reo_context *reo_context;
 	struct mgmt_rx_reo_sim_context *sim_context;
 	qdf_thread_t *mac_hw_thread;
 	uint8_t link_id;
@@ -3333,11 +3316,15 @@ mgmt_rx_reo_sim_start(void)
 	int8_t num_mlo_links;
 	QDF_STATUS status;
 
-	sim_context = mgmt_rx_reo_sim_get_context();
-	if (!sim_context) {
-		mgmt_rx_reo_err("Mgmt reo simulation context is null");
+	reo_context = mgmt_rx_reo_get_context();
+	if (!reo_context) {
+		mgmt_rx_reo_err("reo context is null");
 		return QDF_STATUS_E_NULL_VALUE;
 	}
+
+	reo_context->simulation_in_progress = true;
+
+	sim_context = &reo_context->sim_context;
 
 	num_mlo_links = mgmt_rx_reo_sim_get_num_mlo_links(sim_context);
 	if (num_mlo_links <= 0) {
@@ -3474,6 +3461,8 @@ mgmt_rx_reo_sim_stop(void)
 	} else {
 		mgmt_rx_reo_err("reo sim passed");
 	}
+
+	reo_context->simulation_in_progress = false;
 
 	return QDF_STATUS_SUCCESS;
 }
@@ -3830,4 +3819,18 @@ mgmt_rx_reo_pdev_obj_destroy_notification(
 	}
 
 	return QDF_STATUS_SUCCESS;
+}
+
+bool
+mgmt_rx_reo_is_simulation_in_progress(void)
+{
+	struct mgmt_rx_reo_context *reo_context;
+
+	reo_context = mgmt_rx_reo_get_context();
+	if (!reo_context) {
+		mgmt_rx_reo_err("reo context is null");
+		return false;
+	}
+
+	return reo_context->simulation_in_progress;
 }

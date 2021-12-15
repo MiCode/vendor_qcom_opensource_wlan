@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -23,6 +23,8 @@
 #include <wlan_mgmt_txrx_rx_reo_utils_api.h>
 #include "../../core/src/wlan_mgmt_txrx_rx_reo_i.h"
 #include <cfg_ucfg_api.h>
+#include <wlan_mgmt_txrx_tgt_api.h>
+#include<wlan_mgmt_txrx_rx_reo_tgt_api.h>
 
 QDF_STATUS
 wlan_mgmt_rx_reo_deinit(void)
@@ -210,7 +212,6 @@ wlan_mgmt_rx_reo_is_feature_enabled_at_pdev(struct wlan_objmgr_pdev *pdev)
 {
 	return true;
 }
-#endif /* WLAN_MGMT_RX_REO_SIM_SUPPORT */
 
 QDF_STATUS
 wlan_mgmt_rx_reo_sim_start(void)
@@ -227,3 +228,10 @@ wlan_mgmt_rx_reo_sim_stop(void)
 }
 
 qdf_export_symbol(wlan_mgmt_rx_reo_sim_stop);
+#endif /* WLAN_MGMT_RX_REO_SIM_SUPPORT */
+
+bool
+wlan_mgmt_rx_reo_is_simulation_in_progress(void)
+{
+	return mgmt_rx_reo_is_simulation_in_progress();
+}

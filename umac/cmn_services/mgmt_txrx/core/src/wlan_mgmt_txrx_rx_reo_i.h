@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -538,6 +538,8 @@ struct reo_egress_debug_info {
  * @sim_context: Management rx-reorder simulation context
  * @ingress_frame_debug_info: Debug object to log incoming frames
  * @egress_frame_debug_info: Debug object to log outgoing frames
+ * @simulation_in_progress: Flag to indicate whether simulation is
+ * in progress
  */
 struct mgmt_rx_reo_context {
 	struct mgmt_rx_reo_list reo_list;
@@ -552,6 +554,7 @@ struct mgmt_rx_reo_context {
 	struct  reo_ingress_debug_info ingress_frame_debug_info;
 	struct  reo_egress_debug_info egress_frame_debug_info;
 #endif /* WLAN_MGMT_RX_REO_DEBUG_SUPPORT */
+	bool simulation_in_progress;
 };
 
 /**
@@ -677,6 +680,15 @@ mgmt_rx_reo_init_context(void);
  */
 QDF_STATUS
 mgmt_rx_reo_deinit_context(void);
+
+/**
+ * mgmt_rx_reo_is_simulation_in_progress() - API to check whether
+ * simulation is in progress
+ *
+ * Return: true if simulation is in progress, else false
+ */
+bool
+mgmt_rx_reo_is_simulation_in_progress(void);
 
 #ifdef WLAN_MGMT_RX_REO_SIM_SUPPORT
 /**
