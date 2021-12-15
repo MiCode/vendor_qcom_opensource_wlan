@@ -56,6 +56,8 @@
 #define MGMT_RX_REO_LIST_ENTRY_RELEASE_REASON_AGED_OUT                  (BIT(1))
 #define MGMT_RX_REO_LIST_ENTRY_RELEASE_REASON_OLDER_THAN_AGED_OUT_FRAME (BIT(2))
 #define MGMT_RX_REO_LIST_ENTRY_RELEASE_REASON_LIST_MAX_SIZE_EXCEEDED    (BIT(3))
+#define MGMT_RX_REO_RELEASE_REASON_MAX      \
+	((MGMT_RX_REO_LIST_ENTRY_RELEASE_REASON_LIST_MAX_SIZE_EXCEEDED << 1) - 1)
 
 #define MGMT_RX_REO_LIST_ENTRY_IS_WAITING_FOR_FRAME_ON_OTHER_LINK(entry)   \
 	((entry)->status & MGMT_RX_REO_STATUS_WAIT_FOR_FRAME_ON_OTHER_LINKS)
@@ -131,11 +133,13 @@ mgmt_rx_reo_pdev_obj_destroy_notification(
  * @MGMT_RX_REO_FRAME_DESC_FW_CONSUMED_FRAME: Management frame consumed by FW
  * @MGMT_RX_REO_FRAME_DESC_ERROR_FRAME: Management frame which got dropped
  * at host due to any error
+ * @MGMT_RX_REO_FRAME_DESC_TYPE_MAX: Maximum number of frame types
  */
 enum mgmt_rx_reo_frame_descriptor_type {
 	MGMT_RX_REO_FRAME_DESC_HOST_CONSUMED_FRAME,
 	MGMT_RX_REO_FRAME_DESC_FW_CONSUMED_FRAME,
 	MGMT_RX_REO_FRAME_DESC_ERROR_FRAME,
+	MGMT_RX_REO_FRAME_DESC_TYPE_MAX,
 };
 
 /**
@@ -582,7 +586,7 @@ struct mgmt_rx_reo_frame_descriptor {
  * Return: Pointer to management rx reorder context
  */
 static inline struct mgmt_rx_reo_context *
-mgmt_rx_reo_get_context_from_reo_list(struct mgmt_rx_reo_list *reo_list) {
+mgmt_rx_reo_get_context_from_reo_list(const struct mgmt_rx_reo_list *reo_list) {
 	qdf_assert_always(reo_list);
 
 	return qdf_container_of(reo_list, struct mgmt_rx_reo_context,

@@ -303,7 +303,7 @@ mgmt_rx_reo_sim_get_pdev_from_mlo_link_id(uint8_t mlo_link_id,
 }
 
 /**
- * @mgmt_rx_reo_handle_potential_premature_delivery: Helper API to handle
+ * mgmt_rx_reo_handle_potential_premature_delivery - Helper API to handle
  * premature delivery.
  * @reo_context: Pointer to reorder list
  * @global_timestamp: Global time stamp of the current management frame
@@ -411,14 +411,15 @@ mgmt_rx_reo_sim_remove_frame_from_stale_list(
 
 	status = qdf_list_remove_node(&master_frame_list->stale_list,
 				      &matching_entry->node);
+
 	if (QDF_IS_STATUS_ERROR(status)) {
 		qdf_spin_unlock(&master_frame_list->lock);
 		return status;
 	}
 
-	qdf_spin_unlock(&master_frame_list->lock);
-
 	qdf_mem_free(matching_entry);
+
+	qdf_spin_unlock(&master_frame_list->lock);
 
 	return QDF_STATUS_SUCCESS;
 }
@@ -474,7 +475,7 @@ mgmt_rx_reo_handle_stale_frame(struct mgmt_rx_reo_list *reo_list,
 static bool
 mgmt_rx_reo_is_potential_premature_delivery(uint8_t release_reason)
 {
-	return (release_reason !=
+	return !(release_reason &
 			MGMT_RX_REO_LIST_ENTRY_RELEASE_REASON_ZERO_WAIT_COUNT);
 }
 
@@ -1794,7 +1795,7 @@ mgmt_rx_reo_list_init(struct mgmt_rx_reo_list *reo_list)
 		return status;
 	}
 
-	reo_list->ts_last_delivered_frame.valid = false;
+	reo_list->ts_last_released_frame.valid = false;
 
 	return QDF_STATUS_SUCCESS;
 }
@@ -2344,9 +2345,10 @@ mgmt_rx_reo_sim_remove_frame_from_pending_list(
 		return status;
 	}
 
+	qdf_mem_free(matching_entry);
+
 	qdf_spin_unlock(&master_frame_list->lock);
 
-	qdf_mem_free(matching_entry);
 
 	return QDF_STATUS_SUCCESS;
 }
