@@ -779,6 +779,7 @@ mgmt_rx_reo_sim_get_mlo_link_id_from_pdev(struct wlan_objmgr_pdev *pdev);
  * mgmt_rx_reo_sim_get_pdev_from_mlo_link_id() - Helper API to get the pdev
  * object from the MLO HW link id.
  * @mlo_link_id: MLO HW link id
+ * @refdbgid: Reference debug id
  *
  * This API is applicable for simulation only. A static map from MLO HW link id
  * to the pdev object is created at the init time. This API uses the map to
@@ -788,7 +789,8 @@ mgmt_rx_reo_sim_get_mlo_link_id_from_pdev(struct wlan_objmgr_pdev *pdev);
  * link id. On failure returns NULL.
  */
 struct wlan_objmgr_pdev *
-mgmt_rx_reo_sim_get_pdev_from_mlo_link_id(uint8_t mlo_link_id);
+mgmt_rx_reo_sim_get_pdev_from_mlo_link_id(uint8_t mlo_link_id,
+					  wlan_objmgr_ref_dbgid refdbgid);
 #endif /* WLAN_MGMT_RX_REO_SIM_SUPPORT */
 
 /**

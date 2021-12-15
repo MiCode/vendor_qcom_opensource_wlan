@@ -74,12 +74,14 @@ qdf_export_symbol(wlan_get_mlo_link_id_from_pdev);
  * wlan_get_pdev_from_mlo_link_id() - Helper API to get the pdev
  * object from the MLO HW link id.
  * @mlo_link_id: MLO HW link id
+ * @refdbgid: Reference debug id
  *
  * Return: On success returns the pdev object from the MLO HW link_id.
  * On failure returns NULL.
  */
 struct wlan_objmgr_pdev *
-wlan_get_pdev_from_mlo_link_id(uint8_t mlo_link_id)
+wlan_get_pdev_from_mlo_link_id(uint8_t mlo_link_id,
+			       wlan_objmgr_ref_dbgid refdbgid)
 {
 	return NULL;
 }
@@ -135,14 +137,16 @@ qdf_export_symbol(wlan_get_mlo_link_id_from_pdev);
  * wlan_get_pdev_from_mlo_link_id() - Helper API to get the pdev
  * object from the MLO HW link id.
  * @mlo_link_id: MLO HW link id
+ * @refdbgid: Reference debug id
  *
  * Return: On success returns the pdev object from the MLO HW link_id.
  * On failure returns NULL.
  */
 struct wlan_objmgr_pdev *
-wlan_get_pdev_from_mlo_link_id(uint8_t mlo_link_id)
+wlan_get_pdev_from_mlo_link_id(uint8_t mlo_link_id,
+			       wlan_objmgr_ref_dbgid refdbgid)
 {
-	return mgmt_rx_reo_sim_get_pdev_from_mlo_link_id(mlo_link_id);
+	return mgmt_rx_reo_sim_get_pdev_from_mlo_link_id(mlo_link_id, refdbgid);
 }
 
 qdf_export_symbol(wlan_get_pdev_from_mlo_link_id);

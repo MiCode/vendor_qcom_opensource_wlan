@@ -261,11 +261,13 @@ mgmt_rx_reo_sim_get_mlo_link_id_from_pdev(struct wlan_objmgr_pdev *pdev)
 }
 
 struct wlan_objmgr_pdev *
-mgmt_rx_reo_sim_get_pdev_from_mlo_link_id(uint8_t mlo_link_id)
+mgmt_rx_reo_sim_get_pdev_from_mlo_link_id(uint8_t mlo_link_id,
+					  wlan_objmgr_ref_dbgid refdbgid)
 {
 	struct mgmt_rx_reo_sim_context *sim_context;
 	struct wlan_objmgr_pdev *pdev;
 	int8_t num_mlo_links;
+	QDF_STATUS status;
 
 	sim_context = mgmt_rx_reo_sim_get_context();
 	if (!sim_context) {
@@ -289,6 +291,11 @@ mgmt_rx_reo_sim_get_pdev_from_mlo_link_id(uint8_t mlo_link_id)
 	qdf_spin_lock(&sim_context->link_id_to_pdev_map.lock);
 
 	pdev = sim_context->link_id_to_pdev_map.map[mlo_link_id];
+	status = wlan_objmgr_pdev_try_get_ref(pdev, refdbgid);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		mgmt_rx_reo_err("Failed to get pdev reference");
+		return NULL;
+	}
 
 	qdf_spin_unlock(&sim_context->link_id_to_pdev_map.lock);
 
@@ -572,12 +579,14 @@ wlan_mgmt_rx_reo_algo_calculate_wait_count(
 			goto update_pending_frames;
 		}
 
-		pdev = wlan_get_pdev_from_mlo_link_id(link);
+		pdev = wlan_get_pdev_from_mlo_link_id(link,
+						      WLAN_MGMT_RX_REO_ID);
 
 		rx_reo_pdev_ctx = wlan_mgmt_rx_reo_get_priv_object(pdev);
 		if (!rx_reo_pdev_ctx) {
 			mgmt_rx_reo_err("Mgmt reo context empty for pdev %pK",
 					pdev);
+			wlan_objmgr_pdev_release_ref(pdev, WLAN_MGMT_RX_REO_ID);
 			return QDF_STATUS_E_FAILURE;
 		}
 
@@ -613,6 +622,7 @@ wlan_mgmt_rx_reo_algo_calculate_wait_count(
 				host_ss->global_timestamp,
 				in_frame_params->global_timestamp)) {
 			frames_pending = 0;
+			wlan_objmgr_pdev_release_ref(pdev, WLAN_MGMT_RX_REO_ID);
 			goto update_pending_frames;
 		}
 
@@ -634,6 +644,8 @@ wlan_mgmt_rx_reo_algo_calculate_wait_count(
 			if (QDF_IS_STATUS_ERROR(status)) {
 				mgmt_rx_reo_err("snapshot(%d) read failed on"
 						"link (%d)", snapshot_id, link);
+				wlan_objmgr_pdev_release_ref(
+						pdev, WLAN_MGMT_RX_REO_ID);
 				return status;
 			}
 
@@ -645,6 +657,8 @@ wlan_mgmt_rx_reo_algo_calculate_wait_count(
 			}
 			snapshot_id++;
 		}
+
+		wlan_objmgr_pdev_release_ref(pdev, WLAN_MGMT_RX_REO_ID);
 
 		mac_hw_ss = &snapshot_params
 				[MGMT_RX_REO_SHARED_SNAPSHOT_MAC_HW];
@@ -1482,18 +1496,11 @@ mgmt_rx_reo_prepare_list_entry(
 
 	link_id = mgmt_rx_reo_get_link_id(frame_desc->rx_params);
 
-	pdev = wlan_get_pdev_from_mlo_link_id(link_id);
+	pdev = wlan_get_pdev_from_mlo_link_id(link_id, WLAN_MGMT_RX_REO_ID);
 	if (!pdev) {
 		mgmt_rx_reo_err("pdev corresponding to link %u is null",
 				link_id);
 		return QDF_STATUS_E_NULL_VALUE;
-	}
-
-	/* Take the reference when the entry is created for insertion */
-	status = wlan_objmgr_pdev_try_get_ref(pdev, WLAN_MGMT_RX_REO_ID);
-	if (QDF_IS_STATUS_ERROR(status)) {
-		mgmt_rx_reo_err("Failed to get ref to pdev");
-		return QDF_STATUS_E_FAILURE;
 	}
 
 	list_entry =  qdf_mem_malloc(sizeof(*list_entry));
@@ -1503,6 +1510,7 @@ mgmt_rx_reo_prepare_list_entry(
 		return QDF_STATUS_E_NOMEM;
 	}
 
+	list_entry->pdev = pdev;
 	list_entry->nbuf = frame_desc->nbuf;
 	list_entry->rx_params = frame_desc->rx_params;
 	list_entry->wait_count = frame_desc->wait_count;
@@ -1731,22 +1739,13 @@ mgmt_rx_reo_update_list(struct mgmt_rx_reo_list *reo_list,
 
 error:
 	/* Cleanup the entry if it is not queued */
-	if (!*is_queued) {
-		struct wlan_objmgr_pdev *pdev;
-		uint8_t link_id;
-
-		link_id = mgmt_rx_reo_get_link_id(new_entry->rx_params);
-
-		pdev = wlan_get_pdev_from_mlo_link_id(link_id);
+	if (new_entry && !*is_queued) {
 		/**
 		 * New entry created is not inserted to reorder list, free
 		 * the entry and release the reference
 		 */
-		if (pdev)
-			wlan_objmgr_pdev_release_ref(pdev, WLAN_MGMT_RX_REO_ID);
-		else
-			mgmt_rx_reo_err("Unable to get pdev corresponding to entry %pK",
-					new_entry);
+		wlan_objmgr_pdev_release_ref(new_entry->pdev,
+					     WLAN_MGMT_RX_REO_ID);
 		qdf_mem_free(new_entry);
 	}
 
@@ -2726,7 +2725,7 @@ mgmt_rx_reo_sim_write_snapshot(uint8_t link_id,
 	struct mgmt_rx_reo_snapshot *snapshot_address;
 	QDF_STATUS status;
 
-	pdev = wlan_get_pdev_from_mlo_link_id(link_id);
+	pdev = wlan_get_pdev_from_mlo_link_id(link_id, WLAN_MGMT_RX_REO_SIM_ID);
 
 	if (!pdev) {
 		mgmt_rx_reo_err("pdev is null");
@@ -2735,6 +2734,9 @@ mgmt_rx_reo_sim_write_snapshot(uint8_t link_id,
 
 	status = mgmt_rx_reo_sim_get_snapshot_address(pdev, id,
 						      &snapshot_address);
+
+	wlan_objmgr_pdev_release_ref(pdev, WLAN_MGMT_RX_REO_SIM_ID);
+
 	if (QDF_IS_STATUS_ERROR(status)) {
 		mgmt_rx_reo_err("Failed to get snapshot address %d of pdev %pK",
 				id, pdev);
@@ -3606,25 +3608,14 @@ mgmt_rx_reo_flush_reorder_list(struct mgmt_rx_reo_list *reo_list)
 	qdf_spin_lock_bh(&reo_list->list_lock);
 
 	qdf_list_for_each_del(&reo_list->list, cur_entry, temp, node) {
-		uint8_t link_id;
-		struct wlan_objmgr_pdev *pdev = NULL;
-
 		free_mgmt_rx_event_params(cur_entry->rx_params);
-
-		link_id = mgmt_rx_reo_get_link_id(cur_entry->rx_params);
-
-		pdev = wlan_get_pdev_from_mlo_link_id(link_id);
-		if (!pdev) {
-			qdf_spin_unlock_bh(&reo_list->list_lock);
-			mgmt_rx_reo_err("Pdev for link_id %u is null", link_id);
-			return QDF_STATUS_E_NULL_VALUE;
-		}
 
 		/**
 		 * Release the reference taken when the entry is inserted into
 		 * the reorder list.
 		 */
-		wlan_objmgr_pdev_release_ref(pdev, WLAN_MGMT_RX_REO_ID);
+		wlan_objmgr_pdev_release_ref(cur_entry->pdev,
+					     WLAN_MGMT_RX_REO_ID);
 
 		qdf_mem_free(cur_entry);
 	}

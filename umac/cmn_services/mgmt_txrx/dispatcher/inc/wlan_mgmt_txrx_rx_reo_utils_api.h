@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -43,12 +44,15 @@ wlan_get_mlo_link_id_from_pdev(struct wlan_objmgr_pdev *pdev);
 /**
  * wlan_get_pdev_from_mlo_link_id() - Helper API to get the pdev
  * object from the link id.
+ * @mlo_link_id: MLO HW link id
+ * @refdbgid: Reference debug id
  *
  * Return: On success returns the pdev object from the link_id.
  * On failure returns NULL.
  */
 struct wlan_objmgr_pdev *
-wlan_get_pdev_from_mlo_link_id(uint8_t mlo_link_id);
+wlan_get_pdev_from_mlo_link_id(uint8_t mlo_link_id,
+			       wlan_objmgr_ref_dbgid refdbgid);
 
 #ifdef WLAN_MGMT_RX_REO_SUPPORT
 
