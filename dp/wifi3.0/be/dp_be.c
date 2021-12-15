@@ -372,18 +372,6 @@ static QDF_STATUS dp_soc_detach_be(struct dp_soc *soc)
 }
 
 #ifdef WLAN_MLO_MULTI_CHIP
-static QDF_STATUS dp_mlo_peer_find_hash_attach_wrapper(struct dp_soc *soc)
-{
-	/* In case of MULTI chip MLO peer hash table when MLO global object
-	 * is created, avoid from SOC attach path
-	 */
-	return QDF_STATUS_SUCCESS;
-}
-
-static void dp_mlo_peer_find_hash_detach_wrapper(struct dp_soc *soc)
-{
-}
-
 static void dp_mlo_init_ptnr_list(struct dp_vdev *vdev)
 {
 	struct dp_vdev_be *be_vdev = dp_get_be_vdev_from_dp_vdev(vdev);
@@ -393,30 +381,6 @@ static void dp_mlo_init_ptnr_list(struct dp_vdev *vdev)
 		    CDP_INVALID_VDEV_ID);
 }
 #else
-static QDF_STATUS dp_mlo_peer_find_hash_attach_wrapper(struct dp_soc *soc)
-{
-	dp_mld_peer_hash_obj_t mld_hash_obj;
-
-	mld_hash_obj = dp_mlo_get_peer_hash_obj(soc);
-
-	if (!mld_hash_obj)
-		return QDF_STATUS_E_FAILURE;
-
-	return dp_mlo_peer_find_hash_attach_be(mld_hash_obj, soc->max_peers);
-}
-
-static void dp_mlo_peer_find_hash_detach_wrapper(struct dp_soc *soc)
-{
-	dp_mld_peer_hash_obj_t mld_hash_obj;
-
-	mld_hash_obj = dp_mlo_get_peer_hash_obj(soc);
-
-	if (!mld_hash_obj)
-		return;
-
-	return dp_mlo_peer_find_hash_detach_be(mld_hash_obj);
-}
-
 static void dp_mlo_init_ptnr_list(struct dp_vdev *vdev)
 {
 }
@@ -1129,6 +1093,44 @@ dp_mlo_peer_find_hash_detach_be(dp_mld_peer_hash_obj_t mld_hash_obj)
 		qdf_spinlock_destroy(&mld_hash_obj->mld_peer_hash_lock);
 	}
 }
+
+#ifdef WLAN_MLO_MULTI_CHIP
+static QDF_STATUS dp_mlo_peer_find_hash_attach_wrapper(struct dp_soc *soc)
+{
+	/* In case of MULTI chip MLO peer hash table when MLO global object
+	 * is created, avoid from SOC attach path
+	 */
+	return QDF_STATUS_SUCCESS;
+}
+
+static void dp_mlo_peer_find_hash_detach_wrapper(struct dp_soc *soc)
+{
+}
+#else
+static QDF_STATUS dp_mlo_peer_find_hash_attach_wrapper(struct dp_soc *soc)
+{
+	dp_mld_peer_hash_obj_t mld_hash_obj;
+
+	mld_hash_obj = dp_mlo_get_peer_hash_obj(soc);
+
+	if (!mld_hash_obj)
+		return QDF_STATUS_E_FAILURE;
+
+	return dp_mlo_peer_find_hash_attach_be(mld_hash_obj, soc->max_peers);
+}
+
+static void dp_mlo_peer_find_hash_detach_wrapper(struct dp_soc *soc)
+{
+	dp_mld_peer_hash_obj_t mld_hash_obj;
+
+	mld_hash_obj = dp_mlo_get_peer_hash_obj(soc);
+
+	if (!mld_hash_obj)
+		return;
+
+	return dp_mlo_peer_find_hash_detach_be(mld_hash_obj);
+}
+#endif
 
 static struct dp_peer *
 dp_mlo_peer_find_hash_find_be(struct dp_soc *soc,
