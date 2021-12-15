@@ -239,15 +239,21 @@ struct mgmt_rx_frame_params {
 };
 
 /**
- * struct mgmt_rx_reo_pending_frame_list - List which contains all the
+ * struct mgmt_rx_reo_master_frame_list - List which contains all the
  * management frames received and not yet consumed by FW/Host. Order of frames
  * in the list is same as the order in which they are received in the air.
- * This is used by the simulation framework.
- * @list: list data structure
- * @lock: lock used to protect the list
+ * This is used by the simulation framework to confirm that the outcome of
+ * reordering is correct.
+ * @pending_list: List which contains all the frames received after the
+ * last frame delivered to upper layer. These frames will eventually reach host.
+ * @stale_list: List which contains all the stale management frames which
+ * are not yet consumed by FW/Host. Stale management frames are the frames which
+ * are older than last delivered frame to upper layer.
+ * @lock: Spin lock to protect pending frame list and stale frame list.
  */
-struct mgmt_rx_reo_pending_frame_list {
-	qdf_list_t list;
+struct mgmt_rx_reo_master_frame_list {
+	qdf_list_t pending_list;
+	qdf_list_t stale_list;
 	qdf_spinlock_t lock;
 };
 
@@ -260,17 +266,6 @@ struct mgmt_rx_reo_pending_frame_list {
 struct mgmt_rx_reo_pending_frame_list_entry {
 	struct mgmt_rx_frame_params params;
 	qdf_list_node_t node;
-};
-
-/**
- * struct mgmt_rx_reo_stale_frame_list - List which contains all the
- * stale management frames.
- * @list: list data structure
- * @lock: lock used to protect the list
- */
-struct mgmt_rx_reo_stale_frame_list {
-	qdf_list_t list;
-	qdf_spinlock_t lock;
 };
 
 /**
@@ -350,8 +345,8 @@ struct mgmt_rx_reo_mac_hw_simulator {
  * struct mgmt_rx_reo_sim_context - Management rx-reorder simulation context
  * @host_mgmt_frame_handler: Per link work queue to simulate the host layer
  * @fw_mgmt_frame_handler: Per link work queue to simulate the FW layer
- * @pending_frame_list: List used to store pending frames
- * @stale_frame_list: List used to store stale frames
+ * @master_frame_list: List used to store information about all the management
+ * frames
  * @mac_hw_sim:  MAC HW simulation object
  * @snapshot: snapshots required for reo algorithm
  * @link_id_to_pdev_map: link_id to pdev object map
@@ -359,8 +354,7 @@ struct mgmt_rx_reo_mac_hw_simulator {
 struct mgmt_rx_reo_sim_context {
 	struct workqueue_struct *host_mgmt_frame_handler[MGMT_RX_REO_MAX_LINKS];
 	struct workqueue_struct *fw_mgmt_frame_handler[MGMT_RX_REO_MAX_LINKS];
-	struct mgmt_rx_reo_pending_frame_list pending_frame_list;
-	struct mgmt_rx_reo_stale_frame_list stale_frame_list;
+	struct mgmt_rx_reo_master_frame_list master_frame_list;
 	struct mgmt_rx_reo_mac_hw_simulator mac_hw_sim;
 	struct mgmt_rx_reo_snapshot snapshot[MGMT_RX_REO_MAX_LINKS]
 					    [MGMT_RX_REO_SHARED_SNAPSHOT_MAX];

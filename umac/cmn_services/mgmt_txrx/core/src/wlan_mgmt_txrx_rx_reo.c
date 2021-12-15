@@ -157,7 +157,7 @@ mgmt_rx_reo_handle_potential_premature_delivery(
 
 static QDF_STATUS
 mgmt_rx_reo_handle_stale_frame(struct mgmt_rx_reo_list *reo_list,
-			       struct mgmt_rx_reo_params *reo_params)
+			       struct mgmt_rx_reo_frame_descriptor *desc)
 {
 	return QDF_STATUS_SUCCESS;
 }
@@ -317,19 +317,17 @@ mgmt_rx_reo_handle_potential_premature_delivery(
 	struct mgmt_rx_reo_pending_frame_list_entry *latest_stale_frame = NULL;
 	struct mgmt_rx_reo_pending_frame_list_entry *cur_entry;
 	struct mgmt_rx_reo_sim_context *sim_context;
-	struct mgmt_rx_reo_pending_frame_list *pending_frame_list;
-	struct mgmt_rx_reo_stale_frame_list *stale_frame_list;
+	struct mgmt_rx_reo_master_frame_list *master_frame_list;
 
 	if (!reo_context)
 		return QDF_STATUS_E_NULL_VALUE;
 
 	sim_context = &reo_context->sim_context;
-	pending_frame_list = &sim_context->pending_frame_list;
-	stale_frame_list = &sim_context->stale_frame_list;
+	master_frame_list = &sim_context->master_frame_list;
 
-	qdf_spin_lock(&pending_frame_list->lock);
+	qdf_spin_lock(&master_frame_list->lock);
 
-	qdf_list_for_each(&pending_frame_list->list, cur_entry, node) {
+	qdf_list_for_each(&master_frame_list->pending_list, cur_entry, node) {
 		if (cur_entry->params.global_timestamp == global_timestamp)
 			break;
 
@@ -341,25 +339,21 @@ mgmt_rx_reo_handle_potential_premature_delivery(
 				MGMT_RX_REO_SIM_STALE_FRAME_TEMP_LIST_MAX_SIZE);
 
 		status = qdf_list_split(&stale_frame_list_temp,
-					&pending_frame_list->list,
+					&master_frame_list->pending_list,
 					&latest_stale_frame->node);
 		if (QDF_IS_STATUS_ERROR(status))
-			goto exit_unlock_pending_frame_list;
+			goto exit_unlock_master_frame_list;
 
-		qdf_spin_lock(&stale_frame_list->lock);
-		status = qdf_list_join(&stale_frame_list->list,
+		status = qdf_list_join(&master_frame_list->stale_list,
 				       &stale_frame_list_temp);
-		if (QDF_IS_STATUS_ERROR(status)) {
-			qdf_spin_unlock(&stale_frame_list->lock);
-			goto exit_unlock_pending_frame_list;
-		}
-		qdf_spin_unlock(&stale_frame_list->lock);
+		if (QDF_IS_STATUS_ERROR(status))
+			goto exit_unlock_master_frame_list;
 	}
 
 	status = QDF_STATUS_SUCCESS;
 
-exit_unlock_pending_frame_list:
-	qdf_spin_unlock(&pending_frame_list->lock);
+exit_unlock_master_frame_list:
+	qdf_spin_unlock(&master_frame_list->lock);
 
 	return status;
 }
@@ -367,7 +361,7 @@ exit_unlock_pending_frame_list:
 /**
  * mgmt_rx_reo_sim_remove_frame_from_stale_list() - Removes frame from the
  * stale management frame list
- * @stale_frame_list: pointer to stale management frame list
+ * @master_frame_list: pointer to master management frame list
  * @reo_params: pointer to reo params
  *
  * This API removes frames from the stale management frame list.
@@ -376,23 +370,23 @@ exit_unlock_pending_frame_list:
  */
 static QDF_STATUS
 mgmt_rx_reo_sim_remove_frame_from_stale_list(
-		struct mgmt_rx_reo_stale_frame_list *stale_frame_list,
+		struct mgmt_rx_reo_master_frame_list *master_frame_list,
 		const struct mgmt_rx_reo_params *reo_params)
 {
 	struct mgmt_rx_reo_stale_frame_list_entry *cur_entry;
 	struct mgmt_rx_reo_stale_frame_list_entry *matching_entry = NULL;
 	QDF_STATUS status;
 
-	if (!stale_frame_list || !reo_params)
+	if (!master_frame_list || !reo_params)
 		return QDF_STATUS_E_NULL_VALUE;
 
-	qdf_spin_lock(&stale_frame_list->lock);
+	qdf_spin_lock(&master_frame_list->lock);
 
 	/**
 	 * Stale frames can come in any order at host. Do a linear search and
 	 * remove the matching entry.
 	 */
-	qdf_list_for_each(&stale_frame_list->list, cur_entry, node) {
+	qdf_list_for_each(&master_frame_list->stale_list, cur_entry, node) {
 		if (cur_entry->params.link_id == reo_params->link_id &&
 		    cur_entry->params.mgmt_pkt_ctr == reo_params->mgmt_pkt_ctr &&
 		    cur_entry->params.global_timestamp ==
@@ -403,19 +397,19 @@ mgmt_rx_reo_sim_remove_frame_from_stale_list(
 	}
 
 	if (!matching_entry) {
-		qdf_spin_unlock(&stale_frame_list->lock);
+		qdf_spin_unlock(&master_frame_list->lock);
 		mgmt_rx_reo_err("reo sim failure: absent in stale frame list");
 		qdf_assert_always(0);
 	}
 
-	status = qdf_list_remove_node(&stale_frame_list->list,
+	status = qdf_list_remove_node(&master_frame_list->stale_list,
 				      &matching_entry->node);
 	if (QDF_IS_STATUS_ERROR(status)) {
-		qdf_spin_unlock(&stale_frame_list->lock);
+		qdf_spin_unlock(&master_frame_list->lock);
 		return status;
 	}
 
-	qdf_spin_unlock(&stale_frame_list->lock);
+	qdf_spin_unlock(&master_frame_list->lock);
 
 	qdf_mem_free(matching_entry);
 
@@ -425,20 +419,25 @@ mgmt_rx_reo_sim_remove_frame_from_stale_list(
 /**
  * mgmt_rx_reo_handle_stale_frame() - API to handle stale management frames.
  * @reo_list: Pointer to reorder list
- * @reo_params: Pointer to reo parameters
+ * @desc: Pointer to frame descriptor
  *
  * Return: QDF_STATUS of operation
  */
 static QDF_STATUS
 mgmt_rx_reo_handle_stale_frame(struct mgmt_rx_reo_list *reo_list,
-			       struct mgmt_rx_reo_params *reo_params)
+			       struct mgmt_rx_reo_frame_descriptor *desc)
 {
 	QDF_STATUS status;
 	struct mgmt_rx_reo_context *reo_context;
 	struct mgmt_rx_reo_sim_context *sim_context;
+	struct mgmt_rx_reo_params *reo_params;
 
-	if (!reo_list || !reo_params)
+	if (!reo_list || !desc)
 		return QDF_STATUS_E_NULL_VALUE;
+
+	/* FW consumed/Error frames are already removed */
+	if (desc->type != MGMT_RX_REO_FRAME_DESC_HOST_CONSUMED_FRAME)
+		return QDF_STATUS_SUCCESS;
 
 	reo_context = mgmt_rx_reo_get_context_from_reo_list(reo_list);
 	if (!reo_context)
@@ -446,8 +445,12 @@ mgmt_rx_reo_handle_stale_frame(struct mgmt_rx_reo_list *reo_list,
 
 	sim_context = &reo_context->sim_context;
 
+	reo_params = desc->rx_params->reo_params;
+	if (!reo_params)
+		return QDF_STATUS_E_NULL_VALUE;
+
 	status = mgmt_rx_reo_sim_remove_frame_from_stale_list(
-				&sim_context->stale_frame_list, reo_params);
+				&sim_context->master_frame_list, reo_params);
 
 	return status;
 }
@@ -1598,8 +1601,7 @@ mgmt_rx_reo_update_list(struct mgmt_rx_reo_list *reo_list,
 				       new_frame_global_ts)) {
 		frame_desc->is_stale = true;
 
-		status = mgmt_rx_reo_handle_stale_frame(
-				reo_list, frame_desc->rx_params->reo_params);
+		status = mgmt_rx_reo_handle_stale_frame(reo_list, frame_desc);
 		if (QDF_IS_STATUS_ERROR(status))
 			goto error;
 	}
@@ -2041,9 +2043,103 @@ mgmt_rx_reo_sim_pdev_object_destroy_notification(struct wlan_objmgr_pdev *pdev)
 }
 #else
 /**
+ * mgmt_rx_reo_sim_remove_frame_from_master_list() - Removes frame from the
+ * master management frame list
+ * @master_frame_list: pointer to master management frame list
+ * @frame: pointer to management frame parameters
+ *
+ * This API removes frames from the master management frame list. This API is
+ * used in case of FW consumed management frames or management frames which
+ * are dropped at host due to any error.
+ *
+ * Return: QDF_STATUS of operation
+ */
+static QDF_STATUS
+mgmt_rx_reo_sim_remove_frame_from_master_list(
+		struct mgmt_rx_reo_master_frame_list *master_frame_list,
+		const struct mgmt_rx_frame_params *frame)
+{
+	struct mgmt_rx_reo_pending_frame_list_entry *pending_entry;
+	struct mgmt_rx_reo_pending_frame_list_entry *matching_pend_entry = NULL;
+	struct mgmt_rx_reo_stale_frame_list_entry *stale_entry;
+	struct mgmt_rx_reo_stale_frame_list_entry *matching_stale_entry = NULL;
+	QDF_STATUS status;
+
+	if (!master_frame_list) {
+		mgmt_rx_reo_err("Mgmt master frame list is null");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	if (!frame) {
+		mgmt_rx_reo_err("Pointer to mgmt frame params is null");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	qdf_spin_lock(&master_frame_list->lock);
+
+	qdf_list_for_each(&master_frame_list->pending_list, pending_entry,
+			  node) {
+		if (pending_entry->params.link_id == frame->link_id &&
+		    pending_entry->params.mgmt_pkt_ctr == frame->mgmt_pkt_ctr &&
+		    pending_entry->params.global_timestamp ==
+		    frame->global_timestamp) {
+			matching_pend_entry = pending_entry;
+			break;
+		}
+	}
+
+	qdf_list_for_each(&master_frame_list->stale_list, stale_entry, node) {
+		if (stale_entry->params.link_id == frame->link_id &&
+		    stale_entry->params.mgmt_pkt_ctr == frame->mgmt_pkt_ctr &&
+		    stale_entry->params.global_timestamp ==
+		    frame->global_timestamp) {
+			matching_stale_entry = stale_entry;
+			break;
+		}
+	}
+
+	/* Found in pending and stale list. Duplicate entries, assert */
+	qdf_assert_always(!matching_pend_entry || !matching_stale_entry);
+
+	if (!matching_pend_entry && !matching_stale_entry) {
+		qdf_spin_unlock(&master_frame_list->lock);
+		mgmt_rx_reo_err("No matching frame in pend/stale list");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	if (matching_pend_entry) {
+		status = qdf_list_remove_node(&master_frame_list->pending_list,
+					      &matching_pend_entry->node);
+		if (QDF_IS_STATUS_ERROR(status)) {
+			qdf_spin_unlock(&master_frame_list->lock);
+			mgmt_rx_reo_err("Failed to remove the matching entry");
+			return status;
+		}
+
+		qdf_mem_free(matching_pend_entry);
+	}
+
+	if (matching_stale_entry) {
+		status = qdf_list_remove_node(&master_frame_list->stale_list,
+					      &matching_stale_entry->node);
+		if (QDF_IS_STATUS_ERROR(status)) {
+			qdf_spin_unlock(&master_frame_list->lock);
+			mgmt_rx_reo_err("Failed to remove the matching entry");
+			return status;
+		}
+
+		qdf_mem_free(matching_stale_entry);
+	}
+
+	qdf_spin_unlock(&master_frame_list->lock);
+
+	return QDF_STATUS_SUCCESS;
+}
+
+/**
  * mgmt_rx_reo_sim_remove_frame_from_pending_list() - Removes frame from the
  * pending management frame list
- * @pending_frame_list: pointer to pending management frame list
+ * @master_frame_list: pointer to master management frame list
  * @frame: pointer to management frame parameters
  *
  * This API removes frames from the pending management frame list. This API is
@@ -2054,15 +2150,15 @@ mgmt_rx_reo_sim_pdev_object_destroy_notification(struct wlan_objmgr_pdev *pdev)
  */
 static QDF_STATUS
 mgmt_rx_reo_sim_remove_frame_from_pending_list(
-		struct mgmt_rx_reo_pending_frame_list *pending_frame_list,
+		struct mgmt_rx_reo_master_frame_list *master_frame_list,
 		const struct mgmt_rx_frame_params *frame)
 {
 	struct mgmt_rx_reo_pending_frame_list_entry *cur_entry;
 	struct mgmt_rx_reo_pending_frame_list_entry *matching_entry = NULL;
 	QDF_STATUS status;
 
-	if (!pending_frame_list) {
-		mgmt_rx_reo_err("Mgmt pending frame list is null");
+	if (!master_frame_list) {
+		mgmt_rx_reo_err("Mgmt master frame list is null");
 		return QDF_STATUS_E_NULL_VALUE;
 	}
 
@@ -2071,9 +2167,9 @@ mgmt_rx_reo_sim_remove_frame_from_pending_list(
 		return QDF_STATUS_E_NULL_VALUE;
 	}
 
-	qdf_spin_lock(&pending_frame_list->lock);
+	qdf_spin_lock(&master_frame_list->lock);
 
-	qdf_list_for_each(&pending_frame_list->list, cur_entry, node) {
+	qdf_list_for_each(&master_frame_list->pending_list, cur_entry, node) {
 		if (cur_entry->params.link_id == frame->link_id &&
 		    cur_entry->params.mgmt_pkt_ctr == frame->mgmt_pkt_ctr &&
 		    cur_entry->params.global_timestamp ==
@@ -2084,20 +2180,20 @@ mgmt_rx_reo_sim_remove_frame_from_pending_list(
 	}
 
 	if (!matching_entry) {
-		qdf_spin_unlock(&pending_frame_list->lock);
-		mgmt_rx_reo_err("No matching frame in the list to remove");
+		qdf_spin_unlock(&master_frame_list->lock);
+		mgmt_rx_reo_err("No matching frame in the pend list to remove");
 		return QDF_STATUS_E_FAILURE;
 	}
 
-	status = qdf_list_remove_node(&pending_frame_list->list,
+	status = qdf_list_remove_node(&master_frame_list->pending_list,
 				      &matching_entry->node);
 	if (QDF_IS_STATUS_ERROR(status)) {
-		qdf_spin_unlock(&pending_frame_list->lock);
+		qdf_spin_unlock(&master_frame_list->lock);
 		mgmt_rx_reo_err("Failed to remove the matching entry");
 		return status;
 	}
 
-	qdf_spin_unlock(&pending_frame_list->lock);
+	qdf_spin_unlock(&master_frame_list->lock);
 
 	qdf_mem_free(matching_entry);
 
@@ -2107,7 +2203,7 @@ mgmt_rx_reo_sim_remove_frame_from_pending_list(
 /**
  * mgmt_rx_reo_sim_add_frame_to_pending_list() - Inserts frame to the
  * pending management frame list
- * @pending_frame_list: pointer to pending management frame list
+ * @master_frame_list: pointer to master management frame list
  * @frame: pointer to management frame parameters
  *
  * This API inserts frames to the pending management frame list. This API is
@@ -2117,14 +2213,14 @@ mgmt_rx_reo_sim_remove_frame_from_pending_list(
  */
 static QDF_STATUS
 mgmt_rx_reo_sim_add_frame_to_pending_list(
-		struct mgmt_rx_reo_pending_frame_list *pending_frame_list,
+		struct mgmt_rx_reo_master_frame_list *master_frame_list,
 		const struct mgmt_rx_frame_params *frame)
 {
 	struct mgmt_rx_reo_pending_frame_list_entry *new_entry;
 	QDF_STATUS status;
 
-	if (!pending_frame_list) {
-		mgmt_rx_reo_err("Mgmt pending frame list is null");
+	if (!master_frame_list) {
+		mgmt_rx_reo_err("Mgmt master frame list is null");
 		return QDF_STATUS_E_NULL_VALUE;
 	}
 
@@ -2141,102 +2237,18 @@ mgmt_rx_reo_sim_add_frame_to_pending_list(
 
 	new_entry->params = *frame;
 
-	qdf_spin_lock(&pending_frame_list->lock);
+	qdf_spin_lock(&master_frame_list->lock);
 
-	status = qdf_list_insert_back(&pending_frame_list->list,
+	status = qdf_list_insert_back(&master_frame_list->pending_list,
 				      &new_entry->node);
 
-	qdf_spin_unlock(&pending_frame_list->lock);
+	qdf_spin_unlock(&master_frame_list->lock);
 
 	if (QDF_IS_STATUS_ERROR(status)) {
 		mgmt_rx_reo_err("Failed to add frame to pending list");
 		qdf_mem_free(new_entry);
 		return status;
 	}
-
-	return QDF_STATUS_SUCCESS;
-}
-
-/**
- * struct mgmt_rx_reo_pending_frame_debug_info - This structure holds the
- * necessary information about an entry in the pending frame list. This can be
- * used for debug purposes.
- * @link_id: link id
- * @mgmt_pkt_ctr: management packet counter
- * @global_timestamp: global time stamp
- */
-struct mgmt_rx_reo_pending_frame_debug_info {
-	uint8_t link_id;
-	uint16_t mgmt_pkt_ctr;
-	uint32_t global_timestamp;
-};
-
-/**
- * mgmt_rx_reo_sim_print_pending_frame_list() - Print the contents of management
- * rx-reorder pending frame list used for simulation.
- * @pending_frame_list: Pointer to pending frame list
- *
- * This API prints the contents of management pending frame list used for
- * simulation.
- *
- * Return: QDF_STATUS
- */
-static QDF_STATUS
-mgmt_rx_reo_sim_print_pending_frame_list(
-		struct mgmt_rx_reo_pending_frame_list *pending_frame_list)
-{
-	struct mgmt_rx_reo_pending_frame_list_entry *cur_entry;
-	uint32_t index;
-	uint32_t pending_frame_list_size;
-	struct mgmt_rx_reo_pending_frame_debug_info *debug_info;
-
-	if (!pending_frame_list) {
-		mgmt_rx_reo_err("Pointer to pending frame list is null");
-		return QDF_STATUS_E_NULL_VALUE;
-	}
-
-	qdf_spin_lock(&pending_frame_list->lock);
-
-	pending_frame_list_size = qdf_list_size(&pending_frame_list->list);
-
-	qdf_spin_unlock(&pending_frame_list->lock);
-
-	if (pending_frame_list_size == 0) {
-		mgmt_rx_reo_debug("Num entries in the pending frame list = %u",
-				  pending_frame_list_size);
-		return QDF_STATUS_SUCCESS;
-	}
-
-	debug_info =
-		qdf_mem_malloc(pending_frame_list_size * sizeof(*debug_info));
-	if (!debug_info) {
-		mgmt_rx_reo_err("Memory allocation failed");
-		return QDF_STATUS_E_NULL_VALUE;
-	}
-
-	qdf_spin_lock(&pending_frame_list->lock);
-
-	index = 0;
-	qdf_list_for_each(&pending_frame_list->list, cur_entry, node) {
-		struct mgmt_rx_frame_params *params = &cur_entry->params;
-
-		debug_info[index].link_id = params->link_id;
-		debug_info[index].mgmt_pkt_ctr = params->mgmt_pkt_ctr;
-		debug_info[index].global_timestamp = params->global_timestamp;
-
-		++index;
-	}
-
-	qdf_spin_unlock(&pending_frame_list->lock);
-
-	mgmt_rx_reo_debug("Pending management frames list");
-	mgmt_rx_reo_debug("##################################################");
-	for (index = 0; index < pending_frame_list_size; index++)
-		mgmt_rx_reo_debug("index %u: link_id = %u, ctr = %u, ts = %u",
-				  index, debug_info[index].link_id,
-				  debug_info[index].mgmt_pkt_ctr,
-				  debug_info[index].global_timestamp);
-	mgmt_rx_reo_debug("##################################################");
 
 	return QDF_STATUS_SUCCESS;
 }
@@ -2274,10 +2286,10 @@ mgmt_rx_reo_sim_process_rx_frame(struct wlan_objmgr_pdev *pdev, qdf_nbuf_t buf,
 		return QDF_STATUS_E_INVAL;
 	}
 
-	qdf_spin_lock(&sim_context->pending_frame_list.lock);
+	qdf_spin_lock(&sim_context->master_frame_list.lock);
 
-	if (qdf_list_empty(&sim_context->pending_frame_list.list)) {
-		qdf_spin_unlock(&sim_context->pending_frame_list.lock);
+	if (qdf_list_empty(&sim_context->master_frame_list.pending_list)) {
+		qdf_spin_unlock(&sim_context->master_frame_list.lock);
 		mgmt_rx_reo_err("reo sim failure: pending frame list is empty");
 		qdf_assert_always(0);
 	} else {
@@ -2296,7 +2308,7 @@ mgmt_rx_reo_sim_process_rx_frame(struct wlan_objmgr_pdev *pdev, qdf_nbuf_t buf,
 		 * To find matching frame, check whether packet counter,
 		 * global time stamp and link id are same.
 		 */
-		qdf_list_for_each(&sim_context->pending_frame_list.list,
+		qdf_list_for_each(&sim_context->master_frame_list.pending_list,
 				  cur_entry, node) {
 			cur_entry_params = &cur_entry->params;
 
@@ -2313,23 +2325,24 @@ mgmt_rx_reo_sim_process_rx_frame(struct wlan_objmgr_pdev *pdev, qdf_nbuf_t buf,
 		}
 
 		if (!matching_entry) {
-			qdf_spin_unlock(&sim_context->pending_frame_list.lock);
+			qdf_spin_unlock(&sim_context->master_frame_list.lock);
 			mgmt_rx_reo_err("reo sim failure: mismatch");
 			qdf_assert_always(0);
 		}
 
 		status = qdf_list_remove_node(
-					&sim_context->pending_frame_list.list,
-					&matching_entry->node);
+				&sim_context->master_frame_list.pending_list,
+				&matching_entry->node);
 		qdf_mem_free(matching_entry);
+
 		if (QDF_IS_STATUS_ERROR(status)) {
-			qdf_spin_unlock(&sim_context->pending_frame_list.lock);
+			qdf_spin_unlock(&sim_context->master_frame_list.lock);
 			mgmt_rx_reo_err("Failed to remove matching entry");
 			return status;
 		}
 	}
 
-	qdf_spin_unlock(&sim_context->pending_frame_list.lock);
+	qdf_spin_unlock(&sim_context->master_frame_list.lock);
 
 	mgmt_rx_reo_debug("Successfully processed mgmt frame");
 	mgmt_rx_reo_debug("link_id = %u, ctr = %u, ts = %u",
@@ -2449,15 +2462,21 @@ mgmt_rx_reo_sim_frame_handler_host(void *arg)
 		is_error_frame = mgmt_rx_reo_sim_get_random_bool(
 				 MGMT_RX_REO_SIM_PERCENTAGE_ERROR_FRAMES);
 
+		/**
+		 * This frame should be present in pending/stale list of the
+		 * master frame list. Error frames need not be reordered
+		 * by reorder algorithm. It is just used for book
+		 * keeping purposes. Hence remove it from the master list.
+		 */
 		if (is_error_frame) {
-			status = mgmt_rx_reo_sim_remove_frame_from_pending_list(
-					&sim_context->pending_frame_list,
+			status = mgmt_rx_reo_sim_remove_frame_from_master_list(
+					&sim_context->master_frame_list,
 					&frame_fw->params);
 
 			if (QDF_IS_STATUS_ERROR(status)) {
 				mgmt_rx_reo_err("HOST-%d : Failed to remove error frame",
 						link_id);
-				goto error_free_fw_frame;
+				qdf_assert_always(0);
 			}
 		}
 	}
@@ -2679,19 +2698,19 @@ mgmt_rx_reo_sim_frame_handler_fw(void *arg)
 
 	if (is_consumed_by_fw) {
 		/**
-		 * "pending_frame_list" keeps track of all the management frames
-		 * which are supposed to be consumed by host. This frame is
-		 * consumed by FW and hence we have to remove it from the
-		 * "pending_frame_list".
+		 * This frame should be present in pending/stale list of the
+		 * master frame list. FW consumed frames need not be reordered
+		 * by reorder algorithm. It is just used for book
+		 * keeping purposes. Hence remove it from the master list.
 		 */
-		status = mgmt_rx_reo_sim_remove_frame_from_pending_list(
-					&sim_context->pending_frame_list,
+		status = mgmt_rx_reo_sim_remove_frame_from_master_list(
+					&sim_context->master_frame_list,
 					&frame_hw->params);
 
 		if (QDF_IS_STATUS_ERROR(status)) {
-			mgmt_rx_reo_err("FW-%d : Failed to remove consumed frame",
+			mgmt_rx_reo_err("FW-%d : Failed to remove FW consumed frame",
 					link_id);
-			goto error_free_mac_hw_frame;
+			qdf_assert_always(0);
 		}
 	}
 
@@ -2905,7 +2924,7 @@ mgmt_rx_reo_sim_mac_hw_thread(void *data)
 		frame_mac_hw->sim_context = sim_context;
 
 		status = mgmt_rx_reo_sim_add_frame_to_pending_list(
-				&sim_context->pending_frame_list, &frame);
+				&sim_context->master_frame_list, &frame);
 		if (QDF_IS_STATUS_ERROR(status)) {
 			mgmt_rx_reo_err("HW-%d: Failed to add frame to list",
 					link_id);
@@ -2933,7 +2952,7 @@ mgmt_rx_reo_sim_mac_hw_thread(void *data)
 
 			/* Cleanup */
 			status = mgmt_rx_reo_sim_remove_frame_from_pending_list(
-				&sim_context->pending_frame_list, &frame);
+				&sim_context->master_frame_list, &frame);
 			qdf_assert_always(QDF_IS_STATUS_SUCCESS(status));
 
 			status = mgmt_rx_reo_sim_undo_receive_from_air(
@@ -2974,120 +2993,47 @@ mgmt_rx_reo_sim_mac_hw_thread(void *data)
 }
 
 /**
- * mgmt_rx_reo_sim_init_pending_frame_list() - Initializes the pending
+ * mgmt_rx_reo_sim_init_master_frame_list() - Initializes the master
  * management frame list
- * @pending_frame_list: Pointer to pending frame list
+ * @pending_frame_list: Pointer to master frame list
  *
- * This API initializes the pending management frame list
+ * This API initializes the master management frame list
  *
  * Return: QDF_STATUS
  */
 static QDF_STATUS
-mgmt_rx_reo_sim_init_pending_frame_list(
-		struct mgmt_rx_reo_pending_frame_list *pending_frame_list)
+mgmt_rx_reo_sim_init_master_frame_list(
+		struct mgmt_rx_reo_master_frame_list *master_frame_list)
 {
-	qdf_spinlock_create(&pending_frame_list->lock);
-	qdf_list_create(&pending_frame_list->list,
+	qdf_spinlock_create(&master_frame_list->lock);
+
+	qdf_list_create(&master_frame_list->pending_list,
 			MGMT_RX_REO_SIM_PENDING_FRAME_LIST_MAX_SIZE);
-
-	return QDF_STATUS_SUCCESS;
-}
-
-/**
- * mgmt_rx_reo_sim_init_stale_frame_list() - Initializes the stale
- * management frame list
- * @stale_frame_list: Pointer to stale frame list
- *
- * This API initializes the stale management frame list
- *
- * Return: QDF_STATUS
- */
-static QDF_STATUS
-mgmt_rx_reo_sim_init_stale_frame_list(
-		struct mgmt_rx_reo_stale_frame_list *stale_frame_list)
-{
-	qdf_spinlock_create(&stale_frame_list->lock);
-	qdf_list_create(&stale_frame_list->list,
+	qdf_list_create(&master_frame_list->stale_list,
 			MGMT_RX_REO_SIM_STALE_FRAME_LIST_MAX_SIZE);
 
 	return QDF_STATUS_SUCCESS;
 }
 
 /**
- * mgmt_rx_reo_sim_flush_pending_frame_list() - Flush all the entries in the
- * pending management frame list.
- * @pending_frame_list: Pointer to pending frame list
- *
- * This API flushes all the entries in the pending management frame list used
- * for simulation.
- *
- * Return: QDF_STATUS
- */
-static QDF_STATUS
-mgmt_rx_reo_sim_flush_pending_frame_list(
-		struct mgmt_rx_reo_pending_frame_list *pending_frame_list)
-{
-	struct mgmt_rx_reo_pending_frame_list_entry *cur_entry;
-	struct mgmt_rx_reo_pending_frame_list_entry *temp;
-	QDF_STATUS status;
-
-	qdf_spin_lock(&pending_frame_list->lock);
-
-	qdf_list_for_each_del(&pending_frame_list->list, cur_entry, temp,
-			      node) {
-		status = qdf_list_remove_node(&pending_frame_list->list,
-					      &cur_entry->node);
-		if (QDF_IS_STATUS_ERROR(status))
-			break;
-
-		qdf_mem_free(cur_entry);
-	}
-
-	qdf_spin_unlock(&pending_frame_list->lock);
-
-	return status;
-}
-
-/**
- * mgmt_rx_reo_sim_deinit_pending_frame_list() - De initializes the pending
+ * mgmt_rx_reo_sim_deinit_master_frame_list() - De initializes the master
  * management frame list
- * @pending_frame_list: Pointer to pending frame list
+ * @master_frame_list: Pointer to master frame list
  *
- * This API de initializes the pending management frame list
- *
- * Return: QDF_STATUS
- */
-static QDF_STATUS
-mgmt_rx_reo_sim_deinit_pending_frame_list(
-		struct mgmt_rx_reo_pending_frame_list *pending_frame_list)
-{
-	qdf_spin_lock(&pending_frame_list->lock);
-	qdf_list_destroy(&pending_frame_list->list);
-	qdf_spin_unlock(&pending_frame_list->lock);
-
-	qdf_spinlock_destroy(&pending_frame_list->lock);
-
-	return QDF_STATUS_SUCCESS;
-}
-
-/**
- * mgmt_rx_reo_sim_deinit_stale_frame_list() - De initializes the stale
- * management frame list
- * @stale_frame_list: Pointer to stale frame list
- *
- * This API de initializes the stale management frame list
+ * This API de initializes the master management frame list
  *
  * Return: QDF_STATUS
  */
 static QDF_STATUS
-mgmt_rx_reo_sim_deinit_stale_frame_list(
-		struct mgmt_rx_reo_stale_frame_list *stale_frame_list)
+mgmt_rx_reo_sim_deinit_master_frame_list(
+		struct mgmt_rx_reo_master_frame_list *master_frame_list)
 {
-	qdf_spin_lock(&stale_frame_list->lock);
-	qdf_list_destroy(&stale_frame_list->list);
-	qdf_spin_unlock(&stale_frame_list->lock);
+	qdf_spin_lock(&master_frame_list->lock);
+	qdf_list_destroy(&master_frame_list->stale_list);
+	qdf_list_destroy(&master_frame_list->pending_list);
+	qdf_spin_unlock(&master_frame_list->lock);
 
-	qdf_spinlock_destroy(&stale_frame_list->lock);
+	qdf_spinlock_destroy(&master_frame_list->lock);
 
 	return QDF_STATUS_SUCCESS;
 }
@@ -3305,8 +3251,7 @@ mgmt_rx_reo_sim_stop(void)
 {
 	struct mgmt_rx_reo_context *reo_context;
 	struct mgmt_rx_reo_sim_context *sim_context;
-	struct mgmt_rx_reo_pending_frame_list *pending_frame_list;
-	struct mgmt_rx_reo_stale_frame_list *stale_frame_list;
+	struct mgmt_rx_reo_master_frame_list *master_frame_list;
 	uint8_t link_id;
 	QDF_STATUS status;
 	int8_t num_mlo_links;
@@ -3345,23 +3290,15 @@ mgmt_rx_reo_sim_stop(void)
 				sim_context->host_mgmt_frame_handler[link_id]);
 	}
 
-	pending_frame_list = &sim_context->pending_frame_list;
-	stale_frame_list = &sim_context->stale_frame_list;
-	if (!qdf_list_empty(&pending_frame_list->list) ||
-	    !qdf_list_empty(&stale_frame_list->list)) {
+	master_frame_list = &sim_context->master_frame_list;
+	if (!qdf_list_empty(&master_frame_list->pending_list) ||
+	    !qdf_list_empty(&master_frame_list->stale_list)) {
 		mgmt_rx_reo_err("reo sim failure: pending/stale frame list non empty");
 
 		status = mgmt_rx_reo_list_display(
 				&reo_context->reo_list, num_mlo_links);
 		if (QDF_IS_STATUS_ERROR(status)) {
 			mgmt_rx_reo_err("Failed to print reorder list");
-			return status;
-		}
-
-		status = mgmt_rx_reo_sim_print_pending_frame_list(
-							pending_frame_list);
-		if (QDF_IS_STATUS_ERROR(status)) {
-			mgmt_rx_reo_err("Failed to print mgmt frame list");
 			return status;
 		}
 
@@ -3395,17 +3332,10 @@ mgmt_rx_reo_sim_init(struct mgmt_rx_reo_context *reo_context)
 
 	qdf_mem_zero(sim_context, sizeof(*sim_context));
 
-	status = mgmt_rx_reo_sim_init_pending_frame_list(
-					&sim_context->pending_frame_list);
+	status = mgmt_rx_reo_sim_init_master_frame_list(
+					&sim_context->master_frame_list);
 	if (QDF_IS_STATUS_ERROR(status)) {
-		mgmt_rx_reo_err("Failed to create mgmt frame list");
-		return status;
-	}
-
-	status = mgmt_rx_reo_sim_init_stale_frame_list(
-					&sim_context->stale_frame_list);
-	if (QDF_IS_STATUS_ERROR(status)) {
-		mgmt_rx_reo_err("Failed to create stale frame list");
+		mgmt_rx_reo_err("Failed to create master mgmt frame list");
 		return status;
 	}
 
@@ -3436,17 +3366,10 @@ mgmt_rx_reo_sim_deinit(struct mgmt_rx_reo_context *reo_context)
 
 	qdf_spinlock_destroy(&sim_context->link_id_to_pdev_map.lock);
 
-	status = mgmt_rx_reo_sim_deinit_stale_frame_list(
-					&sim_context->stale_frame_list);
+	status = mgmt_rx_reo_sim_deinit_master_frame_list(
+					&sim_context->master_frame_list);
 	if (QDF_IS_STATUS_ERROR(status)) {
-		mgmt_rx_reo_err("Failed to destroy stale frame list");
-		return status;
-	}
-
-	status = mgmt_rx_reo_sim_deinit_pending_frame_list(
-					&sim_context->pending_frame_list);
-	if (QDF_IS_STATUS_ERROR(status)) {
-		mgmt_rx_reo_err("Failed to destroy mgmt frame list");
+		mgmt_rx_reo_err("Failed to destroy master frame list");
 		return status;
 	}
 
