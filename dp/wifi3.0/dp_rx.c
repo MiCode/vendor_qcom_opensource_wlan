@@ -1665,6 +1665,15 @@ void dp_rx_flush_rx_cached(struct dp_peer *peer, bool drop)
 	int num_buff_elem;
 	QDF_STATUS status;
 
+	if (!peer->txrx_peer) {
+		if (!peer->sta_self_peer) {
+			qdf_err("txrx_peer NULL!!");
+			qdf_assert_always(0);
+		}
+
+		return;
+	}
+
 	if (qdf_atomic_inc_return(&peer->flush_in_progress) > 1) {
 		qdf_atomic_dec(&peer->flush_in_progress);
 		return;

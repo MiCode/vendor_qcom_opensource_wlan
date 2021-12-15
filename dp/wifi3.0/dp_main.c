@@ -285,9 +285,6 @@ static uint8_t dp_soc_ring_if_nss_offloaded(struct dp_soc *soc,
 
 #define RNG_ERR		"SRNG setup failed for"
 
-/* Threshold for peer's cached buf queue beyond which frames are dropped */
-#define DP_RX_CACHED_BUFQ_THRESH 64
-
 /**
  * default_dscp_tid_map - Default DSCP-TID mapping
  *
@@ -6792,19 +6789,6 @@ static inline void dp_peer_ast_handle_roam_del(struct dp_soc *soc,
 }
 #endif
 
-#ifdef PEER_CACHE_RX_PKTS
-static inline void dp_peer_rx_bufq_resources_init(struct dp_peer *peer)
-{
-	qdf_spinlock_create(&peer->bufq_info.bufq_lock);
-	peer->bufq_info.thresh = DP_RX_CACHED_BUFQ_THRESH;
-	qdf_list_create(&peer->bufq_info.cached_bufq, DP_RX_CACHED_BUFQ_THRESH);
-}
-#else
-static inline void dp_peer_rx_bufq_resources_init(struct dp_peer *peer)
-{
-}
-#endif
-
 #ifdef QCA_VDEV_STATS_HW_OFFLOAD_SUPPORT
 /*
  * dp_peer_hw_txrx_stats_init() - Initialize hw_txrx_stats_en in dp_peer
@@ -6814,16 +6798,18 @@ static inline void dp_peer_rx_bufq_resources_init(struct dp_peer *peer)
  * Return: none
  */
 static inline
-void dp_peer_hw_txrx_stats_init(struct dp_soc *soc, struct dp_peer *peer)
+void dp_peer_hw_txrx_stats_init(struct dp_soc *soc,
+				struct dp_txrx_peer *txrx_peer)
 {
-	peer->hw_txrx_stats_en =
+	txrx_peer->hw_txrx_stats_en =
 		wlan_cfg_get_vdev_stats_hw_offload_config(soc->wlan_cfg_ctx);
 }
 #else
 static inline
-void dp_peer_hw_txrx_stats_init(struct dp_soc *soc, struct dp_peer *peer)
+void dp_peer_hw_txrx_stats_init(struct dp_soc *soc,
+				struct dp_txrx_peer *txrx_peer)
 {
-	peer->hw_txrx_stats_en = 0;
+	txrx_peer->hw_txrx_stats_en = 0;
 }
 #endif
 
@@ -6835,6 +6821,9 @@ static QDF_STATUS dp_txrx_peer_detach(struct dp_soc *soc, struct dp_peer *peer)
 	if (peer->txrx_peer) {
 		txrx_peer = peer->txrx_peer;
 		peer->txrx_peer = NULL;
+
+		dp_peer_defrag_rx_tids_deinit(txrx_peer);
+		dp_peer_rx_bufq_resources_deinit(txrx_peer);
 
 		qdf_mem_free(txrx_peer);
 	}
@@ -6856,7 +6845,8 @@ static QDF_STATUS dp_txrx_peer_attach(struct dp_soc *soc, struct dp_peer *peer)
 	txrx_peer->vdev = peer->vdev;
 
 	dp_wds_ext_peer_init(peer);
-
+	dp_peer_rx_bufq_resources_init(txrx_peer);
+	dp_peer_defrag_rx_tids_init(txrx_peer);
 	dp_txrx_peer_attach_add(soc, peer, txrx_peer);
 
 	return QDF_STATUS_SUCCESS;
@@ -6926,7 +6916,6 @@ dp_peer_create_wifi3(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
 		dp_local_peer_id_alloc(pdev, peer);
 
 		qdf_spinlock_create(&peer->peer_info_lock);
-		dp_peer_rx_bufq_resources_init(peer);
 
 		DP_STATS_INIT(peer);
 		DP_STATS_UPD(peer, rx.avg_snr, CDP_INVALID_SNR);
@@ -6938,10 +6927,13 @@ dp_peer_create_wifi3(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
 		 */
 		dp_monitor_peer_tx_capture_filter_check(pdev, peer);
 
-		dp_set_peer_isolation(peer, false);
+		if (peer->txrx_peer) {
+			dp_peer_rx_bufq_resources_init(peer->txrx_peer);
+			dp_set_peer_isolation(peer->txrx_peer, false);
+			dp_wds_ext_peer_init(peer->txrx_peer);
+			dp_peer_hw_txrx_stats_init(soc, peer->txrx_peer);
+		}
 
-		dp_wds_ext_peer_init(peer);
-		dp_peer_hw_txrx_stats_init(soc, peer);
 		dp_peer_update_state(soc, peer, DP_PEER_STATE_INIT);
 
 		dp_vdev_unref_delete(soc, vdev, DP_MOD_ID_CDP);
@@ -7007,9 +6999,6 @@ dp_peer_create_wifi3(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
 	qdf_spinlock_create(&peer->peer_state_lock);
 	dp_peer_add_ast(soc, peer, peer_mac_addr, ast_type, 0);
 	qdf_spinlock_create(&peer->peer_info_lock);
-	dp_wds_ext_peer_init(peer);
-	dp_peer_hw_txrx_stats_init(soc, peer);
-	dp_peer_rx_bufq_resources_init(peer);
 
 	/* reset the ast index to flowid table */
 	dp_peer_reset_flowq_map(peer);
@@ -7042,6 +7031,8 @@ dp_peer_create_wifi3(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
 			(wlan_op_mode_sta != vdev->opmode)) {
 		dp_info("vdev bss_peer!!");
 		peer->bss_peer = 1;
+		if (peer->txrx_peer)
+			peer->txrx_peer->bss_peer = 1;
 	}
 
 	if (wlan_op_mode_sta == vdev->opmode &&
@@ -7076,17 +7067,6 @@ dp_peer_create_wifi3(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
 						peer_cookie.ctx;
 		}
 	}
-
-	/*
-	 * Allocate peer extended stats context. Fall through in
-	 * case of failure as its not an implicit requirement to have
-	 * this object for regular statistics updates.
-	 */
-	if (dp_peer_ext_stats_ctx_alloc(soc, peer) !=
-			QDF_STATUS_SUCCESS)
-		dp_warn("peer ext_stats ctx alloc failed");
-
-	dp_set_peer_isolation(peer, false);
 
 	dp_peer_update_state(soc, peer, DP_PEER_STATE_INIT);
 
@@ -7187,6 +7167,7 @@ QDF_STATUS dp_peer_mlo_setup(
 		dp_link_peer_add_mld_peer(peer, mld_peer);
 		dp_mld_peer_add_link_peer(mld_peer, peer);
 
+		mld_peer->txrx_peer->mld_peer = 1;
 		dp_peer_unref_delete(mld_peer, DP_MOD_ID_CDP);
 	} else {
 		peer->mld_peer = NULL;
@@ -7825,7 +7806,8 @@ static int dp_get_sec_type(struct cdp_soc_t *soc, uint8_t vdev_id,
 			   uint8_t *peer_mac, uint8_t sec_idx)
 {
 	int sec_type = 0;
-	struct dp_peer *peer = dp_peer_find_hash_find((struct dp_soc *)soc,
+	struct dp_peer *peer =
+			dp_peer_get_tgt_peer_hash_find((struct dp_soc *)soc,
 						       peer_mac, 0, vdev_id,
 						       DP_MOD_ID_CDP);
 
@@ -7834,7 +7816,12 @@ static int dp_get_sec_type(struct cdp_soc_t *soc, uint8_t vdev_id,
 		return sec_type;
 	}
 
-	sec_type = peer->security[sec_idx].sec_type;
+	if (!peer->txrx_peer) {
+		dp_peer_unref_delete(peer, DP_MOD_ID_CDP);
+		dp_peer_debug("%pK: txrx peer is NULL!\n", soc);
+		return sec_type;
+	}
+	sec_type = peer->txrx_peer->security[sec_idx].sec_type;
 
 	dp_peer_unref_delete(peer, DP_MOD_ID_CDP);
 	return sec_type;
@@ -7854,15 +7841,17 @@ dp_peer_authorize(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
 {
 	QDF_STATUS status = QDF_STATUS_SUCCESS;
 	struct dp_soc *soc = (struct dp_soc *)soc_hdl;
-	struct dp_peer *peer = dp_peer_find_hash_find(soc, peer_mac,
-						      0, vdev_id,
-						      DP_MOD_ID_CDP);
+	struct dp_peer *peer = dp_peer_get_tgt_peer_hash_find(soc, peer_mac,
+							      0, vdev_id,
+							      DP_MOD_ID_CDP);
 
 	if (!peer) {
 		dp_cdp_debug("%pK: Peer is NULL!\n", soc);
 		status = QDF_STATUS_E_FAILURE;
 	} else {
 		peer->authorize = authorize ? 1 : 0;
+		if (peer->txrx_peer)
+			peer->txrx_peer->authorize = peer->authorize;
 
 		if (!peer->authorize)
 			dp_peer_flush_frags(soc_hdl, vdev_id, peer_mac);
@@ -8022,11 +8011,6 @@ void dp_peer_unref_delete(struct dp_peer *peer, enum dp_mod_id mod_id)
 		dp_peer_debug("Deleting peer %pK ("QDF_MAC_ADDR_FMT")", peer,
 			      QDF_MAC_ADDR_REF(peer->mac_addr.raw));
 
-		/*
-		 * Deallocate the extended stats contenxt
-		 */
-		dp_peer_ext_stats_ctx_dealloc(soc, peer);
-
 		/* send peer destroy event to upper layer */
 		qdf_mem_copy(peer_cookie.mac_addr, peer->mac_addr.raw,
 			     QDF_MAC_ADDR_SIZE);
@@ -8081,27 +8065,17 @@ qdf_export_symbol(dp_peer_unref_delete);
 
 /*
  * dp_txrx_peer_unref_delete() - unref and delete peer
- * @handle:    Datapath txrx ref handle
+ * @handle: Datapath txrx ref handle
+ * @mod_id: Module ID of the caller
  *
  */
-void dp_txrx_peer_unref_delete(dp_txrx_ref_handle *handle)
+void dp_txrx_peer_unref_delete(dp_txrx_ref_handle handle,
+			       enum dp_mod_id mod_id)
 {
-	dp_peer_unref_delete((struct dp_peer *)handle, DP_MOD_ID_TX_RX);
+	dp_peer_unref_delete((struct dp_peer *)handle, mod_id);
 }
 
 qdf_export_symbol(dp_txrx_peer_unref_delete);
-
-#ifdef PEER_CACHE_RX_PKTS
-static inline void dp_peer_rx_bufq_resources_deinit(struct dp_peer *peer)
-{
-	qdf_list_destroy(&peer->bufq_info.cached_bufq);
-	qdf_spinlock_destroy(&peer->bufq_info.bufq_lock);
-}
-#else
-static inline void dp_peer_rx_bufq_resources_deinit(struct dp_peer *peer)
-{
-}
-#endif
 
 /*
  * dp_peer_detach_wifi3() – Detach txrx peer
@@ -8137,8 +8111,11 @@ static QDF_STATUS dp_peer_delete_wifi3(struct cdp_soc_t *soc_hdl,
 
 	vdev = peer->vdev;
 
-	if (!vdev)
+	if (!vdev) {
+		dp_peer_unref_delete(peer, DP_MOD_ID_CDP);
 		return QDF_STATUS_E_FAILURE;
+	}
+
 	peer->valid = 0;
 
 	dp_init_info("%pK: peer %pK (" QDF_MAC_ADDR_FMT ")",
@@ -8148,8 +8125,6 @@ static QDF_STATUS dp_peer_delete_wifi3(struct cdp_soc_t *soc_hdl,
 
 	/* Drop all rx packets before deleting peer */
 	dp_clear_peer_internal(soc, peer);
-
-	dp_peer_rx_bufq_resources_deinit(peer);
 
 	qdf_spinlock_destroy(&peer->peer_info_lock);
 	dp_peer_multipass_list_remove(peer);
@@ -9278,25 +9253,30 @@ static QDF_STATUS dp_set_peer_param(struct cdp_soc_t *cdp_soc,  uint8_t vdev_id,
 				    enum cdp_peer_param_type param,
 				    cdp_config_param_type val)
 {
-	struct dp_peer *peer = dp_peer_find_hash_find((struct dp_soc *)cdp_soc,
-						      peer_mac, 0, vdev_id,
-						      DP_MOD_ID_CDP);
+	struct dp_peer *peer =
+			dp_peer_get_tgt_peer_hash_find((struct dp_soc *)cdp_soc,
+						       peer_mac, 0, vdev_id,
+						       DP_MOD_ID_CDP);
+	struct dp_txrx_peer *txrx_peer;
 
 	if (!peer)
 		return QDF_STATUS_E_FAILURE;
 
+	txrx_peer = peer->txrx_peer;
+	if (!txrx_peer) {
+		dp_peer_unref_delete(peer, DP_MOD_ID_CDP);
+		return QDF_STATUS_E_FAILURE;
+	}
+
 	switch (param) {
 	case CDP_CONFIG_NAWDS:
-		peer->nawds_enabled = val.cdp_peer_param_nawds;
-		break;
-	case CDP_CONFIG_NAC:
-		peer->nac = !!(val.cdp_peer_param_nac);
+		txrx_peer->nawds_enabled = val.cdp_peer_param_nawds;
 		break;
 	case CDP_CONFIG_ISOLATION:
-		dp_set_peer_isolation(peer, val.cdp_peer_param_isolation);
+		dp_set_peer_isolation(txrx_peer, val.cdp_peer_param_isolation);
 		break;
 	case CDP_CONFIG_IN_TWT:
-		peer->in_twt = !!(val.cdp_peer_param_in_twt);
+		txrx_peer->in_twt = !!(val.cdp_peer_param_in_twt);
 		break;
 	default:
 		break;
@@ -13708,24 +13688,28 @@ QDF_STATUS dp_wds_ext_set_peer_rx(ol_txrx_soc_handle soc,
 		dp_cdp_debug("%pK: Peer is NULL!\n", (struct dp_soc *)soc);
 		return status;
 	}
+	if (!peer->txrx_peer) {
+		dp_peer_unref_delete(peer, DP_MOD_ID_CDP);
+		return status;
+	}
 
 	if (rx) {
-		if (peer->osif_rx) {
-		    status = QDF_STATUS_E_ALREADY;
+		if (peer->txrx_peer->osif_rx) {
+			status = QDF_STATUS_E_ALREADY;
 		} else {
-		    peer->osif_rx = rx;
-		    status = QDF_STATUS_SUCCESS;
+			peer->txrx_peer->osif_rx = rx;
+			status = QDF_STATUS_SUCCESS;
 		}
 	} else {
-		if (peer->osif_rx) {
-		    peer->osif_rx = NULL;
-		    status = QDF_STATUS_SUCCESS;
+		if (peer->txrx_peer->osif_rx) {
+			peer->txrx_peer->osif_rx = NULL;
+			status = QDF_STATUS_SUCCESS;
 		} else {
-		    status = QDF_STATUS_E_ALREADY;
+			status = QDF_STATUS_E_ALREADY;
 		}
 	}
 
-	peer->wds_ext.osif_peer = osif_peer;
+	peer->txrx_peer->wds_ext.osif_peer = osif_peer;
 	dp_peer_unref_delete(peer, DP_MOD_ID_CDP);
 
 	return status;

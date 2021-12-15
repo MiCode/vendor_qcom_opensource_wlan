@@ -1814,7 +1814,7 @@ dp_enable_peer_based_pktlog(struct cdp_soc_t *soc, uint8_t pdev_id,
 		return QDF_STATUS_E_FAILURE;
 	}
 
-	peer->peer_based_pktlog_filter = enb_dsb;
+	peer->monitor_peer->peer_based_pktlog_filter = enb_dsb;
 	mon_pdev->dp_peer_based_pktlog = enb_dsb;
 
 	dp_peer_unref_delete(peer, DP_MOD_ID_CDP);

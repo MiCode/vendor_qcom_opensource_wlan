@@ -322,7 +322,7 @@ static inline
 QDF_STATUS dp_monitor_tx_add_to_comp_queue(struct dp_soc *soc,
 					   struct dp_tx_desc_s *desc,
 					   struct hal_tx_completion_status *ts,
-					   struct dp_peer *peer)
+					   uint16_t peer_id)
 {
 	return QDF_STATUS_E_FAILURE;
 }
@@ -982,29 +982,27 @@ static inline int dp_log2_ceil(unsigned int value)
 #ifdef QCA_SUPPORT_PEER_ISOLATION
 #define dp_get_peer_isolation(_peer) ((_peer)->isolation)
 
-static inline void dp_set_peer_isolation(struct dp_peer *peer, bool val)
+static inline void dp_set_peer_isolation(struct dp_txrx_peer *txrx_peer,
+					 bool val)
 {
-	peer->isolation = val;
-	QDF_TRACE(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_INFO,
-		  "peer:"QDF_MAC_ADDR_FMT" isolation:%d",
-		  QDF_MAC_ADDR_REF(peer->mac_addr.raw), peer->isolation);
+	txrx_peer->isolation = val;
 }
 
 #else
 #define dp_get_peer_isolation(_peer) (0)
 
-static inline void dp_set_peer_isolation(struct dp_peer *peer, bool val)
+static inline void dp_set_peer_isolation(struct dp_txrx_peer *peer, bool val)
 {
 }
 #endif /* QCA_SUPPORT_PEER_ISOLATION */
 
 #ifdef QCA_SUPPORT_WDS_EXTENDED
-static inline void dp_wds_ext_peer_init(struct dp_peer *peer)
+static inline void dp_wds_ext_peer_init(struct dp_txrx_peer *txrx_peer)
 {
-	peer->wds_ext.init = 0;
+	txrx_peer->wds_ext.init = 0;
 }
 #else
-static inline void dp_wds_ext_peer_init(struct dp_peer *peer)
+static inline void dp_wds_ext_peer_init(struct dp_txrx_peer *txrx_peer)
 {
 }
 #endif /* QCA_SUPPORT_WDS_EXTENDED */

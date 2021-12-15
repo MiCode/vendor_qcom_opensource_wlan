@@ -199,6 +199,8 @@ struct dp_mon_mpdu;
 #ifdef BE_PKTLOG_SUPPORT
 struct dp_mon_filter_be;
 #endif
+struct dp_peer;
+struct dp_txrx_peer;
 
 /**
  * enum for DP peer state
@@ -764,6 +766,38 @@ struct dp_reo_cmd_info {
 	TAILQ_ENTRY(dp_reo_cmd_info) reo_cmd_list_elem;
 };
 
+/* Rx TID defrag*/
+struct dp_rx_tid_defrag {
+	/* TID */
+	int tid;
+
+	/* only used for defrag right now */
+	TAILQ_ENTRY(dp_rx_tid_defrag) defrag_waitlist_elem;
+
+	/* Store dst desc for reinjection */
+	hal_ring_desc_t dst_ring_desc;
+	struct dp_rx_desc *head_frag_desc;
+
+	/* Sequence and fragments that are being processed currently */
+	uint32_t curr_seq_num;
+	uint32_t curr_frag_num;
+
+	/* TODO: Check the following while adding defragmentation support */
+	struct dp_rx_reorder_array_elem *array;
+	/* base - single rx reorder element used for non-aggr cases */
+	struct dp_rx_reorder_array_elem base;
+	/* rx_tid lock */
+	qdf_spinlock_t defrag_tid_lock;
+
+	/* head PN number */
+	uint64_t pn128[2];
+
+	uint32_t defrag_timeout_ms;
+
+	/* defrag usage only, dp_peer pointer related with this tid */
+	struct dp_txrx_peer *defrag_peer;
+};
+
 /* Rx TID */
 struct dp_rx_tid {
 	/* TID */
@@ -801,34 +835,13 @@ struct dp_rx_tid {
 
 	/* Starting sequence number in Addba request */
 	uint16_t startseqnum;
-
-	/* TODO: Check the following while adding defragmentation support */
-	struct dp_rx_reorder_array_elem *array;
-	/* base - single rx reorder element used for non-aggr cases */
-	struct dp_rx_reorder_array_elem base;
-
-	/* only used for defrag right now */
-	TAILQ_ENTRY(dp_rx_tid) defrag_waitlist_elem;
-
-	/* Store dst desc for reinjection */
-	hal_ring_desc_t dst_ring_desc;
-	struct dp_rx_desc *head_frag_desc;
-
-	/* rx_tid lock */
-	qdf_spinlock_t tid_lock;
-
-	/* Sequence and fragments that are being processed currently */
-	uint32_t curr_seq_num;
-	uint32_t curr_frag_num;
-
-	/* head PN number */
-	uint64_t pn128[2];
-
-	uint32_t defrag_timeout_ms;
 	uint16_t dialogtoken;
 	uint16_t statuscode;
 	/* user defined ADDBA response status code */
 	uint16_t userstatuscode;
+
+	/* rx_tid lock */
+	qdf_spinlock_t tid_lock;
 
 	/* Store ppdu_id when 2k exception is received */
 	uint32_t ppdu_id_2k;
@@ -851,9 +864,6 @@ struct dp_rx_tid {
 
 	/* Peer TID statistics */
 	struct cdp_peer_tid_stats stats;
-
-	/* defrag usage only, dp_peer pointer related with this tid */
-	struct dp_peer *defrag_peer;
 };
 
 /**
@@ -1725,7 +1735,6 @@ struct dp_arch_ops {
 				    uint8_t bm_id);
 	uint16_t (*dp_rx_peer_metadata_peer_id_get)(struct dp_soc *soc,
 						    uint32_t peer_metadata);
-
 	/* Control Arch Ops */
 	QDF_STATUS (*txrx_set_vdev_param)(struct dp_soc *soc,
 					  struct dp_vdev *vdev,
@@ -2010,7 +2019,7 @@ struct dp_soc {
 	/* rx defrag state – TBD: do we need this per radio? */
 	struct {
 		struct {
-			TAILQ_HEAD(, dp_rx_tid) waitlist;
+			TAILQ_HEAD(, dp_rx_tid_defrag) waitlist;
 			uint32_t timeout_ms;
 			uint32_t next_flush_ms;
 			qdf_spinlock_t defrag_lock;
@@ -3073,7 +3082,7 @@ struct dp_vdev {
 	uint16_t *iv_vlan_map;
 
 	/* dp_peer special list */
-	TAILQ_HEAD(, dp_peer) mpass_peer_list;
+	TAILQ_HEAD(, dp_txrx_peer) mpass_peer_list;
 	DP_MUTEX_TYPE mpass_peer_mutex;
 #endif
 	/* Extended data path handle */
@@ -3342,6 +3351,7 @@ struct dp_mld_link_peers {
 
 typedef void *dp_txrx_ref_handle;
 
+/* Peer structure for per packet path usage */
 struct dp_txrx_peer {
 	/* Core TxRx Peer */
 
@@ -3350,6 +3360,41 @@ struct dp_txrx_peer {
 
 	/* peer ID for this peer */
 	uint16_t peer_id;
+
+	uint8_t authorize:1, /* Set when authorized */
+		in_twt:1, /* in TWT session */
+		hw_txrx_stats_en:1, /*Indicate HW offload vdev stats */
+		mld_peer:1; /* MLD peer*/
+
+	uint32_t tx_failed;
+
+	struct {
+		enum cdp_sec_type sec_type;
+		u_int32_t michael_key[2]; /* relevant for TKIP */
+	} security[2]; /* 0 -> multicast, 1 -> unicast */
+
+	uint16_t nawds_enabled:1, /* NAWDS flag */
+		bss_peer:1, /* set for bss peer */
+		isolation:1, /* enable peer isolation for this peer */
+		wds_enabled:1; /* WDS peer */
+#ifdef WDS_VENDOR_EXTENSION
+	dp_ecm_policy wds_ecm;
+#endif
+#ifdef PEER_CACHE_RX_PKTS
+	qdf_atomic_t flush_in_progress;
+	struct dp_peer_cached_bufq bufq_info;
+#endif
+#ifdef QCA_MULTIPASS_SUPPORT
+	/* node in the special peer list element */
+	TAILQ_ENTRY(dp_txrx_peer) mpass_peer_list_elem;
+	/* vlan id for key */
+	uint16_t vlan_id;
+#endif
+#ifdef QCA_SUPPORT_WDS_EXTENDED
+	struct dp_wds_ext_peer wds_ext;
+	ol_txrx_rx_fp osif_rx;
+#endif
+	struct dp_rx_tid_defrag rx_tid[DP_MAX_TIDS];
 };
 
 /* Peer structure for data path state */
@@ -3358,15 +3403,15 @@ struct dp_peer {
 #ifdef WIFI_MONITOR_SUPPORT
 	struct dp_mon_peer *monitor_peer;
 #endif
+	/* peer ID for this peer */
+	uint16_t peer_id;
+
 	/* VDEV to which this peer is associated */
 	struct dp_vdev *vdev;
 
 	struct dp_ast_entry *self_ast_entry;
 
 	qdf_atomic_t ref_cnt;
-
-	/* peer ID for this peer */
-	uint16_t peer_id;
 
 	union dp_align_mac_addr mac_addr;
 
@@ -3386,26 +3431,15 @@ struct dp_peer {
 	} security[2]; /* 0 -> multicast, 1 -> unicast */
 
 	/* NAWDS Flag and Bss Peer bit */
-	uint16_t nawds_enabled:1, /* NAWDS flag */
-		bss_peer:1, /* set for bss peer */
-		wds_enabled:1, /* WDS peer */
+	uint16_t bss_peer:1, /* set for bss peer */
 		authorize:1, /* Set when authorized */
-		nac:1, /* NAC Peer*/
-		tx_cap_enabled:1, /* Peer's tx-capture is enabled */
-		rx_cap_enabled:1, /* Peer's rx-capture is enabled */
 		valid:1, /* valid bit */
-		in_twt:1, /* in TWT session */
 		delete_in_progress:1, /* Indicate kickout sent */
-		sta_self_peer:1, /* Indicate STA self peer */
-		hw_txrx_stats_en:1; /*Indicate HW offload vdev stats */
+		sta_self_peer:1; /* Indicate STA self peer */
 
 #ifdef WLAN_FEATURE_11BE_MLO
 	uint8_t first_link:1, /* first link peer for MLO */
 		primary_link:1; /* primary link for MLO */
-#endif
-
-#ifdef QCA_SUPPORT_PEER_ISOLATION
-	bool isolation; /* enable peer isolation for this peer */
 #endif
 
 	/* MCL specific peer local id */
@@ -3422,10 +3456,6 @@ struct dp_peer {
 	TAILQ_HEAD(, dp_ast_entry) ast_entry_list;
 	/* TBD */
 
-#ifdef WDS_VENDOR_EXTENSION
-	dp_ecm_policy wds_ecm;
-#endif
-
 	/* Active Block ack sessions */
 	uint16_t active_ba_session_cnt;
 
@@ -3438,27 +3468,12 @@ struct dp_peer {
 	 */
 	uint8_t kill_256_sessions;
 	qdf_atomic_t is_default_route_set;
-	/* Peer level flag to check peer based pktlog enabled or
-	 * disabled
-	 */
-	uint8_t peer_based_pktlog_filter;
 
 	/* rdk statistics context */
 	struct cdp_peer_rate_stats_ctx *rdkstats_ctx;
 	/* average sojourn time */
 	qdf_ewma_tx_lag avg_sojourn_msdu[CDP_DATA_TID_MAX];
 
-#ifdef QCA_MULTIPASS_SUPPORT
-	/* node in the special peer list element */
-	TAILQ_ENTRY(dp_peer) mpass_peer_list_elem;
-	/* vlan id for key */
-	uint16_t vlan_id;
-#endif
-
-#ifdef PEER_CACHE_RX_PKTS
-	qdf_atomic_t flush_in_progress;
-	struct dp_peer_cached_bufq bufq_info;
-#endif
 #ifdef QCA_PEER_MULTIQ_SUPPORT
 	struct dp_peer_ast_params peer_ast_flowq_idx[DP_PEER_AST_FLOWQ_MAX];
 #endif
@@ -3478,11 +3493,6 @@ struct dp_peer {
 	struct dp_peer_mscs_parameter mscs_ipv4_parameter, mscs_ipv6_parameter;
 	bool mscs_active;
 #endif
-#ifdef QCA_SUPPORT_WDS_EXTENDED
-	struct dp_wds_ext_peer wds_ext;
-	ol_txrx_rx_fp osif_rx;
-#endif
-
 #ifdef WLAN_SUPPORT_MESH_LATENCY
 	struct dp_peer_mesh_latency_parameter mesh_latency_params[DP_MAX_TIDS];
 #endif

@@ -37,6 +37,9 @@
 #define DP_PEER_HASH_LOAD_MULT  2
 #define DP_PEER_HASH_LOAD_SHIFT 0
 
+/* Threshold for peer's cached buf queue beyond which frames are dropped */
+#define DP_RX_CACHED_BUFQ_THRESH 64
+
 #define dp_peer_alert(params...) QDF_TRACE_FATAL(QDF_MODULE_ID_DP_PEER, params)
 #define dp_peer_err(params...) QDF_TRACE_ERROR(QDF_MODULE_ID_DP_PEER, params)
 #define dp_peer_warn(params...) QDF_TRACE_WARN(QDF_MODULE_ID_DP_PEER, params)
@@ -66,7 +69,7 @@ struct ast_del_ctxt {
 typedef void dp_peer_iter_func(struct dp_soc *soc, struct dp_peer *peer,
 			       void *arg);
 void dp_peer_unref_delete(struct dp_peer *peer, enum dp_mod_id id);
-void dp_txrx_peer_unref_delete(dp_txrx_ref_handle *handle);
+void dp_txrx_peer_unref_delete(dp_txrx_ref_handle handle, enum dp_mod_id id);
 struct dp_peer *dp_peer_find_hash_find(struct dp_soc *soc,
 				       uint8_t *peer_mac_addr,
 				       int mac_addr_is_aligned,
@@ -166,20 +169,27 @@ struct dp_peer *dp_peer_get_ref_by_id(struct dp_soc *soc,
  * @soc		: core DP soc context
  * @peer_id	: peer id from peer object can be retrieved
  * @handle	: reference handle
+ * @mod_id      : ID ot module requesting reference
  *
  * Return: struct dp_txrx_peer*: Pointer to txrx DP peer object
  */
 static inline struct dp_txrx_peer *
 dp_txrx_peer_get_ref_by_id(struct dp_soc *soc,
 			   uint16_t peer_id,
-			   dp_txrx_ref_handle *handle)
+			   dp_txrx_ref_handle *handle,
+			   enum dp_mod_id mod_id)
 
 {
 	struct dp_peer *peer;
 
-	peer = dp_peer_get_ref_by_id(soc, peer_id, DP_MOD_ID_TX_RX);
+	peer = dp_peer_get_ref_by_id(soc, peer_id, mod_id);
 	if (!peer)
 		return NULL;
+
+	if (!peer->txrx_peer) {
+		dp_peer_unref_delete(peer, mod_id);
+		return NULL;
+	}
 
 	*handle = (dp_txrx_ref_handle)peer;
 	return peer->txrx_peer;
@@ -1064,6 +1074,10 @@ void dp_peer_delete(struct dp_soc *soc,
 		    void *arg);
 
 #ifdef WLAN_FEATURE_11BE_MLO
+
+/* is MLO connection mld peer */
+#define IS_MLO_DP_MLD_TXRX_PEER(_peer) ((_peer)->mld_peer)
+
 /* set peer type */
 #define DP_PEER_SET_TYPE(_peer, _type_val) \
 	((_peer)->peer_type = (_type_val))
@@ -1530,7 +1544,45 @@ bool dp_peer_is_primary_link_peer(struct dp_peer *peer)
 	else
 		return false;
 }
+
+/**
+ * dp_tgt_txrx_peer_get_ref_by_id() - Gets tgt txrx peer for given the peer id
+ *
+ * @soc		: core DP soc context
+ * @peer_id	: peer id from peer object can be retrieved
+ * @handle	: reference handle
+ * @mod_id      : ID ot module requesting reference
+ *
+ * Return: struct dp_txrx_peer*: Pointer to txrx DP peer object
+ */
+static inline struct dp_txrx_peer *
+dp_tgt_txrx_peer_get_ref_by_id(struct dp_soc *soc,
+			       uint16_t peer_id,
+			       dp_txrx_ref_handle *handle,
+			       enum dp_mod_id mod_id)
+
+{
+	struct dp_peer *peer;
+	struct dp_txrx_peer *txrx_peer;
+
+	peer = dp_peer_get_ref_by_id(soc, peer_id, mod_id);
+	if (!peer)
+		return NULL;
+
+	txrx_peer = dp_get_txrx_peer(peer);
+	if (txrx_peer) {
+		*handle = (dp_txrx_ref_handle)peer;
+		return txrx_peer;
+	}
+
+	dp_peer_unref_delete(peer, mod_id);
+	return NULL;
+}
+
 #else
+
+#define IS_MLO_DP_MLD_TXRX_PEER(_peer) false
+
 #define DP_PEER_SET_TYPE(_peer, _type_val) /* no op */
 /* is legacy peer */
 #define IS_DP_LEGACY_PEER(_peer) true
@@ -1637,6 +1689,27 @@ bool dp_peer_is_primary_link_peer(struct dp_peer *peer)
 {
 	return true;
 }
+
+/**
+ * dp_tgt_txrx_peer_get_ref_by_id() - Gets tgt txrx peer for given the peer id
+ *
+ * @soc		: core DP soc context
+ * @peer_id	: peer id from peer object can be retrieved
+ * @handle	: reference handle
+ * @mod_id      : ID ot module requesting reference
+ *
+ * Return: struct dp_txrx_peer*: Pointer to txrx DP peer object
+ */
+static inline struct dp_txrx_peer *
+dp_tgt_txrx_peer_get_ref_by_id(struct dp_soc *soc,
+			       uint16_t peer_id,
+			       dp_txrx_ref_handle *handle,
+			       enum dp_mod_id mod_id)
+
+{
+	return dp_txrx_peer_get_ref_by_id(soc, peer_id, handle, mod_id);
+}
+
 #endif /* WLAN_FEATURE_11BE_MLO */
 
 #if defined(WLAN_FEATURE_11BE_MLO) && defined(WLAN_MLO_MULTI_CHIP)
@@ -1718,6 +1791,56 @@ void dp_peer_rx_tids_destroy(struct dp_peer *peer)
 
 	peer->rx_tid = NULL;
 }
+
+static inline
+void dp_peer_defrag_rx_tids_init(struct dp_txrx_peer *txrx_peer)
+{
+	uint8_t i;
+
+	qdf_mem_zero(&txrx_peer->rx_tid, DP_MAX_TIDS *
+		     sizeof(struct dp_rx_tid_defrag));
+
+	for (i = 0; i < DP_MAX_TIDS; i++)
+		qdf_spinlock_create(&txrx_peer->rx_tid[i].defrag_tid_lock);
+}
+
+static inline
+void dp_peer_defrag_rx_tids_deinit(struct dp_txrx_peer *txrx_peer)
+{
+	uint8_t i;
+
+	for (i = 0; i < DP_MAX_TIDS; i++)
+		qdf_spinlock_destroy(&txrx_peer->rx_tid[i].defrag_tid_lock);
+}
+
+#ifdef PEER_CACHE_RX_PKTS
+static inline
+void dp_peer_rx_bufq_resources_init(struct dp_txrx_peer *txrx_peer)
+{
+	qdf_spinlock_create(&txrx_peer->bufq_info.bufq_lock);
+	txrx_peer->bufq_info.thresh = DP_RX_CACHED_BUFQ_THRESH;
+	qdf_list_create(&txrx_peer->bufq_info.cached_bufq,
+			DP_RX_CACHED_BUFQ_THRESH);
+}
+
+static inline
+void dp_peer_rx_bufq_resources_deinit(struct dp_txrx_peer *txrx_peer)
+{
+	qdf_list_destroy(&txrx_peer->bufq_info.cached_bufq);
+	qdf_spinlock_destroy(&txrx_peer->bufq_info.bufq_lock);
+}
+
+#else
+static inline
+void dp_peer_rx_bufq_resources_init(struct dp_txrx_peer *txrx_peer)
+{
+}
+
+static inline
+void dp_peer_rx_bufq_resources_deinit(struct dp_txrx_peer *txrx_peer)
+{
+}
+#endif
 
 #ifdef REO_SHARED_QREF_TABLE_EN
 void dp_peer_rx_reo_shared_qaddr_delete(struct dp_soc *soc,

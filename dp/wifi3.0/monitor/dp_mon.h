@@ -471,7 +471,7 @@ struct dp_mon_ops {
 	QDF_STATUS (*mon_tx_add_to_comp_queue)(struct dp_soc *soc,
 					       struct dp_tx_desc_s *desc,
 					       struct hal_tx_completion_status *ts,
-					       struct dp_peer *peer);
+					       uint16_t peer_id);
 	QDF_STATUS (*mon_update_msdu_to_list)(struct dp_soc *soc,
 					      struct dp_pdev *pdev,
 					      struct dp_peer *peer,
@@ -876,6 +876,13 @@ struct dp_mon_peer {
 	/* delayed ba ppdu id */
 	uint32_t last_delayed_ba_ppduid;
 #endif
+	/* Peer level flag to check peer based pktlog enabled or
+	 * disabled
+	 */
+	uint8_t peer_based_pktlog_filter;
+
+	uint8_t tx_cap_enabled:1, /* Peer's tx-capture is enabled */
+		rx_cap_enabled:1; /* Peer's rx-capture is enabled */
 };
 
 #if defined(QCA_TX_CAPTURE_SUPPORT) || defined(QCA_ENHANCED_STATS_SUPPORT)
@@ -2165,7 +2172,7 @@ static inline void dp_monitor_peer_tx_capture_filter_check(struct dp_pdev *pdev,
  * @soc: point to soc
  * @desc: point to tx desc
  * @ts: Tx completion status from HAL/HTT descriptor
- * @peer: DP peer
+ * @peer id: DP peer id
  *
  * Return: QDF_STATUS
  *
@@ -2174,7 +2181,7 @@ static inline
 QDF_STATUS dp_monitor_tx_add_to_comp_queue(struct dp_soc *soc,
 					   struct dp_tx_desc_s *desc,
 					   struct hal_tx_completion_status *ts,
-					   struct dp_peer *peer)
+					   uint16_t peer_id)
 {
 	struct dp_mon_ops *monitor_ops;
 	struct dp_mon_soc *mon_soc = soc->monitor_soc;
@@ -2190,7 +2197,7 @@ QDF_STATUS dp_monitor_tx_add_to_comp_queue(struct dp_soc *soc,
 		return QDF_STATUS_E_FAILURE;
 	}
 
-	return monitor_ops->mon_tx_add_to_comp_queue(soc, desc, ts, peer);
+	return monitor_ops->mon_tx_add_to_comp_queue(soc, desc, ts, peer_id);
 }
 
 static inline
@@ -2306,7 +2313,7 @@ static inline
 QDF_STATUS dp_monitor_tx_add_to_comp_queue(struct dp_soc *soc,
 					   struct dp_tx_desc_s *desc,
 					   struct hal_tx_completion_status *ts,
-					   struct dp_peer *peer)
+					   uint16_t peer_id)
 {
 	return QDF_STATUS_E_FAILURE;
 }
