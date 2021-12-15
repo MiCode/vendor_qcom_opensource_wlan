@@ -21,6 +21,8 @@
 #include <qdf_nbuf_frag.h>
 #include <hal_be_api_mon.h>
 
+#define DP_RX_MON_PACKET_OFFSET 8
+#define DP_RX_MON_RX_HDR_OFFSET 8
 /*
  * dp_rx_mon_buffers_alloc() - allocate rx monitor buffers
  * @soc: DP soc handle
@@ -156,4 +158,16 @@ static inline void dp_rx_mon_process_ppdu(void *context)
 {
 }
 #endif /* DISABLE_MON_CONFIG */
+
+/**
+ * dp_rx_mon_handle_full_mon() - Handle full monitor MPDU restitch
+ *
+ * @pdev: DP pdev
+ * @ppdu_info: PPDU info
+ * @mpdu: mpdu buf
+ */
+void
+dp_rx_mon_handle_full_mon(struct dp_pdev *pdev,
+			  struct hal_rx_ppdu_info *ppdu_info,
+			  qdf_nbuf_t mpdu);
 #endif /* _DP_RX_MON_2_0_H_ */

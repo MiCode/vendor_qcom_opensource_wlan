@@ -1652,12 +1652,30 @@ hal_rx_status_get_mpdu_retry_cnt(struct hal_rx_ppdu_info *ppdu_info,
 			HAL_RX_GET_64(rx_tlv, RX_PPDU_END_USER_STATS,
 				      RETRIED_MPDU_COUNT);
 }
+
+static inline void
+hal_rx_status_get_mon_buf_addr(uint8_t *rx_tlv,
+			       struct hal_rx_ppdu_info *ppdu_info)
+{
+	struct mon_buffer_addr *addr = (struct mon_buffer_addr *)rx_tlv;
+
+	ppdu_info->packet_info.sw_cookie = (((uint64_t)addr->buffer_virt_addr_63_32 << 32) |
+					    (addr->buffer_virt_addr_31_0));
+	ppdu_info->packet_info.dma_length = addr->dma_length;
+	ppdu_info->packet_info.msdu_continuation = addr->msdu_continuation;
+
+}
 #else
 static inline void
 hal_rx_status_get_mpdu_retry_cnt(struct hal_rx_ppdu_info *ppdu_info,
 				 void *rx_tlv)
 {
 		ppdu_info->rx_status.mpdu_retry_cnt = 0;
+}
+static inline void
+hal_rx_status_get_mon_buf_addr(uint8_t *rx_tlv,
+			       struct hal_rx_ppdu_info *ppdu_info)
+{
 }
 #endif
 
@@ -1694,6 +1712,7 @@ hal_rx_status_get_tlv_info_generic_be(void *rx_tlv_hdr, void *ppduinfo,
 	qdf_trace_hex_dump(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_DEBUG,
 			   rx_tlv, tlv_len);
 
+	ppdu_info->user_id = user_id;
 	switch (tlv_tag) {
 	case WIFIRX_PPDU_START_E:
 	{
@@ -2755,7 +2774,10 @@ hal_rx_status_get_tlv_info_generic_be(void *rx_tlv_hdr, void *ppduinfo,
 
 		ppdu_info->nac_info.mcast_bcast =
 			rx_mpdu_start->rx_mpdu_info_details.mcast_bcast;
-		break;
+		ppdu_info->mpdu_info[user_id].decap_type =
+			rx_mpdu_start->rx_mpdu_info_details.decap_type;
+
+		return HAL_TLV_STATUS_MPDU_START;
 	}
 	case WIFIRX_MPDU_END_E:
 		ppdu_info->user_id = user_id;
@@ -2777,13 +2799,23 @@ hal_rx_status_get_tlv_info_generic_be(void *rx_tlv_hdr, void *ppduinfo,
 				rx_msdu_end->flow_idx_invalid;
 			ppdu_info->rx_msdu_info[user_id].flow_idx =
 				rx_msdu_end->flow_idx;
+			ppdu_info->msdu[user_id].first_msdu =
+				rx_msdu_end->first_msdu;
+			ppdu_info->msdu[user_id].last_msdu =
+				rx_msdu_end->last_msdu;
+			ppdu_info->msdu[user_id].msdu_len =
+				rx_msdu_end->msdu_length;
+			ppdu_info->msdu[user_id].user_rssi =
+				rx_msdu_end->user_rssi;
+			ppdu_info->msdu[user_id].reception_type =
+				rx_msdu_end->reception_type;
 		}
 		return HAL_TLV_STATUS_MSDU_END;
 		}
 	case WIFIMON_BUFFER_ADDR_E:
-	{
+		hal_rx_status_get_mon_buf_addr(rx_tlv, ppdu_info);
+
 		return HAL_TLV_STATUS_MON_BUF_ADDR;
-	}
 	case 0:
 		return HAL_TLV_STATUS_PPDU_DONE;
 

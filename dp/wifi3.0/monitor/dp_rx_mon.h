@@ -37,6 +37,35 @@
 /* The maximum buffer length allocated for radiotap for monitor status buffer */
 #define MAX_MONITOR_HEADER (512)
 
+/* l2 header pad byte in case of Raw frame is Zero and 2 in non raw */
+#define DP_RX_MON_RAW_L2_HDR_PAD_BYTE (0)
+#define DP_RX_MON_NONRAW_L2_HDR_PAD_BYTE (2)
+
+/*
+ * The maximum headroom reserved for monitor destination buffer to
+ * accomodate radiotap header and protocol flow tag
+ */
+#ifdef DP_RX_MON_MEM_FRAG
+/*
+ *  -------------------------------------------------
+ * |       Protocol & Flow TAG      | Radiotap header|
+ * |                                |  Length(128 B) |
+ * |  ((4* QDF_NBUF_MAX_FRAGS) * 2) |                |
+ *  -------------------------------------------------
+ */
+#define DP_RX_MON_MAX_RADIO_TAP_HDR (128)
+#define DP_RX_MON_PF_TAG_LEN_PER_FRAG (4)
+#define DP_RX_MON_TOT_PF_TAG_LEN \
+	((DP_RX_MON_PF_TAG_LEN_PER_FRAG) * (QDF_NBUF_MAX_FRAGS))
+#define DP_RX_MON_MAX_MONITOR_HEADER \
+	((DP_RX_MON_TOT_PF_TAG_LEN * 2) + (DP_RX_MON_MAX_RADIO_TAP_HDR))
+#endif
+
+#define DP_RX_MON_LLC_SIZE 4
+#define DP_RX_MON_SNAP_SIZE 4
+#define DP_RX_MON_DECAP_HDR_SIZE 14
+
+
 /**
  * enum dp_mon_reap_status - monitor status ring ppdu status
  *

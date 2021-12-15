@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -31,30 +31,6 @@
  * RXDMA2SW ring.
  */
 #define MON_DROP_REAP_LIMIT 64
-
-/*
- * The maximum headroom reserved for monitor destination buffer to
- * accomodate radiotap header and protocol flow tag
- */
-#ifdef DP_RX_MON_MEM_FRAG
-/*
- *  -------------------------------------------------
- * |       Protocol & Flow TAG      | Radiotap header|
- * |                                |  Length(128 B) |
- * |  ((4* QDF_NBUF_MAX_FRAGS) * 2) |                |
- *  -------------------------------------------------
- */
-#define DP_RX_MON_MAX_RADIO_TAP_HDR (128)
-#define DP_RX_MON_PF_TAG_LEN_PER_FRAG (4)
-#define DP_RX_MON_TOT_PF_TAG_LEN \
-	((DP_RX_MON_PF_TAG_LEN_PER_FRAG) * (QDF_NBUF_MAX_FRAGS))
-#define DP_RX_MON_MAX_MONITOR_HEADER \
-	((DP_RX_MON_TOT_PF_TAG_LEN * 2) + (DP_RX_MON_MAX_RADIO_TAP_HDR))
-#endif
-
-/* l2 header pad byte in case of Raw frame is Zero and 2 in non raw */
-#define DP_RX_MON_RAW_L2_HDR_PAD_BYTE (0)
-#define DP_RX_MON_NONRAW_L2_HDR_PAD_BYTE (2)
 
 QDF_STATUS dp_rx_pdev_mon_status_buffers_alloc(struct dp_pdev *pdev,
 					       uint32_t mac_id);

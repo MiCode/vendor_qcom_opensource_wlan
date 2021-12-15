@@ -1194,6 +1194,43 @@ void dp_mon_filter_reset_tx_mon_mode_2_0(struct dp_pdev *pdev)
 	mon_pdev_be->filter_be[mode][srng_type] = filter;
 }
 
+static void dp_mon_filter_set_mon_2_0(struct dp_mon_pdev *mon_pdev,
+				      struct dp_mon_filter *filter)
+{
+	filter->tlv_filter.mpdu_start = 1;
+	filter->tlv_filter.msdu_start = 1;
+	filter->tlv_filter.packet = 1;
+	filter->tlv_filter.packet_header = 1;
+	filter->tlv_filter.header_per_msdu = 1;
+	filter->tlv_filter.msdu_end = 1;
+	filter->tlv_filter.mpdu_end = 1;
+	filter->tlv_filter.attention = 0;
+	filter->tlv_filter.ppdu_start = 1;
+	filter->tlv_filter.ppdu_end = 1;
+	filter->tlv_filter.ppdu_end_user_stats = 1;
+	filter->tlv_filter.ppdu_end_user_stats_ext = 1;
+	filter->tlv_filter.ppdu_end_status_done = 1;
+	filter->tlv_filter.enable_fp = 1;
+	filter->tlv_filter.enable_md = 0;
+	filter->tlv_filter.fp_mgmt_filter = FILTER_MGMT_ALL;
+	filter->tlv_filter.fp_ctrl_filter = FILTER_CTRL_ALL;
+	filter->tlv_filter.fp_data_filter = FILTER_DATA_ALL;
+	filter->tlv_filter.offset_valid = false;
+	filter->tlv_filter.rx_packet_offset = 8;
+	filter->tlv_filter.mgmt_dma_length = 3;
+	filter->tlv_filter.data_dma_length = 3;
+	filter->tlv_filter.ctrl_dma_length = 3;
+
+	if (mon_pdev->mon_filter_mode & MON_FILTER_OTHER) {
+		filter->tlv_filter.enable_mo = 1;
+		filter->tlv_filter.mo_mgmt_filter = FILTER_MGMT_ALL;
+		filter->tlv_filter.mo_ctrl_filter = FILTER_CTRL_ALL;
+		filter->tlv_filter.mo_data_filter = FILTER_DATA_ALL;
+	} else {
+		filter->tlv_filter.enable_mo = 0;
+	}
+}
+
 void dp_mon_filter_setup_rx_mon_mode_2_0(struct dp_pdev *pdev)
 {
 	struct dp_mon_filter_be filter = {0};
@@ -1226,7 +1263,7 @@ void dp_mon_filter_setup_rx_mon_mode_2_0(struct dp_pdev *pdev)
 	rx_tlv_filter = &filter.rx_tlv_filter;
 	rx_tlv_filter->valid = false;
 
-	dp_mon_filter_set_status_cmn(mon_pdev, rx_tlv_filter);
+	dp_mon_filter_set_mon_2_0(mon_pdev, rx_tlv_filter);
 	dp_mon_filter_show_filter(mon_pdev, mode, rx_tlv_filter);
 
 	mon_pdev->current_filter_mode = mode;

@@ -49,6 +49,8 @@ QDF_STATUS dp_mon_pdev_ext_init_2_0(struct dp_pdev *pdev)
 	struct dp_mon_pdev_be *mon_pdev_be =
 			dp_get_be_mon_pdev_from_dp_mon_pdev(mon_pdev);
 
+	qdf_create_work(0, &mon_pdev_be->rx_mon_work,
+			dp_rx_mon_process_ppdu, pdev);
 	mon_pdev_be->rx_mon_workqueue =
 		qdf_alloc_unbound_workqueue("rx_mon_work_queue");
 
@@ -58,8 +60,6 @@ QDF_STATUS dp_mon_pdev_ext_init_2_0(struct dp_pdev *pdev)
 	}
 	TAILQ_INIT(&mon_pdev_be->rx_mon_queue);
 
-	qdf_create_work(0, &mon_pdev_be->rx_mon_work,
-			dp_rx_mon_process_ppdu, pdev);
 	qdf_spinlock_create(&mon_pdev_be->rx_mon_wq_lock);
 
 	return QDF_STATUS_SUCCESS;
