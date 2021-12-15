@@ -226,24 +226,25 @@ void dp_tx_mec_handler(struct dp_vdev *vdev, uint8_t *status)
  *
  * @soc: core txrx main context
  * @rx_tlv_hdr	: start address of rx tlvs
- * @ta_peer	: Transmitter peer entry
+ * @ta_txrx_peer: Transmitter peer entry
  * @nbuf	: nbuf to retrieve destination mac for which AST will be added
  *
  */
 void
 dp_rx_da_learn(struct dp_soc *soc,
 	       uint8_t *rx_tlv_hdr,
-	       struct dp_peer *ta_peer,
+	       struct dp_txrx_peer *ta_txrx_peer,
 	       qdf_nbuf_t nbuf)
 {
+	struct dp_peer *base_peer;
 	/* For HKv2 DA port learing is not needed */
 	if (qdf_likely(soc->ast_override_support))
 		return;
 
-	if (qdf_unlikely(!ta_peer))
+	if (qdf_unlikely(!ta_txrx_peer))
 		return;
 
-	if (qdf_unlikely(ta_peer->vdev->opmode != wlan_op_mode_ap))
+	if (qdf_unlikely(ta_txrx_peer->vdev->opmode != wlan_op_mode_ap))
 		return;
 
 	if (!soc->da_war_enabled)
@@ -251,11 +252,18 @@ dp_rx_da_learn(struct dp_soc *soc,
 
 	if (qdf_unlikely(!qdf_nbuf_is_da_valid(nbuf) &&
 			 !qdf_nbuf_is_da_mcbc(nbuf))) {
-		dp_peer_add_ast(soc,
-				ta_peer,
-				qdf_nbuf_data(nbuf),
-				CDP_TXRX_AST_TYPE_DA,
-				DP_AST_FLAGS_HM);
+		base_peer = dp_peer_get_ref_by_id(soc, ta_txrx_peer->peer_id,
+						  DP_MOD_ID_AST);
+
+		if (base_peer) {
+			dp_peer_add_ast(soc,
+					base_peer,
+					qdf_nbuf_data(nbuf),
+					CDP_TXRX_AST_TYPE_DA,
+					DP_AST_FLAGS_HM);
+
+			dp_peer_unref_delete(base_peer, DP_MOD_ID_AST);
+		}
 	}
 }
 
@@ -286,10 +294,10 @@ dp_txrx_set_wds_rx_policy(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
 	peer = dp_vdev_bss_peer_ref_n_get(vdev, DP_MOD_ID_AST);
 
 	if (peer) {
-		peer->wds_ecm.wds_rx_filter = 1;
-		peer->wds_ecm.wds_rx_ucast_4addr =
+		peer->txrx_peer->wds_ecm.wds_rx_filter = 1;
+		peer->txrx_peer->wds_ecm.wds_rx_ucast_4addr =
 			(val & WDS_POLICY_RX_UCAST_4ADDR) ? 1 : 0;
-		peer->wds_ecm.wds_rx_mcast_4addr =
+		peer->txrx_peer->wds_ecm.wds_rx_mcast_4addr =
 			(val & WDS_POLICY_RX_MCAST_4ADDR) ? 1 : 0;
 		dp_peer_unref_delete(peer, DP_MOD_ID_AST);
 	}
@@ -314,7 +322,8 @@ dp_txrx_peer_wds_tx_policy_update(struct cdp_soc_t *soc,  uint8_t vdev_id,
 				  uint8_t *peer_mac, int wds_tx_ucast,
 				  int wds_tx_mcast)
 {
-	struct dp_peer *peer = dp_peer_find_hash_find((struct dp_soc *)soc,
+	struct dp_peer *peer =
+			dp_peer_get_tgt_peer_hash_find((struct dp_soc *)soc,
 						       peer_mac, 0,
 						       vdev_id,
 						       DP_MOD_ID_AST);
@@ -325,14 +334,19 @@ dp_txrx_peer_wds_tx_policy_update(struct cdp_soc_t *soc,  uint8_t vdev_id,
 		return QDF_STATUS_E_INVAL;
 	}
 
+	if (!peer->txrx_peer) {
+		dp_peer_unref_delete(peer, DP_MOD_ID_AST);
+		return QDF_STATUS_E_INVAL;
+	}
+
 	if (wds_tx_ucast || wds_tx_mcast) {
-		peer->wds_enabled = 1;
-		peer->wds_ecm.wds_tx_ucast_4addr = wds_tx_ucast;
-		peer->wds_ecm.wds_tx_mcast_4addr = wds_tx_mcast;
+		peer->txrx_peer->wds_enabled = 1;
+		peer->txrx_peer->wds_ecm.wds_tx_ucast_4addr = wds_tx_ucast;
+		peer->txrx_peer->wds_ecm.wds_tx_mcast_4addr = wds_tx_mcast;
 	} else {
-		peer->wds_enabled = 0;
-		peer->wds_ecm.wds_tx_ucast_4addr = 0;
-		peer->wds_ecm.wds_tx_mcast_4addr = 0;
+		peer->txrx_peer->wds_enabled = 0;
+		peer->txrx_peer->wds_ecm.wds_tx_ucast_4addr = 0;
+		peer->txrx_peer->wds_ecm.wds_tx_mcast_4addr = 0;
 	}
 
 	QDF_TRACE(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_INFO,
@@ -341,10 +355,10 @@ dp_txrx_peer_wds_tx_policy_update(struct cdp_soc_t *soc,  uint8_t vdev_id,
 		  "peer->wds_enabled %d\n", peer->wds_enabled);
 	QDF_TRACE(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_INFO,
 		  "peer->wds_ecm.wds_tx_ucast_4addr %d\n",
-		  peer->wds_ecm.wds_tx_ucast_4addr);
+		  peer->txrx_peer->wds_ecm.wds_tx_ucast_4addr);
 	QDF_TRACE(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_INFO,
 		  "peer->wds_ecm.wds_tx_mcast_4addr %d\n",
-		  peer->wds_ecm.wds_tx_mcast_4addr);
+		  peer->txrx_peer->wds_ecm.wds_tx_mcast_4addr);
 
 	dp_peer_unref_delete(peer, DP_MOD_ID_AST);
 	return QDF_STATUS_SUCCESS;
@@ -352,7 +366,7 @@ dp_txrx_peer_wds_tx_policy_update(struct cdp_soc_t *soc,  uint8_t vdev_id,
 
 int dp_wds_rx_policy_check(uint8_t *rx_tlv_hdr,
 			   struct dp_vdev *vdev,
-			   struct dp_peer *peer)
+			   struct dp_txrx_peer *txrx_peer)
 {
 	struct dp_peer *bss_peer;
 	int fr_ds, to_ds, rx_3addr, rx_4addr;
@@ -363,19 +377,19 @@ int dp_wds_rx_policy_check(uint8_t *rx_tlv_hdr,
 	if (vdev->opmode == wlan_op_mode_ap) {
 		bss_peer = dp_vdev_bss_peer_ref_n_get(vdev, DP_MOD_ID_AST);
 		/* if wds policy check is not enabled on this vdev, accept all frames */
-		if (bss_peer && !bss_peer->wds_ecm.wds_rx_filter) {
+		if (bss_peer && !bss_peer->txrx_peer->wds_ecm.wds_rx_filter) {
 			dp_peer_unref_delete(bss_peer, DP_MOD_ID_AST);
 			return 1;
 		}
-		rx_policy_ucast = bss_peer->wds_ecm.wds_rx_ucast_4addr;
-		rx_policy_mcast = bss_peer->wds_ecm.wds_rx_mcast_4addr;
+		rx_policy_ucast = bss_peer->txrx_peerwds_ecm.wds_rx_ucast_4addr;
+		rx_policy_mcast = bss_peer->txrx_peerwds_ecm.wds_rx_mcast_4addr;
 		dp_peer_unref_delete(bss_peer, DP_MOD_ID_AST);
 	} else {             /* sta mode */
-		if (!peer->wds_ecm.wds_rx_filter) {
+		if (!txrx_peer->wds_ecm.wds_rx_filter)
 			return 1;
-		}
-		rx_policy_ucast = peer->wds_ecm.wds_rx_ucast_4addr;
-		rx_policy_mcast = peer->wds_ecm.wds_rx_mcast_4addr;
+
+		rx_policy_ucast = txrx_peer->wds_ecm.wds_rx_ucast_4addr;
+		rx_policy_mcast = txrx_peer->wds_ecm.wds_rx_mcast_4addr;
 	}
 
 	/* ------------------------------------------------
@@ -413,9 +427,11 @@ int dp_wds_rx_policy_check(uint8_t *rx_tlv_hdr,
 	rx_4addr = fr_ds & to_ds;
 
 	if (vdev->opmode == wlan_op_mode_ap) {
-		if ((!peer->wds_enabled && rx_3addr && to_ds) ||
-				(peer->wds_enabled && !rx_mcast && (rx_4addr == rx_policy_ucast)) ||
-				(peer->wds_enabled && rx_mcast && (rx_4addr == rx_policy_mcast))) {
+		if ((!txrx_peer->wds_enabled && rx_3addr && to_ds) ||
+		    (txrx_peer->wds_enabled && !rx_mcast &&
+		    (rx_4addr == rx_policy_ucast)) ||
+		    (txrx_peer->wds_enabled && rx_mcast &&
+		    (rx_4addr == rx_policy_mcast))) {
 			return 1;
 		}
 	} else {           /* sta mode */
@@ -494,6 +510,7 @@ static
 uint8_t dp_tx_need_multipass_process(struct dp_soc *soc, struct dp_vdev *vdev,
 			   qdf_nbuf_t buf, uint16_t *vlan_id)
 {
+	struct dp_txrx_peer *txrx_peer = NULL;
 	struct dp_peer *peer = NULL;
 	qdf_ether_header_t *eh = (qdf_ether_header_t *)qdf_nbuf_data(buf);
 	struct vlan_ethhdr *veh = NULL;
@@ -508,9 +525,9 @@ uint8_t dp_tx_need_multipass_process(struct dp_soc *soc, struct dp_vdev *vdev,
 
 	if (qdf_unlikely(DP_FRAME_IS_MULTICAST((eh)->ether_dhost))) {
 		qdf_spin_lock_bh(&vdev->mpass_peer_mutex);
-		TAILQ_FOREACH(peer, &vdev->mpass_peer_list,
+		TAILQ_FOREACH(txrx_peer, &vdev->mpass_peer_list,
 			      mpass_peer_list_elem) {
-			if (*vlan_id == peer->vlan_id) {
+			if (*vlan_id == txrx_peer->vlan_id) {
 				qdf_spin_unlock_bh(&vdev->mpass_peer_mutex);
 				return DP_VLAN_TAGGED_MULTICAST;
 			}
@@ -529,7 +546,7 @@ uint8_t dp_tx_need_multipass_process(struct dp_soc *soc, struct dp_vdev *vdev,
 	 * Do not drop the frame when vlan_id doesn't match.
 	 * Send the frame as it is.
 	 */
-	if (*vlan_id == peer->vlan_id) {
+	if (*vlan_id == peer->txrx_peer->vlan_id) {
 		dp_peer_unref_delete(peer, DP_MOD_ID_TX_MULTIPASS);
 		return DP_VLAN_TAGGED_UNICAST;
 	}
@@ -617,7 +634,7 @@ bool dp_tx_multipass_process(struct dp_soc *soc, struct dp_vdev *vdev,
 
 /**
  * dp_rx_multipass_process - insert vlan tag on frames for traffic separation
- * @vdev: DP vdev handle
+ * @txrx_peer: DP txrx peer handle
  * @nbuf: skb
  * @tid: traffic priority
  *
@@ -629,12 +646,13 @@ bool dp_tx_multipass_process(struct dp_soc *soc, struct dp_vdev *vdev,
  *  i. Frame comes from multipass peer but doesn't contain vlan header.
  *  In failure case, drop such frames.
  */
-bool dp_rx_multipass_process(struct dp_peer *peer, qdf_nbuf_t nbuf, uint8_t tid)
+bool dp_rx_multipass_process(struct dp_txrx_peer *txrx_peer, qdf_nbuf_t nbuf,
+			     uint8_t tid)
 {
 	struct vlan_ethhdr *vethhdrp;
 
-	if (qdf_unlikely(!peer->vlan_id))
-	       return true;
+	if (qdf_unlikely(!txrx_peer->vlan_id))
+		return true;
 
 	vethhdrp = (struct vlan_ethhdr *)qdf_nbuf_data(nbuf);
 	/*
@@ -648,10 +666,10 @@ bool dp_rx_multipass_process(struct dp_peer *peer, qdf_nbuf_t nbuf, uint8_t tid)
 		return false;
 
 	vethhdrp->h_vlan_TCI = htons(((tid & 0x7) << VLAN_PRIO_SHIFT) |
-		(peer->vlan_id & VLAN_VID_MASK));
+		(txrx_peer->vlan_id & VLAN_VID_MASK));
 
 	if (vethhdrp->h_vlan_encapsulated_proto == htons(ETHERTYPE_PAE))
-		dp_tx_remove_vlan_tag(peer->vdev, nbuf);
+		dp_tx_remove_vlan_tag(txrx_peer->vdev, nbuf);
 
 	return true;
 }
@@ -671,14 +689,15 @@ bool dp_rx_multipass_process(struct dp_peer *peer, qdf_nbuf_t nbuf, uint8_t tid)
 void dp_peer_multipass_list_remove(struct dp_peer *peer)
 {
 	struct dp_vdev *vdev = peer->vdev;
-	struct dp_peer *tpeer = NULL;
+	struct dp_txrx_peer *tpeer = NULL;
 	bool found = 0;
 
 	qdf_spin_lock_bh(&vdev->mpass_peer_mutex);
 	TAILQ_FOREACH(tpeer, &vdev->mpass_peer_list, mpass_peer_list_elem) {
-		if (tpeer == peer) {
+		if (tpeer == peer->txrx_peer) {
 			found = 1;
-			TAILQ_REMOVE(&vdev->mpass_peer_list, peer, mpass_peer_list_elem);
+			TAILQ_REMOVE(&vdev->mpass_peer_list, peer->txrx_peer,
+				     mpass_peer_list_elem);
 			break;
 		}
 	}
@@ -702,35 +721,45 @@ static void dp_peer_multipass_list_add(struct dp_soc *soc, uint8_t *peer_mac,
 				       uint8_t vdev_id, uint16_t vlan_id)
 {
 	struct dp_peer *peer =
-			dp_peer_find_hash_find(soc, peer_mac, 0, vdev_id,
-					       DP_MOD_ID_TX_MULTIPASS);
+			dp_peer_get_tgt_peer_hash_find(soc, peer_mac, 0,
+						       vdev_id,
+						       DP_MOD_ID_TX_MULTIPASS);
 
 	if (qdf_unlikely(!peer)) {
 		qdf_err("NULL peer");
 		return;
 	}
 
+	if (qdf_unlikely(!peer->txrx_peer))
+		goto fail;
+
 	/* If peer already exists in vdev multipass list, do not add it.
 	 * This may happen if key install comes twice or re-key
 	 * happens for a peer.
 	 */
-	if (peer->vlan_id) {
+	if (peer->txrx_peer->vlan_id) {
 		dp_debug("peer already added to vdev multipass list"
 			 "MAC: "QDF_MAC_ADDR_FMT" vlan: %d ",
-			 QDF_MAC_ADDR_REF(peer->mac_addr.raw), peer->vlan_id);
-		dp_peer_unref_delete(peer, DP_MOD_ID_TX_MULTIPASS);
-		return;
+			 QDF_MAC_ADDR_REF(peer->mac_addr.raw),
+			 peer->txrx_peer->vlan_id);
+		goto fail;
 	}
 
 	/*
 	 * Ref_cnt is incremented inside dp_peer_find_hash_find().
 	 * Decrement it when element is deleted from the list.
 	 */
-	peer->vlan_id = vlan_id;
-	qdf_spin_lock_bh(&peer->vdev->mpass_peer_mutex);
-	TAILQ_INSERT_HEAD(&peer->vdev->mpass_peer_list, peer,
+	peer->txrx_peer->vlan_id = vlan_id;
+	qdf_spin_lock_bh(&peer->txrx_peer->vdev->mpass_peer_mutex);
+	TAILQ_INSERT_HEAD(&peer->txrx_peer->vdev->mpass_peer_list,
+			  peer->txrx_peer,
 			  mpass_peer_list_elem);
-	qdf_spin_unlock_bh(&peer->vdev->mpass_peer_mutex);
+	qdf_spin_unlock_bh(&peer->txrx_peer->vdev->mpass_peer_mutex);
+	return;
+
+fail:
+	dp_peer_unref_delete(peer, DP_MOD_ID_TX_MULTIPASS);
+	return;
 }
 
 /**
@@ -817,11 +846,10 @@ fail:
  */
 void dp_tx_vdev_multipass_deinit(struct dp_vdev *vdev)
 {
-	struct dp_peer *peer = NULL;
+	struct dp_txrx_peer *txrx_peer = NULL;
 	qdf_spin_lock_bh(&vdev->mpass_peer_mutex);
-	TAILQ_FOREACH(peer, &vdev->mpass_peer_list, mpass_peer_list_elem)
-		qdf_err("Peers present in mpass list :" QDF_MAC_ADDR_FMT,
-			QDF_MAC_ADDR_REF(peer->mac_addr.raw));
+	TAILQ_FOREACH(txrx_peer, &vdev->mpass_peer_list, mpass_peer_list_elem)
+		qdf_err("Peers present in mpass list : %d", txrx_peer->peer_id);
 	qdf_spin_unlock_bh(&vdev->mpass_peer_mutex);
 
 	if (vdev->iv_vlan_map) {
@@ -1175,7 +1203,7 @@ void dp_hmwds_ast_add_notify(struct dp_peer *peer,
 QDF_STATUS
 dp_get_completion_indication_for_stack(struct dp_soc *soc,
 				       struct dp_pdev *pdev,
-				       struct dp_peer *peer,
+				       struct dp_txrx_peer *txrx_peer,
 				       struct hal_tx_completion_status *ts,
 				       qdf_nbuf_t netbuf,
 				       uint64_t time_latency)
@@ -1186,13 +1214,14 @@ dp_get_completion_indication_for_stack(struct dp_soc *soc,
 	uint8_t first_msdu = ts->first_msdu;
 	uint8_t last_msdu = ts->last_msdu;
 	uint32_t txcap_hdr_size = sizeof(struct tx_capture_hdr);
+	struct dp_peer *peer;
 
 	if (qdf_unlikely(!dp_monitor_is_enable_tx_sniffer(pdev) &&
 			 !dp_monitor_is_enable_mcopy_mode(pdev) &&
 			 !pdev->latency_capture_enable))
 		return QDF_STATUS_E_NOSUPPORT;
 
-	if (!peer) {
+	if (!txrx_peer) {
 		QDF_TRACE(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_ERROR,
 			  FL("Peer Invalid"));
 		return QDF_STATUS_E_INVAL;
@@ -1224,10 +1253,15 @@ dp_get_completion_indication_for_stack(struct dp_soc *soc,
 	}
 
 	ppdu_hdr = (struct tx_capture_hdr *)qdf_nbuf_data(netbuf);
-	qdf_mem_copy(ppdu_hdr->ta, peer->vdev->mac_addr.raw,
+	qdf_mem_copy(ppdu_hdr->ta, txrx_peer->vdev->mac_addr.raw,
 		     QDF_MAC_ADDR_SIZE);
-	qdf_mem_copy(ppdu_hdr->ra, peer->mac_addr.raw,
-		     QDF_MAC_ADDR_SIZE);
+
+	peer = dp_peer_get_ref_by_id(soc, peer_id, DP_MOD_ID_TX_COMP);
+	if (peer) {
+		qdf_mem_copy(ppdu_hdr->ra, peer->mac_addr.raw,
+			     QDF_MAC_ADDR_SIZE);
+		dp_peer_unref_delete(peer, DP_MOD_ID_TX_COMP);
+	}
 	ppdu_hdr->ppdu_id = ppdu_id;
 	ppdu_hdr->peer_id = peer_id;
 	ppdu_hdr->first_msdu = first_msdu;

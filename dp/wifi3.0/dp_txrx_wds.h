@@ -42,7 +42,7 @@ int dp_peer_find_ast_index_by_flowq_id(struct cdp_soc_t *soc,
 void
 dp_rx_da_learn(struct dp_soc *soc,
 	       uint8_t *rx_tlv_hdr,
-	       struct dp_peer *ta_peer,
+	       struct dp_txrx_peer *ta_peer,
 	       qdf_nbuf_t nbuf);
 
 void dp_tx_mec_handler(struct dp_vdev *vdev, uint8_t *status);
@@ -116,7 +116,7 @@ static inline void dp_wds_ext_peer_learn(struct dp_soc *soc,
 
 	if (ta_peer->vdev->wds_ext_enabled &&
 	    !qdf_atomic_test_and_set_bit(WDS_EXT_PEER_INIT_BIT,
-					 &ta_peer->wds_ext.init)) {
+					 &ta_peer->txrx_peer->wds_ext.init)) {
 		qdf_mem_copy(wds_ext_src_mac, &ta_peer->mac_addr.raw[0],
 			     QDF_MAC_ADDR_SIZE);
 		soc->cdp_soc.ol_ops->rx_wds_ext_peer_learn(
@@ -137,7 +137,7 @@ static inline void dp_wds_ext_peer_learn(struct dp_soc *soc,
  * dp_rx_wds_add_or_update_ast() - Add or update the ast entry.
  *
  * @soc: core txrx main context
- * @ta_peer: WDS repeater peer
+ * @ta_txrx_peer: WDS repeater txrx peer
  * @mac_addr: mac address of the peer
  * @is_ad4_valid: 4-address valid flag
  * @is_sa_valid: source address valid flag
@@ -148,7 +148,8 @@ static inline void dp_wds_ext_peer_learn(struct dp_soc *soc,
  * Return: void:
  */
 static inline void
-dp_rx_wds_add_or_update_ast(struct dp_soc *soc, struct dp_peer *ta_peer,
+dp_rx_wds_add_or_update_ast(struct dp_soc *soc,
+			    struct dp_txrx_peer *ta_peer,
 			    qdf_nbuf_t nbuf, uint8_t is_ad4_valid,
 			    uint8_t is_sa_valid, uint8_t is_chfrag_start,
 			    uint16_t sa_idx, uint16_t sa_sw_peer_id)
@@ -157,7 +158,10 @@ dp_rx_wds_add_or_update_ast(struct dp_soc *soc, struct dp_peer *ta_peer,
 	struct dp_ast_entry *ast;
 	uint32_t flags = DP_AST_FLAGS_HM;
 	uint32_t ret = 0;
+	struct dp_pdev *pdev = ta_peer->vdev->pdev;
 	uint8_t wds_src_mac[QDF_MAC_ADDR_SIZE];
+	struct dp_peer *ta_base_peer;
+
 
 	if (!(is_chfrag_start && is_ad4_valid))
 		return;
@@ -167,12 +171,15 @@ dp_rx_wds_add_or_update_ast(struct dp_soc *soc, struct dp_peer *ta_peer,
 			     (qdf_nbuf_data(nbuf) + QDF_MAC_ADDR_SIZE),
 			     QDF_MAC_ADDR_SIZE);
 
-		dp_wds_ext_peer_learn(soc, ta_peer);
-		ret = dp_peer_add_ast(soc,
-				      ta_peer,
-				      wds_src_mac,
-				      CDP_TXRX_AST_TYPE_WDS,
-				      flags);
+		ta_base_peer = dp_peer_get_ref_by_id(soc, ta_peer->peer_id,
+						     DP_MOD_ID_RX);
+		if (ta_base_peer) {
+			dp_wds_ext_peer_learn(soc, ta_base_peer);
+			ret = dp_peer_add_ast(soc, ta_base_peer, wds_src_mac,
+					      CDP_TXRX_AST_TYPE_WDS, flags);
+
+			dp_peer_unref_delete(ta_base_peer, DP_MOD_ID_RX);
+		}
 		return;
 	}
 
@@ -199,11 +206,19 @@ dp_rx_wds_add_or_update_ast(struct dp_soc *soc, struct dp_peer *ta_peer,
 				     (qdf_nbuf_data(nbuf) + QDF_MAC_ADDR_SIZE),
 				     QDF_MAC_ADDR_SIZE);
 
-			ret = dp_peer_add_ast(soc,
-					      ta_peer,
-					      wds_src_mac,
-					      CDP_TXRX_AST_TYPE_WDS,
-					      flags);
+			ta_base_peer = dp_peer_get_ref_by_id(soc,
+							     ta_peer->peer_id,
+							     DP_MOD_ID_RX);
+
+			if (ta_base_peer) {
+				ret = dp_peer_add_ast(soc, ta_base_peer,
+						      wds_src_mac,
+						      CDP_TXRX_AST_TYPE_WDS,
+						      flags);
+
+				dp_peer_unref_delete(ta_base_peer,
+						     DP_MOD_ID_RX);
+			}
 			return;
 		} else {
 			/* In HKv2 smart monitor case, when NAC client is
@@ -213,10 +228,18 @@ dp_rx_wds_add_or_update_ast(struct dp_soc *soc, struct dp_peer *ta_peer,
 			 * smart monitor is enabled and send add_ast command
 			 * to FW.
 			 */
-			dp_monitor_neighbour_peer_add_ast(ta_peer->vdev->pdev,
-							  ta_peer,
-							  wds_src_mac, nbuf,
-							  flags);
+			ta_base_peer = dp_peer_get_ref_by_id(soc,
+							     ta_peer->peer_id,
+							     DP_MOD_ID_RX);
+			if (ta_base_peer) {
+				dp_monitor_neighbour_peer_add_ast(pdev,
+								  ta_base_peer,
+								  wds_src_mac,
+								  nbuf,
+								  flags);
+				dp_peer_unref_delete(ta_base_peer,
+						     DP_MOD_ID_RX);
+			}
 			return;
 		}
 	}
@@ -263,8 +286,20 @@ dp_rx_wds_add_or_update_ast(struct dp_soc *soc, struct dp_peer *ta_peer,
 				    (ta_peer->vdev->opmode == wlan_op_mode_sta)) {
 					dp_peer_del_ast(soc, ast);
 				} else {
-					dp_wds_ext_peer_learn(soc, ta_peer);
-					dp_peer_update_ast(soc, ta_peer, ast, flags);
+					ta_base_peer =
+					dp_peer_get_ref_by_id(soc,
+							      ta_peer->peer_id,
+							      DP_MOD_ID_RX);
+					if (ta_base_peer) {
+						dp_wds_ext_peer_learn(soc,
+								ta_base_peer);
+						dp_peer_update_ast(soc,
+								   ta_base_peer,
+								   ast, flags);
+
+						dp_peer_unref_delete(ta_base_peer,
+								DP_MOD_ID_RX);
+					}
 				}
 				qdf_spin_unlock_bh(&soc->ast_lock);
 				return;
@@ -325,7 +360,7 @@ dp_rx_wds_add_or_update_ast(struct dp_soc *soc, struct dp_peer *ta_peer,
 static inline void
 dp_rx_wds_srcport_learn(struct dp_soc *soc,
 			uint8_t *rx_tlv_hdr,
-			struct dp_peer *ta_peer,
+			struct dp_txrx_peer *ta_peer,
 			qdf_nbuf_t nbuf,
 			struct hal_rx_msdu_metadata msdu_end_info)
 {
