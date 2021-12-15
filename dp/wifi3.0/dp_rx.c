@@ -755,13 +755,13 @@ qdf_export_symbol(__dp_rx_buffers_replenish);
  *
  * @vdev: vdev on which RAW mode is enabled
  * @nbuf_list: list of RAW pkts to process
- * @peer: peer object from which the pkt is rx
+ * @txrx_peer: peer object from which the pkt is rx
  *
  * Return: void
  */
 void
 dp_rx_deliver_raw(struct dp_vdev *vdev, qdf_nbuf_t nbuf_list,
-					struct dp_peer *peer)
+		  struct dp_txrx_peer *txrx_peer)
 {
 	qdf_nbuf_t deliver_list_head = NULL;
 	qdf_nbuf_t deliver_list_tail = NULL;
@@ -790,7 +790,7 @@ dp_rx_deliver_raw(struct dp_vdev *vdev, qdf_nbuf_t nbuf_list,
 	}
 
 	vdev->osif_rsim_rx_decap(vdev->osif_vdev, &deliver_list_head,
-				 &deliver_list_tail, peer->mac_addr.raw);
+				 &deliver_list_tail);
 
 	vdev->osif_rx(vdev->osif_vdev, deliver_list_head);
 }
@@ -798,7 +798,7 @@ dp_rx_deliver_raw(struct dp_vdev *vdev, qdf_nbuf_t nbuf_list,
 #ifndef QCA_HOST_MODE_WIFI_DISABLED
 #ifndef FEATURE_WDS
 void dp_rx_da_learn(struct dp_soc *soc, uint8_t *rx_tlv_hdr,
-		    struct dp_peer *ta_peer, qdf_nbuf_t nbuf)
+		    struct dp_txrx_peer *ta_peer, qdf_nbuf_t nbuf)
 {
 }
 #endif
@@ -814,7 +814,7 @@ void dp_rx_da_learn(struct dp_soc *soc, uint8_t *rx_tlv_hdr,
  *
  * Return: bool: true if it is forwarded else false
  */
-bool dp_rx_intrabss_mcbc_fwd(struct dp_soc *soc, struct dp_peer *ta_peer,
+bool dp_rx_intrabss_mcbc_fwd(struct dp_soc *soc, struct dp_txrx_peer *ta_peer,
 			     uint8_t *rx_tlv_hdr, qdf_nbuf_t nbuf,
 			     struct cdp_tid_rx_stats *tid_stats)
 {
@@ -865,7 +865,7 @@ bool dp_rx_intrabss_mcbc_fwd(struct dp_soc *soc, struct dp_peer *ta_peer,
  *
  * Return: bool: true if it is forwarded else false
  */
-bool dp_rx_intrabss_ucast_fwd(struct dp_soc *soc, struct dp_peer *ta_peer,
+bool dp_rx_intrabss_ucast_fwd(struct dp_soc *soc, struct dp_txrx_peer *ta_peer,
 			      uint8_t tx_vdev_id,
 			      uint8_t *rx_tlv_hdr, qdf_nbuf_t nbuf,
 			      struct cdp_tid_rx_stats *tid_stats)
@@ -919,7 +919,7 @@ bool dp_rx_intrabss_ucast_fwd(struct dp_soc *soc, struct dp_peer *ta_peer,
  * @vdev: DP Virtual device handle
  * @nbuf: Buffer pointer
  * @rx_tlv_hdr: start of rx tlv header
- * @peer: pointer to peer
+ * @txrx_peer: pointer to peer
  *
  * This function allocated memory for mesh receive stats and fill the
  * required stats. Stores the memory address in skb cb.
@@ -928,7 +928,8 @@ bool dp_rx_intrabss_ucast_fwd(struct dp_soc *soc, struct dp_peer *ta_peer,
  */
 
 void dp_rx_fill_mesh_stats(struct dp_vdev *vdev, qdf_nbuf_t nbuf,
-				uint8_t *rx_tlv_hdr, struct dp_peer *peer)
+			   uint8_t *rx_tlv_hdr,
+			   struct dp_txrx_peer *txrx_peer)
 {
 	struct mesh_recv_hdr_s *rx_info = NULL;
 	uint32_t pkt_type;
@@ -938,6 +939,7 @@ void dp_rx_fill_mesh_stats(struct dp_vdev *vdev, qdf_nbuf_t nbuf,
 	uint8_t primary_chan_num;
 	uint32_t center_chan_freq;
 	struct dp_soc *soc = vdev->pdev->soc;
+	struct dp_peer *peer;
 
 	/* fill recv mesh stats */
 	rx_info = qdf_mem_malloc(sizeof(struct mesh_recv_hdr_s));
@@ -958,18 +960,23 @@ void dp_rx_fill_mesh_stats(struct dp_vdev *vdev, qdf_nbuf_t nbuf,
 	if (qdf_nbuf_is_rx_chfrag_end(nbuf))
 		rx_info->rs_flags |= MESH_RX_LAST_MSDU;
 
-	if (hal_rx_tlv_get_is_decrypted(soc->hal_soc, rx_tlv_hdr)) {
-		rx_info->rs_flags |= MESH_RX_DECRYPTED;
-		rx_info->rs_keyix = hal_rx_msdu_get_keyid(soc->hal_soc,
-							  rx_tlv_hdr);
-		if (vdev->osif_get_key)
-			vdev->osif_get_key(vdev->osif_vdev,
-					&rx_info->rs_decryptkey[0],
-					&peer->mac_addr.raw[0],
-					rx_info->rs_keyix);
+	peer = dp_peer_get_ref_by_id(soc, txrx_peer->peer_id, DP_MOD_ID_MESH);
+	if (peer) {
+		if (hal_rx_tlv_get_is_decrypted(soc->hal_soc, rx_tlv_hdr)) {
+			rx_info->rs_flags |= MESH_RX_DECRYPTED;
+			rx_info->rs_keyix = hal_rx_msdu_get_keyid(soc->hal_soc,
+								  rx_tlv_hdr);
+			if (vdev->osif_get_key)
+				vdev->osif_get_key(vdev->osif_vdev,
+						   &rx_info->rs_decryptkey[0],
+						   &peer->mac_addr.raw[0],
+						   rx_info->rs_keyix);
+		}
+
+		rx_info->rs_snr = peer->stats.rx.snr;
+		dp_peer_unref_delete(peer, DP_MOD_ID_MESH);
 	}
 
-	rx_info->rs_snr = peer->stats.rx.snr;
 	rx_info->rs_rssi = rx_info->rs_snr + DP_DEFAULT_NOISEFLOOR;
 
 	soc = vdev->pdev->soc;
@@ -1607,14 +1614,14 @@ static inline int dp_rx_drop_nbuf_list(struct dp_pdev *pdev,
  * dp_rx_deliver_to_stack_ext() - Deliver to netdev per sta
  * @soc: core txrx main context
  * @vdev: vdev
- * @peer: peer
+ * @txrx_peer: txrx peer
  * @nbuf_head: skb list head
  *
  * Return: true if packet is delivered to netdev per STA.
  */
 static inline bool
 dp_rx_deliver_to_stack_ext(struct dp_soc *soc, struct dp_vdev *vdev,
-			   struct dp_peer *peer, qdf_nbuf_t nbuf_head)
+			   struct dp_txrx_peer *txrx_peer, qdf_nbuf_t nbuf_head)
 {
 	/*
 	 * When extended WDS is disabled, frames are sent to AP netdevice.
@@ -1629,11 +1636,11 @@ dp_rx_deliver_to_stack_ext(struct dp_soc *soc, struct dp_vdev *vdev,
 	 *    a. Send frame to appropriate netdev using registered fp.
 	 *    b. If fp is NULL, drop the frames.
 	 */
-	if (!peer->wds_ext.init)
+	if (!txrx_peer->wds_ext.init)
 		return false;
 
-	if (peer->osif_rx)
-		peer->osif_rx(peer->wds_ext.osif_peer, nbuf_head);
+	if (txrx_peer->osif_rx)
+		txrx_peer->osif_rx(txrx_peer->wds_ext.osif_peer, nbuf_head);
 	else
 		dp_rx_drop_nbuf_list(vdev->pdev, nbuf_head);
 
@@ -1643,7 +1650,7 @@ dp_rx_deliver_to_stack_ext(struct dp_soc *soc, struct dp_vdev *vdev,
 #else
 static inline bool
 dp_rx_deliver_to_stack_ext(struct dp_soc *soc, struct dp_vdev *vdev,
-			   struct dp_peer *peer, qdf_nbuf_t nbuf_head)
+			   struct dp_txrx_peer *txrx_peer, qdf_nbuf_t nbuf_head)
 {
 	return false;
 }
@@ -1674,8 +1681,8 @@ void dp_rx_flush_rx_cached(struct dp_peer *peer, bool drop)
 		return;
 	}
 
-	if (qdf_atomic_inc_return(&peer->flush_in_progress) > 1) {
-		qdf_atomic_dec(&peer->flush_in_progress);
+	if (qdf_atomic_inc_return(&peer->txrx_peer->flush_in_progress) > 1) {
+		qdf_atomic_dec(&peer->txrx_peer->flush_in_progress);
 		return;
 	}
 
@@ -1686,7 +1693,7 @@ void dp_rx_flush_rx_cached(struct dp_peer *peer, bool drop)
 		drop = true;
 	qdf_spin_unlock_bh(&peer->peer_info_lock);
 
-	bufqi = &peer->bufq_info;
+	bufqi = &peer->txrx_peer->bufq_info;
 
 	qdf_spin_lock_bh(&bufqi->bufq_lock);
 	qdf_list_remove_front(&bufqi->cached_bufq,
@@ -1714,7 +1721,7 @@ void dp_rx_flush_rx_cached(struct dp_peer *peer, bool drop)
 				      (qdf_list_node_t **)&cache_buf);
 	}
 	qdf_spin_unlock_bh(&bufqi->bufq_lock);
-	qdf_atomic_dec(&peer->flush_in_progress);
+	qdf_atomic_dec(&peer->txrx_peer->flush_in_progress);
 }
 
 /**
@@ -1725,26 +1732,37 @@ void dp_rx_flush_rx_cached(struct dp_peer *peer, bool drop)
  * Return: None
  */
 static QDF_STATUS
-dp_rx_enqueue_rx(struct dp_peer *peer, qdf_nbuf_t rx_buf_list)
+dp_rx_enqueue_rx(struct dp_txrx_peer *txrx_peer, qdf_nbuf_t rx_buf_list)
 {
 	struct dp_rx_cached_buf *cache_buf;
-	struct dp_peer_cached_bufq *bufqi = &peer->bufq_info;
+	struct dp_peer_cached_bufq *bufqi = &txrx_peer->bufq_info;
 	int num_buff_elem;
+	QDF_STATUS ret = QDF_STATUS_SUCCESS;
+	struct dp_peer *peer = dp_peer_get_ref_by_id(soc, txrx_peer->peer_id,
+						     DP_MOD_ID_RX);
 
-	dp_debug_rl("bufq->curr %d bufq->drops %d", bufqi->entries,
-		    bufqi->dropped);
-	if (!peer->valid) {
-		bufqi->dropped = dp_rx_drop_nbuf_list(peer->vdev->pdev,
+	if (!peer) {
+		bufqi->dropped = dp_rx_drop_nbuf_list(txrx_peer->vdev->pdev,
 						      rx_buf_list);
 		return QDF_STATUS_E_INVAL;
 	}
 
+	dp_debug_rl("bufq->curr %d bufq->drops %d", bufqi->entries,
+		    bufqi->dropped);
+	if (!peer->valid) {
+		bufqi->dropped = dp_rx_drop_nbuf_list(txrx_peer->vdev->pdev,
+						      rx_buf_list);
+		ret = QDF_STATUS_E_INVAL;
+		goto fail;
+	}
+
 	qdf_spin_lock_bh(&bufqi->bufq_lock);
 	if (bufqi->entries >= bufqi->thresh) {
-		bufqi->dropped = dp_rx_drop_nbuf_list(peer->vdev->pdev,
+		bufqi->dropped = dp_rx_drop_nbuf_list(txrx_peer->vdev->pdev,
 						      rx_buf_list);
 		qdf_spin_unlock_bh(&bufqi->bufq_lock);
-		return QDF_STATUS_E_RESOURCES;
+		ret = QDF_STATUS_E_RESOURCES;
+		goto fail;
 	}
 	qdf_spin_unlock_bh(&bufqi->bufq_lock);
 
@@ -1754,9 +1772,10 @@ dp_rx_enqueue_rx(struct dp_peer *peer, qdf_nbuf_t rx_buf_list)
 	if (!cache_buf) {
 		QDF_TRACE(QDF_MODULE_ID_TXRX, QDF_TRACE_LEVEL_ERROR,
 			  "Failed to allocate buf to cache rx frames");
-		bufqi->dropped = dp_rx_drop_nbuf_list(peer->vdev->pdev,
+		bufqi->dropped = dp_rx_drop_nbuf_list(txrx_peer->vdev->pdev,
 						      rx_buf_list);
-		return QDF_STATUS_E_NOMEM;
+		ret = QDF_STATUS_E_NOMEM;
+		goto fail;
 	}
 
 	cache_buf->buf = rx_buf_list;
@@ -1767,7 +1786,9 @@ dp_rx_enqueue_rx(struct dp_peer *peer, qdf_nbuf_t rx_buf_list)
 	bufqi->entries += num_buff_elem;
 	qdf_spin_unlock_bh(&bufqi->bufq_lock);
 
-	return QDF_STATUS_SUCCESS;
+fail:
+	dp_peer_unref_delete(peer, DP_MOD_ID_RX);
+	return ret;
 }
 
 static inline
@@ -1783,7 +1804,7 @@ bool dp_rx_is_peer_cache_bufq_supported(void)
 }
 
 static inline QDF_STATUS
-dp_rx_enqueue_rx(struct dp_peer *peer, qdf_nbuf_t rx_buf_list)
+dp_rx_enqueue_rx(struct dp_txrx_peer *txrx_peer, qdf_nbuf_t rx_buf_list)
 {
 	return QDF_STATUS_SUCCESS;
 }
@@ -1803,11 +1824,11 @@ dp_rx_enqueue_rx(struct dp_peer *peer, qdf_nbuf_t rx_buf_list)
  */
 static void dp_rx_check_delivery_to_stack(struct dp_soc *soc,
 					  struct dp_vdev *vdev,
-					  struct dp_peer *peer,
+					  struct dp_txrx_peer *txrx_peer,
 					  qdf_nbuf_t nbuf_head)
 {
 	if (qdf_unlikely(dp_rx_deliver_to_stack_ext(soc, vdev,
-						    peer, nbuf_head)))
+						    txrx_peer, nbuf_head)))
 		return;
 
 	/* Function pointer initialized only when FISA is enabled */
@@ -1824,7 +1845,7 @@ static void dp_rx_check_delivery_to_stack(struct dp_soc *soc,
  * using the appropriate call back functions.
  * @soc: soc
  * @vdev: vdev
- * @peer: peer
+ * @txrx_peer: txrx peer
  * @nbuf_head: skb list head
  * @nbuf_tail: skb list tail
  *
@@ -1835,7 +1856,7 @@ static void dp_rx_check_delivery_to_stack(struct dp_soc *soc,
  */
 static void dp_rx_check_delivery_to_stack(struct dp_soc *soc,
 					  struct dp_vdev *vdev,
-					  struct dp_peer *peer,
+					  struct dp_txrx_peer *txrx_peer,
 					  qdf_nbuf_t nbuf_head)
 {
 	int num_nbuf = 0;
@@ -1851,8 +1872,8 @@ static void dp_rx_check_delivery_to_stack(struct dp_soc *soc,
 	if (!QDF_IS_STATUS_SUCCESS(ret_val)) {
 		num_nbuf = dp_rx_drop_nbuf_list(vdev->pdev, nbuf_head);
 		DP_STATS_INC(soc, rx.err.rejected, num_nbuf);
-		if (peer)
-			DP_STATS_DEC(peer, rx.to_stack.num, num_nbuf);
+		if (txrx_peer)
+			DP_STATS_DEC(txrx_peer, to_stack.num, num_nbuf);
 	}
 }
 #endif /* ifdef DELIVERY_TO_STACK_STATUS_CHECK */
@@ -1861,7 +1882,7 @@ static void dp_rx_check_delivery_to_stack(struct dp_soc *soc,
  * dp_rx_validate_rx_callbacks() - validate rx callbacks
  * @soc DP soc
  * @vdev: DP vdev handle
- * @peer: pointer to the peer object
+ * @txrx_peer: pointer to the txrx peer object
  * nbuf_head: skb list head
  *
  * Return: QDF_STATUS - QDF_STATUS_SUCCESS
@@ -1870,7 +1891,7 @@ static void dp_rx_check_delivery_to_stack(struct dp_soc *soc,
 static inline QDF_STATUS
 dp_rx_validate_rx_callbacks(struct dp_soc *soc,
 			    struct dp_vdev *vdev,
-			    struct dp_peer *peer,
+			    struct dp_txrx_peer *txrx_peer,
 			    qdf_nbuf_t nbuf_head)
 {
 	int num_nbuf;
@@ -1891,8 +1912,8 @@ dp_rx_validate_rx_callbacks(struct dp_soc *soc,
 	 * callback function. if so let us free the nbuf_list.
 	 */
 	if (qdf_unlikely(!vdev->osif_rx)) {
-		if (peer && dp_rx_is_peer_cache_bufq_supported()) {
-			dp_rx_enqueue_rx(peer, nbuf_head);
+		if (txrx_peer && dp_rx_is_peer_cache_bufq_supported()) {
+			dp_rx_enqueue_rx(txrx_peer, nbuf_head);
 		} else {
 			num_nbuf = dp_rx_drop_nbuf_list(vdev->pdev,
 							nbuf_head);
@@ -1907,21 +1928,21 @@ dp_rx_validate_rx_callbacks(struct dp_soc *soc,
 
 QDF_STATUS dp_rx_deliver_to_stack(struct dp_soc *soc,
 				  struct dp_vdev *vdev,
-				  struct dp_peer *peer,
+				  struct dp_txrx_peer *txrx_peer,
 				  qdf_nbuf_t nbuf_head,
 				  qdf_nbuf_t nbuf_tail)
 {
-	if (dp_rx_validate_rx_callbacks(soc, vdev, peer, nbuf_head) !=
+	if (dp_rx_validate_rx_callbacks(soc, vdev, txrx_peer, nbuf_head) !=
 					QDF_STATUS_SUCCESS)
 		return QDF_STATUS_E_FAILURE;
 
 	if (qdf_unlikely(vdev->rx_decap_type == htt_cmn_pkt_type_raw) ||
 			(vdev->rx_decap_type == htt_cmn_pkt_type_native_wifi)) {
 		vdev->osif_rsim_rx_decap(vdev->osif_vdev, &nbuf_head,
-				&nbuf_tail, peer->mac_addr.raw);
+					 &nbuf_tail);
 	}
 
-	dp_rx_check_delivery_to_stack(soc, vdev, peer, nbuf_head);
+	dp_rx_check_delivery_to_stack(soc, vdev, txrx_peer, nbuf_head);
 
 	return QDF_STATUS_SUCCESS;
 }
@@ -1929,11 +1950,11 @@ QDF_STATUS dp_rx_deliver_to_stack(struct dp_soc *soc,
 #ifdef QCA_SUPPORT_EAPOL_OVER_CONTROL_PORT
 QDF_STATUS dp_rx_eapol_deliver_to_stack(struct dp_soc *soc,
 					struct dp_vdev *vdev,
-					struct dp_peer *peer,
+					struct dp_txrx_peer *txrx_peer,
 					qdf_nbuf_t nbuf_head,
 					qdf_nbuf_t nbuf_tail)
 {
-	if (dp_rx_validate_rx_callbacks(soc, vdev, peer, nbuf_head) !=
+	if (dp_rx_validate_rx_callbacks(soc, vdev, txrx_peer, nbuf_head) !=
 					QDF_STATUS_SUCCESS)
 		return QDF_STATUS_E_FAILURE;
 
@@ -2088,7 +2109,7 @@ void dp_rx_msdu_stats_update(struct dp_soc *soc, qdf_nbuf_t nbuf,
 #ifndef WDS_VENDOR_EXTENSION
 int dp_wds_rx_policy_check(uint8_t *rx_tlv_hdr,
 			   struct dp_vdev *vdev,
-			   struct dp_peer *peer)
+			   struct dp_txrx_peer *txrx_peer)
 {
 	return 1;
 }
@@ -2838,7 +2859,8 @@ dp_rx_pdev_buffers_free(struct dp_pdev *pdev)
 }
 
 #ifdef DP_RX_SPECIAL_FRAME_NEED
-bool dp_rx_deliver_special_frame(struct dp_soc *soc, struct dp_peer *peer,
+bool dp_rx_deliver_special_frame(struct dp_soc *soc,
+				 struct dp_txrx_peer *txrx_peer,
 				 qdf_nbuf_t nbuf, uint32_t frame_mask,
 				 uint8_t *rx_tlv_hdr)
 {
@@ -2865,7 +2887,7 @@ bool dp_rx_deliver_special_frame(struct dp_soc *soc, struct dp_peer *peer,
 		dp_info("special frame, mpdu sn 0x%x",
 			hal_rx_get_rx_sequence(soc->hal_soc, rx_tlv_hdr));
 		qdf_nbuf_set_exc_frame(nbuf, 1);
-		dp_rx_deliver_to_stack(soc, peer->vdev, peer,
+		dp_rx_deliver_to_stack(soc, txrx_peer->vdev, txrx_peer,
 				       nbuf, NULL);
 		return true;
 	}

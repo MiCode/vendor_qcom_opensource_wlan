@@ -182,7 +182,8 @@ void dp_tx_process_htt_completion_be(struct dp_soc *soc,
 	struct dp_vdev *vdev = NULL;
 	struct hal_tx_completion_status ts = {0};
 	uint32_t *htt_desc = (uint32_t *)status;
-	struct dp_peer *peer;
+	struct dp_txrx_peer *txrx_peer;
+	dp_txrx_ref_handle txrx_ref_handle;
 	struct cdp_tid_tx_stats *tid_stats = NULL;
 	struct htt_soc *htt_handle;
 	uint8_t vdev_id;
@@ -276,8 +277,9 @@ void dp_tx_process_htt_completion_be(struct dp_soc *soc,
 		if (tx_status < CDP_MAX_TX_HTT_STATUS)
 			tid_stats->htt_status_cnt[tx_status]++;
 
-		peer = dp_peer_get_ref_by_id(soc, ts.peer_id,
-					     DP_MOD_ID_HTT_COMP);
+		txrx_peer = dp_txrx_peer_get_ref_by_id(soc, ts.peer_id,
+						       &txrx_ref_handle,
+						       DP_MOD_ID_HTT_COMP);
 		if (qdf_likely(peer))
 			dp_tx_update_peer_basic_stats(
 						peer,
@@ -285,12 +287,14 @@ void dp_tx_process_htt_completion_be(struct dp_soc *soc,
 						tx_status,
 						pdev->enhanced_stats_en);
 
-		dp_tx_comp_process_tx_status(soc, tx_desc, &ts, peer, ring_id);
-		dp_tx_comp_process_desc(soc, tx_desc, &ts, peer);
+		dp_tx_comp_process_tx_status(soc, tx_desc, &ts, txrx_peer,
+					     ring_id);
+		dp_tx_comp_process_desc(soc, tx_desc, &ts, txrx_peer);
 		dp_tx_desc_release(tx_desc, tx_desc->pool_id);
 
-		if (qdf_likely(peer))
-			dp_peer_unref_delete(peer, DP_MOD_ID_HTT_COMP);
+		if (qdf_likely(txrx_peer))
+			dp_txrx_peer_unref_delete(txrx_ref_handle,
+						  DP_MOD_ID_HTT_COMP);
 
 		break;
 	}

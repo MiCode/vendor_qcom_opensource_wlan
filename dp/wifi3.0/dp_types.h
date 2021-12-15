@@ -1754,7 +1754,7 @@ struct dp_arch_ops {
 	void (*dp_tx_mcast_handler)(struct dp_soc *soc, struct dp_vdev *vdev,
 				    qdf_nbuf_t nbuf);
 	bool (*dp_rx_mcast_handler)(struct dp_soc *soc, struct dp_vdev *vdev,
-				    struct dp_peer *peer, qdf_nbuf_t nbuf);
+				    struct dp_txrx_peer *peer, qdf_nbuf_t nbuf);
 #endif
 	void (*mlo_peer_find_hash_detach)(struct dp_soc *soc);
 	QDF_STATUS (*mlo_peer_find_hash_attach)(struct dp_soc *soc);

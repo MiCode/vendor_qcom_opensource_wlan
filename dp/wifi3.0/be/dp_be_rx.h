@@ -41,7 +41,7 @@ struct dp_be_intrabss_params {
  * dp_rx_intrabss_fwd_be() - API for intrabss fwd. For EAPOL
  *  pkt with DA not equal to vdev mac addr, fwd is not allowed.
  * @soc: core txrx main context
- * @ta_peer: source peer entry
+ * @ta_txrx_peer: source peer entry
  * @rx_tlv_hdr: start address of rx tlvs
  * @nbuf: nbuf that has to be intrabss forwarded
  * @msdu_metadata: msdu metadata
@@ -50,7 +50,7 @@ struct dp_be_intrabss_params {
  */
 
 bool dp_rx_intrabss_fwd_be(struct dp_soc *soc,
-			   struct dp_peer *ta_peer,
+			   struct dp_txrx_peer *ta_txrx_peer,
 			   uint8_t *rx_tlv_hdr,
 			   qdf_nbuf_t nbuf,
 			   struct hal_rx_msdu_metadata msdu_metadata);

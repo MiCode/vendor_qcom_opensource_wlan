@@ -3120,6 +3120,7 @@ void dp_tx_nawds_handler(struct dp_soc *soc, struct dp_vdev *vdev,
 	uint16_t sa_peer_id = DP_INVALID_PEER;
 	struct dp_ast_entry *ast_entry = NULL;
 	qdf_ether_header_t *eh = (qdf_ether_header_t *)qdf_nbuf_data(nbuf);
+	struct dp_txrx_peer *txrx_peer;
 
 	if (!soc->ast_offload_support) {
 		if (qdf_nbuf_get_tx_ftype(nbuf) == CB_FTYPE_INTRABSS_FWD) {
@@ -3140,7 +3141,10 @@ void dp_tx_nawds_handler(struct dp_soc *soc, struct dp_vdev *vdev,
 
 	qdf_spin_lock_bh(&vdev->peer_list_lock);
 	TAILQ_FOREACH(peer, &vdev->peer_list, peer_list_elem) {
-		if (!peer->bss_peer && peer->nawds_enabled) {
+		txrx_peer = dp_get_txrx_peer(peer);
+		qdf_assert_always(txrx_peer);
+
+		if (!txrx_peer->bss_peer && txrx_peer->nawds_enabled) {
 			peer_id = peer->peer_id;
 			/* Multicast packets needs to be
 			 * dropped in case of intra bss forwarding
@@ -3481,6 +3485,7 @@ void dp_tx_reinject_handler(struct dp_soc *soc,
 	qdf_ether_header_t *eth_hdr = (qdf_ether_header_t *)(qdf_nbuf_data(nbuf));
 	struct ieee80211_frame_addr4 *wh = (struct ieee80211_frame_addr4 *)(qdf_nbuf_data(nbuf));
 #endif
+	struct dp_txrx_peer *txrx_peer;
 
 	qdf_assert(vdev);
 
@@ -3511,7 +3516,10 @@ void dp_tx_reinject_handler(struct dp_soc *soc,
 
 	qdf_spin_lock_bh(&vdev->peer_list_lock);
 	TAILQ_FOREACH(peer, &vdev->peer_list, peer_list_elem) {
-		if (peer->bss_peer)
+		txrx_peer = dp_get_txrx_peer(peer);
+		qdf_assert_always(txrx_peer);
+
+		if (txrx_peer->bss_peer)
 			continue;
 
 		/* Detect wds peers that use 3-addr framing for mcast.
@@ -3520,7 +3528,8 @@ void dp_tx_reinject_handler(struct dp_soc *soc,
 		 * peers that use 4-addr framing for mcast frames will
 		 * be duplicated and sent as 4-addr frames below.
 		 */
-		if (!peer->wds_enabled || !peer->wds_ecm.wds_tx_mcast_4addr) {
+		if (!txrx_peer->wds_enabled ||
+		    !txrx_peer->wds_ecm.wds_tx_mcast_4addr) {
 			num_peers_3addr = 1;
 			break;
 		}
@@ -3533,7 +3542,10 @@ void dp_tx_reinject_handler(struct dp_soc *soc,
 	} else {
 		qdf_spin_lock_bh(&vdev->peer_list_lock);
 		TAILQ_FOREACH(peer, &vdev->peer_list, peer_list_elem) {
-			if ((peer->peer_id != HTT_INVALID_PEER) &&
+			txrx_peer = dp_get_txrx_peer(peer);
+			qdf_assert_always(txrx_peer);
+
+			if ((txrx_peer->peer_id != HTT_INVALID_PEER) &&
 #ifdef WDS_VENDOR_EXTENSION
 			/*
 			 * . if 3-addr STA, then send on BSS Peer
@@ -3542,12 +3554,13 @@ void dp_tx_reinject_handler(struct dp_soc *soc,
 			 * . if Peer WDS enabled and accept 4-addr ucast,
 			 * send ucast on that peer only
 			 */
-			((peer->bss_peer && num_peers_3addr && is_mcast) ||
-			 (peer->wds_enabled &&
-				  ((is_mcast && peer->wds_ecm.wds_tx_mcast_4addr) ||
-				   (is_ucast && peer->wds_ecm.wds_tx_ucast_4addr))))) {
+			((txrx_peer->bss_peer && num_peers_3addr && is_mcast) ||
+			 (txrx_peer->wds_enabled &&
+			 ((is_mcast && txrx_peer->wds_ecm.wds_tx_mcast_4addr) ||
+			 (is_ucast &&
+			 txrx_peer->wds_ecm.wds_tx_ucast_4addr))))) {
 #else
-			(peer->bss_peer &&
+			(txrx_peer->bss_peer &&
 			 (dp_tx_proxy_arp(vdev, nbuf) == QDF_STATUS_SUCCESS))) {
 #endif
 				peer_id = DP_INVALID_PEER;
@@ -3775,12 +3788,12 @@ void dp_tx_compute_delay(struct dp_vdev *vdev, struct dp_tx_desc_s *tx_desc,
 
 #ifdef DISABLE_DP_STATS
 static
-inline void dp_update_no_ack_stats(qdf_nbuf_t nbuf, struct dp_peer *peer)
+inline void dp_update_no_ack_stats(qdf_nbuf_t nbuf, struct dp_txrx_peer *peer)
 {
 }
 #else
-static
-inline void dp_update_no_ack_stats(qdf_nbuf_t nbuf, struct dp_peer *peer)
+static inline void
+dp_update_no_ack_stats(qdf_nbuf_t nbuf, struct dp_txrx_peer *txrx_peer)
 {
 	enum qdf_proto_subtype subtype = QDF_PROTO_INVALID;
 
@@ -4116,9 +4129,10 @@ void
 dp_tx_comp_process_desc(struct dp_soc *soc,
 			struct dp_tx_desc_s *desc,
 			struct hal_tx_completion_status *ts,
-			struct dp_peer *peer)
+			struct dp_txrx_peer *txrx_peer)
 {
 	uint64_t time_latency = 0;
+	uint16_t peer_id = DP_INVALID_PEER_ID;
 
 	/*
 	 * m_copy/tx_capture modes are not supported for
@@ -4139,16 +4153,18 @@ dp_tx_comp_process_desc(struct dp_soc *soc,
 
 	if (!(desc->msdu_ext_desc)) {
 		dp_tx_enh_unmap(soc, desc);
+		if (txrx_peer)
+			peer_id = txrx_peer->peer_id;
 
 		if (QDF_STATUS_SUCCESS ==
-		    dp_monitor_tx_add_to_comp_queue(soc, desc, ts, peer)) {
+		    dp_monitor_tx_add_to_comp_queue(soc, desc, ts, peer_id)) {
 			return;
 		}
 
 		if (QDF_STATUS_SUCCESS ==
 		    dp_get_completion_indication_for_stack(soc,
 							   desc->pdev,
-							   peer, ts,
+							   txrx_peer, ts,
 							   desc->nbuf,
 							   time_latency)) {
 			dp_send_completion_to_stack(soc,
@@ -4345,7 +4361,7 @@ void dp_tx_update_uplink_delay(struct dp_soc *soc, struct dp_vdev *vdev,
  * @soc: DP soc handle
  * @tx_desc: software descriptor head pointer
  * @ts: Tx completion status
- * @peer: peer handle
+ * @txrx_peer: txrx peer handle
  * @ring_id: ring number
  *
  * Return: none
@@ -4353,7 +4369,8 @@ void dp_tx_update_uplink_delay(struct dp_soc *soc, struct dp_vdev *vdev,
 void dp_tx_comp_process_tx_status(struct dp_soc *soc,
 				  struct dp_tx_desc_s *tx_desc,
 				  struct hal_tx_completion_status *ts,
-				  struct dp_peer *peer, uint8_t ring_id)
+				  struct dp_txrx_peer *txrx_peer,
+				  uint8_t ring_id)
 {
 	uint32_t length;
 	qdf_ether_header_t *eh;
@@ -4411,12 +4428,12 @@ void dp_tx_comp_process_tx_status(struct dp_soc *soc,
 	DP_STATS_INCC(soc, tx.dropped_fw_removed, 1,
 			(ts->status == HAL_TX_TQM_RR_REM_CMD_REM));
 
-	if (!peer) {
+	if (!txrx_peer) {
 		dp_info_rl("peer is null or deletion in progress");
 		DP_STATS_INC_PKT(soc, tx.tx_invalid_peer, 1, length);
 		goto out;
 	}
-	vdev = peer->vdev;
+	vdev = txrx_peer->vdev;
 
 	dp_tx_update_connectivity_stats(soc, vdev, tx_desc, ts->status);
 	dp_tx_update_uplink_delay(soc, vdev, ts);
@@ -4427,12 +4444,13 @@ void dp_tx_comp_process_tx_status(struct dp_soc *soc,
 		dp_tx_comp_fill_tx_completion_stats(tx_desc, ts);
 
 	/* Update peer level stats */
-	if (qdf_unlikely(peer->bss_peer && vdev->opmode == wlan_op_mode_ap)) {
+	if (qdf_unlikely(txrx_peer->bss_peer &&
+			 vdev->opmode == wlan_op_mode_ap)) {
 		if (ts->status != HAL_TX_TQM_RR_REM_CMD_REM) {
 			DP_STATS_INC_PKT(peer, tx.mcast, 1, length);
 
-			if ((peer->vdev->tx_encap_type ==
-				htt_cmn_pkt_type_ethernet) &&
+			if (txrx_peer->vdev->tx_encap_type ==
+				htt_cmn_pkt_type_ethernet &&
 				QDF_IS_ADDR_BROADCAST(eh->ether_dhost)) {
 				DP_STATS_INC_PKT(peer, tx.bcast, 1, length);
 			}
@@ -4441,7 +4459,7 @@ void dp_tx_comp_process_tx_status(struct dp_soc *soc,
 		DP_STATS_INC_PKT(peer, tx.ucast, 1, length);
 		if (ts->status == HAL_TX_TQM_RR_FRAME_ACKED) {
 			DP_STATS_INC_PKT(peer, tx.tx_success, 1, length);
-			if (qdf_unlikely(peer->in_twt)) {
+			if (qdf_unlikely(txrx_peer->in_twt)) {
 				DP_STATS_INC_PKT(peer,
 						 tx.tx_success_twt,
 						 1, length);
@@ -4551,9 +4569,10 @@ dp_tx_comp_process_desc_list(struct dp_soc *soc,
 	struct dp_tx_desc_s *desc;
 	struct dp_tx_desc_s *next;
 	struct hal_tx_completion_status ts;
-	struct dp_peer *peer = NULL;
+	struct dp_txrx_peer *txrx_peer = NULL;
 	uint16_t peer_id = DP_INVALID_PEER;
 	qdf_nbuf_t netbuf;
+	dp_txrx_ref_handle txrx_ref_handle;
 
 	desc = comp_head;
 
@@ -4562,12 +4581,14 @@ dp_tx_comp_process_desc_list(struct dp_soc *soc,
 		dp_tx_prefetch_next_nbuf_data(next);
 
 		if (peer_id != desc->peer_id) {
-			if (peer)
-				dp_peer_unref_delete(peer,
-						     DP_MOD_ID_TX_COMP);
+			if (txrx_peer)
+				dp_txrx_peer_unref_delete(txrx_ref_handle,
+							  DP_MOD_ID_TX_COMP);
 			peer_id = desc->peer_id;
-			peer = dp_peer_get_ref_by_id(soc, peer_id,
-						     DP_MOD_ID_TX_COMP);
+			txrx_peer =
+				dp_txrx_peer_get_ref_by_id(soc, peer_id,
+							   &txrx_ref_handle,
+							   DP_MOD_ID_TX_COMP);
 		}
 
 		if (qdf_likely(desc->flags & DP_TX_DESC_FLAG_SIMPLE)) {
@@ -4595,21 +4616,22 @@ dp_tx_comp_process_desc_list(struct dp_soc *soc,
 		}
 		hal_tx_comp_get_status(&desc->comp, &ts, soc->hal_soc);
 
-		dp_tx_comp_process_tx_status(soc, desc, &ts, peer, ring_id);
+		dp_tx_comp_process_tx_status(soc, desc, &ts, txrx_peer,
+					     ring_id);
 
 		netbuf = desc->nbuf;
 		/* check tx complete notification */
-		if (peer && qdf_nbuf_tx_notify_comp_get(netbuf))
-			dp_tx_notify_completion(soc, peer->vdev, desc,
+		if (txrx_peer && qdf_nbuf_tx_notify_comp_get(netbuf))
+			dp_tx_notify_completion(soc, txrx_peer->vdev, desc,
 						netbuf, ts.status);
 
-		dp_tx_comp_process_desc(soc, desc, &ts, peer);
+		dp_tx_comp_process_desc(soc, desc, &ts, txrx_peer);
 
 		dp_tx_desc_release(desc, desc->pool_id);
 		desc = next;
 	}
-	if (peer)
-		dp_peer_unref_delete(peer, DP_MOD_ID_TX_COMP);
+	if (txrx_peer)
+		dp_txrx_peer_unref_delete(txrx_ref_handle, DP_MOD_ID_TX_COMP);
 }
 
 #ifdef WLAN_FEATURE_RX_SOFTIRQ_TIME_LIMIT

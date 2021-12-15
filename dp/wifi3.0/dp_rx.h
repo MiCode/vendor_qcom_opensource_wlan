@@ -236,7 +236,7 @@ bool dp_rx_is_special_frame(qdf_nbuf_t nbuf, uint32_t frame_mask)
  *
  * return: true - nbuf has been delivered to stack, false - not.
  */
-bool dp_rx_deliver_special_frame(struct dp_soc *soc, struct dp_peer *peer,
+bool dp_rx_deliver_special_frame(struct dp_soc *soc, struct dp_txrx_peer *peer,
 				 qdf_nbuf_t nbuf, uint32_t frame_mask,
 				 uint8_t *rx_tlv_hdr);
 #else
@@ -247,7 +247,7 @@ bool dp_rx_is_special_frame(qdf_nbuf_t nbuf, uint32_t frame_mask)
 }
 
 static inline
-bool dp_rx_deliver_special_frame(struct dp_soc *soc, struct dp_peer *peer,
+bool dp_rx_deliver_special_frame(struct dp_soc *soc, struct dp_txrx_peer *peer,
 				 qdf_nbuf_t nbuf, uint32_t frame_mask,
 				 uint8_t *rx_tlv_hdr)
 {
@@ -258,18 +258,20 @@ bool dp_rx_deliver_special_frame(struct dp_soc *soc, struct dp_peer *peer,
 #ifndef QCA_HOST_MODE_WIFI_DISABLED
 #ifdef DP_RX_DISABLE_NDI_MDNS_FORWARDING
 static inline
-bool dp_rx_check_ndi_mdns_fwding(struct dp_peer *ta_peer, qdf_nbuf_t nbuf)
+bool dp_rx_check_ndi_mdns_fwding(struct dp_txrx_peer *ta_txrx_peer,
+				 qdf_nbuf_t nbuf)
 {
-	if (ta_peer->vdev->opmode == wlan_op_mode_ndi &&
+	if (ta_txrx_peer->vdev->opmode == wlan_op_mode_ndi &&
 	    qdf_nbuf_is_ipv6_mdns_pkt(nbuf)) {
-		DP_STATS_INC(ta_peer, rx.intra_bss.mdns_no_fwd, 1);
+		DP_STATS_INC(ta_txrx_peer, rx.intra_bss.mdns_no_fwd, 1);
 		return false;
 	}
 		return true;
 }
 #else
 static inline
-bool dp_rx_check_ndi_mdns_fwding(struct dp_peer *ta_peer, qdf_nbuf_t nbuf)
+bool dp_rx_check_ndi_mdns_fwding(struct dp_txrx_peer *ta_txrx_peer,
+				 qdf_nbuf_t nbuf)
 {
 	return true;
 }
@@ -788,7 +790,7 @@ void dp_rx_desc_pool_free(struct dp_soc *soc,
 			  struct rx_desc_pool *rx_desc_pool);
 
 void dp_rx_deliver_raw(struct dp_vdev *vdev, qdf_nbuf_t nbuf_list,
-				struct dp_peer *peer);
+				struct dp_txrx_peer *peer);
 
 #ifdef RX_DESC_LOGGING
 /*
@@ -899,7 +901,7 @@ uint8_t dp_rx_process_invalid_peer(struct dp_soc *soc, qdf_nbuf_t nbuf,
 void dp_rx_process_invalid_peer_wrapper(struct dp_soc *soc,
 		qdf_nbuf_t mpdu, bool mpdu_done, uint8_t mac_id);
 void dp_rx_process_mic_error(struct dp_soc *soc, qdf_nbuf_t nbuf,
-			     uint8_t *rx_tlv_hdr, struct dp_peer *peer);
+			     uint8_t *rx_tlv_hdr, struct dp_txrx_peer *peer);
 void dp_2k_jump_handle(struct dp_soc *soc, qdf_nbuf_t nbuf, uint8_t *rx_tlv_hdr,
 		       uint16_t peer_id, uint8_t tid);
 
@@ -1116,7 +1118,7 @@ static inline bool dp_nbuf_dst_addr_is_self_addr(struct dp_vdev *vdev,
  * dp_rx_intrabss_eapol_drop_check() - API For EAPOL
  *  pkt with DA not equal to vdev mac addr, fwd is not allowed.
  * @soc: core txrx main context
- * @ta_peer: source peer entry
+ * @ta_txrx_peer: source peer entry
  * @rx_tlv_hdr: start address of rx tlvs
  * @nbuf: nbuf that has to be intrabss forwarded
  *
@@ -1124,12 +1126,14 @@ static inline bool dp_nbuf_dst_addr_is_self_addr(struct dp_vdev *vdev,
  */
 static inline
 bool dp_rx_intrabss_eapol_drop_check(struct dp_soc *soc,
-				     struct dp_peer *ta_peer,
+				     struct dp_txrx_peer *ta_txrx_peer,
 				     uint8_t *rx_tlv_hdr, qdf_nbuf_t nbuf)
 {
 	if (qdf_unlikely(qdf_nbuf_is_ipv4_eapol_pkt(nbuf) &&
-			 !(dp_nbuf_dst_addr_is_self_addr(ta_peer->vdev, nbuf) ||
-			   dp_nbuf_dst_addr_is_mld_addr(ta_peer->vdev, nbuf)))) {
+			 !(dp_nbuf_dst_addr_is_self_addr(ta_txrx_peer->vdev,
+							 nbuf) ||
+			   dp_nbuf_dst_addr_is_mld_addr(ta_txrx_peer->vdev,
+							nbuf)))) {
 		qdf_nbuf_free(nbuf);
 		DP_STATS_INC(soc, rx.err.intrabss_eapol_drop, 1);
 		return true;
@@ -1141,18 +1145,20 @@ bool dp_rx_intrabss_eapol_drop_check(struct dp_soc *soc,
 
 static inline
 bool dp_rx_intrabss_eapol_drop_check(struct dp_soc *soc,
-				     struct dp_peer *ta_peer,
+				     struct dp_txrx_peer *ta_txrx_peer,
 				     uint8_t *rx_tlv_hdr, qdf_nbuf_t nbuf)
 {
 	return false;
 }
 #endif /* DISABLE_EAPOL_INTRABSS_FWD */
 
-bool dp_rx_intrabss_mcbc_fwd(struct dp_soc *soc, struct dp_peer *ta_peer,
+bool dp_rx_intrabss_mcbc_fwd(struct dp_soc *soc,
+			     struct dp_txrx_peer *ta_txrx_peer,
 			     uint8_t *rx_tlv_hdr, qdf_nbuf_t nbuf,
 			     struct cdp_tid_rx_stats *tid_stats);
 
-bool dp_rx_intrabss_ucast_fwd(struct dp_soc *soc, struct dp_peer *ta_peer,
+bool dp_rx_intrabss_ucast_fwd(struct dp_soc *soc,
+			      struct dp_txrx_peer *ta_txrx_peer,
 			      uint8_t tx_vdev_id,
 			      uint8_t *rx_tlv_hdr, qdf_nbuf_t nbuf,
 			      struct cdp_tid_rx_stats *tid_stats);
@@ -1191,7 +1197,7 @@ static inline QDF_STATUS dp_rx_defrag_concat(qdf_nbuf_t dst, qdf_nbuf_t src)
 
 #ifndef FEATURE_WDS
 void dp_rx_da_learn(struct dp_soc *soc, uint8_t *rx_tlv_hdr,
-		    struct dp_peer *ta_peer, qdf_nbuf_t nbuf);
+		    struct dp_txrx_peer *ta_txrx_peer, qdf_nbuf_t nbuf);
 
 static inline QDF_STATUS dp_rx_ast_set_active(struct dp_soc *soc, uint16_t sa_idx, bool is_active)
 {
@@ -1201,7 +1207,7 @@ static inline QDF_STATUS dp_rx_ast_set_active(struct dp_soc *soc, uint16_t sa_id
 static inline void
 dp_rx_wds_srcport_learn(struct dp_soc *soc,
 			uint8_t *rx_tlv_hdr,
-			struct dp_peer *ta_peer,
+			struct dp_txrx_peer *txrx_peer,
 			qdf_nbuf_t nbuf,
 			struct hal_rx_msdu_metadata msdu_metadata)
 {
@@ -1490,7 +1496,7 @@ QDF_STATUS dp_rx_filter_mesh_packets(struct dp_vdev *vdev, qdf_nbuf_t nbuf,
 					uint8_t *rx_tlv_hdr);
 
 int dp_wds_rx_policy_check(uint8_t *rx_tlv_hdr, struct dp_vdev *vdev,
-			   struct dp_peer *peer);
+			   struct dp_txrx_peer *peer);
 
 /*
  * dp_rx_dump_info_and_assert() - dump RX Ring info and Rx Desc info
@@ -1635,17 +1641,18 @@ void dp_rx_enable_mon_dest_frag(struct rx_desc_pool *rx_desc_pool,
 				bool is_mon_dest_desc);
 
 void dp_rx_process_rxdma_err(struct dp_soc *soc, qdf_nbuf_t nbuf,
-			     uint8_t *rx_tlv_hdr, struct dp_peer *peer,
+			     uint8_t *rx_tlv_hdr, struct dp_txrx_peer *peer,
 			     uint8_t err_code, uint8_t mac_id);
 
 #ifndef QCA_MULTIPASS_SUPPORT
 static inline
-bool dp_rx_multipass_process(struct dp_peer *peer, qdf_nbuf_t nbuf, uint8_t tid)
+bool dp_rx_multipass_process(struct dp_txrx_peer *peer, qdf_nbuf_t nbuf,
+			     uint8_t tid)
 {
 	return false;
 }
 #else
-bool dp_rx_multipass_process(struct dp_peer *peer, qdf_nbuf_t nbuf,
+bool dp_rx_multipass_process(struct dp_txrx_peer *peer, qdf_nbuf_t nbuf,
 			     uint8_t tid);
 #endif
 
@@ -1668,7 +1675,7 @@ QDF_STATUS dp_peer_set_rx_capture_enabled(struct dp_pdev *pdev,
  * Caller to hold peer refcount and check for valid peer
  * @soc: soc
  * @vdev: vdev
- * @peer: peer
+ * @txrx_peer: txrx peer
  * @nbuf_head: skb list head
  * @nbuf_tail: skb list tail
  *
@@ -1676,7 +1683,7 @@ QDF_STATUS dp_peer_set_rx_capture_enabled(struct dp_pdev *pdev,
  */
 QDF_STATUS dp_rx_deliver_to_stack(struct dp_soc *soc,
 				  struct dp_vdev *vdev,
-				  struct dp_peer *peer,
+				  struct dp_txrx_peer *peer,
 				  qdf_nbuf_t nbuf_head,
 				  qdf_nbuf_t nbuf_tail);
 
@@ -1694,7 +1701,7 @@ QDF_STATUS dp_rx_deliver_to_stack(struct dp_soc *soc,
  */
 QDF_STATUS dp_rx_eapol_deliver_to_stack(struct dp_soc *soc,
 					struct dp_vdev *vdev,
-					struct dp_peer *peer,
+					struct dp_txrx_peer *peer,
 					qdf_nbuf_t nbuf_head,
 					qdf_nbuf_t nbuf_tail);
 #endif
@@ -1866,12 +1873,12 @@ dp_rx_deliver_to_pkt_capture_no_peer(struct dp_soc *soc, qdf_nbuf_t nbuf,
  *
  */
 bool dp_rx_mcast_echo_check(struct dp_soc *soc,
-			    struct dp_peer *peer,
+			    struct dp_txrx_peer *peer,
 			    uint8_t *rx_tlv_hdr,
 			    qdf_nbuf_t nbuf);
 #else
 static inline bool dp_rx_mcast_echo_check(struct dp_soc *soc,
-					  struct dp_peer *peer,
+					  struct dp_txrx_peer *peer,
 					  uint8_t *rx_tlv_hdr,
 					  qdf_nbuf_t nbuf)
 {
@@ -2055,7 +2062,7 @@ void dp_rx_update_stats(struct dp_soc *soc, qdf_nbuf_t nbuf);
 			   and 3-address frames
  * @nbuf_head: skb list head
  * @vdev: vdev
- * @peer: peer
+* @txrx_peer : txrx_peer
  * @peer_id: peer id of new received frame
  * @vdev_id: vdev_id of new received frame
  *
@@ -2064,11 +2071,11 @@ void dp_rx_update_stats(struct dp_soc *soc, qdf_nbuf_t nbuf);
 static inline bool
 dp_rx_is_list_ready(qdf_nbuf_t nbuf_head,
 		    struct dp_vdev *vdev,
-		    struct dp_peer *peer,
+		    struct dp_txrx_peer *txrx_peer,
 		    uint16_t peer_id,
 		    uint8_t vdev_id)
 {
-	if (nbuf_head && peer && (peer->peer_id != peer_id))
+	if (nbuf_head && txrx_peer && txrx_peer->peer_id != peer_id)
 		return true;
 
 	return false;
@@ -2077,7 +2084,7 @@ dp_rx_is_list_ready(qdf_nbuf_t nbuf_head,
 static inline bool
 dp_rx_is_list_ready(qdf_nbuf_t nbuf_head,
 		    struct dp_vdev *vdev,
-		    struct dp_peer *peer,
+		    struct dp_txrx_peer *txrx_peer,
 		    uint16_t peer_id,
 		    uint8_t vdev_id)
 {
@@ -2382,22 +2389,39 @@ void dp_rx_nbuf_free(qdf_nbuf_t nbuf)
 }
 #endif
 
-static inline
-struct dp_peer *dp_rx_get_peer_and_vdev(struct dp_soc *soc,
-					qdf_nbuf_t nbuf,
-					uint16_t peer_id,
-					bool pkt_capture_offload,
-					struct dp_vdev **vdev,
-					struct dp_pdev **rx_pdev,
-					uint32_t *dsf,
-					uint32_t *old_tid)
+/**
+ * dp_rx_get_txrx_peer_and_vdev() - Get txrx peer and vdev from peer id
+ * @nbuf : pointer to the first msdu of an amsdu.
+ * @peer_id : Peer id of the peer
+ * @txrx_ref_handle : Buffer to save the handle for txrx peer's reference
+ * @pkt_capture_offload : Flag indicating if pkt capture offload is needed
+ * @vdev : Buffer to hold pointer to vdev
+ * @rx_pdev : Buffer to hold pointer to rx pdev
+ * @dsf : delay stats flag
+ * @old_tid : Old tid
+ *
+ * Get txrx peer and vdev from peer id
+ *
+ * Return: Pointer to txrx peer
+ */
+static inline struct dp_txrx_peer *
+dp_rx_get_txrx_peer_and_vdev(struct dp_soc *soc,
+			     qdf_nbuf_t nbuf,
+			     uint16_t peer_id,
+			     dp_txrx_ref_handle *txrx_ref_handle,
+			     bool pkt_capture_offload,
+			     struct dp_vdev **vdev,
+			     struct dp_pdev **rx_pdev,
+			     uint32_t *dsf,
+			     uint32_t *old_tid)
 {
-	struct dp_peer *peer = NULL;
+	struct dp_txrx_peer *txrx_peer = NULL;
 
-	peer = dp_peer_get_ref_by_id(soc, peer_id, DP_MOD_ID_RX);
+	txrx_peer = dp_txrx_peer_get_ref_by_id(soc, peer_id, txrx_ref_handle,
+					       DP_MOD_ID_RX);
 
-	if (qdf_likely(peer)) {
-		*vdev = peer->vdev;
+	if (qdf_likely(txrx_peer)) {
+		*vdev = txrx_peer->vdev;
 	} else {
 		nbuf->next = NULL;
 		dp_rx_deliver_to_pkt_capture_no_peer(soc, nbuf,
@@ -2419,7 +2443,7 @@ struct dp_peer *dp_rx_get_peer_and_vdev(struct dp_soc *soc,
 	*old_tid = 0xff;
 
 end:
-	return peer;
+	return txrx_peer;
 }
 
 static inline QDF_STATUS

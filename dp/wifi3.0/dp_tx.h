@@ -247,11 +247,12 @@ void dp_tx_compute_delay(struct dp_vdev *vdev, struct dp_tx_desc_s *tx_desc,
 void dp_tx_comp_process_tx_status(struct dp_soc *soc,
 				  struct dp_tx_desc_s *tx_desc,
 				  struct hal_tx_completion_status *ts,
-				  struct dp_peer *peer, uint8_t ring_id);
+				  struct dp_txrx_peer *txrx_peer,
+				  uint8_t ring_id);
 void dp_tx_comp_process_desc(struct dp_soc *soc,
 			     struct dp_tx_desc_s *desc,
 			     struct hal_tx_completion_status *ts,
-			     struct dp_peer *peer);
+			     struct dp_txrx_peer *txrx_peer);
 void dp_tx_reinject_handler(struct dp_soc *soc,
 			    struct dp_vdev *vdev,
 			    struct dp_tx_desc_s *tx_desc,
@@ -715,7 +716,7 @@ static inline void dp_tx_vdev_update_search_flags(struct dp_vdev *vdev)
 QDF_STATUS
 dp_get_completion_indication_for_stack(struct dp_soc *soc,
 				       struct dp_pdev *pdev,
-				       struct dp_peer *peer,
+				       struct dp_txrx_peer *peer,
 				       struct hal_tx_completion_status *ts,
 				       qdf_nbuf_t netbuf,
 				       uint64_t time_latency);
@@ -727,7 +728,7 @@ void dp_send_completion_to_stack(struct dp_soc *soc,  struct dp_pdev *pdev,
 static inline
 QDF_STATUS dp_get_completion_indication_for_stack(struct dp_soc *soc,
 				       struct dp_pdev *pdev,
-				       struct dp_peer *peer,
+				       struct dp_txrx_peer *peer,
 				       struct hal_tx_completion_status *ts,
 				       qdf_nbuf_t netbuf,
 				       uint64_t time_latency)

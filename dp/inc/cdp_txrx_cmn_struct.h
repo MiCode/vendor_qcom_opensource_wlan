@@ -944,8 +944,7 @@ typedef QDF_STATUS(*ol_txrx_get_key_fp)(void *osif_dev, uint8_t *key_buf, uint8_
  */
 typedef QDF_STATUS(*ol_txrx_rsim_rx_decap_fp)(void *osif_dev,
 						qdf_nbuf_t *list_head,
-						qdf_nbuf_t *list_tail,
-						uint8_t *peer_mac);
+						qdf_nbuf_t *list_tail);
 
 /* ol_txrx_rx_fp - external tx free function to read per packet stats and
  *                            free tx buffer externally

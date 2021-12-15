@@ -1788,7 +1788,7 @@ fail:
 	defined(WLAN_MCAST_MLO)
 static bool dp_rx_igmp_handler(struct dp_soc *soc,
 			       struct dp_vdev *vdev,
-			       struct dp_peer *peer,
+			       struct dp_txrx_peer *peer,
 			       qdf_nbuf_t nbuf)
 {
 	if (soc->arch_ops.dp_rx_mcast_handler) {
@@ -1800,7 +1800,7 @@ static bool dp_rx_igmp_handler(struct dp_soc *soc,
 #else
 static bool dp_rx_igmp_handler(struct dp_soc *soc,
 			       struct dp_vdev *vdev,
-			       struct dp_peer *peer,
+			       struct dp_txrx_peer *peer,
 			       qdf_nbuf_t nbuf)
 {
 	return false;
@@ -1879,7 +1879,7 @@ dp_rx_err_route_hdl(struct dp_soc *soc, qdf_nbuf_t nbuf,
 		qdf_nbuf_pull_head(nbuf, (msdu_metadata.l3_hdr_pad +
 				   soc->rx_pkt_tlv_size));
 
-	if (dp_rx_igmp_handler(soc, vdev, peer, nbuf))
+	if (dp_rx_igmp_handler(soc, vdev, txrx_peer, nbuf))
 		return;
 
 	dp_vdev_peer_stats_update_protocol_cnt(vdev, nbuf, NULL, 0, 1);

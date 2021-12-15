@@ -44,7 +44,7 @@ static void
 dp_rx_wds_learn(struct dp_soc *soc,
 		struct dp_vdev *vdev,
 		uint8_t *rx_tlv_hdr,
-		struct dp_peer *peer,
+		struct dp_txrx_peer *txrx_peer,
 		qdf_nbuf_t nbuf,
 		struct hal_rx_msdu_metadata msdu_metadata)
 {
@@ -52,7 +52,7 @@ dp_rx_wds_learn(struct dp_soc *soc,
 	if (qdf_likely(vdev->wds_enabled))
 		dp_rx_wds_srcport_learn(soc,
 				rx_tlv_hdr,
-				peer,
+				txrx_peer,
 				nbuf,
 				msdu_metadata);
 }
@@ -62,40 +62,51 @@ dp_rx_wds_learn(struct dp_soc *soc,
  * dp_wds_ext_peer_learn_be() - function to send event to control
  * path on receiving 1st 4-address frame from backhaul.
  * @soc: DP soc
- * @ta_peer: WDS repeater peer
+ * @ta_txrx_peer: WDS repeater txrx peer
  * @rx_tlv_hdr  : start address of rx tlvs
  *
  * Return: void
  */
 static inline void dp_wds_ext_peer_learn_be(struct dp_soc *soc,
-					    struct dp_peer *ta_peer,
+					    struct dp_txrx_peer *ta_txrx_peer,
 					    uint8_t *rx_tlv_hdr)
 {
 	uint8_t wds_ext_src_mac[QDF_MAC_ADDR_SIZE];
+	struct dp_peer *ta_base_peer;
 
 	/* instead of checking addr4 is valid or not in per packet path
 	 * check for init bit, which will be set on reception of
 	 * first addr4 valid packet.
 	 */
-	if (!ta_peer->vdev->wds_ext_enabled ||
-	    qdf_atomic_test_bit(WDS_EXT_PEER_INIT_BIT, &ta_peer->wds_ext.init))
+	if (!ta_txrx_peer->vdev->wds_ext_enabled ||
+	    qdf_atomic_test_bit(WDS_EXT_PEER_INIT_BIT,
+				&ta_txrx_peer->wds_ext.init))
 		return;
 
 	if (hal_rx_get_mpdu_mac_ad4_valid(soc->hal_soc, rx_tlv_hdr)) {
 		qdf_atomic_test_and_set_bit(WDS_EXT_PEER_INIT_BIT,
-					    &ta_peer->wds_ext.init);
-		qdf_mem_copy(wds_ext_src_mac, &ta_peer->mac_addr.raw[0],
+					    &ta_txrx_peer->wds_ext.init);
+
+		ta_base_peer = dp_peer_get_ref_by_id(soc, ta_txrx_peer->peer_id,
+						     DP_MOD_ID_RX);
+
+		if (!ta_base_peer)
+			return;
+
+		qdf_mem_copy(wds_ext_src_mac, &ta_base_peer->mac_addr.raw[0],
 			     QDF_MAC_ADDR_SIZE);
+		dp_peer_unref_delete(ta_base_peer, DP_MOD_ID_RX);
+
 		soc->cdp_soc.ol_ops->rx_wds_ext_peer_learn(
 						soc->ctrl_psoc,
-						ta_peer->peer_id,
-						ta_peer->vdev->vdev_id,
+						ta_txrx_peer->peer_id,
+						ta_txrx_peer->vdev->vdev_id,
 						wds_ext_src_mac);
 	}
 }
 #else
 static inline void dp_wds_ext_peer_learn_be(struct dp_soc *soc,
-					    struct dp_peer *ta_peer,
+					    struct dp_txrx_peer *ta_txrx_peer,
 					    uint8_t *rx_tlv_hdr)
 {
 }
@@ -104,11 +115,11 @@ static void
 dp_rx_wds_learn(struct dp_soc *soc,
 		struct dp_vdev *vdev,
 		uint8_t *rx_tlv_hdr,
-		struct dp_peer *ta_peer,
+		struct dp_txrx_peer *ta_txrx_peer,
 		qdf_nbuf_t nbuf,
 		struct hal_rx_msdu_metadata msdu_metadata)
 {
-	dp_wds_ext_peer_learn_be(soc, ta_peer, rx_tlv_hdr);
+	dp_wds_ext_peer_learn_be(soc, ta_txrx_peer, rx_tlv_hdr);
 }
 #endif
 
@@ -141,7 +152,8 @@ uint32_t dp_rx_process_be(struct dp_intr *int_ctx,
 	uint16_t msdu_len = 0;
 	uint16_t peer_id;
 	uint8_t vdev_id;
-	struct dp_peer *peer;
+	struct dp_txrx_peer *txrx_peer;
+	dp_txrx_ref_handle txrx_ref_handle;
 	struct dp_vdev *vdev;
 	uint32_t pkt_len = 0;
 	struct hal_rx_mpdu_desc_info mpdu_desc_info;
@@ -196,7 +208,7 @@ more_data:
 	nbuf_tail = NULL;
 	deliver_list_head = NULL;
 	deliver_list_tail = NULL;
-	peer = NULL;
+	txrx_peer = NULL;
 	vdev = NULL;
 	num_rx_bufs_reaped = 0;
 	ebuf_head = NULL;
@@ -468,7 +480,7 @@ done:
 
 	dp_verbose_debug("replenished %u\n", rx_bufs_reaped[0]);
 	/* Peer can be NULL is case of LFR */
-	if (qdf_likely(peer))
+	if (qdf_likely(txrx_peer))
 		vdev = NULL;
 
 	/*
@@ -491,9 +503,9 @@ done:
 		vdev_id = QDF_NBUF_CB_RX_VDEV_ID(nbuf);
 		peer_id =  QDF_NBUF_CB_RX_PEER_ID(nbuf);
 
-		if (dp_rx_is_list_ready(deliver_list_head, vdev, peer,
+		if (dp_rx_is_list_ready(deliver_list_head, vdev, txrx_peer,
 					peer_id, vdev_id)) {
-			dp_rx_deliver_to_stack(soc, vdev, peer,
+			dp_rx_deliver_to_stack(soc, vdev, txrx_peer,
 					       deliver_list_head,
 					       deliver_list_tail);
 			deliver_list_head = NULL;
@@ -504,16 +516,19 @@ done:
 		if (qdf_nbuf_is_rx_chfrag_start(nbuf))
 			tid = qdf_nbuf_get_tid_val(nbuf);
 
-		if (qdf_unlikely(!peer)) {
-			peer = dp_peer_get_ref_by_id(soc, peer_id,
-						     DP_MOD_ID_RX);
-		} else if (peer && peer->peer_id != peer_id) {
-			dp_peer_unref_delete(peer, DP_MOD_ID_RX);
-			peer = dp_peer_get_ref_by_id(soc, peer_id,
-						     DP_MOD_ID_RX);
+		if (qdf_unlikely(!txrx_peer)) {
+			txrx_peer = dp_txrx_peer_get_ref_by_id(soc, peer_id,
+							       &txrx_ref_handle,
+							       DP_MOD_ID_RX);
+		} else if (txrx_peer && txrx_peer->peer_id != peer_id) {
+			dp_txrx_peer_unref_delete(txrx_ref_handle,
+						  DP_MOD_ID_RX);
+			txrx_peer = dp_txrx_peer_get_ref_by_id(soc, peer_id,
+							       &txrx_ref_handle,
+							       DP_MOD_ID_RX);
 		}
 
-		if (peer) {
+		if (txrx_peer) {
 			QDF_NBUF_CB_DP_TRACE_PRINT(nbuf) = false;
 			qdf_dp_trace_set_track(nbuf, QDF_RX);
 			QDF_NBUF_CB_RX_DP_TRACE(nbuf) = 1;
@@ -523,8 +538,8 @@ done:
 
 		rx_bufs_used++;
 
-		if (qdf_likely(peer)) {
-			vdev = peer->vdev;
+		if (qdf_likely(txrx_peer)) {
+			vdev = txrx_peer->vdev;
 		} else {
 			nbuf->next = NULL;
 			dp_rx_deliver_to_pkt_capture_no_peer(
@@ -654,7 +669,8 @@ done:
 		 * process frame for mulitpass phrase processing
 		 */
 		if (qdf_unlikely(vdev->multipass_en)) {
-			if (dp_rx_multipass_process(peer, nbuf, tid) == false) {
+			if (dp_rx_multipass_process(txrx_peer, nbuf,
+						    tid) == false) {
 				DP_STATS_INC(peer, rx.multipass_rx_pkt_drop, 1);
 				dp_rx_nbuf_free(nbuf);
 				nbuf = next;
@@ -662,7 +678,7 @@ done:
 			}
 		}
 
-		if (!dp_wds_rx_policy_check(rx_tlv_hdr, vdev, peer)) {
+		if (!dp_wds_rx_policy_check(rx_tlv_hdr, vdev, txrx_peer)) {
 			dp_rx_err("%pK: Policy Check Drop pkt", soc);
 			DP_STATS_INC(peer, rx.policy_check_drop, 1);
 			tid_stats->fail_cnt[POLICY_CHECK_DROP]++;
@@ -673,7 +689,7 @@ done:
 			continue;
 		}
 
-		if (qdf_unlikely(peer && (peer->nawds_enabled) &&
+		if (qdf_unlikely(txrx_peer && (txrx_peer->nawds_enabled) &&
 				 (qdf_nbuf_is_da_mcbc(nbuf)) &&
 				 (hal_rx_get_mpdu_mac_ad4_valid(soc->hal_soc,
 								rx_tlv_hdr) ==
@@ -688,7 +704,8 @@ done:
 		/*
 		 * Drop non-EAPOL frames from unauthorized peer.
 		 */
-		if (qdf_likely(peer) && qdf_unlikely(!peer->authorize) &&
+		if (qdf_likely(txrx_peer) &&
+		    qdf_unlikely(!txrx_peer->authorize) &&
 		    !qdf_nbuf_is_raw_frame(nbuf)) {
 			bool is_eapol = qdf_nbuf_is_ipv4_eapol_pkt(nbuf) ||
 					qdf_nbuf_is_ipv4_wapi_pkt(nbuf);
@@ -735,13 +752,14 @@ done:
 		    qdf_likely(!vdev->mesh_vdev)) {
 			dp_rx_wds_learn(soc, vdev,
 					rx_tlv_hdr,
-					peer,
+					txrx_peer,
 					nbuf,
 					msdu_metadata);
 
 			/* Intrabss-fwd */
 			if (dp_rx_check_ap_bridge(vdev))
-				if (dp_rx_intrabss_fwd_be(soc, peer, rx_tlv_hdr,
+				if (dp_rx_intrabss_fwd_be(soc, txrx_peer,
+							  rx_tlv_hdr,
 							  nbuf,
 							  msdu_metadata)) {
 					nbuf = next;
@@ -758,7 +776,7 @@ done:
 				  nbuf);
 		DP_PEER_TO_STACK_INCC_PKT(peer, 1, QDF_NBUF_CB_RX_PKT_LEN(nbuf),
 					  enh_flag);
-		if (qdf_unlikely(peer->in_twt))
+		if (qdf_unlikely(txrx_peer->in_twt))
 			DP_STATS_INC_PKT(peer, rx.to_stack_twt, 1,
 					 QDF_NBUF_CB_RX_PKT_LEN(nbuf));
 
@@ -767,12 +785,12 @@ done:
 	}
 
 	if (qdf_likely(deliver_list_head)) {
-		if (qdf_likely(peer)) {
+		if (qdf_likely(txrx_peer)) {
 			dp_rx_deliver_to_pkt_capture(soc, vdev->pdev, peer_id,
 						     pkt_capture_offload,
 						     deliver_list_head);
 			if (!pkt_capture_offload)
-				dp_rx_deliver_to_stack(soc, vdev, peer,
+				dp_rx_deliver_to_stack(soc, vdev, txrx_peer,
 						       deliver_list_head,
 						       deliver_list_tail);
 		} else {
@@ -786,8 +804,8 @@ done:
 		}
 	}
 
-	if (qdf_likely(peer))
-		dp_peer_unref_delete(peer, DP_MOD_ID_RX);
+	if (qdf_likely(txrx_peer))
+		dp_txrx_peer_unref_delete(txrx_ref_handle, DP_MOD_ID_RX);
 
 	/*
 	 * If we are processing in near-full condition, there are 3 scenario
@@ -1067,7 +1085,7 @@ static inline void dp_rx_dummy_src_mac(qdf_nbuf_t nbuf)
 
 bool dp_rx_mlo_igmp_handler(struct dp_soc *soc,
 			    struct dp_vdev *vdev,
-			    struct dp_peer *peer,
+			    struct dp_txrx_peer *peer,
 			    qdf_nbuf_t nbuf)
 {
 	struct dp_vdev *mcast_primary_vdev = NULL;
@@ -1147,14 +1165,14 @@ uint32_t dp_rx_nf_process(struct dp_intr *int_ctx,
  * Return: true - MLO forwarding case, false: not
  */
 static inline bool
-dp_rx_intrabss_fwd_mlo_allow(struct dp_peer *ta_peer,
-			     struct dp_peer *da_peer)
+dp_rx_intrabss_fwd_mlo_allow(struct dp_txrx_peer *ta_peer,
+			     struct dp_txrx_peer *da_peer)
 {
 	/* one of TA/DA peer should belong to MLO connection peer,
 	 * only MLD peer type is as expected
 	 */
-	if (!IS_MLO_DP_MLD_PEER(ta_peer) &&
-	    !IS_MLO_DP_MLD_PEER(da_peer))
+	if (!IS_MLO_DP_MLD_TXRX_PEER(ta_peer) &&
+	    !IS_MLO_DP_MLD_TXRX_PEER(da_peer))
 		return false;
 
 	/* TA peer and DA peer's vdev should be partner MLO vdevs */
@@ -1166,8 +1184,8 @@ dp_rx_intrabss_fwd_mlo_allow(struct dp_peer *ta_peer,
 }
 #else
 static inline bool
-dp_rx_intrabss_fwd_mlo_allow(struct dp_peer *ta_peer,
-			     struct dp_peer *da_peer)
+dp_rx_intrabss_fwd_mlo_allow(struct dp_txrx_peer *ta_peer,
+			     struct dp_txrx_peer *da_peer)
 {
 	return false;
 }
@@ -1188,12 +1206,13 @@ dp_rx_intrabss_fwd_mlo_allow(struct dp_peer *ta_peer,
  */
 static bool
 dp_rx_intrabss_ucast_check_be(qdf_nbuf_t nbuf,
-			      struct dp_peer *ta_peer,
+			      struct dp_txrx_peer *ta_peer,
 			      struct hal_rx_msdu_metadata *msdu_metadata,
 			      struct dp_be_intrabss_params *params)
 {
 	uint16_t da_peer_id;
-	struct dp_peer *da_peer;
+	struct dp_txrx_peer *da_peer;
+	dp_txrx_ref_handle txrx_ref_handle;
 
 	if (!qdf_nbuf_is_intra_bss(nbuf))
 		return false;
@@ -1201,12 +1220,12 @@ dp_rx_intrabss_ucast_check_be(qdf_nbuf_t nbuf,
 	da_peer_id = dp_rx_peer_metadata_peer_id_get_be(
 						params->dest_soc,
 						msdu_metadata->da_idx);
-	da_peer = dp_peer_get_ref_by_id(params->dest_soc, da_peer_id,
-					DP_MOD_ID_RX);
+	da_peer = dp_txrx_peer_get_ref_by_id(params->dest_soc, da_peer_id,
+					     &txrx_ref_handle, DP_MOD_ID_RX);
 	if (!da_peer)
 		return false;
 	params->tx_vdev_id = da_peer->vdev->vdev_id;
-	dp_peer_unref_delete(da_peer, DP_MOD_ID_RX);
+	dp_txrx_peer_unref_delete(txrx_ref_handle, DP_MOD_ID_RX);
 
 	return true;
 }
@@ -1214,15 +1233,16 @@ dp_rx_intrabss_ucast_check_be(qdf_nbuf_t nbuf,
 #ifdef WLAN_MLO_MULTI_CHIP
 static bool
 dp_rx_intrabss_ucast_check_be(qdf_nbuf_t nbuf,
-			      struct dp_peer *ta_peer,
+			      struct dp_txrx_peer *ta_peer,
 			      struct hal_rx_msdu_metadata *msdu_metadata,
 			      struct dp_be_intrabss_params *params)
 {
 	uint16_t da_peer_id;
-	struct dp_peer *da_peer;
+	struct dp_txrx_peer *da_peer;
 	bool ret = false;
 	uint8_t dest_chip_id;
 	uint8_t soc_idx;
+	dp_txrx_ref_handle txrx_ref_handle;
 	struct dp_vdev_be *be_vdev =
 		dp_get_be_vdev_from_dp_vdev(ta_peer->vdev);
 	struct dp_soc_be *be_soc =
@@ -1245,8 +1265,8 @@ dp_rx_intrabss_ucast_check_be(qdf_nbuf_t nbuf,
 
 	da_peer_id = dp_rx_peer_metadata_peer_id_get_be(params->dest_soc,
 							msdu_metadata->da_idx);
-	da_peer = dp_peer_get_ref_by_id(params->dest_soc, da_peer_id,
-					DP_MOD_ID_RX);
+	da_peer = dp_txrx_peer_get_ref_by_id(params->dest_soc, da_peer_id,
+					     &txrx_ref_handle, DP_MOD_ID_RX);
 	if (!da_peer)
 		return false;
 	/* soc unref if needed */
@@ -1284,19 +1304,20 @@ dp_rx_intrabss_ucast_check_be(qdf_nbuf_t nbuf,
 	}
 
 rel_da_peer:
-	dp_peer_unref_delete(da_peer, DP_MOD_ID_RX);
+	dp_txrx_peer_unref_delete(txrx_ref_handle, DP_MOD_ID_RX);
 	return ret;
 }
 #else
 static bool
 dp_rx_intrabss_ucast_check_be(qdf_nbuf_t nbuf,
-			      struct dp_peer *ta_peer,
+			      struct dp_txrx_peer *ta_peer,
 			      struct hal_rx_msdu_metadata *msdu_metadata,
 			      struct dp_be_intrabss_params *params)
 {
 	uint16_t da_peer_id;
-	struct dp_peer *da_peer;
+	struct dp_txrx_peer *da_peer;
 	bool ret = false;
+	dp_txrx_ref_handle txrx_ref_handle;
 
 	if (!qdf_nbuf_is_da_valid(nbuf) || qdf_nbuf_is_da_mcbc(nbuf))
 		return false;
@@ -1305,8 +1326,8 @@ dp_rx_intrabss_ucast_check_be(qdf_nbuf_t nbuf,
 						params->dest_soc,
 						msdu_metadata->da_idx);
 
-	da_peer = dp_peer_get_ref_by_id(params->dest_soc, da_peer_id,
-					DP_MOD_ID_RX);
+	da_peer = dp_txrx_peer_get_ref_by_id(params->dest_soc, da_peer_id,
+					     &txrx_ref_handle, DP_MOD_ID_RX);
 	if (!da_peer)
 		return false;
 
@@ -1334,7 +1355,7 @@ dp_rx_intrabss_ucast_check_be(qdf_nbuf_t nbuf,
 	}
 
 rel_da_peer:
-	dp_peer_unref_delete(da_peer, DP_MOD_ID_RX);
+	dp_txrx_peer_unref_delete(txrx_ref_handle, DP_MOD_ID_RX);
 	return ret;
 }
 #endif /* WLAN_MLO_MULTI_CHIP */
@@ -1351,7 +1372,7 @@ rel_da_peer:
  *
  * Return: true if it is forwarded else false
  */
-bool dp_rx_intrabss_fwd_be(struct dp_soc *soc, struct dp_peer *ta_peer,
+bool dp_rx_intrabss_fwd_be(struct dp_soc *soc, struct dp_txrx_peer *ta_peer,
 			   uint8_t *rx_tlv_hdr, qdf_nbuf_t nbuf,
 			   struct hal_rx_msdu_metadata msdu_metadata)
 {
