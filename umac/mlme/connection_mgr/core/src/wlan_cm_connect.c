@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2012-2015, 2020-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -799,8 +799,8 @@ cm_inform_blm_connect_complete(struct wlan_objmgr_vdev *vdev,
 	}
 
 	if (QDF_IS_STATUS_SUCCESS(resp->connect_status))
-		wlan_blm_update_bssid_connect_params(pdev, resp->bssid,
-						     BLM_AP_CONNECTED);
+		wlan_dlm_update_bssid_connect_params(pdev, resp->bssid,
+						     DLM_AP_CONNECTED);
 
 	return QDF_STATUS_SUCCESS;
 }

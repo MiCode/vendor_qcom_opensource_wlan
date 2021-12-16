@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2013-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1097,19 +1098,19 @@ static QDF_STATUS send_set_base_macaddr_indicate_cmd_tlv(wmi_unified_t wmi_handl
 	return 0;
 }
 
-#if defined(WLAN_FEATURE_ROAM_OFFLOAD) && defined(FEATURE_BLACKLIST_MGR)
+#if defined(WLAN_FEATURE_ROAM_OFFLOAD) && defined(FEATURE_DENYLIST_MGR)
 
 static WMI_BSSID_DISALLOW_LIST_TYPE
-wmi_get_wmi_reject_ap_type(enum blm_reject_ap_type reject_ap_type)
+wmi_get_wmi_reject_ap_type(enum dlm_reject_ap_type reject_ap_type)
 {
 	switch (reject_ap_type) {
 	case USERSPACE_AVOID_TYPE:
 		return WMI_BSSID_DISALLOW_USER_SPACE_AVOID_LIST;
 	case DRIVER_AVOID_TYPE:
 		return WMI_BSSID_DISALLOW_DRIVER_AVOID_LIST;
-	case USERSPACE_BLACKLIST_TYPE:
+	case USERSPACE_DENYLIST_TYPE:
 		return WMI_BSSID_DISALLOW_USER_SPACE_BLACK_LIST;
-	case DRIVER_BLACKLIST_TYPE:
+	case DRIVER_DENYLIST_TYPE:
 		return WMI_BSSID_DISALLOW_DRIVER_BLACK_LIST;
 	case DRIVER_RSSI_REJECT_TYPE:
 		return WMI_BSSID_DISALLOW_RSSI_REJECT_LIST;
@@ -1119,7 +1120,7 @@ wmi_get_wmi_reject_ap_type(enum blm_reject_ap_type reject_ap_type)
 }
 
 static WMI_BLACKLIST_REASON_ID
-wmi_get_reject_reason(enum blm_reject_ap_reason reject_reason)
+wmi_get_reject_reason(enum dlm_reject_ap_reason reject_reason)
 {
 	switch(reject_reason) {
 	case REASON_NUD_FAILURE:

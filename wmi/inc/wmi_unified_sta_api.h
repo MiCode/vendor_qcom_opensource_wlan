@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2013-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -72,7 +73,7 @@ QDF_STATUS
 wmi_unified_vdev_set_gtx_cfg_cmd(wmi_unified_t wmi_handle, uint32_t if_id,
 				 struct wmi_gtx_config *gtx_info);
 
-#if defined(WLAN_FEATURE_ROAM_OFFLOAD) && defined(FEATURE_BLACKLIST_MGR)
+#if defined(WLAN_FEATURE_ROAM_OFFLOAD) && defined(FEATURE_DENYLIST_MGR)
 /**
  * wmi_unified_send_reject_ap_list() - send the reject ap list maintained by
  * BLM to FW for roaming cases.

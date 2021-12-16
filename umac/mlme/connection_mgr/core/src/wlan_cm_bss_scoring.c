@@ -1816,7 +1816,7 @@ void wlan_cm_calculate_bss_score(struct wlan_objmgr_pdev *pdev,
 	int pcl_chan_weight;
 	QDF_STATUS status;
 	struct psoc_phy_config *config;
-	enum cm_blacklist_action blacklist_action;
+	enum cm_denylist_action blacklist_action;
 	struct wlan_objmgr_psoc *psoc;
 	bool assoc_allowed;
 	struct scan_cache_node *force_connect_candidate = NULL;
@@ -1863,16 +1863,16 @@ void wlan_cm_calculate_bss_score(struct wlan_objmgr_pdev *pdev,
 						    scan_entry->entry);
 
 		if (assoc_allowed)
-			blacklist_action = wlan_blacklist_action_on_bssid(pdev,
+			blacklist_action = wlan_denylist_action_on_bssid(pdev,
 							scan_entry->entry);
 		else
-			blacklist_action = CM_BLM_FORCE_REMOVE;
+			blacklist_action = CM_DLM_FORCE_REMOVE;
 
-		if (blacklist_action == CM_BLM_NO_ACTION ||
-		    blacklist_action == CM_BLM_AVOID)
+		if (blacklist_action == CM_DLM_NO_ACTION ||
+		    blacklist_action == CM_DLM_AVOID)
 			are_all_candidate_blacklisted = false;
 
-		if (blacklist_action == CM_BLM_NO_ACTION &&
+		if (blacklist_action == CM_DLM_NO_ACTION &&
 		    pcl_lst && pcl_lst->num_of_pcl_channels &&
 		    scan_entry->entry->rssi_raw > CM_PCL_RSSI_THRESHOLD &&
 		    score_config->weight_config.pcl_weightage) {
@@ -1885,11 +1885,11 @@ void wlan_cm_calculate_bss_score(struct wlan_objmgr_pdev *pdev,
 			}
 		}
 
-		if (blacklist_action == CM_BLM_NO_ACTION ||
-		    (are_all_candidate_blacklisted && blacklist_action == CM_BLM_REMOVE)) {
+		if (blacklist_action == CM_DLM_NO_ACTION ||
+		    (are_all_candidate_blacklisted && blacklist_action == CM_DLM_REMOVE)) {
 			cm_calculate_bss_score(psoc, scan_entry->entry,
 					       pcl_chan_weight, bssid_hint);
-		} else if (blacklist_action == CM_BLM_AVOID) {
+		} else if (blacklist_action == CM_DLM_AVOID) {
 			/* add min score so that it is added back in the end */
 			scan_entry->entry->bss_score =
 					CM_AVOID_CANDIDATE_MIN_SCORE;
@@ -1909,7 +1909,7 @@ void wlan_cm_calculate_bss_score(struct wlan_objmgr_pdev *pdev,
 		 * then we keep a backup node and restore the candidate
 		 * list.
 		 */
-		if (blacklist_action == CM_BLM_REMOVE &&
+		if (blacklist_action == CM_DLM_REMOVE &&
 		    are_all_candidate_blacklisted) {
 			if (!force_connect_candidate) {
 				force_connect_candidate =
@@ -1942,11 +1942,11 @@ void wlan_cm_calculate_bss_score(struct wlan_objmgr_pdev *pdev,
 		}
 
 		/*
-		 * If CM_BLM_REMOVE ie blacklisted or assoc not allowed then
+		 * If CM_DLM_REMOVE ie blacklisted or assoc not allowed then
 		 * free the entry else add back to the list sorted
 		 */
-		if (blacklist_action == CM_BLM_REMOVE ||
-		    blacklist_action == CM_BLM_FORCE_REMOVE) {
+		if (blacklist_action == CM_DLM_REMOVE ||
+		    blacklist_action == CM_DLM_FORCE_REMOVE) {
 			if (assoc_allowed)
 				mlme_nofl_debug("Candidate("QDF_MAC_ADDR_FMT" freq %d): rssi %d, blm action %d is in Blacklist, remove entry",
 					QDF_MAC_ADDR_REF(scan_entry->entry->bssid.bytes),

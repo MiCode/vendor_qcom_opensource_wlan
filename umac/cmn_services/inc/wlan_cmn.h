@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -280,7 +280,7 @@
  * @WLAN_UMAC_COMP_ACTION_OUI:    ACTION OUI
  * @WLAN_UMAC_COMP_FWOL           FW Offload
  * @WLAN_UMAC_COMP_INTEROP_ISSUES_AP       interop issues ap component
- * @WLAN_UMAC_COMP_BLACKLIST_MGR:      Blacklist mgr component
+ * @WLAN_UMAC_COMP_DENYLIST_MGR:      Denylist mgr component
  * @WLAN_UMAC_COMP_COEX:          Coex config component
  * @WLAN_UMAC_COMP_FTM_TIME_SYNC: WLAN FTM TIMESYNC
  * @WLAN_UMAC_COMP_PKT_CAPTURE:   Packet capture component
@@ -331,7 +331,7 @@ enum wlan_umac_comp_id {
 	WLAN_UMAC_COMP_FWOL               = 29,
 	WLAN_UMAC_COMP_CFR                = 30,
 	WLAN_UMAC_COMP_INTEROP_ISSUES_AP  = 31,
-	WLAN_UMAC_COMP_BLACKLIST_MGR      = 32,
+	WLAN_UMAC_COMP_DENYLIST_MGR       = 32,
 	WLAN_UMAC_COMP_COEX               = 33,
 	WLAN_UMAC_COMP_FTM_TIME_SYNC      = 34,
 	WLAN_UMAC_COMP_PKT_CAPTURE        = 35,
