@@ -41,9 +41,6 @@
 #include "dp_txrx_wds.h"
 #endif
 
-/* Ring index for WBM2SW2 release ring */
-#define IPA_TX_COMP_RING_IDX HAL_IPA_TX_COMP_RING_IDX
-
 /* Hard coded config parameters until dp_ops_cfg.cfg_attach implemented */
 #define CFG_IPA_UC_TX_BUF_SIZE_DEFAULT            (2048)
 
@@ -436,7 +433,7 @@ static int dp_ipa_tx_alt_pool_attach(struct dp_soc *soc)
 	struct hal_srng *wbm_srng = (struct hal_srng *)
 			soc->tx_comp_ring[IPA_TX_ALT_COMP_RING_IDX].hal_srng;
 	struct hal_srng_params srng_params;
-	uint32_t wbm_sw0_bm_id = soc->wbm_sw0_bm_id;
+	uint32_t wbm_bm_id;
 	void *ring_entry;
 	int num_entries;
 	qdf_nbuf_t nbuf;
@@ -450,6 +447,9 @@ static int dp_ipa_tx_alt_pool_attach(struct dp_soc *soc)
 	 */
 	unsigned int uc_tx_buf_sz = CFG_IPA_UC_TX_BUF_SIZE_DEFAULT;
 	unsigned int alloc_size = uc_tx_buf_sz + ring_base_align - 1;
+
+	wbm_bm_id = wlan_cfg_get_rbm_id_for_index(soc->wlan_cfg_ctx,
+						  IPA_TX_ALT_RING_IDX);
 
 	hal_get_srng_params(soc->hal_soc,
 			    hal_srng_to_hal_ring_handle(wbm_srng),
@@ -508,8 +508,7 @@ static int dp_ipa_tx_alt_pool_attach(struct dp_soc *soc)
 		qdf_mem_dp_tx_skb_inc(qdf_nbuf_get_end_offset(nbuf));
 
 		hal_rxdma_buff_addr_info_set(soc->hal_soc, ring_entry,
-					     buffer_paddr, 0,
-					     HAL_WBM_SW4_BM_ID(wbm_sw0_bm_id));
+					     buffer_paddr, 0, wbm_bm_id);
 
 		soc->ipa_uc_tx_rsc_alt.tx_buf_pool_vaddr_unaligned[
 			tx_buffer_count] = (void *)nbuf;
@@ -1206,6 +1205,7 @@ static int dp_tx_ipa_uc_attach(struct dp_soc *soc, struct dp_pdev *pdev)
 	qdf_nbuf_t nbuf;
 	int retval = QDF_STATUS_SUCCESS;
 	int max_alloc_count = 0;
+	uint32_t wbm_bm_id;
 
 	/*
 	 * Uncomment when dp_ops_cfg.cfg_attach is implemented
@@ -1214,6 +1214,9 @@ static int dp_tx_ipa_uc_attach(struct dp_soc *soc, struct dp_pdev *pdev)
 	 */
 	unsigned int uc_tx_buf_sz = CFG_IPA_UC_TX_BUF_SIZE_DEFAULT;
 	unsigned int alloc_size = uc_tx_buf_sz + ring_base_align - 1;
+
+	wbm_bm_id = wlan_cfg_get_rbm_id_for_index(soc->wlan_cfg_ctx,
+						  IPA_TCL_DATA_RING_IDX);
 
 	hal_get_srng_params(soc->hal_soc, hal_srng_to_hal_ring_handle(wbm_srng),
 			    &srng_params);
@@ -1274,9 +1277,7 @@ static int dp_tx_ipa_uc_attach(struct dp_soc *soc, struct dp_pdev *pdev)
 		 * instead of hal soc ops.
 		 */
 		hal_rxdma_buff_addr_info_set(soc->hal_soc, ring_entry,
-					     buffer_paddr, 0,
-					     (IPA_TCL_DATA_RING_IDX +
-					      soc->wbm_sw0_bm_id));
+					     buffer_paddr, 0, wbm_bm_id);
 
 		soc->ipa_uc_tx_rsc.tx_buf_pool_vaddr_unaligned[tx_buffer_count]
 			= (void *)nbuf;

@@ -18,7 +18,15 @@
 #ifndef _DP_IPA_H_
 #define _DP_IPA_H_
 
+#if defined(QCA_WIFI_KIWI) || defined(QCA_WIFI_KIWI_V2)
+/* Index into soc->tcl_data_ring[] */
+#define IPA_TCL_DATA_RING_IDX	3
+#else
 #define IPA_TCL_DATA_RING_IDX	2
+#endif
+/* Index into soc->tx_comp_ring[] */
+#define IPA_TX_COMP_RING_IDX IPA_TCL_DATA_RING_IDX
+
 #ifdef IPA_OFFLOAD
 
 #define DP_IPA_MAX_IFACE	3
@@ -32,14 +40,21 @@
 #define TX_COMP_DRAIN_WAIT_TIMEOUT_MS	100
 
 #ifdef IPA_WDI3_TX_TWO_PIPES
+#if defined(QCA_WIFI_KIWI) || defined(QCA_WIFI_KIWI_V2)
+/* Index into soc->tcl_data_ring[] and soc->tx_comp_ring[] */
+#define IPA_TX_ALT_RING_IDX 4
+#define IPA_TX_ALT_COMP_RING_IDX IPA_TX_ALT_RING_IDX
+#else /* !KIWI */
 #define IPA_TX_ALT_RING_IDX 1
 /*
  * must be same as IPA_TX_ALT_RING_IDX as tcl and wbm ring
  * are initialized with same index as a pair.
  */
 #define IPA_TX_ALT_COMP_RING_IDX 1
+#endif /* KIWI */
+
 #define IPA_SESSION_ID_SHIFT 1
-#endif
+#endif /* IPA_WDI3_TX_TWO_PIPES */
 
 /**
  * struct dp_ipa_uc_tx_hdr - full tx header registered to IPA hardware
