@@ -136,6 +136,33 @@ void mlo_ap_get_vdev_list(struct wlan_objmgr_vdev *vdev,
 }
 
 /**
+ * mlo_ap_vdev_is_start_resp_rcvd() - Is start response received on this vdev
+ * @vdev: vdev pointer
+ *
+ * Return: SUCCESS if start response is received, ERROR otherwise.
+ */
+static QDF_STATUS mlo_ap_vdev_is_start_resp_rcvd(struct wlan_objmgr_vdev *vdev)
+{
+	enum wlan_vdev_state state;
+
+	if (!vdev) {
+		mlme_err("vdev is null");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	if (!wlan_vdev_mlme_is_mlo_ap(vdev))
+		return QDF_STATUS_E_FAILURE;
+
+	state = wlan_vdev_mlme_get_state(vdev);
+	if ((state == WLAN_VDEV_S_UP) ||
+	    (state == WLAN_VDEV_S_DFS_CAC_WAIT) ||
+	    (state == WLAN_VDEV_S_SUSPEND))
+		return QDF_STATUS_SUCCESS;
+
+	return QDF_STATUS_E_FAILURE;
+}
+
+/**
  * mlo_is_ap_vdev_up_allowed() - Is mlo ap allowed to come up
  * @vdev: vdev pointer
  *
@@ -157,10 +184,8 @@ static bool mlo_is_ap_vdev_up_allowed(struct wlan_objmgr_vdev *vdev)
 
 	mlo_dev_lock_acquire(dev_ctx);
 	for (i = 0; i < QDF_ARRAY_SIZE(dev_ctx->wlan_vdev_list); i++) {
-		if (dev_ctx->wlan_vdev_list[i] &&
-		    wlan_vdev_mlme_is_mlo_ap(dev_ctx->wlan_vdev_list[i]) &&
-		    QDF_IS_STATUS_SUCCESS(
-		    wlan_vdev_chan_config_valid(dev_ctx->wlan_vdev_list[i])))
+		if (QDF_IS_STATUS_SUCCESS(
+		    mlo_ap_vdev_is_start_resp_rcvd(dev_ctx->wlan_vdev_list[i])))
 			vdev_count++;
 	}
 
