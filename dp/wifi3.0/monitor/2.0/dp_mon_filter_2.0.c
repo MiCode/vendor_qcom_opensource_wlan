@@ -1063,7 +1063,9 @@ void dp_mon_filter_reset_tx_mon_mode_2_0(struct dp_pdev *pdev)
 	enum dp_mon_filter_srng_type srng_type =
 				DP_MON_FILTER_SRNG_TYPE_TXMON_DEST;
 	struct dp_mon_pdev *mon_pdev;
+	struct dp_mon_soc *mon_soc;
 	struct dp_mon_pdev_be *mon_pdev_be;
+	struct dp_mon_soc_be *mon_soc_be = NULL;
 
 	if (!pdev) {
 		dp_mon_filter_err("pdev Context is null");
@@ -1077,7 +1079,11 @@ void dp_mon_filter_reset_tx_mon_mode_2_0(struct dp_pdev *pdev)
 	}
 
 	mon_pdev = pdev->monitor_pdev;
+	mon_soc = soc->monitor_soc;
 	mon_pdev_be = (struct dp_mon_pdev_be *)mon_pdev;
+	mon_soc_be = (struct dp_mon_soc_be *)mon_soc;
+	mon_soc_be->tx_mon_ring_fill_level = DP_MON_RING_FILL_LEVEL_DEFAULT;
+	mon_soc_be->rx_mon_ring_fill_level = DP_MON_RING_FILL_LEVEL_DEFAULT;
 
 	mon_pdev_be->filter_be[mode][srng_type] = filter;
 }

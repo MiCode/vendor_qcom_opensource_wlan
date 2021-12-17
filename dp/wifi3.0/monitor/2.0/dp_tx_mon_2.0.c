@@ -149,13 +149,18 @@ dp_tx_mon_buf_desc_pool_alloc(struct dp_soc *soc)
 	struct dp_mon_desc_pool *tx_mon_desc_pool;
 	struct dp_soc_be *be_soc = dp_get_be_soc_from_dp_soc(soc);
 	struct dp_mon_soc_be *mon_soc = be_soc->monitor_soc_be;
+	int entries;
+	struct wlan_cfg_dp_soc_ctxt *soc_cfg_ctx;
+
+	soc_cfg_ctx = soc->wlan_cfg_ctx;
+
+	entries = wlan_cfg_get_dp_soc_tx_mon_buf_ring_size(soc_cfg_ctx);
 
 	mon_buf_ring = &mon_soc->tx_mon_buf_ring;
 
 	tx_mon_desc_pool = &mon_soc->tx_desc_mon;
 
-	return dp_mon_desc_pool_alloc(mon_soc->tx_mon_ring_fill_level,
-				      tx_mon_desc_pool);
+	return dp_mon_desc_pool_alloc(entries, tx_mon_desc_pool);
 }
 
 void
@@ -171,7 +176,7 @@ dp_tx_mon_buffers_free(struct dp_soc *soc)
 }
 
 QDF_STATUS
-dp_tx_mon_buffers_alloc(struct dp_soc *soc)
+dp_tx_mon_buffers_alloc(struct dp_soc *soc, uint32_t size)
 {
 	struct dp_srng *mon_buf_ring;
 	struct dp_mon_desc_pool *tx_mon_desc_pool;
@@ -186,6 +191,6 @@ dp_tx_mon_buffers_alloc(struct dp_soc *soc)
 
 	return dp_mon_buffers_replenish(soc, mon_buf_ring,
 					tx_mon_desc_pool,
-					mon_soc->tx_mon_ring_fill_level,
+					size,
 					&desc_list, &tail);
 }

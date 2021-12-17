@@ -29,7 +29,7 @@
  *         QDF_STATUS_E_FAILURE: Error
  */
 QDF_STATUS
-dp_rx_mon_buffers_alloc(struct dp_soc *soc);
+dp_rx_mon_buffers_alloc(struct dp_soc *soc, uint32_t size);
 
 /*
  * dp_rx_mon_buffers_free() - free rx monitor buffers

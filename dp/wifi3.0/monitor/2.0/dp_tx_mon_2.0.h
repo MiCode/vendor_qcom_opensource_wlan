@@ -29,7 +29,7 @@
  *         QDF_STATUS_E_FAILURE: Error
  */
 QDF_STATUS
-dp_tx_mon_buffers_alloc(struct dp_soc *soc);
+dp_tx_mon_buffers_alloc(struct dp_soc *soc, uint32_t size);
 
 /*
  * dp_tx_mon_buffers_free() - free tx monitor buffers

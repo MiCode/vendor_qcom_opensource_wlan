@@ -303,6 +303,39 @@ QDF_STATUS dp_mon_desc_pool_alloc(uint32_t pool_size,
 static
 void dp_vdev_set_monitor_mode_buf_rings_2_0(struct dp_pdev *pdev)
 {
+	int tx_mon_max_entries, rx_mon_max_entries;
+	struct wlan_cfg_dp_soc_ctxt *soc_cfg_ctx;
+	struct dp_soc *soc = pdev->soc;
+	struct dp_mon_soc *mon_soc;
+	struct dp_mon_soc_be *mon_soc_be = NULL;
+
+	mon_soc = soc->monitor_soc;
+	mon_soc_be = (struct dp_mon_soc_be *)mon_soc;
+	if (!mon_soc_be) {
+		dp_mon_err("DP MON SOC is NULL");
+		return;
+	}
+
+	soc_cfg_ctx = soc->wlan_cfg_ctx;
+	rx_mon_max_entries = wlan_cfg_get_dp_soc_rx_mon_buf_ring_size(soc_cfg_ctx);
+
+	if (dp_rx_mon_buffers_alloc(soc,
+				    (rx_mon_max_entries - mon_soc_be->tx_mon_ring_fill_level))) {
+		dp_mon_err("%pK: Rx mon buffers allocation failed", soc);
+		return;
+	}
+
+	tx_mon_max_entries = wlan_cfg_get_dp_soc_tx_mon_buf_ring_size(soc_cfg_ctx);
+	if (dp_tx_mon_buffers_alloc(soc,
+				    (tx_mon_max_entries - mon_soc_be->tx_mon_ring_fill_level))) {
+		dp_mon_err("%pK: Tx mon buffers allocation failed", soc);
+		return;
+	}
+
+	mon_soc_be->tx_mon_ring_fill_level +=
+				(tx_mon_max_entries - mon_soc_be->tx_mon_ring_fill_level);
+	mon_soc_be->rx_mon_ring_fill_level +=
+				(rx_mon_max_entries - mon_soc_be->rx_mon_ring_fill_level);
 }
 
 static
@@ -608,13 +641,13 @@ QDF_STATUS dp_mon_soc_attach_2_0(struct dp_soc *soc)
 		goto fail;
 	}
 
-	/* allocate and replenish initial buffers */
-	if (dp_rx_mon_buffers_alloc(soc)) {
+	/* monitor buffers for src */
+	if (dp_rx_mon_buffers_alloc(soc, DP_MON_RING_FILL_LEVEL_DEFAULT)) {
 		dp_mon_err("%pK: Rx mon buffers allocation failed", soc);
 		goto fail;
 	}
 
-	if (dp_tx_mon_buffers_alloc(soc)) {
+	if (dp_tx_mon_buffers_alloc(soc, DP_MON_RING_FILL_LEVEL_DEFAULT)) {
 		dp_mon_err("%pK: Tx mon buffers allocation failed", soc);
 		goto fail;
 	}
