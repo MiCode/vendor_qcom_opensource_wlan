@@ -3565,6 +3565,7 @@ void dp_link_desc_ring_replenish(struct dp_soc *soc, uint32_t mac_id)
 	struct qdf_mem_dma_page_t *dma_pages;
 	uint32_t offset = 0;
 	uint32_t count = 0;
+	uint32_t desc_id = 0;
 	void *desc_srng;
 	int link_desc_size = hal_get_link_desc_size(soc->hal_soc);
 	uint32_t *total_link_descs_addr;
@@ -3616,8 +3617,11 @@ void dp_link_desc_ring_replenish(struct dp_soc *soc, uint32_t mac_id)
 						     desc_srng)) &&
 			(count < total_link_descs)) {
 			page_idx = count / pages->num_element_per_page;
+			if (desc_id == pages->num_element_per_page)
+				desc_id = 0;
+
 			offset = count % pages->num_element_per_page;
-			cookie = LINK_DESC_COOKIE(count, page_idx,
+			cookie = LINK_DESC_COOKIE(desc_id, page_idx,
 						  soc->link_desc_id_start);
 
 			hal_set_link_desc_addr(soc->hal_soc, desc, cookie,
@@ -3625,6 +3629,7 @@ void dp_link_desc_ring_replenish(struct dp_soc *soc, uint32_t mac_id)
 					       + (offset * link_desc_size),
 					       soc->idle_link_bm_id);
 			count++;
+			desc_id++;
 		}
 		hal_srng_access_end_unlocked(soc->hal_soc, desc_srng);
 	} else {
@@ -3647,7 +3652,10 @@ void dp_link_desc_ring_replenish(struct dp_soc *soc, uint32_t mac_id)
 		while (count < total_link_descs) {
 			page_idx = count / num_descs_per_page;
 			offset = count % num_descs_per_page;
-			cookie = LINK_DESC_COOKIE(count, page_idx,
+			if (desc_id == pages->num_element_per_page)
+				desc_id = 0;
+
+			cookie = LINK_DESC_COOKIE(desc_id, page_idx,
 						  soc->link_desc_id_start);
 			hal_set_link_desc_addr(soc->hal_soc,
 					       (void *)scatter_buf_ptr,
@@ -3668,6 +3676,7 @@ void dp_link_desc_ring_replenish(struct dp_soc *soc, uint32_t mac_id)
 					 scatter_buf_num]);
 			}
 			count++;
+			desc_id++;
 		}
 		/* Setup link descriptor idle list in HW */
 		hal_setup_link_idle_list(soc->hal_soc,
