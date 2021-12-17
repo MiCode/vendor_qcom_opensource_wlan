@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2017-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -1231,11 +1232,9 @@ ucfg_scan_suspend_handler(struct wlan_objmgr_psoc *psoc, void *arg)
 		pdev = wlan_objmgr_get_pdev_by_id(psoc, i, WLAN_SCAN_ID);
 		if (!pdev)
 			continue;
-		if (wlan_get_pdev_status(pdev) !=
-		    SCAN_NOT_IN_PROGRESS) {
+		if (wlan_get_pdev_status(pdev) != SCAN_NOT_IN_PROGRESS)
 			status = scan_cancel_pdev_scan(pdev);
-			scm_disable_obss_pdev_scan(psoc, pdev);
-		}
+		scm_disable_obss_pdev_scan(psoc, pdev);
 		wlan_objmgr_pdev_release_ref(pdev, WLAN_SCAN_ID);
 		if (QDF_IS_STATUS_ERROR(status)) {
 			scm_err("failed to cancel scan for pdev_id %d", i);
