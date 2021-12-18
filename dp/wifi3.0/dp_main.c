@@ -8581,7 +8581,7 @@ void dp_aggregate_pdev_stats(struct dp_pdev *pdev)
 	qdf_mem_zero(&pdev->stats.rx_i, sizeof(pdev->stats.rx_i));
 
 	if (dp_monitor_is_enable_mcopy_mode(pdev))
-		DP_UPDATE_STATS(pdev, pdev->invalid_peer);
+		dp_monitor_invalid_peer_update_pdev_stats(soc, pdev);
 
 	qdf_spin_lock_bh(&pdev->vdev_list_lock);
 	TAILQ_FOREACH(vdev, &pdev->vdev_list, vdev_list_elem) {
@@ -10237,7 +10237,7 @@ dp_txrx_get_peer_stats_param(struct cdp_soc_t *soc, uint8_t vdev_id,
 			     uint8_t *peer_mac, enum cdp_peer_stats_type type,
 			     cdp_peer_stats_param_t *buf)
 {
-	QDF_STATUS ret = QDF_STATUS_SUCCESS;
+	QDF_STATUS ret;
 	struct dp_peer *peer = dp_peer_find_hash_find((struct dp_soc *)soc,
 						      peer_mac, 0, vdev_id,
 						      DP_MOD_ID_CDP);
@@ -10246,57 +10246,16 @@ dp_txrx_get_peer_stats_param(struct cdp_soc_t *soc, uint8_t vdev_id,
 		dp_peer_err("%pK: Invalid Peer for Mac " QDF_MAC_ADDR_FMT,
 			    soc, QDF_MAC_ADDR_REF(peer_mac));
 		return QDF_STATUS_E_FAILURE;
-	} else if (type < cdp_peer_stats_max) {
-		switch (type) {
-		case cdp_peer_tx_ucast:
-			buf->tx_ucast = peer->stats.tx.ucast;
-			break;
-		case cdp_peer_tx_mcast:
-			buf->tx_mcast = peer->stats.tx.mcast;
-			break;
-		case cdp_peer_tx_rate:
-			buf->tx_rate = peer->stats.tx.tx_rate;
-			break;
-		case cdp_peer_tx_last_tx_rate:
-			buf->last_tx_rate = peer->stats.tx.last_tx_rate;
-			break;
-		case cdp_peer_tx_inactive_time:
-			buf->tx_inactive_time = peer->stats.tx.inactive_time;
-			break;
-		case cdp_peer_tx_ratecode:
-			buf->tx_ratecode = peer->stats.tx.tx_ratecode;
-			break;
-		case cdp_peer_tx_flags:
-			buf->tx_flags = peer->stats.tx.tx_flags;
-			break;
-		case cdp_peer_tx_power:
-			buf->tx_power = peer->stats.tx.tx_power;
-			break;
-		case cdp_peer_rx_rate:
-			buf->rx_rate = peer->stats.rx.rx_rate;
-			break;
-		case cdp_peer_rx_last_rx_rate:
-			buf->last_rx_rate = peer->stats.rx.last_rx_rate;
-			break;
-		case cdp_peer_rx_ratecode:
-			buf->rx_ratecode = peer->stats.rx.rx_ratecode;
-			break;
-		case cdp_peer_rx_ucast:
-			buf->rx_ucast = peer->stats.rx.unicast;
-			break;
-		case cdp_peer_rx_flags:
-			buf->rx_flags = peer->stats.rx.rx_flags;
-			break;
-		case cdp_peer_rx_avg_snr:
-			buf->rx_avg_snr = peer->stats.rx.avg_snr;
-			break;
-		default:
-			dp_peer_err("%pK: Invalid value", soc);
-			ret = QDF_STATUS_E_FAILURE;
-			break;
-		}
+	}
+
+	if (type >= cdp_peer_per_pkt_stats_min &&
+	    type < cdp_peer_per_pkt_stats_max) {
+		ret = dp_txrx_get_peer_per_pkt_stats_param(peer, type, buf);
+	} else if (type >= cdp_peer_extd_stats_min &&
+		   type < cdp_peer_extd_stats_max) {
+		ret = dp_txrx_get_peer_extd_stats_param(peer, type, buf);
 	} else {
-		dp_peer_err("%pK: Invalid value", soc);
+		dp_err("%pK: Invalid stat type requested", soc);
 		ret = QDF_STATUS_E_FAILURE;
 	}
 

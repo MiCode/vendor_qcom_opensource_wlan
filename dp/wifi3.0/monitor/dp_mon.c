@@ -5144,6 +5144,68 @@ void dp_mon_peer_get_stats(struct dp_peer *peer, void *arg,
 		dp_mon_err("Invalid stats_update_type");
 	}
 }
+
+void dp_mon_invalid_peer_update_pdev_stats(struct dp_pdev *pdev)
+{
+	struct dp_mon_peer *mon_peer;
+	struct dp_mon_peer_stats *mon_peer_stats;
+	struct cdp_pdev_stats *pdev_stats;
+
+	if (!pdev || !pdev->monitor_pdev)
+		return;
+
+	mon_peer = pdev->monitor_pdev->invalid_mon_peer;
+	if (!mon_peer)
+		return;
+
+	mon_peer_stats = &mon_peer->stats;
+	pdev_stats = &pdev->stats;
+	DP_UPDATE_MON_STATS(pdev_stats, mon_peer_stats);
+}
+
+QDF_STATUS
+dp_mon_peer_get_stats_param(struct dp_peer *peer, enum cdp_peer_stats_type type,
+			    cdp_peer_stats_param_t *buf)
+{
+	QDF_STATUS ret = QDF_STATUS_SUCCESS;
+	struct dp_mon_peer *mon_peer;
+
+	mon_peer = peer->monitor_peer;
+	if (!mon_peer)
+		return QDF_STATUS_E_FAILURE;
+
+	switch (type) {
+	case cdp_peer_tx_rate:
+		buf->tx_rate = mon_peer->stats.tx.tx_rate;
+		break;
+	case cdp_peer_tx_last_tx_rate:
+		buf->last_tx_rate = mon_peer->stats.tx.last_tx_rate;
+		break;
+	case cdp_peer_tx_ratecode:
+		buf->tx_ratecode = mon_peer->stats.tx.tx_ratecode;
+		break;
+	case cdp_peer_rx_rate:
+		buf->rx_rate = mon_peer->stats.rx.rx_rate;
+		break;
+	case cdp_peer_rx_last_rx_rate:
+		buf->last_rx_rate = mon_peer->stats.rx.last_rx_rate;
+		break;
+	case cdp_peer_rx_ratecode:
+		buf->rx_ratecode = mon_peer->stats.rx.rx_ratecode;
+		break;
+	case cdp_peer_rx_avg_snr:
+		buf->rx_avg_snr = mon_peer->stats.rx.avg_snr;
+		break;
+	case cdp_peer_rx_snr:
+		buf->rx_snr = mon_peer->stats.rx.snr;
+		break;
+	default:
+		dp_err("Invalid stats type requested");
+		ret = QDF_STATUS_E_FAILURE;
+	}
+
+	return ret;
+}
 #endif
 
 void dp_mon_ops_register(struct dp_soc *soc)

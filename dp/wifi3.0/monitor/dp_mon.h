@@ -217,6 +217,27 @@ void dp_mon_peer_reset_stats(struct dp_peer *peer);
  */
 void dp_mon_peer_get_stats(struct dp_peer *peer, void *arg,
 			   enum cdp_stat_update_type type);
+
+/*
+ * dp_mon_invalid_peer_update_pdev_stats() - Update pdev stats from
+ *					invalid monitor peer
+ * @pdev: Datapath pdev handle
+ *
+ * Return: none
+ */
+void dp_mon_invalid_peer_update_pdev_stats(struct dp_pdev *pdev);
+
+/*
+ * dp_mon_peer_get_stats_param() - Get stats param value from monitor peer
+ * @peer: Datapath peer handle
+ * @type: Stats type requested
+ * @buf: Pointer to buffer for stats param
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS dp_mon_peer_get_stats_param(struct dp_peer *peer,
+				       enum cdp_peer_stats_type type,
+				       cdp_peer_stats_param_t *buf);
 #else
 static inline void dp_mon_peer_reset_stats(struct dp_peer *peer)
 {
@@ -226,6 +247,18 @@ static inline
 void dp_mon_peer_get_stats(struct dp_peer *peer, void *arg,
 			   enum cdp_stat_update_type type)
 {
+}
+
+static inline void dp_mon_invalid_peer_update_pdev_stats(struct dp_pdev *pdev)
+{
+}
+
+static inline
+QDF_STATUS dp_mon_peer_get_stats_param(struct dp_peer *peer,
+				       enum cdp_peer_stats_type type,
+				       cdp_peer_stats_param_t *buf)
+{
+	return QDF_STATUS_E_FAILURE;
 }
 #endif
 
@@ -482,6 +515,10 @@ struct dp_mon_ops {
 	void (*mon_peer_reset_stats)(struct dp_peer *peer);
 	void (*mon_peer_get_stats)(struct dp_peer *peer, void *arg,
 				   enum cdp_stat_update_type type);
+	void (*mon_invalid_peer_update_pdev_stats)(struct dp_pdev *pdev);
+	QDF_STATUS (*mon_peer_get_stats_param)(struct dp_peer *peer,
+					       enum cdp_peer_stats_type type,
+					       cdp_peer_stats_param_t *buf);
 	QDF_STATUS (*mon_config_debug_sniffer)(struct dp_pdev *pdev, int val);
 	void (*mon_flush_rings)(struct dp_soc *soc);
 #if !defined(DISABLE_MON_CONFIG)
@@ -1750,6 +1787,62 @@ void dp_monitor_peer_get_stats(struct dp_soc *soc, struct dp_peer *peer,
 	}
 
 	monitor_ops->mon_peer_get_stats(peer, arg, type);
+}
+
+/*
+ * dp_monitor_invalid_peer_update_pdev_stats() - Update pdev stats from
+ *						invalid monitor peer
+ * @soc: Datapath soc handle
+ * @pdev: Datapath pdev handle
+ *
+ * Return: none
+ */
+static inline
+void dp_monitor_invalid_peer_update_pdev_stats(struct dp_soc *soc,
+					       struct dp_pdev *pdev)
+{
+	struct dp_mon_ops *monitor_ops;
+	struct dp_mon_soc *mon_soc = soc->monitor_soc;
+
+	if (!mon_soc)
+		return;
+
+	monitor_ops = mon_soc->mon_ops;
+	if (!monitor_ops || !monitor_ops->mon_invalid_peer_update_pdev_stats) {
+		dp_mon_debug("callback not registered");
+		return;
+	}
+
+	monitor_ops->mon_invalid_peer_update_pdev_stats(pdev);
+}
+
+/*
+ * dp_monitor_peer_get_stats_param() - Get stats param value from monitor peer
+ * @soc: Datapath soc handle
+ * @peer: Datapath peer handle
+ * @type: Stats type requested
+ * @buf: Pointer to buffer for stats param
+ *
+ * Return: QDF_STATUS
+ */
+static inline QDF_STATUS
+dp_monitor_peer_get_stats_param(struct dp_soc *soc, struct dp_peer *peer,
+				enum cdp_peer_stats_type type,
+				cdp_peer_stats_param_t *buf)
+{
+	struct dp_mon_ops *monitor_ops;
+	struct dp_mon_soc *mon_soc = soc->monitor_soc;
+
+	if (!mon_soc)
+		return QDF_STATUS_E_FAILURE;
+
+	monitor_ops = mon_soc->mon_ops;
+	if (!monitor_ops || !monitor_ops->mon_peer_get_stats_param) {
+		dp_mon_debug("callback not registered");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	return monitor_ops->mon_peer_get_stats_param(peer, type, buf);
 }
 
 /*

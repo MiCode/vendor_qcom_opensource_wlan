@@ -998,6 +998,9 @@ struct dp_mon_ops monitor_ops_1_0 = {
 	.mon_peer_get_rdkstats_ctx = dp_mon_peer_get_rdkstats_ctx,
 	.mon_peer_reset_stats = dp_mon_peer_reset_stats,
 	.mon_peer_get_stats = dp_mon_peer_get_stats,
+	.mon_invalid_peer_update_pdev_stats =
+				dp_mon_invalid_peer_update_pdev_stats,
+	.mon_peer_get_stats_param = dp_mon_peer_get_stats_param,
 	.mon_flush_rings = dp_flush_monitor_rings,
 #if !defined(DISABLE_MON_CONFIG)
 	.mon_pdev_htt_srng_setup = dp_mon_htt_srng_setup_1_0,

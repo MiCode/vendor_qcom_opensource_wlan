@@ -247,6 +247,21 @@ void dp_monitor_peer_get_stats(struct dp_soc *soc, struct dp_peer *peer,
 {
 }
 
+static inline
+void dp_monitor_invalid_peer_update_pdev_stats(struct dp_soc *soc,
+					       struct dp_pdev *pdev)
+{
+}
+
+static inline
+QDF_STATUS dp_monitor_peer_get_stats_param(struct dp_soc *soc,
+					   struct dp_peer *peer,
+					   enum cdp_peer_stats_type type,
+					   cdp_peer_stats_param_t *buf)
+{
+	return QDF_STATUS_E_FAILURE;
+}
+
 static inline QDF_STATUS dp_monitor_pdev_init(struct dp_pdev *pdev)
 {
 	return QDF_STATUS_SUCCESS;
@@ -1235,6 +1250,28 @@ void dp_txrx_clear_tso_stats(struct dp_soc *soc)
 }
 #endif /* FEATURE_TSO_STATS */
 
+/* dp_txrx_get_peer_per_pkt_stats_param() - Get peer per pkt stats param
+ * @peer: DP peer handle
+ * @type: Requested stats type
+ * @ buf: Buffer to hold the value
+ *
+ * Return: status success/failure
+ */
+QDF_STATUS dp_txrx_get_peer_per_pkt_stats_param(struct dp_peer *peer,
+						enum cdp_peer_stats_type type,
+						cdp_peer_stats_param_t *buf);
+
+/* dp_txrx_get_peer_extd_stats_param() - Get peer extd stats param
+ * @peer: DP peer handle
+ * @type: Requested stats type
+ * @ buf: Buffer to hold the value
+ *
+ * Return: status success/failure
+ */
+QDF_STATUS dp_txrx_get_peer_extd_stats_param(struct dp_peer *peer,
+					     enum cdp_peer_stats_type type,
+					     cdp_peer_stats_param_t *buf);
+
 #define DP_HTT_T2H_HP_PIPE 5
 /**
  * dp_update_pdev_stats(): Update the pdev stats
@@ -1283,6 +1320,16 @@ void dp_update_pdev_ingress_stats(struct dp_pdev *tgtobj,
 void dp_update_vdev_stats(struct dp_soc *soc,
 			  struct dp_peer *srcobj,
 			  void *arg);
+
+/**
+ * dp_update_vdev_stats_on_peer_unmap() - Update the vdev stats on peer unmap
+ * @vdev: DP_VDEV handle
+ * @peer: DP_PEER handle
+ *
+ * Return: None
+ */
+void dp_update_vdev_stats_on_peer_unmap(struct dp_vdev *vdev,
+					struct dp_peer *peer);
 
 #define DP_UPDATE_STATS(_tgtobj, _srcobj)	\
 	do {				\
