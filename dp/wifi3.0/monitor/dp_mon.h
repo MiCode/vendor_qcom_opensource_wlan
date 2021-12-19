@@ -44,6 +44,11 @@
 #define dp_mon_debug(params...) QDF_TRACE_DEBUG(QDF_MODULE_ID_MON, params)
 #define dp_mon_warn(params...) QDF_TRACE_WARN(QDF_MODULE_ID_MON, params)
 
+#ifdef QCA_ENHANCED_STATS_SUPPORT
+typedef struct dp_peer_extd_tx_stats dp_mon_peer_tx_stats;
+typedef struct dp_peer_extd_rx_stats dp_mon_peer_rx_stats;
+#endif
+
 #ifndef WLAN_TX_PKT_CAPTURE_ENH
 struct dp_pdev_tx_capture {
 };
@@ -672,6 +677,43 @@ struct dp_mon_soc {
 #endif
 };
 
+/**
+ * struct dp_mon_peer_stats - Monitor peer stats
+ */
+struct dp_mon_peer_stats {
+#ifdef QCA_ENHANCED_STATS_SUPPORT
+	dp_mon_peer_tx_stats tx;
+	dp_mon_peer_rx_stats rx;
+#endif
+};
+
+struct dp_mon_peer {
+#ifdef WLAN_TX_PKT_CAPTURE_ENH
+	struct dp_peer_tx_capture tx_capture;
+#endif
+#ifdef FEATURE_PERPKT_INFO
+	/* delayed ba ppdu stats handling */
+	struct cdp_delayed_tx_completion_ppdu_user delayed_ba_ppdu_stats;
+	/* delayed ba flag */
+	bool last_delayed_ba;
+	/* delayed ba ppdu id */
+	uint32_t last_delayed_ba_ppduid;
+#endif
+	uint8_t tx_cap_enabled:1, /* Peer's tx-capture is enabled */
+		rx_cap_enabled:1; /* Peer's rx-capture is enabled */
+
+	/* Peer level flag to check peer based pktlog enabled or
+	 * disabled
+	 */
+	uint8_t peer_based_pktlog_filter;
+
+	/* Monitor peer stats */
+	struct dp_mon_peer_stats stats;
+
+	/* rdk statistics context */
+	struct cdp_peer_rate_stats_ctx *rdkstats_ctx;
+};
+
 struct  dp_mon_pdev {
 	/* monitor */
 	bool monitor_configured;
@@ -854,6 +896,9 @@ struct  dp_mon_pdev {
 #endif
 	bool is_tlv_hdr_64_bit;
 	enum dp_mon_filter_mode current_filter_mode;
+
+	/* Invalid monitor peer to account for stats in mcopy mode */
+	struct dp_mon_peer *invalid_mon_peer;
 };
 
 struct  dp_mon_vdev {
@@ -862,27 +907,6 @@ struct  dp_mon_vdev {
 #ifdef QCA_SUPPORT_SCAN_SPCL_VAP_STATS
 	struct cdp_scan_spcl_vap_stats *scan_spcl_vap_stats;
 #endif
-};
-
-struct dp_mon_peer {
-#ifdef WLAN_TX_PKT_CAPTURE_ENH
-	struct dp_peer_tx_capture tx_capture;
-#endif
-#ifdef FEATURE_PERPKT_INFO
-	/* delayed ba ppdu stats handling */
-	struct cdp_delayed_tx_completion_ppdu_user delayed_ba_ppdu_stats;
-	/* delayed ba flag */
-	bool last_delayed_ba;
-	/* delayed ba ppdu id */
-	uint32_t last_delayed_ba_ppduid;
-#endif
-	/* Peer level flag to check peer based pktlog enabled or
-	 * disabled
-	 */
-	uint8_t peer_based_pktlog_filter;
-
-	uint8_t tx_cap_enabled:1, /* Peer's tx-capture is enabled */
-		rx_cap_enabled:1; /* Peer's rx-capture is enabled */
 };
 
 #if defined(QCA_TX_CAPTURE_SUPPORT) || defined(QCA_ENHANCED_STATS_SUPPORT)

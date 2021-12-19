@@ -1174,25 +1174,31 @@ struct cdp_tso_stats {
 
 enum cdp_peer_stats_type {
 	cdp_peer_stats_min = CDP_PEER_STATS_START,
-
-	/* Tx types */
-	cdp_peer_tx_ucast = cdp_peer_stats_min,
+	/* Peer per pkt stats */
+	cdp_peer_per_pkt_stats_min = cdp_peer_stats_min,
+	cdp_peer_tx_ucast = cdp_peer_per_pkt_stats_min,
 	cdp_peer_tx_mcast,
-	cdp_peer_tx_rate,
-	cdp_peer_tx_last_tx_rate,
 	cdp_peer_tx_inactive_time,
+	cdp_peer_rx_ucast,
+	/* Add enum for peer per pkt stats before this */
+	cdp_peer_per_pkt_stats_max,
+
+	/* Peer extd stats */
+	cdp_peer_extd_stats_min,
+	cdp_peer_tx_rate = cdp_peer_extd_stats_min,
+	cdp_peer_tx_last_tx_rate,
 	cdp_peer_tx_ratecode,
 	cdp_peer_tx_flags,
 	cdp_peer_tx_power,
-
-	/* Rx types */
 	cdp_peer_rx_rate,
 	cdp_peer_rx_last_rx_rate,
 	cdp_peer_rx_ratecode,
-	cdp_peer_rx_ucast,
 	cdp_peer_rx_flags,
 	cdp_peer_rx_avg_snr,
-	cdp_peer_stats_max,
+	cdp_peer_rx_snr,
+	/* Add enum for peer extd stats before this */
+	cdp_peer_extd_stats_max,
+	cdp_peer_stats_max = cdp_peer_extd_stats_max,
 };
 
 /*
@@ -1218,6 +1224,7 @@ typedef union cdp_peer_stats_buf {
 	uint32_t rx_ratecode;
 	uint32_t rx_flags;
 	uint32_t rx_avg_snr;
+	uint32_t rx_snr;
 } cdp_peer_stats_param_t; /* Max union size 16 bytes */
 
 /**
@@ -1318,6 +1325,9 @@ struct protocol_trace_count {
  * @failed_retry_count: packets failed due to retry above 802.11 retry limit
  * @retry_count: packets successfully send after one or more retry
  * @multiple_retry_count: packets successfully sent after more than one retry
+ * @tx_ppdus: ppdus in tx
+ * @tx_mpdus_success: mpdus successful in tx
+ * @tx_mpdus_tried: mpdus tried in tx
  * @transmit_type: pkt info for tx transmit type
  * @mu_group_id: mumimo mu group id
  * @ru_start: RU start index
@@ -1423,6 +1433,9 @@ struct cdp_tx_stats {
 	uint32_t retry_count;
 	uint32_t multiple_retry_count;
 	uint32_t last_tx_rate_used;
+	uint32_t tx_ppdus;
+	uint32_t tx_mpdus_success;
+	uint32_t tx_mpdus_tried;
 
 	struct cdp_tx_pkt_info transmit_type[MAX_TRANSMIT_TYPES];
 	uint32_t mu_group_id[MAX_MU_GROUP_ID];
@@ -1532,7 +1545,7 @@ struct cdp_tx_stats {
  * @to_stack_twt: Total packets sent up the stack in TWT session
  * @mpdu_retry_cnt: retries of mpdu in rx
  * @su_be_ppdu_cnt: SU Rx packet count for BE
- * @rx_mu_be: MU rx packet count for BE
+ * @mu_be_ppdu_cnt: MU rx packet count for BE
  */
 struct cdp_rx_stats {
 	struct cdp_pkt_info to_stack;
@@ -1617,7 +1630,7 @@ struct cdp_rx_stats {
 	uint32_t mpdu_retry_cnt;
 #ifdef WLAN_FEATURE_11BE
 	struct cdp_pkt_type su_be_ppdu_cnt;
-	struct cdp_pkt_type rx_mu_be[TXRX_TYPE_MU_MAX];
+	struct cdp_pkt_type mu_be_ppdu_cnt[TXRX_TYPE_MU_MAX];
 #endif
 };
 
@@ -1758,6 +1771,51 @@ struct cdp_vdev_stats {
 	struct cdp_tso_stats tso_stats;
 };
 
+/* struct cdp_calibr_stats - Calibrated stats
+ * @last_per: Tx last packet error rate
+ * @tx_bytes_success_last: last Tx success bytes
+ * @tx_data_success_last: last Tx success data
+ * @tx_byte_rate: Bytes Trasmitted in last one sec
+ * @tx_data_rate: Data Transmitted in last one sec
+ * @tx_data_ucast_last: last unicast Tx bytes
+ * @tx_data_ucast_rate: last unicast Tx data
+ * @inactive_time: inactive time in secs
+ * @rx_bytes_success_last: last Rx success bytes
+ * @rx_data_success_last: last Rx success data
+ * @rx_byte_rate: Bytes received in last one sec
+ * @rx_data_rate: Data received in last one sec
+ */
+struct cdp_calibr_stats {
+	struct {
+		uint32_t last_per;
+		uint32_t tx_bytes_success_last;
+		uint32_t tx_data_success_last;
+		uint32_t tx_byte_rate;
+		uint32_t tx_data_rate;
+		uint32_t tx_data_ucast_last;
+		uint32_t tx_data_ucast_rate;
+		uint32_t inactive_time;
+	} tx;
+
+	struct {
+		uint32_t rx_bytes_success_last;
+		uint32_t rx_data_success_last;
+		uint32_t rx_byte_rate;
+		uint32_t rx_data_rate;
+	} rx;
+};
+
+/* struct cdp_calibr_stats_intf: Calibrated stats interface
+ * @to_stack: Total packets sent up the stack
+ * @tx_success: Successful Tx Packets
+ * @tx_ucast: Tx Unicast Packet Count
+ */
+struct cdp_calibr_stats_intf {
+	struct cdp_pkt_info to_stack;
+	struct cdp_pkt_info tx_success;
+	struct cdp_pkt_info tx_ucast;
+};
+
 /* struct cdp_peer_stats - peer stats structure
  * @tx: cdp tx stats
  * @rx: cdp rx stats
@@ -1800,6 +1858,7 @@ struct cdp_peer_tid_stats {
  * @per: per error rate
  * @ack_rssi: RSSI of the last ack received
  * @free_buff: free tx descriptor count
+ * @rx_avg_snr: Avg Rx SNR
  */
 struct cdp_interface_peer_stats {
 	uint8_t  peer_mac[QDF_MAC_ADDR_SIZE];
@@ -1815,6 +1874,7 @@ struct cdp_interface_peer_stats {
 	uint32_t per;
 	uint32_t ack_rssi;
 	uint32_t free_buff;
+	uint32_t rx_avg_snr;
 };
 
 /* struct cdp_interface_peer_qos_stats - interface structure for peer qos stats

@@ -866,9 +866,6 @@ struct dp_rx_tid {
 
 	/* Coex Override preserved windows size 1 based */
 	uint16_t rx_ba_win_size_override;
-
-	/* Peer TID statistics */
-	struct cdp_peer_tid_stats stats;
 };
 
 /**
@@ -2779,9 +2776,6 @@ struct dp_pdev {
 	struct cdp_tx_sojourn_stats sojourn_stats;
 	qdf_nbuf_t sojourn_buf;
 
-	/* peer pointer for collecting invalid peer stats */
-	struct dp_peer *invalid_peer;
-
 	union dp_rx_desc_list_elem_t *free_list_head;
 	union dp_rx_desc_list_elem_t *free_list_tail;
 	/* Cached peer_id from htt_peer_details_tlv */
@@ -3356,7 +3350,362 @@ struct dp_mld_link_peers {
 
 typedef void *dp_txrx_ref_handle;
 
-/* Peer structure for per packet path usage */
+/**
+ * struct dp_peer_per_pkt_tx_stats- Peer Tx stats updated in per pkt
+ *				Tx completion path
+ * @cdp_pkt_info ucast: Unicast Packet Count
+ * @cdp_pkt_info mcast: Multicast Packet Count
+ * @cdp_pkt_info bcast: Broadcast Packet Count
+ * @cdp_pkt_info nawds_mcast: NAWDS Multicast Packet Count
+ * @cdp_pkt_info tx_success: Successful Tx Packets
+ * @nawds_mcast_drop: NAWDS Multicast Drop Count
+ * @ofdma: Total Packets as ofdma
+ * @non_amsdu_cnt: Number of MSDUs with no MSDU level aggregation
+ * @amsdu_cnt: Number of MSDUs part of AMSDU
+ * @cdp_pkt_info fw_rem: Discarded by firmware
+ * @fw_rem_notx: firmware_discard_untransmitted
+ * @fw_rem_tx: firmware_discard_transmitted
+ * @age_out: aged out in mpdu/msdu queues
+ * @fw_reason1: discarded by firmware reason 1
+ * @fw_reason2: discarded by firmware reason 2
+ * @fw_reason3: discarded by firmware reason  3
+ * @failed_retry_count: packets failed due to retry above 802.11 retry limit
+ * @retry_count: packets successfully send after one or more retry
+ * @multiple_retry_count: packets successfully sent after more than one retry
+ * @no_ack_count: no ack pkt count for different protocols
+ * @tx_success_twt: Successful Tx Packets in TWT session
+ * @last_tx_ts: last timestamp in jiffies when tx comp occurred
+ * @avg_sojourn_msdu[CDP_DATA_TID_MAX]: Avg sojourn msdu stat
+ * @protocol_trace_cnt: per-peer protocol counter
+ */
+struct dp_peer_per_pkt_tx_stats {
+	struct cdp_pkt_info ucast;
+	struct cdp_pkt_info mcast;
+	struct cdp_pkt_info bcast;
+	struct cdp_pkt_info nawds_mcast;
+	struct cdp_pkt_info tx_success;
+	uint32_t nawds_mcast_drop;
+	uint32_t ofdma;
+	uint32_t non_amsdu_cnt;
+	uint32_t amsdu_cnt;
+	struct {
+		struct cdp_pkt_info fw_rem;
+		uint32_t fw_rem_notx;
+		uint32_t fw_rem_tx;
+		uint32_t age_out;
+		uint32_t fw_reason1;
+		uint32_t fw_reason2;
+		uint32_t fw_reason3;
+	} dropped;
+	uint32_t failed_retry_count;
+	uint32_t retry_count;
+	uint32_t multiple_retry_count;
+	uint32_t no_ack_count[QDF_PROTO_SUBTYPE_MAX];
+	struct cdp_pkt_info tx_success_twt;
+	unsigned long last_tx_ts;
+	qdf_ewma_tx_lag avg_sojourn_msdu[CDP_DATA_TID_MAX];
+#ifdef VDEV_PEER_PROTOCOL_COUNT
+	struct protocol_trace_count protocol_trace_cnt[CDP_TRACE_MAX];
+#endif
+};
+
+/**
+ * struct dp_peer_extd_tx_stats - Peer Tx stats updated in either
+ *	per pkt Tx completion path when macro QCA_ENHANCED_STATS_SUPPORT is
+ *	disabled or in HTT Tx PPDU completion path when macro is enabled
+ * @stbc: Packets in STBC
+ * @ldpc: Packets in LDPC
+ * @retries: Packet retries
+ * @pkt_type[DOT11_MAX]: pkt count for different .11 modes
+ * @wme_ac_type[WME_AC_MAX]: Wireless Multimedia type Count
+ * @excess_retries_per_ac[WME_AC_MAX]: Wireless Multimedia type Count
+ * @ampdu_cnt: completion of aggregation
+ * @non_ampdu_cnt: tx completion not aggregated
+ * @num_ppdu_cookie_valid: no. of valid ppdu cookies rcvd from FW
+ * @tx_ppdus: ppdus in tx
+ * @tx_mpdus_success: mpdus successful in tx
+ * @tx_mpdus_tried: mpdus tried in tx
+ * @tx_rate: Tx Rate
+ * @last_tx_rate: Last tx rate for unicast packets
+ * @last_tx_rate_mcs: Tx rate mcs for unicast packets
+ * @mcast_last_tx_rate: Last tx rate for multicast packets
+ * @mcast_last_tx_rate_mcs: Last tx rate mcs for multicast
+ * @rnd_avg_tx_rate: Rounded average tx rate
+ * @avg_tx_rate: Average TX rate
+ * @tx_ratecode: Tx rate code of last frame
+ * @pream_punct_cnt: Preamble Punctured count
+ * @sgi_count[MAX_GI]: SGI count
+ * @nss[SS_COUNT]: Packet count for different num_spatial_stream values
+ * @bw[MAX_BW]: Packet Count for different bandwidths
+ * @ru_start: RU start index
+ * @ru_tones: RU tones size
+ * @ru_loc: pkt info for RU location 26/ 52/ 106/ 242/ 484 counter
+ * @transmit_type: pkt info for tx transmit type
+ * @mu_group_id: mumimo mu group id
+ * @last_ack_rssi: RSSI of last acked packet
+ * @nss_info: NSS 1,2, ...8
+ * @mcs_info: MCS index
+ * @bw_info: Bandwidth
+ *       <enum 0 bw_20_MHz>
+ *       <enum 1 bw_40_MHz>
+ *       <enum 2 bw_80_MHz>
+ *       <enum 3 bw_160_MHz>
+ * @gi_info: <enum 0     0_8_us_sgi > Legacy normal GI
+ *       <enum 1     0_4_us_sgi > Legacy short GI
+ *       <enum 2     1_6_us_sgi > HE related GI
+ *       <enum 3     3_2_us_sgi > HE
+ * @preamble_info: preamble
+ * @retries_mpdu: mpdu number of successfully transmitted after retries
+ * @mpdu_success_with_retries: mpdu retry count in case of successful tx
+ * @su_be_ppdu_cnt: SU Tx packet count for 11BE
+ * @mu_be_ppdu_cnt[TXRX_TYPE_MU_MAX]: MU Tx packet count for 11BE
+ */
+struct dp_peer_extd_tx_stats {
+	uint32_t stbc;
+	uint32_t ldpc;
+	uint32_t retries;
+	struct cdp_pkt_type pkt_type[DOT11_MAX];
+	uint32_t wme_ac_type[WME_AC_MAX];
+	uint32_t excess_retries_per_ac[WME_AC_MAX];
+	uint32_t ampdu_cnt;
+	uint32_t non_ampdu_cnt;
+	uint32_t num_ppdu_cookie_valid;
+	uint32_t tx_ppdus;
+	uint32_t tx_mpdus_success;
+	uint32_t tx_mpdus_tried;
+
+	uint32_t tx_rate;
+	uint32_t last_tx_rate;
+	uint32_t last_tx_rate_mcs;
+	uint32_t mcast_last_tx_rate;
+	uint32_t mcast_last_tx_rate_mcs;
+	uint64_t rnd_avg_tx_rate;
+	uint64_t avg_tx_rate;
+	uint16_t tx_ratecode;
+
+	uint32_t sgi_count[MAX_GI];
+	uint32_t pream_punct_cnt;
+	uint32_t nss[SS_COUNT];
+	uint32_t bw[MAX_BW];
+	uint32_t ru_start;
+	uint32_t ru_tones;
+	struct cdp_tx_pkt_info ru_loc[MAX_RU_LOCATIONS];
+
+	struct cdp_tx_pkt_info transmit_type[MAX_TRANSMIT_TYPES];
+	uint32_t mu_group_id[MAX_MU_GROUP_ID];
+
+	uint32_t last_ack_rssi;
+
+	uint32_t nss_info:4,
+		 mcs_info:4,
+		 bw_info:4,
+		 gi_info:4,
+		 preamble_info:4;
+
+	uint32_t retries_mpdu;
+	uint32_t mpdu_success_with_retries;
+#ifdef WLAN_FEATURE_11BE
+	struct cdp_pkt_type su_be_ppdu_cnt;
+	struct cdp_pkt_type mu_be_ppdu_cnt[TXRX_TYPE_MU_MAX];
+#endif
+};
+
+/**
+ * struct dp_peer_per_pkt_rx_stats - Peer Rx stats updated in per pkt Rx path
+ * @rcvd_reo[CDP_MAX_RX_RINGS]: Packets received on the reo ring
+ * @unicast: Total unicast packets
+ * @multicast: Total multicast packets
+ * @bcast:  Broadcast Packet Count
+ * @raw: Raw Pakets received
+ * @nawds_mcast_drop: Total NAWDS multicast packets dropped
+ * @mec_drop: Total MEC packets dropped
+ * @last_rx_ts: last timestamp in jiffies when RX happened
+ * @intra_bss.pkts: Intra BSS packets received
+ * @intra_bss.fail: Intra BSS packets failed
+ * @intra_bss.mdns_no_fws: Intra BSS MDNS packets not forwarded
+ * @mic_err: Rx MIC errors CCMP
+ * @decrypt_err: Rx Decryption Errors CRC
+ * @fcserr: rx MIC check failed (CCMP)
+ * @pn_err: pn check failed
+ * @oor_err: Rx OOR errors
+ * @jump_2k_err: 2k jump errors
+ * @rxdma_wifi_parse_err: rxdma wifi parse errors
+ * @non_amsdu_cnt: Number of MSDUs with no MSDU level aggregation
+ * @amsdu_cnt: Number of MSDUs part of AMSDU
+ * @rx_retries: retries of packet in rx
+ * @multipass_rx_pkt_drop: Dropped multipass rx pkt
+ * @peer_unauth_rx_pkt_drop: Unauth rx packet drops
+ * @policy_check_drop: policy check drops
+ * @to_stack_twt: Total packets sent up the stack in TWT session
+ * @protocol_trace_cnt: per-peer protocol counters
+ */
+struct dp_peer_per_pkt_rx_stats {
+	struct cdp_pkt_info rcvd_reo[CDP_MAX_RX_RINGS];
+	struct cdp_pkt_info unicast;
+	struct cdp_pkt_info multicast;
+	struct cdp_pkt_info bcast;
+	struct cdp_pkt_info raw;
+	uint32_t nawds_mcast_drop;
+	struct cdp_pkt_info mec_drop;
+	unsigned long last_rx_ts;
+	struct {
+		struct cdp_pkt_info pkts;
+		struct cdp_pkt_info fail;
+		uint32_t mdns_no_fwd;
+	} intra_bss;
+	struct {
+		uint32_t mic_err;
+		uint32_t decrypt_err;
+		uint32_t fcserr;
+		uint32_t pn_err;
+		uint32_t oor_err;
+		uint32_t jump_2k_err;
+		uint32_t rxdma_wifi_parse_err;
+	} err;
+	uint32_t non_amsdu_cnt;
+	uint32_t amsdu_cnt;
+	uint32_t rx_retries;
+	uint32_t multipass_rx_pkt_drop;
+	uint32_t peer_unauth_rx_pkt_drop;
+	uint32_t policy_check_drop;
+	struct cdp_pkt_info to_stack_twt;
+#ifdef VDEV_PEER_PROTOCOL_COUNT
+	struct protocol_trace_count protocol_trace_cnt[CDP_TRACE_MAX];
+#endif
+};
+
+/**
+ * struct dp_peer_extd_rx_stats - Peer Rx stats updated in either
+ *	per pkt Rx path when macro QCA_ENHANCED_STATS_SUPPORT is disabled or in
+ *	Rx monitor patch when macro is enabled
+ * @pkt_type[DOT11_MAX]: pkt counter for different .11 modes
+ * @wme_ac_type[WME_AC_MAX]: Wireless Multimedia type Count
+ * @mpdu_cnt_fcs_ok: SU Rx success mpdu count
+ * @mpdu_cnt_fcs_err: SU Rx fail mpdu count
+ * @non_ampdu_cnt: Number of MSDUs with no MPDU level aggregation
+ * @ampdu_cnt: Number of MSDUs part of AMSPU
+ * @rx_mpdus: mpdu in rx
+ * @rx_ppdus: ppdu in rx
+ * @su_ax_ppdu_cnt: SU Rx packet count for .11ax
+ * @rx_mu[TXRX_TYPE_MU_MAX]: Rx MU stats
+ * @reception_type[MAX_RECEPTION_TYPES]: Reception type of packets
+ * @ppdu_cnt[MAX_RECEPTION_TYPES]: PPDU packet count in reception type
+ * @sgi_count[MAX_GI]: sgi count
+ * @nss[SS_COUNT]: packet count in spatiel Streams
+ * @ppdu_nss[SS_COUNT]: PPDU packet count in spatial streams
+ * @bw[MAX_BW]: Packet Count in different bandwidths
+ * @rx_mpdu_cnt[MAX_MCS]: rx mpdu count per MCS rate
+ * @rx_rate: Rx rate
+ * @last_rx_rate: Previous rx rate
+ * @rnd_avg_rx_rate: Rounded average rx rate
+ * @avg_rx_rate: Average Rx rate
+ * @rx_ratecode: Rx rate code of last frame
+ * @avg_snr: Average snr
+ * @rx_snr_measured_time: Time at which snr is measured
+ * @snr: SNR of received signal
+ * @last_snr: Previous snr
+ * @nss_info: NSS 1,2, ...8
+ * @mcs_info: MCS index
+ * @bw_info: Bandwidth
+ *       <enum 0 bw_20_MHz>
+ *       <enum 1 bw_40_MHz>
+ *       <enum 2 bw_80_MHz>
+ *       <enum 3 bw_160_MHz>
+ * @gi_info: <enum 0     0_8_us_sgi > Legacy normal GI
+ *       <enum 1     0_4_us_sgi > Legacy short GI
+ *       <enum 2     1_6_us_sgi > HE related GI
+ *       <enum 3     3_2_us_sgi > HE
+ * @preamble_info: preamble
+ * @mpdu_retry_cnt: retries of mpdu in rx
+ * @su_be_ppdu_cnt: SU Rx packet count for BE
+ * @mu_be_ppdu_cnt[TXRX_TYPE_MU_MAX]: MU rx packet count for BE
+ */
+struct dp_peer_extd_rx_stats {
+	struct cdp_pkt_type pkt_type[DOT11_MAX];
+	uint32_t wme_ac_type[WME_AC_MAX];
+	uint32_t mpdu_cnt_fcs_ok;
+	uint32_t mpdu_cnt_fcs_err;
+	uint32_t non_ampdu_cnt;
+	uint32_t ampdu_cnt;
+	uint32_t rx_mpdus;
+	uint32_t rx_ppdus;
+
+	struct cdp_pkt_type su_ax_ppdu_cnt;
+	struct cdp_rx_mu rx_mu[TXRX_TYPE_MU_MAX];
+	uint32_t reception_type[MAX_RECEPTION_TYPES];
+	uint32_t ppdu_cnt[MAX_RECEPTION_TYPES];
+
+	uint32_t sgi_count[MAX_GI];
+	uint32_t nss[SS_COUNT];
+	uint32_t ppdu_nss[SS_COUNT];
+	uint32_t bw[MAX_BW];
+	uint32_t rx_mpdu_cnt[MAX_MCS];
+
+	uint32_t rx_rate;
+	uint32_t last_rx_rate;
+	uint32_t rnd_avg_rx_rate;
+	uint32_t avg_rx_rate;
+	uint32_t rx_ratecode;
+
+	uint32_t avg_snr;
+	uint32_t rx_snr_measured_time;
+	uint8_t snr;
+	uint8_t last_snr;
+
+	uint32_t nss_info:4,
+		 mcs_info:4,
+		 bw_info:4,
+		 gi_info:4,
+		 preamble_info:4;
+
+	uint32_t mpdu_retry_cnt;
+#ifdef WLAN_FEATURE_11BE
+	struct cdp_pkt_type su_be_ppdu_cnt;
+	struct cdp_pkt_type mu_be_ppdu_cnt[TXRX_TYPE_MU_MAX];
+#endif
+};
+
+/**
+ * struct dp_peer_per_pkt_stats - Per pkt stats for peer
+ * @tx: Per pkt Tx stats
+ * @rx: Per pkt Rx stats
+ */
+struct dp_peer_per_pkt_stats {
+	struct dp_peer_per_pkt_tx_stats tx;
+	struct dp_peer_per_pkt_rx_stats rx;
+};
+
+/**
+ * struct dp_peer_extd_stats - Stats from extended path for peer
+ * @tx: Extended path tx stats
+ * @rx: Extended path rx stats
+ */
+struct dp_peer_extd_stats {
+	struct dp_peer_extd_tx_stats tx;
+	struct dp_peer_extd_rx_stats rx;
+};
+
+/**
+ * struct dp_peer_stats - Peer stats
+ * @per_pkt_stats: Per packet path stats
+ * @extd_stats: Extended path stats
+ */
+struct dp_peer_stats {
+	struct dp_peer_per_pkt_stats per_pkt_stats;
+#ifndef QCA_ENHANCED_STATS_SUPPORT
+	struct dp_peer_extd_stats extd_stats;
+#endif
+};
+
+/**
+ * struct dp_txrx_peer: DP txrx_peer strcuture used in per pkt path
+ * @tx_failed: Total Tx failure
+ * @cdp_pkt_info comp_pkt: Pkt Info for which completions were received
+ * @to_stack: Total packets sent up the stack
+ * @stats: Peer stats
+ * @delay_stats: Peer delay stats
+ * @jitter_stats: Peer jitter stats
+ */
 struct dp_txrx_peer {
 	/* Core TxRx Peer */
 
@@ -3374,7 +3723,12 @@ struct dp_txrx_peer {
 	uint32_t tx_failed;
 	struct cdp_pkt_info comp_pkt;
 	struct cdp_pkt_info to_stack;
+
+	struct dp_peer_stats stats;
+
 	struct dp_peer_delay_stats *delay_stats;
+
+	struct cdp_peer_tid_stats *jitter_stats;
 
 	struct {
 		enum cdp_sec_type sec_type;
@@ -3455,8 +3809,8 @@ struct dp_peer {
 	enum ol_txrx_peer_state state;
 	qdf_spinlock_t peer_info_lock;
 
-	/* Peer Stats */
-	struct cdp_peer_stats stats;
+	/* Peer calibrated stats */
+	struct cdp_calibr_stats stats;
 
 	TAILQ_HEAD(, dp_ast_entry) ast_entry_list;
 	/* TBD */
@@ -3473,11 +3827,6 @@ struct dp_peer {
 	 */
 	uint8_t kill_256_sessions;
 	qdf_atomic_t is_default_route_set;
-
-	/* rdk statistics context */
-	struct cdp_peer_rate_stats_ctx *rdkstats_ctx;
-	/* average sojourn time */
-	qdf_ewma_tx_lag avg_sojourn_msdu[CDP_DATA_TID_MAX];
 
 #ifdef QCA_PEER_MULTIQ_SUPPORT
 	struct dp_peer_ast_params peer_ast_flowq_idx[DP_PEER_AST_FLOWQ_MAX];
