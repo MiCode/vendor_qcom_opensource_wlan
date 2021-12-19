@@ -1430,6 +1430,103 @@ QDF_STATUS dp_peer_mlo_setup(
 			uint8_t vdev_id,
 			struct cdp_peer_setup_info *setup_info);
 
+/**
+ * dp_get_tgt_peer_from_peer() - Get target peer from the given peer
+ * @peer: datapath peer
+ *
+ * Return: MLD peer in case of MLO Link peer
+ *	   Peer itself in other cases
+ */
+static inline
+struct dp_peer *dp_get_tgt_peer_from_peer(struct dp_peer *peer)
+{
+	return IS_MLO_DP_LINK_PEER(peer) ? peer->mld_peer : peer;
+}
+
+/**
+ * dp_get_primary_link_peer_by_id(): Get primary link peer from the given
+ *					peer id
+ * @soc: core DP soc context
+ * @peer_id: peer id
+ * @mod_id: ID of module requesting reference
+ *
+ * Return: primary link peer for the MLO peer
+ *	   legacy peer itself in case of legacy peer
+ */
+static inline
+struct dp_peer *dp_get_primary_link_peer_by_id(struct dp_soc *soc,
+					       uint16_t peer_id,
+					       enum dp_mod_id mod_id)
+{
+	uint8_t i;
+	struct dp_mld_link_peers link_peers_info;
+	struct dp_peer *peer;
+	struct dp_peer *link_peer;
+	struct dp_peer *primary_peer = NULL;
+
+	peer = dp_peer_get_ref_by_id(soc, peer_id, mod_id);
+
+	if (!peer)
+		return NULL;
+
+	if (IS_MLO_DP_MLD_PEER(peer)) {
+		/* get link peers with reference */
+		dp_get_link_peers_ref_from_mld_peer(soc, peer, &link_peers_info,
+						    mod_id);
+
+		for (i = 0; i < link_peers_info.num_links; i++) {
+			link_peer = link_peers_info.link_peers[i];
+			if (link_peer->primary_link) {
+				primary_peer = link_peer;
+				/*
+				 * Take additional reference over
+				 * primary link peer.
+				 */
+				dp_peer_get_ref(NULL, primary_peer, mod_id);
+				break;
+			}
+		}
+		/* release link peers reference */
+		dp_release_link_peers_ref(&link_peers_info, mod_id);
+		dp_peer_unref_delete(peer, mod_id);
+	} else {
+		primary_peer = peer;
+	}
+
+	return primary_peer;
+}
+
+/**
+ * dp_get_txrx_peer() - Get dp_txrx_peer from passed dp_peer
+ * @peer: Datapath peer
+ *
+ * Return: dp_txrx_peer from MLD peer if peer type is link peer
+ *	   dp_txrx_peer from peer itself for other cases
+ */
+static inline
+struct dp_txrx_peer *dp_get_txrx_peer(struct dp_peer *peer)
+{
+	return IS_MLO_DP_LINK_PEER(peer) ?
+				peer->mld_peer->txrx_peer : peer->txrx_peer;
+}
+
+/**
+ * dp_peer_is_primary_link_peer() - Check if peer is primary link peer
+ * @peer: Datapath peer
+ *
+ * Return: true if peer is primary link peer or legacy peer
+ *	   false otherwise
+ */
+static inline
+bool dp_peer_is_primary_link_peer(struct dp_peer *peer)
+{
+	if (IS_MLO_DP_LINK_PEER(peer) && peer->primary_link)
+		return true;
+	else if (IS_DP_LEGACY_PEER(peer))
+		return true;
+	else
+		return false;
+}
 #else
 #define DP_PEER_SET_TYPE(_peer, _type_val) /* no op */
 /* is legacy peer */
@@ -1509,6 +1606,32 @@ dp_link_peer_hash_find_by_chip_id(struct dp_soc *soc,
 	return dp_peer_find_hash_find(soc, peer_mac_addr,
 				      mac_addr_is_aligned,
 				      vdev_id, mod_id);
+}
+
+static inline
+struct dp_peer *dp_get_tgt_peer_from_peer(struct dp_peer *peer)
+{
+	return peer;
+}
+
+static inline
+struct dp_peer *dp_get_primary_link_peer_by_id(struct dp_soc *soc,
+					       uint16_t peer_id,
+					       enum dp_mod_id mod_id)
+{
+	return dp_peer_get_ref_by_id(soc, peer_id, mod_id);
+}
+
+static inline
+struct dp_txrx_peer *dp_get_txrx_peer(struct dp_peer *peer)
+{
+	return peer->txrx_peer;
+}
+
+static inline
+bool dp_peer_is_primary_link_peer(struct dp_peer *peer)
+{
+	return true;
 }
 #endif /* WLAN_FEATURE_11BE_MLO */
 
