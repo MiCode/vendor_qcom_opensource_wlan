@@ -1404,7 +1404,8 @@ dp_rx_null_q_desc_handle(struct dp_soc *soc, qdf_nbuf_t nbuf,
 	if ((!soc->mec_fw_offload) &&
 	    dp_rx_mcast_echo_check(soc, txrx_peer, rx_tlv_hdr, nbuf)) {
 		/* this is a looped back MCBC pkt, drop it */
-		DP_STATS_INC_PKT(peer, rx.mec_drop, 1, qdf_nbuf_len(nbuf));
+		DP_PEER_PER_PKT_STATS_INC_PKT(txrx_peer, rx.mec_drop, 1,
+					      qdf_nbuf_len(nbuf));
 		goto drop_nbuf;
 	}
 
@@ -1414,7 +1415,8 @@ dp_rx_null_q_desc_handle(struct dp_soc *soc, qdf_nbuf_t nbuf,
 	 * from any proxysta.
 	 */
 	if (check_qwrap_multicast_loopback(vdev, nbuf)) {
-		DP_STATS_INC_PKT(peer, rx.mec_drop, 1, qdf_nbuf_len(nbuf));
+		DP_PEER_PER_PKT_STATS_INC_PKT(txrx_peer, rx.mec_drop, 1,
+					      qdf_nbuf_len(nbuf));
 		goto drop_nbuf;
 	}
 
@@ -1423,13 +1425,13 @@ dp_rx_null_q_desc_handle(struct dp_soc *soc, qdf_nbuf_t nbuf,
 			 hal_rx_msdu_end_da_is_mcbc_get(soc->hal_soc,
 							rx_tlv_hdr))) {
 		dp_err_rl("free buffer for multicast packet");
-		DP_STATS_INC(peer, rx.nawds_mcast_drop, 1);
+		DP_PEER_PER_PKT_STATS_INC(txrx_peer, rx.nawds_mcast_drop, 1);
 		goto drop_nbuf;
 	}
 
 	if (!dp_wds_rx_policy_check(rx_tlv_hdr, vdev, txrx_peer)) {
 		dp_err_rl("mcast Policy Check Drop pkt");
-		DP_STATS_INC(peer, rx.policy_check_drop, 1);
+		DP_PEER_PER_PKT_STATS_INC(txrx_peer, rx.policy_check_drop, 1);
 		goto drop_nbuf;
 	}
 	/* WDS Source Port Learning */
@@ -1440,6 +1442,7 @@ dp_rx_null_q_desc_handle(struct dp_soc *soc, qdf_nbuf_t nbuf,
 					msdu_metadata);
 
 	if (hal_rx_is_unicast(soc->hal_soc, rx_tlv_hdr)) {
+		struct dp_peer *peer;
 		tid = hal_rx_tid_get(soc->hal_soc, rx_tlv_hdr);
 		peer = dp_peer_get_ref_by_id(soc, txrx_peer->peer_id,
 					     DP_MOD_ID_RX_ERR);
@@ -1510,7 +1513,8 @@ dp_rx_null_q_desc_handle(struct dp_soc *soc, qdf_nbuf_t nbuf,
 					    enh_flag);
 
 			if (QDF_IS_ADDR_BROADCAST(eh->ether_dhost))
-				DP_PEER_BC_INCC_PKT(peer, 1, qdf_nbuf_len(nbuf),
+				DP_PEER_BC_INCC_PKT(txrx_peer, 1,
+						    qdf_nbuf_len(nbuf),
 						    enh_flag);
 		}
 
@@ -1669,10 +1673,11 @@ process_rx:
 		eh = (qdf_ether_header_t *)qdf_nbuf_data(nbuf);
 		is_broadcast = (QDF_IS_ADDR_BROADCAST
 				(eh->ether_dhost)) ? 1 : 0 ;
-		DP_STATS_INC_PKT(peer, rx.multicast, 1, qdf_nbuf_len(nbuf));
+		DP_PEER_PER_PKT_STATS_INC_PKT(txrx_peer, rx.multicast, 1,
+					      qdf_nbuf_len(nbuf));
 		if (is_broadcast) {
-			DP_STATS_INC_PKT(peer, rx.bcast, 1,
-					qdf_nbuf_len(nbuf));
+			DP_PEER_PER_PKT_STATS_INC_PKT(txrx_peer, rx.bcast, 1,
+						      qdf_nbuf_len(nbuf));
 		}
 	}
 
@@ -1684,7 +1689,7 @@ process_rx:
 					  EXCEPTION_DEST_RING_ID, true, true);
 		/* Update the flow tag in SKB based on FSE metadata */
 		dp_rx_update_flow_tag(soc, vdev, nbuf, rx_tlv_hdr, true);
-		DP_STATS_FLAT_INC(txrx_peer, to_stack.num, 1);
+		DP_PEER_STATS_FLAT_INC(txrx_peer, to_stack.num, 1);
 		qdf_nbuf_set_exc_frame(nbuf, 1);
 		dp_rx_deliver_to_stack(soc, vdev, txrx_peer, nbuf, NULL);
 	}
@@ -2760,10 +2765,10 @@ done:
 				/* TODO */
 				/* Add per error code accounting */
 				case HAL_REO_ERR_REGULAR_FRAME_2K_JUMP:
-					if (peer)
-						DP_STATS_INC(peer,
-							     rx.err.jump_2k_err,
-							     1);
+					if (txrx_peer)
+						DP_PEER_PER_PKT_STATS_INC(txrx_peer,
+									  rx.err.jump_2k_err,
+									  1);
 
 					pool_id = wbm_err_info.pool_id;
 
@@ -2782,8 +2787,9 @@ done:
 					break;
 				case HAL_REO_ERR_REGULAR_FRAME_OOR:
 					if (txrx_peer)
-						DP_STATS_INC(peer,
-							     rx.err.oor_err, 1);
+						DP_PEER_PER_PKT_STATS_INC(txrx_peer,
+									  rx.err.oor_err,
+									  1);
 					if (hal_rx_msdu_end_first_msdu_get(soc->hal_soc,
 									   rx_tlv_hdr)) {
 						tid =
@@ -2811,8 +2817,9 @@ done:
 				case HAL_REO_ERR_PN_CHECK_FAILED:
 				case HAL_REO_ERR_PN_ERROR_HANDLING_FLAG_SET:
 					if (txrx_peer)
-						DP_STATS_INC(txrx_peer,
-							     rx.err.pn_err, 1);
+						DP_PEER_PER_PKT_STATS_INC(txrx_peer,
+									  rx.err.pn_err,
+									  1);
 					dp_rx_nbuf_free(nbuf);
 					break;
 
@@ -2851,10 +2858,10 @@ done:
 				case HAL_RXDMA_ERR_UNENCRYPTED:
 
 				case HAL_RXDMA_ERR_WIFI_PARSE:
-					if (peer)
-						DP_STATS_INC(peer,
-							     rx.err.rxdma_wifi_parse_err,
-							     1);
+					if (txrx_peer)
+						DP_PEER_PER_PKT_STATS_INC(txrx_peer,
+									  rx.err.rxdma_wifi_parse_err,
+									  1);
 
 					pool_id = wbm_err_info.pool_id;
 					dp_rx_process_rxdma_err(soc, nbuf,
@@ -2870,14 +2877,17 @@ done:
 								rx_tlv_hdr,
 								txrx_peer);
 					if (txrx_peer)
-						DP_STATS_INC(peer, rx.err.mic_err, 1);
+						DP_PEER_PER_PKT_STATS_INC(txrx_peer,
+									  rx.err.mic_err,
+									  1);
 					break;
 
 				case HAL_RXDMA_ERR_DECRYPT:
 
 					if (txrx_peer) {
-						DP_STATS_INC(peer, rx.err.
-							     decrypt_err, 1);
+						DP_PEER_PER_PKT_STATS_INC(txrx_peer,
+									  rx.err.decrypt_err,
+									  1);
 						dp_rx_nbuf_free(nbuf);
 						break;
 					}
@@ -2896,8 +2906,10 @@ done:
 								pool_id);
 					break;
 				case HAL_RXDMA_MULTICAST_ECHO:
-					DP_STATS_INC_PKT(peer, rx.mec_drop, 1,
-							 qdf_nbuf_len(nbuf));
+					if (txrx_peer)
+						DP_PEER_PER_PKT_STATS_INC_PKT(txrx_peer,
+									      rx.mec_drop, 1,
+									      qdf_nbuf_len(nbuf));
 					dp_rx_nbuf_free(nbuf);
 					break;
 				case HAL_RXDMA_UNAUTHORIZED_WDS:

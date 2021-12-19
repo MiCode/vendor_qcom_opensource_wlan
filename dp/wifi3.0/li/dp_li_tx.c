@@ -193,10 +193,10 @@ void dp_tx_process_htt_completion_li(struct dp_soc *soc,
 						       &txrx_ref_handle,
 						       DP_MOD_ID_HTT_COMP);
 		if (qdf_likely(txrx_peer)) {
-			DP_STATS_FLAT_INC_PKT(txrx_peer, comp_pkt, 1,
-					      qdf_nbuf_len(tx_desc->nbuf));
-			DP_STATS_FLAT_INC(txrx_peer, tx_failed, 1,
-					  tx_status != HTT_TX_FW2WBM_TX_STATUS_OK);
+			DP_PEER_STATS_FLAT_INC_PKT(txrx_peer, comp_pkt, 1,
+						   qdf_nbuf_len(tx_desc->nbuf));
+			if (tx_status != HTT_TX_FW2WBM_TX_STATUS_OK)
+				DP_PEER_STATS_FLAT_INC(txrx_peer, tx_failed, 1);
 		}
 
 		dp_tx_comp_process_tx_status(soc, tx_desc, &ts, txrx_peer,

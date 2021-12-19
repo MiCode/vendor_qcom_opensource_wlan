@@ -4458,17 +4458,18 @@ static QDF_STATUS dp_peer_stats_update_protocol_test_cnt(struct dp_vdev *vdev,
 
 void dp_vdev_peer_stats_update_protocol_cnt(struct dp_vdev *vdev,
 					    qdf_nbuf_t nbuf,
-					    struct dp_peer *peer,
+					    struct dp_txrx_peer *txrx_peer,
 					    bool is_egress,
 					    bool is_rx)
 {
-	struct cdp_peer_stats *peer_stats;
+	struct dp_peer_per_pkt_stats *per_pkt_stats;
 	struct protocol_trace_count *protocol_trace_cnt;
 	enum cdp_protocol_trace prot;
 	struct dp_soc *soc;
 	struct ether_header *eh;
 	char *mac;
 	bool new_peer_ref = false;
+	struct dp_peer *peer = NULL;
 
 	if (qdf_likely(!vdev->peer_protocol_count_track))
 		return;
@@ -4485,14 +4486,18 @@ void dp_vdev_peer_stats_update_protocol_cnt(struct dp_vdev *vdev,
 	else
 		mac = eh->ether_dhost;
 
-	if (!peer) {
+	if (!txrx_peer) {
 		peer = dp_peer_find_hash_find(soc, mac, 0, vdev->vdev_id,
 					      DP_MOD_ID_GENERIC_STATS);
 		new_peer_ref = true;
 		if (!peer)
 			return;
+
+		txrx_peer = peer->txrx_peer;
+		if (!txrx_peer)
+			goto dp_vdev_peer_stats_update_protocol_cnt_free_peer;
 	}
-	peer_stats = &peer->stats;
+	per_pkt_stats = &txrx_peer->stats.per_pkt_stats;
 
 	if (qdf_nbuf_is_icmp_pkt(nbuf) == true)
 		prot = CDP_TRACE_ICMP;
@@ -4504,9 +4509,9 @@ void dp_vdev_peer_stats_update_protocol_cnt(struct dp_vdev *vdev,
 		goto dp_vdev_peer_stats_update_protocol_cnt_free_peer;
 
 	if (is_rx)
-		protocol_trace_cnt = peer_stats->rx.protocol_trace_cnt;
+		protocol_trace_cnt = per_pkt_stats->rx.protocol_trace_cnt;
 	else
-		protocol_trace_cnt = peer_stats->tx.protocol_trace_cnt;
+		protocol_trace_cnt = per_pkt_stats->tx.protocol_trace_cnt;
 
 	if (is_egress)
 		protocol_trace_cnt[prot].egress_cnt++;

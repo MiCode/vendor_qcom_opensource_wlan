@@ -3151,8 +3151,9 @@ void dp_tx_nawds_handler(struct dp_soc *soc, struct dp_vdev *vdev,
 			 */
 			if (sa_peer_id == peer->peer_id) {
 				dp_tx_debug("multicast packet");
-				DP_STATS_INC(peer, tx.nawds_mcast_drop,
-					     1);
+				DP_PEER_PER_PKT_STATS_INC(txrx_peer,
+							  tx.nawds_mcast_drop,
+							  1);
 				continue;
 			}
 
@@ -3173,9 +3174,11 @@ void dp_tx_nawds_handler(struct dp_soc *soc, struct dp_vdev *vdev,
 				dp_tx_debug("pkt send failed");
 				qdf_nbuf_free(nbuf_clone);
 			} else {
-				if (peer_id != DP_INVALID_PEER)
-					DP_STATS_INC_PKT(peer, tx.nawds_mcast,
-							 1, qdf_nbuf_len(nbuf));
+				if (peer_id != DP_INVALID_PEER) {
+					DP_PEER_PER_PKT_STATS_INC_PKT(txrx_peer,
+								      tx.nawds_mcast,
+								      1, qdf_nbuf_len(nbuf));
+				}
 			}
 		}
 	}
@@ -3788,7 +3791,8 @@ void dp_tx_compute_delay(struct dp_vdev *vdev, struct dp_tx_desc_s *tx_desc,
 
 #ifdef DISABLE_DP_STATS
 static
-inline void dp_update_no_ack_stats(qdf_nbuf_t nbuf, struct dp_txrx_peer *peer)
+inline void dp_update_no_ack_stats(qdf_nbuf_t nbuf,
+				   struct dp_txrx_peer *txrx_peer)
 {
 }
 #else
@@ -3799,7 +3803,81 @@ dp_update_no_ack_stats(qdf_nbuf_t nbuf, struct dp_txrx_peer *txrx_peer)
 
 	DPTRACE(qdf_dp_track_noack_check(nbuf, &subtype));
 	if (subtype != QDF_PROTO_INVALID)
-		DP_STATS_INC(peer, tx.no_ack_count[subtype], 1);
+		DP_PEER_PER_PKT_STATS_INC(txrx_peer, tx.no_ack_count[subtype],
+					  1);
+}
+#endif
+
+#ifndef QCA_ENHANCED_STATS_SUPPORT
+/**
+ * dp_tx_update_peer_extd_stats()- Update Tx extended path stats for peer
+ *
+ * @ts: Tx compltion status
+ * @txrx_peer: datapath txrx_peer handle
+ *
+ * Return: void
+ */
+static inline void
+dp_tx_update_peer_extd_stats(struct hal_tx_completion_status *ts,
+			     struct dp_txrx_peer *txrx_peer)
+{
+	uint8_t mcs, pkt_type;
+
+	mcs = ts->mcs;
+	pkt_type = ts->pkt_type;
+
+	DP_PEER_EXTD_STATS_INCC(txrx_peer,
+				tx.pkt_type[pkt_type].mcs_count[MAX_MCS - 1], 1,
+				((mcs >= MAX_MCS_11A) && (pkt_type == DOT11_A)));
+	DP_PEER_EXTD_STATS_INCC(txrx_peer,
+				tx.pkt_type[pkt_type].mcs_count[mcs], 1,
+				((mcs < (MAX_MCS_11A)) && (pkt_type == DOT11_A)));
+	DP_PEER_EXTD_STATS_INCC(txrx_peer,
+				tx.pkt_type[pkt_type].mcs_count[MAX_MCS - 1], 1,
+				((mcs >= MAX_MCS_11B) && (pkt_type == DOT11_B)));
+	DP_PEER_EXTD_STATS_INCC(txrx_peer,
+				tx.pkt_type[pkt_type].mcs_count[mcs], 1,
+				((mcs < MAX_MCS_11B) && (pkt_type == DOT11_B)));
+	DP_PEER_EXTD_STATS_INCC(txrx_peer,
+				tx.pkt_type[pkt_type].mcs_count[MAX_MCS - 1], 1,
+				((mcs >= MAX_MCS_11A) && (pkt_type == DOT11_N)));
+	DP_PEER_EXTD_STATS_INCC(txrx_peer,
+				tx.pkt_type[pkt_type].mcs_count[mcs], 1,
+				((mcs < MAX_MCS_11A) && (pkt_type == DOT11_N)));
+	DP_PEER_EXTD_STATS_INCC(txrx_peer,
+				tx.pkt_type[pkt_type].mcs_count[MAX_MCS - 1], 1,
+				((mcs >= MAX_MCS_11AC) && (pkt_type == DOT11_AC)));
+	DP_PEER_EXTD_STATS_INCC(txrx_peer,
+				tx.pkt_type[pkt_type].mcs_count[mcs], 1,
+				((mcs < MAX_MCS_11AC) && (pkt_type == DOT11_AC)));
+	DP_PEER_EXTD_STATS_INCC(txrx_peer,
+				tx.pkt_type[pkt_type].mcs_count[MAX_MCS - 1], 1,
+				((mcs >= (MAX_MCS - 1)) && (pkt_type == DOT11_AX)));
+	DP_PEER_EXTD_STATS_INCC(txrx_peer,
+				tx.pkt_type[pkt_type].mcs_count[mcs], 1,
+				((mcs < (MAX_MCS - 1)) && (pkt_type == DOT11_AX)));
+
+	DP_PEER_EXTD_STATS_INC(txrx_peer, tx.sgi_count[ts->sgi], 1);
+	DP_PEER_EXTD_STATS_INC(txrx_peer, tx.bw[ts->bw], 1);
+	DP_PEER_EXTD_STATS_UPD(txrx_peer, tx.last_ack_rssi, ts->ack_frame_rssi);
+	DP_PEER_EXTD_STATS_INC(txrx_peer,
+			       tx.wme_ac_type[TID_TO_WME_AC(ts->tid)], 1);
+	DP_PEER_EXTD_STATS_INCC(txrx_peer, tx.stbc, 1, ts->stbc);
+	DP_PEER_EXTD_STATS_INCC(txrx_peer, tx.ldpc, 1, ts->ldpc);
+	DP_PEER_EXTD_STATS_INCC(txrx_peer, tx.retries, 1, ts->transmit_cnt > 1);
+	if (ts->first_msdu) {
+		DP_PEER_EXTD_STATS_INCC(txrx_peer, tx.retries_mpdu, 1,
+					ts->transmit_cnt > 1);
+		DP_PEER_EXTD_STATS_INCC(txrx_peer, tx.mpdu_success_with_retries,
+					qdf_do_div(ts->transmit_cnt, DP_RETRY_COUNT),
+					ts->transmit_cnt > DP_RETRY_COUNT);
+	}
+}
+#else
+static inline void
+dp_tx_update_peer_extd_stats(struct hal_tx_completion_status *ts,
+			     struct dp_txrx_peer *txrx_peer)
+{
 }
 #endif
 
@@ -3821,7 +3899,6 @@ dp_tx_update_peer_stats(struct dp_tx_desc_s *tx_desc,
 {
 	struct dp_pdev *pdev = txrx_peer->vdev->pdev;
 	struct dp_soc *soc = NULL;
-	uint8_t mcs, pkt_type;
 	uint8_t tid = ts->tid;
 	uint32_t length;
 	struct cdp_tid_tx_stats *tid_stats;
@@ -3835,38 +3912,35 @@ dp_tx_update_peer_stats(struct dp_tx_desc_s *tx_desc,
 	tid_stats = &pdev->stats.tid_stats.tid_tx_stats[ring_id][tid];
 	soc = pdev->soc;
 
-	mcs = ts->mcs;
-	pkt_type = ts->pkt_type;
-
 	if (ts->release_src != HAL_TX_COMP_RELEASE_SOURCE_TQM) {
 		dp_err("Release source is not from TQM");
 		return;
 	}
 
 	length = qdf_nbuf_len(tx_desc->nbuf);
-	DP_STATS_FLAT_INC_PKT(txrx_peer, comp_pkt, 1, length);
+	DP_PEER_STATS_FLAT_INC_PKT(txrx_peer, comp_pkt, 1, length);
 
 	if (qdf_unlikely(pdev->delay_stats_flag))
 		dp_tx_compute_delay(txrx_peer->vdev, tx_desc, tid, ring_id);
-	DP_STATS_INCC(peer, tx.dropped.age_out, 1,
-		     (ts->status == HAL_TX_TQM_RR_REM_CMD_AGED));
+	DP_PEER_PER_PKT_STATS_INCC(txrx_peer, tx.dropped.age_out, 1,
+			  (ts->status == HAL_TX_TQM_RR_REM_CMD_AGED));
 
-	DP_STATS_INCC_PKT(peer, tx.dropped.fw_rem, 1, length,
+	DP_PEER_PER_PKT_STATS_INCC_PKT(txrx_peer, tx.dropped.fw_rem, 1, length,
 			  (ts->status == HAL_TX_TQM_RR_REM_CMD_REM));
 
-	DP_STATS_INCC(peer, tx.dropped.fw_rem_notx, 1,
+	DP_PEER_PER_PKT_STATS_INCC(txrx_peer, tx.dropped.fw_rem_notx, 1,
 		     (ts->status == HAL_TX_TQM_RR_REM_CMD_NOTX));
 
-	DP_STATS_INCC(peer, tx.dropped.fw_rem_tx, 1,
+	DP_PEER_PER_PKT_STATS_INCC(txrx_peer, tx.dropped.fw_rem_tx, 1,
 		     (ts->status == HAL_TX_TQM_RR_REM_CMD_TX));
 
-	DP_STATS_INCC(peer, tx.dropped.fw_reason1, 1,
+	DP_PEER_PER_PKT_STATS_INCC(txrx_peer, tx.dropped.fw_reason1, 1,
 		     (ts->status == HAL_TX_TQM_RR_FW_REASON1));
 
-	DP_STATS_INCC(peer, tx.dropped.fw_reason2, 1,
+	DP_PEER_PER_PKT_STATS_INCC(txrx_peer, tx.dropped.fw_reason2, 1,
 		     (ts->status == HAL_TX_TQM_RR_FW_REASON2));
 
-	DP_STATS_INCC(peer, tx.dropped.fw_reason3, 1,
+	DP_PEER_PER_PKT_STATS_INCC(txrx_peer, tx.dropped.fw_reason3, 1,
 		     (ts->status == HAL_TX_TQM_RR_FW_REASON3));
 	/*
 	 * tx_failed is ideally supposed to be updated from HTT ppdu completion
@@ -3876,73 +3950,40 @@ dp_tx_update_peer_stats(struct dp_tx_desc_s *tx_desc,
 	 * then this has to be removed
 	 */
 	txrx_peer->tx_failed =
-				peer->stats.tx.dropped.fw_rem.num +
-				peer->stats.tx.dropped.fw_rem_notx +
-				peer->stats.tx.dropped.fw_rem_tx +
-				peer->stats.tx.dropped.age_out +
-				peer->stats.tx.dropped.fw_reason1 +
-				peer->stats.tx.dropped.fw_reason2 +
-				peer->stats.tx.dropped.fw_reason3;
+			txrx_peer->stats.per_pkt_stats.tx.dropped.fw_rem.num +
+			txrx_peer->stats.per_pkt_stats.tx.dropped.fw_rem_notx +
+			txrx_peer->stats.per_pkt_stats.tx.dropped.fw_rem_tx +
+			txrx_peer->stats.per_pkt_stats.tx.dropped.age_out +
+			txrx_peer->stats.per_pkt_stats.tx.dropped.fw_reason1 +
+			txrx_peer->stats.per_pkt_stats.tx.dropped.fw_reason2 +
+			txrx_peer->stats.per_pkt_stats.tx.dropped.fw_reason3;
 	if (ts->status < CDP_MAX_TX_TQM_STATUS) {
 		tid_stats->tqm_status_cnt[ts->status]++;
 	}
 
 	if (ts->status != HAL_TX_TQM_RR_FRAME_ACKED) {
-		DP_STATS_INCC(peer, tx.failed_retry_count, 1,
-			      ts->transmit_cnt > DP_RETRY_COUNT);
-		dp_update_no_ack_stats(tx_desc->nbuf, peer);
+		DP_PEER_PER_PKT_STATS_INCC(txrx_peer, tx.failed_retry_count, 1,
+					   ts->transmit_cnt > DP_RETRY_COUNT);
+		dp_update_no_ack_stats(tx_desc->nbuf, txrx_peer);
 		return;
 	}
 
-	DP_STATS_INCC(peer, tx.retry_count, 1, ts->transmit_cnt > 1);
+	DP_PEER_PER_PKT_STATS_INCC(txrx_peer, tx.retry_count, 1,
+				   ts->transmit_cnt > 1);
 
-	DP_STATS_INCC(peer, tx.multiple_retry_count, 1, ts->transmit_cnt > 2);
+	DP_PEER_PER_PKT_STATS_INCC(txrx_peer, tx.multiple_retry_count, 1,
+				   ts->transmit_cnt > 2);
 
-	DP_STATS_INCC(peer, tx.ofdma, 1, ts->ofdma);
+	DP_PEER_PER_PKT_STATS_INCC(txrx_peer, tx.ofdma, 1, ts->ofdma);
 
-	DP_STATS_INCC(peer, tx.amsdu_cnt, 1, ts->msdu_part_of_amsdu);
-	DP_STATS_INCC(peer, tx.non_amsdu_cnt, 1, !ts->msdu_part_of_amsdu);
-	/*
-	 * Following Rate Statistics are updated from HTT PPDU events from FW.
-	 * Return from here if HTT PPDU events are enabled.
-	 */
-	if (!(soc->process_tx_status))
-		return;
-	DP_STATS_INCC(peer, tx.pkt_type[pkt_type].mcs_count[MAX_MCS - 1], 1,
-			((mcs >= MAX_MCS_11A) && (pkt_type == DOT11_A)));
-	DP_STATS_INCC(peer, tx.pkt_type[pkt_type].mcs_count[mcs], 1,
-			((mcs < (MAX_MCS_11A)) && (pkt_type == DOT11_A)));
-	DP_STATS_INCC(peer, tx.pkt_type[pkt_type].mcs_count[MAX_MCS - 1], 1,
-			((mcs >= MAX_MCS_11B) && (pkt_type == DOT11_B)));
-	DP_STATS_INCC(peer, tx.pkt_type[pkt_type].mcs_count[mcs], 1,
-			((mcs < MAX_MCS_11B) && (pkt_type == DOT11_B)));
-	DP_STATS_INCC(peer, tx.pkt_type[pkt_type].mcs_count[MAX_MCS - 1], 1,
-			((mcs >= MAX_MCS_11A) && (pkt_type == DOT11_N)));
-	DP_STATS_INCC(peer, tx.pkt_type[pkt_type].mcs_count[mcs], 1,
-			((mcs < MAX_MCS_11A) && (pkt_type == DOT11_N)));
-	DP_STATS_INCC(peer, tx.pkt_type[pkt_type].mcs_count[MAX_MCS - 1], 1,
-			((mcs >= MAX_MCS_11AC) && (pkt_type == DOT11_AC)));
-	DP_STATS_INCC(peer, tx.pkt_type[pkt_type].mcs_count[mcs], 1,
-			((mcs < MAX_MCS_11AC) && (pkt_type == DOT11_AC)));
-	DP_STATS_INCC(peer, tx.pkt_type[pkt_type].mcs_count[MAX_MCS - 1], 1,
-			((mcs >= (MAX_MCS - 1)) && (pkt_type == DOT11_AX)));
-	DP_STATS_INCC(peer, tx.pkt_type[pkt_type].mcs_count[mcs], 1,
-			((mcs < (MAX_MCS - 1)) && (pkt_type == DOT11_AX)));
+	DP_PEER_PER_PKT_STATS_INCC(txrx_peer, tx.amsdu_cnt, 1,
+				   ts->msdu_part_of_amsdu);
+	DP_PEER_PER_PKT_STATS_INCC(txrx_peer, tx.non_amsdu_cnt, 1,
+				   !ts->msdu_part_of_amsdu);
 
-	DP_STATS_INC(peer, tx.sgi_count[ts->sgi], 1);
-	DP_STATS_INC(peer, tx.bw[ts->bw], 1);
-	DP_STATS_UPD(peer, tx.last_ack_rssi, ts->ack_frame_rssi);
-	DP_STATS_INC(peer, tx.wme_ac_type[TID_TO_WME_AC(ts->tid)], 1);
-	DP_STATS_INCC(peer, tx.stbc, 1, ts->stbc);
-	DP_STATS_INCC(peer, tx.ldpc, 1, ts->ldpc);
-	DP_STATS_INCC(peer, tx.retries, 1, ts->transmit_cnt > 1);
-	if (ts->first_msdu) {
-		DP_STATS_INCC(peer, tx.retries_mpdu, 1, ts->transmit_cnt > 1);
-		DP_STATS_INCC(peer, tx.mpdu_success_with_retries,
-			      qdf_do_div(ts->transmit_cnt, DP_RETRY_COUNT),
-			      ts->transmit_cnt > DP_RETRY_COUNT);
-	}
-	peer->stats.tx.last_tx_ts = qdf_system_ticks();
+	txrx_peer->stats.per_pkt_stats.tx.last_tx_ts = qdf_system_ticks();
+
+	dp_tx_update_peer_extd_stats(ts, txrx_peer);
 }
 
 #ifdef QCA_LL_TX_FLOW_CONTROL_V2
@@ -4055,6 +4096,8 @@ static inline void dp_tx_sojourn_stats_process(struct dp_pdev *pdev,
 {
 	uint64_t delta_ms;
 	struct cdp_tx_sojourn_stats *sojourn_stats;
+	struct dp_peer *primary_link_peer = NULL;
+	struct dp_soc *link_peer_soc = NULL;
 
 	if (qdf_unlikely(!pdev->enhanced_stats_en))
 		return;
@@ -4066,29 +4109,41 @@ static inline void dp_tx_sojourn_stats_process(struct dp_pdev *pdev,
 	if (qdf_unlikely(!pdev->sojourn_buf))
 		return;
 
+	primary_link_peer = dp_get_primary_link_peer_by_id(pdev->soc,
+							   txrx_peer->peer_id,
+							   DP_MOD_ID_TX_COMP);
+
+	if (qdf_unlikely(!primary_link_peer))
+		return;
+
 	sojourn_stats = (struct cdp_tx_sojourn_stats *)
 		qdf_nbuf_data(pdev->sojourn_buf);
 
-	sojourn_stats->cookie = (void *)peer->rdkstats_ctx;
+	link_peer_soc = primary_link_peer->vdev->pdev->soc;
+	sojourn_stats->cookie = (void *)
+			dp_monitor_peer_get_rdkstats_ctx(link_peer_soc,
+							 primary_link_peer);
 
 	delta_ms = qdf_ktime_to_ms(qdf_ktime_real_get()) -
 				txdesc_ts;
-	qdf_ewma_tx_lag_add(&peer->avg_sojourn_msdu[tid],
+	qdf_ewma_tx_lag_add(&txrx_peer->stats.per_pkt_stats.tx.avg_sojourn_msdu[tid],
 			    delta_ms);
 	sojourn_stats->sum_sojourn_msdu[tid] = delta_ms;
 	sojourn_stats->num_msdus[tid] = 1;
 	sojourn_stats->avg_sojourn_msdu[tid].internal =
-		peer->avg_sojourn_msdu[tid].internal;
+		txrx_peer->stats.per_pkt_stats.tx.avg_sojourn_msdu[tid].internal;
 	dp_wdi_event_handler(WDI_EVENT_TX_SOJOURN_STAT, pdev->soc,
 			     pdev->sojourn_buf, HTT_INVALID_PEER,
 			     WDI_NO_VAL, pdev->pdev_id);
 	sojourn_stats->sum_sojourn_msdu[tid] = 0;
 	sojourn_stats->num_msdus[tid] = 0;
 	sojourn_stats->avg_sojourn_msdu[tid].internal = 0;
+
+	dp_peer_unref_delete(primary_link_peer, DP_MOD_ID_TX_COMP);
 }
 #else
 static inline void dp_tx_sojourn_stats_process(struct dp_pdev *pdev,
-					       struct dp_peer *peer,
+					       struct dp_txrx_peer *txrx_peer,
 					       uint8_t tid,
 					       uint64_t txdesc_ts,
 					       uint32_t ppdu_id)
@@ -4445,22 +4500,26 @@ void dp_tx_comp_process_tx_status(struct dp_soc *soc,
 	if (qdf_unlikely(txrx_peer->bss_peer &&
 			 vdev->opmode == wlan_op_mode_ap)) {
 		if (ts->status != HAL_TX_TQM_RR_REM_CMD_REM) {
-			DP_STATS_INC_PKT(peer, tx.mcast, 1, length);
+			DP_PEER_PER_PKT_STATS_INC_PKT(txrx_peer, tx.mcast, 1,
+						      length);
 
 			if (txrx_peer->vdev->tx_encap_type ==
 				htt_cmn_pkt_type_ethernet &&
 				QDF_IS_ADDR_BROADCAST(eh->ether_dhost)) {
-				DP_STATS_INC_PKT(peer, tx.bcast, 1, length);
+				DP_PEER_PER_PKT_STATS_INC_PKT(txrx_peer,
+							      tx.bcast, 1,
+							      length);
 			}
 		}
 	} else {
-		DP_STATS_INC_PKT(peer, tx.ucast, 1, length);
+		DP_PEER_PER_PKT_STATS_INC_PKT(txrx_peer, tx.ucast, 1, length);
 		if (ts->status == HAL_TX_TQM_RR_FRAME_ACKED) {
-			DP_STATS_INC_PKT(peer, tx.tx_success, 1, length);
+			DP_PEER_PER_PKT_STATS_INC_PKT(txrx_peer, tx.tx_success,
+						      1, length);
 			if (qdf_unlikely(txrx_peer->in_twt)) {
-				DP_STATS_INC_PKT(peer,
-						 tx.tx_success_twt,
-						 1, length);
+				DP_PEER_PER_PKT_STATS_INC_PKT(txrx_peer,
+							      tx.tx_success_twt,
+							      1, length);
 			}
 		}
 	}
@@ -4483,7 +4542,7 @@ out:
 	defined(QCA_ENHANCED_STATS_SUPPORT)
 /*
  * dp_tx_update_peer_basic_stats(): Update peer basic stats
- * @peer: Datapath peer handle
+ * @txrx_peer: Datapath txrx_peer handle
  * @length: Length of the packet
  * @tx_status: Tx status from TQM/FW
  * @update: enhanced flag value present in dp_pdev
@@ -4495,9 +4554,10 @@ void dp_tx_update_peer_basic_stats(struct dp_txrx_peer *txrx_peer,
 				   bool update)
 {
 	if ((!txrx_peer->hw_txrx_stats_en) || update) {
-		DP_STATS_FLAT_INC_PKT(txrx_peer, comp_pkt, 1, length);
-		DP_STATS_FLAT_INC(txrx_peer, tx_failed, 1,
-				  tx_status != HAL_TX_TQM_RR_FRAME_ACKED);
+		DP_PEER_STATS_FLAT_INC_PKT(txrx_peer, comp_pkt, 1, length);
+
+		if (tx_status != HAL_TX_TQM_RR_FRAME_ACKED)
+			DP_PEER_STATS_FLAT_INC(txrx_peer, tx_failed, 1);
 	}
 }
 #elif defined(QCA_VDEV_STATS_HW_OFFLOAD_SUPPORT)
@@ -4506,9 +4566,10 @@ void dp_tx_update_peer_basic_stats(struct dp_txrx_peer *txrx_peer,
 				   bool update)
 {
 	if (!peer->hw_txrx_stats_en) {
-		DP_STATS_FLAT_INC_PKT(txrx_peer, comp_pkt, 1, length);
-		DP_STATS_FLAT_INC(txrx_peer, tx_failed, 1,
-				  tx_status != HAL_TX_TQM_RR_FRAME_ACKED);
+		DP_PEER_STATS_FLAT_INC_PKT(txrx_peer, comp_pkt, 1, length);
+
+		if (tx_status != HAL_TX_TQM_RR_FRAME_ACKED)
+			DP_PEER_STATS_FLAT_INC(txrx_peer, tx_failed, 1);
 	}
 }
 
@@ -4517,9 +4578,10 @@ void dp_tx_update_peer_basic_stats(struct dp_txrx_peer *txrx_peer,
 				   uint32_t length, uint8_t tx_status,
 				   bool update)
 {
-	DP_STATS_FLAT_INC_PKT(txrx_peer, comp_pkt, 1, length);
-	DP_STATS_FLAT_INC(txrx_peer, tx_failed, 1,
-			  tx_status != HAL_TX_TQM_RR_FRAME_ACKED);
+	DP_PEER_STATS_FLAT_INC_PKT(txrx_peer, comp_pkt, 1, length);
+
+	if (tx_status != HAL_TX_TQM_RR_FRAME_ACKED)
+		DP_PEER_STATS_FLAT_INC(txrx_peer, tx_failed, 1);
 }
 #endif
 

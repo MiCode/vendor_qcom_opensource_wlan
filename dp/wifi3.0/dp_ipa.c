@@ -2748,16 +2748,23 @@ static qdf_nbuf_t dp_ipa_intrabss_send(struct dp_pdev *pdev,
 	if (qdf_unlikely(!vdev_peer))
 		return nbuf;
 
-	qdf_mem_zero(nbuf->cb, sizeof(nbuf->cb));
-	len = qdf_nbuf_len(nbuf);
-
-	if (dp_tx_send((struct cdp_soc_t *)pdev->soc, vdev->vdev_id, nbuf)) {
-		DP_STATS_INC_PKT(vdev_peer, rx.intra_bss.fail, 1, len);
+	if (qdf_unlikely(!vdev_peer->txrx_peer)) {
 		dp_peer_unref_delete(vdev_peer, DP_MOD_ID_IPA);
 		return nbuf;
 	}
 
-	DP_STATS_INC_PKT(vdev_peer, rx.intra_bss.pkts, 1, len);
+	qdf_mem_zero(nbuf->cb, sizeof(nbuf->cb));
+	len = qdf_nbuf_len(nbuf);
+
+	if (dp_tx_send((struct cdp_soc_t *)pdev->soc, vdev->vdev_id, nbuf)) {
+		DP_PEER_PER_PKT_STATS_INC_PKT(vdev_peer->txrx_peer,
+					      rx.intra_bss.fail, 1, len);
+		dp_peer_unref_delete(vdev_peer, DP_MOD_ID_IPA);
+		return nbuf;
+	}
+
+	DP_PEER_PER_PKT_STATS_INC_PKT(vdev_peer->txrx_peer,
+				      rx.intra_bss.pkts, 1, len);
 	dp_peer_unref_delete(vdev_peer, DP_MOD_ID_IPA);
 	return NULL;
 }

@@ -754,7 +754,7 @@ void DP_PRINT_STATS(const char *fmt, ...);
 		_handle->stats._field += _delta; \
 }
 
-#define DP_STATS_FLAT_INC(_handle, _field, _delta) \
+#define DP_PEER_STATS_FLAT_INC(_handle, _field, _delta) \
 { \
 	if (likely(_handle)) \
 		_handle->_field += _delta; \
@@ -772,7 +772,7 @@ void DP_PRINT_STATS(const char *fmt, ...);
 		_handle->stats._field -= _delta; \
 }
 
-#define DP_STATS_FLAT_DEC(_handle, _field, _delta) \
+#define DP_PEER_STATS_FLAT_DEC(_handle, _field, _delta) \
 { \
 	if (likely(_handle)) \
 		_handle->_field -= _delta; \
@@ -790,10 +790,10 @@ void DP_PRINT_STATS(const char *fmt, ...);
 	DP_STATS_INC(_handle, _field.bytes, _bytes) \
 }
 
-#define DP_STATS_FLAT_INC_PKT(_handle, _field, _count, _bytes) \
+#define DP_PEER_STATS_FLAT_INC_PKT(_handle, _field, _count, _bytes) \
 { \
-	DP_STATS_FLAT_INC(_handle, _field.num, _count); \
-	DP_STATS_FLAT_INC(_handle, _field.bytes, _bytes) \
+	DP_PEER_STATS_FLAT_INC(_handle, _field.num, _count); \
+	DP_PEER_STATS_FLAT_INC(_handle, _field.bytes, _bytes) \
 }
 
 #define DP_STATS_INCC_PKT(_handle, _field, _count, _bytes, _cond) \
@@ -820,16 +820,55 @@ void DP_PRINT_STATS(const char *fmt, ...);
 
 #else
 #define DP_STATS_INC(_handle, _field, _delta)
-#define DP_STATS_FLAT_INC(_handle, _field, _delta)
+#define DP_PEER_STATS_FLAT_INC(_handle, _field, _delta)
 #define DP_STATS_INCC(_handle, _field, _delta, _cond)
 #define DP_STATS_DEC(_handle, _field, _delta)
-#define DP_STATS_FLAT_DEC(_handle, _field, _delta)
+#define DP_PEER_STATS_FLAT_DEC(_handle, _field, _delta)
 #define DP_STATS_UPD(_handle, _field, _delta)
 #define DP_STATS_INC_PKT(_handle, _field, _count, _bytes)
-#define DP_STATS_FLAT_INC_PKT(_handle, _field, _count, _bytes)
+#define DP_PEER_STATS_FLAT_INC_PKT(_handle, _field, _count, _bytes)
 #define DP_STATS_INCC_PKT(_handle, _field, _count, _bytes, _cond)
 #define DP_STATS_AGGR(_handle_a, _handle_b, _field)
 #define DP_STATS_AGGR_PKT(_handle_a, _handle_b, _field)
+#endif
+
+#define DP_PEER_PER_PKT_STATS_INC(_handle, _field, _delta) \
+{ \
+	DP_STATS_INC(_handle, per_pkt_stats._field, _delta); \
+}
+
+#define DP_PEER_PER_PKT_STATS_INCC(_handle, _field, _delta, _cond) \
+{ \
+	DP_STATS_INCC(_handle, per_pkt_stats._field, _delta, _cond); \
+}
+
+#define DP_PEER_PER_PKT_STATS_INC_PKT(_handle, _field, _count, _bytes) \
+{ \
+	DP_PEER_PER_PKT_STATS_INC(_handle, _field.num, _count); \
+	DP_PEER_PER_PKT_STATS_INC(_handle, _field.bytes, _bytes) \
+}
+
+#define DP_PEER_PER_PKT_STATS_INCC_PKT(_handle, _field, _count, _bytes, _cond) \
+{ \
+	DP_PEER_PER_PKT_STATS_INCC(_handle, _field.num, _count, _cond); \
+	DP_PEER_PER_PKT_STATS_INCC(_handle, _field.bytes, _bytes, _cond) \
+}
+
+#ifndef QCA_ENHANCED_STATS_SUPPORT
+#define DP_PEER_EXTD_STATS_INC(_handle, _field, _delta) \
+{ \
+	DP_STATS_INC(_handle, extd_stats._field, _delta); \
+}
+
+#define DP_PEER_EXTD_STATS_INCC(_handle, _field, _delta, _cond) \
+{ \
+	DP_STATS_INCC(_handle, extd_stats._field, _delta, _cond); \
+}
+
+#define DP_PEER_EXTD_STATS_UPD(_handle, _field, _delta) \
+{ \
+	DP_STATS_UPD(_handle, extd_stats._field, _delta); \
+}
 #endif
 
 #if defined(QCA_VDEV_STATS_HW_OFFLOAD_SUPPORT) && \
@@ -837,62 +876,62 @@ void DP_PRINT_STATS(const char *fmt, ...);
 #define DP_PEER_TO_STACK_INCC_PKT(_handle, _count, _bytes, _cond) \
 { \
 	if (!(_handle->hw_txrx_stats_en) || _cond) \
-		DP_STATS_FLAT_INC_PKT(_handle, to_stack, _count, _bytes); \
+		DP_PEER_STATS_FLAT_INC_PKT(_handle, to_stack, _count, _bytes); \
 }
 
 #define DP_PEER_TO_STACK_DECC(_handle, _count, _cond) \
 { \
 	if (!(_handle->hw_txrx_stats_en) || _cond) \
-		DP_STATS_FLAT_DEC(_handle, to_stack.num, _count); \
+		DP_PEER_STATS_FLAT_DEC(_handle, to_stack.num, _count); \
 }
 
 #define DP_PEER_MC_INCC_PKT(_handle, _count, _bytes, _cond) \
 { \
 	if (!(_handle->hw_txrx_stats_en) || _cond) \
-		DP_STATS_FLAT_INC_PKT(_handle, multicast, _count, _bytes); \
+		DP_PEER_PER_PKT_STATS_INC_PKT(_handle, rx.multicast, _count, _bytes); \
 }
 
 #define DP_PEER_BC_INCC_PKT(_handle, _count, _bytes, _cond) \
 { \
 	if (!(_handle->hw_txrx_stats_en) || _cond) \
-		DP_STATS_FLAT_INC_PKT(_handle, bcast, _count, _bytes); \
+		DP_PEER_PER_PKT_STATS_INC_PKT(_handle, rx.bcast, _count, _bytes); \
 }
 #elif defined(QCA_VDEV_STATS_HW_OFFLOAD_SUPPORT)
 #define DP_PEER_TO_STACK_INCC_PKT(_handle, _count, _bytes, _cond) \
 { \
 	if (!(_handle->hw_txrx_stats_en)) \
-		DP_STATS_FLAT_INC_PKT(_handle, to_stack, _count, _bytes); \
+		DP_PEER_STATS_FLAT_INC_PKT(_handle, to_stack, _count, _bytes); \
 }
 
 #define DP_PEER_TO_STACK_DECC(_handle, _count, _cond) \
 { \
 	if (!(_handle->hw_txrx_stats_en)) \
-		DP_STATS_FLAT_DEC(_handle, to_stack.num, _count); \
+		DP_PEER_STATS_FLAT_DEC(_handle, to_stack.num, _count); \
 }
 
 #define DP_PEER_MC_INCC_PKT(_handle, _count, _bytes, _cond) \
 { \
 	if (!(_handle->hw_txrx_stats_en)) \
-		DP_STATS_FLAT_INC_PKT(_handle, multicast, _count, _bytes); \
+		DP_PEER_PER_PKT_STATS_INC_PKT(_handle, rx.multicast, _count, _bytes); \
 }
 
 #define DP_PEER_BC_INCC_PKT(_handle, _count, _bytes, _cond) \
 { \
 	if (!(_handle->hw_txrx_stats_en)) \
-		DP_STATS_FLAT_INC_PKT(_handle, bcast, _count, _bytes); \
+		DP_PEER_PER_PKT_STATS_INC_PKT(_handle, rx.bcast, _count, _bytes); \
 }
 #else
 #define DP_PEER_TO_STACK_INCC_PKT(_handle, _count, _bytes, _cond) \
-	DP_STATS_FLAT_INC_PKT(_handle, to_stack, _count, _bytes);
+	DP_PEER_STATS_FLAT_INC_PKT(_handle, to_stack, _count, _bytes);
 
 #define DP_PEER_TO_STACK_DECC(_handle, _count, _cond) \
-	DP_STATS_FLAT_DEC(_handle, to_stack.num, _count);
+	DP_PEER_STATS_FLAT_DEC(_handle, to_stack.num, _count);
 
 #define DP_PEER_MC_INCC_PKT(_handle, _count, _bytes, _cond) \
-	DP_STATS_FLAT_INC_PKT(_handle, multicast, _count, _bytes);
+	DP_PEER_PER_PKT_STATS_INC_PKT(_handle, rx.multicast, _count, _bytes);
 
 #define DP_PEER_BC_INCC_PKT(_handle, _count, _bytes, _cond) \
-	DP_STATS_FLAT_INC_PKT(_handle, bcast, _count, _bytes);
+	DP_PEER_PER_PKT_STATS_INC_PKT(_handle, rx.bcast, _count, _bytes);
 #endif
 
 #ifdef ENABLE_DP_HIST_STATS
@@ -2072,7 +2111,7 @@ dp_hif_update_pipe_callback(struct dp_soc *dp_soc, void *cb_context,
  * dp_vdev_peer_stats_update_protocol_cnt() - update per-peer protocol counters
  * @vdev: VDEV DP object
  * @nbuf: data packet
- * @peer: Peer DP object
+ * @peer: DP TXRX Peer object
  * @is_egress: whether egress or ingress
  * @is_rx: whether rx or tx
  *
@@ -2081,7 +2120,7 @@ dp_hif_update_pipe_callback(struct dp_soc *dp_soc, void *cb_context,
  */
 void dp_vdev_peer_stats_update_protocol_cnt(struct dp_vdev *vdev,
 					    qdf_nbuf_t nbuf,
-					    struct dp_peer *peer,
+					    struct dp_txrx_peer *txrx_peer,
 					    bool is_egress,
 					    bool is_rx);
 
@@ -2107,7 +2146,7 @@ void dp_vdev_peer_stats_update_protocol_cnt_tx(struct dp_vdev *vdev_hdl,
 					       qdf_nbuf_t nbuf);
 
 #else
-#define dp_vdev_peer_stats_update_protocol_cnt(vdev, nbuf, peer, \
+#define dp_vdev_peer_stats_update_protocol_cnt(vdev, nbuf, txrx_peer, \
 					       is_egress, is_rx)
 
 static inline

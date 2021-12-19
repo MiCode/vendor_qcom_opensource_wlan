@@ -263,10 +263,11 @@ bool dp_rx_check_ndi_mdns_fwding(struct dp_txrx_peer *ta_txrx_peer,
 {
 	if (ta_txrx_peer->vdev->opmode == wlan_op_mode_ndi &&
 	    qdf_nbuf_is_ipv6_mdns_pkt(nbuf)) {
-		DP_STATS_INC(ta_txrx_peer, rx.intra_bss.mdns_no_fwd, 1);
+		DP_PEER_PER_PKT_STATS_INC(ta_txrx_peer,
+					  rx.intra_bss.mdns_no_fwd, 1);
 		return false;
 	}
-		return true;
+	return true;
 }
 #else
 static inline

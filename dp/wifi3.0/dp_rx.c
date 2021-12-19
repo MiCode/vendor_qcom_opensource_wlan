@@ -774,7 +774,8 @@ dp_rx_deliver_raw(struct dp_vdev *vdev, qdf_nbuf_t nbuf_list,
 		DP_RX_LIST_APPEND(deliver_list_head, deliver_list_tail, nbuf);
 
 		DP_STATS_INC(vdev->pdev, rx_raw_pkts, 1);
-		DP_STATS_INC_PKT(txrx_peer, rx.raw, 1, qdf_nbuf_len(nbuf));
+		DP_PEER_PER_PKT_STATS_INC_PKT(txrx_peer, rx.raw, 1,
+					      qdf_nbuf_len(nbuf));
 		/*
 		 * reset the chfrag_start and chfrag_end bits in nbuf cb
 		 * as this is a non-amsdu pkt and RAW mode simulation expects
@@ -843,11 +844,13 @@ bool dp_rx_intrabss_mcbc_fwd(struct dp_soc *soc, struct dp_txrx_peer *ta_peer,
 				  CB_FTYPE_INTRABSS_FWD);
 	if (dp_tx_send((struct cdp_soc_t *)soc,
 		       ta_peer->vdev->vdev_id, nbuf_copy)) {
-		DP_STATS_INC_PKT(ta_peer, rx.intra_bss.fail, 1, len);
+		DP_PEER_PER_PKT_STATS_INC_PKT(ta_peer, rx.intra_bss.fail, 1,
+					      len);
 		tid_stats->fail_cnt[INTRABSS_DROP]++;
 		dp_rx_nbuf_free(nbuf_copy);
 	} else {
-		DP_STATS_INC_PKT(ta_peer, rx.intra_bss.pkts, 1, len);
+		DP_PEER_PER_PKT_STATS_INC_PKT(ta_peer, rx.intra_bss.pkts, 1,
+					      len);
 		tid_stats->intrabss_cnt++;
 	}
 	return false;
@@ -883,8 +886,9 @@ bool dp_rx_intrabss_ucast_fwd(struct dp_soc *soc, struct dp_txrx_peer *ta_peer,
 
 		nbuf = qdf_nbuf_unshare(nbuf);
 		if (!nbuf) {
-			DP_STATS_INC_PKT(ta_peer,
-					 rx.intra_bss.fail, 1, len);
+			DP_PEER_PER_PKT_STATS_INC_PKT(ta_peer,
+						      rx.intra_bss.fail,
+						      1, len);
 			/* return true even though the pkt is
 			 * not forwarded. Basically skb_unshare
 			 * failed and we want to continue with
@@ -897,11 +901,11 @@ bool dp_rx_intrabss_ucast_fwd(struct dp_soc *soc, struct dp_txrx_peer *ta_peer,
 
 	if (!dp_tx_send((struct cdp_soc_t *)soc,
 			tx_vdev_id, nbuf)) {
-		DP_STATS_INC_PKT(ta_peer, rx.intra_bss.pkts, 1,
-				 len);
+		DP_PEER_PER_PKT_STATS_INC_PKT(ta_peer, rx.intra_bss.pkts, 1,
+					      len);
 	} else {
-		DP_STATS_INC_PKT(ta_peer, rx.intra_bss.fail, 1,
-				 len);
+		DP_PEER_PER_PKT_STATS_INC_PKT(ta_peer, rx.intra_bss.fail, 1,
+					      len);
 		tid_stats->fail_cnt[INTRABSS_DROP]++;
 		return false;
 	}
@@ -940,6 +944,9 @@ void dp_rx_fill_mesh_stats(struct dp_vdev *vdev, qdf_nbuf_t nbuf,
 	uint32_t center_chan_freq;
 	struct dp_soc *soc = vdev->pdev->soc;
 	struct dp_peer *peer;
+	struct dp_peer *primary_link_peer;
+	struct dp_soc *link_peer_soc;
+	cdp_peer_stats_param_t buf = {0};
 
 	/* fill recv mesh stats */
 	rx_info = qdf_mem_malloc(sizeof(struct mesh_recv_hdr_s));
@@ -973,8 +980,20 @@ void dp_rx_fill_mesh_stats(struct dp_vdev *vdev, qdf_nbuf_t nbuf,
 						   rx_info->rs_keyix);
 		}
 
-		rx_info->rs_snr = peer->stats.rx.snr;
 		dp_peer_unref_delete(peer, DP_MOD_ID_MESH);
+	}
+
+	primary_link_peer = dp_get_primary_link_peer_by_id(soc,
+							   txrx_peer->peer_id,
+							   DP_MOD_ID_MESH);
+
+	if (qdf_likely(primary_link_peer)) {
+		link_peer_soc = primary_link_peer->vdev->pdev->soc;
+		dp_monitor_peer_get_stats_param(link_peer_soc,
+						primary_link_peer,
+						cdp_peer_rx_snr, &buf);
+		rx_info->rs_snr = buf.rx_snr;
+		dp_peer_unref_delete(primary_link_peer, DP_MOD_ID_MESH);
 	}
 
 	rx_info->rs_rssi = rx_info->rs_snr + DP_DEFAULT_NOISEFLOOR;
@@ -1738,6 +1757,7 @@ dp_rx_enqueue_rx(struct dp_txrx_peer *txrx_peer, qdf_nbuf_t rx_buf_list)
 	struct dp_peer_cached_bufq *bufqi = &txrx_peer->bufq_info;
 	int num_buff_elem;
 	QDF_STATUS ret = QDF_STATUS_SUCCESS;
+	struct dp_soc *soc = txrx_peer->vdev->pdev->soc;
 	struct dp_peer *peer = dp_peer_get_ref_by_id(soc, txrx_peer->peer_id,
 						     DP_MOD_ID_RX);
 
@@ -1873,7 +1893,8 @@ static void dp_rx_check_delivery_to_stack(struct dp_soc *soc,
 		num_nbuf = dp_rx_drop_nbuf_list(vdev->pdev, nbuf_head);
 		DP_STATS_INC(soc, rx.err.rejected, num_nbuf);
 		if (txrx_peer)
-			DP_STATS_DEC(txrx_peer, to_stack.num, num_nbuf);
+			DP_PEER_STATS_FLAT_DEC(txrx_peer, to_stack.num,
+					       num_nbuf);
 	}
 }
 #endif /* ifdef DELIVERY_TO_STACK_STATUS_CHECK */
@@ -1966,27 +1987,128 @@ QDF_STATUS dp_rx_eapol_deliver_to_stack(struct dp_soc *soc,
 
 #ifndef QCA_HOST_MODE_WIFI_DISABLED
 #ifdef VDEV_PEER_PROTOCOL_COUNT
-#define dp_rx_msdu_stats_update_prot_cnts(vdev_hdl, nbuf, peer) \
+#define dp_rx_msdu_stats_update_prot_cnts(vdev_hdl, nbuf, txrx_peer) \
 { \
 	qdf_nbuf_t nbuf_local; \
-	struct dp_peer *peer_local; \
+	struct dp_txrx_peer *txrx_peer_local; \
 	struct dp_vdev *vdev_local = vdev_hdl; \
 	do { \
 		if (qdf_likely(!((vdev_local)->peer_protocol_count_track))) \
 			break; \
 		nbuf_local = nbuf; \
-		peer_local = peer; \
+		txrx_peer_local = txrx_peer; \
 		if (qdf_unlikely(qdf_nbuf_is_frag((nbuf_local)))) \
 			break; \
 		else if (qdf_unlikely(qdf_nbuf_is_raw_frame((nbuf_local)))) \
 			break; \
 		dp_vdev_peer_stats_update_protocol_cnt((vdev_local), \
 						       (nbuf_local), \
-						       (peer_local), 0, 1); \
+						       (txrx_peer_local), 0, 1); \
 	} while (0); \
 }
 #else
-#define dp_rx_msdu_stats_update_prot_cnts(vdev_hdl, nbuf, peer)
+#define dp_rx_msdu_stats_update_prot_cnts(vdev_hdl, nbuf, txrx_peer)
+#endif
+
+#ifndef QCA_ENHANCED_STATS_SUPPORT
+/**
+ * dp_rx_msdu_extd_stats_update(): Update Rx extended path stats for peer
+ *
+ * @soc: datapath soc handle
+ * @nbuf: received msdu buffer
+ * @rx_tlv_hdr: rx tlv header
+ * @txrx_peer: datapath txrx_peer handle
+ *
+ * Return: void
+ */
+static inline
+void dp_rx_msdu_extd_stats_update(struct dp_soc *soc, qdf_nbuf_t nbuf,
+				  uint8_t *rx_tlv_hdr,
+				  struct dp_txrx_peer *txrx_peer)
+{
+	bool is_ampdu;
+	uint32_t sgi, mcs, tid, nss, bw, reception_type, pkt_type;
+
+	/*
+	 * TODO - For KIWI this field is present in ring_desc
+	 * Try to use ring desc instead of tlv.
+	 */
+	is_ampdu = hal_rx_mpdu_info_ampdu_flag_get(soc->hal_soc, rx_tlv_hdr);
+	DP_PEER_EXTD_STATS_INCC(txrx_peer, rx.ampdu_cnt, 1, is_ampdu);
+	DP_PEER_EXTD_STATS_INCC(txrx_peer, rx.non_ampdu_cnt, 1, !(is_ampdu));
+
+	sgi = hal_rx_tlv_sgi_get(soc->hal_soc, rx_tlv_hdr);
+	mcs = hal_rx_tlv_rate_mcs_get(soc->hal_soc, rx_tlv_hdr);
+	tid = qdf_nbuf_get_tid_val(nbuf);
+	bw = hal_rx_tlv_bw_get(soc->hal_soc, rx_tlv_hdr);
+	reception_type = hal_rx_msdu_start_reception_type_get(soc->hal_soc,
+							      rx_tlv_hdr);
+	nss = hal_rx_msdu_start_nss_get(soc->hal_soc, rx_tlv_hdr);
+	pkt_type = hal_rx_tlv_get_pkt_type(soc->hal_soc, rx_tlv_hdr);
+
+	DP_PEER_EXTD_STATS_INCC(txrx_peer, rx.rx_mpdu_cnt[mcs], 1,
+		      ((mcs < MAX_MCS) && QDF_NBUF_CB_RX_CHFRAG_START(nbuf)));
+	DP_PEER_EXTD_STATS_INCC(txrx_peer, rx.rx_mpdu_cnt[MAX_MCS - 1], 1,
+		      ((mcs >= MAX_MCS) && QDF_NBUF_CB_RX_CHFRAG_START(nbuf)));
+	DP_PEER_EXTD_STATS_INC(txrx_peer, rx.bw[bw], 1);
+	/*
+	 * only if nss > 0 and pkt_type is 11N/AC/AX,
+	 * then increase index [nss - 1] in array counter.
+	 */
+	if (nss > 0 && (pkt_type == DOT11_N ||
+			pkt_type == DOT11_AC ||
+			pkt_type == DOT11_AX))
+		DP_PEER_EXTD_STATS_INC(txrx_peer, rx.nss[nss - 1], 1);
+
+	DP_PEER_EXTD_STATS_INC(txrx_peer, rx.sgi_count[sgi], 1);
+	DP_PEER_PER_PKT_STATS_INCC(txrx_peer, rx.err.mic_err, 1,
+				   hal_rx_tlv_mic_err_get(soc->hal_soc,
+				   rx_tlv_hdr));
+	DP_PEER_PER_PKT_STATS_INCC(txrx_peer, rx.err.decrypt_err, 1,
+				   hal_rx_tlv_decrypt_err_get(soc->hal_soc,
+				   rx_tlv_hdr));
+
+	DP_PEER_EXTD_STATS_INC(txrx_peer, rx.wme_ac_type[TID_TO_WME_AC(tid)], 1);
+	DP_PEER_EXTD_STATS_INC(txrx_peer, rx.reception_type[reception_type], 1);
+
+	DP_PEER_EXTD_STATS_INCC(txrx_peer,
+				rx.pkt_type[pkt_type].mcs_count[MAX_MCS - 1], 1,
+				((mcs >= MAX_MCS_11A) && (pkt_type == DOT11_A)));
+	DP_PEER_EXTD_STATS_INCC(txrx_peer,
+				rx.pkt_type[pkt_type].mcs_count[mcs], 1,
+				((mcs <= MAX_MCS_11A) && (pkt_type == DOT11_A)));
+	DP_PEER_EXTD_STATS_INCC(txrx_peer,
+				rx.pkt_type[pkt_type].mcs_count[MAX_MCS - 1], 1,
+				((mcs >= MAX_MCS_11B) && (pkt_type == DOT11_B)));
+	DP_PEER_EXTD_STATS_INCC(txrx_peer,
+				rx.pkt_type[pkt_type].mcs_count[mcs], 1,
+				((mcs <= MAX_MCS_11B) && (pkt_type == DOT11_B)));
+	DP_PEER_EXTD_STATS_INCC(txrx_peer,
+				rx.pkt_type[pkt_type].mcs_count[MAX_MCS - 1], 1,
+				((mcs >= MAX_MCS_11A) && (pkt_type == DOT11_N)));
+	DP_PEER_EXTD_STATS_INCC(txrx_peer,
+				rx.pkt_type[pkt_type].mcs_count[mcs], 1,
+				((mcs <= MAX_MCS_11A) && (pkt_type == DOT11_N)));
+	DP_PEER_EXTD_STATS_INCC(txrx_peer,
+				rx.pkt_type[pkt_type].mcs_count[MAX_MCS - 1], 1,
+				((mcs >= MAX_MCS_11AC) && (pkt_type == DOT11_AC)));
+	DP_PEER_EXTD_STATS_INCC(txrx_peer,
+				rx.pkt_type[pkt_type].mcs_count[mcs], 1,
+				((mcs <= MAX_MCS_11AC) && (pkt_type == DOT11_AC)));
+	DP_PEER_EXTD_STATS_INCC(txrx_peer,
+				rx.pkt_type[pkt_type].mcs_count[MAX_MCS - 1], 1,
+				((mcs >= MAX_MCS) && (pkt_type == DOT11_AX)));
+	DP_PEER_EXTD_STATS_INCC(txrx_peer,
+				rx.pkt_type[pkt_type].mcs_count[mcs], 1,
+				((mcs < MAX_MCS) && (pkt_type == DOT11_AX)));
+}
+#else
+static inline
+void dp_rx_msdu_extd_stats_update(struct dp_soc *soc, qdf_nbuf_t nbuf,
+				  uint8_t *rx_tlv_hdr,
+				  struct dp_txrx_peer *txrx_peer)
+{
+}
 #endif
 
 /**
@@ -2007,8 +2129,7 @@ void dp_rx_msdu_stats_update(struct dp_soc *soc, qdf_nbuf_t nbuf,
 			     uint8_t ring_id,
 			     struct cdp_tid_rx_stats *tid_stats)
 {
-	bool is_ampdu, is_not_amsdu;
-	uint32_t sgi, mcs, tid, nss, bw, reception_type, pkt_type;
+	bool is_not_amsdu;
 	struct dp_vdev *vdev = txrx_peer->vdev;
 	bool enh_flag;
 	qdf_ether_header_t *eh;
@@ -2017,89 +2138,29 @@ void dp_rx_msdu_stats_update(struct dp_soc *soc, qdf_nbuf_t nbuf,
 	dp_rx_msdu_stats_update_prot_cnts(vdev, nbuf, txrx_peer);
 	is_not_amsdu = qdf_nbuf_is_rx_chfrag_start(nbuf) &
 			qdf_nbuf_is_rx_chfrag_end(nbuf);
-	DP_STATS_INC_PKT(txrx_peer, rx.rcvd_reo[ring_id], 1, msdu_len);
-	DP_STATS_INCC(txrx_peer, rx.non_amsdu_cnt, 1, is_not_amsdu);
-	DP_STATS_INCC(txrx_peer, rx.amsdu_cnt, 1, !is_not_amsdu);
-	DP_STATS_INCC(peer, rx.rx_retries, 1, qdf_nbuf_is_rx_retry_flag(nbuf));
+	DP_PEER_PER_PKT_STATS_INC_PKT(txrx_peer, rx.rcvd_reo[ring_id], 1,
+				      msdu_len);
+	DP_PEER_PER_PKT_STATS_INCC(txrx_peer, rx.non_amsdu_cnt, 1,
+				   is_not_amsdu);
+	DP_PEER_PER_PKT_STATS_INCC(txrx_peer, rx.amsdu_cnt, 1, !is_not_amsdu);
+	DP_PEER_PER_PKT_STATS_INCC(txrx_peer, rx.rx_retries, 1,
+				   qdf_nbuf_is_rx_retry_flag(nbuf));
 	tid_stats->msdu_cnt++;
 	if (qdf_unlikely(qdf_nbuf_is_da_mcbc(nbuf) &&
 			 (vdev->rx_decap_type == htt_cmn_pkt_type_ethernet))) {
 		eh = (qdf_ether_header_t *)qdf_nbuf_data(nbuf);
 		enh_flag = vdev->pdev->enhanced_stats_en;
-		DP_PEER_MC_INCC_PKT(peer, 1, msdu_len, enh_flag);
+		DP_PEER_MC_INCC_PKT(txrx_peer, 1, msdu_len, enh_flag);
 		tid_stats->mcast_msdu_cnt++;
 		if (QDF_IS_ADDR_BROADCAST(eh->ether_dhost)) {
-			DP_PEER_BC_INCC_PKT(peer, 1, msdu_len, enh_flag);
+			DP_PEER_BC_INCC_PKT(txrx_peer, 1, msdu_len, enh_flag);
 			tid_stats->bcast_msdu_cnt++;
 		}
 	}
 
-	/*
-	 * currently we can return from here as we have similar stats
-	 * updated at per ppdu level instead of msdu level
-	 */
-	if (!soc->process_rx_status)
-		return;
+	txrx_peer->stats.per_pkt_stats.rx.last_rx_ts = qdf_system_ticks();
 
-	peer->stats.rx.last_rx_ts = qdf_system_ticks();
-
-	/*
-	 * TODO - For KIWI this field is present in ring_desc
-	 * Try to use ring desc instead of tlv.
-	 */
-	is_ampdu = hal_rx_mpdu_info_ampdu_flag_get(soc->hal_soc, rx_tlv_hdr);
-	DP_STATS_INCC(peer, rx.ampdu_cnt, 1, is_ampdu);
-	DP_STATS_INCC(peer, rx.non_ampdu_cnt, 1, !(is_ampdu));
-	sgi = hal_rx_tlv_sgi_get(soc->hal_soc, rx_tlv_hdr);
-	mcs = hal_rx_tlv_rate_mcs_get(soc->hal_soc, rx_tlv_hdr);
-	tid = qdf_nbuf_get_tid_val(nbuf);
-	bw = hal_rx_tlv_bw_get(soc->hal_soc, rx_tlv_hdr);
-	reception_type = hal_rx_msdu_start_reception_type_get(soc->hal_soc,
-							      rx_tlv_hdr);
-	nss = hal_rx_msdu_start_nss_get(soc->hal_soc, rx_tlv_hdr);
-	pkt_type = hal_rx_tlv_get_pkt_type(soc->hal_soc, rx_tlv_hdr);
-	DP_STATS_INCC(peer, rx.rx_mpdu_cnt[mcs], 1,
-		      ((mcs < MAX_MCS) && QDF_NBUF_CB_RX_CHFRAG_START(nbuf)));
-	DP_STATS_INCC(peer, rx.rx_mpdu_cnt[MAX_MCS - 1], 1,
-		      ((mcs >= MAX_MCS) && QDF_NBUF_CB_RX_CHFRAG_START(nbuf)));
-	DP_STATS_INC(peer, rx.bw[bw], 1);
-	/*
-	 * only if nss > 0 and pkt_type is 11N/AC/AX,
-	 * then increase index [nss - 1] in array counter.
-	 */
-	if (nss > 0 && (pkt_type == DOT11_N ||
-			pkt_type == DOT11_AC ||
-			pkt_type == DOT11_AX))
-		DP_STATS_INC(peer, rx.nss[nss - 1], 1);
-	DP_STATS_INC(peer, rx.sgi_count[sgi], 1);
-	DP_STATS_INCC(peer, rx.err.mic_err, 1,
-		      hal_rx_tlv_mic_err_get(soc->hal_soc, rx_tlv_hdr));
-	DP_STATS_INCC(peer, rx.err.decrypt_err, 1,
-		      hal_rx_tlv_decrypt_err_get(soc->hal_soc, rx_tlv_hdr));
-
-	DP_STATS_INC(peer, rx.wme_ac_type[TID_TO_WME_AC(tid)], 1);
-	DP_STATS_INC(peer, rx.reception_type[reception_type], 1);
-
-	DP_STATS_INCC(peer, rx.pkt_type[pkt_type].mcs_count[MAX_MCS - 1], 1,
-		      ((mcs >= MAX_MCS_11A) && (pkt_type == DOT11_A)));
-	DP_STATS_INCC(peer, rx.pkt_type[pkt_type].mcs_count[mcs], 1,
-		      ((mcs <= MAX_MCS_11A) && (pkt_type == DOT11_A)));
-	DP_STATS_INCC(peer, rx.pkt_type[pkt_type].mcs_count[MAX_MCS - 1], 1,
-		      ((mcs >= MAX_MCS_11B) && (pkt_type == DOT11_B)));
-	DP_STATS_INCC(peer, rx.pkt_type[pkt_type].mcs_count[mcs], 1,
-		      ((mcs <= MAX_MCS_11B) && (pkt_type == DOT11_B)));
-	DP_STATS_INCC(peer, rx.pkt_type[pkt_type].mcs_count[MAX_MCS - 1], 1,
-		      ((mcs >= MAX_MCS_11A) && (pkt_type == DOT11_N)));
-	DP_STATS_INCC(peer, rx.pkt_type[pkt_type].mcs_count[mcs], 1,
-		      ((mcs <= MAX_MCS_11A) && (pkt_type == DOT11_N)));
-	DP_STATS_INCC(peer, rx.pkt_type[pkt_type].mcs_count[MAX_MCS - 1], 1,
-		      ((mcs >= MAX_MCS_11AC) && (pkt_type == DOT11_AC)));
-	DP_STATS_INCC(peer, rx.pkt_type[pkt_type].mcs_count[mcs], 1,
-		      ((mcs <= MAX_MCS_11AC) && (pkt_type == DOT11_AC)));
-	DP_STATS_INCC(peer, rx.pkt_type[pkt_type].mcs_count[MAX_MCS - 1], 1,
-		      ((mcs >= MAX_MCS) && (pkt_type == DOT11_AX)));
-	DP_STATS_INCC(peer, rx.pkt_type[pkt_type].mcs_count[mcs], 1,
-		      ((mcs < MAX_MCS) && (pkt_type == DOT11_AX)));
+	dp_rx_msdu_extd_stats_update(soc, nbuf, rx_tlv_hdr, txrx_peer);
 }
 
 #ifndef WDS_VENDOR_EXTENSION
