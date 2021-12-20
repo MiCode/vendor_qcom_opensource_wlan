@@ -730,27 +730,33 @@ void dp_service_mon_rings(struct  dp_soc *soc, uint32_t quota)
 #endif
 
 /*
- * dp_peer_tx_init() – Initialize receive TID state
+ * dp_mon_peer_tx_init() – Initialize receive TID state in monitor peer
  * @pdev: Datapath pdev
  * @peer: Datapath peer
  *
  */
 static void
-dp_peer_tx_init(struct dp_pdev *pdev, struct dp_peer *peer)
+dp_mon_peer_tx_init(struct dp_pdev *pdev, struct dp_peer *peer)
 {
+	if (!peer->monitor_peer)
+		return;
+
 	dp_peer_tid_queue_init(peer);
 	dp_peer_update_80211_hdr(peer->vdev, peer);
 }
 
 /*
- * dp_peer_tx_cleanup() – Deinitialize receive TID state
+ * dp_mon_peer_tx_cleanup() – Deinitialize receive TID state in monitor peer
  * @vdev: Datapath vdev
  * @peer: Datapath peer
  *
  */
 static void
-dp_peer_tx_cleanup(struct dp_vdev *vdev, struct dp_peer *peer)
+dp_mon_peer_tx_cleanup(struct dp_vdev *vdev, struct dp_peer *peer)
 {
+	if (!peer->monitor_peer)
+		return;
+
 	dp_peer_tid_queue_cleanup(peer);
 }
 
@@ -866,8 +872,8 @@ dp_mon_register_feature_ops_1_0(struct dp_soc *soc)
 	}
 
 	mon_ops->mon_config_debug_sniffer = dp_config_debug_sniffer;
-	mon_ops->mon_peer_tx_init = dp_peer_tx_init;
-	mon_ops->mon_peer_tx_cleanup = dp_peer_tx_cleanup;
+	mon_ops->mon_peer_tx_init = dp_mon_peer_tx_init;
+	mon_ops->mon_peer_tx_cleanup = dp_mon_peer_tx_cleanup;
 	mon_ops->mon_htt_ppdu_stats_attach = dp_htt_ppdu_stats_attach;
 	mon_ops->mon_htt_ppdu_stats_detach = dp_htt_ppdu_stats_detach;
 	mon_ops->mon_print_pdev_rx_mon_stats = dp_print_pdev_rx_mon_stats;
@@ -989,6 +995,8 @@ struct dp_mon_ops monitor_ops_1_0 = {
 	.mon_vdev_detach = dp_mon_vdev_detach,
 	.mon_peer_attach = dp_mon_peer_attach,
 	.mon_peer_detach = dp_mon_peer_detach,
+	.mon_peer_get_rdkstats_ctx = dp_mon_peer_get_rdkstats_ctx,
+	.mon_peer_reset_stats = dp_mon_peer_reset_stats,
 	.mon_flush_rings = dp_flush_monitor_rings,
 #if !defined(DISABLE_MON_CONFIG)
 	.mon_pdev_htt_srng_setup = dp_mon_htt_srng_setup_1_0,

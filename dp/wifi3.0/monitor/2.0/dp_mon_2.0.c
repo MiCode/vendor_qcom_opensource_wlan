@@ -1137,6 +1137,8 @@ struct dp_mon_ops monitor_ops_2_0 = {
 	.mon_vdev_detach = dp_mon_vdev_detach,
 	.mon_peer_attach = dp_mon_peer_attach,
 	.mon_peer_detach = dp_mon_peer_detach,
+	.mon_peer_get_rdkstats_ctx = dp_mon_peer_get_rdkstats_ctx,
+	.mon_peer_reset_stats = dp_mon_peer_reset_stats,
 	.mon_flush_rings = NULL,
 #if !defined(DISABLE_MON_CONFIG)
 	.mon_pdev_htt_srng_setup = dp_mon_pdev_htt_srng_setup_2_0,

@@ -1796,6 +1796,7 @@ dp_enable_peer_based_pktlog(struct cdp_soc_t *soc, uint8_t pdev_id,
 			    uint8_t *mac_addr, uint8_t enb_dsb)
 {
 	struct dp_peer *peer;
+	QDF_STATUS status = QDF_STATUS_E_FAILURE;
 	struct dp_pdev *pdev =
 		dp_get_pdev_from_soc_pdev_id_wifi3((struct dp_soc *)soc,
 						   pdev_id);
@@ -1814,12 +1815,15 @@ dp_enable_peer_based_pktlog(struct cdp_soc_t *soc, uint8_t pdev_id,
 		return QDF_STATUS_E_FAILURE;
 	}
 
-	peer->monitor_peer->peer_based_pktlog_filter = enb_dsb;
-	mon_pdev->dp_peer_based_pktlog = enb_dsb;
+	if (!IS_MLO_DP_MLD_PEER(peer) && peer->monitor_peer) {
+		peer->monitor_peer->peer_based_pktlog_filter = enb_dsb;
+		mon_pdev->dp_peer_based_pktlog = enb_dsb;
+		status = QDF_STATUS_SUCCESS;
+	}
 
 	dp_peer_unref_delete(peer, DP_MOD_ID_CDP);
 
-	return QDF_STATUS_SUCCESS;
+	return status;
 }
 
 /**
@@ -1842,7 +1846,7 @@ dp_peer_update_pkt_capture_params(ol_txrx_soc_handle soc,
 				  uint8_t *peer_mac)
 {
 	struct dp_peer *peer;
-	QDF_STATUS status;
+	QDF_STATUS status = QDF_STATUS_E_FAILURE;
 	struct dp_pdev *pdev =
 			dp_get_pdev_from_soc_pdev_id_wifi3((struct dp_soc *)soc,
 							   pdev_id);
@@ -1856,12 +1860,16 @@ dp_peer_update_pkt_capture_params(ol_txrx_soc_handle soc,
 		return QDF_STATUS_E_FAILURE;
 
 	/* we need to set tx pkt capture for non associated peer */
-	status = dp_monitor_tx_peer_filter(pdev, peer, is_tx_pkt_cap_enable,
-					   peer_mac);
+	if (!IS_MLO_DP_MLD_PEER(peer)) {
+		status = dp_monitor_tx_peer_filter(pdev, peer,
+						   is_tx_pkt_cap_enable,
+						   peer_mac);
 
-	status = dp_peer_set_rx_capture_enabled(pdev, peer,
-						is_rx_pkt_cap_enable,
-						peer_mac);
+		status = dp_peer_set_rx_capture_enabled(pdev, peer,
+							is_rx_pkt_cap_enable,
+							peer_mac);
+	}
+
 	dp_peer_unref_delete(peer, DP_MOD_ID_CDP);
 
 	return status;
@@ -1991,7 +1999,26 @@ dp_peer_cal_clients_stats_update(struct dp_soc *soc,
 				 struct dp_peer *peer,
 				 void *arg)
 {
-	dp_cal_client_update_peer_stats(&peer->stats);
+	struct cdp_calibr_stats_intf peer_stats_intf = {0};
+	struct dp_peer *tgt_peer = NULL;
+	struct dp_txrx_peer *txrx_peer = NULL;
+
+	if (!dp_peer_is_primary_link_peer(peer))
+		return;
+
+	tgt_peer = dp_get_tgt_peer_from_peer(peer);
+	if (!tgt_peer || !(tgt_peer->txrx_peer))
+		return;
+
+	txrx_peer = tgt_peer->txrx_peer;
+	peer_stats_intf.to_stack = txrx_peer->to_stack;
+	peer_stats_intf.tx_success =
+				txrx_peer->stats.per_pkt_stats.tx.tx_success;
+	peer_stats_intf.tx_ucast =
+				txrx_peer->stats.per_pkt_stats.tx.ucast;
+
+	dp_cal_client_update_peer_stats_wifi3(&peer_stats_intf,
+					      &tgt_peer->stats);
 }
 
 /*dp_iterate_update_peer_list - update peer stats on cal client timer
@@ -4701,24 +4728,31 @@ QDF_STATUS dp_mon_pdev_init(struct dp_pdev *pdev)
 	soc = pdev->soc;
 	mon_pdev = pdev->monitor_pdev;
 
+	mon_pdev->invalid_mon_peer = qdf_mem_malloc(sizeof(struct dp_mon_peer));
+	if (!mon_pdev->invalid_mon_peer) {
+		dp_mon_err("%pK: Memory allocation failed for invalid "
+			   "monitor peer", pdev);
+		return QDF_STATUS_E_NOMEM;
+	}
+
 	mon_ops = dp_mon_ops_get(pdev->soc);
 	if (!mon_ops) {
 		dp_mon_err("Monitor ops is NULL");
-		return QDF_STATUS_E_FAILURE;
+		goto fail0;
 	}
 
 	mon_pdev->filter = dp_mon_filter_alloc(mon_pdev);
 	if (!mon_pdev->filter) {
 		dp_mon_err("%pK: Memory allocation failed for monitor filter",
 			   pdev);
-		return QDF_STATUS_E_NOMEM;
+		goto fail0;
 	}
 
 	if (mon_ops->tx_mon_filter_alloc) {
 		if (mon_ops->tx_mon_filter_alloc(pdev)) {
-		dp_mon_err("%pK: Memory allocation failed for tx monitor filter",
-			   pdev);
-		return QDF_STATUS_E_NOMEM;
+			dp_mon_err("%pK: Memory allocation failed for tx monitor "
+				   "filter", pdev);
+			goto fail1;
 		}
 	}
 
@@ -4753,12 +4787,12 @@ QDF_STATUS dp_mon_pdev_init(struct dp_pdev *pdev)
 			     pdev->soc->osdev,
 			     &dp_iterate_update_peer_list);
 	if (dp_htt_ppdu_stats_attach(pdev) != QDF_STATUS_SUCCESS)
-		goto fail0;
+		goto fail2;
 
 	if (mon_ops->mon_rings_init) {
 		if (mon_ops->mon_rings_init(pdev)) {
 			dp_mon_err("%pK: MONITOR rings setup failed", pdev);
-			goto fail1;
+			goto fail3;
 		}
 	}
 
@@ -4775,14 +4809,17 @@ QDF_STATUS dp_mon_pdev_init(struct dp_pdev *pdev)
 	mon_pdev->is_dp_mon_pdev_initialized = true;
 
 	return QDF_STATUS_SUCCESS;
-fail1:
+fail3:
 	dp_htt_ppdu_stats_detach(pdev);
-fail0:
+fail2:
 	qdf_spinlock_destroy(&mon_pdev->neighbour_peer_mutex);
 	qdf_spinlock_destroy(&mon_pdev->ppdu_stats_lock);
 	if (mon_ops->tx_mon_filter_dealloc)
 		mon_ops->tx_mon_filter_dealloc(pdev);
+fail1:
 	dp_mon_filter_dealloc(mon_pdev);
+fail0:
+	qdf_mem_free(mon_pdev->invalid_mon_peer);
 	return QDF_STATUS_E_FAILURE;
 }
 
@@ -4821,6 +4858,8 @@ QDF_STATUS dp_mon_pdev_deinit(struct dp_pdev *pdev)
 		dp_mon_filter_dealloc(mon_pdev);
 	if (mon_ops->mon_rings_deinit)
 		mon_ops->mon_rings_deinit(pdev);
+	if (mon_pdev->invalid_mon_peer)
+		qdf_mem_free(mon_pdev->invalid_mon_peer);
 	mon_pdev->is_dp_mon_pdev_initialized = false;
 
 	return QDF_STATUS_SUCCESS;
@@ -4866,6 +4905,92 @@ QDF_STATUS dp_mon_vdev_detach(struct dp_vdev *vdev)
 	return QDF_STATUS_SUCCESS;
 }
 
+#if defined(FEATURE_PERPKT_INFO) && WDI_EVENT_ENABLE
+/**
+ * dp_mon_peer_attach_notify() - Raise WDI event for peer create
+ * @peer: DP Peer handle
+ *
+ * Return: none
+ */
+static inline
+void dp_mon_peer_attach_notify(struct dp_peer *peer)
+{
+	struct dp_mon_peer *mon_peer = peer->monitor_peer;
+	struct dp_pdev *pdev;
+	struct dp_soc *soc;
+	struct cdp_peer_cookie peer_cookie;
+
+	pdev = peer->vdev->pdev;
+	soc = pdev->soc;
+
+	qdf_mem_copy(peer_cookie.mac_addr, peer->mac_addr.raw,
+		     QDF_MAC_ADDR_SIZE);
+
+	peer_cookie.ctx = NULL;
+	peer_cookie.pdev_id = pdev->pdev_id;
+	peer_cookie.cookie = pdev->next_peer_cookie++;
+
+	dp_wdi_event_handler(WDI_EVENT_PEER_CREATE, soc,
+			     (void *)&peer_cookie,
+			     peer->peer_id, WDI_NO_VAL, pdev->pdev_id);
+
+	if (soc->rdkstats_enabled) {
+		if (!peer_cookie.ctx) {
+			pdev->next_peer_cookie--;
+			qdf_err("Failed to initialize peer rate stats");
+			mon_peer->rdkstats_ctx = NULL;
+		} else {
+			mon_peer->rdkstats_ctx = (struct cdp_peer_rate_stats_ctx *)
+						  peer_cookie.ctx;
+		}
+	}
+}
+
+/**
+ * dp_mon_peer_detach_notify() - Raise WDI event for peer destroy
+ * @peer: DP Peer handle
+ *
+ * Return: none
+ */
+static inline
+void dp_mon_peer_detach_notify(struct dp_peer *peer)
+{
+	struct dp_mon_peer *mon_peer = peer->monitor_peer;
+	struct dp_pdev *pdev;
+	struct dp_soc *soc;
+	struct cdp_peer_cookie peer_cookie;
+
+	pdev = peer->vdev->pdev;
+	soc = pdev->soc;
+	/* send peer destroy event to upper layer */
+	qdf_mem_copy(peer_cookie.mac_addr, peer->mac_addr.raw,
+		     QDF_MAC_ADDR_SIZE);
+	peer_cookie.ctx = NULL;
+	peer_cookie.ctx = (struct cdp_stats_cookie *)mon_peer->rdkstats_ctx;
+
+	dp_wdi_event_handler(WDI_EVENT_PEER_DESTROY,
+			     soc,
+			     (void *)&peer_cookie,
+			     peer->peer_id,
+			     WDI_NO_VAL,
+			     pdev->pdev_id);
+
+	mon_peer->rdkstats_ctx = NULL;
+}
+#else
+static inline
+void dp_mon_peer_attach_notify(struct dp_peer *peer)
+{
+	peer->monitor_peer->rdkstats_ctx = NULL;
+}
+
+static inline
+void dp_mon_peer_detach_notify(struct dp_peer *peer)
+{
+	peer->monitor_peer->rdkstats_ctx = NULL;
+}
+#endif
+
 #if defined(WLAN_TX_PKT_CAPTURE_ENH) || defined(FEATURE_PERPKT_INFO)
 QDF_STATUS dp_mon_peer_attach(struct dp_peer *peer)
 {
@@ -4887,6 +5012,11 @@ QDF_STATUS dp_mon_peer_attach(struct dp_peer *peer)
 	 */
 	dp_monitor_peer_tx_capture_filter_check(pdev, peer);
 
+	DP_STATS_INIT(mon_peer);
+	DP_STATS_UPD(mon_peer, rx.avg_snr, CDP_INVALID_SNR);
+
+	dp_mon_peer_attach_notify(peer);
+
 	return QDF_STATUS_SUCCESS;
 }
 #endif
@@ -4894,6 +5024,11 @@ QDF_STATUS dp_mon_peer_attach(struct dp_peer *peer)
 QDF_STATUS dp_mon_peer_detach(struct dp_peer *peer)
 {
 	struct dp_mon_peer *mon_peer = peer->monitor_peer;
+
+	if (!mon_peer)
+		return QDF_STATUS_SUCCESS;
+
+	dp_mon_peer_detach_notify(peer);
 
 	qdf_mem_free(mon_peer);
 	peer->monitor_peer = NULL;
@@ -4913,6 +5048,30 @@ void dp_mon_register_intr_ops(struct dp_soc *soc)
 	}
 	if (mon_ops->mon_register_intr_ops)
 		mon_ops->mon_register_intr_ops(soc);
+}
+#endif
+
+struct cdp_peer_rate_stats_ctx *dp_mon_peer_get_rdkstats_ctx(struct dp_peer *peer)
+{
+	struct dp_mon_peer *mon_peer = peer->monitor_peer;
+
+	if (mon_peer)
+		return mon_peer->rdkstats_ctx;
+	else
+		return NULL;
+}
+
+#ifdef QCA_ENHANCED_STATS_SUPPORT
+void dp_mon_peer_reset_stats(struct dp_peer *peer)
+{
+	struct dp_mon_peer *mon_peer = NULL;
+
+	mon_peer = peer->monitor_peer;
+	if (!mon_peer)
+		return;
+
+	DP_STATS_CLR(mon_peer);
+	DP_STATS_UPD(mon_peer, rx.avg_snr, CDP_INVALID_SNR);
 }
 #endif
 

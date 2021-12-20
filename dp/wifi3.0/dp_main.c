@@ -5369,9 +5369,6 @@ static void dp_pdev_deinit(struct cdp_pdev *txrx_pdev, int force)
 	qdf_spinlock_destroy(&pdev->tx_mutex);
 	qdf_spinlock_destroy(&pdev->vdev_list_lock);
 
-	if (pdev->invalid_peer)
-		qdf_mem_free(pdev->invalid_peer);
-
 	dp_monitor_pdev_deinit(pdev);
 
 	dp_pdev_srng_deinit(pdev);
@@ -6848,6 +6845,8 @@ static QDF_STATUS dp_txrx_peer_attach(struct dp_soc *soc, struct dp_peer *peer)
 	/* initialize the peer_id */
 	txrx_peer->vdev = peer->vdev;
 
+	DP_STATS_INIT(txrx_peer);
+
 	dp_wds_ext_peer_init(txrx_peer);
 	dp_peer_rx_bufq_resources_init(txrx_peer);
 	dp_peer_hw_txrx_stats_init(soc, txrx_peer);
@@ -6868,6 +6867,21 @@ static QDF_STATUS dp_txrx_peer_attach(struct dp_soc *soc, struct dp_peer *peer)
 	return QDF_STATUS_SUCCESS;
 }
 
+static inline
+void dp_txrx_peer_stats_clr(struct dp_txrx_peer *txrx_peer)
+{
+	if (!txrx_peer)
+		return;
+
+	txrx_peer->tx_failed = 0;
+	txrx_peer->comp_pkt.num = 0;
+	txrx_peer->comp_pkt.bytes = 0;
+	txrx_peer->to_stack.num = 0;
+	txrx_peer->to_stack.bytes = 0;
+
+	DP_STATS_CLR(txrx_peer);
+}
+
 /*
  * dp_peer_create_wifi3() - attach txrx peer
  * @soc_hdl: Datapath soc handle
@@ -6885,7 +6899,6 @@ dp_peer_create_wifi3(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
 	int i;
 	struct dp_soc *soc = (struct dp_soc *)soc_hdl;
 	struct dp_pdev *pdev;
-	struct cdp_peer_cookie peer_cookie;
 	enum cdp_txrx_ast_entry_type ast_type = CDP_TXRX_AST_TYPE_STATIC;
 	struct dp_vdev *vdev = NULL;
 
@@ -6934,17 +6947,20 @@ dp_peer_create_wifi3(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
 		qdf_spinlock_create(&peer->peer_info_lock);
 
 		DP_STATS_INIT(peer);
-		DP_STATS_UPD(peer, rx.avg_snr, CDP_INVALID_SNR);
 
 		/*
 		 * In tx_monitor mode, filter may be set for unassociated peer
 		 * when unassociated peer get associated peer need to
 		 * update tx_cap_enabled flag to support peer filter.
 		 */
-		dp_monitor_peer_tx_capture_filter_check(pdev, peer);
+		if (!IS_MLO_DP_MLD_PEER(peer)) {
+			dp_monitor_peer_tx_capture_filter_check(pdev, peer);
+			dp_monitor_peer_reset_stats(soc, peer);
+		}
 
 		if (peer->txrx_peer) {
 			dp_peer_rx_bufq_resources_init(peer->txrx_peer);
+			dp_txrx_peer_stats_clr(peer->txrx_peer);
 			dp_set_peer_isolation(peer->txrx_peer, false);
 			dp_wds_ext_peer_init(peer->txrx_peer);
 			dp_peer_hw_txrx_stats_init(soc, peer->txrx_peer);
@@ -7062,27 +7078,6 @@ dp_peer_create_wifi3(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
 	peer->valid = 1;
 	dp_local_peer_id_alloc(pdev, peer);
 	DP_STATS_INIT(peer);
-	DP_STATS_UPD(peer, rx.avg_snr, CDP_INVALID_SNR);
-
-	qdf_mem_copy(peer_cookie.mac_addr, peer->mac_addr.raw,
-		     QDF_MAC_ADDR_SIZE);
-	peer_cookie.ctx = NULL;
-	peer_cookie.pdev_id = pdev->pdev_id;
-	peer_cookie.cookie = pdev->next_peer_cookie++;
-#if defined(FEATURE_PERPKT_INFO) && WDI_EVENT_ENABLE
-	dp_wdi_event_handler(WDI_EVENT_PEER_CREATE, pdev->soc,
-			     (void *)&peer_cookie,
-			     peer->peer_id, WDI_NO_VAL, pdev->pdev_id);
-#endif
-	if (soc->rdkstats_enabled) {
-		if (!peer_cookie.ctx) {
-			pdev->next_peer_cookie--;
-			qdf_err("Failed to initialize peer rate stats");
-		} else {
-			peer->rdkstats_ctx = (struct cdp_peer_rate_stats_ctx *)
-						peer_cookie.ctx;
-		}
-	}
 
 	dp_peer_update_state(soc, peer, DP_PEER_STATE_INIT);
 
@@ -7408,7 +7403,8 @@ dp_peer_setup_wifi3(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
 	 * which is REO2TCL ring. for this reason we should
 	 * not setup reo_queues and default route for bss_peer.
 	 */
-	dp_monitor_peer_tx_init(pdev, peer);
+	if (!IS_MLO_DP_MLD_PEER(peer))
+		dp_monitor_peer_tx_init(pdev, peer);
 
 	if (!setup_info)
 		if (dp_peer_legacy_setup(soc, peer) !=
@@ -7458,7 +7454,8 @@ dp_peer_setup_wifi3(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
 		}
 	}
 
-	dp_peer_ppdu_delayed_ba_init(peer);
+	if (!IS_MLO_DP_MLD_PEER(peer))
+		dp_peer_ppdu_delayed_ba_init(peer);
 
 fail:
 	dp_peer_unref_delete(peer, DP_MOD_ID_CDP);
@@ -7998,7 +7995,6 @@ void dp_peer_unref_delete(struct dp_peer *peer, enum dp_mod_id mod_id)
 	struct dp_pdev *pdev = vdev->pdev;
 	struct dp_soc *soc = pdev->soc;
 	uint16_t peer_id;
-	struct cdp_peer_cookie peer_cookie;
 	struct dp_peer *tmp_peer;
 	bool found = false;
 
@@ -8027,21 +8023,6 @@ void dp_peer_unref_delete(struct dp_peer *peer, enum dp_mod_id mod_id)
 		dp_peer_debug("Deleting peer %pK ("QDF_MAC_ADDR_FMT")", peer,
 			      QDF_MAC_ADDR_REF(peer->mac_addr.raw));
 
-		/* send peer destroy event to upper layer */
-		qdf_mem_copy(peer_cookie.mac_addr, peer->mac_addr.raw,
-			     QDF_MAC_ADDR_SIZE);
-		peer_cookie.ctx = NULL;
-		peer_cookie.ctx = (struct cdp_stats_cookie *)
-					peer->rdkstats_ctx;
-#if defined(FEATURE_PERPKT_INFO) && WDI_EVENT_ENABLE
-		dp_wdi_event_handler(WDI_EVENT_PEER_DESTROY,
-				     soc,
-				     (void *)&peer_cookie,
-				     peer->peer_id,
-				     WDI_NO_VAL,
-				     pdev->pdev_id);
-#endif
-		peer->rdkstats_ctx = NULL;
 		wlan_minidump_remove(peer, sizeof(*peer), soc->ctrl_psoc,
 				     WLAN_MD_DP_PEER, "dp_peer");
 
@@ -8063,7 +8044,9 @@ void dp_peer_unref_delete(struct dp_peer *peer, enum dp_mod_id mod_id)
 
 		/* cleanup the peer data */
 		dp_peer_cleanup(vdev, peer);
-		dp_monitor_peer_detach(soc, peer);
+
+		if (!IS_MLO_DP_MLD_PEER(peer))
+			dp_monitor_peer_detach(soc, peer);
 
 		qdf_spinlock_destroy(&peer->peer_state_lock);
 
@@ -9491,6 +9474,11 @@ static void dp_rx_update_peer_delay_stats(struct dp_soc *soc,
 	peer = dp_peer_get_ref_by_id(soc, peer_id, DP_MOD_ID_CDP);
 	if (qdf_unlikely(!peer))
 		return;
+
+	if (qdf_unlikely(!peer->txrx_peer)) {
+		dp_peer_unref_delete(peer, DP_MOD_ID_CDP);
+		return;
+	}
 
 	if (qdf_likely(peer->txrx_peer->delay_stats)) {
 		delay_stats = peer->txrx_peer->delay_stats;
@@ -11499,7 +11487,7 @@ dp_peer_flush_rate_stats_req(struct dp_soc *soc, struct dp_peer *peer,
 
 	dp_wdi_event_handler(
 		WDI_EVENT_FLUSH_RATE_STATS_REQ,
-		soc, peer->rdkstats_ctx,
+		soc, dp_monitor_peer_get_rdkstats_ctx(soc, peer),
 		peer->peer_id,
 		WDI_NO_VAL, peer->vdev->pdev->pdev_id);
 }
@@ -11550,7 +11538,9 @@ static void *dp_peer_get_rdkstats_ctx(struct cdp_soc_t *soc_hdl,
 		if (!peer)
 			return NULL;
 
-		rdkstats_ctx = peer->rdkstats_ctx;
+		if (!IS_MLO_DP_MLD_PEER(peer))
+			rdkstats_ctx = dp_monitor_peer_get_rdkstats_ctx(soc,
+									peer);
 
 		dp_peer_unref_delete(peer, DP_MOD_ID_CDP);
 	}
@@ -14624,16 +14614,6 @@ static QDF_STATUS dp_pdev_init(struct cdp_soc_t *txrx_soc,
 					    soc->tcl_cmd_credit_ring.hal_srng);
 
 	dp_tx_pdev_init(pdev);
-	/*
-	 * Variable to prevent double pdev deinitialization during
-	 * radio detach execution .i.e. in the absence of any vdev.
-	 */
-	pdev->invalid_peer = qdf_mem_malloc(sizeof(struct dp_peer));
-
-	if (!pdev->invalid_peer) {
-		dp_init_err("%pK: Invalid peer memory allocation failed", soc);
-		goto fail2;
-	}
 
 	/*
 	 * set nss pdev config based on soc config
@@ -14682,7 +14662,7 @@ static QDF_STATUS dp_pdev_init(struct cdp_soc_t *txrx_soc,
 
 	if (!pdev->sojourn_buf) {
 		dp_init_err("%pK: Failed to allocate sojourn buf", soc);
-		goto fail3;
+		goto fail2;
 	}
 	sojourn_buf = qdf_nbuf_data(pdev->sojourn_buf);
 	qdf_mem_zero(sojourn_buf, sizeof(struct cdp_tx_sojourn_stats));
@@ -14693,18 +14673,18 @@ static QDF_STATUS dp_pdev_init(struct cdp_soc_t *txrx_soc,
 
 	if (dp_rxdma_ring_setup(soc, pdev)) {
 		dp_init_err("%pK: RXDMA ring config failed", soc);
-		goto fail4;
+		goto fail3;
 	}
 
 	if (dp_init_ipa_rx_refill_buf_ring(soc, pdev))
-		goto fail4;
+		goto fail3;
 
 	if (dp_ipa_ring_resource_setup(soc, pdev))
-		goto fail5;
+		goto fail4;
 
 	if (dp_ipa_uc_attach(soc, pdev) != QDF_STATUS_SUCCESS) {
 		dp_init_err("%pK: dp_ipa_uc_attach failed", soc);
-		goto fail5;
+		goto fail4;
 	}
 
 	ret = dp_rx_fst_attach(soc, pdev);
@@ -14712,18 +14692,18 @@ static QDF_STATUS dp_pdev_init(struct cdp_soc_t *txrx_soc,
 	    (ret != QDF_STATUS_E_NOSUPPORT)) {
 		dp_init_err("%pK: RX Flow Search Table attach failed: pdev %d err %d",
 			    soc, pdev_id, ret);
-		goto fail6;
+		goto fail5;
 	}
 
 	if (dp_pdev_bkp_stats_attach(pdev) != QDF_STATUS_SUCCESS) {
 		QDF_TRACE(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_ERROR,
 			  FL("dp_pdev_bkp_stats_attach failed"));
-		goto fail7;
+		goto fail6;
 	}
 
 	if (dp_monitor_pdev_init(pdev)) {
 		dp_init_err("%pK: dp_monitor_pdev_init failed\n", soc);
-		goto fail8;
+		goto fail7;
 	}
 
 	/* initialize sw rx descriptors */
@@ -14739,22 +14719,20 @@ static QDF_STATUS dp_pdev_init(struct cdp_soc_t *txrx_soc,
 		qdf_skb_total_mem_stats_read());
 
 	return QDF_STATUS_SUCCESS;
-fail8:
-	dp_pdev_bkp_stats_detach(pdev);
 fail7:
-	dp_rx_fst_detach(soc, pdev);
+	dp_pdev_bkp_stats_detach(pdev);
 fail6:
-	dp_ipa_uc_detach(soc, pdev);
+	dp_rx_fst_detach(soc, pdev);
 fail5:
-	dp_deinit_ipa_rx_refill_buf_ring(soc, pdev);
+	dp_ipa_uc_detach(soc, pdev);
 fail4:
+	dp_deinit_ipa_rx_refill_buf_ring(soc, pdev);
+fail3:
 	dp_rxdma_ring_cleanup(soc, pdev);
 	qdf_nbuf_free(pdev->sojourn_buf);
-fail3:
+fail2:
 	qdf_spinlock_destroy(&pdev->tx_mutex);
 	qdf_spinlock_destroy(&pdev->vdev_list_lock);
-	qdf_mem_free(pdev->invalid_peer);
-fail2:
 	dp_pdev_srng_deinit(pdev);
 fail1:
 	dp_wdi_event_detach(pdev);

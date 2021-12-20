@@ -187,6 +187,28 @@ QDF_STATUS dp_mon_peer_attach(struct dp_peer *peer)
 QDF_STATUS dp_mon_peer_detach(struct dp_peer *peer);
 
 /*
+ * dp_mon_peer_get_rdkstats_ctx() - Get rdk stats context from monitor peer
+ * @peer: Datapath peer handle
+ *
+ * Return: rdkstats_ctx
+ */
+struct cdp_peer_rate_stats_ctx *dp_mon_peer_get_rdkstats_ctx(struct dp_peer *peer);
+
+#ifdef QCA_ENHANCED_STATS_SUPPORT
+/*
+ * dp_mon_peer_reset_stats() - Reset monitor peer stats
+ * @peer: Datapath peer handle
+ *
+ * Return: none
+ */
+void dp_mon_peer_reset_stats(struct dp_peer *peer);
+#else
+static inline void dp_mon_peer_reset_stats(struct dp_peer *peer)
+{
+}
+#endif
+
+/*
  * dp_mon_cdp_ops_register() - Register monitor cdp ops
  * @soc: Datapath soc handle
  *
@@ -435,6 +457,8 @@ struct dp_mon_ops {
 	QDF_STATUS (*mon_vdev_detach)(struct dp_vdev *vdev);
 	QDF_STATUS (*mon_peer_attach)(struct dp_peer *peer);
 	QDF_STATUS (*mon_peer_detach)(struct dp_peer *peer);
+	struct cdp_peer_rate_stats_ctx *(*mon_peer_get_rdkstats_ctx)(struct dp_peer *peer);
+	void (*mon_peer_reset_stats)(struct dp_peer *peer);
 	QDF_STATUS (*mon_config_debug_sniffer)(struct dp_pdev *pdev, int val);
 	void (*mon_flush_rings)(struct dp_soc *soc);
 #if !defined(DISABLE_MON_CONFIG)
@@ -1614,6 +1638,56 @@ static inline QDF_STATUS dp_monitor_peer_detach(struct dp_soc *soc,
 	}
 
 	return monitor_ops->mon_peer_detach(peer);
+}
+
+/*
+ * dp_monitor_peer_get_rdkstats_ctx() - Get RDK stats context from monitor peer
+ * @soc: Datapath soc handle
+ * @peer: Datapath peer handle
+ *
+ * Return: RDK stats context
+ */
+static inline struct cdp_peer_rate_stats_ctx*
+dp_monitor_peer_get_rdkstats_ctx(struct dp_soc *soc, struct dp_peer *peer)
+{
+	struct dp_mon_ops *monitor_ops;
+	struct dp_mon_soc *mon_soc = soc->monitor_soc;
+
+	if (!mon_soc)
+		return NULL;
+
+	monitor_ops = mon_soc->mon_ops;
+	if (!monitor_ops || !monitor_ops->mon_peer_get_rdkstats_ctx) {
+		dp_mon_debug("callback not registered");
+		return NULL;
+	}
+
+	return monitor_ops->mon_peer_get_rdkstats_ctx(peer);
+}
+
+/*
+ * dp_monitor_peer_reset_stats() - Reset monitor peer stats
+ * @soc: Datapath soc handle
+ * @peer: Datapath peer handle
+ *
+ * Return: none
+ */
+static inline void dp_monitor_peer_reset_stats(struct dp_soc *soc,
+					       struct dp_peer *peer)
+{
+	struct dp_mon_ops *monitor_ops;
+	struct dp_mon_soc *mon_soc = soc->monitor_soc;
+
+	if (!mon_soc)
+		return;
+
+	monitor_ops = mon_soc->mon_ops;
+	if (!monitor_ops || !monitor_ops->mon_peer_reset_stats) {
+		dp_mon_debug("callback not registered");
+		return;
+	}
+
+	monitor_ops->mon_peer_reset_stats(peer);
 }
 
 /*

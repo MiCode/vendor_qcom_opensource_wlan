@@ -2541,8 +2541,9 @@ static inline struct dp_peer *dp_peer_find_add_id(struct dp_soc *soc,
 		}
 
 		if (peer->peer_id == HTT_INVALID_PEER) {
-			dp_monitor_peer_tid_peer_id_update(soc, peer,
-							   peer_id);
+			if (!IS_MLO_DP_MLD_PEER(peer))
+				dp_monitor_peer_tid_peer_id_update(soc, peer,
+								   peer_id);
 		} else {
 			dp_peer_unref_delete(peer, DP_MOD_ID_CONFIG);
 			QDF_ASSERT(0);
@@ -3881,7 +3882,8 @@ void dp_peer_cleanup(struct dp_vdev *vdev, struct dp_peer *peer)
 	/* save vdev related member in case vdev freed */
 	vdev_opmode = vdev->opmode;
 
-	dp_monitor_peer_tx_cleanup(vdev, peer);
+	if (!IS_MLO_DP_MLD_PEER(peer))
+		dp_monitor_peer_tx_cleanup(vdev, peer);
 
 	if (vdev_opmode != wlan_op_mode_monitor)
 	/* cleanup the Rx reorder queues for this peer */

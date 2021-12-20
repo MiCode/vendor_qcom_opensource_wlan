@@ -1658,7 +1658,7 @@ dp_rx_process_peer_based_pktlog(struct dp_soc *soc,
 	if (!peer)
 		return;
 
-	if ((peer->peer_id != HTT_INVALID_PEER) &&
+	if ((peer->peer_id != HTT_INVALID_PEER) && (peer->monitor_peer) &&
 	    (peer->monitor_peer->peer_based_pktlog_filter)) {
 		dp_wdi_event_handler(
 				     WDI_EVENT_RX_DESC, soc,
