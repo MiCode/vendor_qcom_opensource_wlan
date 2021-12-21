@@ -2318,7 +2318,7 @@ void wlan_ipa_handle_multiple_sap_evt(struct wlan_ipa_priv *ipa_ctx,
 		}
 
 		if (!ipa_ctx->ipa_pipes_down)
-			wlan_ipa_uc_disable_pipes(ipa_ctx, true);
+			wlan_ipa_uc_handle_last_discon(ipa_ctx, true);
 	}
 }
 #endif
