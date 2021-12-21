@@ -355,7 +355,6 @@ static QDF_STATUS dp_soc_detach_be(struct dp_soc *soc)
 	struct dp_soc_be *be_soc = dp_get_be_soc_from_dp_soc(soc);
 	int i = 0;
 
-	dp_tx_deinit_bank_profiles(be_soc);
 
 	for (i = 0; i < MAX_TXDESC_POOLS; i++)
 		dp_hw_cookie_conversion_detach(be_soc,
@@ -410,7 +409,6 @@ static QDF_STATUS dp_soc_attach_be(struct dp_soc *soc,
 	}
 
 	soc->wbm_sw0_bm_id = hal_tx_get_wbm_sw0_bm_id();
-	qdf_status = dp_tx_init_bank_profiles(be_soc);
 
 	qdf_status = dp_hw_cc_cmem_addr_init(soc);
 	if (!QDF_IS_STATUS_SUCCESS(qdf_status))
@@ -452,6 +450,7 @@ static QDF_STATUS dp_soc_deinit_be(struct dp_soc *soc)
 	struct dp_soc_be *be_soc = dp_get_be_soc_from_dp_soc(soc);
 	int i = 0;
 
+	dp_tx_deinit_bank_profiles(be_soc);
 	for (i = 0; i < MAX_TXDESC_POOLS; i++)
 		dp_hw_cookie_conversion_deinit(be_soc,
 					       &be_soc->tx_cc_ctx[i]);
@@ -488,6 +487,10 @@ static QDF_STATUS dp_soc_init_be(struct dp_soc *soc)
 	/* route vdev_id mismatch notification via FW completion */
 	hal_tx_vdev_mismatch_routing_set(soc->hal_soc,
 					 HAL_TX_VDEV_MISMATCH_FW_NOTIFY);
+
+	qdf_status = dp_tx_init_bank_profiles(be_soc);
+	if (!QDF_IS_STATUS_SUCCESS(qdf_status))
+		goto fail;
 
 	/* write WBM/REO cookie conversion CFG register */
 	dp_cc_reg_cfg_init(soc, true);
