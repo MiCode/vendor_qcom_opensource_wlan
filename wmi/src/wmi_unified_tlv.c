@@ -7262,8 +7262,11 @@ extract_pdev_sscan_fw_cmd_fixed_param_tlv(
 								ev->pdev_id);
 	param->smode = ev->spectral_scan_mode;
 	param->num_fft_bin_index = param_buf->num_fft_bin_index;
-	wmi_debug("pdev id %u scan mode %u num_fft_bin_index %u",
-		 param->pdev_id, param->smode, param->num_fft_bin_index);
+	param->num_det_info = param_buf->num_det_info;
+
+	wmi_debug("pdev id:%u smode:%u num_fft_bin_index:%u num_det_info:%u",
+		  ev->pdev_id, ev->spectral_scan_mode,
+		  param_buf->num_fft_bin_index, param_buf->num_det_info);
 
 	return QDF_STATUS_SUCCESS;
 }
@@ -7338,6 +7341,19 @@ extract_pdev_spectral_session_chan_info_tlv(
 		return QDF_STATUS_E_NULL_VALUE;
 	}
 
+	wmi_debug("operating_pri20_freq:%u operating_cfreq1:%u"
+		  "operating_cfreq2:%u operating_bw:%u"
+		  "operating_puncture_20mhz_bitmap:%u"
+		  "sscan_cfreq1:%u sscan_cfreq2:%u"
+		  "sscan_bw:%u sscan_puncture_20mhz_bitmap:%u",
+		  chan_info_tlv->operating_pri20_freq,
+		  chan_info_tlv->operating_cfreq1,
+		  chan_info_tlv->operating_cfreq2, chan_info_tlv->operating_bw,
+		  chan_info_tlv->operating_puncture_20mhz_bitmap,
+		  chan_info_tlv->sscan_cfreq1, chan_info_tlv->sscan_cfreq2,
+		  chan_info_tlv->sscan_bw,
+		  chan_info_tlv->sscan_puncture_20mhz_bitmap);
+
 	chan_info->operating_pri20_freq =
 			(qdf_freq_t)chan_info_tlv->operating_pri20_freq;
 	chan_info->operating_cfreq1 =
@@ -7387,6 +7403,10 @@ extract_pdev_spectral_session_detector_info_tlv(
 	}
 
 	det_info_tlv = &param_buf->det_info[idx];
+
+	wmi_debug("det_info_idx: %u detector_id:%u start_freq:%u end_freq:%u",
+		  idx, det_info_tlv->detector_id,
+		  det_info_tlv->start_freq, det_info_tlv->end_freq);
 
 	det_info->det_id = det_info_tlv->detector_id;
 	det_info->start_freq = (qdf_freq_t)det_info_tlv->start_freq;
