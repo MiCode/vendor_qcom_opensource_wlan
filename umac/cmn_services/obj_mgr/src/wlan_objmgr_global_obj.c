@@ -890,6 +890,8 @@ struct wlan_objmgr_psoc
 	return psoc;
 }
 
+qdf_export_symbol(wlan_objmgr_get_psoc_by_id);
+
 #ifdef WLAN_FEATURE_11BE_MLO
 struct mlo_mgr_context *wlan_objmgr_get_mlo_ctx(void)
 {
