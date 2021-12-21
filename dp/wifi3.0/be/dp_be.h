@@ -293,6 +293,17 @@ void dp_initialize_arch_ops_be(struct dp_arch_ops *arch_ops);
  */
 qdf_size_t dp_get_context_size_be(enum dp_context_type context_type);
 
+#if QCA_MONITOR_2_0_SUPPORT
+/**
+ * dp_mon_get_context_size_be() - get BE specific size for mon pdev/soc
+ * @arch_ops: arch ops pointer
+ *
+ * Return: size in bytes for the context_type
+ */
+qdf_size_t dp_mon_get_context_size_be(enum dp_context_type context_type);
+
+#endif
+
 /**
  * dp_get_be_soc_from_dp_soc() - get dp_soc_be from dp_soc
  * @soc: dp_soc pointer
@@ -683,30 +694,4 @@ QDF_STATUS dp_txrx_set_vdev_param_be(struct dp_soc *soc,
 				     enum cdp_vdev_param_type param,
 				     cdp_config_param_type val);
 
-/*
- * dp_get_mon_obj_be_size: get monitor context size
- * @context_type: context type
- *
- * return: size of context
- */
-#ifdef QCA_MONITOR_2_0_SUPPORT
-static inline qdf_size_t
-dp_get_mon_obj_be_size(enum dp_context_type context_type)
-{
-	switch (context_type) {
-	case DP_CONTEXT_TYPE_MON_PDEV:
-		return sizeof(struct dp_mon_pdev_be);
-	break;
-
-	default:
-		return 0;
-	}
-}
-#else
-static inline qdf_size_t
-dp_get_mon_obj_be_size(enum dp_context_type context_type)
-{
-	return sizeof(struct dp_mon_pdev);
-}
-#endif
 #endif

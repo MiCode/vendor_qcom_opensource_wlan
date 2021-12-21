@@ -412,6 +412,8 @@ struct dp_rx_nbuf_frag_info {
  * @DP_RX_REINJECT_RING_HIST_TYPE: Datapath reinject ring history
  * @DP_RX_REFILL_RING_HIST_TYPE: Datapath rx refill ring history
  * @DP_TX_HW_DESC_HIST_TYPE: Datapath TX HW descriptor history
+ * @DP_MON_SOC_TYPE: Datapath monitor soc context
+ * @DP_MON_PDEV_TYPE: Datapath monitor pdev context
  */
 enum dp_ctxt_type {
 	DP_PDEV_TYPE,
@@ -423,6 +425,8 @@ enum dp_ctxt_type {
 	DP_FISA_RX_FT_TYPE,
 	DP_RX_REFILL_RING_HIST_TYPE,
 	DP_TX_HW_DESC_HIST_TYPE,
+	DP_MON_SOC_TYPE,
+	DP_MON_PDEV_TYPE,
 };
 
 /**
@@ -1610,6 +1614,8 @@ struct dp_tx_msdu_info_s;
  * @DP_CONTEXT_TYPE_PDEV: Context type DP PDEV
  * @DP_CONTEXT_TYPE_VDEV: Context type DP VDEV
  * @DP_CONTEXT_TYPE_PEER: Context type DP PEER
+ * @DP_CONTEXT_TYPE_MON_SOC: Context type DP MON SOC
+ * @DP_CONTEXT_TYPE_MON_PDEV: Context type DP MON PDEV
  *
  * Helper enums to be used to retrieve the size of the corresponding
  * data structure by passing the type.
@@ -1618,7 +1624,9 @@ enum dp_context_type {
 	DP_CONTEXT_TYPE_SOC,
 	DP_CONTEXT_TYPE_PDEV,
 	DP_CONTEXT_TYPE_VDEV,
-	DP_CONTEXT_TYPE_PEER
+	DP_CONTEXT_TYPE_PEER,
+	DP_CONTEXT_TYPE_MON_SOC,
+	DP_CONTEXT_TYPE_MON_PDEV
 };
 
 /*
@@ -1720,6 +1728,7 @@ struct dp_arch_ops {
 
 	/* Misc Arch Ops */
 	qdf_size_t (*txrx_get_context_size)(enum dp_context_type);
+	qdf_size_t (*txrx_get_mon_context_size)(enum dp_context_type);
 	int (*dp_srng_test_and_update_nf_params)(struct dp_soc *soc,
 						 struct dp_srng *dp_srng,
 						 int *max_reap_limit);

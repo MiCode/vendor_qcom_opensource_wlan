@@ -64,6 +64,18 @@ qdf_size_t dp_get_context_size_li(enum dp_context_type context_type)
 	}
 }
 
+qdf_size_t dp_mon_get_context_size_li(enum dp_context_type context_type)
+{
+	switch (context_type) {
+	case DP_CONTEXT_TYPE_MON_PDEV:
+		return sizeof(struct dp_mon_pdev_li);
+	case DP_CONTEXT_TYPE_MON_SOC:
+		return sizeof(struct dp_mon_soc_li);
+	default:
+		return 0;
+	}
+}
+
 static QDF_STATUS dp_soc_attach_li(struct dp_soc *soc,
 				   struct cdp_soc_attach_params *params)
 {
@@ -403,6 +415,7 @@ void dp_initialize_arch_ops_li(struct dp_arch_ops *arch_ops)
 	arch_ops->dp_rx_desc_pool_deinit = dp_rx_desc_pool_deinit_generic;
 #endif
 	arch_ops->txrx_get_context_size = dp_get_context_size_li;
+	arch_ops->txrx_get_mon_context_size = dp_mon_get_context_size_li;
 	arch_ops->txrx_soc_attach = dp_soc_attach_li;
 	arch_ops->txrx_soc_detach = dp_soc_detach_li;
 	arch_ops->txrx_soc_init = dp_soc_init_li;

@@ -4531,6 +4531,7 @@ QDF_STATUS dp_mon_pdev_attach(struct dp_pdev *pdev)
 	struct dp_soc *soc;
 	struct dp_mon_pdev *mon_pdev;
 	struct dp_mon_ops *mon_ops;
+	qdf_size_t mon_pdev_context_size;
 
 	if (!pdev) {
 		dp_mon_err("pdev is NULL");
@@ -4539,12 +4540,14 @@ QDF_STATUS dp_mon_pdev_attach(struct dp_pdev *pdev)
 
 	soc = pdev->soc;
 
-	mon_pdev = (struct dp_mon_pdev *)qdf_mem_malloc(sizeof(*mon_pdev));
+	mon_pdev_context_size = soc->arch_ops.txrx_get_mon_context_size(DP_CONTEXT_TYPE_MON_PDEV);
+	mon_pdev = dp_context_alloc_mem(soc, DP_MON_PDEV_TYPE, mon_pdev_context_size);
 	if (!mon_pdev) {
 		dp_mon_err("%pK: MONITOR pdev allocation failed", pdev);
 		goto fail0;
 	}
 
+	pdev->monitor_pdev = mon_pdev;
 	mon_ops = dp_mon_ops_get(pdev->soc);
 	if (!mon_ops) {
 		dp_mon_err("%pK: Invalid monitor ops", pdev);
@@ -4619,8 +4622,8 @@ QDF_STATUS dp_mon_pdev_detach(struct dp_pdev *pdev)
 	if (mon_ops->mon_pdev_free)
 		mon_ops->mon_pdev_free(pdev);
 
-	pdev->monitor_pdev = NULL;
 	qdf_mem_free(mon_pdev);
+	pdev->monitor_pdev = NULL;
 	return QDF_STATUS_SUCCESS;
 }
 
@@ -4696,13 +4699,23 @@ QDF_STATUS dp_mon_pdev_init(struct dp_pdev *pdev)
 		mon_ops->rx_mon_desc_pool_init(pdev);
 
 	/* allocate buffers and replenish the monitor RxDMA ring */
-	if (mon_ops->rx_mon_buffers_alloc)
-		mon_ops->rx_mon_buffers_alloc(pdev);
+	if (mon_ops->rx_mon_buffers_alloc) {
+		if (mon_ops->rx_mon_buffers_alloc(pdev)) {
+			dp_mon_err("%pK: rx mon buffers alloc failed", pdev);
+			goto fail2;
+		}
+	}
 
 	dp_tx_ppdu_stats_attach(pdev);
 	mon_pdev->is_dp_mon_pdev_initialized = true;
 
 	return QDF_STATUS_SUCCESS;
+fail2:
+	if (mon_ops->rx_mon_desc_pool_deinit)
+		mon_ops->rx_mon_desc_pool_deinit(pdev);
+
+	if (mon_ops->mon_rings_deinit)
+		mon_ops->mon_rings_deinit(pdev);
 fail1:
 	dp_htt_ppdu_stats_detach(pdev);
 fail0:

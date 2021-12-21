@@ -29,15 +29,6 @@
 #include <hal_be_api_mon.h>
 #include <dp_be.h>
 
-extern QDF_STATUS dp_srng_alloc(struct dp_soc *soc, struct dp_srng *srng,
-				int ring_type, uint32_t num_entries,
-				bool cached);
-extern void dp_srng_free(struct dp_soc *soc, struct dp_srng *srng);
-extern QDF_STATUS dp_srng_init(struct dp_soc *soc, struct dp_srng *srng,
-			       int ring_type, int ring_num, int mac_id);
-extern void dp_srng_deinit(struct dp_soc *soc, struct dp_srng *srng,
-			   int ring_type, int ring_num);
-
 #if !defined(DISABLE_MON_CONFIG)
 /*
  * dp_mon_add_desc_list_to_free_list() - append unused desc_list back to
@@ -120,8 +111,8 @@ void dp_mon_pool_frag_unmap_and_free(struct dp_soc *soc,
 
 			if (!(mon_desc_pool->array[desc_id].mon_desc.unmapped)) {
 				qdf_mem_unmap_page(soc->osdev, paddr,
-						   QDF_DMA_FROM_DEVICE,
-						   mon_desc_pool->buf_size);
+						   mon_desc_pool->buf_size,
+						   QDF_DMA_FROM_DEVICE);
 				mon_desc_pool->array[desc_id].mon_desc.unmapped = 1;
 				mon_desc_pool->array[desc_id].mon_desc.cookie = desc_id;
 			}
@@ -211,7 +202,7 @@ dp_mon_buffers_replenish(struct dp_soc *dp_soc,
 		num_req_buffers = num_entries_avail;
 	}
 
-	while (count <= num_req_buffers) {
+	while (count <= num_req_buffers - 1) {
 		ret = dp_mon_frag_alloc_and_map(dp_soc,
 						&mon_desc,
 						mon_desc_pool);
@@ -232,6 +223,8 @@ dp_mon_buffers_replenish(struct dp_soc *dp_soc,
 
 		(*desc_list)->mon_desc.in_use = 1;
 		(*desc_list)->mon_desc.unmapped = 0;
+		(*desc_list)->mon_desc.buf_addr = mon_desc.buf_addr;
+		(*desc_list)->mon_desc.paddr = mon_desc.paddr;
 
 		hal_mon_buff_addr_info_set(dp_soc->hal_soc,
 					   mon_ring_entry,
@@ -533,16 +526,17 @@ QDF_STATUS dp_mon_soc_detach_2_0(struct dp_soc *soc)
 	struct dp_soc_be *be_soc = dp_get_be_soc_from_dp_soc(soc);
 	struct dp_mon_soc_be *mon_soc = be_soc->monitor_soc_be;
 
+	if (!mon_soc) {
+		dp_mon_err("DP MON SOC NULL");
+		return QDF_STATUS_E_FAILURE;
+	}
+
 	dp_tx_mon_buffers_free(soc);
 	dp_rx_mon_buffers_free(soc);
 	dp_tx_mon_buf_desc_pool_free(soc);
 	dp_rx_mon_buf_desc_pool_free(soc);
-
-	if (mon_soc) {
-		dp_srng_free(soc, &soc->rxdma_mon_buf_ring[0]);
-		dp_srng_free(soc, &mon_soc->tx_mon_buf_ring);
-		qdf_mem_free(be_soc->monitor_soc_be);
-	}
+	dp_srng_free(soc, &soc->rxdma_mon_buf_ring[0]);
+	dp_srng_free(soc, &mon_soc->tx_mon_buf_ring);
 
 	return QDF_STATUS_SUCCESS;
 }
@@ -551,18 +545,20 @@ static
 QDF_STATUS dp_mon_soc_attach_2_0(struct dp_soc *soc)
 {
 	struct dp_soc_be *be_soc = dp_get_be_soc_from_dp_soc(soc);
-	struct dp_mon_soc_be *mon_soc = NULL;
+	struct dp_mon_soc_be *mon_soc_be = NULL;
+	struct dp_mon_soc *mon_soc = soc->monitor_soc;
 	int entries;
 	struct wlan_cfg_dp_soc_ctxt *soc_cfg_ctx;
 
 	soc_cfg_ctx = soc->wlan_cfg_ctx;
-	mon_soc = (struct dp_mon_soc_be *)qdf_mem_malloc(sizeof(*mon_soc));
-	if (!mon_soc) {
-		dp_mon_err("%pK: mem allocation failed", soc);
-		return QDF_STATUS_E_NOMEM;
+	mon_soc_be = (struct dp_mon_soc_be *)mon_soc;
+	if (!mon_soc_be) {
+		dp_mon_err("DP MON SOC is NULL");
+		return QDF_STATUS_E_FAILURE;
 	}
-	qdf_mem_zero(mon_soc, sizeof(*mon_soc));
-	be_soc->monitor_soc_be = mon_soc;
+
+	mon_soc_be->tx_mon_ring_fill_level = DP_MON_RING_FILL_LEVEL_DEFAULT;
+	mon_soc_be->rx_mon_ring_fill_level = DP_MON_RING_FILL_LEVEL_DEFAULT;
 
 	entries = wlan_cfg_get_dp_soc_rx_mon_buf_ring_size(soc_cfg_ctx);
 	if (dp_srng_alloc(soc, &soc->rxdma_mon_buf_ring[0],
@@ -578,7 +574,19 @@ QDF_STATUS dp_mon_soc_attach_2_0(struct dp_soc *soc)
 		goto fail;
 	}
 
-	/* sw desc pool for src ring */
+	if (dp_srng_init(soc, &soc->rxdma_mon_buf_ring[0],
+			 RXDMA_MONITOR_BUF, 0, 0)) {
+		dp_mon_err("%pK: " RNG_ERR "rx_mon_buf_ring", soc);
+		goto fail;
+	}
+
+	if (dp_srng_init(soc, &mon_soc_be->tx_mon_buf_ring,
+			 TX_MONITOR_BUF, 0, 0)) {
+		dp_mon_err("%pK: " RNG_ERR "tx_mon_buf_ring", soc);
+		goto fail;
+	}
+
+	/* allocate sw desc pool */
 	if (dp_rx_mon_buf_desc_pool_alloc(soc)) {
 		dp_mon_err("%pK: Rx mon desc pool allocation failed", soc);
 		goto fail;
@@ -589,7 +597,18 @@ QDF_STATUS dp_mon_soc_attach_2_0(struct dp_soc *soc)
 		goto fail;
 	}
 
-	/* monitor buffers for src */
+	/* initialize sw desc pool */
+	if (dp_tx_mon_buf_desc_pool_init(soc)) {
+		dp_mon_err("%pK: " RNG_ERR "tx mon desc pool init", soc);
+		goto fail;
+	}
+
+	if (dp_rx_mon_buf_desc_pool_init(soc)) {
+		dp_mon_err("%pK: " RNG_ERR "rx mon desc pool init", soc);
+		goto fail;
+	}
+
+	/* allocate and replenish initial buffers */
 	if (dp_rx_mon_buffers_alloc(soc)) {
 		dp_mon_err("%pK: Rx mon buffers allocation failed", soc);
 		goto fail;
@@ -604,57 +623,6 @@ QDF_STATUS dp_mon_soc_attach_2_0(struct dp_soc *soc)
 fail:
 	dp_mon_soc_detach_2_0(soc);
 	return QDF_STATUS_E_NOMEM;
-}
-
-static
-QDF_STATUS dp_mon_soc_deinit_2_0(struct dp_soc *soc)
-{
-	struct dp_soc_be *be_soc = dp_get_be_soc_from_dp_soc(soc);
-	struct dp_mon_soc_be *mon_soc = be_soc->monitor_soc_be;
-
-	dp_tx_mon_buf_desc_pool_deinit(soc);
-	dp_rx_mon_buf_desc_pool_deinit(soc);
-
-	dp_srng_deinit(soc, &soc->rxdma_mon_buf_ring[0],
-		       RXDMA_MONITOR_BUF, 0);
-
-	dp_srng_deinit(soc, &mon_soc->tx_mon_buf_ring,
-		       TX_MONITOR_BUF, 0);
-	return QDF_STATUS_SUCCESS;
-}
-
-static
-QDF_STATUS dp_mon_soc_init_2_0(struct dp_soc *soc)
-{
-	struct dp_soc_be *be_soc = dp_get_be_soc_from_dp_soc(soc);
-	struct dp_mon_soc_be *mon_soc = be_soc->monitor_soc_be;
-
-	if (dp_srng_init(soc, &soc->rxdma_mon_buf_ring[0],
-			 RXDMA_MONITOR_BUF, 0, 0)) {
-		dp_mon_err("%pK: " RNG_ERR "rx_mon_buf_ring", soc);
-		goto fail;
-	}
-
-	if (dp_srng_init(soc, &mon_soc->tx_mon_buf_ring,
-			 TX_MONITOR_BUF, 0, 0)) {
-		dp_mon_err("%pK: " RNG_ERR "tx_mon_buf_ring", soc);
-		goto fail;
-	}
-
-	if (dp_tx_mon_buf_desc_pool_init(soc)) {
-		dp_mon_err("%pK: " RNG_ERR "tx mon desc pool init", soc);
-		goto fail;
-	}
-
-	if (dp_rx_mon_buf_desc_pool_init(soc)) {
-		dp_mon_err("%pK: " RNG_ERR "rx mon desc pool init", soc);
-		goto fail;
-	}
-
-	return QDF_STATUS_SUCCESS;
-fail:
-	dp_mon_soc_deinit_2_0(soc);
-	return QDF_STATUS_E_FAILURE;
 }
 
 static
@@ -764,25 +732,19 @@ fail:
 static
 void dp_mon_pdev_free_2_0(struct dp_pdev *pdev)
 {
-	struct dp_pdev_be *be_pdev = dp_get_be_pdev_from_dp_pdev(pdev);
-
-	qdf_mem_free(be_pdev->monitor_pdev_be);
-	be_pdev->monitor_pdev_be = NULL;
 }
 
 static
 QDF_STATUS dp_mon_pdev_alloc_2_0(struct dp_pdev *pdev)
 {
-	struct dp_mon_pdev_be *mon_pdev = NULL;
+	struct dp_mon_pdev_be *mon_pdev_be = NULL;
 	struct dp_pdev_be *be_pdev = dp_get_be_pdev_from_dp_pdev(pdev);
 
-	mon_pdev = (struct dp_mon_pdev_be *)qdf_mem_malloc(sizeof(*mon_pdev));
-	if (!mon_pdev) {
-		dp_mon_err("%pK: mem allocation failed", pdev);
-		return QDF_STATUS_E_NOMEM;
+	mon_pdev_be = be_pdev->monitor_pdev_be;
+	if (!mon_pdev_be) {
+		dp_mon_err("DP MON PDEV is NULL");
+		return QDF_STATUS_E_FAILURE;
 	}
-	qdf_mem_zero(mon_pdev, sizeof(*mon_pdev));
-	be_pdev->monitor_pdev_be = mon_pdev;
 
 	return QDF_STATUS_SUCCESS;
 }
@@ -804,8 +766,8 @@ dp_rx_mon_process_2_0(struct dp_soc *soc, struct dp_intr *int_ctx,
 }
 
 static uint32_t
-dp_tx_mon_process(struct dp_soc *soc, struct dp_intr *int_ctx,
-		  uint32_t mac_id, uint32_t quota)
+dp_tx_mon_process_2_0(struct dp_soc *soc, struct dp_intr *int_ctx,
+		      uint32_t mac_id, uint32_t quota)
 {
 	return 0;
 }
@@ -818,18 +780,6 @@ QDF_STATUS dp_mon_soc_attach_2_0(struct dp_soc *soc)
 
 static inline
 QDF_STATUS dp_mon_soc_detach_2_0(struct dp_soc *soc)
-{
-	return status;
-}
-
-static inline
-QDF_STATUS dp_mon_soc_init_2_0(struct dp_soc *soc)
-{
-	return status;
-}
-
-static inline
-QDF_STATUS dp_mon_soc_deinit_2_0(struct dp_soc *soc)
 {
 	return status;
 }
@@ -906,7 +856,7 @@ dp_mon_register_feature_ops_2_0(struct dp_soc *soc)
 	mon_ops->mon_pdev_get_filter_non_data = dp_pdev_get_filter_non_data;
 	mon_ops->mon_neighbour_peer_add_ast = NULL;
 #ifndef DISABLE_MON_CONFIG
-	mon_ops->mon_tx_process = dp_tx_mon_process;
+	mon_ops->mon_tx_process = dp_tx_mon_process_2_0;
 #endif
 #ifdef WLAN_TX_PKT_CAPTURE_ENH
 	mon_ops->mon_peer_tid_peer_id_update = NULL;
@@ -1001,8 +951,6 @@ struct dp_mon_ops monitor_ops_2_0 = {
 	.mon_soc_cfg_init = dp_mon_soc_cfg_init,
 	.mon_soc_attach = dp_mon_soc_attach_2_0,
 	.mon_soc_detach = dp_mon_soc_detach_2_0,
-	.mon_soc_init = dp_mon_soc_init_2_0,
-	.mon_soc_deinit = dp_mon_soc_deinit_2_0,
 	.mon_pdev_alloc = dp_mon_pdev_alloc_2_0,
 	.mon_pdev_free = dp_mon_pdev_free_2_0,
 	.mon_pdev_attach = dp_mon_pdev_attach,

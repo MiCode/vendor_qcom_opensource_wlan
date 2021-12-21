@@ -77,16 +77,16 @@ dp_tx_mon_srng_process_2_0(struct dp_soc *soc, struct dp_intr *int_ctx,
 		struct dp_mon_desc_pool *tx_desc_pool;
 
 		tx_desc_pool = &monitor_soc->tx_desc_mon;
-		hal_mon_buf_get(soc->hal_soc,
-				tx_mon_dst_ring_desc,
-				&hal_mon_tx_desc);
+		hal_be_get_mon_dest_status(soc->hal_soc,
+					   tx_mon_dst_ring_desc,
+					   &hal_mon_tx_desc);
 		mon_desc = (struct dp_mon_desc *)(uintptr_t)(hal_mon_tx_desc.buf_addr);
 		qdf_assert_always(mon_desc);
 
 		if (!mon_desc->unmapped) {
 			qdf_mem_unmap_page(soc->osdev, mon_desc->paddr,
-					   QDF_DMA_FROM_DEVICE,
-					   tx_desc_pool->buf_size);
+					   DP_MON_DATA_BUFFER_SIZE,
+					   QDF_DMA_FROM_DEVICE);
 			mon_desc->unmapped = 1;
 		}
 
@@ -129,17 +129,8 @@ dp_tx_mon_buf_desc_pool_init(struct dp_soc *soc)
 {
 	struct dp_soc_be *be_soc = dp_get_be_soc_from_dp_soc(soc);
 	struct dp_mon_soc_be *mon_soc = be_soc->monitor_soc_be;
-	QDF_STATUS status;
 
-	status = dp_mon_desc_pool_init(&mon_soc->tx_desc_mon);
-	if (status != QDF_STATUS_SUCCESS) {
-		dp_mon_err("Failed to init tx monior descriptor pool");
-		mon_soc->tx_mon_ring_fill_level = 0;
-	} else {
-		mon_soc->tx_mon_ring_fill_level = DP_MON_RING_FILL_LEVEL_DEFAULT;
-	}
-
-	return status;
+	return dp_mon_desc_pool_init(&mon_soc->tx_desc_mon);
 }
 
 void dp_tx_mon_buf_desc_pool_free(struct dp_soc *soc)

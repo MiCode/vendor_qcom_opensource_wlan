@@ -87,4 +87,16 @@ void dp_tx_mon_process_status_tlv(struct dp_soc *soc,
 				  struct hal_mon_desc *mon_ring_desc,
 				  qdf_dma_addr_t addr);
 
+/*
+ * dp_tx_mon_process_2_0() - tx monitor interrupt process
+ * @soc: dp soc handle
+ * @int_ctx: interrupt context
+ * @mac_id: mac id
+ * @quota: quota to process
+ *
+ */
+uint32_t
+dp_tx_mon_process_2_0(struct dp_soc *soc, struct dp_intr *int_ctx,
+		      uint32_t mac_id, uint32_t quota);
+
 #endif /* _DP_TX_MON_2_0_H_ */

@@ -76,12 +76,36 @@ qdf_size_t dp_get_context_size_be(enum dp_context_type context_type)
 		return sizeof(struct dp_vdev_be);
 	case DP_CONTEXT_TYPE_PEER:
 		return sizeof(struct dp_peer_be);
-	case DP_CONTEXT_TYPE_MON_PDEV:
-		return dp_get_mon_obj_be_size(DP_CONTEXT_TYPE_MON_PDEV);
 	default:
 		return 0;
 	}
 }
+
+#ifdef QCA_MONITOR_2_0_SUPPORT
+qdf_size_t dp_mon_get_context_size_be(enum dp_context_type context_type)
+{
+	switch (context_type) {
+	case DP_CONTEXT_TYPE_MON_SOC:
+		return sizeof(struct dp_mon_soc_be);
+	case DP_CONTEXT_TYPE_MON_PDEV:
+		return sizeof(struct dp_mon_pdev_be);
+	default:
+		return 0;
+	}
+}
+#else
+qdf_size_t dp_mon_get_context_size_be(enum dp_context_type context_type)
+{
+	switch (context_type) {
+	case DP_CONTEXT_TYPE_MON_SOC:
+		return sizeof(struct dp_mon_soc);
+	case DP_CONTEXT_TYPE_MON_PDEV:
+		return sizeof(struct dp_mon_pdev);
+	default:
+		return 0;
+	}
+}
+#endif
 
 #ifdef DP_FEATURE_HW_COOKIE_CONVERSION
 #if defined(WLAN_MAX_PDEVS) && (WLAN_MAX_PDEVS == 1)
@@ -1456,6 +1480,9 @@ void dp_initialize_arch_ops_be(struct dp_arch_ops *arch_ops)
 				dp_wbm_get_rx_desc_from_hal_desc_be;
 #endif
 	arch_ops->txrx_get_context_size = dp_get_context_size_be;
+#if QCA_MONITOR_2_0_SUPPORT
+	arch_ops->txrx_get_mon_context_size = dp_mon_get_context_size_be;
+#endif
 	arch_ops->dp_rx_desc_cookie_2_va =
 			dp_rx_desc_cookie_2_va_be;
 

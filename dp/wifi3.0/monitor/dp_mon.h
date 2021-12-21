@@ -417,8 +417,6 @@ struct dp_mon_ops {
 	QDF_STATUS (*mon_soc_cfg_init)(struct dp_soc *soc);
 	QDF_STATUS (*mon_soc_attach)(struct dp_soc *soc);
 	QDF_STATUS (*mon_soc_detach)(struct dp_soc *soc);
-	QDF_STATUS (*mon_soc_init)(struct dp_soc *soc);
-	QDF_STATUS (*mon_soc_deinit)(struct dp_soc *soc);
 	QDF_STATUS (*mon_pdev_alloc)(struct dp_pdev *pdev);
 	void (*mon_pdev_free)(struct dp_pdev *pdev);
 	QDF_STATUS (*mon_pdev_attach)(struct dp_pdev *pdev);
@@ -1895,7 +1893,21 @@ static inline
 uint32_t dp_tx_mon_process(struct dp_soc *soc, struct dp_intr *int_ctx,
 			   uint32_t mac_id, uint32_t quota)
 {
-	return 0;
+	struct dp_mon_soc *mon_soc = soc->monitor_soc;
+	struct dp_mon_ops *monitor_ops;
+
+	if (!mon_soc) {
+		dp_mon_debug("monitor soc is NULL");
+		return 0;
+	}
+
+	monitor_ops = mon_soc->mon_ops;
+	if (!monitor_ops || !monitor_ops->mon_tx_process) {
+		dp_mon_debug("callback not registered");
+		return 0;
+	}
+
+	return monitor_ops->mon_tx_process(soc, int_ctx, mac_id, quota);
 }
 
 static inline

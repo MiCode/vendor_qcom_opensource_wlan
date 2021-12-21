@@ -24,6 +24,7 @@
 #include <dp_mon.h>
 #include <dp_mon_filter.h>
 #include <dp_htt.h>
+#include <dp_mon.h>
 
 #define DP_MON_RING_FILL_LEVEL_DEFAULT 2048
 #define DP_MON_DATA_BUFFER_SIZE     2048
@@ -92,8 +93,8 @@ struct dp_mon_desc_pool {
 
 /**
  * struct dp_mon_pdev_be - BE specific monitor pdev object
- * @filter_be: Monitor Filter pointer
  * @mon_pdev: monitor pdev structure
+ * @filter_be: filters sent to fw
  */
 struct dp_mon_pdev_be {
 	struct dp_mon_pdev mon_pdev;
