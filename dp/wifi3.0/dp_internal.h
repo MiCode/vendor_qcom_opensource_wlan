@@ -1382,6 +1382,291 @@ void dp_update_vdev_stats(struct dp_soc *soc,
 		DP_STATS_AGGR(_tgtobj, _srcobj, rx.policy_check_drop); \
 	}  while (0)
 
+#ifdef VDEV_PEER_PROTOCOL_COUNT
+#define DP_UPDATE_PROTOCOL_COUNT_STATS(_tgtobj, _srcobj) \
+{ \
+	uint8_t j; \
+	for (j = 0; j < CDP_TRACE_MAX; j++) { \
+		_tgtobj->tx.protocol_trace_cnt[j].egress_cnt += \
+			_srcobj->tx.protocol_trace_cnt[j].egress_cnt; \
+		_tgtobj->tx.protocol_trace_cnt[j].ingress_cnt += \
+			_srcobj->tx.protocol_trace_cnt[j].ingress_cnt; \
+		_tgtobj->rx.protocol_trace_cnt[j].egress_cnt += \
+			_srcobj->rx.protocol_trace_cnt[j].egress_cnt; \
+		_tgtobj->rx.protocol_trace_cnt[j].ingress_cnt += \
+			_srcobj->rx.protocol_trace_cnt[j].ingress_cnt; \
+	} \
+}
+#else
+#define DP_UPDATE_PROTOCOL_COUNT_STATS(_tgtobj, _srcobj)
+#endif
+
+#ifdef WLAN_FEATURE_11BE
+#define DP_UPDATE_11BE_STATS(_tgtobj, _srcobj) \
+	do { \
+		uint8_t i, mu_type; \
+		for (i = 0; i < MAX_MCS; i++) { \
+			_tgtobj->tx.su_be_ppdu_cnt.mcs_count[i] += \
+				_srcobj->tx.su_be_ppdu_cnt.mcs_count[i]; \
+			_tgtobj->rx.su_be_ppdu_cnt.mcs_count[i] += \
+				_srcobj->rx.su_be_ppdu_cnt.mcs_count[i]; \
+		} \
+		for (mu_type = 0; mu_type < TXRX_TYPE_MU_MAX; mu_type++) { \
+			for (i = 0; i < MAX_MCS; i++) { \
+				_tgtobj->tx.mu_be_ppdu_cnt[mu_type].mcs_count[i] += \
+					_srcobj->tx.mu_be_ppdu_cnt[mu_type].mcs_count[i]; \
+				_tgtobj->rx.mu_be_ppdu_cnt[mu_type].mcs_count[i] += \
+					_srcobj->rx.mu_be_ppdu_cnt[mu_type].mcs_count[i]; \
+			} \
+		} \
+	} while (0)
+#else
+#define DP_UPDATE_11BE_STATS(_tgtobj, _srcobj)
+#endif
+
+#define DP_UPDATE_PER_PKT_STATS(_tgtobj, _srcobj) \
+	do { \
+		uint8_t i; \
+		_tgtobj->tx.ucast.num += _srcobj->tx.ucast.num; \
+		_tgtobj->tx.ucast.bytes += _srcobj->tx.ucast.bytes; \
+		_tgtobj->tx.mcast.num += _srcobj->tx.mcast.num; \
+		_tgtobj->tx.mcast.bytes += _srcobj->tx.mcast.bytes; \
+		_tgtobj->tx.bcast.num += _srcobj->tx.bcast.num; \
+		_tgtobj->tx.bcast.bytes += _srcobj->tx.bcast.bytes; \
+		_tgtobj->tx.nawds_mcast.num += _srcobj->tx.nawds_mcast.num; \
+		_tgtobj->tx.nawds_mcast.bytes += \
+					_srcobj->tx.nawds_mcast.bytes; \
+		_tgtobj->tx.tx_success.num += _srcobj->tx.tx_success.num; \
+		_tgtobj->tx.tx_success.bytes += _srcobj->tx.tx_success.bytes; \
+		_tgtobj->tx.nawds_mcast_drop += _srcobj->tx.nawds_mcast_drop; \
+		_tgtobj->tx.ofdma += _srcobj->tx.ofdma; \
+		_tgtobj->tx.non_amsdu_cnt += _srcobj->tx.non_amsdu_cnt; \
+		_tgtobj->tx.amsdu_cnt += _srcobj->tx.amsdu_cnt; \
+		_tgtobj->tx.dropped.fw_rem.num += \
+					_srcobj->tx.dropped.fw_rem.num; \
+		_tgtobj->tx.dropped.fw_rem.bytes += \
+					_srcobj->tx.dropped.fw_rem.bytes; \
+		_tgtobj->tx.dropped.fw_rem_notx += \
+					_srcobj->tx.dropped.fw_rem_notx; \
+		_tgtobj->tx.dropped.fw_rem_tx += \
+					_srcobj->tx.dropped.fw_rem_tx; \
+		_tgtobj->tx.dropped.age_out += _srcobj->tx.dropped.age_out; \
+		_tgtobj->tx.dropped.fw_reason1 += \
+					_srcobj->tx.dropped.fw_reason1; \
+		_tgtobj->tx.dropped.fw_reason2 += \
+					_srcobj->tx.dropped.fw_reason2; \
+		_tgtobj->tx.dropped.fw_reason3 += \
+					_srcobj->tx.dropped.fw_reason3; \
+		_tgtobj->tx.failed_retry_count += \
+					_srcobj->tx.failed_retry_count; \
+		_tgtobj->tx.retry_count += _srcobj->tx.retry_count; \
+		_tgtobj->tx.multiple_retry_count += \
+					_srcobj->tx.multiple_retry_count; \
+		_tgtobj->tx.tx_success_twt.num += \
+					_srcobj->tx.tx_success_twt.num; \
+		_tgtobj->tx.tx_success_twt.bytes += \
+					_srcobj->tx.tx_success_twt.bytes; \
+		_tgtobj->tx.last_tx_ts = _srcobj->tx.last_tx_ts; \
+		for (i = 0; i < QDF_PROTO_SUBTYPE_MAX; i++) { \
+			_tgtobj->tx.no_ack_count[i] += \
+					_srcobj->tx.no_ack_count[i];\
+		} \
+		\
+		_tgtobj->rx.multicast.num += _srcobj->rx.multicast.num; \
+		_tgtobj->rx.multicast.bytes += _srcobj->rx.multicast.bytes; \
+		_tgtobj->rx.bcast.num += _srcobj->rx.bcast.num; \
+		_tgtobj->rx.bcast.bytes += _srcobj->rx.bcast.bytes; \
+		if (_tgtobj->rx.to_stack.num >= _tgtobj->rx.multicast.num) \
+			_tgtobj->rx.unicast.num = \
+				_tgtobj->rx.to_stack.num - _tgtobj->rx.multicast.num; \
+		if (_tgtobj->rx.to_stack.bytes >= _tgtobj->rx.multicast.bytes) \
+			_tgtobj->rx.unicast.bytes = \
+				_tgtobj->rx.to_stack.bytes - _tgtobj->rx.multicast.bytes; \
+		_tgtobj->rx.raw.num += _srcobj->rx.raw.num; \
+		_tgtobj->rx.raw.bytes += _srcobj->rx.raw.bytes; \
+		_tgtobj->rx.nawds_mcast_drop += _srcobj->rx.nawds_mcast_drop; \
+		_tgtobj->rx.mec_drop.num += _srcobj->rx.mec_drop.num; \
+		_tgtobj->rx.mec_drop.bytes += _srcobj->rx.mec_drop.bytes; \
+		_tgtobj->rx.intra_bss.pkts.num += \
+					_srcobj->rx.intra_bss.pkts.num; \
+		_tgtobj->rx.intra_bss.pkts.bytes += \
+					_srcobj->rx.intra_bss.pkts.bytes; \
+		_tgtobj->rx.intra_bss.fail.num += \
+					_srcobj->rx.intra_bss.fail.num; \
+		_tgtobj->rx.intra_bss.fail.bytes += \
+					_srcobj->rx.intra_bss.fail.bytes; \
+		_tgtobj->rx.intra_bss.mdns_no_fwd += \
+					_srcobj->rx.intra_bss.mdns_no_fwd; \
+		_tgtobj->rx.err.mic_err += _srcobj->rx.err.mic_err; \
+		_tgtobj->rx.err.decrypt_err += _srcobj->rx.err.decrypt_err; \
+		_tgtobj->rx.err.fcserr += _srcobj->rx.err.fcserr; \
+		_tgtobj->rx.err.pn_err += _srcobj->rx.err.pn_err; \
+		_tgtobj->rx.err.oor_err += _srcobj->rx.err.oor_err; \
+		_tgtobj->rx.err.jump_2k_err += _srcobj->rx.err.jump_2k_err; \
+		_tgtobj->rx.err.rxdma_wifi_parse_err += \
+					_srcobj->rx.err.rxdma_wifi_parse_err; \
+		_tgtobj->rx.non_amsdu_cnt += _srcobj->rx.non_amsdu_cnt; \
+		_tgtobj->rx.amsdu_cnt += _srcobj->rx.amsdu_cnt; \
+		_tgtobj->rx.rx_retries += _srcobj->rx.rx_retries; \
+		_tgtobj->rx.multipass_rx_pkt_drop += \
+					_srcobj->rx.multipass_rx_pkt_drop; \
+		_tgtobj->rx.peer_unauth_rx_pkt_drop += \
+					_srcobj->rx.peer_unauth_rx_pkt_drop; \
+		_tgtobj->rx.policy_check_drop += \
+					_srcobj->rx.policy_check_drop; \
+		_tgtobj->rx.to_stack_twt.num += _srcobj->rx.to_stack_twt.num; \
+		_tgtobj->rx.to_stack_twt.bytes += \
+					_srcobj->rx.to_stack_twt.bytes; \
+		_tgtobj->rx.last_rx_ts = _srcobj->rx.last_rx_ts; \
+		for (i = 0; i < CDP_MAX_RX_RINGS; i++) { \
+			_tgtobj->rx.rcvd_reo[i].num += \
+					 _srcobj->rx.rcvd_reo[i].num; \
+			_tgtobj->rx.rcvd_reo[i].bytes += \
+					_srcobj->rx.rcvd_reo[i].bytes; \
+		} \
+		DP_UPDATE_PROTOCOL_COUNT_STATS(_tgtobj, _srcobj); \
+	} while (0)
+
+#define DP_UPDATE_EXTD_STATS(_tgtobj, _srcobj) \
+	do { \
+		uint8_t i, pream_type, mu_type; \
+		_tgtobj->tx.stbc += _srcobj->tx.stbc; \
+		_tgtobj->tx.ldpc += _srcobj->tx.ldpc; \
+		_tgtobj->tx.retries += _srcobj->tx.retries; \
+		_tgtobj->tx.ampdu_cnt += _srcobj->tx.ampdu_cnt; \
+		_tgtobj->tx.non_ampdu_cnt += _srcobj->tx.non_ampdu_cnt; \
+		_tgtobj->tx.num_ppdu_cookie_valid += \
+					_srcobj->tx.num_ppdu_cookie_valid; \
+		_tgtobj->tx.tx_ppdus += _srcobj->tx.tx_ppdus; \
+		_tgtobj->tx.tx_mpdus_success += _srcobj->tx.tx_mpdus_success; \
+		_tgtobj->tx.tx_mpdus_tried += _srcobj->tx.tx_mpdus_tried; \
+		_tgtobj->tx.tx_rate = _srcobj->tx.tx_rate; \
+		_tgtobj->tx.last_tx_rate = _srcobj->tx.last_tx_rate; \
+		_tgtobj->tx.last_tx_rate_mcs = _srcobj->tx.last_tx_rate_mcs; \
+		_tgtobj->tx.mcast_last_tx_rate = \
+					_srcobj->tx.mcast_last_tx_rate; \
+		_tgtobj->tx.mcast_last_tx_rate_mcs = \
+					_srcobj->tx.mcast_last_tx_rate_mcs; \
+		_tgtobj->tx.rnd_avg_tx_rate = _srcobj->tx.rnd_avg_tx_rate; \
+		_tgtobj->tx.avg_tx_rate = _srcobj->tx.avg_tx_rate; \
+		_tgtobj->tx.tx_ratecode = _srcobj->tx.tx_ratecode; \
+		_tgtobj->tx.pream_punct_cnt += _srcobj->tx.pream_punct_cnt; \
+		_tgtobj->tx.ru_start = _srcobj->tx.ru_start; \
+		_tgtobj->tx.ru_tones = _srcobj->tx.ru_tones; \
+		_tgtobj->tx.last_ack_rssi = _srcobj->tx.last_ack_rssi; \
+		_tgtobj->tx.nss_info = _srcobj->tx.nss_info; \
+		_tgtobj->tx.mcs_info = _srcobj->tx.mcs_info; \
+		_tgtobj->tx.bw_info = _srcobj->tx.bw_info; \
+		_tgtobj->tx.gi_info = _srcobj->tx.gi_info; \
+		_tgtobj->tx.preamble_info = _srcobj->tx.preamble_info; \
+		_tgtobj->tx.retries_mpdu += _srcobj->tx.retries_mpdu; \
+		_tgtobj->tx.mpdu_success_with_retries += \
+					_srcobj->tx.mpdu_success_with_retries; \
+		for (pream_type = 0; pream_type < DOT11_MAX; pream_type++) { \
+			for (i = 0; i < MAX_MCS; i++) \
+				_tgtobj->tx.pkt_type[pream_type].mcs_count[i] += \
+				_srcobj->tx.pkt_type[pream_type].mcs_count[i]; \
+		} \
+		for (i = 0; i < WME_AC_MAX; i++) { \
+			_tgtobj->tx.wme_ac_type[i] += _srcobj->tx.wme_ac_type[i]; \
+			_tgtobj->tx.excess_retries_per_ac[i] += \
+					_srcobj->tx.excess_retries_per_ac[i]; \
+		} \
+		for (i = 0; i < MAX_GI; i++) { \
+			_tgtobj->tx.sgi_count[i] += _srcobj->tx.sgi_count[i]; \
+		} \
+		for (i = 0; i < SS_COUNT; i++) { \
+			_tgtobj->tx.nss[i] += _srcobj->tx.nss[i]; \
+		} \
+		for (i = 0; i < MAX_BW; i++) { \
+			_tgtobj->tx.bw[i] += _srcobj->tx.bw[i]; \
+		} \
+		for (i = 0; i < MAX_RU_LOCATIONS; i++) { \
+			_tgtobj->tx.ru_loc[i].num_msdu += \
+					_srcobj->tx.ru_loc[i].num_msdu; \
+			_tgtobj->tx.ru_loc[i].num_mpdu += \
+					_srcobj->tx.ru_loc[i].num_mpdu; \
+			_tgtobj->tx.ru_loc[i].mpdu_tried += \
+					_srcobj->tx.ru_loc[i].mpdu_tried; \
+		} \
+		for (i = 0; i < MAX_TRANSMIT_TYPES; i++) { \
+			_tgtobj->tx.transmit_type[i].num_msdu += \
+					_srcobj->tx.transmit_type[i].num_msdu; \
+			_tgtobj->tx.transmit_type[i].num_mpdu += \
+					_srcobj->tx.transmit_type[i].num_mpdu; \
+			_tgtobj->tx.transmit_type[i].mpdu_tried += \
+					_srcobj->tx.transmit_type[i].mpdu_tried; \
+		} \
+		for (i = 0; i < MAX_MU_GROUP_ID; i++) { \
+			_tgtobj->tx.mu_group_id[i] += _srcobj->tx.mu_group_id[i]; \
+		} \
+		\
+		_tgtobj->rx.mpdu_cnt_fcs_ok += _srcobj->rx.mpdu_cnt_fcs_ok; \
+		_tgtobj->rx.mpdu_cnt_fcs_err += _srcobj->rx.mpdu_cnt_fcs_err; \
+		_tgtobj->rx.non_ampdu_cnt += _srcobj->rx.non_ampdu_cnt; \
+		_tgtobj->rx.ampdu_cnt += _srcobj->rx.ampdu_cnt; \
+		_tgtobj->rx.rx_mpdus += _srcobj->rx.rx_mpdus; \
+		_tgtobj->rx.rx_ppdus += _srcobj->rx.rx_ppdus; \
+		_tgtobj->rx.rx_rate = _srcobj->rx.rx_rate; \
+		_tgtobj->rx.last_rx_rate = _srcobj->rx.last_rx_rate; \
+		_tgtobj->rx.rnd_avg_rx_rate = _srcobj->rx.rnd_avg_rx_rate; \
+		_tgtobj->rx.avg_rx_rate = _srcobj->rx.avg_rx_rate; \
+		_tgtobj->rx.rx_ratecode = _srcobj->rx.rx_ratecode; \
+		_tgtobj->rx.avg_snr = _srcobj->rx.avg_snr; \
+		_tgtobj->rx.rx_snr_measured_time = \
+					_srcobj->rx.rx_snr_measured_time; \
+		_tgtobj->rx.snr = _srcobj->rx.snr; \
+		_tgtobj->rx.last_snr = _srcobj->rx.last_snr; \
+		_tgtobj->rx.nss_info = _srcobj->rx.nss_info; \
+		_tgtobj->rx.mcs_info = _srcobj->rx.mcs_info; \
+		_tgtobj->rx.bw_info = _srcobj->rx.bw_info; \
+		_tgtobj->rx.gi_info = _srcobj->rx.gi_info; \
+		_tgtobj->rx.preamble_info = _srcobj->rx.preamble_info; \
+		_tgtobj->rx.mpdu_retry_cnt += _srcobj->rx.mpdu_retry_cnt; \
+		for (pream_type = 0; pream_type < DOT11_MAX; pream_type++) { \
+			for (i = 0; i < MAX_MCS; i++) { \
+				_tgtobj->rx.pkt_type[pream_type].mcs_count[i] += \
+					_srcobj->rx.pkt_type[pream_type].mcs_count[i]; \
+			} \
+		} \
+		for (i = 0; i < WME_AC_MAX; i++) { \
+			_tgtobj->rx.wme_ac_type[i] += _srcobj->rx.wme_ac_type[i]; \
+		} \
+		for (i = 0; i < MAX_MCS; i++) { \
+			_tgtobj->rx.su_ax_ppdu_cnt.mcs_count[i] += \
+					_srcobj->rx.su_ax_ppdu_cnt.mcs_count[i]; \
+			_tgtobj->rx.rx_mpdu_cnt[i] += _srcobj->rx.rx_mpdu_cnt[i]; \
+		} \
+		for (mu_type = 0 ; mu_type < TXRX_TYPE_MU_MAX; mu_type++) { \
+			_tgtobj->rx.rx_mu[mu_type].mpdu_cnt_fcs_ok += \
+				_srcobj->rx.rx_mu[mu_type].mpdu_cnt_fcs_ok; \
+			_tgtobj->rx.rx_mu[mu_type].mpdu_cnt_fcs_err += \
+				_srcobj->rx.rx_mu[mu_type].mpdu_cnt_fcs_err; \
+			for (i = 0; i < SS_COUNT; i++) \
+				_tgtobj->rx.rx_mu[mu_type].ppdu_nss[i] += \
+					_srcobj->rx.rx_mu[mu_type].ppdu_nss[i]; \
+			for (i = 0; i < MAX_MCS; i++) \
+				_tgtobj->rx.rx_mu[mu_type].ppdu.mcs_count[i] += \
+					_srcobj->rx.rx_mu[mu_type].ppdu.mcs_count[i]; \
+		} \
+		for (i = 0; i < MAX_RECEPTION_TYPES; i++) { \
+			_tgtobj->rx.reception_type[i] += \
+					_srcobj->rx.reception_type[i]; \
+			_tgtobj->rx.ppdu_cnt[i] += _srcobj->rx.ppdu_cnt[i]; \
+		} \
+		for (i = 0; i < MAX_GI; i++) { \
+			_tgtobj->rx.sgi_count[i] += _srcobj->rx.sgi_count[i]; \
+		} \
+		for (i = 0; i < SS_COUNT; i++) { \
+			_tgtobj->rx.nss[i] += _srcobj->rx.nss[i]; \
+			_tgtobj->rx.ppdu_nss[i] += _srcobj->rx.ppdu_nss[i]; \
+		} \
+		for (i = 0; i < MAX_BW; i++) { \
+			_tgtobj->rx.bw[i] += _srcobj->rx.bw[i]; \
+		} \
+		DP_UPDATE_11BE_STATS(_tgtobj, _srcobj); \
+	} while (0)
+
 /**
  * dp_peer_find_attach() - Allocates memory for peer objects
  * @soc: SoC handle
@@ -1768,10 +2053,12 @@ void dp_print_tx_rates(struct dp_vdev *vdev);
 /**
  * dp_print_peer_stats():print peer stats
  * @peer: DP_PEER handle
+ * @peer_stats: buffer holding peer stats
  *
  * return void
  */
-void dp_print_peer_stats(struct dp_peer *peer);
+void dp_print_peer_stats(struct dp_peer *peer,
+			 struct cdp_peer_stats *peer_stats);
 
 /**
  * dp_print_pdev_tx_stats(): Print Pdev level TX stats

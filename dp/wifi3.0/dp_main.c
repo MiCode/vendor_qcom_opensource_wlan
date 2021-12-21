@@ -1708,20 +1708,28 @@ void dp_print_ast_stats(struct dp_soc *soc)
 static void
 dp_print_peer_info(struct dp_soc *soc, struct dp_peer *peer, void *arg)
 {
-	DP_PRINT_STATS("    peer_mac_addr = "QDF_MAC_ADDR_FMT
+	struct dp_txrx_peer *txrx_peer = NULL;
+
+	txrx_peer = dp_get_txrx_peer(peer);
+	if (!txrx_peer)
+		return;
+
+	DP_PRINT_STATS(" peer id = %d"
+		       " peer_mac_addr = "QDF_MAC_ADDR_FMT
 		       " nawds_enabled = %d"
 		       " bss_peer = %d"
 		       " wds_enabled = %d"
 		       " tx_cap_enabled = %d"
-		       " rx_cap_enabled = %d"
-		       " peer id = %d",
+		       " rx_cap_enabled = %d",
+		       peer->peer_id,
 		       QDF_MAC_ADDR_REF(peer->mac_addr.raw),
-		       peer->nawds_enabled,
-		       peer->bss_peer,
-		       peer->wds_enabled,
-		       peer->tx_cap_enabled,
-		       peer->rx_cap_enabled,
-		       peer->peer_id);
+		       txrx_peer->nawds_enabled,
+		       txrx_peer->bss_peer,
+		       txrx_peer->wds_enabled,
+		       peer->monitor_peer ?
+					peer->monitor_peer->tx_cap_enabled : 0,
+		       peer->monitor_peer ?
+					peer->monitor_peer->rx_cap_enabled : 0);
 }
 
 /**
