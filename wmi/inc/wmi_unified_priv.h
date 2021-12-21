@@ -1514,6 +1514,10 @@ QDF_STATUS (*extract_pdev_spectral_session_detector_info)(
 		wmi_unified_t wmi_handle, void *event,
 		struct spectral_session_det_info *det_info,
 		uint8_t det_info_idx);
+
+QDF_STATUS (*extract_spectral_caps_fixed_param)(
+		wmi_unified_t wmi_handle, void *event,
+		struct spectral_capabilities_event_params *param);
 #endif /* WLAN_CONV_SPECTRAL_ENABLE */
 
 QDF_STATUS (*send_vdev_spectral_configure_cmd)(wmi_unified_t wmi_handle,

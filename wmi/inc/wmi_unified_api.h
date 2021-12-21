@@ -2311,6 +2311,20 @@ QDF_STATUS wmi_extract_pdev_spectral_session_detector_info(
 		wmi_unified_t wmi_handle, void *event,
 		struct spectral_session_det_info *det_info,
 		uint8_t det_info_idx);
+
+/**
+ * wmi_extract_spectral_caps_fixed_param() - Extract fixed params from Spectral
+ * capabilities WMI event
+ * @wmi_handle: handle to WMI.
+ * @event: Event buffer
+ * @param: Spectral capabilities event parameters data structure to be filled
+ * by this API
+ *
+ * Return: QDF_STATUS of operation
+ */
+QDF_STATUS wmi_extract_spectral_caps_fixed_param(
+		wmi_unified_t wmi_handle, void *event,
+		struct spectral_capabilities_event_params *param);
 #endif /* WLAN_CONV_SPECTRAL_ENABLE */
 
 #if defined(WLAN_SUPPORT_FILS) || defined(CONFIG_BAND_6GHZ)

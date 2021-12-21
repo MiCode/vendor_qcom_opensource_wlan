@@ -3106,6 +3106,17 @@ struct spectral_session_det_info {
 	qdf_freq_t start_freq;
 	qdf_freq_t end_freq;
 };
+
+/**
+ * struct spectral_capabilities_event_params - parameters related to Spectral
+ * capabilities event
+ * @num_sscan_bw_caps: Number of spectral_scan_bw_capabilities TLVs
+ * @num_fft_size_caps: Number of spectral_fft_size_capabilities TLVs
+ */
+struct spectral_capabilities_event_params {
+	uint8_t num_sscan_bw_caps;
+	uint8_t num_fft_size_caps;
+};
 #endif
 
 /**

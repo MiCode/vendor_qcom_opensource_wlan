@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2011,2017-2021 The Linux Foundation. All rights reserved.
- *
+ * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -942,6 +942,8 @@ struct vdev_spectral_enable_params;
  * channel information
  * @extract_pdev_spectral_session_detector_info: Extract Spectral scan session
  * detector information
+ * @extract_spectral_caps_fixed_param: Extract fixed parameters from Spectral
+ * capabilities event
  */
 struct spectral_wmi_ops {
 	QDF_STATUS (*wmi_spectral_configure_cmd_send)(
@@ -975,6 +977,9 @@ struct spectral_wmi_ops {
 		wmi_unified_t wmi_handle, void *event,
 		struct spectral_session_det_info *det_info,
 		uint8_t det_info_idx);
+	QDF_STATUS (*extract_spectral_caps_fixed_param)(
+		wmi_unified_t wmi_handle, void *event,
+		struct spectral_capabilities_event_params *param);
 };
 
 /**
@@ -2979,4 +2984,20 @@ target_if_spectral_copy_fft_bins(struct target_if_spectral *spectral,
 				 uint32_t *bytes_copied,
 				 uint16_t pwr_format);
 #endif /* WLAN_CONV_SPECTRAL_ENABLE */
+
+struct spectral_capabilities_event_params;
+/**
+ * target_if_wmi_extract_spectral_caps_fixed_param() - Wrapper function to
+ * extract fixed params from Spectral capabilities WMI event
+ * @psoc: Pointer to psoc object
+ * @evt_buf: Event buffer
+ * @param: Spectral capabilities event parameters data structure to be filled
+ * by this API
+ *
+ * Return: QDF_STATUS of operation
+ */
+QDF_STATUS target_if_wmi_extract_spectral_caps_fixed_param(
+			struct wlan_objmgr_psoc *psoc,
+			uint8_t *evt_buf,
+			struct spectral_capabilities_event_params *param);
 #endif /* _TARGET_IF_SPECTRAL_H_ */

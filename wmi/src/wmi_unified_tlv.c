@@ -7306,7 +7306,6 @@ extract_pdev_sscan_fft_bin_index_tlv(
 	return QDF_STATUS_SUCCESS;
 }
 
-#ifdef SPECTRAL_BERYLLIUM
 /**
  * extract_pdev_spectral_session_chan_info_tlv() - Extract channel information
  * for a spectral scan session
@@ -7379,7 +7378,7 @@ extract_pdev_spectral_session_detector_info_tlv(
 			struct spectral_session_det_info *det_info, uint8_t idx)
 {
 	WMI_PDEV_SSCAN_FW_PARAM_EVENTID_param_tlvs *param_buf = event;
-	wmi_pdev_sscan_detector_info *det_info_tlv;
+	wmi_pdev_sscan_per_detector_info *det_info_tlv;
 
 	if (!param_buf) {
 		wmi_err("param_buf is NULL");
@@ -7414,7 +7413,42 @@ extract_pdev_spectral_session_detector_info_tlv(
 
 	return QDF_STATUS_SUCCESS;
 }
-#endif /* SPECTRAL_BERYLLIUM */
+
+/**
+ * extract_spectral_caps_fixed_param_tlv() - Extract fixed params from Spectral
+ * capabilities WMI event
+ * @wmi_handle: handle to WMI.
+ * @event: Event buffer
+ * @param: Spectral capabilities event parameters data structure to be filled
+ * by this API
+ *
+ * Return: QDF_STATUS of operation
+ */
+static QDF_STATUS
+extract_spectral_caps_fixed_param_tlv(
+		wmi_unified_t wmi_handle, void *event,
+		struct spectral_capabilities_event_params *params)
+{
+	WMI_SPECTRAL_CAPABILITIES_EVENTID_param_tlvs *param_buf = event;
+
+	if (!param_buf) {
+		wmi_err("param_buf is NULL");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	if (!params) {
+		wmi_err("event parameters is NULL");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	params->num_sscan_bw_caps = param_buf->num_sscan_bw_caps;
+	params->num_fft_size_caps = param_buf->num_fft_size_caps;
+
+	wmi_debug("num_sscan_bw_caps:%u num_fft_size_caps:%u",
+		  params->num_sscan_bw_caps, params->num_fft_size_caps);
+
+	return QDF_STATUS_SUCCESS;
+}
 #endif /* WLAN_CONV_SPECTRAL_ENABLE */
 
 #ifdef FEATURE_WPSS_THERMAL_MITIGATION
@@ -17001,12 +17035,12 @@ struct wmi_ops tlv_ops =  {
 				extract_pdev_sscan_fw_cmd_fixed_param_tlv,
 	.extract_pdev_sscan_fft_bin_index =
 				extract_pdev_sscan_fft_bin_index_tlv,
-#ifdef SPECTRAL_BERYLLIUM
 	.extract_pdev_spectral_session_chan_info =
 				extract_pdev_spectral_session_chan_info_tlv,
 	.extract_pdev_spectral_session_detector_info =
 				extract_pdev_spectral_session_detector_info_tlv,
-#endif /* SPECTRAL_BERYLLIUM */
+	.extract_spectral_caps_fixed_param =
+				extract_spectral_caps_fixed_param_tlv,
 #endif /* WLAN_CONV_SPECTRAL_ENABLE */
 	.send_thermal_mitigation_param_cmd =
 		send_thermal_mitigation_param_cmd_tlv,

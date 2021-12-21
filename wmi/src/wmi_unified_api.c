@@ -2684,6 +2684,17 @@ QDF_STATUS wmi_extract_pdev_spectral_session_detector_info(
 
 	return QDF_STATUS_E_FAILURE;
 }
+
+QDF_STATUS wmi_extract_spectral_caps_fixed_param(
+		wmi_unified_t wmi_handle, void *event,
+		struct spectral_capabilities_event_params *param)
+{
+	if (wmi_handle->ops->extract_spectral_caps_fixed_param)
+		return wmi_handle->ops->extract_spectral_caps_fixed_param(
+					wmi_handle, event, param);
+
+	return QDF_STATUS_E_FAILURE;
+}
 #endif /* WLAN_CONV_SPECTRAL_ENABLE */
 
 QDF_STATUS wmi_extract_spectral_scaling_params_service_ready_ext(

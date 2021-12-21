@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2011,2017-2021 The Linux Foundation. All rights reserved.
- *
+ * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -7022,6 +7022,46 @@ target_if_extract_pdev_spectral_session_detector_info(
 			extract_pdev_spectral_session_detector_info(
 				wmi_handle, evt_buf, det_info, det_info_idx);
 }
+
+/**
+ * target_if_wmi_extract_spectral_caps_fixed_param() - Wrapper function to
+ * extract fixed params from Spectral capabilities WMI event
+ * @psoc: Pointer to psoc object
+ * @evt_buf: Event buffer
+ * @param: Spectral capabilities event parameters data structure to be filled
+ * by this API
+ *
+ * Return: QDF_STATUS of operation
+ */
+QDF_STATUS
+target_if_wmi_extract_spectral_caps_fixed_param(
+			struct wlan_objmgr_psoc *psoc,
+			uint8_t *evt_buf,
+			struct spectral_capabilities_event_params *param)
+{
+	struct target_if_psoc_spectral *psoc_spectral;
+	wmi_unified_t wmi_handle;
+
+	if (!psoc) {
+		spectral_err("psoc is null");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	wmi_handle = GET_WMI_HDL_FROM_PSOC(psoc);
+	if (!wmi_handle) {
+		spectral_err("WMI handle is null");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	psoc_spectral = get_target_if_spectral_handle_from_psoc(psoc);
+	if (!psoc_spectral) {
+		spectral_err("spectral object is null");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	return psoc_spectral->wmi_ops.extract_spectral_caps_fixed_param(
+			wmi_handle, evt_buf, param);
+}
 #else
 /**
  * target_if_spectral_wmi_unified_register_event_handler() - Wrapper function to
@@ -7260,6 +7300,24 @@ target_if_extract_pdev_spectral_session_detector_info(
 
 	return wmi_extract_pdev_spectral_session_detector_info(
 				wmi_handle, evt_buf, det_info, det_info_idx);
+}
+
+QDF_STATUS
+target_if_wmi_extract_spectral_caps_fixed_param(
+			struct wlan_objmgr_psoc *psoc,
+			uint8_t *evt_buf,
+			struct spectral_capabilities_event_params *param)
+{
+	wmi_unified_t wmi_handle;
+
+	wmi_handle = GET_WMI_HDL_FROM_PSOC(psoc);
+	if (!wmi_handle) {
+		spectral_err("WMI handle is null");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	return wmi_extract_spectral_caps_fixed_param(wmi_handle, evt_buf,
+						     param);
 }
 #endif
 
