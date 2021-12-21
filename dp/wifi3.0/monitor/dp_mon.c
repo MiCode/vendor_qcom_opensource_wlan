@@ -5113,6 +5113,37 @@ void dp_mon_peer_reset_stats(struct dp_peer *peer)
 	DP_STATS_CLR(mon_peer);
 	DP_STATS_UPD(mon_peer, rx.avg_snr, CDP_INVALID_SNR);
 }
+
+void dp_mon_peer_get_stats(struct dp_peer *peer, void *arg,
+			   enum cdp_stat_update_type type)
+{
+	struct dp_mon_peer *mon_peer = peer->monitor_peer;
+	struct dp_mon_peer_stats *mon_peer_stats;
+
+	if (!mon_peer || !arg)
+		return;
+
+	mon_peer_stats = &mon_peer->stats;
+
+	switch (type) {
+	case UPDATE_PEER_STATS:
+	{
+		struct cdp_peer_stats *peer_stats =
+						(struct cdp_peer_stats *)arg;
+		DP_UPDATE_MON_STATS(peer_stats, mon_peer_stats);
+		break;
+	}
+	case UPDATE_VDEV_STATS:
+	{
+		struct cdp_vdev_stats *vdev_stats =
+						(struct cdp_vdev_stats *)arg;
+		DP_UPDATE_MON_STATS(vdev_stats, mon_peer_stats);
+		break;
+	}
+	default:
+		dp_mon_err("Invalid stats_update_type");
+	}
+}
 #endif
 
 void dp_mon_ops_register(struct dp_soc *soc)

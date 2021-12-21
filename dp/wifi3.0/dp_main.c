@@ -8852,21 +8852,29 @@ dp_txrx_host_peer_stats_clr(struct dp_soc *soc,
 			    struct dp_peer *peer,
 			    void *arg)
 {
-	struct dp_rx_tid *rx_tid;
-	uint8_t tid;
+	struct dp_txrx_peer *txrx_peer = NULL;
+	struct dp_peer *tgt_peer = NULL;
+	struct cdp_interface_peer_stats peer_stats_intf;
 
-	for (tid = 0; tid < DP_MAX_TIDS; tid++) {
-		rx_tid = &peer->rx_tid[tid];
-		DP_STATS_CLR(rx_tid);
-	}
+	qdf_mem_zero(&peer_stats_intf, sizeof(struct cdp_interface_peer_stats));
 
 	DP_STATS_CLR(peer);
+	/* Clear monitor peer stats */
+	dp_monitor_peer_reset_stats(soc, peer);
 
-	dp_txrx_host_peer_delay_stats_clr(peer);
+	/* Clear MLD peer stats only when link peer is primary */
+	if (dp_peer_is_primary_link_peer(peer)) {
+		tgt_peer = dp_get_tgt_peer_from_peer(peer);
+		if (tgt_peer) {
+			DP_STATS_CLR(tgt_peer);
+			txrx_peer = tgt_peer->txrx_peer;
+			dp_txrx_peer_stats_clr(txrx_peer);
+		}
+	}
 
 #if defined(FEATURE_PERPKT_INFO) && WDI_EVENT_ENABLE
 	dp_wdi_event_handler(WDI_EVENT_UPDATE_DP_STATS, peer->vdev->pdev->soc,
-			     &peer->stats,  peer->peer_id,
+			     &peer_stats_intf,  peer->peer_id,
 			     UPDATE_PEER_STATS, peer->vdev->pdev->pdev_id);
 #endif
 }
@@ -8915,6 +8923,164 @@ dp_txrx_host_stats_clr(struct dp_vdev *vdev, struct dp_soc *soc)
 	return QDF_STATUS_SUCCESS;
 }
 
+/**
+ * dp_get_peer_calibr_stats()- Get peer calibrated stats
+ * @peer: Datapath peer
+ * @peer_stats: buffer for peer stats
+ *
+ * Return: none
+ */
+static inline
+void dp_get_peer_calibr_stats(struct dp_peer *peer,
+			      struct cdp_peer_stats *peer_stats)
+{
+	peer_stats->tx.last_per = peer->stats.tx.last_per;
+	peer_stats->tx.tx_bytes_success_last =
+					peer->stats.tx.tx_bytes_success_last;
+	peer_stats->tx.tx_data_success_last =
+					peer->stats.tx.tx_data_success_last;
+	peer_stats->tx.tx_byte_rate = peer->stats.tx.tx_byte_rate;
+	peer_stats->tx.tx_data_rate = peer->stats.tx.tx_data_rate;
+	peer_stats->tx.tx_data_ucast_last = peer->stats.tx.tx_data_ucast_last;
+	peer_stats->tx.tx_data_ucast_rate = peer->stats.tx.tx_data_ucast_rate;
+	peer_stats->tx.inactive_time = peer->stats.tx.inactive_time;
+	peer_stats->rx.rx_bytes_success_last =
+					peer->stats.rx.rx_bytes_success_last;
+	peer_stats->rx.rx_data_success_last =
+					peer->stats.rx.rx_data_success_last;
+	peer_stats->rx.rx_byte_rate = peer->stats.rx.rx_byte_rate;
+	peer_stats->rx.rx_data_rate = peer->stats.rx.rx_data_rate;
+}
+
+/**
+ * dp_get_peer_basic_stats()- Get peer basic stats
+ * @peer: Datapath peer
+ * @peer_stats: buffer for peer stats
+ *
+ * Return: none
+ */
+static inline
+void dp_get_peer_basic_stats(struct dp_peer *peer,
+			     struct cdp_peer_stats *peer_stats)
+{
+	struct dp_txrx_peer *txrx_peer;
+
+	txrx_peer = peer->txrx_peer;
+	if (!txrx_peer)
+		return;
+
+	peer_stats->tx.comp_pkt.num += txrx_peer->comp_pkt.num;
+	peer_stats->tx.comp_pkt.bytes += txrx_peer->comp_pkt.bytes;
+	peer_stats->tx.tx_failed += txrx_peer->tx_failed;
+	peer_stats->rx.to_stack.num += txrx_peer->to_stack.num;
+	peer_stats->rx.to_stack.bytes += txrx_peer->to_stack.bytes;
+}
+
+/**
+ * dp_get_peer_per_pkt_stats()- Get peer per pkt stats
+ * @peer: Datapath peer
+ * @peer_stats: buffer for peer stats
+ *
+ * Return: none
+ */
+static inline
+void dp_get_peer_per_pkt_stats(struct dp_peer *peer,
+			       struct cdp_peer_stats *peer_stats)
+{
+	struct dp_txrx_peer *txrx_peer;
+	struct dp_peer_per_pkt_stats *per_pkt_stats;
+
+	txrx_peer = peer->txrx_peer;
+	if (!txrx_peer)
+		return;
+
+	per_pkt_stats = &txrx_peer->stats.per_pkt_stats;
+	DP_UPDATE_PER_PKT_STATS(peer_stats, per_pkt_stats);
+}
+
+/**
+ * dp_get_peer_extd_stats()- Get peer extd stats
+ * @peer: Datapath peer
+ * @peer_stats: buffer for peer stats
+ *
+ * Return: none
+ */
+#ifdef QCA_ENHANCED_STATS_SUPPORT
+#ifdef WLAN_FEATURE_11BE_MLO
+static inline
+void dp_get_peer_extd_stats(struct dp_peer *peer,
+			    struct cdp_peer_stats *peer_stats)
+{
+	struct dp_soc *soc = peer->vdev->pdev->soc;
+
+	if (IS_MLO_DP_MLD_PEER(peer)) {
+		uint8_t i;
+		struct dp_peer *link_peer;
+		struct dp_soc *link_peer_soc;
+		struct dp_mld_link_peers link_peers_info;
+
+		dp_get_link_peers_ref_from_mld_peer(soc, peer,
+						    &link_peers_info,
+						    DP_MOD_ID_CDP);
+		for (i = 0; i < link_peers_info.num_links; i++) {
+			link_peer = link_peers_info.link_peers[i];
+			link_peer_soc = link_peer->vdev->pdev->soc;
+			dp_monitor_peer_get_stats(link_peer_soc, link_peer,
+						  peer_stats,
+						  UPDATE_PEER_STATS);
+		}
+		dp_release_link_peers_ref(&link_peers_info, DP_MOD_ID_CDP);
+	} else {
+		dp_monitor_peer_get_stats(soc, peer, peer_stats,
+					  UPDATE_PEER_STATS);
+	}
+}
+#else
+static inline
+void dp_get_peer_extd_stats(struct dp_peer *peer,
+			    struct cdp_peer_stats *peer_stats)
+{
+	struct dp_soc *soc = peer->vdev->pdev->soc;
+
+	dp_monitor_peer_get_stats(soc, peer, peer_stats, UPDATE_PEER_STATS);
+}
+#endif
+#else
+static inline
+void dp_get_peer_extd_stats(struct dp_peer *peer,
+			    struct cdp_peer_stats *peer_stats)
+{
+	struct dp_txrx_peer *txrx_peer;
+	struct dp_peer_extd_stats *extd_stats;
+
+	txrx_peer = peer->txrx_peer;
+	if (!txrx_peer)
+		return;
+
+	extd_stats = &txrx_peer->stats.extd_stats;
+	DP_UPDATE_EXTD_STATS(peer_stats, extd_stats);
+}
+#endif
+
+/**
+ * dp_get_peer_stats()- Get peer stats
+ * @peer: Datapath peer
+ * @peer_stats: buffer for peer stats
+ *
+ * Return: none
+ */
+static inline
+void dp_get_peer_stats(struct dp_peer *peer, struct cdp_peer_stats *peer_stats)
+{
+	dp_get_peer_calibr_stats(peer, peer_stats);
+
+	dp_get_peer_basic_stats(peer, peer_stats);
+
+	dp_get_peer_per_pkt_stats(peer, peer_stats);
+
+	dp_get_peer_extd_stats(peer, peer_stats);
+}
+
 /*
  * dp_get_host_peer_stats()- function to print peer stats
  * @soc: dp_soc handle
@@ -8926,6 +9092,7 @@ static QDF_STATUS
 dp_get_host_peer_stats(struct cdp_soc_t *soc, uint8_t *mac_addr)
 {
 	struct dp_peer *peer = NULL;
+	struct cdp_peer_stats *peer_stats = NULL;
 
 	if (!mac_addr) {
 		QDF_TRACE(QDF_MODULE_ID_TXRX, QDF_TRACE_LEVEL_ERROR,
@@ -8943,9 +9110,23 @@ dp_get_host_peer_stats(struct cdp_soc_t *soc, uint8_t *mac_addr)
 		return QDF_STATUS_E_FAILURE;
 	}
 
-	dp_print_peer_stats(peer);
+	peer_stats = qdf_mem_malloc(sizeof(struct cdp_peer_stats));
+	if (!peer_stats) {
+		QDF_TRACE(QDF_MODULE_ID_TXRX, QDF_TRACE_LEVEL_ERROR,
+			  "%s: Memory allocation failed for cdp_peer_stats\n",
+			  __func__);
+		dp_peer_unref_delete(peer, DP_MOD_ID_CDP);
+		return QDF_STATUS_E_NOMEM;
+	}
+
+	qdf_mem_zero(peer_stats, sizeof(struct cdp_peer_stats));
+
+	dp_get_peer_stats(peer, peer_stats);
+	dp_print_peer_stats(peer, peer_stats);
+
 	dp_peer_rxtid_stats(peer, dp_rx_tid_stats_cb, NULL);
 
+	qdf_mem_free(peer_stats);
 	dp_peer_unref_delete(peer, DP_MOD_ID_CDP);
 
 	return QDF_STATUS_SUCCESS;
@@ -10031,11 +10212,12 @@ dp_txrx_get_peer_stats(struct cdp_soc_t *soc, uint8_t vdev_id,
 						       peer_mac, 0, vdev_id,
 						       DP_MOD_ID_CDP);
 
+	qdf_mem_zero(peer_stats, sizeof(struct cdp_peer_stats));
+
 	if (!peer)
 		return QDF_STATUS_E_FAILURE;
 
-	qdf_mem_copy(peer_stats, &peer->stats,
-		     sizeof(struct cdp_peer_stats));
+	dp_get_peer_stats(peer, peer_stats);
 
 	dp_peer_unref_delete(peer, DP_MOD_ID_CDP);
 
@@ -10130,6 +10312,50 @@ dp_txrx_get_peer_stats_param(struct cdp_soc_t *soc, uint8_t vdev_id,
  *
  * return : QDF_STATUS
  */
+#ifdef WLAN_FEATURE_11BE_MLO
+static QDF_STATUS
+dp_txrx_reset_peer_stats(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
+			 uint8_t *peer_mac)
+{
+	QDF_STATUS status = QDF_STATUS_SUCCESS;
+	struct dp_soc *soc = (struct dp_soc *)soc_hdl;
+	struct dp_peer *peer =
+			dp_peer_get_tgt_peer_hash_find(soc, peer_mac, 0,
+						       vdev_id, DP_MOD_ID_CDP);
+
+	if (!peer)
+		return QDF_STATUS_E_FAILURE;
+
+	DP_STATS_CLR(peer);
+	dp_txrx_peer_stats_clr(peer->txrx_peer);
+
+	if (IS_MLO_DP_MLD_PEER(peer)) {
+		uint8_t i;
+		struct dp_peer *link_peer;
+		struct dp_soc *link_peer_soc;
+		struct dp_mld_link_peers link_peers_info;
+
+		dp_get_link_peers_ref_from_mld_peer(soc, peer,
+						    &link_peers_info,
+						    DP_MOD_ID_CDP);
+		for (i = 0; i < link_peers_info.num_links; i++) {
+			link_peer = link_peers_info.link_peers[i];
+			link_peer_soc = link_peer->vdev->pdev->soc;
+
+			DP_STATS_CLR(link_peer);
+			dp_monitor_peer_reset_stats(link_peer_soc, link_peer);
+		}
+
+		dp_release_link_peers_ref(&link_peers_info, DP_MOD_ID_CDP);
+	} else {
+		dp_monitor_peer_reset_stats(soc, peer);
+	}
+
+	dp_peer_unref_delete(peer, DP_MOD_ID_CDP);
+
+	return status;
+}
+#else
 static QDF_STATUS
 dp_txrx_reset_peer_stats(struct cdp_soc_t *soc, uint8_t vdev_id,
 			 uint8_t *peer_mac)
@@ -10142,12 +10368,15 @@ dp_txrx_reset_peer_stats(struct cdp_soc_t *soc, uint8_t vdev_id,
 	if (!peer)
 		return QDF_STATUS_E_FAILURE;
 
-	qdf_mem_zero(&peer->stats, sizeof(peer->stats));
+	DP_STATS_CLR(peer);
+	dp_txrx_peer_stats_clr(peer->txrx_peer);
+	dp_monitor_peer_reset_stats((struct dp_soc *)soc, peer);
 
 	dp_peer_unref_delete(peer, DP_MOD_ID_CDP);
 
 	return status;
 }
+#endif
 
 /* dp_txrx_get_vdev_stats - Update buffer with cdp_vdev_stats
  * @vdev_handle: DP_VDEV handle

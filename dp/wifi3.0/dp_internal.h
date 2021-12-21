@@ -241,6 +241,12 @@ void dp_monitor_peer_reset_stats(struct dp_soc *soc, struct dp_peer *peer)
 {
 }
 
+static inline
+void dp_monitor_peer_get_stats(struct dp_soc *soc, struct dp_peer *peer,
+			       void *arg, enum cdp_stat_update_type type)
+{
+}
+
 static inline QDF_STATUS dp_monitor_pdev_init(struct dp_pdev *pdev)
 {
 	return QDF_STATUS_SUCCESS;

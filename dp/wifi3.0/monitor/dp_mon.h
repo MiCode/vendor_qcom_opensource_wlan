@@ -47,6 +47,9 @@
 #ifdef QCA_ENHANCED_STATS_SUPPORT
 typedef struct dp_peer_extd_tx_stats dp_mon_peer_tx_stats;
 typedef struct dp_peer_extd_rx_stats dp_mon_peer_rx_stats;
+
+#define DP_UPDATE_MON_STATS(_tgtobj, _srcobj) \
+	DP_UPDATE_EXTD_STATS(_tgtobj, _srcobj)
 #endif
 
 #ifndef WLAN_TX_PKT_CAPTURE_ENH
@@ -202,8 +205,26 @@ struct cdp_peer_rate_stats_ctx *dp_mon_peer_get_rdkstats_ctx(struct dp_peer *pee
  * Return: none
  */
 void dp_mon_peer_reset_stats(struct dp_peer *peer);
+
+/*
+ * dp_mon_peer_get_stats() - Get monitor peer stats
+ *
+ * @peer: Datapath peer handle
+ * @arg: Pointer to stats struct
+ * @type: Update type
+ *
+ * Return: none
+ */
+void dp_mon_peer_get_stats(struct dp_peer *peer, void *arg,
+			   enum cdp_stat_update_type type);
 #else
 static inline void dp_mon_peer_reset_stats(struct dp_peer *peer)
+{
+}
+
+static inline
+void dp_mon_peer_get_stats(struct dp_peer *peer, void *arg,
+			   enum cdp_stat_update_type type)
 {
 }
 #endif
@@ -459,6 +480,8 @@ struct dp_mon_ops {
 	QDF_STATUS (*mon_peer_detach)(struct dp_peer *peer);
 	struct cdp_peer_rate_stats_ctx *(*mon_peer_get_rdkstats_ctx)(struct dp_peer *peer);
 	void (*mon_peer_reset_stats)(struct dp_peer *peer);
+	void (*mon_peer_get_stats)(struct dp_peer *peer, void *arg,
+				   enum cdp_stat_update_type type);
 	QDF_STATUS (*mon_config_debug_sniffer)(struct dp_pdev *pdev, int val);
 	void (*mon_flush_rings)(struct dp_soc *soc);
 #if !defined(DISABLE_MON_CONFIG)
@@ -1699,6 +1722,34 @@ static inline void dp_monitor_peer_reset_stats(struct dp_soc *soc,
 	}
 
 	monitor_ops->mon_peer_reset_stats(peer);
+}
+
+/*
+ * dp_monitor_peer_get_stats() - Get monitor peer stats
+ * @soc: Datapath soc handle
+ * @peer: Datapath peer handle
+ * @arg: Pointer to stats struct
+ * @type: Update type
+ *
+ * Return: none
+ */
+static inline
+void dp_monitor_peer_get_stats(struct dp_soc *soc, struct dp_peer *peer,
+			       void *arg, enum cdp_stat_update_type type)
+{
+	struct dp_mon_ops *monitor_ops;
+	struct dp_mon_soc *mon_soc = soc->monitor_soc;
+
+	if (!mon_soc)
+		return;
+
+	monitor_ops = mon_soc->mon_ops;
+	if (!monitor_ops || !monitor_ops->mon_peer_get_stats) {
+		dp_mon_debug("callback not registered");
+		return;
+	}
+
+	monitor_ops->mon_peer_get_stats(peer, arg, type);
 }
 
 /*
