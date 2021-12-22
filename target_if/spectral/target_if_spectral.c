@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2011,2017-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -7062,6 +7062,45 @@ target_if_wmi_extract_spectral_caps_fixed_param(
 	return psoc_spectral->wmi_ops.extract_spectral_caps_fixed_param(
 			wmi_handle, evt_buf, param);
 }
+
+/**
+ * target_if_wmi_extract_spectral_scan_bw_caps() - Wrapper function to
+ * extract bandwidth capabilities from Spectral capabilities WMI event
+ * @psoc: Pointer to psoc object
+ * @evt_buf: Event buffer
+ * @bw_caps: Data structure to be filled by this API after extraction
+ *
+ * Return: QDF_STATUS of operation
+ */
+QDF_STATUS
+target_if_wmi_extract_spectral_scan_bw_caps(
+			struct wlan_objmgr_psoc *psoc,
+			uint8_t *evt_buf,
+			struct spectral_scan_bw_capabilities *bw_caps)
+{
+	struct target_if_psoc_spectral *psoc_spectral;
+	wmi_unified_t wmi_handle;
+
+	if (!psoc) {
+		spectral_err("psoc is null");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	wmi_handle = GET_WMI_HDL_FROM_PSOC(psoc);
+	if (!wmi_handle) {
+		spectral_err("WMI handle is null");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	psoc_spectral = get_target_if_spectral_handle_from_psoc(psoc);
+	if (!psoc_spectral) {
+		spectral_err("spectral object is null");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	return psoc_spectral->wmi_ops.extract_spectral_scan_bw_caps(
+			wmi_handle, evt_buf, bw_caps);
+}
 #else
 /**
  * target_if_spectral_wmi_unified_register_event_handler() - Wrapper function to
@@ -7318,6 +7357,23 @@ target_if_wmi_extract_spectral_caps_fixed_param(
 
 	return wmi_extract_spectral_caps_fixed_param(wmi_handle, evt_buf,
 						     param);
+}
+
+QDF_STATUS
+target_if_wmi_extract_spectral_scan_bw_caps(
+			struct wlan_objmgr_psoc *psoc,
+			uint8_t *evt_buf,
+			struct spectral_scan_bw_capabilities *bw_caps)
+{
+	wmi_unified_t wmi_handle;
+
+	wmi_handle = GET_WMI_HDL_FROM_PSOC(psoc);
+	if (!wmi_handle) {
+		spectral_err("WMI handle is null");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	return wmi_extract_spectral_scan_bw_caps(wmi_handle, evt_buf, bw_caps);
 }
 #endif
 

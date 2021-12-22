@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2013-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1518,6 +1518,10 @@ QDF_STATUS (*extract_pdev_spectral_session_detector_info)(
 QDF_STATUS (*extract_spectral_caps_fixed_param)(
 		wmi_unified_t wmi_handle, void *event,
 		struct spectral_capabilities_event_params *param);
+
+QDF_STATUS (*extract_spectral_scan_bw_caps)(
+		wmi_unified_t wmi_handle, void *event,
+		struct spectral_scan_bw_capabilities *bw_caps);
 #endif /* WLAN_CONV_SPECTRAL_ENABLE */
 
 QDF_STATUS (*send_vdev_spectral_configure_cmd)(wmi_unified_t wmi_handle,

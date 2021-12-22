@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -3116,6 +3116,22 @@ struct spectral_session_det_info {
 struct spectral_capabilities_event_params {
 	uint8_t num_sscan_bw_caps;
 	uint8_t num_fft_size_caps;
+};
+
+/**
+ * struct spectral_scan_bw_capabilities - Spectral scan bandwidth caps
+ * that are extracted from Spectral capabilities WMI event
+ * @pdev_id: pdev ID
+ * @smode: Spectral scan mode
+ * @operating_bw: Operating bandwidth
+ * @supported_bws: Supported sscan bandwidths bitmap for given @pdev_id,
+ * @operating_bw, and @smode
+ */
+struct spectral_scan_bw_capabilities {
+	uint8_t pdev_id;
+	enum spectral_scan_mode smode;
+	enum phy_ch_width operating_bw;
+	uint32_t supported_bws;
 };
 #endif
 

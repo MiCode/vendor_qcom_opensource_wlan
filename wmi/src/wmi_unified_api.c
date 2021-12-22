@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -2692,6 +2692,17 @@ QDF_STATUS wmi_extract_spectral_caps_fixed_param(
 	if (wmi_handle->ops->extract_spectral_caps_fixed_param)
 		return wmi_handle->ops->extract_spectral_caps_fixed_param(
 					wmi_handle, event, param);
+
+	return QDF_STATUS_E_FAILURE;
+}
+
+QDF_STATUS wmi_extract_spectral_scan_bw_caps(
+		wmi_unified_t wmi_handle, void *event,
+		struct spectral_scan_bw_capabilities *bw_caps)
+{
+	if (wmi_handle->ops->extract_spectral_scan_bw_caps)
+		return wmi_handle->ops->extract_spectral_scan_bw_caps(
+					wmi_handle, event, bw_caps);
 
 	return QDF_STATUS_E_FAILURE;
 }

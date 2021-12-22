@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2013-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -2325,6 +2325,19 @@ QDF_STATUS wmi_extract_pdev_spectral_session_detector_info(
 QDF_STATUS wmi_extract_spectral_caps_fixed_param(
 		wmi_unified_t wmi_handle, void *event,
 		struct spectral_capabilities_event_params *param);
+
+/**
+ * wmi_extract_spectral_scan_bw_caps() - Extract bandwidth caps from
+ * Spectral capabilities WMI event
+ * @wmi_handle: handle to WMI.
+ * @event: Event buffer
+ * @bw_caps: Data structure to be populated by this API after extraction
+ *
+ * Return: QDF_STATUS of operation
+ */
+QDF_STATUS wmi_extract_spectral_scan_bw_caps(
+		wmi_unified_t wmi_handle, void *event,
+		struct spectral_scan_bw_capabilities *bw_caps);
 #endif /* WLAN_CONV_SPECTRAL_ENABLE */
 
 #if defined(WLAN_SUPPORT_FILS) || defined(CONFIG_BAND_6GHZ)

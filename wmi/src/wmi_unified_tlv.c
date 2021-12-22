@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -7446,6 +7446,55 @@ extract_spectral_caps_fixed_param_tlv(
 
 	wmi_debug("num_sscan_bw_caps:%u num_fft_size_caps:%u",
 		  params->num_sscan_bw_caps, params->num_fft_size_caps);
+
+	return QDF_STATUS_SUCCESS;
+}
+
+/**
+ * extract_spectral_scan_bw_caps_tlv() - Extract bandwidth caps from
+ * Spectral capabilities WMI event
+ * @wmi_handle: handle to WMI.
+ * @event: Event buffer
+ * @bw_caps: Data structure to be populated by this API after extraction
+ *
+ * Return: QDF_STATUS of operation
+ */
+static QDF_STATUS
+extract_spectral_scan_bw_caps_tlv(
+	wmi_unified_t wmi_handle, void *event,
+	struct spectral_scan_bw_capabilities *bw_caps)
+{
+	WMI_SPECTRAL_CAPABILITIES_EVENTID_param_tlvs *param_buf = event;
+	int idx;
+
+	if (!param_buf) {
+		wmi_err("param_buf is NULL");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	if (!bw_caps) {
+		wmi_err("bw_caps is null");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	for (idx = 0; idx < param_buf->num_sscan_bw_caps; idx++) {
+		bw_caps[idx].pdev_id =
+			wmi_handle->ops->convert_pdev_id_target_to_host(
+				wmi_handle,
+				param_buf->sscan_bw_caps[idx].pdev_id);
+		bw_caps[idx].smode = param_buf->sscan_bw_caps[idx].sscan_mode;
+		bw_caps[idx].operating_bw = wmi_map_ch_width(
+			param_buf->sscan_bw_caps[idx].operating_bw);
+		bw_caps[idx].supported_bws =
+			param_buf->sscan_bw_caps[idx].supported_flags;
+
+		wmi_debug("bw_caps[%u]:: pdev_id:%u smode:%u"
+			  "operating_bw:%u supported_flags:0x%x",
+			  idx, param_buf->sscan_bw_caps[idx].pdev_id,
+			  param_buf->sscan_bw_caps[idx].sscan_mode,
+			  param_buf->sscan_bw_caps[idx].operating_bw,
+			  param_buf->sscan_bw_caps[idx].supported_flags);
+	}
 
 	return QDF_STATUS_SUCCESS;
 }
@@ -17041,6 +17090,8 @@ struct wmi_ops tlv_ops =  {
 				extract_pdev_spectral_session_detector_info_tlv,
 	.extract_spectral_caps_fixed_param =
 				extract_spectral_caps_fixed_param_tlv,
+	.extract_spectral_scan_bw_caps =
+				extract_spectral_scan_bw_caps_tlv,
 #endif /* WLAN_CONV_SPECTRAL_ENABLE */
 	.send_thermal_mitigation_param_cmd =
 		send_thermal_mitigation_param_cmd_tlv,
