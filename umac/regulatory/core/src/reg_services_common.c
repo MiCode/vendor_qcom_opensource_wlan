@@ -6104,6 +6104,43 @@ uint16_t reg_convert_enum_to_6g_idx(enum channel_enum ch_idx)
 
 	return (ch_idx - MIN_6GHZ_CHANNEL);
 }
+
+QDF_STATUS
+reg_get_superchan_entry(struct wlan_objmgr_pdev *pdev,
+			enum channel_enum chan_enum,
+			const struct super_chan_info **p_sup_chan_entry)
+{
+	struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj;
+	uint16_t sup_idx;
+
+	sup_idx = reg_convert_enum_to_6g_idx(chan_enum);
+
+	if (sup_idx == INVALID_CHANNEL) {
+		reg_debug("super channel idx is invalid for the chan_enum %d",
+			  chan_enum);
+		return QDF_STATUS_E_INVAL;
+	}
+
+	pdev_priv_obj = reg_get_pdev_obj(pdev);
+	if (!IS_VALID_PDEV_REG_OBJ(pdev_priv_obj)) {
+		reg_err_rl("pdev reg component is NULL");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	if (!p_sup_chan_entry) {
+		reg_err_rl("p_sup_chan_entry is NULL");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	if (sup_idx >= NUM_6GHZ_CHANNELS) {
+		reg_debug("sup_idx is out of bounds");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	*p_sup_chan_entry = &pdev_priv_obj->super_chan_list[sup_idx];
+
+	return QDF_STATUS_SUCCESS;
+}
 #endif
 
 #ifdef FEATURE_WLAN_CH_AVOID_EXT

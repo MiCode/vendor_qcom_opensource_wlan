@@ -276,6 +276,21 @@ wlan_reg_get_max_txpower_for_6g_tpe(struct wlan_objmgr_pdev *pdev,
 				    bool is_psd,
 				    uint8_t *tx_power);
 
+/**
+ * wlan_reg_get_superchan_entry() - Get the address of the super channel list
+ * entry for a given input channel index.
+ *
+ * @pdev: pdev ptr
+ * @chan_enum: Channel enum
+ * @p_sup_chan_entry: Pointer to address of *p_sup_chan_entry
+ *
+ * Return: QDF_STATUS_SUCCESS if super channel entry is available for the input
+ * chan_enum else QDF_STATUS_E_FAILURE
+ */
+QDF_STATUS wlan_reg_get_superchan_entry(
+		struct wlan_objmgr_pdev *pdev,
+		enum channel_enum chan_enum,
+		const struct super_chan_info **p_sup_chan_entry);
 #else
 
 #define WLAN_REG_IS_6GHZ_CHAN_FREQ(freq) (false)
@@ -338,6 +353,16 @@ wlan_reg_get_6g_ap_master_chan_list(struct wlan_objmgr_pdev *pdev,
 				    struct regulatory_channel *chan_list)
 {
 	return QDF_STATUS_E_FAILURE;
+}
+
+static inline
+QDF_STATUS wlan_reg_get_superchan_entry(
+		struct wlan_objmgr_pdev *pdev,
+		enum channel_enum chan_enum,
+		const struct super_chan_info **p_sup_chan_entry)
+{
+	*p_sup_chan_entry = NULL;
+	return QDF_STATUS_E_NOSUPPORT;
 }
 #endif /* CONFIG_BAND_6GHZ */
 

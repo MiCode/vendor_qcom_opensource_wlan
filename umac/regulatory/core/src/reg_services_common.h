@@ -1728,6 +1728,22 @@ bool reg_is_upper_6g_edge_ch_disabled(struct wlan_objmgr_psoc *psoc);
  * Return: enum channel_enum
  */
 uint16_t reg_convert_enum_to_6g_idx(enum channel_enum ch_idx);
+
+/**
+ * reg_get_superchan_entry() - Get the address of the super channel list
+ * entry for a given input channel index.
+ *
+ * @pdev: pdev ptr
+ * @chan_enum: Channel enum
+ * @p_sup_chan_entry: Pointer to address of *p_sup_chan_entry
+ *
+ * Return: QDF_STATUS_SUCCESS if super channel entry is available for the input
+ * chan_enum else QDF_STATUS_E_FAILURE
+ */
+QDF_STATUS
+reg_get_superchan_entry(struct wlan_objmgr_pdev *pdev,
+			enum channel_enum chan_enum,
+			const struct super_chan_info **p_sup_chan_entry);
 #endif
 
 #ifdef FEATURE_WLAN_CH_AVOID_EXT
