@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  *
  * Permission to use, copy, modify, and/or distribute this software for
@@ -288,18 +289,6 @@ QDF_STATUS ucfg_dfs_override_precac_timeout(struct wlan_objmgr_pdev *pdev,
  */
 QDF_STATUS ucfg_dfs_set_precac_enable(struct wlan_objmgr_pdev *pdev,
 				      uint32_t value);
-
-/**
- * ucfg_dfs_get_legacy_precac_enable() - Get the legacy precac enable flag.
- * @pdev: Pointer to DFS pdev object.
- * @buff: Pointer to save precac_enable value.
- *
- * Wrapper function for dfs_is_legacy_precac_enabled() and returns the
- * legacy precac enable flag for partial offload chipsets.
- * This function called from outside of dfs component.
- */
-QDF_STATUS ucfg_dfs_get_legacy_precac_enable(struct wlan_objmgr_pdev *pdev,
-					     bool *buff);
 
 /**
  * ucfg_dfs_get_agile_precac_enable() - Get agile precac enable flag.

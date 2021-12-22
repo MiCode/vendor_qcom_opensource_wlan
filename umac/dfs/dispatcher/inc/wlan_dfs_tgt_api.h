@@ -363,31 +363,6 @@ QDF_STATUS tgt_dfs_ocac_complete(struct wlan_objmgr_pdev *pdev,
 				 struct vdev_adfs_complete_status *ocac_status);
 
 /**
- * tgt_dfs_find_vht80_precac_chan_freq() - Find VHT80 channel for precac
- * @pdev: Pointer to DFS pdev object.
- * @chan_mode: Channel mode.
- * @ch_freq_seg1_mhz: Segment1 channel freq in MHZ.
- * @cfreq1: cfreq1.
- * @cfreq2: cfreq2.
- * @phy_mode: Precac phymode.
- * @dfs_set_cfreq2: Precac cfreq2
- * @set_agile: Agile mode flag.
- *
- * wrapper function for  dfs_find_vht80_chan_for_precac_for_freq().
- */
-#ifdef CONFIG_CHAN_FREQ_API
-QDF_STATUS
-tgt_dfs_find_vht80_precac_chan_freq(struct wlan_objmgr_pdev *pdev,
-				    uint32_t chan_mode,
-				    uint16_t ch_freq_mhz_seg1,
-				    uint32_t *cfreq1,
-				    uint32_t *cfreq2,
-				    uint32_t *phy_mode,
-				    bool *dfs_set_cfreq2,
-				    bool *set_agile);
-#endif
-
-/**
  * tgt_dfs_cac_complete() - Process cac complete indication.
  * @pdev: Pointer to DFS pdev object.
  * @vdev_id: vdev id.

@@ -1855,18 +1855,6 @@ struct wlan_lmac_if_dfs_rx_ops {
 	QDF_STATUS (*dfs_is_precac_timer_running)(struct wlan_objmgr_pdev *pdev,
 						  bool *is_precac_timer_running
 						  );
-#ifdef CONFIG_CHAN_FREQ_API
-	QDF_STATUS
-	    (*dfs_find_vht80_chan_for_precac_for_freq)(struct wlan_objmgr_pdev
-						       *pdev,
-						       uint32_t chan_mode,
-						       uint16_t ch_freq_seg1,
-						       uint32_t *cfreq1,
-						       uint32_t *cfreq2,
-						       uint32_t *phy_mode,
-						       bool *dfs_set_cfreq2,
-						       bool *set_agile);
-#endif
 	QDF_STATUS (*dfs_agile_precac_start)(struct wlan_objmgr_pdev *pdev);
 	QDF_STATUS (*dfs_set_agile_precac_state)(struct wlan_objmgr_pdev *pdev,
 						 int agile_precac_state);
@@ -1881,9 +1869,6 @@ struct wlan_lmac_if_dfs_rx_ops {
 			int precac_timeout);
 	QDF_STATUS (*dfs_set_precac_enable)(struct wlan_objmgr_pdev *pdev,
 			uint32_t value);
-	QDF_STATUS
-	(*dfs_get_legacy_precac_enable)(struct wlan_objmgr_pdev *pdev,
-					bool *buff);
 	QDF_STATUS (*dfs_get_agile_precac_enable)(struct wlan_objmgr_pdev *pdev,
 						  bool *buff);
 #ifdef WLAN_DFS_PRECAC_AUTO_CHAN_SUPPORT

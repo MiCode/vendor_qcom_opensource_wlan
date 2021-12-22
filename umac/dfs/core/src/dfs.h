@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2013, 2016-2021 The Linux Foundation.  All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  * Copyright (c) 2005-2006 Atheros Communications, Inc.
  * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
@@ -1114,8 +1115,6 @@ struct dfs_rcac_params {
  *                                   to be sent in NOL IE with RCSA.
  * @dfs_is_rcsa_ie_sent:             To send or to not send RCSA IE.
  * @dfs_is_nol_ie_sent:              To send or to not send NOL IE.
- * @dfs_legacy_precac_ucfg:          User configuration for legacy preCAC in
- *                                   partial offload chipsets.
  * @dfs_agile_precac_ucfg:           User configuration for agile preCAC.
  * @dfs_agile_rcac_ucfg:             User configuration for Rolling CAC.
  * @dfs_fw_adfs_support_non_160:     Target Agile DFS support for non-160 BWs.
@@ -1287,8 +1286,7 @@ struct wlan_dfs {
 	bool           dfs_is_rcsa_ie_sent;
 	bool           dfs_is_nol_ie_sent;
 #endif
-	uint8_t        dfs_legacy_precac_ucfg:1,
-		       dfs_agile_precac_ucfg:1,
+	uint8_t        dfs_agile_precac_ucfg:1,
 #if defined(QCA_SUPPORT_ADFS_RCAC)
 		       dfs_agile_rcac_ucfg:1,
 #endif

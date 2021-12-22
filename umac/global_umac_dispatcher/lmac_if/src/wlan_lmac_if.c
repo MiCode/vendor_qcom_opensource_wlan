@@ -512,8 +512,6 @@ static void register_dfs_rx_ops_for_freq(struct wlan_lmac_if_dfs_rx_ops *rx_ops)
 {
 	if (!rx_ops)
 		return;
-	rx_ops->dfs_find_vht80_chan_for_precac_for_freq =
-		tgt_dfs_find_vht80_precac_chan_freq;
 	rx_ops->dfs_set_current_channel_for_freq =
 		tgt_dfs_set_current_channel_for_freq;
 }
@@ -665,8 +663,6 @@ wlan_lmac_if_umac_dfs_rx_ops_register(struct wlan_lmac_if_rx_ops *rx_ops)
 	dfs_rx_ops->dfs_override_precac_timeout =
 		ucfg_dfs_override_precac_timeout;
 	dfs_rx_ops->dfs_set_precac_enable = ucfg_dfs_set_precac_enable;
-	dfs_rx_ops->dfs_get_legacy_precac_enable =
-		ucfg_dfs_get_legacy_precac_enable;
 	dfs_rx_ops->dfs_get_agile_precac_enable =
 		ucfg_dfs_get_agile_precac_enable;
 	dfs_rx_ops->dfs_get_override_precac_timeout =

@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2013, 2016-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  * Copyright (c) 2002-2010, Atheros Communications Inc.
  * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
@@ -1446,32 +1447,6 @@ static void dfs_radar_found_action(struct wlan_dfs *dfs,
 }
 
 /**
- * dfs_is_radar_source_legacy_agile() - Check if radar pulse event is received
- * on a Zero CAC agile channel.
- * @dfs: Pointer to wlan_dfs structure.
- *
- * Return: If a radar pulse event is received on a zero cac agile
- * channel return true. Otherwise, return false.
- */
-#if defined(ATH_SUPPORT_ZERO_CAC_DFS)
-static
-bool dfs_is_radar_source_legacy_agile(struct wlan_dfs *dfs)
-{
-	if (dfs_is_legacy_precac_enabled(dfs) &&
-	    dfs_is_precac_timer_running(dfs) &&
-	    dfs->dfs_precac_secondary_freq_mhz)
-		return true;
-	return false;
-}
-#else
-static
-bool dfs_is_radar_source_legacy_agile(struct wlan_dfs *dfs)
-{
-	return false;
-}
-#endif
-
-/**
  * dfs_radar_pulse_event_basic_sanity() - Check if radar pulse event is received
  * on a DFS channel or Zero CAC agile channel.
  * @dfs: Pointer to wlan_dfs structure.
@@ -1489,9 +1464,6 @@ bool dfs_radar_pulse_event_basic_sanity(struct wlan_dfs *dfs,
 			"dfs->dfs_curchan is NULL");
 		return false;
 	}
-
-	if (dfs_is_radar_source_legacy_agile(dfs))
-		return true;
 
 	if (!WLAN_IS_PRIMARY_OR_SECONDARY_CHAN_DFS(chan)) {
 		dfs_debug(dfs, WLAN_DEBUG_DFS1,
