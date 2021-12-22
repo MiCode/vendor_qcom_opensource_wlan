@@ -54,11 +54,20 @@ static struct wlan_ipa_iface_2_client {
 } wlan_ipa_iface_2_client[WLAN_IPA_CLIENT_MAX_IFACE] = {
 	{
 		QDF_IPA_CLIENT_WLAN2_CONS, QDF_IPA_CLIENT_WLAN1_PROD
-	}, {
+	},
+	{
 		QDF_IPA_CLIENT_MCC2_CONS,  QDF_IPA_CLIENT_WLAN1_PROD
-	}, {
+	},
+#if WLAN_IPA_CLIENT_MAX_IFACE >= 3
+	{
 		QDF_IPA_CLIENT_WLAN4_CONS, QDF_IPA_CLIENT_WLAN1_PROD
-	}
+	},
+#if WLAN_IPA_CLIENT_MAX_IFACE == 4
+	{
+		QDF_IPA_CLIENT_WLAN4_CONS, QDF_IPA_CLIENT_WLAN1_PROD
+	},
+#endif
+#endif
 };
 
 /* Local Function Prototypes */
@@ -1113,7 +1122,7 @@ static void __wlan_ipa_w2i_cb(void *priv, qdf_ipa_dp_evt_type_t evt,
 		}
 
 		iface_context = &ipa_ctx->iface_context[iface_id];
-		if (iface_context->session_id == WLAN_IPA_MAX_SESSION) {
+		if (iface_context->session_id >= WLAN_IPA_MAX_SESSION) {
 			ipa_err_rl("session_id of iface_id %u is invalid:%d",
 				   iface_id, iface_context->session_id);
 			ipa_ctx->ipa_rx_internal_drop_count++;
@@ -1165,7 +1174,7 @@ static void __wlan_ipa_w2i_cb(void *priv, qdf_ipa_dp_evt_type_t evt,
 		/* Disable to forward Intra-BSS Rx packets when
 		 * ap_isolate=1 in hostapd.conf
 		 */
-		if (!ipa_ctx->disable_intrabss_fwd[session_id] &&
+		if (!ipa_ctx->disable_intrabss_fwd[iface_context->session_id] &&
 		    iface_context->device_mode == QDF_SAP_MODE) {
 			/*
 			 * When INTRA_BSS_FWD_OFFLOAD is enabled, FW will send
@@ -1183,7 +1192,7 @@ static void __wlan_ipa_w2i_cb(void *priv, qdf_ipa_dp_evt_type_t evt,
 				break;
 		} else {
 			ipa_debug_rl("Intra-BSS fwd disabled for session_id %u",
-				     session_id);
+				     iface_context->session_id);
 		}
 
 		wlan_ipa_send_skb_to_network(skb, iface_context);
