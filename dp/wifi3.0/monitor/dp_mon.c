@@ -48,7 +48,6 @@ dp_pdev_disable_mcopy_code(struct dp_pdev *pdev)
 	struct dp_mon_pdev *mon_pdev = pdev->monitor_pdev;
 
 	mon_pdev->mcopy_mode = M_COPY_DISABLED;
-	mon_pdev->monitor_configured = false;
 	mon_pdev->mvdev = NULL;
 }
 
@@ -157,7 +156,6 @@ QDF_STATUS dp_reset_monitor_mode(struct cdp_soc_t *soc_hdl,
 		cdp_ops->soc_config_full_mon_mode((struct cdp_pdev *)pdev,
 						  DP_FULL_MON_DISABLE);
 	mon_pdev->mvdev = NULL;
-	mon_pdev->monitor_configured = false;
 
 	/*
 	 * Lite monitor mode, smart monitor mode and monitor
@@ -181,6 +179,8 @@ QDF_STATUS dp_reset_monitor_mode(struct cdp_soc_t *soc_hdl,
 		dp_rx_mon_dest_err("%pK: Failed to reset monitor filters",
 				   soc);
 	}
+
+	mon_pdev->monitor_configured = false;
 
 	qdf_spin_unlock_bh(&mon_pdev->mon_lock);
 	return QDF_STATUS_SUCCESS;
