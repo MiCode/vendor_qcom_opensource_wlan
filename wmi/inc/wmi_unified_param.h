@@ -3133,6 +3133,19 @@ struct spectral_scan_bw_capabilities {
 	enum phy_ch_width operating_bw;
 	uint32_t supported_bws;
 };
+
+/**
+ * struct spectral_fft_size_capabilities - Spectral scan FFT size caps
+ * that are extracted from Spectral capabilities WMI event
+ * @pdev_id: pdev ID
+ * @sscan_bw: Spectral scan bandwidth
+ * @sscan_bw: Supported FFT sizes bitmap for given @pdev_id and @sscan_bw
+ */
+struct spectral_fft_size_capabilities {
+	uint8_t pdev_id;
+	enum phy_ch_width sscan_bw;
+	uint32_t supports_fft_sizes;
+};
 #endif
 
 /**

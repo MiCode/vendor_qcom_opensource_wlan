@@ -7498,6 +7498,53 @@ extract_spectral_scan_bw_caps_tlv(
 
 	return QDF_STATUS_SUCCESS;
 }
+
+/**
+ * extract_spectral_fft_size_caps_tlv() - Extract FFT size caps from
+ * Spectral capabilities WMI event
+ * @wmi_handle: handle to WMI.
+ * @event: Event buffer
+ * @fft_size_caps: Data structure to be populated by this API after extraction
+ *
+ * Return: QDF_STATUS of operation
+ */
+static QDF_STATUS
+extract_spectral_fft_size_caps_tlv(
+		wmi_unified_t wmi_handle, void *event,
+		struct spectral_fft_size_capabilities *fft_size_caps)
+{
+	WMI_SPECTRAL_CAPABILITIES_EVENTID_param_tlvs *param_buf = event;
+	int idx;
+
+	if (!param_buf) {
+		wmi_err("param_buf is NULL");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	if (!fft_size_caps) {
+		wmi_err("fft size caps is NULL");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	for (idx = 0; idx < param_buf->num_fft_size_caps; idx++) {
+		fft_size_caps[idx].pdev_id =
+			wmi_handle->ops->convert_pdev_id_target_to_host(
+				wmi_handle,
+				param_buf->fft_size_caps[idx].pdev_id);
+		fft_size_caps[idx].sscan_bw = wmi_map_ch_width(
+			param_buf->fft_size_caps[idx].sscan_bw);
+		fft_size_caps[idx].supports_fft_sizes =
+			param_buf->sscan_bw_caps[idx].supported_flags;
+
+		wmi_debug("fft_size_caps[%u]:: pdev_id:%u sscan_bw:%u"
+			  "supported_flags:0x%x",
+			  idx, param_buf->sscan_bw_caps[idx].pdev_id,
+			  param_buf->fft_size_caps[idx].sscan_bw,
+			  param_buf->sscan_bw_caps[idx].supported_flags);
+	}
+
+	return QDF_STATUS_SUCCESS;
+}
 #endif /* WLAN_CONV_SPECTRAL_ENABLE */
 
 #ifdef FEATURE_WPSS_THERMAL_MITIGATION
@@ -17092,6 +17139,8 @@ struct wmi_ops tlv_ops =  {
 				extract_spectral_caps_fixed_param_tlv,
 	.extract_spectral_scan_bw_caps =
 				extract_spectral_scan_bw_caps_tlv,
+	.extract_spectral_fft_size_caps =
+				extract_spectral_fft_size_caps_tlv,
 #endif /* WLAN_CONV_SPECTRAL_ENABLE */
 	.send_thermal_mitigation_param_cmd =
 		send_thermal_mitigation_param_cmd_tlv,

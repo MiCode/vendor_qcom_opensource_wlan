@@ -7101,6 +7101,45 @@ target_if_wmi_extract_spectral_scan_bw_caps(
 	return psoc_spectral->wmi_ops.extract_spectral_scan_bw_caps(
 			wmi_handle, evt_buf, bw_caps);
 }
+
+/**
+ * target_if_wmi_extract_spectral_fft_size_caps() - Wrapper function to
+ * extract fft size capabilities from Spectral capabilities WMI event
+ * @psoc: Pointer to psoc object
+ * @evt_buf: Event buffer
+ * @fft_size_caps: Data structure to be filled by this API after extraction
+ *
+ * Return: QDF_STATUS of operation
+ */
+QDF_STATUS
+target_if_wmi_extract_spectral_fft_size_caps(
+			struct wlan_objmgr_psoc *psoc,
+			uint8_t *evt_buf,
+			struct spectral_fft_size_capabilities *fft_size_caps)
+{
+	struct target_if_psoc_spectral *psoc_spectral;
+	wmi_unified_t wmi_handle;
+
+	if (!psoc) {
+		spectral_err("psoc is null");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	wmi_handle = GET_WMI_HDL_FROM_PSOC(psoc);
+	if (!wmi_handle) {
+		spectral_err("WMI handle is null");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	psoc_spectral = get_target_if_spectral_handle_from_psoc(psoc);
+	if (!psoc_spectral) {
+		spectral_err("spectral object is null");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	return psoc_spectral->wmi_ops.extract_spectral_fft_size_caps(
+			wmi_handle, evt_buf, fft_size_caps);
+}
 #else
 /**
  * target_if_spectral_wmi_unified_register_event_handler() - Wrapper function to
@@ -7374,6 +7413,24 @@ target_if_wmi_extract_spectral_scan_bw_caps(
 	}
 
 	return wmi_extract_spectral_scan_bw_caps(wmi_handle, evt_buf, bw_caps);
+}
+
+QDF_STATUS
+target_if_wmi_extract_spectral_fft_size_caps(
+			struct wlan_objmgr_psoc *psoc,
+			uint8_t *evt_buf,
+			struct spectral_fft_size_capabilities *fft_size_caps)
+{
+	wmi_unified_t wmi_handle;
+
+	wmi_handle = GET_WMI_HDL_FROM_PSOC(psoc);
+	if (!wmi_handle) {
+		spectral_err("WMI handle is null");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	return wmi_extract_spectral_fft_size_caps(wmi_handle, evt_buf,
+						  fft_size_caps);
 }
 #endif
 

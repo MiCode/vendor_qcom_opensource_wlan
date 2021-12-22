@@ -2338,6 +2338,19 @@ QDF_STATUS wmi_extract_spectral_caps_fixed_param(
 QDF_STATUS wmi_extract_spectral_scan_bw_caps(
 		wmi_unified_t wmi_handle, void *event,
 		struct spectral_scan_bw_capabilities *bw_caps);
+
+/**
+ * wmi_extract_spectral_fft_size_caps() - Extract FFT size caps from
+ * Spectral capabilities WMI event
+ * @wmi_handle: handle to WMI.
+ * @event: Event buffer
+ * @fft_size_caps: Data structure to be populated by this API after extraction
+ *
+ * Return: QDF_STATUS of operation
+ */
+QDF_STATUS wmi_extract_spectral_fft_size_caps(
+		wmi_unified_t wmi_handle, void *event,
+		struct spectral_fft_size_capabilities *fft_size_caps);
 #endif /* WLAN_CONV_SPECTRAL_ENABLE */
 
 #if defined(WLAN_SUPPORT_FILS) || defined(CONFIG_BAND_6GHZ)

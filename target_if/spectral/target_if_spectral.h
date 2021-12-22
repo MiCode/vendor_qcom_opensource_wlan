@@ -946,6 +946,8 @@ struct vdev_spectral_enable_params;
  * capabilities event
  * @extract_spectral_scan_bw_caps: Extract bandwidth capabilities from Spectral
  * capabilities event
+ * @extract_spectral_fft_size_caps: Extract fft size capabilities from Spectral
+ * capabilities event
  */
 struct spectral_wmi_ops {
 	QDF_STATUS (*wmi_spectral_configure_cmd_send)(
@@ -985,6 +987,9 @@ struct spectral_wmi_ops {
 	QDF_STATUS (*extract_spectral_scan_bw_caps)(
 		wmi_unified_t wmi_handle, void *event,
 		struct spectral_scan_bw_capabilities *bw_caps);
+	QDF_STATUS (*extract_spectral_fft_size_caps)(
+		wmi_unified_t wmi_handle, void *event,
+		struct spectral_fft_size_capabilities *fft_size_caps);
 };
 
 /**
@@ -3021,4 +3026,20 @@ target_if_wmi_extract_spectral_scan_bw_caps(
 			struct wlan_objmgr_psoc *psoc,
 			uint8_t *evt_buf,
 			struct spectral_scan_bw_capabilities *bw_caps);
+
+struct spectral_fft_size_capabilities;
+/**
+ * target_if_wmi_extract_spectral_fft_size_caps() - Wrapper function to
+ * extract fft size capabilities from Spectral capabilities WMI event
+ * @psoc: Pointer to psoc object
+ * @evt_buf: Event buffer
+ * @fft_size_caps: Data structure to be filled by this API after extraction
+ *
+ * Return: QDF_STATUS of operation
+ */
+QDF_STATUS
+target_if_wmi_extract_spectral_fft_size_caps(
+			struct wlan_objmgr_psoc *psoc,
+			uint8_t *evt_buf,
+			struct spectral_fft_size_capabilities *fft_size_caps);
 #endif /* _TARGET_IF_SPECTRAL_H_ */

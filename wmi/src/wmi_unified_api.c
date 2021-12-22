@@ -2706,6 +2706,17 @@ QDF_STATUS wmi_extract_spectral_scan_bw_caps(
 
 	return QDF_STATUS_E_FAILURE;
 }
+
+QDF_STATUS wmi_extract_spectral_fft_size_caps(
+		wmi_unified_t wmi_handle, void *event,
+		struct spectral_fft_size_capabilities *fft_size_caps)
+{
+	if (wmi_handle->ops->extract_spectral_fft_size_caps)
+		return wmi_handle->ops->extract_spectral_fft_size_caps(
+					wmi_handle, event, fft_size_caps);
+
+	return QDF_STATUS_E_FAILURE;
+}
 #endif /* WLAN_CONV_SPECTRAL_ENABLE */
 
 QDF_STATUS wmi_extract_spectral_scaling_params_service_ready_ext(

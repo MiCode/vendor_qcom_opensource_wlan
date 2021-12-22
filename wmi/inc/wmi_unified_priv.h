@@ -1522,6 +1522,10 @@ QDF_STATUS (*extract_spectral_caps_fixed_param)(
 QDF_STATUS (*extract_spectral_scan_bw_caps)(
 		wmi_unified_t wmi_handle, void *event,
 		struct spectral_scan_bw_capabilities *bw_caps);
+
+QDF_STATUS (*extract_spectral_fft_size_caps)(
+		wmi_unified_t wmi_handle, void *event,
+		struct spectral_fft_size_capabilities *fft_size_caps);
 #endif /* WLAN_CONV_SPECTRAL_ENABLE */
 
 QDF_STATUS (*send_vdev_spectral_configure_cmd)(wmi_unified_t wmi_handle,
