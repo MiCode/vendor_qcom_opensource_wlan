@@ -585,6 +585,9 @@ enum hal_reo_error_code {
  * @ HAL_RXDMA_AMSDU_FRAGMENT    : Rx PCU reported A-MSDU
  *                                 present as well as a fragmented MPDU
  * @ HAL_RXDMA_MULTICAST_ECHO    : RX OLE reported a multicast echo
+ * @ HAL_RXDMA_AMSDU_ADDR_MISMATCH : RX OLE reported AMSDU address mismatch
+ * @ HAL_RXDMA_UNAUTHORIZED_WDS  : RX PCU reported unauthorized wds
+ * @ HAL_RXDMA_GROUPCAST_AMSDU_OR_WDS :RX PCU reported group cast AMSDU or WDS
  * @ HAL_RXDMA_ERR_WAR           : RxDMA WAR dummy errors
  */
 enum hal_rxdma_error_code {
@@ -604,6 +607,9 @@ enum hal_rxdma_error_code {
 	HAL_RXDMA_ERR_FLUSH_REQUEST,
 	HAL_RXDMA_AMSDU_FRAGMENT,
 	HAL_RXDMA_MULTICAST_ECHO,
+	HAL_RXDMA_AMSDU_ADDR_MISMATCH,
+	HAL_RXDMA_UNAUTHORIZED_WDS,
+	HAL_RXDMA_GROUPCAST_AMSDU_OR_WDS,
 	HAL_RXDMA_ERR_WAR = 31,
 	HAL_RXDMA_ERR_MAX
 };
