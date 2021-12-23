@@ -1622,6 +1622,87 @@ void *qdf_mem_malloc_debug(size_t size, const char *func, uint32_t line,
 }
 qdf_export_symbol(qdf_mem_malloc_debug);
 
+void *qdf_mem_malloc_atomic_debug(size_t size, const char *func,
+				  uint32_t line, void *caller)
+{
+	QDF_STATUS status;
+	enum qdf_debug_domain current_domain = qdf_debug_domain_get();
+	qdf_list_t *mem_list = qdf_mem_list_get(current_domain);
+	struct qdf_mem_header *header;
+	void *ptr;
+	unsigned long start, duration;
+
+	if (is_initial_mem_debug_disabled)
+		return qdf_mem_malloc_atomic_debug_fl(size, func, line);
+
+	if (!size || size > QDF_MEM_MAX_MALLOC) {
+		qdf_err("Cannot malloc %zu bytes @ %s:%d", size, func, line);
+		return NULL;
+	}
+
+	ptr = qdf_mem_prealloc_get(size);
+	if (ptr)
+		return ptr;
+
+	start = qdf_mc_timer_get_system_time();
+	header = kzalloc(size + QDF_MEM_DEBUG_SIZE, GFP_ATOMIC);
+	duration = qdf_mc_timer_get_system_time() - start;
+
+	if (duration > QDF_MEM_WARN_THRESHOLD)
+		qdf_warn("Malloc slept; %lums, %zuB @ %s:%d",
+			 duration, size, func, line);
+
+	if (!header) {
+		qdf_warn("Failed to malloc %zuB @ %s:%d", size, func, line);
+		return NULL;
+	}
+
+	qdf_mem_header_init(header, size, func, line, caller);
+	qdf_mem_trailer_init(header);
+	ptr = qdf_mem_get_ptr(header);
+
+	qdf_spin_lock_irqsave(&qdf_mem_list_lock);
+	status = qdf_list_insert_front(mem_list, &header->node);
+	qdf_spin_unlock_irqrestore(&qdf_mem_list_lock);
+	if (QDF_IS_STATUS_ERROR(status))
+		qdf_err("Failed to insert memory header; status %d", status);
+
+	qdf_mem_kmalloc_inc(ksize(header));
+
+	return ptr;
+}
+
+qdf_export_symbol(qdf_mem_malloc_atomic_debug);
+
+void *qdf_mem_malloc_atomic_debug_fl(size_t size, const char *func,
+				     uint32_t line)
+{
+	void *ptr;
+
+	if (!size || size > QDF_MEM_MAX_MALLOC) {
+		qdf_nofl_err("Cannot malloc %zu bytes @ %s:%d", size, func,
+			     line);
+		return NULL;
+	}
+
+	ptr = qdf_mem_prealloc_get(size);
+	if (ptr)
+		return ptr;
+
+	ptr = kzalloc(size, GFP_ATOMIC);
+	if (!ptr) {
+		qdf_nofl_warn("Failed to malloc %zuB @ %s:%d",
+			      size, func, line);
+		return NULL;
+	}
+
+	qdf_mem_kmalloc_inc(ksize(ptr));
+
+	return ptr;
+}
+
+qdf_export_symbol(qdf_mem_malloc_atomic_debug_fl);
+
 void qdf_mem_free_debug(void *ptr, const char *func, uint32_t line)
 {
 	enum qdf_debug_domain current_domain = qdf_debug_domain_get();

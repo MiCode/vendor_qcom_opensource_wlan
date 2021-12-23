@@ -126,6 +126,37 @@ QDF_STATUS qdf_mem_debug_disabled_config_set(const char *str_value);
 #endif
 
 /**
+ * qdf_mem_malloc_atomic_debug() - debug version of QDF memory allocation API
+ * @size: Number of bytes of memory to allocate.
+ * @func: Function name of the call site
+ * @line: Line number of the call site
+ * @caller: Address of the caller function
+ *
+ * This function will dynamicallly allocate the specified number of bytes of
+ * memory and add it to the qdf tracking list to check for memory leaks and
+ * corruptions
+ *
+ * Return: A valid memory location on success, or NULL on failure
+ */
+void *qdf_mem_malloc_atomic_debug(size_t size, const char *func,
+				  uint32_t line, void *caller);
+
+/**
+ * qdf_mem_malloc_atomic_debug_fl() - allocation QDF memory atomically
+ * @size: Number of bytes of memory to allocate.
+ *
+ * This function will dynamicallly allocate the specified number of bytes of
+ * memory.
+ *
+ * Return:
+ * Upon successful allocate, returns a non-NULL pointer to the allocated
+ * memory.  If this function is unable to allocate the amount of memory
+ * specified (for any reason) it returns NULL.
+ */
+void *qdf_mem_malloc_atomic_debug_fl(qdf_size_t size, const char *func,
+				     uint32_t line);
+
+/**
  * qdf_mem_malloc_debug() - debug version of QDF memory allocation API
  * @size: Number of bytes of memory to allocate.
  * @func: Function name of the call site
@@ -149,7 +180,8 @@ void *qdf_mem_malloc_debug(size_t size, const char *func, uint32_t line,
 	qdf_mem_malloc_debug(size, func, line, QDF_RET_IP, 0)
 
 #define qdf_mem_malloc_atomic(size) \
-	qdf_mem_malloc_debug(size, __func__, __LINE__, QDF_RET_IP, GFP_ATOMIC)
+	qdf_mem_malloc_atomic_debug(size, __func__, __LINE__, QDF_RET_IP)
+
 /**
  * qdf_mem_free_debug() - debug version of qdf_mem_free
  * @ptr: Pointer to the starting address of the memory to be freed.
