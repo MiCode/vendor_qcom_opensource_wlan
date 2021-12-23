@@ -890,6 +890,7 @@ QDF_STATUS dp_peer_delay_stats_ctx_alloc(struct dp_soc *soc,
 					 struct dp_txrx_peer *txrx_peer);
 void dp_peer_delay_stats_ctx_dealloc(struct dp_soc *soc,
 				     struct dp_txrx_peer *txrx_peer);
+void dp_peer_delay_stats_ctx_clr(struct dp_txrx_peer *txrx_peer);
 #else
 static inline
 QDF_STATUS dp_peer_delay_stats_ctx_alloc(struct dp_soc *soc,
@@ -901,6 +902,39 @@ QDF_STATUS dp_peer_delay_stats_ctx_alloc(struct dp_soc *soc,
 static inline
 void dp_peer_delay_stats_ctx_dealloc(struct dp_soc *soc,
 				     struct dp_txrx_peer *txrx_peer)
+{
+}
+
+static inline
+void dp_peer_delay_stats_ctx_clr(struct dp_txrx_peer *txrx_peer)
+{
+}
+#endif
+
+#ifdef WLAN_PEER_JITTER
+QDF_STATUS dp_peer_jitter_stats_ctx_alloc(struct dp_pdev *pdev,
+					  struct dp_txrx_peer *txrx_peer);
+
+void dp_peer_jitter_stats_ctx_dealloc(struct dp_pdev *pdev,
+				      struct dp_txrx_peer *txrx_peer);
+
+void dp_peer_jitter_stats_ctx_clr(struct dp_txrx_peer *txrx_peer);
+#else
+static inline
+QDF_STATUS dp_peer_jitter_stats_ctx_alloc(struct dp_pdev *pdev,
+					  struct dp_txrx_peer *txrx_peer)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static inline
+void dp_peer_jitter_stats_ctx_dealloc(struct dp_pdev *pdev,
+				      struct dp_txrx_peer *txrx_peer)
+{
+}
+
+static inline
+void dp_peer_jitter_stats_ctx_clr(struct dp_txrx_peer *txrx_peer)
 {
 }
 #endif

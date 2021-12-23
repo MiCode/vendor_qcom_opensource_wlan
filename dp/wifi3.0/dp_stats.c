@@ -5629,12 +5629,16 @@ static void dp_print_jitter_stats(struct dp_peer *peer, struct dp_pdev *pdev)
 {
 	uint8_t tid = 0;
 
-	if (pdev && !wlan_cfg_get_dp_pdev_nss_enabled(pdev->wlan_cfg_ctx))
+	if (!pdev || !wlan_cfg_get_dp_pdev_nss_enabled(pdev->wlan_cfg_ctx))
+		return;
+
+	if (!peer->txrx_peer || !peer->txrx_peer->jitter_stats)
 		return;
 
 	DP_PRINT_STATS("Per TID Tx HW Enqueue-Comp Jitter Stats:\n");
 	for (tid = 0; tid < qdf_min(CDP_DATA_TID_MAX, DP_MAX_TIDS); tid++) {
-		struct dp_rx_tid *rx_tid = &peer->rx_tid[tid];
+		struct cdp_peer_tid_stats *rx_tid =
+					&peer->txrx_peer->jitter_stats[tid];
 
 		DP_PRINT_STATS("Node tid = %d\n"
 				"Average Jiiter            : %u (us)\n"
@@ -5642,12 +5646,12 @@ static void dp_print_jitter_stats(struct dp_peer *peer, struct dp_pdev *pdev)
 				"Total Average error count : %llu\n"
 				"Total Success Count       : %llu\n"
 				"Total Drop                : %llu\n",
-				rx_tid->tid,
-				rx_tid->stats.tx_avg_jitter,
-				rx_tid->stats.tx_avg_delay,
-				rx_tid->stats.tx_avg_err,
-				rx_tid->stats.tx_total_success,
-				rx_tid->stats.tx_drop);
+				tid,
+				rx_tid->tx_avg_jitter,
+				rx_tid->tx_avg_delay,
+				rx_tid->tx_avg_err,
+				rx_tid->tx_total_success,
+				rx_tid->tx_drop);
 	}
 }
 #else
@@ -5774,6 +5778,9 @@ void dp_peer_print_tx_delay_stats(struct dp_pdev *pdev,
 	struct cdp_hist_stats hist_stats;
 	uint8_t tid;
 
+	if (!peer || !peer->txrx_peer)
+		return;
+
 	if (!pdev || !pdev->soc)
 		return;
 
@@ -5817,6 +5824,9 @@ void dp_peer_print_rx_delay_stats(struct dp_pdev *pdev,
 	struct dp_soc *soc = NULL;
 	struct cdp_hist_stats hist_stats;
 	uint8_t tid;
+
+	if (!peer || !peer->txrx_peer)
+		return;
 
 	if (!pdev || !pdev->soc)
 		return;
@@ -7760,7 +7770,7 @@ dp_txrx_get_peer_delay_stats(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
 	struct dp_soc *soc = (struct dp_soc *)soc_hdl;
 	struct dp_peer *peer = dp_peer_find_hash_find(soc, peer_mac, 0, vdev_id,
 						      DP_MOD_ID_CDP);
-	struct cdp_peer_ext_stats *pext_stats;
+	struct dp_peer_delay_stats *pext_stats;
 	struct cdp_delay_rx_stats *rx_delay;
 	struct cdp_delay_tx_stats *tx_delay;
 	uint8_t tid;
@@ -7773,7 +7783,12 @@ dp_txrx_get_peer_delay_stats(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
 		return QDF_STATUS_E_FAILURE;
 	}
 
-	pext_stats = peer->pext_stats;
+	if (!peer->txrx_peer) {
+		dp_peer_unref_delete(peer, DP_MOD_ID_CDP);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	pext_stats = peer->txrx_peer->delay_stats;
 	if (!pext_stats) {
 		dp_peer_unref_delete(peer, DP_MOD_ID_CDP);
 		return QDF_STATUS_E_FAILURE;
@@ -7781,14 +7796,14 @@ dp_txrx_get_peer_delay_stats(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
 
 	for (tid = 0; tid < CDP_MAX_DATA_TIDS; tid++) {
 		rx_delay = &delay_stats[tid].rx_delay;
-		dp_accumulate_delay_tid_stats(soc, pext_stats->delay_stats,
+		dp_accumulate_delay_tid_stats(soc, pext_stats->delay_tid_stats,
 					      &rx_delay->to_stack_delay, tid,
 					      CDP_HIST_TYPE_REAP_STACK);
 		tx_delay = &delay_stats[tid].tx_delay;
-		dp_accumulate_delay_tid_stats(soc, pext_stats->delay_stats,
+		dp_accumulate_delay_tid_stats(soc, pext_stats->delay_tid_stats,
 					      &tx_delay->tx_swq_delay, tid,
 					      CDP_HIST_TYPE_SW_ENQEUE_DELAY);
-		dp_accumulate_delay_tid_stats(soc, pext_stats->delay_stats,
+		dp_accumulate_delay_tid_stats(soc, pext_stats->delay_tid_stats,
 					      &tx_delay->hwtx_delay, tid,
 					      CDP_HIST_TYPE_HW_COMP_DELAY);
 	}
@@ -7827,15 +7842,20 @@ dp_txrx_get_peer_jitter_stats(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
 	if (!peer)
 		return QDF_STATUS_E_FAILURE;
 
-	for (tid = 0; tid < qdf_min(CDP_DATA_TID_MAX, DP_MAX_TIDS); tid++) {
-		struct dp_rx_tid *rx_tid = &peer->rx_tid[tid];
+	if (!peer->txrx_peer || !peer->txrx_peer->jitter_stats) {
+		dp_peer_unref_delete(peer, DP_MOD_ID_CDP);
+		return QDF_STATUS_E_FAILURE;
+	}
 
-		tid_stats[tid].tx_avg_jitter = rx_tid->stats.tx_avg_jitter;
-		tid_stats[tid].tx_avg_delay = rx_tid->stats.tx_avg_delay;
-		tid_stats[tid].tx_avg_err = rx_tid->stats.tx_avg_err;
-		tid_stats[tid].tx_total_success =
-					rx_tid->stats.tx_total_success;
-		tid_stats[tid].tx_drop = rx_tid->stats.tx_drop;
+	for (tid = 0; tid < qdf_min(CDP_DATA_TID_MAX, DP_MAX_TIDS); tid++) {
+		struct cdp_peer_tid_stats *rx_tid =
+					&peer->txrx_peer->jitter_stats[tid];
+
+		tid_stats[tid].tx_avg_jitter = rx_tid->tx_avg_jitter;
+		tid_stats[tid].tx_avg_delay = rx_tid->tx_avg_delay;
+		tid_stats[tid].tx_avg_err = rx_tid->tx_avg_err;
+		tid_stats[tid].tx_total_success = rx_tid->tx_total_success;
+		tid_stats[tid].tx_drop = rx_tid->tx_drop;
 	}
 	dp_peer_unref_delete(peer, DP_MOD_ID_CDP);
 

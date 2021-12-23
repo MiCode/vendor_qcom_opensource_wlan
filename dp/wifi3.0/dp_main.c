@@ -6813,11 +6813,13 @@ void dp_peer_hw_txrx_stats_init(struct dp_soc *soc,
 static QDF_STATUS dp_txrx_peer_detach(struct dp_soc *soc, struct dp_peer *peer)
 {
 	struct dp_txrx_peer *txrx_peer;
+	struct dp_pdev *pdev;
 
 	/* dp_txrx_peer exists for mld peer and legacy peer */
 	if (peer->txrx_peer) {
 		txrx_peer = peer->txrx_peer;
 		peer->txrx_peer = NULL;
+		pdev = txrx_peer->vdev->pdev;
 
 		dp_peer_defrag_rx_tids_deinit(txrx_peer);
 		/*
@@ -6825,6 +6827,7 @@ static QDF_STATUS dp_txrx_peer_detach(struct dp_soc *soc, struct dp_peer *peer)
 		 */
 		dp_peer_delay_stats_ctx_dealloc(soc, txrx_peer);
 		dp_peer_rx_bufq_resources_deinit(txrx_peer);
+		dp_peer_jitter_stats_ctx_dealloc(pdev, txrx_peer);
 
 		qdf_mem_free(txrx_peer);
 	}
@@ -6835,6 +6838,7 @@ static QDF_STATUS dp_txrx_peer_detach(struct dp_soc *soc, struct dp_peer *peer)
 static QDF_STATUS dp_txrx_peer_attach(struct dp_soc *soc, struct dp_peer *peer)
 {
 	struct dp_txrx_peer *txrx_peer;
+	struct dp_pdev *pdev;
 
 	txrx_peer = (struct dp_txrx_peer *)qdf_mem_malloc(sizeof(*txrx_peer));
 
@@ -6844,6 +6848,7 @@ static QDF_STATUS dp_txrx_peer_attach(struct dp_soc *soc, struct dp_peer *peer)
 	txrx_peer->peer_id = HTT_INVALID_PEER;
 	/* initialize the peer_id */
 	txrx_peer->vdev = peer->vdev;
+	pdev = peer->vdev->pdev;
 
 	DP_STATS_INIT(txrx_peer);
 
@@ -6857,7 +6862,16 @@ static QDF_STATUS dp_txrx_peer_attach(struct dp_soc *soc, struct dp_peer *peer)
 	 */
 	if (dp_peer_delay_stats_ctx_alloc(soc, txrx_peer) !=
 					  QDF_STATUS_SUCCESS)
-		dp_warn("peer ext_stats ctx alloc failed");
+		dp_warn("peer delay_stats ctx alloc failed");
+
+	/*
+	 * Alloctate memory for jitter stats. Fall through in
+	 * case of failure as its not an implicit requirement to have
+	 * this object for regular statistics updates.
+	 */
+	if (dp_peer_jitter_stats_ctx_alloc(pdev, txrx_peer) !=
+					   QDF_STATUS_SUCCESS)
+		dp_warn("peer jitter_stats ctx alloc failed");
 
 	dp_set_peer_isolation(txrx_peer, false);
 
@@ -6880,6 +6894,8 @@ void dp_txrx_peer_stats_clr(struct dp_txrx_peer *txrx_peer)
 	txrx_peer->to_stack.bytes = 0;
 
 	DP_STATS_CLR(txrx_peer);
+	dp_peer_delay_stats_ctx_clr(txrx_peer);
+	dp_peer_jitter_stats_ctx_clr(txrx_peer);
 }
 
 /*
@@ -8814,23 +8830,6 @@ void dp_print_napi_stats(struct dp_soc *soc)
 {
 	hif_print_napi_stats(soc->hif_handle);
 }
-
-#ifdef QCA_PEER_EXT_STATS
-/**
- * dp_txrx_host_peer_delay_stats_clr: Reinitialize the txrx peer delay stats
- *
- */
-static inline void dp_txrx_host_peer_delay_stats_clr(struct dp_peer *peer)
-{
-	if (peer->txrx_peer->delay_stats)
-		qdf_mem_zero(peer->txrx_peer->delay_stats,
-			     sizeof(struct dp_peer_delay_stats));
-}
-#else
-static inline void dp_txrx_host_peer_delay_stats_clr(struct dp_peer *peer)
-{
-}
-#endif
 
 /**
  * dp_txrx_host_peer_stats_clr): Reinitialize the txrx peer stats

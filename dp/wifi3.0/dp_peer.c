@@ -4716,6 +4716,95 @@ void dp_peer_delay_stats_ctx_dealloc(struct dp_soc *soc,
 	qdf_mem_free(txrx_peer->delay_stats);
 	txrx_peer->delay_stats = NULL;
 }
+
+/**
+ * dp_peer_delay_stats_ctx_clr() - Clear delay stats context of peer
+ *
+ * @txrx_peer: dp_txrx_peer handle
+ *
+ * Return: void
+ */
+void dp_peer_delay_stats_ctx_clr(struct dp_txrx_peer *txrx_peer)
+{
+	if (txrx_peer->delay_stats)
+		qdf_mem_zero(txrx_peer->delay_stats,
+			     sizeof(struct dp_peer_delay_stats));
+}
+#endif
+
+#ifdef WLAN_PEER_JITTER
+/**
+ * dp_peer_jitter_stats_ctx_alloc() - Allocate jitter stats context for peer
+ *
+ * @soc: Datapath pdev handle
+ * @txrx_peer: dp_txrx_peer handle
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS dp_peer_jitter_stats_ctx_alloc(struct dp_pdev *pdev,
+					  struct dp_txrx_peer *txrx_peer)
+{
+	if (!pdev || !txrx_peer) {
+		dp_warn("Null pdev or peer");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	/*
+	 * Allocate memory for jitter stats only when
+	 * operating in offload enabled mode.
+	 */
+	if (!wlan_cfg_get_dp_pdev_nss_enabled(pdev->wlan_cfg_ctx))
+		return QDF_STATUS_SUCCESS;
+
+	txrx_peer->jitter_stats =
+		qdf_mem_malloc(sizeof(struct cdp_peer_tid_stats) * DP_MAX_TIDS);
+	if (!txrx_peer->jitter_stats) {
+		dp_warn("Jitter stats obj alloc failed!!");
+		return QDF_STATUS_E_NOMEM;
+	}
+
+	return QDF_STATUS_SUCCESS;
+}
+
+/**
+ * dp_peer_jitter_stats_ctx_dealloc() - Deallocate jitter stats context
+ *
+ * @pdev: Datapath pdev handle
+ * @txrx_peer: dp_txrx_peer handle
+ *
+ * Return: void
+ */
+void dp_peer_jitter_stats_ctx_dealloc(struct dp_pdev *pdev,
+				      struct dp_txrx_peer *txrx_peer)
+{
+	if (!pdev || !txrx_peer) {
+		dp_warn("Null pdev or peer");
+		return;
+	}
+
+	/* Check for offload mode */
+	if (!wlan_cfg_get_dp_pdev_nss_enabled(pdev->wlan_cfg_ctx))
+		return;
+
+	if (txrx_peer->jitter_stats) {
+		qdf_mem_free(txrx_peer->jitter_stats);
+		txrx_peer->jitter_stats = NULL;
+	}
+}
+
+/**
+ * dp_peer_jitter_stats_ctx_clr() - Clear jitter stats context of peer
+ *
+ * @txrx_peer: dp_txrx_peer handle
+ *
+ * Return: void
+ */
+void dp_peer_jitter_stats_ctx_clr(struct dp_txrx_peer *txrx_peer)
+{
+	if (txrx_peer->jitter_stats)
+		qdf_mem_zero(txrx_peer->jitter_stats,
+			     sizeof(struct cdp_peer_tid_stats) * DP_MAX_TIDS);
+}
 #endif
 
 QDF_STATUS
