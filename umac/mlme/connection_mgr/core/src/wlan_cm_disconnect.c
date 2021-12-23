@@ -26,7 +26,7 @@
 #include "wlan_scan_api.h"
 #include "wlan_crypto_global_api.h"
 #ifdef CONN_MGR_ADV_FEATURE
-#include "wlan_blm_api.h"
+#include "wlan_dlm_api.h"
 #endif
 #include <wlan_mlo_mgr_sta.h>
 

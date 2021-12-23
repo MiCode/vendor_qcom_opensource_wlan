@@ -21,7 +21,7 @@
 #include "wmi.h"
 #include "wmi_version.h"
 #include "wmi_unified_priv.h"
-#include "wmi_version_whitelist.h"
+#include "wmi_version_allowlist.h"
 #include <qdf_module.h>
 #include <wlan_defs.h>
 #include <wlan_cmn.h>

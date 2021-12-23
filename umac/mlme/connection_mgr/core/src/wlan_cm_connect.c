@@ -28,7 +28,7 @@
 #endif
 #include <wlan_serialization_api.h>
 #ifdef CONN_MGR_ADV_FEATURE
-#include "wlan_blm_api.h"
+#include "wlan_dlm_api.h"
 #include "wlan_cm_roam_api.h"
 #include "wlan_tdls_api.h"
 #endif
