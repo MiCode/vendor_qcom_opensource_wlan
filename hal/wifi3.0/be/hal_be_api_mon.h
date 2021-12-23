@@ -110,11 +110,9 @@ hal_be_get_mon_dest_status(hal_soc_handle_t hal_soc,
 			   struct hal_mon_desc *status)
 {
 	struct mon_destination_ring *desc = hw_desc;
-	uint32_t stat_buf_virt_addr_31_0 = desc->stat_buf_virt_addr_31_0;
-	uint32_t stat_buf_virt_addr_63_32 = desc->stat_buf_virt_addr_63_32;
 
-	status->buf_addr = (HAL_MON_BUFFER_ADDR_31_0_GET(&stat_buf_virt_addr_31_0) |
-			((uint64_t)(HAL_MON_BUFFER_ADDR_39_32_GET(&stat_buf_virt_addr_63_32)) << 32));
+	status->buf_addr = ((u64)desc->stat_buf_virt_addr_31_0 |
+				((u64)desc->stat_buf_virt_addr_63_32 << 32));
 	status->ppdu_id = desc->ppdu_id;
 	status->end_offset = desc->end_offset;
 	status->end_reason = desc->end_reason;

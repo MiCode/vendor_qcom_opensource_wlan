@@ -39,7 +39,7 @@
  * @tail: attach the point to last desc of local desc list
  * @mon_desc_pool: monitor descriptor pool pointer
  */
-static void
+void
 dp_mon_add_desc_list_to_free_list(struct dp_soc *soc,
 				  union dp_mon_desc_list_elem_t **local_desc_list,
 				  union dp_mon_desc_list_elem_t **tail,

@@ -41,6 +41,9 @@ dp_tx_mon_srng_process_2_0(struct dp_soc *soc, struct dp_intr *int_ctx,
 	uint32_t work_done = 0;
 	struct dp_mon_soc *mon_soc = soc->monitor_soc;
 	struct dp_mon_soc_be *mon_soc_be = dp_get_be_mon_soc_from_dp_mon_soc(mon_soc);
+	union dp_mon_desc_list_elem_t *desc_list = NULL;
+	union dp_mon_desc_list_elem_t *tail = NULL;
+	struct dp_mon_desc_pool *tx_mon_desc_pool = &mon_soc_be->tx_desc_mon;
 
 	if (!pdev) {
 		dp_mon_err("%pK: pdev is null for mac_id = %d", soc, mac_id);
@@ -95,9 +98,14 @@ dp_tx_mon_srng_process_2_0(struct dp_soc *soc, struct dp_intr *int_ctx,
 					     mon_desc->paddr);
 
 		qdf_frag_free(mon_desc->buf_addr);
+		dp_mon_add_to_free_desc_list(&desc_list, &tail, mon_desc);
 		work_done++;
 	}
 	dp_srng_access_end(int_ctx, soc, mon_dst_srng);
+
+	if (desc_list)
+		dp_mon_add_desc_list_to_free_list(soc, &desc_list,
+						  &tail, tx_mon_desc_pool);
 
 	qdf_spin_unlock_bh(&mon_pdev->mon_lock);
 	dp_mon_info("mac_id: %d, work_done:%d", mac_id, work_done);

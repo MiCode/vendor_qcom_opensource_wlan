@@ -40,6 +40,8 @@
 #include <wbm_release_ring_tx.h>
 #include <wbm_release_ring_rx.h>
 #include <phyrx_location.h>
+#include <mon_ingress_ring.h>
+#include <mon_destination_ring.h>
 
 #include <hal_be_rx.h>
 
@@ -2173,7 +2175,7 @@ struct hal_hw_srng_config hw_srng_table_9224[] = {
 	{ /* RXDMA_MONITOR_BUF */
 		.start_ring_id = HAL_SRNG_WMAC1_SW2RXDMA2_BUF,
 		.max_rings = 1,
-		.entry_size = sizeof(struct wbm_buffer_ring) >> 2,
+		.entry_size = sizeof(struct mon_ingress_ring) >> 2,
 		.lmac_ring = TRUE,
 		.ring_dir = HAL_SRNG_SRC_RING,
 		/* reg_start is not set because LMAC rings are not accessed
@@ -2199,7 +2201,7 @@ struct hal_hw_srng_config hw_srng_table_9224[] = {
 	{ /* RXDMA_MONITOR_DST */
 		.start_ring_id = HAL_SRNG_WMAC1_RXMON2SW0,
 		.max_rings = 1,
-		.entry_size = sizeof(struct sw_monitor_ring) >> 2,
+		.entry_size = sizeof(struct mon_destination_ring) >> 2,
 		.lmac_ring = TRUE,
 		.ring_dir = HAL_SRNG_DST_RING,
 		/* reg_start is not set because LMAC rings are not accessed

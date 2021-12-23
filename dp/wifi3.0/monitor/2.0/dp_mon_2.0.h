@@ -209,4 +209,51 @@ QDF_STATUS dp_mon_buffers_replenish(struct dp_soc *dp_soc,
 void dp_mon_filter_show_filter_be(struct dp_mon_pdev_be *mon_pdev,
 				  enum dp_mon_filter_mode mode,
 				  struct dp_mon_filter_be *filter);
+
+/**
+ * dp_rx_add_to_free_desc_list() - Adds to a local free descriptor list
+ *
+ * @head: pointer to the head of local free list
+ * @tail: pointer to the tail of local free list
+ * @new: new descriptor that is added to the free list
+ * @func_name: caller func name
+ *
+ * Return: void
+ */
+static inline
+void __dp_mon_add_to_free_desc_list(union dp_mon_desc_list_elem_t **head,
+				    union dp_mon_desc_list_elem_t **tail,
+				    struct dp_mon_desc *new,
+				    const char *func_name)
+{
+	qdf_assert(head && new);
+
+	new->buf_addr = NULL;
+	new->in_use = 0;
+
+	((union dp_mon_desc_list_elem_t *)new)->next = *head;
+	*head = (union dp_mon_desc_list_elem_t *)new;
+	 /* reset tail if head->next is NULL */
+	if (!*tail || !(*head)->next)
+		*tail = *head;
+}
+
+#define dp_mon_add_to_free_desc_list(head, tail, new) \
+	__dp_mon_add_to_free_desc_list(head, tail, new, __func__)
+
+/*
+ * dp_mon_add_desc_list_to_free_list() - append unused desc_list back to
+ * freelist.
+ *
+ * @soc: core txrx main context
+ * @local_desc_list: local desc list provided by the caller
+ * @tail: attach the point to last desc of local desc list
+ * @mon_desc_pool: monitor descriptor pool pointer
+ */
+
+void
+dp_mon_add_desc_list_to_free_list(struct dp_soc *soc,
+				  union dp_mon_desc_list_elem_t **local_desc_list,
+				  union dp_mon_desc_list_elem_t **tail,
+				  struct dp_mon_desc_pool *mon_desc_pool);
 #endif /* _DP_MON_2_0_H_ */
