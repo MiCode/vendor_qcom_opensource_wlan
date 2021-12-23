@@ -20,6 +20,50 @@
 #ifndef _DP_MON_FILTER_H_
 #define _DP_MON_FILTER_H_
 
+/**
+ * Accessor Macros to access the software
+ * defined HTT filter htt_rx_ring_tlv_filter.
+ */
+#define DP_MON_FILTER_TLV_OFFSET                      0x00000000
+#define DP_MON_FILTER_TLV_MASK                        0xffffffff
+#define DP_MON_FILTER_TLV_LSB                         0
+
+#define DP_MON_FILTER_FP_MGMT_OFFSET                  0x00000004
+#define DP_MON_FILTER_FP_MGMT_MASK                    0x0000ffff
+#define DP_MON_FILTER_FP_MGMT_LSB                     0
+
+#define DP_MON_FILTER_MO_MGMT_OFFSET                  0x00000004
+#define DP_MON_FILTER_MO_MGMT_MASK                    0xffff0000
+#define DP_MON_FILTER_MO_MGMT_LSB                     16
+
+#define DP_MON_FILTER_FP_CTRL_OFFSET                  0x00000008
+#define DP_MON_FILTER_FP_CTRL_MASK                    0x0000ffff
+#define DP_MON_FILTER_FP_CTRL_LSB                     0
+
+#define DP_MON_FILTER_MO_CTRL_OFFSET                  0x00000008
+#define DP_MON_FILTER_MO_CTRL_MASK                    0xffff0000
+#define DP_MON_FILTER_MO_CTRL_LSB                     16
+
+#define DP_MON_FILTER_FP_DATA_OFFSET                  0x0000000c
+#define DP_MON_FILTER_FP_DATA_MASK                    0x0000ffff
+#define DP_MON_FILTER_FP_DATA_LSB                     0
+
+#define DP_MON_FILTER_MO_DATA_OFFSET                  0x0000000c
+#define DP_MON_FILTER_MO_DATA_MASK                    0xffff0000
+#define DP_MON_FILTER_MO_DATA_LSB                     16
+
+#define DP_MON_FILTER_MD_DATA_OFFSET                  0x00000010
+#define DP_MON_FILTER_MD_DATA_MASK                    0x0000ffff
+#define DP_MON_FILTER_MD_DATA_LSB                     0
+
+#define DP_MON_FILTER_MD_MGMT_OFFSET                  0x00000010
+#define DP_MON_FILTER_MD_MGMT_MASK                    0xffff0000
+#define DP_MON_FILTER_MD_MGMT_LSB                     16
+
+#define DP_MON_FILTER_MD_CTRL_OFFSET                  0x00000014
+#define DP_MON_FILTER_MD_CTRL_MASK                    0x0000ffff
+#define DP_MON_FILTER_MD_CTRL_LSB                     0
+
 #define DP_MON_FILTER_GET(src, field) \
 	((*((uint32_t *)((uint8_t *)(src) + DP_MON_ ## field ## _OFFSET)) & \
 	(DP_MON_ ## field ## _MASK)) >> DP_MON_ ## field ## _LSB) \
@@ -381,4 +425,27 @@ void dp_mon_filter_dealloc(struct dp_mon_pdev *mon_pdev);
  */
 struct dp_mon_filter **dp_mon_filter_alloc(struct dp_mon_pdev *mon_pdev);
 
+/*
+ * dp_mon_filter_h2t_setup () - Setup filter
+ * @soc: Dp soc handle
+ * @pdev: pdev handle
+ * @srng_type: srng type
+ * @filter: filter
+ */
+void dp_mon_filter_h2t_setup(struct dp_soc *soc, struct dp_pdev *pdev,
+			     enum dp_mon_filter_srng_type srng_type,
+			     struct dp_mon_filter *filter);
+
+/**
+ * dp_mon_ht2_rx_ring_cfg () - Configure filter to HW
+ * @soc: Dp soc handle
+ * @pdev: Dp pdev handle
+ * @srng_type: SRNG type
+ * @tlv_filter: filter
+ */
+QDF_STATUS
+dp_mon_ht2_rx_ring_cfg(struct dp_soc *soc,
+		       struct dp_pdev *pdev,
+		       enum dp_mon_filter_srng_type srng_type,
+		       struct htt_rx_ring_tlv_filter *tlv_filter);
 #endif /* #ifndef _DP_MON_FILTER_H_ */

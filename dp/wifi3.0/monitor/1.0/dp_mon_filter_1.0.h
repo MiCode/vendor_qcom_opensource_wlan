@@ -17,50 +17,6 @@
 #ifndef _DP_MON_FILTER_1_0_H_
 #define _DP_MON_FILTER_1_0_H_
 
-/**
- * Accessor Macros to access the software
- * defined HTT filter htt_rx_ring_tlv_filter.
- */
-#define DP_MON_FILTER_TLV_OFFSET                      0x00000000
-#define DP_MON_FILTER_TLV_MASK                        0xffffffff
-#define DP_MON_FILTER_TLV_LSB                         0
-
-#define DP_MON_FILTER_FP_MGMT_OFFSET                  0x00000004
-#define DP_MON_FILTER_FP_MGMT_MASK                    0x0000ffff
-#define DP_MON_FILTER_FP_MGMT_LSB                     0
-
-#define DP_MON_FILTER_MO_MGMT_OFFSET                  0x00000004
-#define DP_MON_FILTER_MO_MGMT_MASK                    0xffff0000
-#define DP_MON_FILTER_MO_MGMT_LSB                     16
-
-#define DP_MON_FILTER_FP_CTRL_OFFSET                  0x00000008
-#define DP_MON_FILTER_FP_CTRL_MASK                    0x0000ffff
-#define DP_MON_FILTER_FP_CTRL_LSB                     0
-
-#define DP_MON_FILTER_MO_CTRL_OFFSET                  0x00000008
-#define DP_MON_FILTER_MO_CTRL_MASK                    0xffff0000
-#define DP_MON_FILTER_MO_CTRL_LSB                     16
-
-#define DP_MON_FILTER_FP_DATA_OFFSET                  0x0000000c
-#define DP_MON_FILTER_FP_DATA_MASK                    0x0000ffff
-#define DP_MON_FILTER_FP_DATA_LSB                     0
-
-#define DP_MON_FILTER_MO_DATA_OFFSET                  0x0000000c
-#define DP_MON_FILTER_MO_DATA_MASK                    0xffff0000
-#define DP_MON_FILTER_MO_DATA_LSB                     16
-
-#define DP_MON_FILTER_MD_DATA_OFFSET                  0x00000010
-#define DP_MON_FILTER_MD_DATA_MASK                    0x0000ffff
-#define DP_MON_FILTER_MD_DATA_LSB                     0
-
-#define DP_MON_FILTER_MD_MGMT_OFFSET                  0x00000010
-#define DP_MON_FILTER_MD_MGMT_MASK                    0xffff0000
-#define DP_MON_FILTER_MD_MGMT_LSB                     16
-
-#define DP_MON_FILTER_MD_CTRL_OFFSET                  0x00000014
-#define DP_MON_FILTER_MD_CTRL_MASK                    0x0000ffff
-#define DP_MON_FILTER_MD_CTRL_LSB                     0
-
 #ifdef QCA_ENHANCED_STATS_SUPPORT
 /**
  * dp_mon_filter_setup_enhanced_stats() - Setup the enhanced stats filter
