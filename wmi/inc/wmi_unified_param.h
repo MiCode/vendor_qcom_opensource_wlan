@@ -5015,6 +5015,7 @@ typedef enum {
 	wmi_pdev_param_mpd_userpd_ssr,
 	wmi_pdev_param_low_latency_mode,
 	wmi_pdev_param_scan_radio_tx_on_dfs,
+	wmi_pdev_param_en_probe_all_bw,
 	wmi_pdev_param_max,
 } wmi_conv_pdev_params_id;
 
@@ -5458,6 +5459,7 @@ typedef enum {
 #ifdef WLAN_FEATURE_DYNAMIC_MAC_ADDR_UPDATE
 	wmi_service_dynamic_update_vdev_macaddr_support,
 #endif
+	wmi_service_probe_all_bw_support,
 	wmi_services_max,
 } wmi_conv_service_ids;
 #define WMI_SERVICE_UNAVAILABLE 0xFFFF
