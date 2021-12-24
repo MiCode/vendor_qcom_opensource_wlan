@@ -194,6 +194,27 @@ void dp_mon_cdp_ops_register(struct dp_soc *soc);
 void dp_mon_cdp_ops_deregister(struct dp_soc *soc);
 
 /*
+ * dp_mon_intr_ops_deregister() - deregister monitor interrupt ops
+ * @soc: Datapath soc handle
+ *
+ */
+void dp_mon_intr_ops_deregister(struct dp_soc *soc);
+
+/*
+ * dp_mon_feature_ops_deregister() - deregister monitor feature ops
+ * @soc: Datapath soc handle
+ *
+ */
+void dp_mon_feature_ops_deregister(struct dp_soc *soc);
+
+/*
+ * dp_mon_ops_free() - free monitor ops
+ * @soc: Datapath soc handle
+ *
+ */
+void dp_mon_ops_free(struct dp_soc *soc);
+
+/*
  * dp_mon_ops_register() - Register monitor ops
  * @soc: Datapath soc handle
  *
@@ -3330,34 +3351,38 @@ dp_ppdu_desc_user_stats_update(struct dp_pdev *pdev,
 #endif /* QCA_ENHANCED_STATS_SUPPORT */
 
 /**
- * dp_mon_ops_get_1_0(): Get legacy monitor ops
+ * dp_mon_ops_register_1_0(): register legacy monitor ops
+ * @mon_soc: monitor soc handle
  *
- * return: Pointer to dp_mon_ops
+ * return: void
  */
-struct dp_mon_ops *dp_mon_ops_get_1_0(void);
+void dp_mon_ops_register_1_0(struct dp_mon_soc *mon_soc);
 
 /**
- * dp_mon_cdp_ops_get_1_0(): Get legacy monitor cdp ops
+ * dp_mon_cdp_ops_register_1_0(): register legacy monitor cdp ops
+ * @ops: cdp ops handle
  *
- * return: Pointer to dp_mon_cdp_ops
+ * return: void
  */
-struct cdp_mon_ops *dp_mon_cdp_ops_get_1_0(void);
+void dp_mon_cdp_ops_register_1_0(struct cdp_ops *ops);
 
 #ifdef QCA_MONITOR_2_0_SUPPORT
 /**
- * dp_mon_ops_get_2_0(): Get BE monitor ops
+ * dp_mon_ops_register_2_0(): register monitor ops
+ * @mon_soc: monitor soc handle
  *
- * return: Pointer to dp_mon_ops
+ * return: void
  */
-struct dp_mon_ops *dp_mon_ops_get_2_0(void);
+void dp_mon_ops_register_2_0(struct dp_mon_soc *mon_soc);
 
 /**
- * dp_mon_cdp_ops_get_2_0(): Get BE monitor cdp ops
+ * dp_mon_cdp_ops_register_2_0(): register monitor cdp ops
+ * @ops: cdp ops handle
  *
- * return: Pointer to dp_mon_cdp_ops
+ * return: void
  */
-struct cdp_mon_ops *dp_mon_cdp_ops_get_2_0(void);
-#endif
+void dp_mon_cdp_ops_register_2_0(struct cdp_ops *ops);
+#endif /* QCA_MONITOR_2_0_SUPPORT */
 
 /**
  * dp_mon_register_feature_ops(): Register mon feature ops

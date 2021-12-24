@@ -1026,12 +1026,52 @@ struct cdp_mon_ops dp_ops_mon_1_0 = {
 	.soc_config_full_mon_mode = dp_soc_config_full_mon_mode,
 };
 
-struct dp_mon_ops *dp_mon_ops_get_1_0(void)
+#ifdef QCA_MONITOR_OPS_PER_SOC_SUPPORT
+void dp_mon_ops_register_1_0(struct dp_mon_soc *mon_soc)
 {
-	return &monitor_ops_1_0;
+	struct dp_mon_ops *mon_ops = NULL;
+
+	if (mon_soc->mon_ops) {
+		dp_mon_err("monitor ops is allocated");
+		return;
+	}
+
+	mon_ops = qdf_mem_malloc(sizeof(struct dp_mon_ops));
+	if (!mon_ops) {
+		dp_mon_err("Failed to allocate memory for mon ops");
+		return;
+	}
+
+	qdf_mem_copy(mon_ops, &monitor_ops_1_0, sizeof(struct dp_mon_ops));
+	mon_soc->mon_ops = mon_ops;
 }
 
-struct cdp_mon_ops *dp_mon_cdp_ops_get_1_0(void)
+void dp_mon_cdp_ops_register_1_0(struct cdp_ops *ops)
 {
-	return &dp_ops_mon_1_0;
+	struct cdp_mon_ops *mon_ops = NULL;
+
+	if (ops->mon_ops) {
+		dp_mon_err("cdp monitor ops is allocated");
+		return;
+	}
+
+	mon_ops = qdf_mem_malloc(sizeof(struct cdp_mon_ops));
+	if (!mon_ops) {
+		dp_mon_err("Failed to allocate memory for cdp mon ops");
+		return;
+	}
+
+	qdf_mem_copy(mon_ops, &dp_ops_mon_1_0, sizeof(struct cdp_mon_ops));
+	ops->mon_ops = mon_ops;
 }
+#else
+void dp_mon_ops_register_1_0(struct dp_mon_soc *mon_soc)
+{
+	mon_soc->mon_ops = &monitor_ops_1_0;
+}
+
+void dp_mon_cdp_ops_register_1_0(struct cdp_ops *ops)
+{
+	ops->mon_ops = &dp_ops_mon_1_0;
+}
+#endif

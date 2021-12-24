@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2020-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -286,6 +287,19 @@ QDF_STATUS dp_mon_filter_update(struct dp_pdev *pdev)
 
 	return QDF_STATUS_E_FAILURE;
 }
+
+#ifdef QCA_ENHANCED_STATS_SUPPORT
+void dp_mon_filters_reset(struct dp_pdev *pdev)
+{
+	dp_mon_filter_reset_enhanced_stats(pdev);
+	dp_mon_filter_reset_mon_mode(pdev);
+	dp_mon_filter_update(pdev);
+}
+#else
+void dp_mon_filters_reset(struct dp_pdev *pdev)
+{
+}
+#endif
 
 void
 dp_mon_filter_reset_mon_srng(struct dp_soc *soc, struct dp_pdev *pdev,

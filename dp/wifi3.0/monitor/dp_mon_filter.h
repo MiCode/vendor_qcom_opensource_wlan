@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2020-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -118,6 +119,12 @@ enum dp_mon_filter_action {
 	DP_MON_FILTER_CLEAR,
 	DP_MON_FILTER_SET,
 };
+
+/**
+ * dp_mon_filters_reset() - reset all filters
+ * @pdev: DP pdev handle
+ */
+void dp_mon_filters_reset(struct dp_pdev *pdev);
 
 #ifdef QCA_ENHANCED_STATS_SUPPORT
 /**

@@ -4717,6 +4717,7 @@ QDF_STATUS dp_mon_pdev_deinit(struct dp_pdev *pdev)
 	if (!mon_pdev->is_dp_mon_pdev_initialized)
 		return QDF_STATUS_SUCCESS;
 
+	dp_mon_filters_reset(pdev);
 	dp_tx_ppdu_stats_detach(pdev);
 
 	if (mon_ops->rx_mon_buffers_free)
@@ -4848,11 +4849,11 @@ void dp_mon_ops_register(struct dp_soc *soc)
 	case TARGET_TYPE_QCN9000:
 	case TARGET_TYPE_QCA5018:
 	case TARGET_TYPE_QCN6122:
-		mon_soc->mon_ops = dp_mon_ops_get_1_0();
+		dp_mon_ops_register_1_0(mon_soc);
 		break;
 	case TARGET_TYPE_QCN9224:
 #ifdef QCA_MONITOR_2_0_SUPPORT
-		mon_soc->mon_ops = dp_mon_ops_get_2_0();
+		dp_mon_ops_register_2_0(mon_soc);
 #endif
 		break;
 	default:
@@ -4861,6 +4862,26 @@ void dp_mon_ops_register(struct dp_soc *soc)
 		break;
 	}
 }
+
+#ifdef QCA_MONITOR_OPS_PER_SOC_SUPPORT
+void dp_mon_ops_free(struct dp_soc *soc)
+{
+	struct cdp_ops *ops = soc->cdp_soc.ops;
+	struct cdp_mon_ops *cdp_mon_ops = ops->mon_ops;
+	struct dp_mon_soc *mon_soc = soc->monitor_soc;
+	struct dp_mon_ops *mon_ops = mon_soc->mon_ops;
+
+	if (cdp_mon_ops)
+		qdf_mem_free(cdp_mon_ops);
+
+	if (mon_ops)
+		qdf_mem_free(mon_ops);
+}
+#else
+void dp_mon_ops_free(struct dp_soc *soc)
+{
+}
+#endif
 
 void dp_mon_cdp_ops_register(struct dp_soc *soc)
 {
@@ -4886,11 +4907,11 @@ void dp_mon_cdp_ops_register(struct dp_soc *soc)
 	case TARGET_TYPE_QCN9000:
 	case TARGET_TYPE_QCA5018:
 	case TARGET_TYPE_QCN6122:
-		ops->mon_ops = dp_mon_cdp_ops_get_1_0();
+		dp_mon_cdp_ops_register_1_0(ops);
 		break;
 	case TARGET_TYPE_QCN9224:
 #ifdef QCA_MONITOR_2_0_SUPPORT
-		ops->mon_ops = dp_mon_cdp_ops_get_2_0();
+		dp_mon_cdp_ops_register_2_0(ops);
 #endif
 		break;
 	default:
@@ -4982,6 +5003,108 @@ void dp_mon_cdp_ops_deregister(struct dp_soc *soc)
 	ops->ctrl_ops->txrx_get_pldev = NULL;
 #endif
 	return;
+}
+
+void dp_mon_intr_ops_deregister(struct dp_soc *soc)
+{
+	struct dp_mon_soc *mon_soc = soc->monitor_soc;
+
+	mon_soc->mon_rx_process = NULL;
+}
+
+void dp_mon_feature_ops_deregister(struct dp_soc *soc)
+{
+	struct dp_mon_ops *mon_ops = dp_mon_ops_get(soc);
+
+	if (!mon_ops) {
+		dp_err("mon_ops is NULL");
+		return;
+	}
+
+	mon_ops->mon_config_debug_sniffer = NULL;
+	mon_ops->mon_peer_tx_init = NULL;
+	mon_ops->mon_peer_tx_cleanup = NULL;
+	mon_ops->mon_htt_ppdu_stats_attach = NULL;
+	mon_ops->mon_htt_ppdu_stats_detach = NULL;
+	mon_ops->mon_print_pdev_rx_mon_stats = NULL;
+	mon_ops->mon_set_bsscolor = NULL;
+	mon_ops->mon_pdev_get_filter_ucast_data = NULL;
+	mon_ops->mon_pdev_get_filter_mcast_data = NULL;
+	mon_ops->mon_pdev_get_filter_non_data = NULL;
+	mon_ops->mon_neighbour_peer_add_ast = NULL;
+#ifdef WLAN_TX_PKT_CAPTURE_ENH
+	mon_ops->mon_peer_tid_peer_id_update = NULL;
+	mon_ops->mon_tx_ppdu_stats_attach = NULL;
+	mon_ops->mon_tx_ppdu_stats_detach = NULL;
+	mon_ops->mon_tx_capture_debugfs_init = NULL;
+	mon_ops->mon_tx_add_to_comp_queue = NULL;
+	mon_ops->mon_peer_tx_capture_filter_check = NULL;
+	mon_ops->mon_print_pdev_tx_capture_stats = NULL;
+	mon_ops->mon_config_enh_tx_capture = NULL;
+#endif
+#if defined(WDI_EVENT_ENABLE) &&\
+	(defined(QCA_ENHANCED_STATS_SUPPORT) || !defined(REMOVE_PKT_LOG))
+	mon_ops->mon_ppdu_stats_ind_handler = NULL;
+#endif
+#ifdef WLAN_RX_PKT_CAPTURE_ENH
+	mon_ops->mon_config_enh_rx_capture = NULL;
+#endif
+#ifdef QCA_SUPPORT_BPR
+	mon_ops->mon_set_bpr_enable = NULL;
+#endif
+#ifdef ATH_SUPPORT_NAC
+	mon_ops->mon_set_filter_neigh_peers = NULL;
+#endif
+#ifdef WLAN_ATF_ENABLE
+	mon_ops->mon_set_atf_stats_enable = NULL;
+#endif
+#ifdef FEATURE_NAC_RSSI
+	mon_ops->mon_filter_neighbour_peer = NULL;
+#endif
+#ifdef QCA_MCOPY_SUPPORT
+	mon_ops->mon_filter_setup_mcopy_mode = NULL;
+	mon_ops->mon_filter_reset_mcopy_mode = NULL;
+	mon_ops->mon_mcopy_check_deliver = NULL;
+#endif
+#ifdef QCA_ENHANCED_STATS_SUPPORT
+	mon_ops->mon_filter_setup_enhanced_stats = NULL;
+#ifdef WLAN_FEATURE_11BE
+	mon_ops->mon_tx_stats_update = NULL;
+#endif
+#endif
+#if defined(ATH_SUPPORT_NAC_RSSI) || defined(ATH_SUPPORT_NAC)
+	mon_ops->mon_filter_setup_smart_monitor = NULL;
+#endif
+#ifdef WLAN_RX_PKT_CAPTURE_ENH
+	mon_ops->mon_filter_setup_rx_enh_capture = NULL;
+#endif
+#ifdef WDI_EVENT_ENABLE
+	mon_ops->mon_set_pktlog_wifi3 = NULL;
+	mon_ops->mon_filter_setup_rx_pkt_log_full = NULL;
+	mon_ops->mon_filter_reset_rx_pkt_log_full = NULL;
+	mon_ops->mon_filter_setup_rx_pkt_log_lite = NULL;
+	mon_ops->mon_filter_reset_rx_pkt_log_lite = NULL;
+	mon_ops->mon_filter_setup_rx_pkt_log_cbf = NULL;
+	mon_ops->mon_filter_reset_rx_pkt_log_cbf = NULL;
+#ifdef QCA_WIFI_QCN9224
+	mon_ops->mon_filter_setup_pktlog_hybrid = NULL;
+	mon_ops->mon_filter_reset_pktlog_hybrid = NULL;
+#endif
+#endif
+#if defined(DP_CON_MON) && !defined(REMOVE_PKT_LOG)
+	mon_ops->mon_pktlogmod_exit = NULL;
+#endif
+	mon_ops->rx_packet_length_set = NULL;
+	mon_ops->rx_wmask_subscribe = NULL;
+	mon_ops->rx_enable_mpdu_logging = NULL;
+	mon_ops->mon_neighbour_peers_detach = NULL;
+	mon_ops->mon_vdev_set_monitor_mode_buf_rings = NULL;
+	mon_ops->mon_vdev_set_monitor_mode_rings = NULL;
+#ifdef QCA_ENHANCED_STATS_SUPPORT
+	mon_ops->mon_rx_stats_update = NULL;
+	mon_ops->mon_rx_populate_ppdu_usr_info = NULL;
+	mon_ops->mon_rx_populate_ppdu_info = NULL;
+#endif
 }
 
 QDF_STATUS dp_mon_soc_attach(struct dp_soc *soc)
