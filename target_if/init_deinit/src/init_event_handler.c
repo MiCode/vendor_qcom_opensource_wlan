@@ -536,15 +536,36 @@ static int init_deinit_service_available_handler(ol_scn_t scn_handle,
 }
 
 #if defined(WLAN_FEATURE_11BE_MLO) && defined(WLAN_MLO_MULTI_CHIP)
+static bool init_deinit_mlo_capable(struct wlan_objmgr_psoc *psoc)
+{
+	struct target_psoc_info *tgt_hdl;
+
+	tgt_hdl = wlan_psoc_get_tgt_if_handle(psoc);
+	if (!tgt_hdl) {
+		target_if_err("target_psoc_info is null");
+		return false;
+	}
+
+	if ((tgt_hdl->tif_ops) &&
+	    (tgt_hdl->tif_ops->mlo_capable))
+		return tgt_hdl->tif_ops->mlo_capable(psoc);
+
+	return false;
+}
+
 static void init_deinit_mlo_update_soc_ready(struct wlan_objmgr_psoc *psoc)
 {
-	mlo_setup_update_soc_ready(psoc);
+	if (init_deinit_mlo_capable(psoc))
+		mlo_setup_update_soc_ready(psoc);
 }
 
 static void init_deinit_send_ml_link_ready(struct wlan_objmgr_psoc *psoc,
 					   void *object, void *arg)
 {
 	struct wlan_objmgr_pdev *pdev = object;
+
+	if (!init_deinit_mlo_capable(psoc))
+		return;
 
 	qdf_assert_always(psoc);
 	qdf_assert_always(pdev);
@@ -555,6 +576,9 @@ static void init_deinit_send_ml_link_ready(struct wlan_objmgr_psoc *psoc,
 static void init_deinit_mlo_update_pdev_ready(struct wlan_objmgr_psoc *psoc,
 					      uint8_t num_radios)
 {
+	if (!init_deinit_mlo_capable(psoc))
+		return;
+
 	wlan_objmgr_iterate_obj_list(psoc, WLAN_PDEV_OP,
 				     init_deinit_send_ml_link_ready,
 				     NULL, 0, WLAN_INIT_DEINIT_ID);
