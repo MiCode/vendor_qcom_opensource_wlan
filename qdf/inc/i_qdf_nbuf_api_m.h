@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2014-2017,2019-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -178,5 +179,30 @@ static inline void qdf_nbuf_set_rx_reo_dest_ind_or_sw_excpt(qdf_nbuf_t buf,
 static inline uint8_t qdf_nbuf_get_rx_reo_dest_ind_or_sw_excpt(qdf_nbuf_t buf)
 {
 	return QDF_NBUF_CB_RX_PACKET_REO_DEST_IND_OR_SW_EXCPT(buf);
+}
+
+/**
+ * qdf_nbuf_get_tx_fctx() - get fctx of nbuf
+ *
+ * @buf: Network buffer
+ * Return: fctx value
+ */
+static inline void *qdf_nbuf_get_tx_fctx(qdf_nbuf_t buf)
+{
+	return NULL;
+}
+
+/**
+ * qdf_nbuf_set_tx_fctx_type() - set ftype and fctx
+ *
+ * @buf: Network buffer
+ * @ctx: address to fctx
+ * @type: ftype
+ *
+ * Return: void
+ */
+static inline void
+qdf_nbuf_set_tx_fctx_type(qdf_nbuf_t buf, void *ctx, uint8_t type)
+{
 }
 #endif /* _QDF_NBUF_M_H */
