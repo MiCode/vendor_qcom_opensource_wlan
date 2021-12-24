@@ -18,6 +18,8 @@
 #ifndef _HAL_BE_API_MON_H_
 #define _HAL_BE_API_MON_H_
 
+#ifdef QCA_MONITOR_2_0_SUPPORT
+
 #include <mon_ingress_ring.h>
 #include <mon_destination_ring.h>
 
@@ -146,4 +148,5 @@ void hal_mon_buff_addr_info_set(hal_soc_handle_t hal_soc_hdl,
 	HAL_MON_VADDR_HI_SET(mon_entry, vaddr_hi);
 }
 
+#endif /* QCA_MONITOR_2_0_SUPPORT */
 #endif /* _HAL_BE_API_MON_H_ */

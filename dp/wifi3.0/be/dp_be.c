@@ -24,7 +24,6 @@
 #include "dp_be_tx.h"
 #include "dp_be_rx.h"
 #if !defined(DISABLE_MON_CONFIG) && defined(QCA_MONITOR_2_0_SUPPORT)
-#ifdef QCA_MONITOR_2_0_SUPPORT
 #include "dp_mon_2.0.h"
 #endif
 #include <hal_be_api.h>
@@ -1481,9 +1480,7 @@ void dp_initialize_arch_ops_be(struct dp_arch_ops *arch_ops)
 				dp_wbm_get_rx_desc_from_hal_desc_be;
 #endif
 	arch_ops->txrx_get_context_size = dp_get_context_size_be;
-#if QCA_MONITOR_2_0_SUPPORT
 	arch_ops->txrx_get_mon_context_size = dp_mon_get_context_size_be;
-#endif
 	arch_ops->dp_rx_desc_cookie_2_va =
 			dp_rx_desc_cookie_2_va_be;
 

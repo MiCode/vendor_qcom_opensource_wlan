@@ -2297,6 +2297,7 @@ struct dp_soc {
 	qdf_atomic_t ref_count;
 
 	unsigned long vdev_stats_id_map;
+	bool txmon_hw_support;
 };
 
 #ifdef IPA_OFFLOAD

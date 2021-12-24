@@ -205,14 +205,14 @@ dp_rx_mon_buffers_alloc(struct dp_soc *soc, uint32_t size)
 
 #ifdef QCA_ENHANCED_STATS_SUPPORT
 void
-dp_mon_populate_ppdu_usr_info_2_0(struct mon_rx_user_status *rx_user_status,
-				  struct cdp_rx_stats_ppdu_user *ppdu_user)
+dp_rx_mon_populate_ppdu_usr_info_2_0(struct mon_rx_user_status *rx_user_status,
+				     struct cdp_rx_stats_ppdu_user *ppdu_user)
 {
 	ppdu_user->mpdu_retries = rx_user_status->retry_mpdu;
 }
 
 #ifdef WLAN_FEATURE_11BE
-void dp_mon_rx_stats_update_2_0(struct dp_peer *peer,
+void dp_rx_mon_stats_update_2_0(struct dp_peer *peer,
 				struct cdp_rx_indication_ppdu *ppdu,
 				struct cdp_rx_stats_ppdu_user *ppdu_user)
 {
@@ -235,35 +235,35 @@ void dp_mon_rx_stats_update_2_0(struct dp_peer *peer,
 		      ((mcs < (MAX_MCS - 1)) && (preamble == DOT11_BE) &&
 		      (ppdu_type == HAL_RX_TYPE_SU)));
 	DP_STATS_INCC(peer,
-		      rx.rx_mu_be[TXRX_TYPE_MU_OFDMA].ppdu.mcs_count[MAX_MCS - 1],
+		      rx.rx_mu_be[TXRX_TYPE_MU_OFDMA].mcs_count[MAX_MCS - 1],
 		      1, ((mcs >= (MAX_MCS - 1)) &&
 		      (preamble == DOT11_BE) &&
 		      (ppdu_type == HAL_RX_TYPE_MU_OFDMA)));
 	DP_STATS_INCC(peer,
-		      rx.rx_mu_be[TXRX_TYPE_MU_OFDMA].ppdu.mcs_count[mcs],
+		      rx.rx_mu_be[TXRX_TYPE_MU_OFDMA].mcs_count[mcs],
 		      1, ((mcs < (MAX_MCS - 1)) &&
 		      (preamble == DOT11_BE) &&
 		      (ppdu_type == HAL_RX_TYPE_MU_OFDMA)));
 	DP_STATS_INCC(peer,
-		      rx.rx_mu_be[TXRX_TYPE_MU_MIMO].ppdu.mcs_count[MAX_MCS - 1],
+		      rx.rx_mu_be[TXRX_TYPE_MU_MIMO].mcs_count[MAX_MCS - 1],
 		      1, ((mcs >= (MAX_MCS - 1)) &&
 		      (preamble == DOT11_BE) &&
 		      (ppdu_type == HAL_RX_TYPE_MU_MIMO)));
 	DP_STATS_INCC(peer,
-		      rx.rx_mu_be[TXRX_TYPE_MU_MIMO].ppdu.mcs_count[mc],
+		      rx.rx_mu_be[TXRX_TYPE_MU_MIMO].mcs_count[mcs],
 		      1, ((mcs < (MAX_MCS - 1)) &&
 		      (preamble == DOT11_BE) &&
 		      (ppdu_type == HAL_RX_TYPE_MU_MIMO)));
 }
 
 void
-dp_mon_populate_ppdu_info_2_0(struct hal_rx_ppdu_info *hal_ppdu_info,
-			      struct cdp_rx_indication_ppdu *ppdu)
+dp_rx_mon_populate_ppdu_info_2_0(struct hal_rx_ppdu_info *hal_ppdu_info,
+				 struct cdp_rx_indication_ppdu *ppdu)
 {
 	ppdu->punc_bw = hal_ppdu_info->rx_status.punctured_bw;
 }
 #else
-void dp_mon_rx_stats_update_2_0(struct dp_peer *peer,
+void dp_rx_mon_stats_update_2_0(struct dp_peer *peer,
 				struct cdp_rx_indication_ppdu *ppdu,
 				struct cdp_rx_stats_ppdu_user *ppdu_user)
 {
@@ -271,8 +271,8 @@ void dp_mon_rx_stats_update_2_0(struct dp_peer *peer,
 }
 
 void
-dp_mon_populate_ppdu_info_2_0(struct hal_rx_ppdu_info *hal_ppdu_info,
-			      struct cdp_rx_indication_ppdu *ppdu)
+dp_rx_mon_populate_ppdu_info_2_0(struct hal_rx_ppdu_info *hal_ppdu_info,
+				 struct cdp_rx_indication_ppdu *ppdu)
 {
 	ppdu->punc_bw = 0;
 }

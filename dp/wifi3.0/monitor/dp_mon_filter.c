@@ -291,6 +291,7 @@ dp_mon_ht2_rx_ring_cfg(struct dp_soc *soc,
 				soc->rxdma_mon_dst_ring[lmac_id].hal_srng;
 			hal_ring_type = RXDMA_MONITOR_DST;
 			ring_buf_size = RX_DATA_BUFFER_SIZE;
+			break;
 		default:
 			return QDF_STATUS_E_FAILURE;
 		}

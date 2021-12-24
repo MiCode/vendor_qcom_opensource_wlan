@@ -1345,7 +1345,7 @@ dp_mon_filter_set_reset_rx_pkt_log_cbf_dest_2_0(struct dp_pdev_be *pdev_be,
 	struct dp_soc *soc = pdev_be->pdev.soc;
 	enum dp_mon_filter_mode mode = DP_MON_FILTER_PKT_LOG_CBF_MODE;
 	enum dp_mon_filter_srng_type srng_type;
-	struct dp_mon_pdev *mon_pdev = pdev_be->pdev->monitor_pdev;
+	struct dp_mon_pdev *mon_pdev = pdev_be->pdev.monitor_pdev;
 	struct dp_mon_pdev_be *mon_pdev_be =
 			dp_get_be_mon_pdev_from_dp_mon_pdev(mon_pdev);
 
@@ -1397,7 +1397,7 @@ void dp_mon_filter_setup_rx_pkt_log_cbf_2_0(struct dp_pdev *pdev)
 	/* Enabled the filter */
 	filter.rx_tlv_filter.valid = true;
 
-	dp_mon_filter_set_status_cbf(&pdev, &filter.rx_tlv_filter);
+	dp_mon_filter_set_status_cbf(pdev, &filter.rx_tlv_filter);
 	dp_mon_filter_show_filter_be(mon_pdev_be, mode, &filter);
 	mon_pdev_be->filter_be[mode][srng_type] = filter;
 
@@ -1685,6 +1685,12 @@ QDF_STATUS dp_tx_mon_filter_update_2_0(struct dp_pdev *pdev)
 
 	if (!pdev) {
 		dp_mon_filter_err("pdev Context is null");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	soc = pdev->soc;
+	if (!soc) {
+		dp_mon_filter_err("soc Context is null");
 		return QDF_STATUS_E_FAILURE;
 	}
 

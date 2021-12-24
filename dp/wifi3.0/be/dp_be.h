@@ -293,7 +293,6 @@ void dp_initialize_arch_ops_be(struct dp_arch_ops *arch_ops);
  */
 qdf_size_t dp_get_context_size_be(enum dp_context_type context_type);
 
-#if QCA_MONITOR_2_0_SUPPORT
 /**
  * dp_mon_get_context_size_be() - get BE specific size for mon pdev/soc
  * @arch_ops: arch ops pointer
@@ -301,7 +300,6 @@ qdf_size_t dp_get_context_size_be(enum dp_context_type context_type);
  * Return: size in bytes for the context_type
  */
 qdf_size_t dp_mon_get_context_size_be(enum dp_context_type context_type);
-#endif
 
 /**
  * dp_get_be_soc_from_dp_soc() - get dp_soc_be from dp_soc
