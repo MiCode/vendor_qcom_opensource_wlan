@@ -41,7 +41,7 @@ void mlo_peer_assign_primary_umac(
 	 * primary umac
 	 */
 	if (ml_peer->primary_umac_psoc_id == ML_PRIMARY_UMAC_ID_INVAL) {
-		if (mlo_peer_is_assoc_peer(ml_peer, peer_entry->link_peer)) {
+		if (wlan_peer_mlme_is_assoc_peer(peer_entry->link_peer)) {
 			peer_entry->is_primary = true;
 			ml_peer->primary_umac_psoc_id =
 				wlan_peer_get_psoc_id(peer_entry->link_peer);
