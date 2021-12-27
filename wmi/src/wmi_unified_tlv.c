@@ -353,6 +353,8 @@ static const uint32_t pdev_param_tlv[] = {
 			WMI_PDEV_PARAM_LOW_LATENCY_SCHED_MODE,
 	[wmi_pdev_param_scan_radio_tx_on_dfs] =
 					WMI_PDEV_PARAM_SCAN_RADIO_TX_ON_DFS,
+	[wmi_pdev_param_en_probe_all_bw] =
+			WMI_PDEV_PARAM_EN_PROBE_ALL_BW,
 };
 
 /**
@@ -18290,6 +18292,8 @@ static void populate_tlv_service(uint32_t *wmi_service)
 	wmi_service[wmi_service_dynamic_update_vdev_macaddr_support] =
 			WMI_SERVICE_DYNAMIC_VDEV_MAC_ADDR_UPDATE_SUPPORT;
 #endif
+	wmi_service[wmi_service_probe_all_bw_support] =
+			WMI_SERVICE_PROBE_ALL_BW_SUPPORT;
 }
 
 /**
