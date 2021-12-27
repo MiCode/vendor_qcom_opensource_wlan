@@ -545,6 +545,8 @@ bool dp_rx_intrabss_mcbc_fwd(struct dp_soc *soc, struct dp_peer *ta_peer,
 		return false;
 
 	len = QDF_NBUF_CB_RX_PKT_LEN(nbuf);
+	qdf_nbuf_set_tx_fctx_type(nbuf_copy, &ta_peer->peer_id,
+				  CB_FTYPE_INTRABSS_FWD);
 	if (dp_tx_send((struct cdp_soc_t *)soc,
 		       ta_peer->vdev->vdev_id, nbuf_copy)) {
 		DP_STATS_INC_PKT(ta_peer, rx.intra_bss.fail, 1, len);

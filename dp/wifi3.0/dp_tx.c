@@ -3001,6 +3001,10 @@ void dp_tx_nawds_handler(struct dp_soc *soc, struct dp_vdev *vdev,
 		if (ast_entry)
 			sa_peer_id = ast_entry->peer_id;
 		qdf_spin_unlock_bh(&soc->ast_lock);
+	} else {
+		if ((qdf_nbuf_get_tx_ftype(nbuf) == CB_FTYPE_INTRABSS_FWD) &&
+		    qdf_nbuf_get_tx_fctx(nbuf))
+			sa_peer_id = *(uint32_t *)qdf_nbuf_get_tx_fctx(nbuf);
 	}
 
 	qdf_spin_lock_bh(&vdev->peer_list_lock);
@@ -3010,13 +3014,11 @@ void dp_tx_nawds_handler(struct dp_soc *soc, struct dp_vdev *vdev,
 			/* Multicast packets needs to be
 			 * dropped in case of intra bss forwarding
 			 */
-			if (!soc->ast_offload_support) {
-				if (sa_peer_id == peer->peer_id) {
-					dp_tx_debug("multicast packet");
-					DP_STATS_INC(peer, tx.nawds_mcast_drop,
-						     1);
-					continue;
-				}
+			if (sa_peer_id == peer->peer_id) {
+				dp_tx_debug("multicast packet");
+				DP_STATS_INC(peer, tx.nawds_mcast_drop,
+					     1);
+				continue;
 			}
 
 			nbuf_clone = qdf_nbuf_clone(nbuf);
