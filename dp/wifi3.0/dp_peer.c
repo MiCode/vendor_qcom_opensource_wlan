@@ -731,6 +731,7 @@ void dp_peer_find_id_to_obj_add(struct dp_soc *soc,
 		/* Peer map event came for peer_id which
 		 * is already mapped, this is not expected
 		 */
+		dp_peer_unref_delete(peer, DP_MOD_ID_CONFIG);
 		QDF_ASSERT(0);
 	}
 	qdf_spin_unlock_bh(&soc->peer_map_lock);

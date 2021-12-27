@@ -408,7 +408,8 @@ void dp_mlo_partner_chips_map(struct dp_soc *soc,
 {
 	struct dp_soc_be *be_soc = dp_get_be_soc_from_dp_soc(soc);
 	struct dp_mlo_ctxt *mlo_ctxt = be_soc->ml_ctxt;
-	bool is_ml_peer_id = peer_id & HTT_RX_PEER_META_DATA_V1_ML_PEER_VALID_S;
+	bool is_ml_peer_id =
+		HTT_RX_PEER_META_DATA_V1_ML_PEER_VALID_GET(peer_id);
 	uint8_t chip_id;
 	struct dp_soc *temp_soc;
 
@@ -442,7 +443,8 @@ void dp_mlo_partner_chips_unmap(struct dp_soc *soc,
 {
 	struct dp_soc_be *be_soc = dp_get_be_soc_from_dp_soc(soc);
 	struct dp_mlo_ctxt *mlo_ctxt = be_soc->ml_ctxt;
-	bool is_ml_peer_id = peer_id & HTT_RX_PEER_META_DATA_V1_ML_PEER_VALID_S;
+	bool is_ml_peer_id =
+		HTT_RX_PEER_META_DATA_V1_ML_PEER_VALID_GET(peer_id);
 	uint8_t chip_id;
 	struct dp_soc *temp_soc;
 
