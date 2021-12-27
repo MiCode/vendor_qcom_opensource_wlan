@@ -2797,6 +2797,10 @@ QDF_STATUS (*extract_update_mac_address_event)(wmi_unified_t wmi_handle,
 					       void *evt_buf, uint8_t *vdev_id,
 					       uint8_t *status);
 #endif
+
+QDF_STATUS
+(*send_soc_tqm_reset_enable_disable_cmd)(wmi_unified_t wmi_handle,
+					 uint32_t enable);
 };
 
 /* Forward declartion for psoc*/
