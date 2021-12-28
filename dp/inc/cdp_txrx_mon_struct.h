@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2017-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -111,6 +112,7 @@ struct cdp_mon_status {
 #define IEEE80211_RX_DECRYPT_ERROR  0x04
 /* holes in flags here between, ATH_RX_XXXX to IEEE80211_RX_XXX */
 #define IEEE80211_RX_KEYMISS        0x200
+#define IEEE80211_RX_PN_ERROR       0x400
 	int rs_rssi;       /* RSSI (noise floor ajusted) */
 	int rs_abs_rssi;   /* absolute RSSI */
 	int rs_datarate;   /* data rate received */

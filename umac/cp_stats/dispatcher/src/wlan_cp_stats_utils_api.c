@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -348,4 +349,20 @@ wlan_cp_stats_comp_obj_cfg(enum wlan_objmgr_obj_type obj_type,
 							cmn_obj, data);
 
 	return status;
+}
+
+void wlan_cp_stats_vdev_ucast_rx_pnerr(struct wlan_objmgr_vdev *vdev)
+{
+	struct vdev_cp_stats *vdev_cs = wlan_cp_stats_get_vdev_stats_obj(vdev);
+
+	if (vdev_cs && vdev_cs->ucast_rx_pnerr_stats_inc)
+		vdev_cs->ucast_rx_pnerr_stats_inc(vdev, 1);
+}
+
+void wlan_cp_stats_peer_rx_pnerr(struct wlan_objmgr_peer *peer)
+{
+	struct peer_cp_stats *peer_cs = wlan_cp_stats_get_peer_stats_obj(peer);
+
+	if (peer_cs && peer_cs->rx_pnerr_stats_inc)
+		peer_cs->rx_pnerr_stats_inc(peer, 1);
 }
