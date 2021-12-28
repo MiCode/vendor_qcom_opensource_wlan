@@ -1033,10 +1033,58 @@ fail0:
 #ifdef QCA_ENHANCED_STATS_SUPPORT
 void dp_mon_filter_setup_enhanced_stats_2_0(struct dp_pdev *pdev)
 {
+	struct dp_mon_filter_be filter = {0};
+	enum dp_mon_filter_mode mode = DP_MON_FILTER_ENHACHED_STATS_MODE;
+	enum dp_mon_filter_srng_type srng_type =
+				DP_MON_FILTER_SRNG_TYPE_RXMON_DEST;
+	struct dp_mon_filter *rx_tlv_filter;
+	struct dp_mon_pdev *mon_pdev;
+	struct dp_mon_pdev_be *mon_pdev_be;
+
+	if (!pdev) {
+		dp_mon_filter_err("pdev Context is null");
+		return;
+	}
+
+	mon_pdev = pdev->monitor_pdev;
+	mon_pdev_be =
+		dp_get_be_mon_pdev_from_dp_mon_pdev(mon_pdev);
+
+	rx_tlv_filter = &filter.rx_tlv_filter;
+	dp_mon_filter_set_status_cmn(mon_pdev, rx_tlv_filter);
+	/* Setup the filter */
+	rx_tlv_filter->tlv_filter.ppdu_end_user_stats_ext = 0;
+	rx_tlv_filter->tlv_filter.enable_mo = 0;
+	rx_tlv_filter->tlv_filter.mo_mgmt_filter = 0;
+	rx_tlv_filter->tlv_filter.mo_ctrl_filter = 0;
+	rx_tlv_filter->tlv_filter.mo_data_filter = 0;
+	/* Enabled the filter */
+	rx_tlv_filter->valid = true;
+
+	dp_mon_filter_show_filter(mon_pdev, mode, rx_tlv_filter);
+
+	mon_pdev_be->filter_be[mode][srng_type] = filter;
 }
 
 void dp_mon_filter_reset_enhanced_stats_2_0(struct dp_pdev *pdev)
 {
+	struct dp_mon_filter_be filter = {0};
+	enum dp_mon_filter_mode mode = DP_MON_FILTER_ENHACHED_STATS_MODE;
+	enum dp_mon_filter_srng_type srng_type =
+				DP_MON_FILTER_SRNG_TYPE_RXMON_DEST;
+	struct dp_mon_pdev *mon_pdev;
+	struct dp_mon_pdev_be *mon_pdev_be;
+
+	if (!pdev) {
+		dp_mon_filter_err("pdev Context is null");
+		return;
+	}
+
+	mon_pdev = pdev->monitor_pdev;
+	mon_pdev_be =
+		dp_get_be_mon_pdev_from_dp_mon_pdev(mon_pdev);
+
+	mon_pdev_be->filter_be[mode][srng_type] = filter;
 }
 #endif /* QCA_ENHANCED_STATS_SUPPORT */
 
