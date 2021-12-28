@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2017-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  *
  * Permission to use, copy, modify, and/or distribute this software for
@@ -36,6 +36,7 @@
 #define FREQ_TO_CHAN_SCALE     5
 /* The distance between the 80Mhz center and the nearest 20Mhz channel */
 #define NEAREST_20MHZ_CHAN_FREQ_OFFSET     10
+#define NUM_20_MHZ_CHAN_IN_40_MHZ_CHAN     2
 #define NUM_20_MHZ_CHAN_IN_80_MHZ_CHAN     4
 #define NUM_20_MHZ_CHAN_IN_160_MHZ_CHAN    8
 

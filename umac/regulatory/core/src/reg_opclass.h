@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2017-2021 The Linux Foundation. All rights reserved.
- *
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -28,6 +28,8 @@
 #ifdef CONFIG_AFC_SUPPORT
 #include <wlan_reg_afc.h>
 #endif
+
+#define OPCLS_132 132
 
 #ifdef HOST_OPCLASS
 /**

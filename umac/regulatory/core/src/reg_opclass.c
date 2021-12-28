@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2014-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1469,6 +1470,12 @@ static uint8_t reg_get_chan_or_chan_center(const struct
 		reg_get_channel_cen(op_class_tbl,
 				    idx,
 				    NUM_20_MHZ_CHAN_IN_160_MHZ_CHAN,
+				    &center_chan);
+	} else if ((op_class_tbl->op_class == BW_40_MHZ) &&
+		   (op_class_tbl->op_class == OPCLS_132)) {
+		reg_get_channel_cen(op_class_tbl,
+				    idx,
+				    NUM_20_MHZ_CHAN_IN_40_MHZ_CHAN,
 				    &center_chan);
 	} else {
 		center_chan = op_class_tbl->channels[*idx];
