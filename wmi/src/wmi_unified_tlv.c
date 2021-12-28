@@ -18348,6 +18348,10 @@ static void populate_tlv_service(uint32_t *wmi_service)
 	wmi_service[wmi_service_fp_phy_err_filter_support] =
 			WMI_SERVICE_FP_PHY_ERR_FILTER_SUPPORT;
 #endif
+#ifdef WLAN_FEATURE_11BE_MLO
+	wmi_service[wmi_service_mlo_sta_nan_ndi_support] =
+			WMI_SERVICE_MLO_STA_NAN_NDI_SUPPORT;
+#endif
 }
 
 /**
