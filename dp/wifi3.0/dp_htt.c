@@ -550,7 +550,8 @@ int htt_srng_setup(struct htt_soc *soc, int mac_id,
 			(uint64_t)tp_addr);
 		break;
 	case RXDMA_MONITOR_BUF:
-		htt_ring_id = HTT_RXDMA_MONITOR_BUF_RING;
+		htt_ring_id = dp_htt_get_mon_htt_ring_id(soc->dp_soc,
+							 RXDMA_MONITOR_BUF);
 		htt_ring_type = HTT_SW_TO_HW_RING;
 		break;
 	case RXDMA_MONITOR_STATUS:
@@ -558,7 +559,8 @@ int htt_srng_setup(struct htt_soc *soc, int mac_id,
 		htt_ring_type = HTT_SW_TO_HW_RING;
 		break;
 	case RXDMA_MONITOR_DST:
-		htt_ring_id = HTT_RXDMA_MONITOR_DEST_RING;
+		htt_ring_id = dp_htt_get_mon_htt_ring_id(soc->dp_soc,
+							 RXDMA_MONITOR_DST);
 		htt_ring_type = HTT_HW_TO_SW_RING;
 		break;
 	case RXDMA_MONITOR_DESC:
@@ -905,7 +907,8 @@ int htt_h2t_rx_ring_cfg(struct htt_soc *htt_soc, int pdev_id,
 		htt_ring_type = HTT_SW_TO_HW_RING;
 		break;
 	case RXDMA_MONITOR_BUF:
-		htt_ring_id = HTT_RXDMA_MONITOR_BUF_RING;
+		htt_ring_id = dp_htt_get_mon_htt_ring_id(soc->dp_soc,
+							 RXDMA_MONITOR_BUF);
 		htt_ring_type = HTT_SW_TO_HW_RING;
 		break;
 	case RXDMA_MONITOR_STATUS:
@@ -913,7 +916,8 @@ int htt_h2t_rx_ring_cfg(struct htt_soc *htt_soc, int pdev_id,
 		htt_ring_type = HTT_SW_TO_HW_RING;
 		break;
 	case RXDMA_MONITOR_DST:
-		htt_ring_id = HTT_RXDMA_MONITOR_DEST_RING;
+		htt_ring_id = dp_htt_get_mon_htt_ring_id(soc->dp_soc,
+							 RXDMA_MONITOR_DST);
 		htt_ring_type = HTT_HW_TO_SW_RING;
 		break;
 	case RXDMA_MONITOR_DESC:

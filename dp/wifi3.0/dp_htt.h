@@ -935,4 +935,39 @@ int htt_h2t_full_mon_cfg(struct htt_soc *htt_soc,
 QDF_STATUS dp_h2t_hw_vdev_stats_config_send(struct dp_soc *dpsoc,
 					    uint8_t pdev_id, bool enable,
 					    bool reset, uint64_t reset_bitmask);
+
+static inline enum htt_srng_ring_id
+dp_htt_get_mon_htt_ring_id(struct dp_soc *soc,
+			   enum hal_ring_type hal_ring_type)
+{
+	enum htt_srng_ring_id htt_srng_id = 0;
+
+	if (wlan_cfg_get_txmon_hw_support(soc->wlan_cfg_ctx)) {
+		switch (hal_ring_type) {
+		case RXDMA_MONITOR_BUF:
+			htt_srng_id = HTT_RX_MON_HOST2MON_BUF_RING;
+			break;
+		case RXDMA_MONITOR_DST:
+			htt_srng_id = HTT_RX_MON_MON2HOST_DEST_RING;
+			break;
+		default:
+			dp_err("Invalid ring type %d ", hal_ring_type);
+			break;
+		}
+	} else {
+		switch (hal_ring_type) {
+		case RXDMA_MONITOR_BUF:
+			htt_srng_id = HTT_RXDMA_MONITOR_BUF_RING;
+			break;
+		case RXDMA_MONITOR_DST:
+			htt_srng_id = HTT_RXDMA_MONITOR_DEST_RING;
+			break;
+		default:
+			dp_err("Invalid ring type %d ", hal_ring_type);
+			break;
+		}
+	}
+
+	return htt_srng_id;
+}
 #endif /* _DP_HTT_H_ */
