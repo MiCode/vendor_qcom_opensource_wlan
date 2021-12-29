@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2017-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2021 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -98,6 +99,20 @@ uint8_t wlan_crypto_is_htallowed(struct wlan_objmgr_vdev *vdev,
  */
 QDF_STATUS wlan_crypto_setkey(struct wlan_objmgr_vdev *vdev,
 					struct wlan_crypto_req_key *req_key);
+
+/**
+ * store_def_keyix_peer - called by wlan_crypto_setkey
+ *                   to store default key index for each peer in the vdev.
+ * @vdev: vdev
+ * @object: Peer object
+ * @arg: Argument passed by caller
+ *
+ * This function gets called from wlan_crypto_setkey
+ *
+ * Return: None
+ */
+void store_def_keyix_peer(struct wlan_objmgr_vdev *vdev, void *object,
+			  void *arg);
 
 /**
  * wlan_crypto_getkey - called by ucfg to get key
