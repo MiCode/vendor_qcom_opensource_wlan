@@ -1925,4 +1925,40 @@ QDF_STATUS reg_is_chwidth_supported(struct wlan_objmgr_pdev *pdev,
  * channel.
  */
 bool reg_is_state_allowed(enum channel_state chan_state);
+
+/**
+ * reg_is_freq_enabled() - Checks if the given frequency is enabled on the given
+ * power mode or not. If the frequency is not a 6G frequency then the input
+ * power mode is ignored and only current channel list is searched.
+ *
+ * @pdev: pdev pointer.
+ * @freq: input frequency.
+ * @in_6g_pwr_mode: Power mode on which the freq is enabled or not is to be
+ * checked.
+ *
+ * Return: True if the frequency is present in the given power mode channel
+ * list.
+ */
+bool reg_is_freq_enabled(struct wlan_objmgr_pdev *pdev,
+			 qdf_freq_t freq,
+			 enum supported_6g_pwr_types in_6g_pwr_mode);
+
+/**
+ * reg_is_freq_idx_enabled() - Checks if the given frequency index is enabled on
+ * the given power mode or not. If the frequency index is not a 6G frequency
+ * then the input power mode is ignored and only current channel list is
+ * searched.
+ *
+ * @pdev: pdev pointer.
+ * @freq_idx: input frequency index.
+ * @in_6g_pwr_mode: Power mode on which the frequency index is enabled or not
+ * is to be checked.
+ *
+ * Return: True if the frequency index is present in the given power mode
+ * channel list.
+ */
+bool reg_is_freq_idx_enabled(struct wlan_objmgr_pdev *pdev,
+			     enum channel_enum freq_idx,
+			     enum supported_6g_pwr_types in_6g_pwr_mode);
+
 #endif

@@ -2170,19 +2170,6 @@ reg_fill_best_pwr_mode(struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj,
 }
 #endif
 
-/**
- * reg_is_chan_disabled() - Check if the input regulatory channel entry
- * is disabled
- * @chan: Pointer to chan
- *
- * Return: bool
- */
-static bool reg_is_chan_disabled(struct regulatory_channel *chan)
-{
-	return ((chan->state == CHANNEL_STATE_DISABLE) ||
-		(chan->chan_flags & REGULATORY_CHAN_DISABLED));
-}
-
 #ifdef CONFIG_AFC_SUPPORT
 /**
  * reg_assign_afc_chan_entry_to_mas_chan() - Assign the AFC channel list entry
@@ -2265,7 +2252,7 @@ static void reg_update_sup_ch_entry_for_mode(
 		return;
 	}
 
-	if (reg_is_chan_disabled(&temp_reg_chan))
+	if (reg_is_chan_disabled_and_not_nol(&temp_reg_chan))
 		return;
 
 	super_chan_list = pdev_priv_obj->super_chan_list;

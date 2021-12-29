@@ -133,6 +133,20 @@ QDF_STATUS wlan_reg_get_current_chan_list(struct wlan_objmgr_pdev *pdev,
 
 qdf_export_symbol(wlan_reg_get_current_chan_list);
 
+bool wlan_reg_is_freq_enabled(struct wlan_objmgr_pdev *pdev,
+			      qdf_freq_t freq,
+			      enum supported_6g_pwr_types in_6g_pwr_mode)
+{
+	return reg_is_freq_enabled(pdev, freq, in_6g_pwr_mode);
+}
+
+bool wlan_reg_is_freq_idx_enabled(struct wlan_objmgr_pdev *pdev,
+				  enum channel_enum freq_idx,
+				  enum supported_6g_pwr_types in_6g_pwr_mode)
+{
+	return reg_is_freq_idx_enabled(pdev, freq_idx, in_6g_pwr_mode);
+}
+
 #ifdef CONFIG_REG_CLIENT
 QDF_STATUS wlan_reg_get_secondary_current_chan_list(
 					struct wlan_objmgr_pdev *pdev,
