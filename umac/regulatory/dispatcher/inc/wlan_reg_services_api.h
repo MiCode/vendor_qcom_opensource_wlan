@@ -639,6 +639,24 @@ bool wlan_reg_is_freq_idx_enabled(struct wlan_objmgr_pdev *pdev,
 				  enum channel_enum freq_idx,
 				  enum supported_6g_pwr_types in_6g_pwr_mode);
 
+/**
+ * wlan_reg_get_pwrmode_chan_list() - Get the modified channel list. A modified
+ * current channel list consists of 2G and 5G portions of the current channel
+ * list and the 6G portion of the current channel list is derived from the input
+ * 6g power type.
+ * @pdev: Pointer to pdev
+ * @chan_list: Pointer to buffer which stores list of regulatory_channels.
+ * @in_6g_pwr_mode: 6GHz power type
+ *
+ * Return:
+ * QDF_STATUS_SUCCESS: Success
+ * QDF_STATUS_E_INVAL: Failed to get channel list
+ */
+QDF_STATUS wlan_reg_get_pwrmode_chan_list(struct wlan_objmgr_pdev *pdev,
+					  struct regulatory_channel *chan_list,
+					  enum supported_6g_pwr_types
+					  in_6g_pwr_mode);
+
 #ifdef CONFIG_REG_CLIENT
 /**
  * wlan_reg_get_secondary_current_chan_list() - provide the pdev secondary

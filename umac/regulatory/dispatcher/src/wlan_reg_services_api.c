@@ -89,6 +89,16 @@ QDF_STATUS wlan_reg_get_max_5g_bw_from_regdomain(
 	return reg_get_max_5g_bw_from_regdomain(pdev, regdmn, max_bw_5g);
 }
 
+QDF_STATUS wlan_reg_get_pwrmode_chan_list(struct wlan_objmgr_pdev *pdev,
+					  struct regulatory_channel *chan_list,
+					  enum supported_6g_pwr_types
+					  in_6g_pwr_mode)
+{
+	return reg_get_pwrmode_chan_list(pdev, chan_list, in_6g_pwr_mode);
+}
+
+qdf_export_symbol(wlan_reg_get_pwrmode_chan_list);
+
 #ifdef CONFIG_REG_CLIENT
 QDF_STATUS
 wlan_reg_get_6g_power_type_for_ctry(struct wlan_objmgr_psoc *psoc,

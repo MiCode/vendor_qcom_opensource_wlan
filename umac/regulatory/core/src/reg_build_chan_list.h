@@ -149,6 +149,23 @@ reg_get_6g_ap_master_chan_list(struct wlan_objmgr_pdev *pdev,
 QDF_STATUS reg_process_master_chan_list(struct cur_regulatory_info *reg_info);
 
 /**
+ * reg_get_pwrmode_chan_list() - Get the modified channel list. A modified
+ * current channel list consists of 2G and 5G portions of the current channel
+ * list and the 6G portion of the current channel list is derived from the input
+ * 6g power type.
+ * @pdev: Pointer to pdev
+ * @in_6g_pwr_mode: Input 6GHz power mode.
+ *
+ * Return:
+ * QDF_STATUS_SUCCESS: Success
+ * QDF_STATUS_E_INVAL: Failed to get channel list
+ */
+QDF_STATUS reg_get_pwrmode_chan_list(struct wlan_objmgr_pdev *pdev,
+				     struct regulatory_channel *chan_list,
+				     enum supported_6g_pwr_types
+				     in_6g_pwr_mode);
+
+/**
  * reg_get_current_chan_list() - provide the pdev current channel list
  * @pdev: pdev pointer
  * @chan_list: channel list pointer
