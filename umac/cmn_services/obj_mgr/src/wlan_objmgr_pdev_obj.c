@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -86,6 +87,7 @@ static QDF_STATUS wlan_objmgr_pdev_obj_free(struct wlan_objmgr_pdev *pdev)
 		return QDF_STATUS_E_FAILURE;
 	}
 	qdf_spinlock_destroy(&pdev->pdev_lock);
+	wlan_delayed_peer_obj_free_deinit(pdev);
 	qdf_mem_free(pdev);
 
 	return QDF_STATUS_SUCCESS;
@@ -114,6 +116,8 @@ struct wlan_objmgr_pdev *wlan_objmgr_pdev_obj_create(
 	pdev->obj_state = WLAN_OBJ_STATE_ALLOCATED;
 	/* Initialize PDEV spinlock */
 	qdf_spinlock_create(&pdev->pdev_lock);
+	wlan_delayed_peer_obj_free_init(pdev);
+
 	/* Attach PDEV with PSOC */
 	if (wlan_objmgr_psoc_pdev_attach(psoc, pdev)
 				!= QDF_STATUS_SUCCESS) {

@@ -26,6 +26,7 @@
 #include <wlan_objmgr_cmn.h>
 #include "wlan_objmgr_psoc_obj.h"
 #include <target_if_pub.h>
+#include <qdf_defer.h>
 
 /* STATUS: scanning */
 #define WLAN_PDEV_F_SCAN                    0x00000001
@@ -221,6 +222,10 @@ struct wlan_objmgr_pdev_objmgr {
  * @obj_state:         object state
  * @tgt_if_handle:     Target interface handle
  * @pdev_lock:         lock to protect object
+ * @peer_free_lock:    lock to protect peer object free
+ * @peer_free_list:    list to hold freed peer
+ * @peer_obj_free_work:delayed work to be queued into workqueue
+ * @active_work_cnt:   active work counts
 */
 struct wlan_objmgr_pdev {
 	struct wlan_chan_list *current_chan_list;
@@ -232,6 +237,12 @@ struct wlan_objmgr_pdev {
 	WLAN_OBJ_STATE obj_state;
 	target_pdev_info_t *tgt_if_handle;
 	qdf_spinlock_t pdev_lock;
+#ifdef FEATURE_DELAYED_PEER_OBJ_DESTROY
+	qdf_spinlock_t peer_free_lock;
+	qdf_list_t peer_free_list;
+	qdf_work_t peer_obj_free_work;
+	uint32_t active_work_cnt;
+#endif
 };
 
 /**

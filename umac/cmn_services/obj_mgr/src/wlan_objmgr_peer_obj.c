@@ -284,7 +284,8 @@ struct wlan_objmgr_peer *wlan_objmgr_peer_obj_create(
 	return peer;
 }
 
-static QDF_STATUS wlan_objmgr_peer_obj_destroy(struct wlan_objmgr_peer *peer)
+static QDF_STATUS
+__wlan_objmgr_peer_obj_destroy(struct wlan_objmgr_peer *peer)
 {
 	uint8_t id;
 	wlan_objmgr_peer_destroy_handler handler;
@@ -337,6 +338,193 @@ static QDF_STATUS wlan_objmgr_peer_obj_destroy(struct wlan_objmgr_peer *peer)
 	/* Free the peer object */
 	return wlan_objmgr_peer_obj_free(peer);
 }
+
+#ifdef FEATURE_DELAYED_PEER_OBJ_DESTROY
+/*
+ * Length of the list used to hold delayed peer obj free.
+ * Must be a multiple of 2.
+ */
+#define MAX_DELAYED_FREE_PEERS 64
+
+/**
+ * wlan_objmgr_peer_obj_free_work() - Peer obj freed in the delayed work
+ * @data: PDEV object
+ *
+ * Peer obj freed in the delayed work
+ *
+ * Return: None
+ */
+static void wlan_objmgr_peer_obj_free_work(void *data)
+{
+	struct wlan_objmgr_pdev *pdev = data;
+	struct wlan_objmgr_peer *peer;
+	qdf_list_node_t *node;
+	uint8_t *macaddr;
+
+	if (!pdev) {
+		obj_mgr_err("pdev is NULL");
+		return;
+	}
+
+	qdf_spin_lock_bh(&pdev->peer_free_lock);
+	while (!(qdf_list_empty(&pdev->peer_free_list))) {
+		qdf_list_remove_front(&pdev->peer_free_list, &node);
+		qdf_spin_unlock_bh(&pdev->peer_free_lock);
+
+		peer = qdf_container_of(node,
+					struct wlan_objmgr_peer,
+					free_node);
+
+		macaddr = wlan_peer_get_macaddr(peer);
+		obj_mgr_debug("active_work_cnt %u list size %u peer 0x%pK("
+			      QDF_MAC_ADDR_FMT ")",
+			      pdev->active_work_cnt,
+			      qdf_list_size(&pdev->peer_free_list),
+			      peer,
+			      QDF_MAC_ADDR_REF(macaddr));
+
+		__wlan_objmgr_peer_obj_destroy(peer);
+
+		qdf_spin_lock_bh(&pdev->peer_free_lock);
+	}
+
+	pdev->active_work_cnt--;
+
+	qdf_spin_unlock_bh(&pdev->peer_free_lock);
+}
+
+/**
+ * wlan_peer_obj_free_enqueue() - enqueue freed peer into kworker
+ * @peer: PEER object
+ *
+ * Enqueue freed peer into kworker
+ *
+ * Return: None
+ */
+static QDF_STATUS
+wlan_peer_obj_free_enqueue(struct wlan_objmgr_peer *peer)
+{
+	struct wlan_objmgr_vdev *vdev;
+	struct wlan_objmgr_pdev *pdev;
+	uint8_t *macaddr;
+
+	if (!peer) {
+		obj_mgr_err("peer is NULL");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	macaddr = wlan_peer_get_macaddr(peer);
+
+	vdev = wlan_peer_get_vdev(peer);
+	if (!vdev) {
+		obj_mgr_err("VDEV is NULL for peer(" QDF_MAC_ADDR_FMT ")",
+			    QDF_MAC_ADDR_REF(macaddr));
+		return QDF_STATUS_E_FAILURE;
+	}
+	/* get PDEV from VDEV, if it is NULL, return */
+	pdev = wlan_vdev_get_pdev(vdev);
+	if (!pdev) {
+		obj_mgr_err("PDEV is NULL for peer(" QDF_MAC_ADDR_FMT ")",
+			    QDF_MAC_ADDR_REF(macaddr));
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	qdf_spin_lock_bh(&pdev->peer_free_lock);
+	qdf_list_insert_back(&pdev->peer_free_list, &peer->free_node);
+	pdev->active_work_cnt++;
+	qdf_spin_unlock_bh(&pdev->peer_free_lock);
+
+	obj_mgr_debug("active_work_cnt %u list size %u peer 0x%pK("
+		      QDF_MAC_ADDR_FMT ")",
+		      pdev->active_work_cnt,
+		      qdf_list_size(&pdev->peer_free_list),
+		      peer,
+		      QDF_MAC_ADDR_REF(macaddr));
+
+	qdf_sched_work(0, &pdev->peer_obj_free_work);
+
+	return QDF_STATUS_SUCCESS;
+}
+
+static QDF_STATUS
+wlan_objmgr_peer_obj_destroy(struct wlan_objmgr_peer *peer)
+{
+	QDF_STATUS status;
+
+	status = wlan_peer_obj_free_enqueue(peer);
+	if (status != QDF_STATUS_SUCCESS) {
+		obj_mgr_warn("enqueue failure, call free obj directly");
+		status = __wlan_objmgr_peer_obj_destroy(peer);
+	}
+
+	return status;
+}
+
+/**
+ * wlan_delayed_peer_obj_free_init() - Init for delayed peer obj freed queue
+ * @data: PDEV object
+ *
+ * Initialize main data structures to process peer obj destroy in a delayed
+ * workqueue.
+ *
+ * Return: QDF_STATUS_SUCCESS on success else a QDF error.
+ */
+QDF_STATUS wlan_delayed_peer_obj_free_init(void *data)
+{
+	struct wlan_objmgr_pdev *pdev = data;
+
+	if (!pdev) {
+		obj_mgr_err("pdev is NULL");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	qdf_spinlock_create(&pdev->peer_free_lock);
+	qdf_create_work(0, &pdev->peer_obj_free_work,
+			wlan_objmgr_peer_obj_free_work,
+			(void *)pdev);
+	pdev->active_work_cnt = 0;
+
+	/* Initialize PDEV's peer free list, assign default values */
+	qdf_list_create(&pdev->peer_free_list, MAX_DELAYED_FREE_PEERS);
+
+	obj_mgr_debug("Delayed peer obj free init successfully");
+
+	return QDF_STATUS_SUCCESS;
+}
+
+/**
+ * wlan_delayed_peer_obj_free_deinit() - De-Init delayed peer freed processing
+ * @data: PDEV object
+ *
+ * De-initialize main data structures to process peer obj freed in a delayed
+ * workqueue.
+ *
+ * Return: QDF_STATUS_SUCCESS on success else a QDF error.
+ */
+QDF_STATUS wlan_delayed_peer_obj_free_deinit(void *data)
+{
+	struct wlan_objmgr_pdev *pdev = data;
+
+	if (!pdev) {
+		obj_mgr_err("pdev is NULL");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	qdf_destroy_work(0, &pdev->peer_obj_free_work);
+	qdf_spinlock_destroy(&pdev->peer_free_lock);
+
+	obj_mgr_debug("Deinit successfully, active_work_cnt=%u",
+		      pdev->active_work_cnt);
+
+	return QDF_STATUS_SUCCESS;
+}
+#else
+static QDF_STATUS
+wlan_objmgr_peer_obj_destroy(struct wlan_objmgr_peer *peer)
+{
+	return __wlan_objmgr_peer_obj_destroy(peer);
+}
+#endif
 
 QDF_STATUS wlan_objmgr_peer_obj_delete(struct wlan_objmgr_peer *peer)
 {
