@@ -2523,12 +2523,16 @@ static inline struct dp_peer *dp_peer_find_add_id(struct dp_soc *soc,
 			return NULL;
 		}
 
-		QDF_ASSERT(peer->peer_id == HTT_INVALID_PEER);
-
+		if (peer->peer_id == HTT_INVALID_PEER) {
+			dp_monitor_peer_tid_peer_id_update(soc, peer,
+							   peer->peer_id);
+		} else {
+			dp_peer_unref_delete(peer, DP_MOD_ID_CONFIG);
+			QDF_ASSERT(0);
+			return NULL;
+		}
 		dp_peer_find_id_to_obj_add(soc, peer, peer_id);
 		dp_mlo_partner_chips_map(soc, peer, peer_id);
-		dp_monitor_peer_tid_peer_id_update(soc, peer,
-						   peer->peer_id);
 
 		dp_peer_update_state(soc, peer, DP_PEER_STATE_ACTIVE);
 		return peer;

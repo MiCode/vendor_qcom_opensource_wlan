@@ -1398,16 +1398,20 @@ struct dp_peer *dp_peer_get_tgt_peer_by_id(struct dp_soc *soc,
 
 /**
  * dp_peer_mlo_delete() - peer MLO related delete operation
- * @soc: Soc handle
  * @peer: DP peer handle
  * Return: None
  */
 static inline
-void dp_peer_mlo_delete(struct dp_soc *soc,
-			struct dp_peer *peer)
+void dp_peer_mlo_delete(struct dp_peer *peer)
 {
+	struct dp_peer *ml_peer;
+	struct dp_soc *soc;
+
 	/* MLO connection link peer */
 	if (IS_MLO_DP_LINK_PEER(peer)) {
+		ml_peer = peer->mld_peer;
+		soc = ml_peer->vdev->pdev->soc;
+
 		/* if last link peer deletion, delete MLD peer */
 		if (dp_mld_peer_del_link_peer(peer->mld_peer, peer) == 0)
 			dp_peer_delete(soc, peer->mld_peer, NULL);
@@ -1479,8 +1483,7 @@ void dp_link_peer_del_mld_peer(struct dp_peer *link_peer)
 }
 
 static inline
-void dp_peer_mlo_delete(struct dp_soc *soc,
-			struct dp_peer *peer)
+void dp_peer_mlo_delete(struct dp_peer *peer)
 {
 }
 
