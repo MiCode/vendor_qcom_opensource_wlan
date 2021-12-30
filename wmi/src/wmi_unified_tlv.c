@@ -18299,6 +18299,8 @@ static void populate_tlv_service(uint32_t *wmi_service)
 #endif
 	wmi_service[wmi_service_probe_all_bw_support] =
 			WMI_SERVICE_PROBE_ALL_BW_SUPPORT;
+	wmi_service[wmi_service_pno_scan_conf_per_ch_support] =
+			WMI_SERVICE_PNO_SCAN_CONFIG_PER_CHANNEL;
 }
 
 /**
