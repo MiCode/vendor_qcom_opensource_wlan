@@ -75,6 +75,9 @@
 
 #define MGMT_RX_REO_EGRESS_FRAME_DEBUG_INFO_FLAG_MAX_SIZE   (3)
 #define MGMT_RX_REO_EGRESS_FRAME_DEBUG_INFO_WAIT_COUNT_MAX_SIZE   (49)
+
+#define MGMT_RX_REO_INGRESS_FRAME_DEBUG_INFO_FLAG_MAX_SIZE   (9)
+#define MGMT_RX_REO_INGRESS_FRAME_DEBUG_INFO_WAIT_COUNT_MAX_SIZE   (49)
 #endif /* WLAN_MGMT_RX_REO_DEBUG_SUPPORT*/
 
 /*
@@ -140,7 +143,7 @@ mgmt_rx_reo_pdev_obj_destroy_notification(
  * @MGMT_RX_REO_FRAME_DESC_TYPE_MAX: Maximum number of frame types
  */
 enum mgmt_rx_reo_frame_descriptor_type {
-	MGMT_RX_REO_FRAME_DESC_HOST_CONSUMED_FRAME,
+	MGMT_RX_REO_FRAME_DESC_HOST_CONSUMED_FRAME = 0,
 	MGMT_RX_REO_FRAME_DESC_FW_CONSUMED_FRAME,
 	MGMT_RX_REO_FRAME_DESC_ERROR_FRAME,
 	MGMT_RX_REO_FRAME_DESC_TYPE_MAX,
@@ -399,9 +402,17 @@ struct mgmt_rx_reo_sim_context {
  * @wait_count: Wait count calculated for the current frame
  * @is_queued: Indicates whether this frame is queued to reorder list
  * @is_stale: Indicates whether this frame is stale.
+ * @zero_wait_count_rx: Indicates whether this frame's wait count was
+ * zero when received by host
+ * @immediate_delivery: Indicates whether this frame can be delivered
+ * immediately to the upper layers
  * @is_error: Indicates whether any error occurred during processing this frame
  * @ts_last_released_frame: Stores the global time stamp for the last frame
  * removed from the reorder list
+ * @list_size_rx: Size of the reorder list when this frame is received (before
+ * updating the list based on this frame).
+ * @list_insertion_pos: Position in the reorder list where this frame is going
+ * to get inserted (Applicable for only host consumed frames)
  */
 struct reo_ingress_debug_frame_info {
 	uint8_t link_id;
@@ -413,8 +424,12 @@ struct reo_ingress_debug_frame_info {
 	struct mgmt_rx_reo_wait_count wait_count;
 	bool is_queued;
 	bool is_stale;
+	bool zero_wait_count_rx;
+	bool immediate_delivery;
 	bool is_error;
 	struct mgmt_rx_reo_global_ts_info ts_last_released_frame;
+	int16_t list_size_rx;
+	int16_t list_insertion_pos;
 };
 
 /**
@@ -595,6 +610,14 @@ struct mgmt_rx_reo_context {
  * be delivered to the upper layers. These frames can be discarded after
  * updating the host snapshot and wait counts of entries currently residing in
  * the reorder list.
+ * @zero_wait_count_rx: Indicates whether this frame's wait count was
+ * zero when received by host
+ * @immediate_delivery: Indicates whether this frame can be delivered
+ * immediately to the upper layers
+ * @list_size_rx: Size of the reorder list when this frame is received (before
+ * updating the list based on this frame).
+ * @list_insertion_pos: Position in the reorder list where this frame is going
+ * to get inserted (Applicable for only host consumed frames)
  */
 struct mgmt_rx_reo_frame_descriptor {
 	enum mgmt_rx_reo_frame_descriptor_type type;
@@ -603,6 +626,10 @@ struct mgmt_rx_reo_frame_descriptor {
 	struct mgmt_rx_reo_wait_count wait_count;
 	uint64_t ingress_timestamp;
 	bool is_stale;
+	bool zero_wait_count_rx;
+	bool immediate_delivery;
+	int16_t list_size_rx;
+	int16_t list_insertion_pos;
 };
 
 /**
