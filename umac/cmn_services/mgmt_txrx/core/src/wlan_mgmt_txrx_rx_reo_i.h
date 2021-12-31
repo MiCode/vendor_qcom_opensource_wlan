@@ -48,7 +48,7 @@
  * This is added only as a place holder for the time being.
  * Remove this once the actual one is implemented.
  */
-#define MGMT_RX_REO_MAX_LINKS (16)
+#define MGMT_RX_REO_MAX_LINKS (4)
 #define MGMT_RX_REO_INVALID_NUM_LINKS (-1)
 #define MGMT_RX_REO_INVALID_LINK_ID   (-1)
 
@@ -58,7 +58,7 @@
 #define MGMT_RX_REO_LIST_ENTRY_RELEASE_REASON_OLDER_THAN_AGED_OUT_FRAME (BIT(2))
 #define MGMT_RX_REO_LIST_ENTRY_RELEASE_REASON_LIST_MAX_SIZE_EXCEEDED    (BIT(3))
 #define MGMT_RX_REO_RELEASE_REASON_MAX      \
-	((MGMT_RX_REO_LIST_ENTRY_RELEASE_REASON_LIST_MAX_SIZE_EXCEEDED << 1) - 1)
+	(MGMT_RX_REO_LIST_ENTRY_RELEASE_REASON_LIST_MAX_SIZE_EXCEEDED << 1)
 
 #define MGMT_RX_REO_LIST_ENTRY_IS_WAITING_FOR_FRAME_ON_OTHER_LINK(entry)   \
 	((entry)->status & MGMT_RX_REO_STATUS_WAIT_FOR_FRAME_ON_OTHER_LINKS)
@@ -72,6 +72,9 @@
 #ifdef WLAN_MGMT_RX_REO_DEBUG_SUPPORT
 #define MGMT_RX_REO_INGRESS_FRAME_DEBUG_ENTRIES_MAX             (1000)
 #define MGMT_RX_REO_EGRESS_FRAME_DEBUG_ENTRIES_MAX              (1000)
+
+#define MGMT_RX_REO_EGRESS_FRAME_DEBUG_INFO_FLAG_MAX_SIZE   (3)
+#define MGMT_RX_REO_EGRESS_FRAME_DEBUG_INFO_WAIT_COUNT_MAX_SIZE   (49)
 #endif /* WLAN_MGMT_RX_REO_DEBUG_SUPPORT*/
 
 /*
@@ -452,39 +455,53 @@ struct reo_egress_debug_frame_info {
 /**
  * struct reo_ingress_frame_stats - Structure to store statistics related to
  * incoming frames
- * @total_count: Total number of frames entering reo module
- * @per_link_count: Total number of frames for each link
- * @per_type_count: Total number of frames for each frame type
- * @queued_count: Total number of frames queued to reorder list
- * @stale_count: Total number of stale frames. Any frame older than the
+ * @ingress_count: Number of frames entering reo module
+ * @queued_count: Number of frames queued to reorder list
+ * @zero_wait_count_rx_count: Number of frames for which wait count is
+ * zero when received at host
+ * @immediate_delivery_count: Number of frames which can be delivered
+ * immediately to the upper layers without reordering. A frame can be
+ * immediately delivered if it has wait count of zero on reception at host
+ * and the global time stamp is less than or equal to the global time
+ * stamp of all the frames in the reorder list. Such frames would get
+ * inserted to the head of the reorder list and gets delivered immediately
+ * to the upper layers.
+ * @stale_count: Number of stale frames. Any frame older than the
  * last frame delivered to upper layer is a stale frame.
+ * @error_count: Number of frames dropped due to error occurred
+ * within the reorder module
  */
 struct reo_ingress_frame_stats {
-	uint64_t total_count;
-	uint64_t per_link_count[MGMT_RX_REO_MAX_LINKS];
-	uint64_t per_type_count[MGMT_RX_REO_FRAME_DESC_TYPE_MAX];
-	uint64_t queued_count;
-	uint64_t stale_count;
+	uint64_t ingress_count
+		[MGMT_RX_REO_MAX_LINKS][MGMT_RX_REO_FRAME_DESC_TYPE_MAX];
+	uint64_t queued_count[MGMT_RX_REO_MAX_LINKS];
+	uint64_t zero_wait_count_rx_count[MGMT_RX_REO_MAX_LINKS];
+	uint64_t immediate_delivery_count[MGMT_RX_REO_MAX_LINKS];
+	uint64_t stale_count[MGMT_RX_REO_MAX_LINKS]
+			    [MGMT_RX_REO_FRAME_DESC_TYPE_MAX];
+	uint64_t error_count[MGMT_RX_REO_MAX_LINKS]
+			    [MGMT_RX_REO_FRAME_DESC_TYPE_MAX];
 };
 
 /**
  * struct reo_egress_frame_stats - Structure to store statistics related to
  * outgoing frames
- * @total_count: Total number of frames entering reo module
- * @per_link_count: Total number of frames for each link
- * @per_release_reason_count: Total number frames delivered corresponding to
- * each release reason
- * @total_delivered_count: Total number of frames delivered successfully
- * @total_premature_delivery_count:  Total number of frames delivered
+ * @delivery_attempts_count: Number of attempts to deliver management
+ * frames to upper layers
+ * @delivery_success_count: Number of successful management frame
+ * deliveries to upper layer
+ * @premature_delivery_count:  Number of frames delivered
  * prematurely. Premature delivery is the delivery of a management frame
  * to the upper layers even before its wait count is reaching zero.
+ * @delivery_count: Number frames delivered successfully for
+ * each link and release  reason.
  */
 struct reo_egress_frame_stats {
-	uint64_t total_count;
-	uint64_t per_link_count[MGMT_RX_REO_MAX_LINKS];
-	uint64_t per_release_reason_count[MGMT_RX_REO_RELEASE_REASON_MAX];
-	uint64_t total_delivered_count;
-	uint64_t total_premature_delivery_count;
+	uint64_t delivery_attempts_count[MGMT_RX_REO_MAX_LINKS];
+	uint64_t delivery_success_count[MGMT_RX_REO_MAX_LINKS];
+	uint64_t premature_delivery_count[MGMT_RX_REO_MAX_LINKS];
+	uint64_t delivery_count[MGMT_RX_REO_MAX_LINKS]
+			       [MGMT_RX_REO_RELEASE_REASON_MAX];
 };
 
 /**
@@ -492,12 +509,15 @@ struct reo_egress_frame_stats {
  * debug information about the frames entering the reorder algorithm.
  * @frame_list: Circular array to store the debug info about frames
  * @next_index: The index at which information about next frame will be logged
+ * @wrap_aroud: Flag to indicate whether wrap around occurred when logging
+ * debug information to @frame_list
  * @stats: Stats related to incoming frames
  */
 struct reo_ingress_debug_info {
 	struct reo_ingress_debug_frame_info
 			frame_list[MGMT_RX_REO_INGRESS_FRAME_DEBUG_ENTRIES_MAX];
 	uint32_t next_index;
+	bool wrap_aroud;
 	struct reo_ingress_frame_stats stats;
 };
 
@@ -506,12 +526,15 @@ struct reo_ingress_debug_info {
  * debug information about the frames leaving the reorder module.
  * @debug_info: Circular array to store the debug info
  * @next_index: The index at which information about next frame will be logged
+ * @wrap_aroud: Flag to indicate whether wrap around occurred when logging
+ * debug information to @frame_list
  * @stats: Stats related to outgoing frames
  */
 struct reo_egress_debug_info {
 	struct reo_egress_debug_frame_info
-			debug_info[MGMT_RX_REO_EGRESS_FRAME_DEBUG_ENTRIES_MAX];
+			frame_list[MGMT_RX_REO_EGRESS_FRAME_DEBUG_ENTRIES_MAX];
 	uint32_t next_index;
+	bool wrap_aroud;
 	struct reo_egress_frame_stats stats;
 };
 #endif /* WLAN_MGMT_RX_REO_DEBUG_SUPPORT */

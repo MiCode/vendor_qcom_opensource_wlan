@@ -969,6 +969,12 @@ mgmt_rx_reo_print_egress_frame_stats(struct mgmt_rx_reo_context *reo_ctx)
 	uint8_t link_id;
 	uint8_t reason;
 	int8_t num_mlo_links;
+	uint64_t total_delivery_attempts_count = 0;
+	uint64_t total_delivery_success_count = 0;
+	uint64_t total_premature_delivery_count = 0;
+	uint64_t delivery_count_per_link[MGMT_RX_REO_MAX_LINKS] = {0};
+	uint64_t delivery_count_per_reason[MGMT_RX_REO_RELEASE_REASON_MAX] = {0};
+	uint64_t total_delivery_count = 0;
 
 	if (!reo_ctx)
 		return QDF_STATUS_E_NULL_VALUE;
@@ -979,25 +985,73 @@ mgmt_rx_reo_print_egress_frame_stats(struct mgmt_rx_reo_context *reo_ctx)
 	qdf_assert_always(num_mlo_links > 0);
 	qdf_assert_always(num_mlo_links <= MGMT_RX_REO_MAX_LINKS);
 
-	mgmt_rx_reo_err("Egress frame stats:");
-	mgmt_rx_reo_err("Total frame count = %llu", stats->total_count);
-	mgmt_rx_reo_err("Total delivered frame count = %llu",
-			stats->total_delivered_count);
-	mgmt_rx_reo_err("Total prematurely delivered frame count = %llu",
-			stats->total_premature_delivery_count);
-
-	mgmt_rx_reo_err("Per link stats:-");
 	for (link_id = 0; link_id < num_mlo_links; link_id++) {
-		mgmt_rx_reo_err("Link id = %u", link_id);
-		mgmt_rx_reo_err("Total frames = %llu",
-				stats->per_link_count[link_id]);
+		total_delivery_attempts_count +=
+				stats->delivery_attempts_count[link_id];
+		total_delivery_success_count +=
+				stats->delivery_success_count[link_id];
+		total_premature_delivery_count +=
+				stats->premature_delivery_count[link_id];
 	}
 
-	mgmt_rx_reo_err("Per release reason stats:-");
-	for (reason = 0; reason < MGMT_RX_REO_RELEASE_REASON_MAX; reason++)
-		mgmt_rx_reo_err("Release reason = %u, Total frames = %llu",
-				reason,
-				stats->per_release_reason_count[reason]);
+	for (link_id = 0; link_id < num_mlo_links; link_id++) {
+		for (reason = 0; reason < MGMT_RX_REO_RELEASE_REASON_MAX;
+		     reason++)
+			delivery_count_per_link[link_id] +=
+				stats->delivery_count[link_id][reason];
+		total_delivery_count += delivery_count_per_link[link_id];
+	}
+	for (reason = 0; reason <= MGMT_RX_REO_RELEASE_REASON_MAX; reason++)
+		for (link_id = 0; link_id < num_mlo_links; link_id++)
+			delivery_count_per_reason[reason] +=
+				stats->delivery_count[link_id][reason];
+
+	mgmt_rx_reo_err("Egress frame stats:");
+	mgmt_rx_reo_err("\t1) Delivery related stats:");
+	mgmt_rx_reo_err("\t------------------------------------------");
+	mgmt_rx_reo_err("\t|link id   |Attempts |Success |Premature |");
+	mgmt_rx_reo_err("\t|          | count   | count  | count    |");
+	mgmt_rx_reo_err("\t------------------------------------------");
+	for (link_id = 0; link_id < num_mlo_links; link_id++) {
+		mgmt_rx_reo_err("\t|%10u|%9llu|%8llu|%10llu|", link_id,
+				stats->delivery_attempts_count[link_id],
+				stats->delivery_success_count[link_id],
+				stats->premature_delivery_count[link_id]);
+	mgmt_rx_reo_err("\t------------------------------------------");
+	}
+	mgmt_rx_reo_err("\t           |%9llu|%8llu|%10llu|\n\n",
+			total_delivery_attempts_count,
+			total_delivery_success_count,
+			total_premature_delivery_count);
+
+	mgmt_rx_reo_err("\t2) Delivery reason related stats");
+	mgmt_rx_reo_err("\tRelease Reason Values:-");
+	mgmt_rx_reo_err("\tRELEASE_REASON_ZERO_WAIT_COUNT - 0x%lx",
+			MGMT_RX_REO_LIST_ENTRY_RELEASE_REASON_ZERO_WAIT_COUNT);
+	mgmt_rx_reo_err("\tRELEASE_REASON_AGED_OUT - 0x%lx",
+			MGMT_RX_REO_LIST_ENTRY_RELEASE_REASON_AGED_OUT);
+	mgmt_rx_reo_err("\tRELEASE_REASON_OLDER_THAN_AGED_OUT_FRAME - 0x%lx",
+			MGMT_RX_REO_LIST_ENTRY_RELEASE_REASON_OLDER_THAN_AGED_OUT_FRAME);
+	mgmt_rx_reo_err("\tRELEASE_REASON_LIST_MAX_SIZE_EXCEEDED - 0x%lx",
+			MGMT_RX_REO_LIST_ENTRY_RELEASE_REASON_LIST_MAX_SIZE_EXCEEDED);
+	mgmt_rx_reo_err("\t--------------------------------------------------");
+	mgmt_rx_reo_err("\t|Release Reason/ |       |       |       |       |");
+	mgmt_rx_reo_err("\t|link id         |      0|      1|      2|      3|");
+	mgmt_rx_reo_err("\t---------------------------------------------------------");
+
+	for (reason = 0; reason < MGMT_RX_REO_RELEASE_REASON_MAX; reason++) {
+		mgmt_rx_reo_err("\t|%16x|%7llu|%7llu|%7llu|%7llu|%7llu", reason,
+				stats->delivery_count[0][reason],
+				stats->delivery_count[1][reason],
+				stats->delivery_count[2][reason],
+				stats->delivery_count[3][reason],
+				delivery_count_per_reason[reason]);
+		mgmt_rx_reo_err("\t---------------------------------------------------------");
+	}
+	mgmt_rx_reo_err("\t                |%7llu|%7llu|%7llu|%7llu|%7llu\n\n",
+			delivery_count_per_link[0], delivery_count_per_link[1],
+			delivery_count_per_link[2], delivery_count_per_link[3],
+			total_delivery_count);
 
 	return QDF_STATUS_SUCCESS;
 }
@@ -1019,13 +1073,14 @@ mgmt_rx_reo_log_egress_frame_before_delivery(
 	struct reo_egress_debug_info *egress_frame_debug_info;
 	struct reo_egress_debug_frame_info *cur_frame_debug_info;
 	struct reo_egress_frame_stats *stats;
+	uint8_t link_id;
 
 	if (!reo_ctx || !entry)
 		return QDF_STATUS_E_NULL_VALUE;
 
 	egress_frame_debug_info = &reo_ctx->egress_frame_debug_info;
 
-	cur_frame_debug_info = &egress_frame_debug_info->debug_info
+	cur_frame_debug_info = &egress_frame_debug_info->frame_list
 			[egress_frame_debug_info->next_index];
 
 	cur_frame_debug_info->link_id =
@@ -1044,11 +1099,10 @@ mgmt_rx_reo_log_egress_frame_before_delivery(
 						entry->is_premature_delivery;
 
 	stats = &egress_frame_debug_info->stats;
-	stats->total_count++;
-	stats->per_link_count[cur_frame_debug_info->link_id]++;
-	stats->per_release_reason_count[entry->release_reason]++;
+	link_id = cur_frame_debug_info->link_id;
+	stats->delivery_attempts_count[link_id]++;
 	if (entry->is_premature_delivery)
-		stats->total_premature_delivery_count++;
+		stats->premature_delivery_count[link_id]++;
 
 	return QDF_STATUS_SUCCESS;
 }
@@ -1076,7 +1130,7 @@ mgmt_rx_reo_log_egress_frame_after_delivery(
 
 	egress_frame_debug_info = &reo_ctx->egress_frame_debug_info;
 
-	cur_frame_debug_info = &egress_frame_debug_info->debug_info
+	cur_frame_debug_info = &egress_frame_debug_info->frame_list
 			[egress_frame_debug_info->next_index];
 
 	cur_frame_debug_info->is_delivered = entry->is_delivered;
@@ -1086,10 +1140,102 @@ mgmt_rx_reo_log_egress_frame_after_delivery(
 	egress_frame_debug_info->next_index++;
 	egress_frame_debug_info->next_index %=
 				MGMT_RX_REO_EGRESS_FRAME_DEBUG_ENTRIES_MAX;
+	if (egress_frame_debug_info->next_index == 0)
+		egress_frame_debug_info->wrap_aroud = true;
 
 	stats = &egress_frame_debug_info->stats;
-	if (entry->is_delivered)
-		stats->total_delivered_count++;
+	if (entry->is_delivered) {
+		uint8_t link_id = cur_frame_debug_info->link_id;
+		uint8_t release_reason = cur_frame_debug_info->release_reason;
+
+		stats->delivery_count[link_id][release_reason]++;
+		stats->delivery_success_count[link_id]++;
+	}
+
+	return QDF_STATUS_SUCCESS;
+}
+
+/**
+ * mgmt_rx_reo_print_egress_frame_info() - Print the debug information about the
+ * latest frames leaving the reorder module
+ * @reo_ctx: management rx reorder context
+ *
+ * Return: QDF_STATUS of operation
+ */
+static QDF_STATUS
+mgmt_rx_reo_print_egress_frame_info(struct mgmt_rx_reo_context *reo_ctx)
+{
+	struct reo_egress_debug_info *egress_frame_debug_info;
+	uint16_t start_index;
+	uint16_t index;
+	uint16_t entry;
+	uint16_t num_valid_entries;
+
+	if (!reo_ctx)
+		return QDF_STATUS_E_NULL_VALUE;
+
+	egress_frame_debug_info = &reo_ctx->egress_frame_debug_info;
+
+	if (egress_frame_debug_info->wrap_aroud) {
+		start_index = egress_frame_debug_info->next_index;
+		num_valid_entries = MGMT_RX_REO_EGRESS_FRAME_DEBUG_ENTRIES_MAX;
+	} else {
+		start_index = 0;
+		num_valid_entries =
+			egress_frame_debug_info->next_index - start_index;
+	}
+
+	if (!num_valid_entries)
+		return QDF_STATUS_SUCCESS;
+
+	mgmt_rx_reo_err_no_fl("Egress Frame Info:-");
+	mgmt_rx_reo_err_no_fl("Number of valid entries = %u",
+			      num_valid_entries);
+	mgmt_rx_reo_err_no_fl("--------------------------------------------------------------------------------------------------------------------------------------------------");
+	mgmt_rx_reo_err_no_fl("|No.|Link|SeqNo|Global ts |Ingress ts|Insert. ts|Removal ts|Egress ts |E Dur|W Dur  |Flags|Rea.|Wait Count                                       |");
+	mgmt_rx_reo_err_no_fl("--------------------------------------------------------------------------------------------------------------------------------------------------");
+
+	index = start_index;
+	for (entry = 0; entry < num_valid_entries; entry++) {
+		struct reo_egress_debug_frame_info *info;
+		char flags[MGMT_RX_REO_EGRESS_FRAME_DEBUG_INFO_FLAG_MAX_SIZE + 1] = {'\0'};
+		char wait_count[MGMT_RX_REO_EGRESS_FRAME_DEBUG_INFO_WAIT_COUNT_MAX_SIZE + 1] = {'\0'};
+		char flag_premature_delivery = ' ';
+		char flag_error = ' ';
+
+		info = &reo_ctx->egress_frame_debug_info.frame_list[index];
+
+		if (!info->is_delivered)
+			flag_error = 'E';
+
+		if (info->is_premature_delivery)
+			flag_premature_delivery = 'P';
+
+		snprintf(flags, sizeof(flags), "%c %c", flag_error,
+			 flag_premature_delivery);
+		snprintf(wait_count, sizeof(wait_count),
+			 "%9llx(%8x, %8x, %8x, %8x)",
+			 info->wait_count.total_count,
+			 info->wait_count.per_link_count[0],
+			 info->wait_count.per_link_count[1],
+			 info->wait_count.per_link_count[2],
+			 info->wait_count.per_link_count[3]);
+
+		mgmt_rx_reo_err_no_fl("|%3u|%4u|%5u|%10u|%10llu|%10llu|%10llu|%10llu|%5llu|%7llu|%5s|%4x|%49s|",
+				      entry, info->link_id, info->mgmt_pkt_ctr,
+				      info->global_timestamp,
+				      info->ingress_timestamp,
+				      info->insertion_ts, info->removal_ts,
+				      info->egress_timestamp,
+				      info->egress_duration,
+				      info->removal_ts - info->insertion_ts,
+				      flags, info->release_reason, wait_count);
+		mgmt_rx_reo_err_no_fl("-------------------------------------------------------------------------"
+				      "-------------------------------------------------------------------------");
+
+		index++;
+		index %= MGMT_RX_REO_EGRESS_FRAME_DEBUG_ENTRIES_MAX;
+	}
 
 	return QDF_STATUS_SUCCESS;
 }
@@ -1141,6 +1287,19 @@ static QDF_STATUS
 mgmt_rx_reo_log_egress_frame_after_delivery(
 					struct mgmt_rx_reo_context *reo_ctx,
 					bool is_delivered)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+/**
+ * mgmt_rx_reo_print_egress_frame_info() - Print debug information about the
+ * latest frames leaving the reorder module
+ * @reo_ctx: management rx reorder context
+ *
+ * Return: QDF_STATUS of operation
+ */
+static QDF_STATUS
+mgmt_rx_reo_print_egress_frame_info(struct mgmt_rx_reo_context *reo_ctx)
 {
 	return QDF_STATUS_SUCCESS;
 }
