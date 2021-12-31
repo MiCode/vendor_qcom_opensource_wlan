@@ -69,6 +69,19 @@ wlan_get_pdev_from_mlo_link_id(uint8_t mlo_link_id,
 #define mgmt_rx_reo_debug(params...) \
 	QDF_TRACE_DEBUG(QDF_MODULE_ID_MGMT_RX_REO, params)
 
+#define mgmt_rx_reo_alert_no_fl(params...) \
+	QDF_TRACE_FATAL_NO_FL(QDF_MODULE_ID_MGMT_RX_REO, params)
+#define mgmt_rx_reo_err_no_fl(params...) \
+	QDF_TRACE_ERROR_NO_FL(QDF_MODULE_ID_MGMT_RX_REO, params)
+#define mgmt_rx_reo_warn_no_fl(params...) \
+	QDF_TRACE_WARN_NO_FL(QDF_MODULE_ID_MGMT_RX_REO, params)
+#define mgmt_rx_reo_notice_no_fl(params...) \
+	QDF_TRACE_INFO_NO_FL(QDF_MODULE_ID_MGMT_RX_REO, params)
+#define mgmt_rx_reo_info_no_fl(params...) \
+	QDF_TRACE_INFO_NO_FL(QDF_MODULE_ID_MGMT_RX_REO, params)
+#define mgmt_rx_reo_debug_no_fl(params...) \
+	QDF_TRACE_DEBUG_NO_FL(QDF_MODULE_ID_MGMT_RX_REO, params)
+
 #define mgmt_rx_reo_alert_rl(params...) \
 	QDF_TRACE_FATAL_RL(QDF_MODULE_ID_MGMT_RX_REO, params)
 #define mgmt_rx_reo_err_rl(params...) \
