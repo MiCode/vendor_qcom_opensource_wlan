@@ -1431,6 +1431,9 @@ mgmt_rx_reo_list_ageout_timer_handler(void *arg)
 
 	qdf_assert_always(reo_list);
 
+	qdf_timer_mod(&reo_list->ageout_timer,
+		      MGMT_RX_REO_AGEOUT_TIMER_PERIOD_MS);
+
 	reo_context = mgmt_rx_reo_get_context_from_reo_list(reo_list);
 	qdf_assert_always(reo_context);
 
@@ -1456,11 +1459,13 @@ mgmt_rx_reo_list_ageout_timer_handler(void *arg)
 
 	qdf_spin_unlock_bh(&reo_list->list_lock);
 
-	status = mgmt_rx_reo_list_release_entries(reo_context);
-	if (QDF_IS_STATUS_ERROR(status)) {
-		mgmt_rx_reo_err("Failed to release list entries, status = %d",
-				status);
-		return;
+	if (latest_aged_out_entry) {
+		status = mgmt_rx_reo_list_release_entries(reo_context);
+		if (QDF_IS_STATUS_ERROR(status)) {
+			mgmt_rx_reo_err("Failed to release entries, ret = %d",
+					status);
+			return;
+		}
 	}
 }
 
@@ -3654,6 +3659,8 @@ mgmt_rx_reo_deinit_context(void)
 		return QDF_STATUS_E_NULL_VALUE;
 	}
 
+	qdf_timer_sync_cancel(&reo_context->reo_list.ageout_timer);
+
 	qdf_spinlock_destroy(&reo_context->reo_algo_entry_lock);
 
 	status = mgmt_rx_reo_sim_deinit(reo_context);
@@ -3698,6 +3705,9 @@ mgmt_rx_reo_init_context(void)
 	}
 
 	qdf_spinlock_create(&reo_context->reo_algo_entry_lock);
+
+	qdf_timer_mod(&reo_context->reo_list.ageout_timer,
+		      MGMT_RX_REO_AGEOUT_TIMER_PERIOD_MS);
 
 	return QDF_STATUS_SUCCESS;
 

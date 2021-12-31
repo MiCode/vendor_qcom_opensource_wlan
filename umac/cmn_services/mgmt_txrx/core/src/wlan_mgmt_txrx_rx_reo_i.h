@@ -35,8 +35,9 @@
 #include <wlan_objmgr_pdev_obj.h>
 #include <wlan_objmgr_psoc_obj.h>
 
-#define MGMT_RX_REO_LIST_MAX_SIZE        (100)
-#define MGMT_RX_REO_LIST_TIMEOUT_US      (10 * USEC_PER_MSEC)
+#define MGMT_RX_REO_LIST_MAX_SIZE             (100)
+#define MGMT_RX_REO_LIST_TIMEOUT_US           (1000 * USEC_PER_MSEC)
+#define MGMT_RX_REO_AGEOUT_TIMER_PERIOD_MS    (500)
 #define MGMT_RX_REO_STATUS_WAIT_FOR_FRAME_ON_OTHER_LINKS         (BIT(0))
 #define MGMT_RX_REO_STATUS_AGED_OUT                              (BIT(1))
 #define MGMT_RX_REO_STATUS_OLDER_THAN_LATEST_AGED_OUT_FRAME      (BIT(2))
