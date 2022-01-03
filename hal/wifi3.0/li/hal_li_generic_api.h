@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -2386,6 +2386,7 @@ void hal_tx_desc_set_cache_set_num_generic_li(void *desc, uint8_t cache_num)
 }
 #endif
 
+#ifdef WLAN_SUPPORT_RX_FISA
 /**
  * hal_rx_flow_get_tuple_info_li() - Setup a flow search entry in HW FST
  * @fst: Pointer to the Rx Flow Search Table
@@ -2487,4 +2488,24 @@ hal_rx_fst_get_fse_size_li(void)
 {
 	return HAL_RX_FST_ENTRY_SIZE;
 }
+#else
+static void *
+hal_rx_flow_get_tuple_info_li(uint8_t *rx_fst, uint32_t hal_hash,
+			      uint8_t *flow_tuple_info)
+{
+	return NULL;
+}
+
+static QDF_STATUS
+hal_rx_flow_delete_entry_li(uint8_t *rx_fst, void *hal_rx_fse)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static inline uint32_t
+hal_rx_fst_get_fse_size_li(void)
+{
+	return 0;
+}
+#endif /* WLAN_SUPPORT_RX_FISA */
 #endif /* _HAL_LI_GENERIC_API_H_ */
