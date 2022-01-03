@@ -5049,6 +5049,9 @@ typedef enum {
 	wmi_pdev_param_truncate_sr,
 	wmi_pdev_param_ctrl_frame_obss_pd_threshold,
 	wmi_pdev_param_rate_upper_cap,
+	wmi_pdev_param_rate_retry_mcs_drop,
+	wmi_pdev_param_mcs_probe_intvl,
+	wmi_pdev_param_nss_probe_intvl,
 	wmi_pdev_param_max,
 } wmi_conv_pdev_params_id;
 

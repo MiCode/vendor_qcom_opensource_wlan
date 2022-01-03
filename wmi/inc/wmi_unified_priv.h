@@ -2818,6 +2818,15 @@ QDF_STATUS
 QDF_STATUS
 (*send_set_rate_upper_cap_cmd)(wmi_unified_t wmi_handle, uint8_t pdev_id,
 			       struct wmi_rc_params *param);
+QDF_STATUS
+(*send_set_rate_retry_mcs_drop_cmd)(wmi_unified_t wmi_handle, uint8_t pdev_id,
+				    struct wmi_rc_params *param);
+QDF_STATUS
+(*send_set_mcs_probe_intvl_cmd)(wmi_unified_t wmi_handle, uint8_t pdev_id,
+				struct wmi_rc_params *param);
+QDF_STATUS
+(*send_set_nss_probe_intvl_cmd)(wmi_unified_t wmi_handle, uint8_t pdev_id,
+				struct wmi_rc_params *param);
 #endif
 };
 

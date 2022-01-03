@@ -361,6 +361,12 @@ static const uint32_t pdev_param_tlv[] = {
 	[wmi_pdev_param_ctrl_frame_obss_pd_threshold] =
 			WMI_PDEV_PARAM_CTRL_FRAME_OBSS_PD_THRESHOLD,
 	[wmi_pdev_param_rate_upper_cap] = WMI_PDEV_PARAM_RATE_UPPER_CAP,
+	[wmi_pdev_param_rate_retry_mcs_drop] =
+		WMI_PDEV_PARAM_SET_RATE_DROP_DOWN_RETRY_THRESH,
+	[wmi_pdev_param_mcs_probe_intvl] =
+		WMI_PDEV_PARAM_MIN_MAX_MCS_PROBE_INTERVAL,
+	[wmi_pdev_param_nss_probe_intvl] =
+		WMI_PDEV_PARAM_MIN_MAX_NSS_PROBE_INTERVAL,
 };
 
 /**
