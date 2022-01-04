@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2014-2020 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021,2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -243,6 +243,7 @@ enum qdf_bus_type {
  * @drv: Pointer to driver
  * @drv_hdl: Pointer to driver handle
  * @drv_name: Pointer to driver name
+ * @cnss_pdev: Pointer to platform device
  * @irq: IRQ
  * @dev: Pointer to device
  * @res: QDF resource
@@ -257,6 +258,7 @@ struct __qdf_device {
 	void *drv;
 	void *drv_hdl;
 	char *drv_name;
+	void *cnss_pdev;
 	int irq;
 	struct device *dev;
 	__qdf_resource_t res;
