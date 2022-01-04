@@ -3918,7 +3918,7 @@ static inline void dp_tx_sojourn_stats_process(struct dp_pdev *pdev,
 
 	sojourn_stats->cookie = (void *)peer->rdkstats_ctx;
 
-	delta_ms = qdf_ktime_to_ms(qdf_ktime_get()) -
+	delta_ms = qdf_ktime_to_ms(qdf_ktime_real_get()) -
 				txdesc_ts;
 	qdf_ewma_tx_lag_add(&peer->avg_sojourn_msdu[tid],
 			    delta_ms);
