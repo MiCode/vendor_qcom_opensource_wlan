@@ -464,7 +464,9 @@ QDF_STATUS wlan_mlo_mgr_update_mld_addr(struct qdf_mac_addr *old_mac,
 			QDF_MAC_ADDR_REF(old_mac->bytes));
 		return QDF_STATUS_E_INVAL;
 	}
+	mlo_dev_lock_acquire(ml_dev);
 	qdf_copy_macaddr(&ml_dev->mld_addr, new_mac);
+	mlo_dev_lock_release(ml_dev);
 
 	return QDF_STATUS_SUCCESS;
 }
