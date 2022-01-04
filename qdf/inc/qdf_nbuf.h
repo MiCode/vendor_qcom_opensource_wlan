@@ -1134,6 +1134,19 @@ static inline int qdf_nbuf_get_num_frags(qdf_nbuf_t buf)
 }
 
 /**
+ * qdf_nbuf_dma_clean_range() - Clean the specified virtual address range
+ * @buf_start: start address
+ * @buf_end: end address
+ *
+ * Return: none
+ */
+static inline void
+qdf_nbuf_dma_clean_range(const void *buf_start, const void *buf_end)
+{
+	__qdf_nbuf_dma_clean_range(buf_start, buf_end);
+}
+
+/**
  * qdf_nbuf_get_frag_len() - get fragment length
  * @buf: Network buffer
  * @frag_num: Fragment number

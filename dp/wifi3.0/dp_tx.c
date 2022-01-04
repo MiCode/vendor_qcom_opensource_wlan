@@ -1852,6 +1852,49 @@ static inline QDF_STATUS dp_tx_msdu_single_map(struct dp_vdev *vdev,
 }
 #endif
 
+#if defined(QCA_DP_TX_NBUF_NO_MAP_UNMAP) && !defined(BUILD_X86)
+static inline
+qdf_dma_addr_t dp_tx_nbuf_map(struct dp_vdev *vdev,
+			      struct dp_tx_desc_s *tx_desc,
+			      qdf_nbuf_t nbuf)
+{
+	qdf_nbuf_dma_clean_range((void *)nbuf->data,
+				 (void *)(nbuf->data + nbuf->len));
+	return (qdf_dma_addr_t)qdf_mem_virt_to_phys(nbuf->data);
+}
+
+static inline
+void dp_tx_nbuf_unmap(struct dp_soc *soc,
+		      struct dp_tx_desc_s *desc)
+{
+}
+#else
+static inline
+qdf_dma_addr_t dp_tx_nbuf_map(struct dp_vdev *vdev,
+			      struct dp_tx_desc_s *tx_desc,
+			      qdf_nbuf_t nbuf)
+{
+	QDF_STATUS ret = QDF_STATUS_E_FAILURE;
+
+	ret = dp_tx_msdu_single_map(vdev, tx_desc, nbuf);
+	if (qdf_unlikely(QDF_IS_STATUS_ERROR(ret)))
+		return 0;
+
+	return qdf_nbuf_mapped_paddr_get(nbuf);
+}
+
+static inline
+void dp_tx_nbuf_unmap(struct dp_soc *soc,
+		      struct dp_tx_desc_s *desc)
+{
+	qdf_nbuf_unmap_nbytes_single_paddr(soc->osdev,
+					   desc->nbuf,
+					   desc->dma_addr,
+					   QDF_DMA_TO_DEVICE,
+					   desc->length);
+}
+#endif
+
 #ifdef MESH_MODE_SUPPORT
 /**
  * dp_tx_update_mesh_flags() - Update descriptor flags for mesh VAP
@@ -2006,6 +2049,7 @@ dp_tx_send_msdu_single(struct dp_vdev *vdev, qdf_nbuf_t nbuf,
 	enum cdp_tx_sw_drop drop_code = TX_MAX_DROP;
 	uint8_t tid = msdu_info->tid;
 	struct cdp_tid_tx_stats *tid_stats = NULL;
+	qdf_dma_addr_t paddr;
 
 	/* Setup Tx descriptor for an MSDU, and MSDU extension descriptor */
 	tx_desc = dp_tx_prepare_desc_single(vdev, nbuf, tx_q->desc_pool_id,
@@ -2038,8 +2082,8 @@ dp_tx_send_msdu_single(struct dp_vdev *vdev, qdf_nbuf_t nbuf,
 
 	dp_tx_update_mesh_flags(soc, vdev, tx_desc);
 
-	if (qdf_unlikely(QDF_STATUS_SUCCESS !=
-			 dp_tx_msdu_single_map(vdev, tx_desc, nbuf))) {
+	paddr =  dp_tx_nbuf_map(vdev, tx_desc, nbuf);
+	if (!paddr) {
 		/* Handle failure */
 		dp_err("qdf_nbuf_map failed");
 		DP_STATS_INC(vdev, tx_i.dropped.dma_error, 1);
@@ -2047,7 +2091,7 @@ dp_tx_send_msdu_single(struct dp_vdev *vdev, qdf_nbuf_t nbuf,
 		goto release_desc;
 	}
 
-	tx_desc->dma_addr = qdf_nbuf_mapped_paddr_get(tx_desc->nbuf);
+	tx_desc->dma_addr = paddr;
 	dp_tx_desc_history_add(soc, tx_desc->dma_addr, nbuf,
 			       tx_desc->id, DP_TX_DESC_MAP);
 	dp_tx_update_mcast_param(peer_id, &htt_tcl_metadata, vdev, msdu_info);
@@ -4512,11 +4556,7 @@ dp_tx_comp_process_desc_list(struct dp_soc *soc,
 			 */
 			dp_tx_desc_history_add(soc, desc->dma_addr, desc->nbuf,
 					       desc->id, DP_TX_COMP_UNMAP);
-			qdf_nbuf_unmap_nbytes_single_paddr(soc->osdev,
-							   desc->nbuf,
-							   desc->dma_addr,
-							   QDF_DMA_TO_DEVICE,
-							   desc->length);
+			dp_tx_nbuf_unmap(soc, desc);
 			qdf_nbuf_free(desc->nbuf);
 			dp_tx_desc_free(soc, desc, desc->pool_id);
 			desc = next;

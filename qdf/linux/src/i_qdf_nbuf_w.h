@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2014-2022 The Linux Foundation. All rights reserved.
- * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -190,6 +190,11 @@ __qdf_dsb(void)
 #endif
 }
 
+static inline void
+__qdf_nbuf_dma_clean_range(const void *buf_start, const void *buf_end)
+{
+	dmac_clean_range(buf_start, buf_end);
+}
 #elif defined(__LINUX_MIPS32_ARCH__) || defined(__LINUX_MIPS64_ARCH__)
 static inline void
 __qdf_nbuf_dma_inv_range(const void *buf_start, const void *buf_end)
@@ -216,6 +221,13 @@ static inline void
 __qdf_dsb(void)
 {
 }
+
+static inline void
+__qdf_nbuf_dma_clean_range(const void *buf_start, const void *buf_end)
+{
+	dma_cache_wback((unsigned long)buf_start,
+			(unsigned long)(buf_end - buf_start));
+}
 #else
 static inline void
 __qdf_nbuf_dma_inv_range(const void *buf_start, const void *buf_end)
@@ -234,6 +246,11 @@ __qdf_nbuf_dma_clean_range_no_dsb(const void *buf_start, const void *buf_end)
 
 static inline void
 __qdf_dsb(void)
+{
+}
+
+static inline void
+__qdf_nbuf_dma_clean_range(const void *buf_start, const void *buf_end)
 {
 }
 #endif

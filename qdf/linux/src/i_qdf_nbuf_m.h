@@ -212,4 +212,7 @@ __qdf_nbuf_dma_clean_range_no_dsb(const void *buf_start, const void *buf_end) {}
 
 static inline void
 __qdf_dsb(void) {}
+
+static inline void
+__qdf_nbuf_dma_clean_range(const void *buf_start, const void *buf_end) {}
 #endif /*_I_QDF_NBUF_M_H */
