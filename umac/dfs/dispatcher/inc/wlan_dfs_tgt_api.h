@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  *
  * Permission to use, copy, modify, and/or distribute this software for
@@ -236,6 +237,7 @@ static inline QDF_STATUS tgt_dfs_process_radar_ind(
 }
 #endif
 
+#ifdef WLAN_DFS_PARTIAL_OFFLOAD
 /**
  * tgt_dfs_process_phyerr() - Process phyerr.
  * @pdev: Pointer to DFS pdev object.
@@ -256,6 +258,18 @@ QDF_STATUS tgt_dfs_process_phyerr(struct wlan_objmgr_pdev *pdev,
 	uint8_t r_ext_rssi,
 	uint32_t r_rs_tstamp,
 	uint64_t r_fulltsf);
+#else
+static inline QDF_STATUS tgt_dfs_process_phyerr(struct wlan_objmgr_pdev *pdev,
+						void *buf,
+						uint16_t datalen,
+						uint8_t r_rssi,
+						uint8_t r_ext_rssi,
+						uint32_t r_rs_tstamp,
+						uint64_t r_fulltsf)
+{
+	return QDF_STATUS_SUCCESS;
+}
+#endif
 
 /**
  * tgt_dfs_process_phyerr_filter_offload() - Process radar event.

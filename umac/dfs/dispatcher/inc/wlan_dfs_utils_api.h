@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  *
  * Permission to use, copy, modify, and/or distribute this software for
@@ -682,14 +683,6 @@ utils_dfs_can_ignore_radar_event(struct wlan_objmgr_pdev *pdev)
  * Return: DFS domain.
  */
 int utils_get_dfsdomain(struct wlan_objmgr_pdev *pdev);
-
-/**
- * utils_dfs_get_cur_rd() - Get current regdomain.
- * @pdev: pdev ptr
- *
- * Return: Regdomain pair id.
- */
-uint16_t utils_dfs_get_cur_rd(struct wlan_objmgr_pdev *pdev);
 
 /**
  * utils_dfs_is_spoof_check_failed() - get spoof check status.

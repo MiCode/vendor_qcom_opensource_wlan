@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  *
  * Permission to use, copy, modify, and/or distribute this software for
@@ -195,6 +196,7 @@ void tgt_dfs_is_radar_enabled(struct wlan_objmgr_pdev *pdev, int *ignore_dfs)
 
 qdf_export_symbol(tgt_dfs_is_radar_enabled);
 
+#ifdef WLAN_DFS_PARTIAL_OFFLOAD
 QDF_STATUS tgt_dfs_process_phyerr(struct wlan_objmgr_pdev *pdev,
 				  void *buf,
 				  uint16_t datalen,
@@ -222,6 +224,7 @@ QDF_STATUS tgt_dfs_process_phyerr(struct wlan_objmgr_pdev *pdev,
 	return QDF_STATUS_SUCCESS;
 }
 qdf_export_symbol(tgt_dfs_process_phyerr);
+#endif
 
 #ifdef MOBILE_DFS_SUPPORT
 QDF_STATUS tgt_dfs_process_phyerr_filter_offload(struct wlan_objmgr_pdev *pdev,
