@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -648,6 +649,10 @@ bool dp_rx_multipass_process(struct dp_peer *peer, qdf_nbuf_t nbuf, uint8_t tid)
 
 	vethhdrp->h_vlan_TCI = htons(((tid & 0x7) << VLAN_PRIO_SHIFT) |
 		(peer->vlan_id & VLAN_VID_MASK));
+
+	if (vethhdrp->h_vlan_encapsulated_proto == htons(ETHERTYPE_PAE))
+		dp_tx_remove_vlan_tag(peer->vdev, nbuf);
+
 	return true;
 }
 
