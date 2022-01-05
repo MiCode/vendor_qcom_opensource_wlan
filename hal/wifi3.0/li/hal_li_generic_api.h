@@ -2489,14 +2489,14 @@ hal_rx_fst_get_fse_size_li(void)
 	return HAL_RX_FST_ENTRY_SIZE;
 }
 #else
-static void *
+static inline void *
 hal_rx_flow_get_tuple_info_li(uint8_t *rx_fst, uint32_t hal_hash,
 			      uint8_t *flow_tuple_info)
 {
 	return NULL;
 }
 
-static QDF_STATUS
+static inline QDF_STATUS
 hal_rx_flow_delete_entry_li(uint8_t *rx_fst, void *hal_rx_fse)
 {
 	return QDF_STATUS_SUCCESS;
