@@ -2605,6 +2605,7 @@ struct cdp_pdev_stats {
 	/* Rx errors */
 	struct {
 		uint32_t desc_alloc_fail;
+		uint32_t desc_lt_alloc_fail;
 		uint32_t ip_csum_err;
 		uint32_t tcp_udp_csum_err;
 		uint32_t rxdma_error;

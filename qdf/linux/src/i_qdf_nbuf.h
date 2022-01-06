@@ -784,6 +784,8 @@ __qdf_nbuf_t
 __qdf_nbuf_alloc(__qdf_device_t osdev, size_t size, int reserve, int align,
 		 int prio, const char *func, uint32_t line);
 
+__qdf_nbuf_t __qdf_nbuf_alloc_simple(__qdf_device_t osdev, size_t size);
+
 /**
  * __qdf_nbuf_alloc_no_recycler() - Allocates skb
  * @size: Size to be allocated for skb

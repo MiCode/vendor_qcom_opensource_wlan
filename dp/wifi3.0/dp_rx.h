@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2016-2022 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -24,6 +24,7 @@
 #include "dp_peer.h"
 #include "dp_internal.h"
 #include <qdf_tracepoint.h>
+#include "dp_ipa.h"
 
 #ifdef RXDMA_OPTIMIZATION
 #ifndef RX_DATA_BUFFER_ALIGNMENT
@@ -1359,6 +1360,69 @@ QDF_STATUS __dp_rx_buffers_replenish(struct dp_soc *dp_soc, uint32_t mac_id,
 				 union dp_rx_desc_list_elem_t **desc_list,
 				 union dp_rx_desc_list_elem_t **tail,
 				 const char *func_name);
+/*
+ * __dp_rx_buffers_no_map_replenish() - replenish rxdma ring with rx nbufs
+ *					use direct APIs to get invalidate
+ *					and get the physical address of the
+ *					nbuf instead of map api,called during
+ *					dp rx initialization and at the end
+ *					of dp_rx_process.
+ *
+ * @soc: core txrx main context
+ * @mac_id: mac_id which is one of 3 mac_ids
+ * @dp_rxdma_srng: dp rxdma circular ring
+ * @rx_desc_pool: Pointer to free Rx descriptor pool
+ * @num_req_buffers: number of buffer to be replenished
+ * @desc_list: list of descs if called from dp_rx_process
+ *	       or NULL during dp rx initialization or out of buffer
+ *	       interrupt.
+ * @tail: tail of descs list
+ * Return: return success or failure
+ */
+QDF_STATUS
+__dp_rx_buffers_no_map_replenish(struct dp_soc *dp_soc, uint32_t mac_id,
+				 struct dp_srng *dp_rxdma_srng,
+				 struct rx_desc_pool *rx_desc_pool,
+				 uint32_t num_req_buffers,
+				 union dp_rx_desc_list_elem_t **desc_list,
+				 union dp_rx_desc_list_elem_t **tail);
+
+/*
+ * __dp_rx_buffers_no_map__lt_replenish() - replenish rxdma ring with rx nbufs
+ *					use direct APIs to get invalidate
+ *					and get the physical address of the
+ *					nbuf instead of map api,called when
+ *					low threshold interrupt is triggered
+ *
+ * @soc: core txrx main context
+ * @mac_id: mac_id which is one of 3 mac_ids
+ * @dp_rxdma_srng: dp rxdma circular ring
+ * @rx_desc_pool: Pointer to free Rx descriptor pool
+ * Return: return success or failure
+ */
+QDF_STATUS
+__dp_rx_buffers_no_map_lt_replenish(struct dp_soc *dp_soc, uint32_t mac_id,
+				    struct dp_srng *dp_rxdma_srng,
+				    struct rx_desc_pool *rx_desc_pool);
+/*
+ * __dp_pdev_rx_buffers_no_map_attach() - replenish rxdma ring with rx nbufs
+ *					use direct APIs to get invalidate
+ *					and get the physical address of the
+ *					nbuf instead of map api,called during
+ *					dp rx initialization.
+ *
+ * @soc: core txrx main context
+ * @mac_id: mac_id which is one of 3 mac_ids
+ * @dp_rxdma_srng: dp rxdma circular ring
+ * @rx_desc_pool: Pointer to free Rx descriptor pool
+ * @num_req_buffers: number of buffer to be replenished
+ * Return: return success or failure
+ */
+QDF_STATUS __dp_pdev_rx_buffers_no_map_attach(struct dp_soc *dp_soc,
+					      uint32_t mac_id,
+					      struct dp_srng *dp_rxdma_srng,
+					      struct rx_desc_pool *rx_desc_pool,
+					      uint32_t num_req_buffers);
 
 /*
  * dp_pdev_rx_buffers_attach() - replenish rxdma ring with rx nbufs
@@ -2091,4 +2155,191 @@ bool dp_rx_pkt_tracepoints_enabled(void)
 		qdf_trace_dp_rx_udp_pkt_enabled() ||
 		qdf_trace_dp_rx_pkt_enabled());
 }
+
+#if defined(QCA_DP_RX_NBUF_NO_MAP_UNMAP) && !defined(BUILD_X86)
+static inline
+QDF_STATUS dp_pdev_rx_buffers_attach_simple(struct dp_soc *soc, uint32_t mac_id,
+					    struct dp_srng *rxdma_srng,
+					    struct rx_desc_pool *rx_desc_pool,
+					    uint32_t num_req_buffers)
+{
+	return __dp_pdev_rx_buffers_no_map_attach(soc, mac_id,
+						  rxdma_srng,
+						  rx_desc_pool,
+						  num_req_buffers);
+}
+
+static inline
+void dp_rx_buffers_replenish_simple(struct dp_soc *soc, uint32_t mac_id,
+				    struct dp_srng *rxdma_srng,
+				    struct rx_desc_pool *rx_desc_pool,
+				    uint32_t num_req_buffers,
+				    union dp_rx_desc_list_elem_t **desc_list,
+				    union dp_rx_desc_list_elem_t **tail)
+{
+	__dp_rx_buffers_no_map_replenish(soc, mac_id, rxdma_srng, rx_desc_pool,
+					 num_req_buffers, desc_list, tail);
+}
+
+static inline
+void dp_rx_buffers_lt_replenish_simple(struct dp_soc *soc, uint32_t mac_id,
+				       struct dp_srng *rxdma_srng,
+				       struct rx_desc_pool *rx_desc_pool,
+				       uint32_t num_req_buffers,
+				       union dp_rx_desc_list_elem_t **desc_list,
+				       union dp_rx_desc_list_elem_t **tail)
+{
+	__dp_rx_buffers_no_map_lt_replenish(soc, mac_id, rxdma_srng,
+					    rx_desc_pool);
+}
+
+static inline
+qdf_dma_addr_t dp_rx_nbuf_sync_no_dsb(struct dp_soc *dp_soc,
+				      qdf_nbuf_t nbuf,
+				      uint32_t buf_size)
+{
+	qdf_nbuf_dma_inv_range_no_dsb((void *)nbuf->data,
+				      (void *)(nbuf->data + buf_size));
+
+	return (qdf_dma_addr_t)qdf_mem_virt_to_phys(nbuf->data);
+}
+
+static inline
+qdf_dma_addr_t dp_rx_nbuf_sync(struct dp_soc *dp_soc,
+			       qdf_nbuf_t nbuf,
+			       uint32_t buf_size)
+{
+	qdf_nbuf_dma_inv_range((void *)nbuf->data,
+			       (void *)(nbuf->data + buf_size));
+
+	return (qdf_dma_addr_t)qdf_mem_virt_to_phys(nbuf->data);
+}
+
+#if !defined(SPECULATIVE_READ_DISABLED)
+static inline
+void dp_rx_nbuf_unmap(struct dp_soc *soc,
+		      struct dp_rx_desc *rx_desc,
+		      uint8_t reo_ring_num)
+{
+	struct rx_desc_pool *rx_desc_pool;
+	qdf_nbuf_t nbuf;
+
+	rx_desc_pool = &soc->rx_desc_buf[rx_desc->pool_id];
+	nbuf = rx_desc->nbuf;
+
+	qdf_nbuf_dma_inv_range((void *)nbuf->data,
+			       (void *)(nbuf->data + rx_desc_pool->buf_size));
+}
+#else
+static inline
+void dp_rx_nbuf_unmap(struct dp_soc *soc,
+		      struct dp_rx_desc *rx_desc,
+		      uint8_t reo_ring_num)
+{
+}
+#endif
+
+static inline
+void dp_rx_per_core_stats_update(struct dp_soc *soc, uint8_t ring_id,
+				 uint32_t bufs_reaped)
+{
+}
+
+static inline
+qdf_nbuf_t dp_rx_nbuf_alloc(struct dp_soc *soc,
+			    struct rx_desc_pool *rx_desc_pool)
+{
+	return qdf_nbuf_alloc_simple(soc->osdev, rx_desc_pool->buf_size);
+}
+
+#else
+static inline
+QDF_STATUS dp_pdev_rx_buffers_attach_simple(struct dp_soc *soc, uint32_t mac_id,
+					    struct dp_srng *rxdma_srng,
+					    struct rx_desc_pool *rx_desc_pool,
+					    uint32_t num_req_buffers)
+{
+	return dp_pdev_rx_buffers_attach(soc, mac_id,
+					 rxdma_srng,
+					 rx_desc_pool,
+					 num_req_buffers);
+}
+
+static inline
+void dp_rx_buffers_replenish_simple(struct dp_soc *soc, uint32_t mac_id,
+				    struct dp_srng *rxdma_srng,
+				    struct rx_desc_pool *rx_desc_pool,
+				    uint32_t num_req_buffers,
+				    union dp_rx_desc_list_elem_t **desc_list,
+				    union dp_rx_desc_list_elem_t **tail)
+{
+	dp_rx_buffers_replenish(soc, mac_id, rxdma_srng, rx_desc_pool,
+				num_req_buffers, desc_list, tail);
+}
+
+static inline
+void dp_rx_buffers_lt_replenish_simple(struct dp_soc *soc, uint32_t mac_id,
+				       struct dp_srng *rxdma_srng,
+				       struct rx_desc_pool *rx_desc_pool,
+				       uint32_t num_req_buffers,
+				       union dp_rx_desc_list_elem_t **desc_list,
+				       union dp_rx_desc_list_elem_t **tail)
+{
+	dp_rx_buffers_replenish(soc, mac_id, rxdma_srng, rx_desc_pool,
+				num_req_buffers, desc_list, tail);
+}
+
+static inline
+qdf_dma_addr_t dp_rx_nbuf_sync_no_dsb(struct dp_soc *dp_soc,
+				      qdf_nbuf_t nbuf,
+				      uint32_t buf_size)
+{
+	return (qdf_dma_addr_t)NULL;
+}
+
+static inline
+qdf_dma_addr_t dp_rx_nbuf_sync(struct dp_soc *dp_soc,
+			       qdf_nbuf_t nbuf,
+			       uint32_t buf_size)
+{
+	return (qdf_dma_addr_t)NULL;
+}
+
+static inline
+void dp_rx_nbuf_unmap(struct dp_soc *soc,
+		      struct dp_rx_desc *rx_desc,
+		      uint8_t reo_ring_num)
+{
+	struct rx_desc_pool *rx_desc_pool;
+
+	rx_desc_pool = &soc->rx_desc_buf[rx_desc->pool_id];
+	dp_ipa_reo_ctx_buf_mapping_lock(soc, reo_ring_num);
+	dp_ipa_handle_rx_buf_smmu_mapping(soc, rx_desc->nbuf,
+					  rx_desc_pool->buf_size,
+					  false);
+
+	qdf_nbuf_unmap_nbytes_single(soc->osdev, rx_desc->nbuf,
+				     QDF_DMA_FROM_DEVICE,
+				     rx_desc_pool->buf_size);
+
+	dp_ipa_reo_ctx_buf_mapping_unlock(soc, reo_ring_num);
+}
+
+static inline
+void dp_rx_per_core_stats_update(struct dp_soc *soc, uint8_t ring_id,
+				 uint32_t bufs_reaped)
+{
+	DP_STATS_INC(soc,
+		     rx.ring_packets[smp_processor_id()][ring_id], bufs_reaped);
+}
+
+static inline
+qdf_nbuf_t dp_rx_nbuf_alloc(struct dp_soc *soc,
+			    struct rx_desc_pool *rx_desc_pool)
+{
+	return qdf_nbuf_alloc(soc->osdev, rx_desc_pool->buf_size,
+			      RX_BUFFER_RESERVATION,
+			      rx_desc_pool->buf_alignment, FALSE);
+}
+#endif
 #endif /* _DP_RX_H */

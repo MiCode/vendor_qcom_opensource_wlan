@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2016-2022 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -266,6 +266,300 @@ dp_pdev_nbuf_alloc_and_map_replenish(struct dp_soc *dp_soc,
 
 	return QDF_STATUS_SUCCESS;
 }
+
+#if defined(QCA_DP_RX_NBUF_NO_MAP_UNMAP) && !defined(BUILD_X86)
+QDF_STATUS
+__dp_rx_buffers_no_map_lt_replenish(struct dp_soc *soc, uint32_t mac_id,
+				    struct dp_srng *dp_rxdma_srng,
+				    struct rx_desc_pool *rx_desc_pool)
+{
+	struct dp_pdev *dp_pdev = dp_get_pdev_for_lmac_id(soc, mac_id);
+	uint32_t count;
+	void *rxdma_ring_entry;
+	union dp_rx_desc_list_elem_t *next = NULL;
+	void *rxdma_srng;
+	qdf_nbuf_t nbuf;
+	qdf_dma_addr_t paddr;
+	uint16_t num_entries_avail = 0;
+	uint16_t num_alloc_desc = 0;
+	union dp_rx_desc_list_elem_t *desc_list = NULL;
+	union dp_rx_desc_list_elem_t *tail = NULL;
+	int sync_hw_ptr = 0;
+
+	rxdma_srng = dp_rxdma_srng->hal_srng;
+
+	if (qdf_unlikely(!dp_pdev)) {
+		dp_rx_err("%pK: pdev is null for mac_id = %d", soc, mac_id);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	if (qdf_unlikely(!rxdma_srng)) {
+		dp_rx_debug("%pK: rxdma srng not initialized", soc);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	hal_srng_access_start(soc->hal_soc, rxdma_srng);
+
+	num_entries_avail = hal_srng_src_num_avail(soc->hal_soc,
+						   rxdma_srng,
+						   sync_hw_ptr);
+
+	dp_rx_debug("%pK: no of available entries in rxdma ring: %d",
+		    soc, num_entries_avail);
+
+	if (qdf_unlikely(num_entries_avail <
+			 ((dp_rxdma_srng->num_entries * 3) / 4))) {
+		hal_srng_access_end(soc->hal_soc, rxdma_srng);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	DP_STATS_INC(dp_pdev, replenish.low_thresh_intrs, 1);
+
+	num_alloc_desc = dp_rx_get_free_desc_list(soc, mac_id,
+						  rx_desc_pool,
+						  num_entries_avail,
+						  &desc_list,
+						  &tail);
+
+	if (!num_alloc_desc) {
+		dp_rx_err("%pK: no free rx_descs in freelist", soc);
+		DP_STATS_INC(dp_pdev, err.desc_lt_alloc_fail,
+			     num_entries_avail);
+		hal_srng_access_end(soc->hal_soc, rxdma_srng);
+		return QDF_STATUS_E_NOMEM;
+	}
+
+	for (count = 0; count < num_alloc_desc; count++) {
+		next = desc_list->next;
+		qdf_prefetch(next);
+		nbuf = dp_rx_nbuf_alloc(soc, rx_desc_pool);
+		if (qdf_unlikely(!nbuf)) {
+			DP_STATS_INC(dp_pdev, replenish.nbuf_alloc_fail, 1);
+			break;
+		}
+
+		paddr = dp_rx_nbuf_sync_no_dsb(soc, nbuf,
+					       rx_desc_pool->buf_size);
+
+		rxdma_ring_entry = hal_srng_src_get_next(soc->hal_soc,
+							 rxdma_srng);
+		qdf_assert_always(rxdma_ring_entry);
+
+		desc_list->rx_desc.nbuf = nbuf;
+		desc_list->rx_desc.rx_buf_start = nbuf->data;
+		desc_list->rx_desc.unmapped = 0;
+
+		/* rx_desc.in_use should be zero at this time*/
+		qdf_assert_always(desc_list->rx_desc.in_use == 0);
+
+		desc_list->rx_desc.in_use = 1;
+		desc_list->rx_desc.in_err_state = 0;
+
+		hal_rxdma_buff_addr_info_set(soc->hal_soc, rxdma_ring_entry,
+					     paddr,
+					     desc_list->rx_desc.cookie,
+					     rx_desc_pool->owner);
+
+		desc_list = next;
+	}
+	qdf_dsb();
+	hal_srng_access_end(soc->hal_soc, rxdma_srng);
+
+	/* No need to count the number of bytes received during replenish.
+	 * Therefore set replenish.pkts.bytes as 0.
+	 */
+	DP_STATS_INC_PKT(dp_pdev, replenish.pkts, count, 0);
+	DP_STATS_INC(dp_pdev, buf_freelist, (num_alloc_desc - count));
+	/*
+	 * add any available free desc back to the free list
+	 */
+	if (desc_list)
+		dp_rx_add_desc_list_to_free_list(soc, &desc_list, &tail,
+						 mac_id, rx_desc_pool);
+
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS
+__dp_rx_buffers_no_map_replenish(struct dp_soc *soc, uint32_t mac_id,
+				 struct dp_srng *dp_rxdma_srng,
+				 struct rx_desc_pool *rx_desc_pool,
+				 uint32_t num_req_buffers,
+				 union dp_rx_desc_list_elem_t **desc_list,
+				 union dp_rx_desc_list_elem_t **tail)
+{
+	struct dp_pdev *dp_pdev = dp_get_pdev_for_lmac_id(soc, mac_id);
+	uint32_t count;
+	void *rxdma_ring_entry;
+	union dp_rx_desc_list_elem_t *next;
+	void *rxdma_srng;
+	qdf_nbuf_t nbuf;
+	qdf_dma_addr_t paddr;
+
+	rxdma_srng = dp_rxdma_srng->hal_srng;
+
+	if (qdf_unlikely(!dp_pdev)) {
+		dp_rx_err("%pK: pdev is null for mac_id = %d",
+			  soc, mac_id);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	if (qdf_unlikely(!rxdma_srng)) {
+		dp_rx_debug("%pK: rxdma srng not initialized", soc);
+		DP_STATS_INC(dp_pdev, replenish.rxdma_err, num_req_buffers);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	dp_rx_debug("%pK: requested %d buffers for replenish",
+		    soc, num_req_buffers);
+
+	hal_srng_access_start(soc->hal_soc, rxdma_srng);
+
+	for (count = 0; count < num_req_buffers; count++) {
+		next = (*desc_list)->next;
+		qdf_prefetch(next);
+		nbuf = dp_rx_nbuf_alloc(soc, rx_desc_pool);
+		if (qdf_unlikely(!nbuf)) {
+			DP_STATS_INC(dp_pdev, replenish.nbuf_alloc_fail, 1);
+			break;
+		}
+
+		paddr = dp_rx_nbuf_sync_no_dsb(soc, nbuf,
+					       rx_desc_pool->buf_size);
+		rxdma_ring_entry = (struct dp_buffer_addr_info *)
+			hal_srng_src_get_next(soc->hal_soc, rxdma_srng);
+		if (!rxdma_ring_entry)
+			break;
+
+		qdf_assert_always(rxdma_ring_entry);
+
+		(*desc_list)->rx_desc.nbuf = nbuf;
+		(*desc_list)->rx_desc.rx_buf_start = nbuf->data;
+		(*desc_list)->rx_desc.unmapped = 0;
+
+		/* rx_desc.in_use should be zero at this time*/
+		qdf_assert_always((*desc_list)->rx_desc.in_use == 0);
+
+		(*desc_list)->rx_desc.in_use = 1;
+		(*desc_list)->rx_desc.in_err_state = 0;
+
+		hal_rxdma_buff_addr_info_set(soc->hal_soc, rxdma_ring_entry,
+					     paddr,
+					     (*desc_list)->rx_desc.cookie,
+					     rx_desc_pool->owner);
+
+		*desc_list = next;
+	}
+	qdf_dsb();
+	hal_srng_access_end(soc->hal_soc, rxdma_srng);
+
+	/* No need to count the number of bytes received during replenish.
+	 * Therefore set replenish.pkts.bytes as 0.
+	 */
+	DP_STATS_INC_PKT(dp_pdev, replenish.pkts, count, 0);
+	DP_STATS_INC(dp_pdev, buf_freelist, (num_req_buffers - count));
+	/*
+	 * add any available free desc back to the free list
+	 */
+	if (*desc_list)
+		dp_rx_add_desc_list_to_free_list(soc, desc_list, tail,
+						 mac_id, rx_desc_pool);
+
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS __dp_pdev_rx_buffers_no_map_attach(struct dp_soc *soc,
+					      uint32_t mac_id,
+					      struct dp_srng *dp_rxdma_srng,
+					      struct rx_desc_pool *rx_desc_pool,
+					      uint32_t num_req_buffers)
+{
+	struct dp_pdev *dp_pdev = dp_get_pdev_for_lmac_id(soc, mac_id);
+	uint32_t count;
+	uint32_t nr_descs = 0;
+	void *rxdma_ring_entry;
+	union dp_rx_desc_list_elem_t *next;
+	void *rxdma_srng;
+	qdf_nbuf_t nbuf;
+	qdf_dma_addr_t paddr;
+	union dp_rx_desc_list_elem_t *desc_list = NULL;
+	union dp_rx_desc_list_elem_t *tail = NULL;
+
+	rxdma_srng = dp_rxdma_srng->hal_srng;
+
+	if (qdf_unlikely(!dp_pdev)) {
+		dp_rx_err("%pK: pdev is null for mac_id = %d",
+			  soc, mac_id);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	if (qdf_unlikely(!rxdma_srng)) {
+		dp_rx_debug("%pK: rxdma srng not initialized", soc);
+		DP_STATS_INC(dp_pdev, replenish.rxdma_err, num_req_buffers);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	dp_rx_debug("%pK: requested %d buffers for replenish",
+		    soc, num_req_buffers);
+
+	nr_descs = dp_rx_get_free_desc_list(soc, mac_id, rx_desc_pool,
+					    num_req_buffers, &desc_list, &tail);
+	if (!nr_descs) {
+		dp_err("no free rx_descs in freelist");
+		DP_STATS_INC(dp_pdev, err.desc_alloc_fail, num_req_buffers);
+		return QDF_STATUS_E_NOMEM;
+	}
+
+	dp_debug("got %u RX descs for driver attach", nr_descs);
+
+	hal_srng_access_start(soc->hal_soc, rxdma_srng);
+
+	for (count = 0; count < nr_descs; count++) {
+		next = desc_list->next;
+		qdf_prefetch(next);
+		nbuf = dp_rx_nbuf_alloc(soc, rx_desc_pool);
+		if (qdf_unlikely(!nbuf)) {
+			DP_STATS_INC(dp_pdev, replenish.nbuf_alloc_fail, 1);
+			break;
+		}
+
+		paddr = dp_rx_nbuf_sync_no_dsb(soc, nbuf,
+					       rx_desc_pool->buf_size);
+		rxdma_ring_entry = (struct dp_buffer_addr_info *)
+			hal_srng_src_get_next(soc->hal_soc, rxdma_srng);
+		if (!rxdma_ring_entry)
+			break;
+
+		qdf_assert_always(rxdma_ring_entry);
+
+		desc_list->rx_desc.nbuf = nbuf;
+		desc_list->rx_desc.rx_buf_start = nbuf->data;
+		desc_list->rx_desc.unmapped = 0;
+
+		/* rx_desc.in_use should be zero at this time*/
+		qdf_assert_always(desc_list->rx_desc.in_use == 0);
+
+		desc_list->rx_desc.in_use = 1;
+		desc_list->rx_desc.in_err_state = 0;
+
+		hal_rxdma_buff_addr_info_set(soc->hal_soc, rxdma_ring_entry,
+					     paddr,
+					     desc_list->rx_desc.cookie,
+					     rx_desc_pool->owner);
+
+		desc_list = next;
+	}
+	qdf_dsb();
+	hal_srng_access_end(soc->hal_soc, rxdma_srng);
+
+	/* No need to count the number of bytes received during replenish.
+	 * Therefore set replenish.pkts.bytes as 0.
+	 */
+	DP_STATS_INC_PKT(dp_pdev, replenish.pkts, count, 0);
+
+	return QDF_STATUS_SUCCESS;
+}
+#endif
 
 /*
  * dp_rx_buffers_replenish() - replenish rxdma ring with rx nbufs
@@ -2510,8 +2804,10 @@ dp_rx_pdev_buffers_alloc(struct dp_pdev *pdev)
 	 */
 	dp_rx_buffer_pool_init(soc, mac_for_pdev);
 
-	return dp_pdev_rx_buffers_attach(soc, mac_for_pdev, dp_rxdma_srng,
-					 rx_desc_pool, rxdma_entries - 1);
+	return dp_pdev_rx_buffers_attach_simple(soc, mac_for_pdev,
+						dp_rxdma_srng,
+						rx_desc_pool,
+						rxdma_entries - 1);
 }
 
 /*

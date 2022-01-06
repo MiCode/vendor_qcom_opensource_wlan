@@ -1094,6 +1094,40 @@ qdf_nbuf_dma_inv_range(const void *buf_start, const void *buf_end)
 	__qdf_nbuf_dma_inv_range(buf_start, buf_end);
 }
 
+/**
+ * qdf_nbuf_dma_inv_range_no_dsb() - barrierless Invalidate the specified
+ *				     virtual address range
+ * @buf_start: start address
+ * @buf_end: end address
+ *
+ * Return: none
+ */
+static inline void
+qdf_nbuf_dma_inv_range_no_dsb(const void *buf_start, const void *buf_end)
+{
+	__qdf_nbuf_dma_inv_range_no_dsb(buf_start, buf_end);
+}
+
+/**
+ * qdf_nbuf_dma_clean_range_no_dsb() - barrierless clean the specified
+ *				       virtual address range
+ * @buf_start: start address
+ * @buf_end: end address
+ *
+ * Return: none
+ */
+static inline void
+qdf_nbuf_dma_clean_range_no_dsb(const void *buf_start, const void *buf_end)
+{
+	__qdf_nbuf_dma_clean_range_no_dsb(buf_start, buf_end);
+}
+
+static inline void
+qdf_dsb(void)
+{
+	__qdf_dsb();
+}
+
 static inline int qdf_nbuf_get_num_frags(qdf_nbuf_t buf)
 {
 	return __qdf_nbuf_get_num_frags(buf);
@@ -1662,6 +1696,9 @@ void qdf_net_buf_debug_acquire_skb(qdf_nbuf_t net_buf,
 void qdf_net_buf_debug_release_skb(qdf_nbuf_t net_buf);
 
 /* nbuf allocation rouines */
+
+#define qdf_nbuf_alloc_simple(d, s) \
+	__qdf_nbuf_alloc_simple(d, s)
 
 #define qdf_nbuf_alloc(d, s, r, a, p) \
 	qdf_nbuf_alloc_debug(d, s, r, a, p, __func__, __LINE__)

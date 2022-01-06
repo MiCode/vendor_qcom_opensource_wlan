@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -504,16 +504,8 @@ more_data:
 		 * move unmap after scattered msdu waiting break logic
 		 * in case double skb unmap happened.
 		 */
-		rx_desc_pool = &soc->rx_desc_buf[rx_desc->pool_id];
-		dp_ipa_reo_ctx_buf_mapping_lock(soc, reo_ring_num);
-		dp_ipa_handle_rx_buf_smmu_mapping(soc, rx_desc->nbuf,
-						  rx_desc_pool->buf_size,
-						  false);
-		qdf_nbuf_unmap_nbytes_single(soc->osdev, rx_desc->nbuf,
-					     QDF_DMA_FROM_DEVICE,
-					     rx_desc_pool->buf_size);
+		dp_rx_nbuf_unmap(soc, rx_desc, reo_ring_num);
 		rx_desc->unmapped = 1;
-		dp_ipa_reo_ctx_buf_mapping_unlock(soc, reo_ring_num);
 		DP_RX_PROCESS_NBUF(soc, nbuf_head, nbuf_tail, ebuf_head,
 				   ebuf_tail, rx_desc);
 		/*
@@ -547,9 +539,7 @@ more_data:
 done:
 	dp_rx_srng_access_end(int_ctx, soc, hal_ring_hdl);
 
-	DP_STATS_INCC(soc,
-		      rx.ring_packets[qdf_get_smp_processor_id()][reo_ring_num],
-		      num_rx_bufs_reaped, num_rx_bufs_reaped);
+	dp_rx_per_core_stats_update(soc, reo_ring_num, num_rx_bufs_reaped);
 
 	for (mac_id = 0; mac_id < MAX_PDEV_CNT; mac_id++) {
 		/*
@@ -563,9 +553,10 @@ done:
 
 		rx_desc_pool = &soc->rx_desc_buf[mac_id];
 
-		dp_rx_buffers_replenish(soc, mac_id, dp_rxdma_srng,
-					rx_desc_pool, rx_bufs_reaped[mac_id],
-					&head[mac_id], &tail[mac_id]);
+		dp_rx_buffers_replenish_simple(soc, mac_id, dp_rxdma_srng,
+					       rx_desc_pool,
+					       rx_bufs_reaped[mac_id],
+					       &head[mac_id], &tail[mac_id]);
 	}
 
 	dp_verbose_debug("replenished %u\n", rx_bufs_reaped[0]);
@@ -849,9 +840,6 @@ done:
 		if (qdf_likely(vdev->rx_decap_type ==
 			       htt_cmn_pkt_type_ethernet) &&
 		    qdf_likely(!vdev->mesh_vdev)) {
-			/* WDS Destination Address Learning */
-			dp_rx_da_learn(soc, rx_tlv_hdr, peer, nbuf);
-
 			/* Due to HW issue, sometimes we see that the sa_idx
 			 * and da_idx are invalid with sa_valid and da_valid
 			 * bits set

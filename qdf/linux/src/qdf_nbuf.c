@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2014-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2014-2022 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -595,6 +595,37 @@ skb_alloc:
 	return skb;
 }
 #else
+
+struct sk_buff *__qdf_nbuf_alloc_simple(qdf_device_t osdev, size_t size)
+{
+	struct sk_buff *skb;
+	int flags = GFP_KERNEL;
+
+	if (in_interrupt() || irqs_disabled() || in_atomic()) {
+		flags = GFP_ATOMIC;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0)
+		/*
+		 * Observed that kcompactd burns out CPU to make order-3 page.
+		 *__netdev_alloc_skb has 4k page fallback option just in case of
+		 * failing high order page allocation so we don't need to be
+		 * hard. Make kcompactd rest in piece.
+		 */
+		flags = flags & ~__GFP_KSWAPD_RECLAIM;
+#endif
+	}
+
+	skb = __netdev_alloc_skb(NULL, size, flags);
+
+	if (skb)
+		qdf_nbuf_count_inc(skb);
+	else
+		return NULL;
+
+	return skb;
+}
+
+qdf_export_symbol(__qdf_nbuf_alloc_simple);
+
 struct sk_buff *__qdf_nbuf_alloc(qdf_device_t osdev, size_t size, int reserve,
 				 int align, int prio, const char *func,
 				 uint32_t line)
