@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2013-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -34,6 +34,7 @@
 #include <cdp_txrx_flow_ctrl_v2.h>
 #include <cdp_txrx_peer_ops.h>
 #endif
+#include <qal_vbus_dev.h>
 
 #define IPA_SPS_DESC_SIZE 8
 static struct wlan_ipa_priv *gp_ipa;
@@ -746,7 +747,7 @@ static bool is_rx_dest_bridge_dev(struct wlan_ipa_iface_context *iface_ctx,
 	if (!netif_is_bridge_port(ndev))
 		return false;
 
-	rcu_read_lock();
+	qal_vbus_rcu_read_lock();
 
 	master_ndev = netdev_master_upper_dev_get_rcu(ndev);
 	if (!master_ndev) {
@@ -763,7 +764,7 @@ static bool is_rx_dest_bridge_dev(struct wlan_ipa_iface_context *iface_ctx,
 	ret = true;
 
 out:
-	rcu_read_unlock();
+	qal_vbus_rcu_read_unlock();
 	return ret;
 }
 #else /* !MDM_PLATFORM */
