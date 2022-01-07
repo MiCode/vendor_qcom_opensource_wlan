@@ -2825,7 +2825,7 @@ QDF_STATUS reg_get_phybitmap(struct wlan_objmgr_pdev *pdev,
 	return QDF_STATUS_SUCCESS;
 }
 
-QDF_STATUS reg_modify_pdev_chan_range(struct wlan_objmgr_pdev *pdev)
+QDF_STATUS reg_update_channel_ranges(struct wlan_objmgr_pdev *pdev)
 {
 	struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj;
 	struct wlan_regulatory_psoc_priv_obj *psoc_priv_obj;
@@ -2833,13 +2833,12 @@ QDF_STATUS reg_modify_pdev_chan_range(struct wlan_objmgr_pdev *pdev)
 	struct wlan_lmac_if_reg_tx_ops *reg_tx_ops;
 	struct wlan_psoc_host_hal_reg_capabilities_ext *reg_cap_ptr;
 	uint32_t cnt;
-	uint32_t phy_id;
-	enum direction dir;
+	uint8_t phy_id;
+	uint8_t pdev_id;
 	QDF_STATUS status = QDF_STATUS_SUCCESS;
-	struct target_pdev_info *tgt_pdev;
 
-	tgt_pdev = wlan_pdev_get_tgt_if_handle(pdev);
-	phy_id = (uint32_t)target_pdev_get_phy_idx(tgt_pdev);
+	pdev_id = wlan_objmgr_pdev_get_pdev_id(pdev);
+
 	pdev_priv_obj = reg_get_pdev_obj(pdev);
 	if (!IS_VALID_PDEV_REG_OBJ(pdev_priv_obj)) {
 		reg_err("pdev reg component is NULL");
@@ -2851,6 +2850,12 @@ QDF_STATUS reg_modify_pdev_chan_range(struct wlan_objmgr_pdev *pdev)
 		reg_err("psoc is NULL");
 		return QDF_STATUS_E_INVAL;
 	}
+
+	reg_tx_ops = reg_get_psoc_tx_ops(psoc);
+	if (reg_tx_ops->get_phy_id_from_pdev_id)
+		reg_tx_ops->get_phy_id_from_pdev_id(psoc, pdev_id, &phy_id);
+	else
+		phy_id = pdev_id;
 
 	psoc_priv_obj = reg_get_psoc_obj(psoc);
 	if (!IS_VALID_PSOC_REG_OBJ(psoc_priv_obj)) {
@@ -2877,18 +2882,51 @@ QDF_STATUS reg_modify_pdev_chan_range(struct wlan_objmgr_pdev *pdev)
 		reg_err("extended capabilities not found for pdev");
 		return QDF_STATUS_E_FAULT;
 	}
+	pdev_priv_obj->range_2g_low = reg_cap_ptr->low_2ghz_chan;
+	pdev_priv_obj->range_2g_high = reg_cap_ptr->high_2ghz_chan;
+	pdev_priv_obj->range_5g_low = reg_cap_ptr->low_5ghz_chan;
+	pdev_priv_obj->range_5g_high = reg_cap_ptr->high_5ghz_chan;
+	pdev_priv_obj->wireless_modes = reg_cap_ptr->wireless_modes;
+
+	return status;
+}
+
+QDF_STATUS reg_modify_pdev_chan_range(struct wlan_objmgr_pdev *pdev)
+{
+	struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj;
+	struct wlan_regulatory_psoc_priv_obj *psoc_priv_obj;
+	struct wlan_objmgr_psoc *psoc;
+	struct wlan_lmac_if_reg_tx_ops *reg_tx_ops;
+	enum direction dir;
+	QDF_STATUS status;
+
+	status = reg_update_channel_ranges(pdev);
+	if (status != QDF_STATUS_SUCCESS)
+		return status;
+
+	pdev_priv_obj = reg_get_pdev_obj(pdev);
+	if (!IS_VALID_PDEV_REG_OBJ(pdev_priv_obj)) {
+		reg_err("pdev reg component is NULL");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	psoc = wlan_pdev_get_psoc(pdev);
+	if (!psoc) {
+		reg_err("psoc is NULL");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	psoc_priv_obj = reg_get_psoc_obj(psoc);
+	if (!IS_VALID_PSOC_REG_OBJ(psoc_priv_obj)) {
+		reg_err("psoc reg component is NULL");
+		return QDF_STATUS_E_INVAL;
+	}
 
 	if (psoc_priv_obj->offload_enabled) {
 		dir = NORTHBOUND;
 	} else {
 		dir = SOUTHBOUND;
 	}
-
-	pdev_priv_obj->range_2g_low = reg_cap_ptr->low_2ghz_chan;
-	pdev_priv_obj->range_2g_high = reg_cap_ptr->high_2ghz_chan;
-	pdev_priv_obj->range_5g_low = reg_cap_ptr->low_5ghz_chan;
-	pdev_priv_obj->range_5g_high = reg_cap_ptr->high_5ghz_chan;
-	pdev_priv_obj->wireless_modes = reg_cap_ptr->wireless_modes;
 
 	reg_compute_pdev_current_chan_list(pdev_priv_obj);
 

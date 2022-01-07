@@ -2536,6 +2536,7 @@ void reg_propagate_mas_chan_list_to_pdev(struct wlan_objmgr_psoc *psoc,
 		psoc_priv_obj->chan_list_recvd[phy_id];
 
 	reg_update_max_phymode_chwidth_for_pdev(pdev);
+	reg_update_channel_ranges(pdev);
 	reg_compute_pdev_current_chan_list(pdev_priv_obj);
 
 	if (reg_tx_ops->fill_umac_legacy_chanlist) {

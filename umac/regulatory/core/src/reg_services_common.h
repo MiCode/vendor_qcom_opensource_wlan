@@ -787,6 +787,15 @@ bool reg_is_regdmn_en302502_applicable(struct wlan_objmgr_pdev *pdev);
 #endif
 
 /**
+ * reg_update_channel_ranges() - Update the channel ranges with the new
+ * phy capabilities.
+ * @pdev: The physical dev for which channel ranges are to be updated.
+ *
+ * Return: QDF_STATUS.
+ */
+QDF_STATUS reg_update_channel_ranges(struct wlan_objmgr_pdev *pdev);
+
+/**
  * reg_modify_pdev_chan_range() - Compute current channel list
  * in accordance with the modified reg caps.
  * @pdev: The physical dev for which channel list must be built.
