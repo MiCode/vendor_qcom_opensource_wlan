@@ -3739,9 +3739,14 @@ dp_tx_update_peer_stats(struct dp_tx_desc_s *tx_desc,
 	}
 
 	if (ts->status != HAL_TX_TQM_RR_FRAME_ACKED) {
+		DP_STATS_INCC(peer, tx.failed_retry_count, 1,
+			      ts->transmit_cnt > DP_RETRY_COUNT);
 		dp_update_no_ack_stats(tx_desc->nbuf, peer);
 		return;
 	}
+	DP_STATS_INCC(peer, tx.retry_count, 1, ts->transmit_cnt > 1);
+
+	DP_STATS_INCC(peer, tx.multiple_retry_count, 1, ts->transmit_cnt > 2);
 
 	DP_STATS_INCC(peer, tx.ofdma, 1, ts->ofdma);
 
