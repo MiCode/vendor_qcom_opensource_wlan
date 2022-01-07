@@ -6782,10 +6782,14 @@ static QDF_STATUS dp_txrx_peer_detach(struct dp_soc *soc, struct dp_peer *peer)
 {
 	struct dp_txrx_peer *txrx_peer;
 
-	txrx_peer = peer->txrx_peer;
-	peer->txrx_peer = NULL;
+	/* dp_txrx_peer exists for mld peer and legacy peer */
+	if (peer->txrx_peer) {
+		txrx_peer = peer->txrx_peer;
+		peer->txrx_peer = NULL;
 
-	qdf_mem_free(txrx_peer);
+		qdf_mem_free(txrx_peer);
+	}
+
 	return QDF_STATUS_SUCCESS;
 }
 
@@ -6932,10 +6936,11 @@ dp_peer_create_wifi3(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
 
 	DP_PEER_SET_TYPE(peer, peer_type);
 	if (IS_MLO_DP_MLD_PEER(peer)) {
-		dp_mld_peer_init_link_peers_info(peer);
 		if (dp_txrx_peer_attach(soc, peer) !=
 				QDF_STATUS_SUCCESS)
 			goto fail; /* failure */
+
+		dp_mld_peer_init_link_peers_info(peer);
 	} else if (dp_monitor_peer_attach(soc, peer) !=
 				QDF_STATUS_SUCCESS)
 		dp_warn("peer monitor ctx alloc failed");
@@ -7360,8 +7365,10 @@ dp_peer_setup_wifi3(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
 
 	if (!setup_info)
 		if (dp_peer_legacy_setup(soc, peer) !=
-				QDF_STATUS_SUCCESS)
+				QDF_STATUS_SUCCESS) {
+			status = QDF_STATUS_E_RESOURCES;
 			goto fail;
+		}
 
 	if (peer->bss_peer && vdev->opmode == wlan_op_mode_ap) {
 		status = QDF_STATUS_E_FAILURE;
@@ -7995,10 +8002,7 @@ void dp_peer_unref_delete(struct dp_peer *peer, enum dp_mod_id mod_id)
 
 		qdf_spinlock_destroy(&peer->peer_state_lock);
 
-		/* dp_txrx_peer exists for mld peer and legacy peer */
-		if (peer->txrx_peer)
-			dp_txrx_peer_detach(soc, peer);
-
+		dp_txrx_peer_detach(soc, peer);
 		qdf_mem_free(peer);
 
 		/*
