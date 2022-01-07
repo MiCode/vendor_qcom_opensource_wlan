@@ -7049,6 +7049,10 @@ fail:
 
 static QDF_STATUS dp_peer_legacy_setup(struct dp_soc *soc, struct dp_peer *peer)
 {
+	/* txrx_peer might exist already in peer reuse case */
+	if (peer->txrx_peer)
+		return QDF_STATUS_SUCCESS;
+
 	if (dp_txrx_peer_attach(soc, peer) !=
 				QDF_STATUS_SUCCESS) {
 		dp_err("peer txrx ctx alloc failed");
