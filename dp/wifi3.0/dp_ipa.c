@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -215,7 +215,7 @@ static void dp_ipa_set_reo_ctx_mapping_lock_required(struct dp_soc *soc,
 	hal_ring_handle_t hal_ring_hdl;
 	int ring;
 
-	for (ring = 0; ring < MAX_REO_DEST_RINGS; ring++) {
+	for (ring = 0; ring < soc->num_reo_dest_rings; ring++) {
 		hal_ring_hdl = soc->reo_dest_ring[ring].hal_srng;
 		hal_srng_lock(hal_ring_hdl);
 		soc->ipa_reo_ctx_lock_required[ring] = lock_required;
