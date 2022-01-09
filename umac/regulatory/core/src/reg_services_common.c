@@ -44,6 +44,9 @@
 #include "wlan_mlme_ucfg_api.h"
 #include "wlan_nan_api.h"
 #endif
+#ifndef CONFIG_REG_CLIENT
+#include <wlan_reg_channel_api.h>
+#endif
 
 const struct chan_map *channel_map;
 
@@ -3857,6 +3860,40 @@ reg_fill_channel_list_for_320(struct wlan_objmgr_pdev *pdev,
 #define NO_SCHANS_PUNC 0x0000
 
 /**
+ * reg_set_chan_params_for_freq() - Set regulatory channel params
+ * for the given primary freq and channel width.
+ * If CONFIG_REG_CLIENT is not defined, call the API which considers
+ * NOL channels as enabled and fills the channel params accordingly.
+ * @pdev: Pointer to struct wlan_objmgr_pdev
+ * @freq: Primary frequency in MHZ
+ * @sec_ch_2g_freq: Secondary 2g freq in MHZ
+ * @chan_list: Pointer to struct reg_channel_list
+ *
+ * Return - None
+ */
+#ifdef CONFIG_REG_CLIENT
+static void
+reg_set_chan_params_for_freq(struct wlan_objmgr_pdev *pdev,
+			     qdf_freq_t freq,
+			     qdf_freq_t sec_ch_2g_freq,
+			     struct reg_channel_list *chan_list)
+{
+	reg_set_channel_params_for_freq(pdev, freq, sec_ch_2g_freq,
+					&chan_list->chan_param[0]);
+}
+#else
+static void
+reg_set_chan_params_for_freq(struct wlan_objmgr_pdev *pdev,
+			     qdf_freq_t freq,
+			     qdf_freq_t sec_ch_2g_freq,
+			     struct reg_channel_list *chan_list)
+{
+	wlan_reg_get_channel_params(pdev, freq, sec_ch_2g_freq,
+				    &chan_list->chan_param[0]);
+}
+#endif
+
+/**
  * reg_fill_pre320mhz_channel() - Fill channel params for channel width
  * less than 320.
  * @pdev: Pointer to struct wlan_objmgr_pdev
@@ -3875,8 +3912,7 @@ reg_fill_pre320mhz_channel(struct wlan_objmgr_pdev *pdev,
 	chan_list->num_ch_params = 1;
 	chan_list->chan_param[0].ch_width = ch_width;
 	chan_list->chan_param[0].reg_punc_pattern = NO_SCHANS_PUNC;
-	reg_set_channel_params_for_freq(pdev, freq, sec_ch_2g_freq,
-					&chan_list->chan_param[0]);
+	reg_set_chan_params_for_freq(pdev, freq, sec_ch_2g_freq, chan_list);
 }
 
 void
