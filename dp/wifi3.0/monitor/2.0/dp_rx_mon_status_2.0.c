@@ -49,7 +49,7 @@ dp_rx_process_pktlog_be(struct dp_soc *soc, struct dp_pdev *pdev,
 			     end_offset,
 			     RX_MON_MIN_HEAD_ROOM, true);
 
-	if (mon_pdev->dp_peer_based_pktlog) {
+	if (mon_pdev->dp_peer_based_pktlog && ppdu_info) {
 		dp_rx_process_peer_based_pktlog(soc, ppdu_info,
 						nbuf, pdev->pdev_id);
 	} else {

@@ -450,6 +450,13 @@ hal_rx_handle_mu_ul_info(void *rx_tlv,
 		HAL_RX_GET_64(rx_tlv, RX_PPDU_END_USER_STATS,
 			      SW_RESPONSE_REFERENCE_PTR_EXT);
 }
+#else
+static inline void
+hal_rx_handle_mu_ul_info(void *rx_tlv,
+			 struct mon_rx_user_status *mon_rx_user_status)
+{
+}
+#endif
 
 static inline void
 hal_rx_populate_byte_count(void *rx_tlv, void *ppduinfo,
@@ -468,25 +475,6 @@ hal_rx_populate_byte_count(void *rx_tlv, void *ppduinfo,
 	mon_rx_user_status->mpdu_ok_byte_count = mpdu_ok_byte_count;
 	mon_rx_user_status->mpdu_err_byte_count = mpdu_err_byte_count;
 }
-#else
-static inline void
-hal_rx_handle_mu_ul_info(void *rx_tlv,
-			 struct mon_rx_user_status *mon_rx_user_status)
-{
-}
-
-static inline void
-hal_rx_populate_byte_count(void *rx_tlv, void *ppduinfo,
-			   struct mon_rx_user_status *mon_rx_user_status)
-{
-	struct hal_rx_ppdu_info *ppdu_info =
-			(struct hal_rx_ppdu_info *)ppduinfo;
-
-	/* HKV1: doesn't support mpdu byte count */
-	mon_rx_user_status->mpdu_ok_byte_count = ppdu_info->rx_status.ppdu_len;
-	mon_rx_user_status->mpdu_err_byte_count = 0;
-}
-#endif
 
 static inline void
 hal_rx_populate_mu_user_info(void *rx_tlv, void *ppduinfo, uint32_t user_id,
@@ -533,7 +521,8 @@ hal_rx_populate_mu_user_info(void *rx_tlv, void *ppduinfo, uint32_t user_id,
 		     &ppdu_info->com_info.mpdu_fcs_ok_bitmap,
 		     HAL_RX_NUM_WORDS_PER_PPDU_BITMAP *
 		     sizeof(ppdu_info->com_info.mpdu_fcs_ok_bitmap[0]));
-
+	mon_rx_user_status->retry_mpdu =
+			ppdu_info->rx_status.mpdu_retry_cnt;
 	hal_rx_populate_byte_count(rx_tlv, ppdu_info, mon_rx_user_status);
 }
 
@@ -1592,6 +1581,24 @@ hal_rx_parse_receive_user_info(struct hal_soc *hal_soc, uint8_t *tlv,
 	return HAL_TLV_STATUS_PPDU_NOT_DONE;
 }
 
+#ifdef QCA_MONITOR_2_0_SUPPORT
+static inline void
+hal_rx_status_get_mpdu_retry_cnt(struct hal_rx_ppdu_info *ppdu_info,
+				 void *rx_tlv)
+{
+		ppdu_info->rx_status.mpdu_retry_cnt =
+			HAL_RX_GET_64(rx_tlv, RX_PPDU_END_USER_STATS,
+				      RETRIED_MPDU_COUNT);
+}
+#else
+static inline void
+hal_rx_status_get_mpdu_retry_cnt(struct hal_rx_ppdu_info *ppdu_info,
+				 void *rx_tlv)
+{
+		ppdu_info->rx_status.mpdu_retry_cnt = 0;
+}
+#endif
+
 /**
  * hal_rx_status_get_tlv_info() - process receive info TLV
  * @rx_tlv_hdr: pointer to TLV header
@@ -1730,6 +1737,7 @@ hal_rx_status_get_tlv_info_generic_be(void *rx_tlv_hdr, void *ppduinfo,
 		ppdu_info->rx_status.other_msdu_count =
 			HAL_RX_GET_64(rx_tlv, RX_PPDU_END_USER_STATS,
 				      OTHER_MSDU_COUNT);
+		hal_rx_status_get_mpdu_retry_cnt(ppdu_info, rx_tlv);
 
 		if (ppdu_info->sw_frame_group_id
 		    != HAL_MPDU_SW_FRAME_GROUP_NULL_DATA) {

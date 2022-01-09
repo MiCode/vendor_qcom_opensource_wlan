@@ -288,9 +288,8 @@ dp_rx_mon_srng_process_2_0(struct dp_soc *soc, struct dp_intr *int_ctx,
 			   uint32_t mac_id, uint32_t quota)
 {
 	struct dp_pdev *pdev = dp_get_pdev_for_lmac_id(soc, mac_id);
-	struct dp_mon_pdev *mon_pdev = pdev->monitor_pdev;
-	struct dp_mon_pdev_be *mon_pdev_be =
-			dp_get_be_mon_pdev_from_dp_mon_pdev(mon_pdev);
+	struct dp_mon_pdev *mon_pdev;
+	struct dp_mon_pdev_be *mon_pdev_be;
 	struct dp_mon_soc *mon_soc = soc->monitor_soc;
 	struct dp_mon_soc_be *mon_soc_be = dp_get_be_mon_soc_from_dp_mon_soc(mon_soc);
 	struct dp_mon_desc_pool *rx_mon_desc_pool = &mon_soc_be->rx_desc_mon;
@@ -307,6 +306,8 @@ dp_rx_mon_srng_process_2_0(struct dp_soc *soc, struct dp_intr *int_ctx,
 		return work_done;
 	}
 
+	mon_pdev = pdev->monitor_pdev;
+	mon_pdev_be = dp_get_be_mon_pdev_from_dp_mon_pdev(mon_pdev);
 	mon_dst_srng = soc->rxdma_mon_dst_ring[mac_id].hal_srng;
 
 	if (!mon_dst_srng || !hal_srng_initialized(mon_dst_srng)) {
@@ -353,18 +354,21 @@ dp_rx_mon_srng_process_2_0(struct dp_soc *soc, struct dp_intr *int_ctx,
 		mon_pdev_be->status[desc_idx++] = mon_desc;
 
 		rx_mon_dst_ring_desc = hal_srng_dst_get_next(hal_soc, mon_dst_srng);
-		mon_pdev->rx_mon_stats.status_ppdu_done++;
-
-		if (hal_mon_rx_desc.end_reason == HAL_MON_STATUS_BUFFER_FULL)
-			continue;
 
 		status = dp_rx_process_pktlog_be(soc, pdev, ppdu_info,
 						 mon_desc->buf_addr,
 						 hal_mon_rx_desc.end_offset);
 
+		if (hal_mon_rx_desc.end_reason == HAL_MON_STATUS_BUFFER_FULL)
+			continue;
+
+		mon_pdev->rx_mon_stats.status_ppdu_done++;
+
 		ppdu_info = dp_rx_mon_process_status_tlv(pdev, desc_idx);
 
 		/* Call enhanced stats update API */
+		if (mon_pdev->enhanced_stats_en && ppdu_info)
+			dp_rx_handle_ppdu_stats(soc, pdev, ppdu_info);
 
 		/* Call API to add PPDU info workqueue */
 
