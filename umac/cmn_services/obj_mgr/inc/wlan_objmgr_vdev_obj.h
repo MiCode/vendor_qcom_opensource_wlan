@@ -305,7 +305,9 @@ struct wlan_channel {
  *                      net dev address for non-ML connection
  * @mldaddr[]:          MLD address
  * @linkaddr[]:         Link MAC address
- * @link_id:            link id for mlo connection
+ * @mlo_link_id: link id for mlo connection
+ * @wlan_vdev_mlo_lock: lock to protect the set/clear of
+ * WLAN_VDEV_FEXT2_MLO feature flag in vdev MLME
  */
 struct wlan_objmgr_vdev_mlme {
 	enum QDF_OPMODE vdev_opmode;
@@ -324,6 +326,11 @@ struct wlan_objmgr_vdev_mlme {
 	uint8_t  linkaddr[QDF_MAC_ADDR_SIZE];
 #ifdef WLAN_FEATURE_11BE_MLO
 	uint8_t  mlo_link_id;
+#ifdef WLAN_MLO_USE_SPINLOCK
+	qdf_spinlock_t wlan_vdev_mlo_lock;
+#else
+	qdf_mutex_t wlan_vdev_mlo_lock;
+#endif
 #endif
 };
 
@@ -893,10 +900,130 @@ static inline void wlan_vdev_set_link_id(struct wlan_objmgr_vdev *vdev,
 {
 	vdev->vdev_mlme.mlo_link_id = link_id;
 }
+
+#ifdef WLAN_MLO_USE_SPINLOCK
+/**
+ * wlan_create_vdev_mlo_lock() - API to create spin lock
+ * which protects the set/clear of WLAN_VDEV_FEXT2_MLO flag in
+ * vdev MLME ext2 feature caps
+ * @vdev: VDEV object
+ *
+ * Return: void
+ */
+static inline
+void wlan_create_vdev_mlo_lock(struct wlan_objmgr_vdev *vdev)
+{
+	qdf_spinlock_create(&vdev->vdev_mlme.wlan_vdev_mlo_lock);
+}
+
+/**
+ * wlan_destroy_vdev_mlo_lock() - API to destroy spin lock
+ * which protects the set/clear of WLAN_VDEV_FEXT2_MLO flag in
+ * vdev MLME ext2 feature caps
+ * @vdev: VDEV object
+ *
+ * Return: void
+ */
+static inline
+void wlan_destroy_vdev_mlo_lock(struct wlan_objmgr_vdev *vdev)
+{
+	qdf_spinlock_destroy(&vdev->vdev_mlme.wlan_vdev_mlo_lock);
+}
+
+/**
+ * wlan_acquire_vdev_mlo_lock() - API to acquire spin lock
+ * which protects the set/clear of WLAN_VDEV_FEXT2_MLO flag in
+ * vdev MLME ext2 feature caps
+ * @vdev: VDEV object
+ *
+ * Return: void
+ */
+static inline
+void wlan_acquire_vdev_mlo_lock(struct wlan_objmgr_vdev *vdev)
+{
+	qdf_spin_lock_bh(&vdev->vdev_mlme.wlan_vdev_mlo_lock);
+}
+
+/**
+ * wlan_release_vdev_mlo_lock() - API to release spin lock
+ * which protects the set/clear of WLAN_VDEV_FEXT2_MLO flag in
+ * vdev MLME ext2 feature caps
+ * @vdev: VDEV object
+ *
+ * Return: void
+ */
+static inline
+void wlan_release_vdev_mlo_lock(struct wlan_objmgr_vdev *vdev)
+{
+	qdf_spin_unlock_bh(&vdev->vdev_mlme.wlan_vdev_mlo_lock);
+}
+#else
+/**
+ * wlan_create_vdev_mlo_lock() - API to create mutex which protects the
+ * set/clear of WLAN_VDEV_FEXT2_MLO flag in vdev MLME ext2 feature caps
+ * @vdev: VDEV object
+ *
+ * Return: void
+ */
+static inline
+void wlan_create_vdev_mlo_lock(struct wlan_objmgr_vdev *vdev)
+{
+	qdf_mutex_create(&vdev->vdev_mlme.wlan_vdev_mlo_lock);
+}
+
+/**
+ * wlan_destroy_vdev_mlo_lock() - API to destroy mutex which protects the
+ * set/clear of WLAN_VDEV_FEXT2_MLO flag in vdev MLME ext2 feature caps
+ * @vdev: VDEV object
+ *
+ * Return: void
+ */
+static inline
+void wlan_destroy_vdev_mlo_lock(struct wlan_objmgr_vdev *vdev)
+{
+	qdf_mutex_destroy(&vdev->vdev_mlme.wlan_vdev_mlo_lock);
+}
+
+/**
+ * wlan_acquire_vdev_mlo_lock() - API to acquire mutex which protects the
+ * set/clear of WLAN_VDEV_FEXT2_MLO flag in vdev MLME ext2 feature caps
+ * @vdev: VDEV object
+ *
+ * Return: void
+ */
+static inline
+void wlan_acquire_vdev_mlo_lock(struct wlan_objmgr_vdev *vdev)
+{
+	qdf_mutex_acquire(&vdev->vdev_mlme.wlan_vdev_mlo_lock);
+}
+
+/**
+ * wlan_release_vdev_mlo_lock() - API to release mutex which protects the
+ * set/clear of WLAN_VDEV_FEXT2_MLO flag in vdev MLME ext2 feature caps
+ * @vdev: VDEV object
+ *
+ * Return: void
+ */
+static inline
+void wlan_release_vdev_mlo_lock(struct wlan_objmgr_vdev *vdev)
+{
+	qdf_mutex_release(&vdev->vdev_mlme.wlan_vdev_mlo_lock);
+}
+#endif /* WLAN_MLO_USE_SPINLOCK */
 #else
 static inline uint8_t wlan_vdev_get_link_id(struct wlan_objmgr_vdev *vdev)
 {
 	return WLAN_INVALID_LINK_ID;
+}
+
+static inline
+void wlan_create_vdev_mlo_lock(struct wlan_objmgr_vdev *vdev)
+{
+}
+
+static inline
+void wlan_destroy_vdev_mlo_lock(struct wlan_objmgr_vdev *vdev)
+{
 }
 #endif
 
@@ -1414,6 +1541,15 @@ static inline uint16_t wlan_vdev_get_peer_count(struct wlan_objmgr_vdev *vdev)
 
 #ifdef WLAN_FEATURE_11BE_MLO
 /**
+ * wlan_vdev_mlme_is_mlo_vdev() - Determine whether the given vdev is an MLO
+ * vdev or not
+ * @vdev: VDEV object
+ *
+ * Return: True if it is MLO, otherwise false.
+ */
+bool wlan_vdev_mlme_is_mlo_vdev(struct wlan_objmgr_vdev *vdev);
+
+/**
  * wlan_vdev_mlme_is_mlo_ap() - whether it is mlo ap or not
  * @vdev: VDEV object
  *
@@ -1422,27 +1558,24 @@ static inline uint16_t wlan_vdev_get_peer_count(struct wlan_objmgr_vdev *vdev)
 static inline bool wlan_vdev_mlme_is_mlo_ap(struct wlan_objmgr_vdev *vdev)
 {
 	return (wlan_vdev_mlme_get_opmode(vdev) == QDF_SAP_MODE) &&
-	       wlan_vdev_mlme_feat_ext2_cap_get(vdev, WLAN_VDEV_FEXT2_MLO);
+		wlan_vdev_mlme_is_mlo_vdev(vdev);
 }
-#else
-static inline bool wlan_vdev_mlme_is_mlo_ap(struct wlan_objmgr_vdev *vdev)
-{
-	return false;
-}
-#endif
 
-#ifdef WLAN_FEATURE_11BE_MLO
 /**
- * wlan_vdev_mlme_is_mlo_vdev() - whether it is mlo vdev or not
+ * wlan_vdev_mlme_set_mlo_vdev() - Set vdev as an MLO vdev
  * @vdev: VDEV object
  *
- * Return: True if it is mlo, otherwise false.
+ * Return: void
  */
-static inline
-bool wlan_vdev_mlme_is_mlo_vdev(struct wlan_objmgr_vdev *vdev)
-{
-	return wlan_vdev_mlme_feat_ext2_cap_get(vdev, WLAN_VDEV_FEXT2_MLO);
-}
+void wlan_vdev_mlme_set_mlo_vdev(struct wlan_objmgr_vdev *vdev);
+
+/**
+ * wlan_vdev_mlme_clear_mlo_vdev() - Mark that the vdev is no longer an MLO vdev
+ * @vdev: VDEV object
+ *
+ * Return: void
+ */
+void wlan_vdev_mlme_clear_mlo_vdev(struct wlan_objmgr_vdev *vdev);
 
 #ifdef WLAN_MCAST_MLO
 /**
@@ -1516,11 +1649,25 @@ bool wlan_vdev_mlme_is_link_sta_vdev(struct wlan_objmgr_vdev *vdev)
 	return false;
 }
 #else
-
 static inline
 bool wlan_vdev_mlme_is_mlo_vdev(struct wlan_objmgr_vdev *vdev)
 {
 	return false;
+}
+
+static inline bool wlan_vdev_mlme_is_mlo_ap(struct wlan_objmgr_vdev *vdev)
+{
+	return false;
+}
+
+static inline
+void wlan_vdev_mlme_set_mlo_vdev(struct wlan_objmgr_vdev *vdev)
+{
+}
+
+static inline
+void wlan_vdev_mlme_clear_mlo_vdev(struct wlan_objmgr_vdev *vdev)
+{
 }
 
 static inline

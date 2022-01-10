@@ -530,8 +530,7 @@ void osif_update_partner_vdev_info(struct wlan_objmgr_vdev *vdev,
 				&partner_info.partner_link_info[i].link_addr);
 		if (tmp_vdev) {
 			mlo_update_connect_req_links(tmp_vdev, 1);
-			wlan_vdev_mlme_feat_ext2_cap_set(
-					tmp_vdev, WLAN_VDEV_FEXT2_MLO);
+			wlan_vdev_mlme_set_mlo_vdev(tmp_vdev);
 			wlan_vdev_mlme_feat_ext2_cap_set(
 					tmp_vdev, WLAN_VDEV_FEXT2_MLO_STA_LINK);
 			wlan_vdev_set_link_id(
@@ -617,7 +616,7 @@ QDF_STATUS osif_update_mlo_partner_info(
 		}
 
 		wlan_vdev_set_link_id(vdev, linkid);
-		wlan_vdev_mlme_feat_ext2_cap_set(vdev, WLAN_VDEV_FEXT2_MLO);
+		wlan_vdev_mlme_set_mlo_vdev(vdev);
 	}
 
 	qdf_mem_copy(&connect_req->ml_parnter_info,

@@ -34,6 +34,7 @@
 #endif
 #include <wlan_utility.h>
 #include <wlan_mlo_mgr_sta.h>
+#include <wlan_objmgr_vdev_obj.h>
 
 static void
 cm_fill_failure_resp_from_cm_id(struct cnx_mgr *cm_ctx,
@@ -474,8 +475,7 @@ static void cm_update_vdev_mlme_macaddr(struct cnx_mgr *cm_ctx,
 		/* Use link address for ML connection */
 		wlan_vdev_mlme_set_macaddr(cm_ctx->vdev,
 					   cm_ctx->vdev->vdev_mlme.linkaddr);
-		wlan_vdev_mlme_feat_ext2_cap_set(cm_ctx->vdev,
-						 WLAN_VDEV_FEXT2_MLO);
+		wlan_vdev_mlme_set_mlo_vdev(cm_ctx->vdev);
 		mlme_debug("set link address for ML connection");
 	} else {
 		/* Use net_dev address for non-ML connection */
@@ -486,8 +486,7 @@ static void cm_update_vdev_mlme_macaddr(struct cnx_mgr *cm_ctx,
 				   QDF_MAC_ADDR_REF(mac->bytes));
 		}
 
-		wlan_vdev_mlme_feat_ext2_cap_clear(cm_ctx->vdev,
-						   WLAN_VDEV_FEXT2_MLO);
+		wlan_vdev_mlme_clear_mlo_vdev(cm_ctx->vdev);
 		mlme_debug("clear MLO cap for non-ML connection");
 	}
 	wlan_vdev_obj_unlock(cm_ctx->vdev);
@@ -2105,7 +2104,7 @@ cm_update_scan_db_on_connect_success(struct cnx_mgr *cm_ctx,
 static inline void
 cm_clear_vdev_mlo_cap(struct wlan_objmgr_vdev *vdev)
 {
-	wlan_vdev_mlme_feat_ext2_cap_clear(vdev, WLAN_VDEV_FEXT2_MLO);
+	wlan_vdev_mlme_clear_mlo_vdev(vdev);
 }
 #else /*WLAN_FEATURE_11BE_MLO_ADV_FEATURE*/
 static inline void

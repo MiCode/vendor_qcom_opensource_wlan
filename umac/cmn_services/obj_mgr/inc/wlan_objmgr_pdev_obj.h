@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -195,6 +195,7 @@ struct wlan_objmgr_pdev_mlme {
  * @wlan_psoc:         back pointer to PSOC, its attached to
  * @ref_cnt:           Ref count
  * @ref_id_dbg:        Array to track Ref count
+ * @wlan_mlo_vdev_count: MLO VDEVs count
  */
 struct wlan_objmgr_pdev_objmgr {
 	uint8_t wlan_pdev_id;
@@ -209,6 +210,9 @@ struct wlan_objmgr_pdev_objmgr {
 	struct wlan_objmgr_psoc *wlan_psoc;
 	qdf_atomic_t ref_cnt;
 	qdf_atomic_t ref_id_dbg[WLAN_REF_ID_MAX];
+#ifdef WLAN_FEATURE_11BE_MLO
+	qdf_atomic_t wlan_mlo_vdev_count;
+#endif
 };
 
 /**
@@ -1156,6 +1160,88 @@ static inline uint8_t wlan_pdev_get_vdev_count(struct wlan_objmgr_pdev *pdev)
 {
 	return pdev->pdev_objmgr.wlan_vdev_count;
 }
+
+#ifdef WLAN_FEATURE_11BE_MLO
+/**
+ * wlan_pdev_init_mlo_vdev_count() - Initialize PDEV MLO vdev count
+ * @pdev: PDEV object
+ *
+ * API to initialize MLO vdev count from PDEV
+ *
+ * Return: void
+ */
+static inline
+void wlan_pdev_init_mlo_vdev_count(struct wlan_objmgr_pdev *pdev)
+{
+	qdf_atomic_init(&pdev->pdev_objmgr.wlan_mlo_vdev_count);
+}
+
+/**
+ * wlan_pdev_get_mlo_vdev_count() - get PDEV MLO vdev count
+ * @pdev: PDEV object
+ *
+ * API to get MLO vdev count from PDEV
+ *
+ * Return: MLO vdev_count - pdev's MLO vdev count
+ */
+static inline
+uint32_t wlan_pdev_get_mlo_vdev_count(struct wlan_objmgr_pdev *pdev)
+{
+	return qdf_atomic_read(&pdev->pdev_objmgr.wlan_mlo_vdev_count);
+}
+
+/**
+ * wlan_pdev_inc_mlo_vdev_count() - Increment PDEV MLO vdev count
+ * @pdev: PDEV object
+ *
+ * API to increment MLO vdev count from PDEV
+ *
+ * Return: void
+ */
+static inline
+void wlan_pdev_inc_mlo_vdev_count(struct wlan_objmgr_pdev *pdev)
+{
+	qdf_atomic_inc(&pdev->pdev_objmgr.wlan_mlo_vdev_count);
+}
+
+/**
+ * wlan_pdev_dec_mlo_vdev_count() - Decrement PDEV MLO vdev count
+ * @pdev: PDEV object
+ *
+ * API to decrement MLO vdev count from PDEV
+ *
+ * Return: void
+ */
+static inline
+void wlan_pdev_dec_mlo_vdev_count(struct wlan_objmgr_pdev *pdev)
+{
+	qdf_assert_always
+		(qdf_atomic_read(&pdev->pdev_objmgr.wlan_mlo_vdev_count));
+
+	qdf_atomic_dec(&pdev->pdev_objmgr.wlan_mlo_vdev_count);
+}
+#else
+static inline
+void wlan_pdev_init_mlo_vdev_count(struct wlan_objmgr_pdev *pdev)
+{
+}
+
+static inline
+uint32_t wlan_pdev_get_mlo_vdev_count(struct wlan_objmgr_pdev *pdev)
+{
+	return 0;
+}
+
+static inline
+void wlan_pdev_inc_mlo_vdev_count(struct wlan_objmgr_pdev *pdev)
+{
+}
+
+static inline
+void wlan_pdev_dec_mlo_vdev_count(struct wlan_objmgr_pdev *pdev)
+{
+}
+#endif /* WLAN_FEATURE_11BE_MLO */
 
 /**
  * wlan_print_pdev_info() - print pdev members

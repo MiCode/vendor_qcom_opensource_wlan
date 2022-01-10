@@ -504,7 +504,7 @@ cm_inform_dlm_disconnect_complete(struct wlan_objmgr_vdev *vdev,
 static inline void
 cm_clear_vdev_mlo_cap(struct wlan_objmgr_vdev *vdev)
 {
-	wlan_vdev_mlme_feat_ext2_cap_clear(vdev, WLAN_VDEV_FEXT2_MLO);
+	wlan_vdev_mlme_clear_mlo_vdev(vdev);
 }
 #else /*WLAN_FEATURE_11BE_MLO_ADV_FEATURE*/
 static inline void

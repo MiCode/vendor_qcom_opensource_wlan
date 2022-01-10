@@ -48,7 +48,7 @@ bool mlo_ap_vdev_attach(struct wlan_objmgr_vdev *vdev,
 
 	dev_ctx = vdev->mlo_dev_ctx;
 	wlan_vdev_set_link_id(vdev, link_id);
-	wlan_vdev_mlme_feat_ext2_cap_set(vdev, WLAN_VDEV_FEXT2_MLO);
+	wlan_vdev_mlme_set_mlo_vdev(vdev);
 
 	/**
 	 * every link will trigger mlo_ap_vdev_attach,
@@ -86,7 +86,7 @@ bool mlo_ap_vdev_attach(struct wlan_objmgr_vdev *vdev,
 
 	dev_ctx = vdev->mlo_dev_ctx;
 	wlan_vdev_set_link_id(vdev, link_id);
-	wlan_vdev_mlme_feat_ext2_cap_set(vdev, WLAN_VDEV_FEXT2_MLO);
+	wlan_vdev_mlme_set_mlo_vdev(vdev);
 
 	/**
 	 * every link will trigger mlo_ap_vdev_attach,
@@ -277,7 +277,7 @@ void mlo_ap_vdev_detach(struct wlan_objmgr_vdev *vdev)
 		mlo_err("Invalid input");
 		return;
 	}
-	wlan_vdev_mlme_feat_ext2_cap_clear(vdev, WLAN_VDEV_FEXT2_MLO);
+	wlan_vdev_mlme_clear_mlo_vdev(vdev);
 }
 
 void mlo_ap_link_down_cmpl_notify(struct wlan_objmgr_vdev *vdev)
