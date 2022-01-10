@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -248,6 +248,9 @@ void mlo_mld_clear_mlo_cap(struct wlan_objmgr_vdev *vdev)
 		wlan_vdev_mlme_feat_ext2_cap_clear(
 				mlo_dev_ctx->wlan_vdev_list[i],
 				WLAN_VDEV_FEXT2_MLO);
+		wlan_vdev_mlme_feat_ext2_cap_clear(
+				mlo_dev_ctx->wlan_vdev_list[i],
+				WLAN_VDEV_FEXT2_MLO_STA_LINK);
 	}
 }
 
@@ -1030,6 +1033,8 @@ void mlo_sta_link_handle_pending_connect(struct wlan_objmgr_vdev *vdev)
 	if (sta_ctx->connect_req->ml_parnter_info.num_partner_links) {
 		partner_info = sta_ctx->connect_req->ml_parnter_info;
 		wlan_vdev_mlme_feat_ext2_cap_set(vdev, WLAN_VDEV_FEXT2_MLO);
+		wlan_vdev_mlme_feat_ext2_cap_clear(
+				vdev, WLAN_VDEV_FEXT2_MLO_STA_LINK);
 		mlo_clear_connect_req_links_bmap(vdev);
 		mlo_update_connect_req_links(vdev, 1);
 		for (i = 0; i < partner_info.num_partner_links; i++) {
