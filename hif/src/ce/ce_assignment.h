@@ -1558,23 +1558,23 @@ static struct CE_attr host_ce_config_wlan_qcn9224[] = {
 		PKTLOG_DST_ENTRIES, NULL,},
 #endif
 	/* Target autonomous HIF_memcpy */
-	{/*CE6*/ CE_ATTR_FLAGS, 0, 0, 0, 0, NULL,},
+	{/*CE6*/ (CE_ATTR_FLAGS | CE_ATTR_DISABLE_INTR), 0, 0, 0, 0, NULL,},
 	/* host->target WMI (mac1) */
 	{/*CE7*/ CE_ATTR_FLAGS, 0, 32, 2048, 0, NULL,},
 	/* Reserved for target (Generic HiF memcpy */
-	{/*CE8*/ CE_ATTR_FLAGS, 0, 0, 0, 0, NULL,},
+	{/*CE8*/ (CE_ATTR_FLAGS | CE_ATTR_DISABLE_INTR), 0, 0, 0, 0, NULL,},
 	/* CE 9, 10, 11 belong to CoreBsp & MHI driver */
-	{/*CE9*/ CE_ATTR_FLAGS, 0, 0, 0, 0, NULL,},
-	{/*CE10*/ CE_ATTR_FLAGS, 0, 0, 0, 0, NULL,},
-	{/*CE11*/ CE_ATTR_FLAGS, 0, 0, 0, 0, NULL,},
+	{/*CE9*/ (CE_ATTR_FLAGS | CE_ATTR_DISABLE_INTR), 0, 0, 0, 0, NULL,},
+	{/*CE10*/ (CE_ATTR_FLAGS | CE_ATTR_DISABLE_INTR), 0, 0, 0, 0, NULL,},
+	{/*CE11*/ (CE_ATTR_FLAGS | CE_ATTR_DISABLE_INTR), 0, 0, 0, 0, NULL,},
 	/* Target CV prefetch */
-	{/*CE12*/ CE_ATTR_FLAGS, 0, 0, 0, 0, NULL,},
+	{/*CE12*/ (CE_ATTR_FLAGS | CE_ATTR_DISABLE_INTR), 0, 0, 0, 0, NULL,},
 	/* Target CV prefetch */
-	{/*CE13*/ CE_ATTR_FLAGS, 0, 0, 0, 0, NULL,},
+	{/*CE13*/ (CE_ATTR_FLAGS | CE_ATTR_DISABLE_INTR), 0, 0, 0, 0, NULL,},
 	/* target->host WMI logging, Direc-DMA */
-	{/*CE14*/ CE_ATTR_FLAGS, 0, 0, 0, 0, NULL,},
+	{/*CE14*/ (CE_ATTR_FLAGS), 0, 0, 0, 0, NULL,},
 	/* Reserved for customer use */
-	{/*CE15*/ CE_ATTR_FLAGS, 0, 0, 0, 0, NULL,},
+	{/*CE15*/ (CE_ATTR_FLAGS | CE_ATTR_DISABLE_INTR), 0, 0, 0, 0, NULL,},
 };
 
 static struct CE_pipe_config target_ce_config_wlan_qcn9224[] = {
