@@ -127,6 +127,14 @@
 #define WLAN_REASSOC_REQ_IES_OFFSET \
 	(WLAN_CAPABILITYINFO_LEN + WLAN_LISTENINTERVAL_LEN + QDF_MAC_ADDR_SIZE)
 
+/* Probe response IE offset - timestamp(8) + Beacon Int(2) + Cap info(2) */
+#define WLAN_PROBE_RESP_IES_OFFSET \
+	(WLAN_TIMESTAMP_LEN + WLAN_BEACONINTERVAL_LEN + WLAN_CAPABILITYINFO_LEN)
+
+/* Beacon IE offset - timestamp(8) + Beacon Int(2) + Cap info(2) */
+#define WLAN_BEACON_IES_OFFSET \
+	(WLAN_TIMESTAMP_LEN + WLAN_BEACONINTERVAL_LEN + WLAN_CAPABILITYINFO_LEN)
+
 /* Length (in bytes) of MAC header in 3 address format */
 #define WLAN_MAC_HDR_LEN_3A 24
 
@@ -1608,8 +1616,16 @@ struct subelem_header {
 #define EHTCAP_MAC_NSEPPRIACCESS_BITS                   1
 #define EHTCAP_MAC_EHTOMCTRL_IDX                        1
 #define EHTCAP_MAC_EHTOMCTRL_BITS                       1
-#define EHTCAP_MAC_TRIGTXOP_IDX                         2
-#define EHTCAP_MAC_TRIGTXOP_BITS                        1
+#define EHTCAP_MAC_TRIGGERED_TXOP_MODE1_IDX             2
+#define EHTCAP_MAC_TRIGGERED_TXOP_MODE1_BITS            1
+#define EHTCAP_MAC_TRIGGERED_TXOP_MODE2_IDX             3
+#define EHTCAP_MAC_TRIGGERED_TXOP_MODE2_BITS            1
+#define EHTCAP_MAC_RESTRICTED_TWT_IDX                   4
+#define EHTCAP_MAC_RESTRICTED_TWT_BITS                  1
+#define EHTCAP_MAC_SCS_TRAFFIC_DESC_IDX                 5
+#define EHTCAP_MAC_SCS_TRAFFIC_DESC_BITS                1
+#define EHTCAP_MAC_MAX_MPDU_LEN_IDX                     6
+#define EHTCAP_MAC_MAX_MPDU_LEN_BITS                    2
 
 #define EHTCAP_PHY_320MHZIN6GHZ_IDX                     1
 #define EHTCAP_PHY_320MHZIN6GHZ_BITS                    1
@@ -1690,6 +1706,13 @@ struct subelem_header {
 #define EHTCAP_PHY_MUBFMR160MHZ_BITS                    1
 #define EHTCAP_PHY_MUBFMR320MHZ_IDX                     62
 #define EHTCAP_PHY_MUBFMR320MHZ_BITS                    1
+#define EHTCAP_PHY_TB_SOUNDING_FEEDBACK_RL_IDX          63
+#define EHTCAP_PHY_TB_SOUNDING_FEEDBACK_RL_BITS         1
+
+#define EHTCAP_RX_MCS_NSS_MAP_IDX                       0
+#define EHTCAP_RX_MCS_NSS_MAP_BITS                      4
+#define EHTCAP_TX_MCS_NSS_MAP_IDX                       4
+#define EHTCAP_TX_MCS_NSS_MAP_BITS                      4
 
 #define EHTCAP_PPET_NSS_IDX               0
 #define EHTCAP_PPET_NSS_BITS              4
@@ -2419,7 +2442,11 @@ struct wlan_ext_cap_ie {
  * struct wlan_eht_cap_info - struct for eht capabilities information
  * nsep_pri_access: NSEP priority access support
  * eht_om_ctl: EHT OM control support
- * triggered_txop_sharing: Triggered TXOP sharing support
+ * triggered_txop_sharing_mode1: Triggered TXOP sharing support mode 1 support
+ * triggered_txop_sharing_mode2: Triggered TXOP sharing mode 2 support
+ * restricted_twt: Restricted TWT support
+ * scs_traffic_desc: SCS traffic description support
+ * max_mpdu_len: Maximum MPDU length
  * reserved3: reserved bits
  * reserved2: reserved bits
  * support_320mhz_6ghz: support 320mhz in 6gz
@@ -2465,20 +2492,54 @@ struct wlan_ext_cap_ie {
  * mu_bformer_le_80mhz: MU Beamformer (BW ≤ 80 MHz)
  * mu_bformer_160mhz: MU Beamformer (BW ≤ 160 MHz)
  * mu_bformer_320mhz: MU Beamformer (BW ≤ 320 MHz)
- * reserved3: reserved bits
- * eht_mcs_map_20: EHT-MCS Map
- * (20 MHz-Only STA)
- * eht_mcs_map_le_80: EHT-MCS Map
- * (less than 80 MHz)
- * eht_mcs_map_160: EHT-MCS Map
- * (160 MHz)
- * eht_mcs_map_320: EHT-MCS Map
- * (320 MHz)
+ * tb_sounding_feedback_rl: TB sounding feedback rate limit
+ * bw_20_rx_max_nss_for_mcs_0_to_7: Max Rx NSS for MCS 0 to 7 (BW = 20MHz)
+ * bw_20_tx_max_nss_for_mcs_0_to_7: Max Tx NSS for MCS 0 to 7 (BW = 20MHz)
+ * bw_20_rx_max_nss_for_mcs_8_and_9: Max Rx NSS for MCS 8 and 9 (BW = 20MHz)
+ * bw_20_tx_max_nss_for_mcs_8_and_9: Max Tx NSS for MCS 8 and 9 (BW = 20MHz)
+ * bw_20_rx_max_nss_for_mcs_10_and_11: Max Rx NSS for MCS 10 and 11 (BW = 20MHz)
+ * bw_20_tx_max_nss_for_mcs_10_and_11: Max Tx NSS for MCS 10 and 11 (BW = 20MHz)
+ * bw_20_rx_max_nss_for_mcs_12_and_13: Max Rx NSS for MCS 12 and 13 (BW = 20MHz)
+ * bw_20_tx_max_nss_for_mcs_12_and_13: Max Tx NSS for MCS 12 and 13 (BW = 20MHz)
+ * bw_le_80_rx_max_nss_for_mcs_0_to_9: Max Rx NSS for MCS 0 to 9 (BW <= 80MHz)
+ * bw_le_80_tx_max_nss_for_mcs_0_to_9: Max Tx NSS for MCS 0 to 9 (BW <= 80MHz)
+ * bw_le_80_rx_max_nss_for_mcs_10_and_11: Max Rx NSS for MCS 10 and 11
+ *                                        (BW <= 80MHz)
+ * bw_le_80_tx_max_nss_for_mcs_10_and_11: Max Tx NSS for MCS 10 and 11
+ *                                        (BW <= 80MHz)
+ * bw_le_80_rx_max_nss_for_mcs_12_and_13: Max Rx NSS for MCS 12 and 13
+ *                                        (BW <= 80MHz)
+ * bw_le_80_tx_max_nss_for_mcs_12_and_13: Max Tx NSS for MCS 12 and 13
+ *                                        (BW <= 80MHz)
+ * bw_160_rx_max_nss_for_mcs_0_to_9: Max Rx NSS for MCS 0 to 9 (BW = 160MHz)
+ * bw_160_tx_max_nss_for_mcs_0_to_9: Max Tx NSS for MCS 0 to 9 (BW = 160MHz)
+ * bw_160_rx_max_nss_for_mcs_10_and_11: Max Rx NSS for MCS 10 and 11
+ *                                      (BW = 160MHz)
+ * bw_160_tx_max_nss_for_mcs_10_and_11: Max Tx NSS for MCS 10 and 11
+ *                                      (BW = 160MHz)
+ * bw_160_rx_max_nss_for_mcs_12_and_13: Max Rx NSS for MCS 12 and 13
+ *                                      (BW = 160MHz)
+ * bw_160_tx_max_nss_for_mcs_12_and_13: Max Tx NSS for MCS 12 and 13
+ *                                      (BW = 160MHz)
+ * bw_320_rx_max_nss_for_mcs_0_to_9: Max Rx NSS for MCS 0 to 9 (BW = 320MHz)
+ * bw_320_tx_max_nss_for_mcs_0_to_9: Max Tx NSS for MCS 0 to 9 (BW = 320MHz)
+ * bw_320_rx_max_nss_for_mcs_10_and_11: Max Rx NSS for MCS 10 and 11
+ *                                      (BW = 320MHz)
+ * bw_320_tx_max_nss_for_mcs_10_and_11: Max Tx NSS for MCS 10 and 11
+ *                                      (BW = 320MHz)
+ * bw_320_rx_max_nss_for_mcs_12_and_13: Max Rx NSS for MCS 12 and 13
+ *                                      (BW = 320MHz)
+ * bw_320_tx_max_nss_for_mcs_12_and_13: Max Tx NSS for MCS 12 and 13
+ *                                      (BW = 320MHz)
  */
 struct wlan_eht_cap_info {
 #ifndef ANI_LITTLE_BIT_ENDIAN
-	uint16_t reserved:13;
-	uint16_t triggered_txop_sharing:1;
+	uint16_t reserved:8;
+	uint16_t max_mpdu_len:2;
+	uint16_t scs_traffic_desc:1;
+	uint16_t restricted_twt:1;
+	uint16_t triggered_txop_sharing_mode2:1;
+	uint16_t triggered_txop_sharing_mode1:1;
 	uint16_t eht_om_ctl:1;
 	uint16_t nsep_pri_access:1;
 
@@ -2503,7 +2564,7 @@ struct wlan_eht_cap_info {
 	uint32_t support_320mhz_6ghz:1;
 	uint32_t reserved2:1;
 
-	uint32_t reserved3:1;
+	uint32_t tb_sounding_feedback_rl:1;
 	uint32_t mu_bformer_320mhz:1;
 	uint32_t mu_bformer_160mhz:1;
 	uint32_t mu_bformer_le_80mhz:1;
@@ -2525,15 +2586,45 @@ struct wlan_eht_cap_info {
 	uint32_t psr_based_sr:1;
 	uint32_t partial_bw_dl_mu_mimo:1;
 
-	uint8_t eht_mcs_map_320[3];
-	uint8_t eht_mcs_map_160[3];
-	uint8_t eht_mcs_map_le_80[3];
-	uint8_t eht_mcs_map_20[4];
+	uint32_t bw_20_rx_max_nss_for_mcs_12_and_13:4;
+	uint32_t bw_20_tx_max_nss_for_mcs_12_and_13:4;
+	uint32_t bw_20_rx_max_nss_for_mcs_10_and_11:4;
+	uint32_t bw_20_tx_max_nss_for_mcs_10_and_11:4;
+	uint32_t bw_20_rx_max_nss_for_mcs_8_and_9:4;
+	uint32_t bw_20_tx_max_nss_for_mcs_8_and_9:4;
+	uint32_t bw_20_rx_max_nss_for_mcs_0_to_7:4;
+	uint32_t bw_20_tx_max_nss_for_mcs_0_to_7:4;
+
+	uint32_t bw_le_80_rx_max_nss_for_mcs_12_and_13:4;
+	uint32_t bw_le_80_tx_max_nss_for_mcs_12_and_13:4;
+	uint32_t bw_le_80_rx_max_nss_for_mcs_10_and_11:4;
+	uint32_t bw_le_80_tx_max_nss_for_mcs_10_and_11:4;
+	uint32_t bw_le_80_rx_max_nss_for_mcs_0_to_9:4;
+	uint32_t bw_le_80_tx_max_nss_for_mcs_0_to_9:4;
+	uint32_t bw_160_rx_max_nss_for_mcs_12_and_13:4;
+	uint32_t bw_160_tx_max_nss_for_mcs_12_and_13:4;
+
+	uint32_t bw_160_rx_max_nss_for_mcs_10_and_11:4;
+	uint32_t bw_160_tx_max_nss_for_mcs_10_and_11:4;
+	uint32_t bw_160_rx_max_nss_for_mcs_0_to_9:4;
+	uint32_t bw_160_tx_max_nss_for_mcs_0_to_9:4;
+	uint32_t bw_320_rx_max_nss_for_mcs_12_and_13:4;
+	uint32_t bw_320_tx_max_nss_for_mcs_12_and_13:4;
+	uint32_t bw_320_rx_max_nss_for_mcs_10_and_11:4;
+	uint32_t bw_320_tx_max_nss_for_mcs_10_and_11:4;
+
+	uint8_t bw_320_rx_max_nss_for_mcs_0_to_9:4;
+	uint8_t bw_320_tx_max_nss_for_mcs_0_to_9:4;
+
 #else
 	uint16_t nsep_pri_access:1;
 	uint16_t eht_om_ctl:1;
-	uint16_t triggered_txop_sharing:1;
-	uint16_t reserved:13;
+	uint16_t triggered_txop_sharing_mode1:1;
+	uint16_t triggered_txop_sharing_mode2:1;
+	uint16_t restricted_twt:1;
+	uint16_t scs_traffic_desc:1;
+	uint16_t max_mpdu_len:2;
+	uint16_t reserved:8;
 
 	uint32_t reserved2:1;
 	uint32_t support_320mhz_6ghz:1;
@@ -2576,12 +2667,37 @@ struct wlan_eht_cap_info {
 	uint32_t mu_bformer_le_80mhz:1;
 	uint32_t mu_bformer_160mhz:1;
 	uint32_t mu_bformer_320mhz:1;
-	uint32_t reserved3:1;
+	uint32_t tb_sounding_feedback_rl:1;
 
-	uint8_t eht_mcs_map_20[4];
-	uint8_t eht_mcs_map_le_80[3];
-	uint8_t eht_mcs_map_160[3];
-	uint8_t eht_mcs_map_320[3];
+	uint32_t bw_20_rx_max_nss_for_mcs_0_to_7:4;
+	uint32_t bw_20_tx_max_nss_for_mcs_0_to_7:4;
+	uint32_t bw_20_rx_max_nss_for_mcs_8_and_9:4;
+	uint32_t bw_20_tx_max_nss_for_mcs_8_and_9:4;
+	uint32_t bw_20_rx_max_nss_for_mcs_10_and_11:4;
+	uint32_t bw_20_tx_max_nss_for_mcs_10_and_11:4;
+	uint32_t bw_20_rx_max_nss_for_mcs_12_and_13:4;
+	uint32_t bw_20_tx_max_nss_for_mcs_12_and_13:4;
+
+	uint32_t bw_le_80_rx_max_nss_for_mcs_0_to_9:4;
+	uint32_t bw_le_80_tx_max_nss_for_mcs_0_to_9:4;
+	uint32_t bw_le_80_rx_max_nss_for_mcs_10_and_11:4;
+	uint32_t bw_le_80_tx_max_nss_for_mcs_10_and_11:4;
+	uint32_t bw_le_80_rx_max_nss_for_mcs_12_and_13:4;
+	uint32_t bw_le_80_tx_max_nss_for_mcs_12_and_13:4;
+
+	uint32_t bw_160_rx_max_nss_for_mcs_0_to_9:4;
+	uint32_t bw_160_tx_max_nss_for_mcs_0_to_9:4;
+	uint32_t bw_160_rx_max_nss_for_mcs_10_and_11:4;
+	uint32_t bw_160_tx_max_nss_for_mcs_10_and_11:4;
+	uint32_t bw_160_rx_max_nss_for_mcs_12_and_13:4;
+	uint32_t bw_160_tx_max_nss_for_mcs_12_and_13:4;
+
+	uint32_t bw_320_rx_max_nss_for_mcs_0_to_9:4;
+	uint32_t bw_320_tx_max_nss_for_mcs_0_to_9:4;
+	uint32_t bw_320_rx_max_nss_for_mcs_10_and_11:4;
+	uint32_t bw_320_tx_max_nss_for_mcs_10_and_11:4;
+	uint8_t bw_320_rx_max_nss_for_mcs_12_and_13:4;
+	uint8_t bw_320_tx_max_nss_for_mcs_12_and_13:4;
 #endif
 } qdf_packed;
 
@@ -2637,7 +2753,11 @@ struct wlan_mlo_ie_info {
  * wlan_eht_cap_info_network_endian - struct for eht capabilities information
  * nsep_pri_access: NSEP priority access support
  * eht_om_ctl: EHT OM control support
- * triggered_txop_sharing: Triggered TXOP sharing support
+ * triggered_txop_sharing_mode1: Triggered TXOP sharing mode 1 support
+ * triggered_txop_sharing_mode2: Triggered TXOP sharing mode 2 support
+ * restricted_twt: Restricted TWT support
+ * scs_traffic_desc: SCS traffic description support
+ * max_mpdu_len: Maximum MPDU length
  * reserved3: reserved bits
  * reserved2: reserved bits
  * support_320mhz_6ghz: support 320mhz in 6gz
@@ -2683,21 +2803,55 @@ struct wlan_mlo_ie_info {
  * mu_bformer_le_80mhz: MU Beamformer (BW ≤ 80 MHz)
  * mu_bformer_160mhz: MU Beamformer (BW ≤ 160 MHz)
  * mu_bformer_320mhz: MU Beamformer (BW ≤ 320 MHz)
- * reserved3: reserved bits
- * eht_mcs_map_20: EHT-MCS Map
- * (20 MHz-Only STA)
- * eht_mcs_map_le_80: EHT-MCS Map
- * (less than 80 MHz)
- * eht_mcs_map_160: EHT-MCS Map
- * (160 MHz)
- * eht_mcs_map_320: EHT-MCS Map
- * (320 MHz)
+ * tb_sounding_feedback_rl: TB sounding feedback rate limit
+ * bw_20_rx_max_nss_for_mcs_0_to_7: Max Rx NSS for MCS 0 to 7 (BW = 20MHz)
+ * bw_20_tx_max_nss_for_mcs_0_to_7: Max Tx NSS for MCS 0 to 7 (BW = 20MHz)
+ * bw_20_rx_max_nss_for_mcs_8_and_9: Max Rx NSS for MCS 8 and 9 (BW = 20MHz)
+ * bw_20_tx_max_nss_for_mcs_8_and_9: Max Tx NSS for MCS 8 and 9 (BW = 20MHz
+ * bw_20_rx_max_nss_for_mcs_10_and_11: Max Rx NSS for MCS 10 and 11 (BW = 20MHz)
+ * bw_20_tx_max_nss_for_mcs_10_and_11: Max Tx NSS for MCS 10 and 11 (BW = 20MHz)
+ * bw_20_rx_max_nss_for_mcs_12_and_13: Max Rx NSS for MCS 12 and 13 (BW = 20MHz)
+ * bw_20_tx_max_nss_for_mcs_12_and_13: Max Tx NSS for MCS 12 and 13 (BW = 20MHz)
+ * bw_le_80_rx_max_nss_for_mcs_0_to_9: Max Rx NSS for MCS 0 to 9 (BW <= 80MHz)
+ * bw_le_80_tx_max_nss_for_mcs_0_to_9: Max Tx NSS for MCS 0 to 9 (BW <= 80MHz)
+ * bw_le_80_rx_max_nss_for_mcs_10_and_11: Max Rx NSS for MCS 10 and 11
+ *                                        (BW <= 80MHz)
+ * bw_le_80_tx_max_nss_for_mcs_10_and_11: Max Tx NSS for MCS 10 and 11
+ *                                        (BW <= 80MHz)
+ * bw_le_80_rx_max_nss_for_mcs_12_and_13: Max Rx NSS for MCS 12 and 13
+ *                                        (BW <= 80MHz)
+ * bw_le_80_tx_max_nss_for_mcs_12_and_13: Max Tx NSS for MCS 12 and 13
+ *                                        (BW <= 80MHz)
+ * bw_160_rx_max_nss_for_mcs_0_to_9: Max Rx NSS for MCS 0 to 9 (BW = 160MHz)
+ * bw_160_tx_max_nss_for_mcs_0_to_9: Max Tx NSS for MCS 0 to 9 (BW = 160MHz)
+ * bw_160_rx_max_nss_for_mcs_10_and_11: Max Rx NSS for MCS 10 and 11
+ *                                      (BW = 160MHz)
+ * bw_160_tx_max_nss_for_mcs_10_and_11: Max Tx NSS for MCS 10 and 11
+ *                                      (BW = 160MHz)
+ * bw_160_rx_max_nss_for_mcs_12_and_13: Max Rx NSS for MCS 12 and 13
+ *                                      (BW = 160MHz)
+ * bw_160_tx_max_nss_for_mcs_12_and_13: Max Tx NSS for MCS 12 and 13
+ *                                      (BW = 160MHz)
+ * bw_320_rx_max_nss_for_mcs_0_to_9: Max Rx NSS for MCS 0 to 9 (BW = 320MHz)
+ * bw_320_tx_max_nss_for_mcs_0_to_9: Max Tx NSS for MCS 0 to 9 (BW = 320MHz)
+ * bw_320_rx_max_nss_for_mcs_10_and_11: Max Rx NSS for MCS 10 and 11
+ *                                      (BW = 320MHz)
+ * bw_320_tx_max_nss_for_mcs_10_and_11: Max Tx NSS for MCS 10 and 11
+ *                                      (BW = 320MHz)
+ * bw_320_rx_max_nss_for_mcs_12_and_13: Max Rx NSS for MCS 12 and 13
+ *                                      (BW = 320MHz)
+ * bw_320_tx_max_nss_for_mcs_12_and_13: Max Tx NSS for MCS 12 and 13
+ *                                      (BW = 320MHz)
  */
 struct wlan_eht_cap_info_network_endian {
 	uint16_t nsep_pri_access:1;
 	uint16_t eht_om_ctl:1;
-	uint16_t triggered_txop_sharing:1;
-	uint16_t reserved:13;
+	uint16_t triggered_txop_sharing_mode1:1;
+	uint16_t triggered_txop_sharing_mode2:1;
+	uint16_t restricted_twt:1;
+	uint16_t scs_traffic_desc:1;
+	uint16_t max_mpdu_len:2;
+	uint16_t reserved:8;
 
 	uint32_t reserved2:1;
 	uint32_t support_320mhz_6ghz:1;
@@ -2740,12 +2894,36 @@ struct wlan_eht_cap_info_network_endian {
 	uint32_t mu_bformer_le_80mhz:1;
 	uint32_t mu_bformer_160mhz:1;
 	uint32_t mu_bformer_320mhz:1;
-	uint32_t reserved3:1;
+	uint32_t tb_sounding_feedback_rl:1;
 
-	uint8_t eht_mcs_map_20[4];
-	uint8_t eht_mcs_map_le_80[3];
-	uint8_t eht_mcs_map_160[3];
-	uint8_t eht_mcs_map_320[3];
+	uint32_t bw_20_rx_max_nss_for_mcs_0_to_7:4;
+	uint32_t bw_20_tx_max_nss_for_mcs_0_to_7:4;
+	uint32_t bw_20_rx_max_nss_for_mcs_8_and_9:4;
+	uint32_t bw_20_tx_max_nss_for_mcs_8_and_9:4;
+	uint32_t bw_20_rx_max_nss_for_mcs_10_and_11:4;
+	uint32_t bw_20_tx_max_nss_for_mcs_10_and_11:4;
+	uint32_t bw_20_rx_max_nss_for_mcs_12_and_13:4;
+	uint32_t bw_20_tx_max_nss_for_mcs_12_and_13:4;
+
+	uint32_t bw_le_80_rx_max_nss_for_mcs_0_to_9:4;
+	uint32_t bw_le_80_tx_max_nss_for_mcs_0_to_9:4;
+	uint32_t bw_le_80_rx_max_nss_for_mcs_10_and_11:4;
+	uint32_t bw_le_80_tx_max_nss_for_mcs_10_and_11:4;
+	uint32_t bw_le_80_rx_max_nss_for_mcs_12_and_13:4;
+	uint32_t bw_le_80_tx_max_nss_for_mcs_12_and_13:4;
+
+	uint32_t bw_160_rx_max_nss_for_mcs_0_to_9:4;
+	uint32_t bw_160_tx_max_nss_for_mcs_0_to_9:4;
+	uint32_t bw_160_rx_max_nss_for_mcs_10_and_11:4;
+	uint32_t bw_160_tx_max_nss_for_mcs_10_and_11:4;
+	uint32_t bw_160_rx_max_nss_for_mcs_12_and_13:4;
+	uint32_t bw_160_tx_max_nss_for_mcs_12_and_13:4;
+
+	uint32_t bw_320_rx_max_nss_for_mcs_0_to_9:4;
+	uint32_t bw_320_tx_max_nss_for_mcs_0_to_9:4;
+	uint32_t bw_320_rx_max_nss_for_mcs_10_and_11:4;
+	uint32_t bw_320_tx_max_nss_for_mcs_10_and_11:4;
+	uint8_t bw_320_rx_max_nss_for_mcs_12_and_13:4;
 } qdf_packed;
 
 /**
