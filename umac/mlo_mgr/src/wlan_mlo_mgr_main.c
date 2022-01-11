@@ -281,6 +281,7 @@ static QDF_STATUS mlo_dev_ctx_init(struct wlan_objmgr_vdev *vdev)
 	struct qdf_mac_addr *mld_addr;
 	struct mlo_mgr_context *g_mlo_ctx = wlan_objmgr_get_mlo_ctx();
 	uint8_t id = 0;
+	enum QDF_OPMODE opmode = wlan_vdev_mlme_get_opmode(vdev);
 
 	mld_addr = (struct qdf_mac_addr *)wlan_vdev_mlme_get_mldaddr(vdev);
 	ml_dev = wlan_mlo_get_mld_ctx_by_mldaddr(mld_addr);
@@ -288,6 +289,13 @@ static QDF_STATUS mlo_dev_ctx_init(struct wlan_objmgr_vdev *vdev)
 		mlo_dev_lock_acquire(ml_dev);
 		while (id < WLAN_UMAC_MLO_MAX_VDEVS) {
 			if (ml_dev->wlan_vdev_list[id]) {
+				if (wlan_vdev_mlme_get_opmode(
+					ml_dev->wlan_vdev_list[id]) !=
+						opmode) {
+					mlo_err("Invalid opmode type found, investigate config");
+					mlo_dev_lock_release(ml_dev);
+					return QDF_STATUS_E_FAILURE;
+				}
 				id++;
 				continue;
 			}
