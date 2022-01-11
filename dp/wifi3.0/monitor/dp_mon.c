@@ -4841,14 +4841,26 @@ QDF_STATUS dp_mon_pdev_init(struct dp_pdev *pdev)
 		mon_ops->rx_mon_desc_pool_init(pdev);
 
 	/* allocate buffers and replenish the monitor RxDMA ring */
-	if (mon_ops->rx_mon_buffers_alloc)
-		mon_ops->rx_mon_buffers_alloc(pdev);
+	if (mon_ops->rx_mon_buffers_alloc) {
+		if (mon_ops->rx_mon_buffers_alloc(pdev)) {
+			dp_mon_err("%pK: rx mon buffers alloc failed", pdev);
+			goto fail4;
+		}
+	}
 
 	/* attach monitor function */
 	dp_monitor_tx_ppdu_stats_attach(pdev);
 	mon_pdev->is_dp_mon_pdev_initialized = true;
 
 	return QDF_STATUS_SUCCESS;
+
+fail4:
+	if (mon_ops->rx_mon_desc_pool_deinit)
+		mon_ops->rx_mon_desc_pool_deinit(pdev);
+
+	if (mon_ops->mon_rings_deinit)
+		mon_ops->mon_rings_deinit(pdev);
+
 fail3:
 	dp_htt_ppdu_stats_detach(pdev);
 fail2:
