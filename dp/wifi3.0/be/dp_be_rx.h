@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -211,7 +211,6 @@ dp_rx_replensih_soc_get(struct dp_soc *soc, uint8_t reo_ring_num)
 #endif
 
 #ifdef WLAN_FEATURE_11BE_MLO
-#ifdef WLAN_MCAST_MLO
 /**
  * dp_rx_mlo_igmp_handler() - Rx handler for Mcast packets
  * @soc: Handle to DP Soc structure
@@ -225,7 +224,6 @@ bool dp_rx_mlo_igmp_handler(struct dp_soc *soc,
 			    struct dp_vdev *vdev,
 			    struct dp_peer *peer,
 			    qdf_nbuf_t nbuf);
-#endif
 #endif
 
 #endif
