@@ -1743,7 +1743,7 @@ struct cdp_ipa_ops {
 				bool is_rm_enabled, uint32_t *tx_pipe_handle,
 				uint32_t *rx_pipe_handle, bool is_smmu_enabled,
 				qdf_ipa_sys_connect_params_t *sys_in,
-				bool over_gsi);
+				bool over_gsi, qdf_ipa_wdi_hdl_t hdl);
 #else /* CONFIG_IPA_WDI_UNIFIED_API */
 	QDF_STATUS (*ipa_setup)(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
 				void *ipa_i2w_cb, void *ipa_w2i_cb,
@@ -1754,18 +1754,22 @@ struct cdp_ipa_ops {
 #endif /* CONFIG_IPA_WDI_UNIFIED_API */
 	QDF_STATUS (*ipa_cleanup)(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
 				  uint32_t tx_pipe_handle,
-				  uint32_t rx_pipe_handle);
+				  uint32_t rx_pipe_handle,
+				  qdf_ipa_wdi_hdl_t hdl);
 	QDF_STATUS (*ipa_setup_iface)(char *ifname, uint8_t *mac_addr,
-		qdf_ipa_client_type_t prod_client,
-		qdf_ipa_client_type_t cons_client,
-		uint8_t session_id, bool is_ipv6_enabled);
-	QDF_STATUS (*ipa_cleanup_iface)(char *ifname, bool is_ipv6_enabled);
+				      qdf_ipa_client_type_t prod_client,
+				      qdf_ipa_client_type_t cons_client,
+				      uint8_t session_id, bool is_ipv6_enabled,
+				      qdf_ipa_wdi_hdl_t hdl);
+	QDF_STATUS (*ipa_cleanup_iface)(char *ifname, bool is_ipv6_enabled,
+					qdf_ipa_wdi_hdl_t hdl);
 	QDF_STATUS (*ipa_enable_pipes)(struct cdp_soc_t *soc_hdl,
-				       uint8_t pdev_id);
+				       uint8_t pdev_id, qdf_ipa_wdi_hdl_t hdl);
 	QDF_STATUS (*ipa_disable_pipes)(struct cdp_soc_t *soc_hdl,
-					uint8_t pdev_id);
+					uint8_t pdev_id, qdf_ipa_wdi_hdl_t hdl);
 	QDF_STATUS (*ipa_set_perf_level)(int client,
-		uint32_t max_supported_bw_mbps);
+					 uint32_t max_supported_bw_mbps,
+					 qdf_ipa_wdi_hdl_t hdl);
 	bool (*ipa_rx_intrabss_fwd)(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
 				    qdf_nbuf_t nbuf, bool *fwd_success);
 	QDF_STATUS (*ipa_tx_buf_smmu_mapping)(struct cdp_soc_t *soc_hdl,
