@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2013-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -47,7 +48,7 @@ QDF_STATUS wlan_ipa_set_perf_level(struct wlan_ipa_priv *ipa_ctx,
 			  ipa_ctx->curr_cons_bw, next_bw);
 		ret = cdp_ipa_set_perf_level(ipa_ctx->dp_soc,
 					     QDF_IPA_CLIENT_WLAN1_CONS,
-					     next_bw);
+					     next_bw, ipa_ctx->hdl);
 		if (ret) {
 			ipa_err("RM CONS set perf profile failed: %d", ret);
 
@@ -55,7 +56,7 @@ QDF_STATUS wlan_ipa_set_perf_level(struct wlan_ipa_priv *ipa_ctx,
 		}
 		ret = cdp_ipa_set_perf_level(ipa_ctx->dp_soc,
 					     QDF_IPA_CLIENT_WLAN1_PROD,
-					     next_bw);
+					     next_bw, ipa_ctx->hdl);
 		if (ret) {
 			ipa_err("RM PROD set perf profile failed: %d", ret);
 			return QDF_STATUS_E_FAILURE;
@@ -80,7 +81,7 @@ QDF_STATUS wlan_ipa_init_perf_level(struct wlan_ipa_priv *ipa_ctx)
 
 	ret = cdp_ipa_set_perf_level(ipa_ctx->dp_soc,
 				     QDF_IPA_CLIENT_WLAN1_CONS,
-				     WLAN_IPA_MAX_BANDWIDTH);
+				     WLAN_IPA_MAX_BANDWIDTH, ipa_ctx->hdl);
 	if (ret) {
 		ipa_err("CONS set perf profile failed: %d", ret);
 		return QDF_STATUS_E_FAILURE;
@@ -88,7 +89,7 @@ QDF_STATUS wlan_ipa_init_perf_level(struct wlan_ipa_priv *ipa_ctx)
 
 	ret = cdp_ipa_set_perf_level(ipa_ctx->dp_soc,
 				     QDF_IPA_CLIENT_WLAN1_PROD,
-				     WLAN_IPA_MAX_BANDWIDTH);
+				     WLAN_IPA_MAX_BANDWIDTH, ipa_ctx->hdl);
 	if (ret) {
 		ipa_err("PROD set perf profile failed: %d", ret);
 		return QDF_STATUS_E_FAILURE;

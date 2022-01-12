@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2018, 2020-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -23,13 +23,19 @@
 #include "wlan_ipa_obj_mgmt_api.h"
 #include "wlan_ipa_main.h"
 #include "wlan_objmgr_global_obj.h"
+#include <wlan_objmgr_global_obj_i.h>
 #include "target_if_ipa.h"
 #include "wlan_ipa_ucfg_api.h"
 #include "qdf_platform.h"
 #include "qdf_module.h"
 
+/* This is as per IPA capbility */
+#define MAX_INSTANCES_SUPPORTED 2
+
+uint8_t g_instances_added;
 static bool g_ipa_is_ready;
-static qdf_mutex_t g_init_deinit_lock;
+qdf_mutex_t g_init_deinit_lock;
+
 bool ipa_cb_is_ready(void)
 {
 	return g_ipa_is_ready;
@@ -136,17 +142,24 @@ ipa_pdev_obj_create_notification(struct wlan_objmgr_pdev *pdev,
 static void ipa_register_ready_cb(void *user_data)
 {
 	QDF_STATUS status = QDF_STATUS_SUCCESS;
-	struct wlan_ipa_priv *ipa_obj = (struct wlan_ipa_priv *)user_data;
+	struct wlan_ipa_priv *ipa_obj;
 	struct wlan_objmgr_pdev *pdev;
 	struct wlan_objmgr_psoc *psoc;
 	qdf_device_t qdf_dev;
+	qdf_ipa_wdi_capabilities_out_params_t out_param;
+	uint8_t obj_id;
+	uint8_t pdev_id;
+	uint8_t pdev_count;
+	uint8_t instances_supported = 0;
+	uint8_t instances_processed = 0;
 
 	if (!ipa_config_is_enabled()) {
 		ipa_info("IPA config is disabled");
 		return;
 	}
-	if (!ipa_obj) {
-		ipa_err("IPA object is NULL");
+
+	if (!user_data) {
+		ipa_err("User_data object is NULL");
 		return;
 	}
 
@@ -166,31 +179,77 @@ static void ipa_register_ready_cb(void *user_data)
 		ipa_err("Driver modules stop in-progress/done, releasing lock");
 		goto out;
 	}
-	pdev = ipa_priv_obj_get_pdev(ipa_obj);
-	psoc = wlan_pdev_get_psoc(pdev);
-	qdf_dev = wlan_psoc_get_qdf_dev(psoc);
-	if (!qdf_dev) {
-		ipa_err("QDF device context is NULL");
-		goto out;
-	}
 
 	g_ipa_is_ready = true;
 	ipa_info("IPA ready callback invoked: ipa_register_ready_cb");
-	status = ipa_obj_setup(ipa_obj);
-	if (QDF_IS_STATUS_ERROR(status)) {
-		ipa_err("Failed to setup ipa component");
-		wlan_objmgr_pdev_component_obj_detach(pdev,
-						      WLAN_UMAC_COMP_IPA,
-						      ipa_obj);
-		qdf_mem_free(ipa_obj);
-		ipa_disable_register_cb();
-		goto out;
-	}
-	if (ucfg_ipa_uc_ol_init(pdev, qdf_dev)) {
-		ipa_err("IPA ucfg_ipa_uc_ol_init failed");
-		goto out;
-	}
 
+	/* Make call to get num_instances supported by IPA */
+	qdf_ipa_wdi_get_capabilities(&out_param);
+	instances_supported =
+		QDF_IPA_WDI_CAPABILITIES_OUT_PARAMS_NUM_INSTANCES(&out_param);
+	ipa_info("Max instances supported by IPA is %d", instances_supported);
+
+	for (obj_id = 0; obj_id < WLAN_OBJMGR_MAX_DEVICES; obj_id++) {
+		/* Get Psoc from global umac obj */
+		psoc = g_umac_glb_obj->psoc[obj_id];
+		if (!psoc)
+			continue;
+
+		pdev_count = psoc->soc_objmgr.wlan_pdev_count;
+		for (pdev_id = 0; pdev_id < pdev_count &&
+		     instances_processed < instances_supported &&
+		     instances_processed < g_instances_added;
+		     pdev_id++, instances_processed++) {
+			pdev = wlan_objmgr_get_pdev_by_id(psoc, pdev_id,
+							  WLAN_IPA_ID);
+
+			if (!pdev) {
+				qdf_err("Pdev is NULL for pdev_id[%d]", pdev_id);
+				continue;
+			}
+
+			/* Get IPA obj from pdev obj */
+			ipa_obj = ipa_pdev_get_priv_obj(pdev);
+
+			if (!ipa_obj) {
+				ipa_err("ipa_obj is NULL for pdev_id[%d]",
+					pdev_id);
+				wlan_objmgr_pdev_release_ref(pdev, WLAN_IPA_ID);
+				continue;
+			}
+
+			if (ipa_obj->handle_initialized) {
+				ipa_info("ipa_obj hdl is true for pdev_id %d", pdev_id);
+				wlan_objmgr_pdev_release_ref(pdev, WLAN_IPA_ID);
+				continue;
+			}
+			/* Update instace_id for current pdev */
+			ipa_obj->instance_id = instances_processed;
+			qdf_dev = wlan_psoc_get_qdf_dev(psoc);
+			if (!qdf_dev) {
+				ipa_err("QDF device context is NULL");
+				wlan_objmgr_pdev_release_ref(pdev, WLAN_IPA_ID);
+				continue;
+			}
+
+			status = ipa_obj_setup(ipa_obj);
+			if (QDF_IS_STATUS_ERROR(status)) {
+				ipa_err("Failed to setup ipa component");
+				wlan_objmgr_pdev_component_obj_detach(pdev, WLAN_UMAC_COMP_IPA,
+								      ipa_obj);
+				qdf_mem_free(ipa_obj);
+				wlan_objmgr_pdev_release_ref(pdev, WLAN_IPA_ID);
+				continue;
+			}
+			if (ucfg_ipa_uc_ol_init(pdev, qdf_dev)) {
+				ipa_err("IPA ucfg_ipa_uc_ol_init failed");
+				wlan_objmgr_pdev_release_ref(pdev, WLAN_IPA_ID);
+				continue;
+			}
+			ipa_obj->handle_initialized = true;
+			wlan_objmgr_pdev_release_ref(pdev, WLAN_IPA_ID);
+		}
+	}
 out:
 	ipa_init_deinit_unlock();
 }
@@ -210,6 +269,13 @@ QDF_STATUS ipa_register_is_ipa_ready(struct wlan_objmgr_pdev *pdev)
 		ipa_err("IPA object is NULL");
 		return QDF_STATUS_E_FAILURE;
 	}
+
+	/* Acquire lock */
+	ipa_init_deinit_lock();
+	g_instances_added++;
+	ipa_info("No. of instances added for IPA is %d", g_instances_added);
+	/* Unlock */
+	ipa_init_deinit_unlock();
 
 	ret = qdf_ipa_register_ipa_ready_cb(ipa_register_ready_cb,
 					    (void *)ipa_obj);
@@ -294,3 +360,31 @@ QDF_STATUS ipa_deinit(void)
 
 	return status;
 }
+
+qdf_ipa_wdi_hdl_t wlan_ipa_get_hdl(void *soc, uint8_t pdev_id)
+{
+	struct wlan_objmgr_psoc *psoc = (struct wlan_objmgr_psoc *)soc;
+	struct wlan_objmgr_pdev *pdev;
+	struct wlan_ipa_priv *ipa_obj;
+	qdf_ipa_wdi_hdl_t hdl;
+
+	pdev = wlan_objmgr_get_pdev_by_id(psoc, pdev_id, WLAN_IPA_ID);
+
+	if (!pdev) {
+		ipa_err("Failed to get pdev handle");
+		return IPA_INVALID_HDL;
+	}
+
+	ipa_obj = ipa_pdev_get_priv_obj(pdev);
+	if (!ipa_obj) {
+		ipa_err("IPA object is NULL for pdev_id[%d]", pdev_id);
+		wlan_objmgr_pdev_release_ref(pdev, WLAN_IPA_ID);
+		return IPA_INVALID_HDL;
+	}
+	hdl = ipa_obj->hdl;
+
+	wlan_objmgr_pdev_release_ref(pdev, WLAN_IPA_ID);
+	return hdl;
+}
+
+qdf_export_symbol(wlan_ipa_get_hdl);

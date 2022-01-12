@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2013-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -770,7 +770,8 @@ static inline void wlan_ipa_mcc_work_handler(void *data)
 QDF_STATUS wlan_ipa_wlan_evt(qdf_netdev_t net_dev, uint8_t device_mode,
 			     uint8_t session_id,
 			     enum wlan_ipa_wlan_event ipa_event_type,
-			     uint8_t *mac_addr, bool is_2g_iface);
+			     uint8_t *mac_addr, bool is_2g_iface,
+			     struct wlan_ipa_priv *ipa_obj);
 
 /**
  * wlan_ipa_uc_smmu_map() - Map / Unmap DMA buffer to IPA UC

@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2013-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -127,6 +128,10 @@ static void wlan_ipa_uc_rt_debug_handler(void *ctext)
 
 void wlan_ipa_uc_rt_debug_destructor(qdf_nbuf_t nbuff)
 {
+	/* Make change to get the ipa_ctx on per pdev basis
+	 * Currently storing the debug count only in global ipa_ctx
+	 * or to the last enumerated radio ipa_ctx
+	 */
 	struct wlan_ipa_priv *ipa_ctx = wlan_ipa_get_obj_context();
 
 	if (!ipa_ctx) {
