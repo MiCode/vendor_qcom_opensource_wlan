@@ -2525,7 +2525,7 @@ static inline struct dp_peer *dp_peer_find_add_id(struct dp_soc *soc,
 
 		if (peer->peer_id == HTT_INVALID_PEER) {
 			dp_monitor_peer_tid_peer_id_update(soc, peer,
-							   peer->peer_id);
+							   peer_id);
 		} else {
 			dp_peer_unref_delete(peer, DP_MOD_ID_CONFIG);
 			QDF_ASSERT(0);
