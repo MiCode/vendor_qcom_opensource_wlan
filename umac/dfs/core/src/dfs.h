@@ -30,6 +30,7 @@
 #include <qdf_lock.h>        /* qdf_spinlock */
 #include <qdf_time.h>
 #include <qdf_timer.h>
+#include <qdf_hrtimer.h>
 #include <qdf_str.h>         /* qdf_str_lcopy */
 
 #include <wlan_dfs_ioctl.h>
@@ -773,7 +774,7 @@ struct dfs_nolelem {
 	uint32_t       nol_chwidth;
 	uint64_t       nol_start_us;
 	uint32_t       nol_timeout_ms;
-	qdf_timer_t    nol_timer;
+	qdf_hrtimer_data_t    nol_timer;
 	struct dfs_nolelem *nol_next;
 };
 
