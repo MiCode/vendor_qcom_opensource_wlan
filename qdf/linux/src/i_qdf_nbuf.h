@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2014-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -2275,6 +2275,18 @@ static inline void __qdf_nbuf_orphan(struct sk_buff *skb)
 static inline unsigned int __qdf_nbuf_get_end_offset(__qdf_nbuf_t nbuf)
 {
 	return skb_end_offset(nbuf);
+}
+
+/**
+ * __qdf_nbuf_get_truesize() - Return the true size of the nbuf
+ * including the header and variable data area
+ * @skb: sk buff
+ *
+ * Return: size of network buffer
+ */
+static inline unsigned int __qdf_nbuf_get_truesize(struct sk_buff *skb)
+{
+	return skb->truesize;
 }
 
 #ifdef CONFIG_WLAN_SYSFS_MEM_STATS

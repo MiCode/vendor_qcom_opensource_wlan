@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2014-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -3959,6 +3959,18 @@ static inline qdf_size_t qdf_nbuf_get_data_len(qdf_nbuf_t nbuf)
 static inline qdf_size_t qdf_nbuf_get_end_offset(qdf_nbuf_t nbuf)
 {
 	return __qdf_nbuf_get_end_offset(nbuf);
+}
+
+/**
+ * qdf_nbuf_get_truesize() - Return the true size of the nbuf
+ * including the header and variable data area
+ * @nbuf: qdf_nbuf_t
+ *
+ * Return: size of network buffer
+ */
+static inline qdf_size_t qdf_nbuf_get_truesize(qdf_nbuf_t nbuf)
+{
+	return __qdf_nbuf_get_truesize(nbuf);
 }
 
 #ifdef NBUF_FRAG_MEMORY_DEBUG
