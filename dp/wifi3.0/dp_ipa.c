@@ -1719,6 +1719,29 @@ qdf_nbuf_t dp_tx_send_ipa_data_frame(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
 	return NULL;
 }
 
+#ifdef QCA_IPA_LL_TX_FLOW_CONTROL
+/**
+ * dp_ipa_is_target_ready() - check if target is ready or not
+ * @soc: datapath soc handle
+ *
+ * Return: true if target is ready
+ */
+static inline
+bool dp_ipa_is_target_ready(struct dp_soc *soc)
+{
+	if (hif_get_target_status(soc->hif_handle) == TARGET_STATUS_RESET)
+		return false;
+	else
+		return true;
+}
+#else
+static inline
+bool dp_ipa_is_target_ready(struct dp_soc *soc)
+{
+	return true;
+}
+#endif
+
 QDF_STATUS dp_ipa_enable_autonomy(struct cdp_soc_t *soc_hdl, uint8_t pdev_id)
 {
 	struct dp_soc *soc = cdp_soc_t_to_dp_soc(soc_hdl);
@@ -1737,6 +1760,9 @@ QDF_STATUS dp_ipa_enable_autonomy(struct cdp_soc_t *soc_hdl, uint8_t pdev_id)
 		return QDF_STATUS_SUCCESS;
 
 	if (!hif_is_target_ready(HIF_GET_SOFTC(soc->hif_handle)))
+		return QDF_STATUS_E_AGAIN;
+
+	if (!dp_ipa_is_target_ready(soc))
 		return QDF_STATUS_E_AGAIN;
 
 	/* Call HAL API to remap REO rings to REO2IPA ring */
@@ -1797,6 +1823,9 @@ QDF_STATUS dp_ipa_disable_autonomy(struct cdp_soc_t *soc_hdl, uint8_t pdev_id)
 		return QDF_STATUS_SUCCESS;
 
 	if (!hif_is_target_ready(HIF_GET_SOFTC(soc->hif_handle)))
+		return QDF_STATUS_E_AGAIN;
+
+	if (!dp_ipa_is_target_ready(soc))
 		return QDF_STATUS_E_AGAIN;
 
 	ix0_map[0] = REO_REMAP_TCL;
