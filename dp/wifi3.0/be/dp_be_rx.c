@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1247,6 +1247,8 @@ dp_rx_intrabss_ucast_check_be(qdf_nbuf_t nbuf,
 	uint8_t soc_idx;
 	struct dp_vdev_be *be_vdev =
 		dp_get_be_vdev_from_dp_vdev(ta_peer->vdev);
+	struct dp_soc_be *be_soc =
+		dp_get_be_soc_from_dp_soc(params->dest_soc);
 
 	if (!(qdf_nbuf_is_da_valid(nbuf) || qdf_nbuf_is_da_mcbc(nbuf)))
 		return false;
@@ -1254,12 +1256,14 @@ dp_rx_intrabss_ucast_check_be(qdf_nbuf_t nbuf,
 	dest_chip_id = HAL_RX_DEST_CHIP_ID_GET(msdu_metadata);
 	qdf_assert_always(dest_chip_id <= (DP_MLO_MAX_DEST_CHIP_ID - 1));
 
-	/* validate chip_id, get a ref, and re-assign soc */
-	params->dest_soc = dp_mlo_get_soc_ref_by_chip_id(
-					dp_mlo_get_peer_hash_obj(params->dest_soc),
-					dest_chip_id);
-	if (!params->dest_soc)
-		return false;
+	if (be_soc->mlo_enabled) {
+		/* validate chip_id, get a ref, and re-assign soc */
+		params->dest_soc =
+			dp_mlo_get_soc_ref_by_chip_id(be_soc->ml_ctxt,
+						      dest_chip_id);
+		if (!params->dest_soc)
+			return false;
+	}
 
 	da_peer_id = dp_rx_peer_metadata_peer_id_get_be(params->dest_soc,
 							msdu_metadata->da_idx);

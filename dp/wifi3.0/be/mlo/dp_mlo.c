@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -108,6 +108,11 @@ dp_mlo_get_soc_ref_by_chip_id(struct dp_mlo_ctxt *ml_ctxt,
 			      uint8_t chip_id)
 {
 	struct dp_soc *soc = NULL;
+
+	if (!ml_ctxt) {
+		dp_warn("MLO context not created, MLO not enabled");
+		return NULL;
+	}
 
 	qdf_spin_lock_bh(&ml_ctxt->ml_soc_list_lock);
 	soc = ml_ctxt->ml_soc_list[chip_id];
