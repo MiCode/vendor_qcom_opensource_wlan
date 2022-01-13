@@ -1180,6 +1180,69 @@ bool dp_rx_check_pkt_len(struct dp_soc *soc, uint32_t pkt_len)
 
 #endif
 
+/*
+ * dp_rx_deliver_to_osif_stack() - function to deliver rx pkts to stack
+ * @soc: DP soc
+ * @vdv: DP vdev handle
+ * @peer: pointer to the peer object
+ * @nbuf: skb list head
+ * @tail: skb list tail
+ * @is_eapol: eapol pkt check
+ *
+ * Return: None
+ */
+#ifdef QCA_SUPPORT_EAPOL_OVER_CONTROL_PORT
+static inline void
+dp_rx_deliver_to_osif_stack(struct dp_soc *soc,
+			    struct dp_vdev *vdev,
+			    struct dp_peer *peer,
+			    qdf_nbuf_t nbuf,
+			    qdf_nbuf_t tail,
+			    bool is_eapol)
+{
+	if (is_eapol && soc->eapol_over_control_port)
+		dp_rx_eapol_deliver_to_stack(soc, vdev, peer, nbuf, NULL);
+	else
+		dp_rx_deliver_to_stack(soc, vdev, peer, nbuf, NULL);
+}
+#else
+static inline void
+dp_rx_deliver_to_osif_stack(struct dp_soc *soc,
+			    struct dp_vdev *vdev,
+			    struct dp_peer *peer,
+			    qdf_nbuf_t nbuf,
+			    qdf_nbuf_t tail,
+			    bool is_eapol)
+{
+	dp_rx_deliver_to_stack(soc, vdev, peer, nbuf, NULL);
+}
+#endif
+
+#ifdef WLAN_FEATURE_11BE_MLO
+/*
+ * dp_rx_err_match_dhost() - function to check whether dest-mac is correct
+ * @eh: Ethernet header of incoming packet
+ * @vdev: dp_vdev object of the VAP on which this data packet is received
+ *
+ * Return: 1 if the destination mac is correct,
+ *         0 if this frame is not correctly destined to this VAP/MLD
+ */
+int dp_rx_err_match_dhost(qdf_ether_header_t *eh, struct dp_vdev *vdev)
+{
+	return ((qdf_mem_cmp(eh->ether_dhost, &vdev->mac_addr.raw[0],
+			     QDF_MAC_ADDR_SIZE) == 0) ||
+		(qdf_mem_cmp(eh->ether_dhost, &vdev->mld_mac_addr.raw[0],
+			     QDF_MAC_ADDR_SIZE) == 0));
+}
+
+#else
+int dp_rx_err_match_dhost(qdf_ether_header_t *eh, struct dp_vdev *vdev)
+{
+	return (qdf_mem_cmp(eh->ether_dhost, &vdev->mac_addr.raw[0],
+			    QDF_MAC_ADDR_SIZE) == 0);
+}
+#endif
+
 #ifndef QCA_HOST_MODE_WIFI_DISABLED
 
 /**
@@ -1216,7 +1279,7 @@ dp_rx_null_q_desc_handle(struct dp_soc *soc, qdf_nbuf_t nbuf,
 	qdf_ether_header_t *eh;
 	struct hal_rx_msdu_metadata msdu_metadata;
 	uint16_t sa_idx = 0;
-	bool is_eapol;
+	bool is_eapol = 0;
 	bool enh_flag;
 
 	qdf_nbuf_set_rx_chfrag_start(nbuf,
@@ -1385,9 +1448,7 @@ dp_rx_null_q_desc_handle(struct dp_soc *soc, qdf_nbuf_t nbuf,
 			   qdf_nbuf_is_ipv4_wapi_pkt(nbuf);
 
 		if (is_eapol) {
-			if (qdf_mem_cmp(eh->ether_dhost,
-					&vdev->mac_addr.raw[0],
-					QDF_MAC_ADDR_SIZE))
+			if (!dp_rx_err_match_dhost(eh, vdev))
 				goto drop_nbuf;
 		} else {
 			goto drop_nbuf;
@@ -1443,7 +1504,8 @@ dp_rx_null_q_desc_handle(struct dp_soc *soc, qdf_nbuf_t nbuf,
 		}
 
 		qdf_nbuf_set_exc_frame(nbuf, 1);
-		dp_rx_deliver_to_stack(soc, vdev, peer, nbuf, NULL);
+		dp_rx_deliver_to_osif_stack(soc, vdev, peer, nbuf, NULL,
+					    is_eapol);
 	}
 	return QDF_STATUS_SUCCESS;
 
@@ -1710,43 +1772,6 @@ fail:
 	return;
 }
 
-/*
- * dp_rx_deliver_to_osif_stack() - function to deliver rx pkts to stack
- * @soc: DP soc
- * @vdv: DP vdev handle
- * @peer: pointer to the peer object
- * @nbuf: skb list head
- * @tail: skb list tail
- * @is_eapol: eapol pkt check
- *
- * Return: None
- */
-#ifdef QCA_SUPPORT_EAPOL_OVER_CONTROL_PORT
-static inline void
-dp_rx_deliver_to_osif_stack(struct dp_soc *soc,
-			    struct dp_vdev *vdev,
-			    struct dp_peer *peer,
-			    qdf_nbuf_t nbuf,
-			    qdf_nbuf_t tail,
-			    bool is_eapol)
-{
-	if (is_eapol && soc->eapol_over_control_port)
-		dp_rx_eapol_deliver_to_stack(soc, vdev, peer, nbuf, NULL);
-	else
-		dp_rx_deliver_to_stack(soc, vdev, peer, nbuf, NULL);
-}
-#else
-static inline void
-dp_rx_deliver_to_osif_stack(struct dp_soc *soc,
-			    struct dp_vdev *vdev,
-			    struct dp_peer *peer,
-			    qdf_nbuf_t nbuf,
-			    qdf_nbuf_t tail,
-			    bool is_eapol)
-{
-	dp_rx_deliver_to_stack(soc, vdev, peer, nbuf, NULL);
-}
-#endif
 
 #if defined(WLAN_FEATURE_11BE_MLO) && defined(WLAN_MLO_MULTI_CHIP) && \
 	defined(WLAN_MCAST_MLO)
@@ -1856,8 +1881,7 @@ dp_rx_err_route_hdl(struct dp_soc *soc, qdf_nbuf_t nbuf,
 	if (is_eapol || qdf_nbuf_is_ipv4_wapi_pkt(nbuf)) {
 		qdf_ether_header_t *eh =
 			(qdf_ether_header_t *)qdf_nbuf_data(nbuf);
-		if (qdf_mem_cmp(eh->ether_dhost, &vdev->mac_addr.raw[0],
-				QDF_MAC_ADDR_SIZE) == 0) {
+		if (dp_rx_err_match_dhost(eh, vdev)) {
 			DP_STATS_INC_PKT(vdev, rx_i.routed_eapol_pkt, 1,
 					 qdf_nbuf_len(nbuf));
 

@@ -157,6 +157,16 @@ struct htt_dbgfs_cfg {
 QDF_STATUS dp_mon_soc_attach(struct dp_soc *soc);
 QDF_STATUS dp_mon_soc_detach(struct dp_soc *soc);
 
+/*
+ * dp_rx_err_match_dhost() - function to check whether dest-mac is correct
+ * @eh: Ethernet header of incoming packet
+ * @vdev: dp_vdev object of the VAP on which this data packet is received
+ *
+ * Return: 1 if the destination mac is correct,
+ *         0 if this frame is not correctly destined to this VAP/MLD
+ */
+int dp_rx_err_match_dhost(qdf_ether_header_t *eh, struct dp_vdev *vdev);
+
 #ifdef MONITOR_MODULARIZED_ENABLE
 static inline bool dp_monitor_modularized_enable(void)
 {
