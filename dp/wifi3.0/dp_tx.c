@@ -4635,7 +4635,7 @@ dp_tx_comp_process_desc_list(struct dp_soc *soc,
 	struct dp_txrx_peer *txrx_peer = NULL;
 	uint16_t peer_id = DP_INVALID_PEER;
 	qdf_nbuf_t netbuf;
-	dp_txrx_ref_handle txrx_ref_handle;
+	dp_txrx_ref_handle txrx_ref_handle = NULL;
 
 	desc = comp_head;
 

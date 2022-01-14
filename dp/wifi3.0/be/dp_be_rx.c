@@ -153,7 +153,7 @@ uint32_t dp_rx_process_be(struct dp_intr *int_ctx,
 	uint16_t peer_id;
 	uint8_t vdev_id;
 	struct dp_txrx_peer *txrx_peer;
-	dp_txrx_ref_handle txrx_ref_handle;
+	dp_txrx_ref_handle txrx_ref_handle = NULL;
 	struct dp_vdev *vdev;
 	uint32_t pkt_len = 0;
 	struct hal_rx_mpdu_desc_info mpdu_desc_info;
@@ -1223,7 +1223,7 @@ dp_rx_intrabss_ucast_check_be(qdf_nbuf_t nbuf,
 {
 	uint16_t da_peer_id;
 	struct dp_txrx_peer *da_peer;
-	dp_txrx_ref_handle txrx_ref_handle;
+	dp_txrx_ref_handle txrx_ref_handle = NULL;
 
 	if (!qdf_nbuf_is_intra_bss(nbuf))
 		return false;
@@ -1253,7 +1253,7 @@ dp_rx_intrabss_ucast_check_be(qdf_nbuf_t nbuf,
 	bool ret = false;
 	uint8_t dest_chip_id;
 	uint8_t soc_idx;
-	dp_txrx_ref_handle txrx_ref_handle;
+	dp_txrx_ref_handle txrx_ref_handle = NULL;
 	struct dp_vdev_be *be_vdev =
 		dp_get_be_vdev_from_dp_vdev(ta_peer->vdev);
 	struct dp_soc_be *be_soc =
@@ -1328,7 +1328,7 @@ dp_rx_intrabss_ucast_check_be(qdf_nbuf_t nbuf,
 	uint16_t da_peer_id;
 	struct dp_txrx_peer *da_peer;
 	bool ret = false;
-	dp_txrx_ref_handle txrx_ref_handle;
+	dp_txrx_ref_handle txrx_ref_handle = NULL;
 
 	if (!qdf_nbuf_is_da_valid(nbuf) || qdf_nbuf_is_da_mcbc(nbuf))
 		return false;

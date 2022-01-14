@@ -444,7 +444,7 @@ dp_rx_pn_error_handle(struct dp_soc *soc, hal_ring_desc_t ring_desc,
 	uint32_t rx_bufs_used = 0;
 	struct dp_txrx_peer *txrx_peer;
 	bool peer_pn_policy = false;
-	dp_txrx_ref_handle txrx_ref_handle;
+	dp_txrx_ref_handle txrx_ref_handle = NULL;
 
 	peer_id = dp_rx_peer_metadata_peer_id_get(soc,
 					       mpdu_desc_info->peer_meta_data);
@@ -497,7 +497,7 @@ dp_rx_oor_handle(struct dp_soc *soc,
 	uint32_t frame_mask = FRAME_MASK_IPV4_ARP | FRAME_MASK_IPV4_DHCP |
 				FRAME_MASK_IPV4_EAPOL | FRAME_MASK_IPV6_DHCP;
 	struct dp_txrx_peer *txrx_peer = NULL;
-	dp_txrx_ref_handle txrx_ref_handle;
+	dp_txrx_ref_handle txrx_ref_handle = NULL;
 
 	txrx_peer = dp_tgt_txrx_peer_get_ref_by_id(soc, peer_id,
 						   &txrx_ref_handle,
@@ -2711,7 +2711,7 @@ done:
 		uint8_t err_code;
 		uint8_t *tlv_hdr;
 		uint32_t peer_meta_data;
-		dp_txrx_ref_handle txrx_ref_handle;
+		dp_txrx_ref_handle txrx_ref_handle = NULL;
 		rx_tlv_hdr = qdf_nbuf_data(nbuf);
 
 		/*

@@ -94,7 +94,7 @@ dp_rx_intrabss_ucast_check_li(struct dp_soc *soc, qdf_nbuf_t nbuf,
 	uint16_t da_peer_id;
 	struct dp_txrx_peer *da_peer;
 	struct dp_ast_entry *ast_entry;
-	dp_txrx_ref_handle txrx_ref_handle;
+	dp_txrx_ref_handle txrx_ref_handle = NULL;
 
 	if (!qdf_nbuf_is_da_valid(nbuf) || qdf_nbuf_is_da_mcbc(nbuf))
 		return false;
@@ -219,7 +219,7 @@ uint32_t dp_rx_process_li(struct dp_intr *int_ctx,
 	uint16_t peer_id;
 	uint8_t vdev_id;
 	struct dp_txrx_peer *txrx_peer;
-	dp_txrx_ref_handle txrx_ref_handle;
+	dp_txrx_ref_handle txrx_ref_handle = NULL;
 	struct dp_vdev *vdev;
 	uint32_t pkt_len = 0;
 	struct hal_rx_mpdu_desc_info mpdu_desc_info;

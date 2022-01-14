@@ -179,7 +179,7 @@ void dp_rx_defrag_waitlist_flush(struct dp_soc *soc)
 	struct dp_rx_tid_defrag *tmp;
 	uint32_t now_ms = qdf_system_ticks_to_msecs(qdf_system_ticks());
 	TAILQ_HEAD(, dp_rx_tid_defrag) temp_list;
-	dp_txrx_ref_handle txrx_ref_handle;
+	dp_txrx_ref_handle txrx_ref_handle = NULL;
 
 	TAILQ_INIT(&temp_list);
 
@@ -1699,7 +1699,7 @@ dp_rx_defrag_store_fragment(struct dp_soc *soc,
 	struct dp_rx_reorder_array_elem *rx_reorder_array_elem;
 	struct dp_pdev *pdev;
 	struct dp_txrx_peer *txrx_peer = NULL;
-	dp_txrx_ref_handle txrx_ref_handle;
+	dp_txrx_ref_handle txrx_ref_handle = NULL;
 	uint16_t peer_id;
 	uint8_t fragno, more_frag, all_frag_present = 0;
 	uint16_t rxseq = mpdu_desc_info->mpdu_seq;
