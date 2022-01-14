@@ -406,6 +406,8 @@ dp_tx_hw_enqueue_li(struct dp_soc *soc, struct dp_vdev *vdev,
 		dp_tx_pkt_tracepoints_enabled() ||
 		qdf_unlikely(soc->rdkstats_enabled))
 		tx_desc->timestamp = qdf_ktime_to_ms(qdf_ktime_real_get());
+	else
+		dp_tx_desc_set_timestamp(tx_desc);
 
 	dp_verbose_debug("length:%d , type = %d, dma_addr %llx, offset %d desc id %u",
 			 tx_desc->length,
@@ -476,6 +478,7 @@ QDF_STATUS dp_tx_desc_pool_init_li(struct dp_soc *soc,
 
 		tx_desc->id = id;
 		tx_desc->pool_id = pool_id;
+		dp_tx_desc_set_magic(tx_desc, DP_TX_MAGIC_PATTERN_FREE);
 		tx_desc = tx_desc->next;
 		count++;
 	}
