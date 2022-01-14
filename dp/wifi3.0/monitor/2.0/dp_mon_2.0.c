@@ -1327,6 +1327,7 @@ struct cdp_mon_ops dp_ops_mon_2_0 = {
 	.config_full_mon_mode = NULL,
 	.soc_config_full_mon_mode = NULL,
 	.get_mon_pdev_rx_stats = dp_pdev_get_rx_mon_stats,
+	.txrx_enable_mon_reap_timer = dp_enable_mon_reap_timer,
 };
 
 #ifdef QCA_MONITOR_OPS_PER_SOC_SUPPORT

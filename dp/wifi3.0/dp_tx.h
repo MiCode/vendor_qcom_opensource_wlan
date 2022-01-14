@@ -22,8 +22,12 @@
 #include <qdf_types.h>
 #include <qdf_nbuf.h>
 #include "dp_types.h"
-#if defined(MESH_MODE_SUPPORT) || defined(FEATURE_PERPKT_INFO)
+#ifdef FEATURE_PERPKT_INFO
+#if defined(QCA_SUPPORT_LATENCY_CAPTURE) || \
+	defined(QCA_TX_CAPTURE_SUPPORT) || \
+	defined(QCA_MCOPY_SUPPORT)
 #include "if_meta_hdr.h"
+#endif
 #endif
 #include "dp_internal.h"
 #include "hal_tx.h"
@@ -716,6 +720,9 @@ static inline void dp_tx_vdev_update_search_flags(struct dp_vdev *vdev)
 
 #endif /* QCA_HOST_MODE_WIFI_DISABLED */
 
+#if defined(QCA_SUPPORT_LATENCY_CAPTURE) || \
+	defined(QCA_TX_CAPTURE_SUPPORT) || \
+	defined(QCA_MCOPY_SUPPORT)
 #ifdef FEATURE_PERPKT_INFO
 QDF_STATUS
 dp_get_completion_indication_for_stack(struct dp_soc *soc,
@@ -728,6 +735,7 @@ dp_get_completion_indication_for_stack(struct dp_soc *soc,
 void dp_send_completion_to_stack(struct dp_soc *soc,  struct dp_pdev *pdev,
 			    uint16_t peer_id, uint32_t ppdu_id,
 			    qdf_nbuf_t netbuf);
+#endif
 #else
 static inline
 QDF_STATUS dp_get_completion_indication_for_stack(struct dp_soc *soc,

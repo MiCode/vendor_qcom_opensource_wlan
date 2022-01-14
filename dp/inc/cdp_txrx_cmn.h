@@ -2755,4 +2755,30 @@ void cdp_set_rtpm_tput_policy_requirement(ol_txrx_soc_handle soc,
 
 #endif /* FEATURE_RUNTIME_PM */
 
+/**
+ * cdp_enable_mon_reap_timer() - enable/disable reap timer
+ * @soc: Datapath soc handle
+ * @pdev_id: id of objmgr pdev
+ * @enable: enable/disable reap timer of monitor status ring
+ *
+ * Return: none
+ */
+static inline void
+cdp_enable_mon_reap_timer(ol_txrx_soc_handle soc, uint8_t pdev_id,
+			  bool enable)
+{
+	if (!soc || !soc->ops) {
+		QDF_TRACE(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_FATAL,
+			  "%s invalid instance", __func__);
+		QDF_BUG(0);
+		return;
+	}
+
+	if (!soc->ops->mon_ops ||
+	    !soc->ops->mon_ops->txrx_enable_mon_reap_timer)
+		return;
+
+	return soc->ops->mon_ops->txrx_enable_mon_reap_timer(soc, pdev_id,
+							     enable);
+}
 #endif /* _CDP_TXRX_CMN_H_ */

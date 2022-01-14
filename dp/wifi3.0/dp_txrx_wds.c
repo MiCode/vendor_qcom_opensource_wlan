@@ -1335,6 +1335,9 @@ void dp_hmwds_ast_add_notify(struct dp_peer *peer,
 #endif
 }
 
+#if defined(QCA_SUPPORT_LATENCY_CAPTURE) || \
+	defined(QCA_TX_CAPTURE_SUPPORT) || \
+	defined(QCA_MCOPY_SUPPORT)
 #ifdef FEATURE_PERPKT_INFO
 /**
  * dp_get_completion_indication_for_stack() - send completion to stack
@@ -1440,4 +1443,5 @@ void dp_send_completion_to_stack(struct dp_soc *soc,  struct dp_pdev *pdev,
 			     netbuf, peer_id,
 			     WDI_NO_VAL, pdev->pdev_id);
 }
+#endif
 #endif
