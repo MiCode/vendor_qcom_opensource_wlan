@@ -1357,6 +1357,16 @@ enum channel_state wlan_reg_get_channel_state_from_secondary_list_for_freq(
 {
 	return reg_get_channel_state_from_secondary_list_for_freq(pdev, freq);
 }
+
+QDF_STATUS
+wlan_reg_get_channel_list_with_power(struct wlan_objmgr_pdev *pdev,
+				     struct channel_power *ch_list,
+				     uint8_t *num_chan,
+				     enum supported_6g_pwr_types in_6g_pwr_type)
+{
+	return reg_get_channel_list_with_power(pdev, ch_list, num_chan,
+					       in_6g_pwr_type);
+}
 #endif
 
 uint8_t wlan_reg_get_channel_reg_power_for_freq(struct wlan_objmgr_pdev *pdev,
