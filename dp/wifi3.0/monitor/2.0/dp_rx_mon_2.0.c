@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2021,2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -37,6 +37,7 @@ dp_rx_mon_srng_process_2_0(struct dp_soc *soc, struct dp_intr *int_ctx,
 	void *rx_mon_dst_ring_desc;
 	hal_soc_handle_t hal_soc;
 	void *mon_dst_srng;
+	struct hal_rx_ppdu_info *ppdu_info;
 	struct dp_mon_pdev *mon_pdev;
 	struct dp_mon_soc *mon_soc = soc->monitor_soc;
 	struct dp_mon_soc_be *mon_soc_be = dp_get_be_mon_soc_from_dp_mon_soc(mon_soc);
@@ -52,6 +53,7 @@ dp_rx_mon_srng_process_2_0(struct dp_soc *soc, struct dp_intr *int_ctx,
 
 	mon_pdev = pdev->monitor_pdev;
 	mon_dst_srng = soc->rxdma_mon_dst_ring[mac_id].hal_srng;
+	ppdu_info = &mon_pdev->ppdu_info;
 
 	if (!mon_dst_srng || !hal_srng_initialized(mon_dst_srng)) {
 		dp_mon_err("%pK: : HAL Monitor Destination Ring Init Failed -- %pK",
@@ -92,6 +94,10 @@ dp_rx_mon_srng_process_2_0(struct dp_soc *soc, struct dp_intr *int_ctx,
 					   QDF_DMA_FROM_DEVICE);
 			mon_desc->unmapped = 1;
 		}
+
+		dp_rx_process_pktlog(soc, pdev, ppdu_info,
+				     mon_desc->buf_addr,
+				     hal_mon_rx_desc.end_offset);
 
 		dp_rx_mon_process_status_tlv(soc, pdev,
 					     &hal_mon_rx_desc,

@@ -5178,7 +5178,7 @@ void dp_mon_feature_ops_deregister(struct dp_soc *soc)
 	mon_ops->mon_filter_reset_rx_pkt_log_lite = NULL;
 	mon_ops->mon_filter_setup_rx_pkt_log_cbf = NULL;
 	mon_ops->mon_filter_reset_rx_pkt_log_cbf = NULL;
-#ifdef QCA_WIFI_QCN9224
+#ifdef BE_PKTLOG_SUPPORT
 	mon_ops->mon_filter_setup_pktlog_hybrid = NULL;
 	mon_ops->mon_filter_reset_pktlog_hybrid = NULL;
 #endif

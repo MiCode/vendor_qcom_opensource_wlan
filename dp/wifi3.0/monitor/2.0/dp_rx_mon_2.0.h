@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2021,2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -123,6 +123,20 @@ dp_rx_mon_populate_ppdu_usr_info_2_0(struct mon_rx_user_status *rx_user_status,
 void
 dp_rx_mon_populate_ppdu_info_2_0(struct hal_rx_ppdu_info *hal_ppdu_info,
 				 struct cdp_rx_indication_ppdu *ppdu);
+
+/*
+ * dp_rx_process_pktlog() - process pktlog
+ * @soc: dp soc handle
+ * @pdev: dp pdev handle
+ * @ppdu_info: HAL PPDU info
+ * @status_frag: frag pointer which needs to be added to nbuf
+ * @end_offset: Offset in frag to be added to nbuf_frags
+ *
+ * Return: void
+ */
+void dp_rx_process_pktlog(struct dp_soc *soc, struct dp_pdev *pdev,
+			  struct hal_rx_ppdu_info *ppdu_info,
+			  void *status_frag, uint32_t end_offset);
 
 #if !defined(DISABLE_MON_CONFIG)
 /*
