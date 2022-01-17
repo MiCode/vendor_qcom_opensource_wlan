@@ -157,6 +157,7 @@ extract_mlo_glb_rx_reo_per_link_info_tlv(
 	uint32_t tlv_len, tlv_tag;
 	int len;
 	uint8_t *fw_consumed;
+	int parsed_bytes;
 
 	qdf_assert_always(data);
 	qdf_assert_always(link_info);
@@ -176,25 +177,32 @@ extract_mlo_glb_rx_reo_per_link_info_tlv(
 	 * Get the pointer to the fw_consumed snapshot with in the TLV.
 	 * Note that snapshots are nested TLVs within link_sanpshot_info TLV.
 	 */
+	data += qdf_offsetof(mlo_glb_rx_reo_per_link_snapshot_info,
+			     fw_consumed);
 	fw_consumed = (uint8_t *)get_field_pointer_in_tlv(ptlv, fw_consumed,
 							  tlv_len);
 	remaining_len -= qdf_offsetof(mlo_glb_rx_reo_per_link_snapshot_info,
 				      fw_consumed);
+	parsed_bytes = qdf_offsetof(mlo_glb_rx_reo_per_link_snapshot_info,
+				    fw_consumed);
 
 	/* extract fw_consumed snapshot */
-	len = extract_mgmt_rx_reo_snapshot_tlv(fw_consumed, remaining_len,
+	len = extract_mgmt_rx_reo_snapshot_tlv(data, remaining_len,
 					       &link_info->fw_consumed);
 	validate_parsed_bytes_advance_data_pointer(len, data, remaining_len);
+	parsed_bytes += len;
 
 	/* extract fw_forwarded snapshot */
-	len = extract_mgmt_rx_reo_snapshot_tlv(fw_consumed, remaining_len,
+	len = extract_mgmt_rx_reo_snapshot_tlv(data, remaining_len,
 					       &link_info->fw_forwarded);
 	validate_parsed_bytes_advance_data_pointer(len, data, remaining_len);
+	parsed_bytes += len;
 
 	/* extract hw_forwarded snapshot */
-	len = extract_mgmt_rx_reo_snapshot_tlv(fw_consumed, remaining_len,
+	len = extract_mgmt_rx_reo_snapshot_tlv(data, remaining_len,
 					       &link_info->hw_forwarded);
 	validate_parsed_bytes_advance_data_pointer(len, data, remaining_len);
+	parsed_bytes += len;
 
 	/**
 	 * Return the length of link_sanpshot_info TLV itself as the snapshots
@@ -715,7 +723,8 @@ static int parse_mlo_glb_h_shmem_arena(
 	uint8_t *data, size_t remaining_len,
 	struct wlan_host_mlo_glb_h_shmem_arena_ctx *shmem_arena_ctx)
 {
-	int parsed_bytes, len;
+	int parsed_bytes;
+	int len;
 
 	qdf_assert_always(data);
 	qdf_assert_always(shmem_arena_ctx);
