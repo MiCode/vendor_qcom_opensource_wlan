@@ -107,7 +107,7 @@ static const uint32_t peer_param_tlv[] = {
 	[WMI_HOST_PEER_PHYMODE] = WMI_PEER_PHYMODE,
 	[WMI_HOST_PEER_USE_FIXED_PWR] = WMI_PEER_USE_FIXED_PWR,
 	[WMI_HOST_PEER_PARAM_FIXED_RATE] = WMI_PEER_PARAM_FIXED_RATE,
-	[WMI_HOST_PEER_SET_MU_WHITELIST] = WMI_PEER_SET_MU_WHITELIST,
+	[WMI_HOST_PEER_SET_MU_ALLOWLIST] = WMI_PEER_SET_MU_WHITELIST,
 	[WMI_HOST_PEER_SET_MAC_TX_RATE] = WMI_PEER_SET_MAX_TX_RATE,
 	[WMI_HOST_PEER_SET_MIN_TX_RATE] = WMI_PEER_SET_MIN_TX_RATE,
 	[WMI_HOST_PEER_SET_DEFAULT_ROUTING] = WMI_PEER_SET_DEFAULT_ROUTING,
@@ -3091,7 +3091,7 @@ static inline void copy_scan_event_cntrl_flags(
 		cmd->scan_ctrl_flags |= WMI_SCAN_ADD_SPOOFED_MAC_IN_PROBE_REQ;
 	if (param->scan_f_add_rand_seq_in_probe)
 		cmd->scan_ctrl_flags |= WMI_SCAN_RANDOM_SEQ_NO_IN_PROBE_REQ;
-	if (param->scan_f_en_ie_whitelist_in_probe)
+	if (param->scan_f_en_ie_allowlist_in_probe)
 		cmd->scan_ctrl_flags |=
 			WMI_SCAN_ENABLE_IE_WHTELIST_IN_PROBE_REQ;
 
@@ -3153,27 +3153,27 @@ void wmi_fill_vendor_oui(uint8_t *buf_ptr, uint32_t num_vendor_oui,
 }
 
 /*
- * wmi_fill_ie_whitelist_attrs() - fill IE whitelist attrs
+ * wmi_fill_ie_allowlist_attrs() - fill IE allowlist attrs
  * @ie_bitmap: output pointer to ie bit map in cmd
  * @num_vendor_oui: output pointer to num vendor OUIs
- * @ie_whitelist: input parameter
+ * @ie_allowlist: input parameter
  *
- * This function populates the IE whitelist attrs of scan, pno and
- * scan oui commands for ie_whitelist parameter.
+ * This function populates the IE allowlist attrs of scan, pno and
+ * scan oui commands for ie_allowlist parameter.
  *
  * Return: None
  */
 static inline
-void wmi_fill_ie_whitelist_attrs(uint32_t *ie_bitmap,
+void wmi_fill_ie_allowlist_attrs(uint32_t *ie_bitmap,
 				 uint32_t *num_vendor_oui,
-				 struct probe_req_whitelist_attr *ie_whitelist)
+				 struct probe_req_allowlist_attr *ie_allowlist)
 {
 	uint32_t i = 0;
 
 	for (i = 0; i < PROBE_REQ_BITMAP_LEN; i++)
-		ie_bitmap[i] = ie_whitelist->ie_bitmap[i];
+		ie_bitmap[i] = ie_allowlist->ie_bitmap[i];
 
-	*num_vendor_oui = ie_whitelist->num_vendor_oui;
+	*num_vendor_oui = ie_allowlist->num_vendor_oui;
 }
 
 /**
@@ -3197,7 +3197,7 @@ static QDF_STATUS send_scan_start_cmd_tlv(wmi_unified_t wmi_handle,
 	size_t len = sizeof(*cmd);
 	uint16_t extraie_len_with_pad = 0;
 	uint8_t phymode_roundup = 0;
-	struct probe_req_whitelist_attr *ie_whitelist = &params->ie_whitelist;
+	struct probe_req_allowlist_attr *ie_allowlist = &params->ie_allowlist;
 	wmi_hint_freq_short_ssid *s_ssid = NULL;
 	wmi_hint_freq_bssid *hint_bssid = NULL;
 
@@ -3225,8 +3225,8 @@ static QDF_STATUS send_scan_start_cmd_tlv(wmi_unified_t wmi_handle,
 	len += extraie_len_with_pad;
 
 	len += WMI_TLV_HDR_SIZE; /* Length of TLV for array of wmi_vendor_oui */
-	if (ie_whitelist->num_vendor_oui)
-		len += ie_whitelist->num_vendor_oui * sizeof(wmi_vendor_oui);
+	if (ie_allowlist->num_vendor_oui)
+		len += ie_allowlist->num_vendor_oui * sizeof(wmi_vendor_oui);
 
 	len += WMI_TLV_HDR_SIZE; /* Length of TLV for array of scan phymode */
 	if (params->scan_f_wide_band)
@@ -3290,10 +3290,10 @@ static QDF_STATUS send_scan_start_cmd_tlv(wmi_unified_t wmi_handle,
 					 &cmd->mac_addr,
 					 &cmd->mac_mask);
 
-	if (ie_whitelist->white_list)
-		wmi_fill_ie_whitelist_attrs(cmd->ie_bitmap,
+	if (ie_allowlist->allow_list)
+		wmi_fill_ie_allowlist_attrs(cmd->ie_bitmap,
 					    &cmd->num_vendor_oui,
-					    ie_whitelist);
+					    ie_allowlist);
 
 	buf_ptr += sizeof(*cmd);
 	tmp_ptr = (uint32_t *) (buf_ptr + WMI_TLV_HDR_SIZE);
@@ -3351,15 +3351,15 @@ static QDF_STATUS send_scan_start_cmd_tlv(wmi_unified_t wmi_handle,
 
 	buf_ptr += WMI_TLV_HDR_SIZE + extraie_len_with_pad;
 
-	/* probe req ie whitelisting */
+	/* probe req ie allowlisting */
 	WMITLV_SET_HDR(buf_ptr, WMITLV_TAG_ARRAY_STRUC,
-		       ie_whitelist->num_vendor_oui * sizeof(wmi_vendor_oui));
+		       ie_allowlist->num_vendor_oui * sizeof(wmi_vendor_oui));
 
 	buf_ptr += WMI_TLV_HDR_SIZE;
 
 	if (cmd->num_vendor_oui) {
 		wmi_fill_vendor_oui(buf_ptr, cmd->num_vendor_oui,
-				    ie_whitelist->voui);
+				    ie_allowlist->voui);
 		buf_ptr += cmd->num_vendor_oui * sizeof(wmi_vendor_oui);
 	}
 
@@ -4880,10 +4880,10 @@ static QDF_STATUS send_scan_probe_setoui_cmd_tlv(wmi_unified_t wmi_handle,
 	uint32_t len;
 	uint8_t *buf_ptr;
 	uint32_t *oui_buf;
-	struct probe_req_whitelist_attr *ie_whitelist = &psetoui->ie_whitelist;
+	struct probe_req_allowlist_attr *ie_allowlist = &psetoui->ie_allowlist;
 
 	len = sizeof(*cmd) + WMI_TLV_HDR_SIZE +
-		ie_whitelist->num_vendor_oui * sizeof(wmi_vendor_oui);
+		ie_allowlist->num_vendor_oui * sizeof(wmi_vendor_oui);
 
 	wmi_buf = wmi_buf_alloc(wmi_handle, len);
 	if (!wmi_buf)
@@ -4907,22 +4907,22 @@ static QDF_STATUS send_scan_probe_setoui_cmd_tlv(wmi_unified_t wmi_handle,
 	if (psetoui->enb_probe_req_sno_randomization)
 		cmd->flags |= WMI_SCAN_PROBE_OUI_RANDOM_SEQ_NO_IN_PROBE_REQ;
 
-	if (ie_whitelist->white_list) {
-		wmi_fill_ie_whitelist_attrs(cmd->ie_bitmap,
+	if (ie_allowlist->allow_list) {
+		wmi_fill_ie_allowlist_attrs(cmd->ie_bitmap,
 					    &cmd->num_vendor_oui,
-					    ie_whitelist);
+					    ie_allowlist);
 		cmd->flags |=
 			WMI_SCAN_PROBE_OUI_ENABLE_IE_WHITELIST_IN_PROBE_REQ;
 	}
 
 	buf_ptr += sizeof(*cmd);
 	WMITLV_SET_HDR(buf_ptr, WMITLV_TAG_ARRAY_STRUC,
-		       ie_whitelist->num_vendor_oui * sizeof(wmi_vendor_oui));
+		       ie_allowlist->num_vendor_oui * sizeof(wmi_vendor_oui));
 	buf_ptr += WMI_TLV_HDR_SIZE;
 
 	if (cmd->num_vendor_oui != 0) {
 		wmi_fill_vendor_oui(buf_ptr, cmd->num_vendor_oui,
-				    ie_whitelist->voui);
+				    ie_allowlist->voui);
 		buf_ptr += cmd->num_vendor_oui * sizeof(wmi_vendor_oui);
 	}
 
@@ -5288,7 +5288,7 @@ static QDF_STATUS send_pno_start_cmd_tlv(wmi_unified_t wmi_handle,
 	uint8_t *buf_ptr;
 	uint8_t i;
 	int ret;
-	struct probe_req_whitelist_attr *ie_whitelist = &pno->ie_whitelist;
+	struct probe_req_allowlist_attr *ie_allowlist = &pno->ie_allowlist;
 	connected_nlo_rssi_params *nlo_relative_rssi;
 	connected_nlo_bss_band_rssi_pref *nlo_band_rssi;
 
@@ -5308,7 +5308,7 @@ static QDF_STATUS send_pno_start_cmd_tlv(wmi_unified_t wmi_handle,
 	       QDF_MIN(pno->networks_cnt, WMI_NLO_MAX_SSIDS);
 	len += sizeof(nlo_channel_prediction_cfg);
 	len += sizeof(enlo_candidate_score_params);
-	len += sizeof(wmi_vendor_oui) * ie_whitelist->num_vendor_oui;
+	len += sizeof(wmi_vendor_oui) * ie_allowlist->num_vendor_oui;
 	len += sizeof(connected_nlo_rssi_params);
 	len += sizeof(connected_nlo_bss_band_rssi_pref);
 
@@ -5425,20 +5425,20 @@ static QDF_STATUS send_pno_start_cmd_tlv(wmi_unified_t wmi_handle,
 		       WMITLV_GET_STRUCT_TLVLEN(enlo_candidate_score_params));
 	buf_ptr += sizeof(enlo_candidate_score_params);
 
-	if (ie_whitelist->white_list) {
+	if (ie_allowlist->allow_list) {
 		cmd->flags |= WMI_NLO_CONFIG_ENABLE_IE_WHITELIST_IN_PROBE_REQ;
-		wmi_fill_ie_whitelist_attrs(cmd->ie_bitmap,
+		wmi_fill_ie_allowlist_attrs(cmd->ie_bitmap,
 					    &cmd->num_vendor_oui,
-					    ie_whitelist);
+					    ie_allowlist);
 	}
 
-	/* ie white list */
+	/* ie allow list */
 	WMITLV_SET_HDR(buf_ptr, WMITLV_TAG_ARRAY_STRUC,
-		       ie_whitelist->num_vendor_oui * sizeof(wmi_vendor_oui));
+		       ie_allowlist->num_vendor_oui * sizeof(wmi_vendor_oui));
 	buf_ptr += WMI_TLV_HDR_SIZE;
 	if (cmd->num_vendor_oui != 0) {
 		wmi_fill_vendor_oui(buf_ptr, cmd->num_vendor_oui,
-				    ie_whitelist->voui);
+				    ie_allowlist->voui);
 		buf_ptr += cmd->num_vendor_oui * sizeof(wmi_vendor_oui);
 	}
 
@@ -8105,10 +8105,10 @@ static inline uint8_t *copy_hw_mode_in_init_cmd(struct wmi_unified *wmi_handle,
 static inline void copy_fw_abi_version_tlv(wmi_unified_t wmi_handle,
 		wmi_init_cmd_fixed_param *cmd)
 {
-	int num_whitelist;
+	int num_allowlist;
 	wmi_abi_version my_vers;
 
-	num_whitelist = sizeof(version_whitelist) /
+	num_allowlist = sizeof(version_whitelist) /
 		sizeof(wmi_whitelist_version_info);
 	my_vers.abi_version_0 = WMI_ABI_VERSION_0;
 	my_vers.abi_version_1 = WMI_ABI_VERSION_1;
@@ -8117,8 +8117,8 @@ static inline void copy_fw_abi_version_tlv(wmi_unified_t wmi_handle,
 	my_vers.abi_version_ns_2 = WMI_ABI_VERSION_NS_2;
 	my_vers.abi_version_ns_3 = WMI_ABI_VERSION_NS_3;
 
-	wmi_cmp_and_set_abi_version(num_whitelist, version_whitelist,
-			&my_vers,
+	wmi_cmp_and_set_abi_version(num_allowlist, version_whitelist,
+				    &my_vers,
 			(struct _wmi_abi_version *)&wmi_handle->fw_abi_version,
 			&cmd->host_abi_vers);
 
@@ -17900,7 +17900,7 @@ static void populate_tlv_events_id(uint32_t *event_ids)
 		WMI_PDEV_CTL_FAILSAFE_CHECK_EVENTID;
 	event_ids[wmi_vdev_bcn_reception_stats_event_id] =
 		WMI_VDEV_BCN_RECEPTION_STATS_EVENTID;
-	event_ids[wmi_roam_blacklist_event_id] = WMI_ROAM_BLACKLIST_EVENTID;
+	event_ids[wmi_roam_denylist_event_id] = WMI_ROAM_BLACKLIST_EVENTID;
 	event_ids[wmi_wlm_stats_event_id] = WMI_WLM_STATS_EVENTID;
 	event_ids[wmi_peer_cfr_capture_event_id] = WMI_PEER_CFR_CAPTURE_EVENTID;
 	event_ids[wmi_pdev_cold_boot_cal_event_id] =

@@ -76,7 +76,7 @@ wmi_unified_vdev_set_gtx_cfg_cmd(wmi_unified_t wmi_handle, uint32_t if_id,
 #if defined(WLAN_FEATURE_ROAM_OFFLOAD) && defined(FEATURE_DENYLIST_MGR)
 /**
  * wmi_unified_send_reject_ap_list() - send the reject ap list maintained by
- * BLM to FW for roaming cases.
+ * DLM to FW for roaming cases.
  * @wmi_handle: wmi handle
  * @reject_params: This contains the reject ap list, and the num of BSSIDs.
  *

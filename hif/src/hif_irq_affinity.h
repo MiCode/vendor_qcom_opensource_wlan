@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2015-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -29,12 +30,12 @@
 #include <hif.h> /* struct hif_opaque_softc; */
 #include <hif_napi.h>
 struct hif_opaque_softc;
-enum qca_blacklist_op;
+enum qca_denylist_op;
 
 int hif_exec_cpu_migrate(struct qca_napi_data *napid, int cpu, int action);
 
-int hif_exec_cpu_blacklist(struct qca_napi_data *napid,
-			   enum qca_blacklist_op op);
+int hif_exec_cpu_denylist(struct qca_napi_data *napid,
+			  enum qca_denylist_op op);
 
 #ifdef HIF_IRQ_AFFINITY
 int hif_exec_event(struct hif_opaque_softc     *hif,

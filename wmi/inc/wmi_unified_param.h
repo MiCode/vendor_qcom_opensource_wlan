@@ -1719,13 +1719,13 @@ struct set_key_params {
  * @oui: oui parameters
  * @vdev_id: interface id
  * @enb_probe_req_sno_randomization: control probe req sequence no randomization
- * @ie_whitelist: probe req IE whitelist attrs
+ * @ie_allowlist: probe req IE allowlist attrs
  */
 struct scan_mac_oui {
 	uint8_t oui[WMI_WIFI_SCANNING_MAC_OUI_LENGTH];
 	uint32_t vdev_id;
 	bool enb_probe_req_sno_randomization;
-	struct probe_req_whitelist_attr ie_whitelist;
+	struct probe_req_allowlist_attr ie_allowlist;
 };
 
 #define WMI_PASSPOINT_REALM_LEN 256
@@ -4021,7 +4021,7 @@ typedef struct {
  * @last_tx_power: Tx power latest
  * @atf_tokens_allocated: atf tokens allocated
  * @atf_tokens_utilized: atf tokens utilized
- * @num_mu_tx_blacklisted: Blacklisted MU Tx count
+ * @num_mu_tx_denylisted: Denylisted MU Tx count
  * @sgi_count: sgi count of the peer
  * @rx_mc_bc_cnt: Total number of received multicast & broadcast data frames
  * corresponding to this peer, 1 in the MSB of rx_mc_bc_cnt represents a
@@ -4038,7 +4038,7 @@ typedef struct {
 	uint32_t last_tx_power;
 	uint32_t atf_tokens_allocated;
 	uint32_t atf_tokens_utilized;
-	uint32_t num_mu_tx_blacklisted;
+	uint32_t num_mu_tx_denylisted;
 	uint32_t sgi_count;
 	uint32_t rx_mc_bc_cnt;
 	uint32_t rx_retry_cnt;
@@ -4835,7 +4835,7 @@ typedef enum {
 	wmi_esp_estimate_event_id,
 	wmi_pdev_ctl_failsafe_check_event_id,
 	wmi_vdev_bcn_reception_stats_event_id,
-	wmi_roam_blacklist_event_id,
+	wmi_roam_denylist_event_id,
 	wmi_wlm_stats_event_id,
 	wmi_peer_cfr_capture_event_id,
 	wmi_pdev_cold_boot_cal_event_id,
@@ -6126,7 +6126,7 @@ typedef enum {
  * @WMI_HOST_PEER_EXT_STATS_ENABLE: Enable extended peer stats
  * @WMI_HOST_PEER_USE_FIXED_PWR: Use FIXED Pwr,
  * @WMI_HOST_PEER_PARAM_FIXED_RATE: Set peer fixed rate
- * @WMI_HOST_PEER_SET_MU_WHITELIST: Whitelist peer TIDs
+ * @WMI_HOST_PEER_SET_MU_ALLOWLIST: Allowlist peer TIDs
  * @WMI_HOST_PEER_MEMBERSHIP: set group membership status
  * @WMI_HOST_PEER_USERPOS: User POS
  * @WMI_HOST_PEER_CRIT_PROTO_HINT_ENABLED: Critical Protocol Hint enabled
@@ -6156,7 +6156,7 @@ enum {
 	WMI_HOST_PEER_EXT_STATS_ENABLE,
 	WMI_HOST_PEER_USE_FIXED_PWR,
 	WMI_HOST_PEER_PARAM_FIXED_RATE,
-	WMI_HOST_PEER_SET_MU_WHITELIST,
+	WMI_HOST_PEER_SET_MU_ALLOWLIST,
 	WMI_HOST_PEER_MEMBERSHIP,
 	WMI_HOST_PEER_USERPOS,
 	WMI_HOST_PEER_CRIT_PROTO_HINT_ENABLED,
@@ -7912,10 +7912,10 @@ struct wmi_roam_wtc_btm_trigger_data {
  *  @rssi_score:  AP RSSI score
  *  @total_score: Total score of the candidate AP.
  *  @etp:         Estimated throughput value of the AP in Mbps
- *  @bl_reason:   Blacklist reason
+ *  @bl_reason:   Denylist reason
  *  @bl_source:   Source of adding AP to BL
  *  @bl_timestamp:This timestamp indicates the time when AP added
- *  to blacklist.
+ *  to denylist.
  *  @bl_original_timeout: Original timeout value in milli seconds
  *  when AP added to BL
  */

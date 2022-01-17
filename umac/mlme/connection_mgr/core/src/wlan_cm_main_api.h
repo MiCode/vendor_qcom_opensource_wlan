@@ -565,14 +565,14 @@ void cm_store_wep_key(struct cnx_mgr *cm_ctx,
 		      wlan_cm_id cm_id);
 
 /**
- * cm_inform_blm_connect_complete() - inform bsl about connect complete
+ * cm_inform_dlm_connect_complete() - inform bsl about connect complete
  * @vdev: vdev
  * @resp: connect resp
  *
  * Return: QDF_STATUS
  */
 QDF_STATUS
-cm_inform_blm_connect_complete(struct wlan_objmgr_vdev *vdev,
+cm_inform_dlm_connect_complete(struct wlan_objmgr_vdev *vdev,
 			       struct wlan_cm_connect_resp *resp);
 
 static inline QDF_STATUS
@@ -595,7 +595,7 @@ static inline void cm_store_wep_key(struct cnx_mgr *cm_ctx,
 {}
 
 static inline QDF_STATUS
-cm_inform_blm_connect_complete(struct wlan_objmgr_vdev *vdev,
+cm_inform_dlm_connect_complete(struct wlan_objmgr_vdev *vdev,
 			       struct wlan_cm_connect_resp *resp)
 {
 	return QDF_STATUS_SUCCESS;

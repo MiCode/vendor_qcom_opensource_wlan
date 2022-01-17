@@ -889,14 +889,14 @@ struct scan_random_attr {
 };
 
 /**
- * struct probe_req_whitelist_attr - holds probe req ie whitelist attrs
- * @white_list: enable/disable whitelist
+ * struct probe_req_allowlist_attr - holds probe req ie allowlist attrs
+ * @allow_list: enable/disable allowlist
  * @ie_bitmap: bitmap of IEs to be enabled
  * @num_vendor_oui: number of vendor OUIs
  * @voui: vendor oui buffer
  */
-struct probe_req_whitelist_attr {
-	bool white_list;
+struct probe_req_allowlist_attr {
+	bool allow_list;
 	uint32_t ie_bitmap[PROBE_REQ_BITMAP_LEN];
 	uint32_t num_vendor_oui;
 	uint32_t voui[MAX_PROBE_REQ_OUIS];
@@ -1032,7 +1032,7 @@ enum scan_request_type {
  * @scan_f_add_ds_ie_in_probe: add DS ie in probe req frame
  * @scan_f_add_spoofed_mac_in_probe: use random mac address for TA in probe
  * @scan_f_add_rand_seq_in_probe: use random sequence number in probe
- * @scan_f_en_ie_whitelist_in_probe: enable ie whitelist in probe
+ * @scan_f_en_ie_allowlist_in_probe: enable ie allowlist in probe
  * @scan_f_forced: force scan even in presence of data traffic
  * @scan_f_2ghz: scan 2.4 GHz channels
  * @scan_f_5ghz: scan 5 GHz channels
@@ -1047,7 +1047,7 @@ enum scan_request_type {
  * @ssid: ssid list
  * @bssid_list: Lisst of bssid to scan
  * @scan_random: scan randomization params
- * @ie_whitelist: probe req IE whitelist attrs
+ * @ie_allowlist: probe req IE allowlist attrs
  * @extraie: list of optional/vendor specific ie's to be added in probe requests
  * @htcap: htcap ie
  * @vhtcap: vhtcap ie
@@ -1119,7 +1119,7 @@ struct scan_req_params {
 				 scan_f_add_ds_ie_in_probe:1,
 				 scan_f_add_spoofed_mac_in_probe:1,
 				 scan_f_add_rand_seq_in_probe:1,
-				 scan_f_en_ie_whitelist_in_probe:1,
+				 scan_f_en_ie_allowlist_in_probe:1,
 				 scan_f_forced:1,
 				 scan_f_2ghz:1,
 				 scan_f_5ghz:1,
@@ -1146,7 +1146,7 @@ struct scan_req_params {
 	struct wlan_ssid ssid[WLAN_SCAN_MAX_NUM_SSID];
 	struct qdf_mac_addr bssid_list[WLAN_SCAN_MAX_NUM_BSSID];
 	struct scan_random_attr scan_random;
-	struct probe_req_whitelist_attr ie_whitelist;
+	struct probe_req_allowlist_attr ie_allowlist;
 	struct element_info extraie;
 	struct element_info htcap;
 	struct element_info vhtcap;
@@ -1456,7 +1456,7 @@ struct nlo_mawc_params {
  * to be triggered.
  * @networks_list: Preferred network list
  * @scan_random: scan randomization params
- * @ie_whitelist: probe req IE whitelist attrs
+ * @ie_allowlist: probe req IE allowlist attrs
  * @relative_rssi_set: Flag to check whether realtive_rssi is set or not
  * @relative_rssi: Relative rssi threshold, used for connected pno
  * @band_rssi_pref: Band and RSSI preference that can be given to one BSS
@@ -1488,7 +1488,7 @@ struct pno_scan_req_params {
 	uint32_t channel_prediction_full_scan;
 	struct pno_nw_type networks_list[SCAN_PNO_MAX_SUPP_NETWORKS];
 	struct scan_random_attr scan_random;
-	struct probe_req_whitelist_attr ie_whitelist;
+	struct probe_req_allowlist_attr ie_allowlist;
 	bool relative_rssi_set;
 	int8_t relative_rssi;
 	struct cpno_band_rssi_pref band_rssi_pref;
@@ -1498,11 +1498,11 @@ struct pno_scan_req_params {
 
 /**
  * struct scan_user_cfg - user configuration required for for scan
- * @ie_whitelist: probe req IE whitelist attrs
+ * @ie_allowlist: probe req IE allowlist attrs
  * @sta_miracast_mcc_rest_time: sta miracast mcc rest time
  */
 struct scan_user_cfg {
-	struct probe_req_whitelist_attr ie_whitelist;
+	struct probe_req_allowlist_attr ie_allowlist;
 	uint32_t sta_miracast_mcc_rest_time;
 };
 

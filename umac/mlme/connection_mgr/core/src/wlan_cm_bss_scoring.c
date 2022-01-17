@@ -1816,11 +1816,11 @@ void wlan_cm_calculate_bss_score(struct wlan_objmgr_pdev *pdev,
 	int pcl_chan_weight;
 	QDF_STATUS status;
 	struct psoc_phy_config *config;
-	enum cm_denylist_action blacklist_action;
+	enum cm_denylist_action denylist_action;
 	struct wlan_objmgr_psoc *psoc;
 	bool assoc_allowed;
 	struct scan_cache_node *force_connect_candidate = NULL;
-	bool are_all_candidate_blacklisted = true;
+	bool are_all_candidate_denylisted = true;
 
 	psoc = wlan_pdev_get_psoc(pdev);
 
@@ -1863,16 +1863,16 @@ void wlan_cm_calculate_bss_score(struct wlan_objmgr_pdev *pdev,
 						    scan_entry->entry);
 
 		if (assoc_allowed)
-			blacklist_action = wlan_denylist_action_on_bssid(pdev,
+			denylist_action = wlan_denylist_action_on_bssid(pdev,
 							scan_entry->entry);
 		else
-			blacklist_action = CM_DLM_FORCE_REMOVE;
+			denylist_action = CM_DLM_FORCE_REMOVE;
 
-		if (blacklist_action == CM_DLM_NO_ACTION ||
-		    blacklist_action == CM_DLM_AVOID)
-			are_all_candidate_blacklisted = false;
+		if (denylist_action == CM_DLM_NO_ACTION ||
+		    denylist_action == CM_DLM_AVOID)
+			are_all_candidate_denylisted = false;
 
-		if (blacklist_action == CM_DLM_NO_ACTION &&
+		if (denylist_action == CM_DLM_NO_ACTION &&
 		    pcl_lst && pcl_lst->num_of_pcl_channels &&
 		    scan_entry->entry->rssi_raw > CM_PCL_RSSI_THRESHOLD &&
 		    score_config->weight_config.pcl_weightage) {
@@ -1885,11 +1885,12 @@ void wlan_cm_calculate_bss_score(struct wlan_objmgr_pdev *pdev,
 			}
 		}
 
-		if (blacklist_action == CM_DLM_NO_ACTION ||
-		    (are_all_candidate_blacklisted && blacklist_action == CM_DLM_REMOVE)) {
+		if (denylist_action == CM_DLM_NO_ACTION ||
+		    (are_all_candidate_denylisted && denylist_action ==
+		     CM_DLM_REMOVE)) {
 			cm_calculate_bss_score(psoc, scan_entry->entry,
 					       pcl_chan_weight, bssid_hint);
-		} else if (blacklist_action == CM_DLM_AVOID) {
+		} else if (denylist_action == CM_DLM_AVOID) {
 			/* add min score so that it is added back in the end */
 			scan_entry->entry->bss_score =
 					CM_AVOID_CANDIDATE_MIN_SCORE;
@@ -1902,15 +1903,15 @@ void wlan_cm_calculate_bss_score(struct wlan_objmgr_pdev *pdev,
 
 		/*
 		 * The below logic is added to select the best candidate
-		 * amongst the blacklisted candidates. This is done to
-		 * handle a case where all the BSSIDs become blacklisted
+		 * amongst the denylisted candidates. This is done to
+		 * handle a case where all the BSSIDs become denylisted
 		 * and hence there are continuous connection failures.
 		 * With the below logic if the action on BSSID is to remove
 		 * then we keep a backup node and restore the candidate
 		 * list.
 		 */
-		if (blacklist_action == CM_DLM_REMOVE &&
-		    are_all_candidate_blacklisted) {
+		if (denylist_action == CM_DLM_REMOVE &&
+		    are_all_candidate_denylisted) {
 			if (!force_connect_candidate) {
 				force_connect_candidate =
 					qdf_mem_malloc(
@@ -1942,17 +1943,17 @@ void wlan_cm_calculate_bss_score(struct wlan_objmgr_pdev *pdev,
 		}
 
 		/*
-		 * If CM_DLM_REMOVE ie blacklisted or assoc not allowed then
+		 * If CM_DLM_REMOVE ie denylisted or assoc not allowed then
 		 * free the entry else add back to the list sorted
 		 */
-		if (blacklist_action == CM_DLM_REMOVE ||
-		    blacklist_action == CM_DLM_FORCE_REMOVE) {
+		if (denylist_action == CM_DLM_REMOVE ||
+		    denylist_action == CM_DLM_FORCE_REMOVE) {
 			if (assoc_allowed)
-				mlme_nofl_debug("Candidate("QDF_MAC_ADDR_FMT" freq %d): rssi %d, blm action %d is in Blacklist, remove entry",
+				mlme_nofl_debug("Candidate( " QDF_MAC_ADDR_FMT " freq %d): rssi %d, dlm action %d is in Denylist, remove entry",
 					QDF_MAC_ADDR_REF(scan_entry->entry->bssid.bytes),
 					scan_entry->entry->channel.chan_freq,
 					scan_entry->entry->rssi_raw,
-					blacklist_action);
+					denylist_action);
 			util_scan_free_cache_entry(scan_entry->entry);
 			qdf_mem_free(scan_entry);
 		} else {
@@ -1963,8 +1964,8 @@ void wlan_cm_calculate_bss_score(struct wlan_objmgr_pdev *pdev,
 		next_node = NULL;
 	}
 
-	if (are_all_candidate_blacklisted && force_connect_candidate) {
-		mlme_nofl_debug("All candidates in blacklist, Candidate("QDF_MAC_ADDR_FMT" freq %d): rssi %d, selected for connection",
+	if (are_all_candidate_denylisted && force_connect_candidate) {
+		mlme_nofl_debug("All candidates in denylist, Candidate( " QDF_MAC_ADDR_FMT " freq %d): rssi %d, selected for connection",
 			QDF_MAC_ADDR_REF(force_connect_candidate->entry->bssid.bytes),
 			force_connect_candidate->entry->channel.chan_freq,
 			force_connect_candidate->entry->rssi_raw);

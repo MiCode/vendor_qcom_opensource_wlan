@@ -431,7 +431,7 @@ QDF_STATUS
 QDF_STATUS
 (*extract_btm_bl_event)(wmi_unified_t wmi_handle,
 			uint8_t *event, uint32_t data_len,
-			struct roam_blacklist_event **dst_list);
+			struct roam_denylist_event **dst_list);
 QDF_STATUS
 (*extract_vdev_disconnect_event)(wmi_unified_t wmi_handle,
 				 uint8_t *event, uint32_t data_len,
@@ -3367,10 +3367,10 @@ void wmi_policy_mgr_attach_tlv(struct wmi_unified *wmi_handle)
 #endif
 
 #if defined(WLAN_FEATURE_ROAM_OFFLOAD) && defined(FEATURE_DENYLIST_MGR)
-void wmi_blacklist_mgr_attach_tlv(struct wmi_unified *wmi_handle);
+void wmi_denylist_mgr_attach_tlv(struct wmi_unified *wmi_handle);
 #else
 static inline
-void wmi_blacklist_mgr_attach_tlv(struct wmi_unified *wmi_handle)
+void wmi_denylist_mgr_attach_tlv(struct wmi_unified *wmi_handle)
 {
 }
 #endif

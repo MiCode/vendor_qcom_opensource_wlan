@@ -1201,7 +1201,7 @@ QDF_STATUS ucfg_scan_update_user_config(struct wlan_objmgr_psoc *psoc,
 	}
 
 	scan_def = &scan_obj->scan_def;
-	scan_obj->ie_whitelist = scan_cfg->ie_whitelist;
+	scan_obj->ie_allowlist = scan_cfg->ie_allowlist;
 	scan_def->sta_miracast_mcc_rest_time =
 				scan_cfg->sta_miracast_mcc_rest_time;
 
@@ -1450,8 +1450,8 @@ ucfg_scan_get_max_active_scans(struct wlan_objmgr_psoc *psoc)
 	return scan_params->max_active_scans_allowed;
 }
 
-bool ucfg_copy_ie_whitelist_attrs(struct wlan_objmgr_psoc *psoc,
-				  struct probe_req_whitelist_attr *ie_whitelist)
+bool ucfg_copy_ie_allowlist_attrs(struct wlan_objmgr_psoc *psoc,
+				  struct probe_req_allowlist_attr *ie_allowlist)
 {
 	struct wlan_scan_obj *scan_obj = NULL;
 
@@ -1459,13 +1459,13 @@ bool ucfg_copy_ie_whitelist_attrs(struct wlan_objmgr_psoc *psoc,
 	if (!scan_obj)
 		return false;
 
-	qdf_mem_copy(ie_whitelist, &scan_obj->ie_whitelist,
-		     sizeof(*ie_whitelist));
+	qdf_mem_copy(ie_allowlist, &scan_obj->ie_allowlist,
+		     sizeof(*ie_allowlist));
 
 	return true;
 }
 
-bool ucfg_ie_whitelist_enabled(struct wlan_objmgr_psoc *psoc,
+bool ucfg_ie_allowlist_enabled(struct wlan_objmgr_psoc *psoc,
 			       struct wlan_objmgr_vdev *vdev)
 {
 	struct wlan_scan_obj *scan_obj = NULL;
@@ -1478,7 +1478,7 @@ bool ucfg_ie_whitelist_enabled(struct wlan_objmgr_psoc *psoc,
 	    wlan_vdev_is_up(vdev) == QDF_STATUS_SUCCESS)
 		return false;
 
-	if (!scan_obj->ie_whitelist.white_list)
+	if (!scan_obj->ie_allowlist.allow_list)
 		return false;
 
 	return true;

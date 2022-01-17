@@ -786,7 +786,7 @@ static bool cm_is_any_other_vdev_disconnecting(struct cnx_mgr *cm_ctx,
 }
 
 QDF_STATUS
-cm_inform_blm_connect_complete(struct wlan_objmgr_vdev *vdev,
+cm_inform_dlm_connect_complete(struct wlan_objmgr_vdev *vdev,
 			       struct wlan_cm_connect_resp *resp)
 {
 	struct wlan_objmgr_pdev *pdev;
@@ -1998,7 +1998,7 @@ QDF_STATUS cm_notify_connect_complete(struct cnx_mgr *cm_ctx,
 	mlme_cm_osif_connect_complete(cm_ctx->vdev, resp);
 	cm_if_mgr_inform_connect_complete(cm_ctx->vdev,
 					  resp->connect_status);
-	cm_inform_blm_connect_complete(cm_ctx->vdev, resp);
+	cm_inform_dlm_connect_complete(cm_ctx->vdev, resp);
 
 	if (QDF_IS_STATUS_ERROR(resp->connect_status))
 		cm_clear_vdev_mlo_cap(cm_ctx->vdev);

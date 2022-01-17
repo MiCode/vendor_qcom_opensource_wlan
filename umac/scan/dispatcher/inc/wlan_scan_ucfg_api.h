@@ -643,30 +643,31 @@ QDF_STATUS ucfg_scan_psoc_close(struct wlan_objmgr_psoc *psoc);
 uint32_t ucfg_scan_get_max_active_scans(struct wlan_objmgr_psoc *psoc);
 
 /**
- * ucfg_ie_whitelist_enabled() - Checks for IE whitelisting enable
+ * ucfg_ie_allowlist_enabled() - Checks for IE allowlisting enable
  * @psoc: pointer to psoc object
  * @vdev: pointer to vdev
  *
- * This function is used to check whether IE whitelisting is enabled or not
+ * This function is used to check whether IE allowlisting is enabled or not
  *
  * Return: If enabled returns true else returns false
  */
-bool ucfg_ie_whitelist_enabled(struct wlan_objmgr_psoc *psoc,
+bool ucfg_ie_allowlist_enabled(struct wlan_objmgr_psoc *psoc,
 			       struct wlan_objmgr_vdev *vdev);
 
 /**
- * ucfg_copy_ie_whitelist_attrs() - Populate probe req IE whitelist attrs
+ * ucfg_copy_ie_allowlist_attrs() - Populate probe req IE allowlist attrs
  * @psoc: pointer to psoc object
- * @ie_whitelist: output parameter to hold ie whitelist attrs
+ * @ie_allowlist: output parameter to hold ie allowlist attrs
  *
- * If IE whitelisting is enabled then invoke this function to copy
- * IE whitelisting attrs from wlan scan object
+ * If IE allowlisting is enabled then invoke this function to copy
+ * IE allowlisting attrs from wlan scan object
  *
  * Return: true - successful copy
  *         false - copy failed
  */
-bool ucfg_copy_ie_whitelist_attrs(struct wlan_objmgr_psoc *psoc,
-				struct probe_req_whitelist_attr *ie_whitelist);
+bool
+ucfg_copy_ie_allowlist_attrs(struct wlan_objmgr_psoc *psoc,
+			     struct probe_req_allowlist_attr *ie_allowlist);
 
 /**
  * ucfg_scan_set_bt_activity() - API to set bt activity
