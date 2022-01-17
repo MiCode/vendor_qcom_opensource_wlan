@@ -26,7 +26,7 @@
 
 /* Include files */
 #include "wifi_pos_utils_pub.h"
-#include "../src/wifi_pos_utils_i.h"
+#include "wifi_pos_utils_i.h"
 
 /* forward reference */
 struct wlan_objmgr_psoc;

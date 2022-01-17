@@ -53,6 +53,8 @@
 
 #ifdef WIFI_POS_CONVERGED
 #include "target_if_wifi_pos.h"
+#include "target_if_wifi_pos_tx_ops.h"
+#include "target_if_wifi_pos_rx_ops.h"
 #endif
 
 #ifdef FEATURE_WLAN_TDLS
@@ -266,17 +268,18 @@ static void target_if_fd_tx_ops_register(struct wlan_lmac_if_tx_ops *tx_ops)
 #endif
 
 #ifdef WIFI_POS_CONVERGED
-static void target_if_wifi_pos_tx_ops_register(
-			struct wlan_lmac_if_tx_ops *tx_ops)
+static void
+target_if_wifi_pos_tx_ops_register(struct wlan_lmac_if_tx_ops *tx_ops)
 {
 	target_if_wifi_pos_register_tx_ops(tx_ops);
 }
 #else
-static void target_if_wifi_pos_tx_ops_register(
-			struct wlan_lmac_if_tx_ops *tx_ops)
+static void
+target_if_wifi_pos_tx_ops_register(struct wlan_lmac_if_tx_ops *tx_ops)
 {
 }
 #endif
+
 #if defined(QCA_SUPPORT_SON) || defined(WLAN_FEATURE_SON)
 static void target_if_son_tx_ops_register(
 			struct wlan_lmac_if_tx_ops *tx_ops)
