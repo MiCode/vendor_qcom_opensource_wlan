@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2016-2018,2020-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -39,7 +39,7 @@ QDF_STATUS hif_initialize_ahb_ops(struct hif_bus_ops *bus_ops)
 	bus_ops->hif_bus_open = &hif_ahb_open;
 	bus_ops->hif_bus_close = &hif_ahb_close;
 	bus_ops->hif_bus_prevent_linkdown = &hif_dummy_bus_prevent_linkdown;
-	bus_ops->hif_reset_soc = &hif_ahb_reset_soc;
+	bus_ops->hif_reset_soc = &hif_dummy_reset_soc;
 	bus_ops->hif_bus_suspend = &hif_dummy_bus_suspend;
 	bus_ops->hif_bus_resume = &hif_dummy_bus_resume;
 	bus_ops->hif_target_sleep_state_adjust =

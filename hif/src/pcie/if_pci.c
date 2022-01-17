@@ -2770,12 +2770,6 @@ void hif_target_dump_access_log(void)
 #endif
 
 #ifndef HIF_AHB
-int hif_ahb_configure_legacy_irq(struct hif_pci_softc *sc)
-{
-	QDF_BUG(0);
-	return -EINVAL;
-}
-
 int hif_ahb_configure_irq(struct hif_pci_softc *sc)
 {
 	QDF_BUG(0);
@@ -3286,9 +3280,6 @@ int hif_configure_irq(struct hif_softc *scn)
 	}
 
 	switch (scn->target_info.target_type) {
-	case TARGET_TYPE_IPQ4019:
-		ret = hif_ahb_configure_legacy_irq(sc);
-		break;
 	case TARGET_TYPE_QCA8074:
 	case TARGET_TYPE_QCA8074V2:
 	case TARGET_TYPE_QCA6018:

@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2013-2018,2020-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -27,7 +28,6 @@ void hif_ahb_close(struct hif_softc *hif_ctx);
 
 void hif_ahb_disable_isr(struct hif_softc *hif_ctx);
 void hif_ahb_nointrs(struct hif_softc *scn);
-void hif_ahb_reset_soc(struct hif_softc *hif_ctx);
 QDF_STATUS hif_ahb_enable_bus(struct hif_softc *ol_sc,
 			  struct device *dev, void *bdev,
 			  const struct hif_bus_id *bid,
@@ -40,12 +40,6 @@ void hif_ahb_exec_grp_irq_disable(struct hif_exec_context *hif_ext_grp);
 void hif_ahb_exec_grp_irq_enable(struct hif_exec_context *hif_ext_grp);
 int hif_ahb_dump_registers(struct hif_softc *scn);
 
-int hif_ahb_configure_legacy_irq(struct hif_pci_softc *sc);
-int hif_ahb_clk_enable_disable(struct device *dev, int enable);
-void hif_ahb_device_reset(struct hif_softc *scn);
-int hif_ahb_enable_radio(struct hif_pci_softc *sc,
-		struct platform_device *pdev,
-		const struct platform_device_id *id);
 int hif_ahb_configure_irq(struct hif_pci_softc *sc);
 int hif_ahb_configure_irq_by_ceid(struct hif_softc *sc, int ce_id);
 int hif_ahb_configure_grp_irq(struct hif_softc *scn,
