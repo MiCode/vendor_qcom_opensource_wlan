@@ -1745,5 +1745,8 @@ QDF_STATUS dp_rx_mon_filter_update_2_0(struct dp_pdev *pdev)
 	dp_mon_filter_h2t_setup(soc, pdev, srng_type, &filter.rx_tlv_filter);
 	dp_mon_ht2_rx_ring_cfg(soc, pdev, srng_type,
 			       &filter.rx_tlv_filter.tlv_filter);
+	dp_mon_filter_show_filter(mon_pdev,
+				  DP_MON_FILTER_MONITOR_MODE,
+				  &filter.rx_tlv_filter);
 	return QDF_STATUS_SUCCESS;
 }

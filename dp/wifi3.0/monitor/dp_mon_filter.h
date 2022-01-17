@@ -77,7 +77,7 @@ do { \
 } while (0)
 
 #define DP_MON_FILTER_PRINT(fmt, args ...) \
-	QDF_TRACE(QDF_MODULE_ID_MON_FILTER, QDF_TRACE_LEVEL_DEBUG, \
+	QDF_TRACE(QDF_MODULE_ID_MON_FILTER, QDF_TRACE_LEVEL_ERROR, \
 		  fmt, ## args)
 
 #define dp_mon_filter_err(params...) QDF_TRACE_ERROR(QDF_MODULE_ID_MON_FILTER, params)

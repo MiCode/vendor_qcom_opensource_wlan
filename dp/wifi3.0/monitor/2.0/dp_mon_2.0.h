@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021,2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -134,10 +134,13 @@ struct dp_mon_soc_be {
 /**
  * dp_mon_desc_pool_init() - Monitor descriptor pool init
  * @mon_desc_pool: mon desc pool
+ * @pool_size
  *
  * Return: non-zero for failure, zero for success
  */
-QDF_STATUS dp_mon_desc_pool_init(struct dp_mon_desc_pool *mon_desc_pool);
+QDF_STATUS
+dp_mon_desc_pool_init(struct dp_mon_desc_pool *mon_desc_pool,
+		      uint32_t pool_size);
 
 /*
  * dp_mon_desc_pool_deinit()- monitor descriptor pool deinit

@@ -5634,10 +5634,15 @@ static void dp_soc_deinit(void *txrx_soc)
 {
 	struct dp_soc *soc = (struct dp_soc *)txrx_soc;
 	struct htt_soc *htt_soc = soc->htt_handle;
+	struct dp_mon_ops *mon_ops;
 
 	qdf_atomic_set(&soc->cmn_init_done, 0);
 
 	soc->arch_ops.txrx_soc_deinit(soc);
+
+	mon_ops = dp_mon_ops_get(soc);
+	if (mon_ops && mon_ops->mon_soc_deinit)
+		mon_ops->mon_soc_deinit(soc);
 
 	/* free peer tables & AST tables allocated during peer_map_attach */
 	if (soc->peer_map_attach_success) {
@@ -13037,6 +13042,7 @@ void *dp_soc_init(struct dp_soc *soc, HTC_HANDLE htc_handle,
 	struct hal_reo_params reo_params;
 	uint8_t i;
 	int num_dp_msi;
+	struct dp_mon_ops *mon_ops;
 
 	wlan_minidump_log(soc, sizeof(*soc), soc->ctrl_psoc,
 			  WLAN_MD_DP_SOC, "dp_soc");
@@ -13196,6 +13202,10 @@ void *dp_soc_init(struct dp_soc *soc, HTC_HANDLE htc_handle,
 	hal_reo_set_err_dst_remap(soc->hal_soc);
 
 	soc->features.pn_in_reo_dest = hal_reo_enable_pn_in_dest(soc->hal_soc);
+
+	mon_ops = dp_mon_ops_get(soc);
+	if (mon_ops && mon_ops->mon_soc_init)
+		mon_ops->mon_soc_init(soc);
 
 	qdf_atomic_set(&soc->cmn_init_done, 1);
 

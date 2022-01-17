@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021,2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -567,6 +567,9 @@ static QDF_STATUS dp_vdev_attach_be(struct dp_soc *soc, struct dp_vdev *vdev)
 	struct dp_vdev_be *be_vdev = dp_get_be_vdev_from_dp_vdev(vdev);
 	struct dp_pdev *pdev = vdev->pdev;
 
+	if (vdev->opmode == wlan_op_mode_monitor)
+		return QDF_STATUS_SUCCESS;
+
 	be_vdev->vdev_id_check_en = DP_TX_VDEV_ID_CHECK_ENABLE;
 
 	be_vdev->bank_id = dp_tx_get_bank_profile(be_soc, be_vdev);
@@ -600,6 +603,9 @@ static QDF_STATUS dp_vdev_detach_be(struct dp_soc *soc, struct dp_vdev *vdev)
 {
 	struct dp_soc_be *be_soc = dp_get_be_soc_from_dp_soc(soc);
 	struct dp_vdev_be *be_vdev = dp_get_be_vdev_from_dp_vdev(vdev);
+
+	if (vdev->opmode == wlan_op_mode_monitor)
+		return QDF_STATUS_SUCCESS;
 
 	dp_tx_put_bank_profile(be_soc, be_vdev);
 	dp_clr_mlo_ptnr_list(soc, vdev);

@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2021,2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -127,7 +127,8 @@ void
 dp_tx_mon_buf_desc_pool_deinit(struct dp_soc *soc)
 {
 	struct dp_mon_soc *mon_soc = soc->monitor_soc;
-	struct dp_mon_soc_be *mon_soc_be = dp_get_be_mon_soc_from_dp_mon_soc(mon_soc);
+	struct dp_mon_soc_be *mon_soc_be =
+		dp_get_be_mon_soc_from_dp_mon_soc(mon_soc);
 
 	dp_mon_desc_pool_deinit(&mon_soc_be->tx_desc_mon);
 }
@@ -136,15 +137,20 @@ QDF_STATUS
 dp_tx_mon_buf_desc_pool_init(struct dp_soc *soc)
 {
 	struct dp_mon_soc *mon_soc = soc->monitor_soc;
-	struct dp_mon_soc_be *mon_soc_be = dp_get_be_mon_soc_from_dp_mon_soc(mon_soc);
+	struct dp_mon_soc_be *mon_soc_be =
+		dp_get_be_mon_soc_from_dp_mon_soc(mon_soc);
+	uint32_t num_entries;
 
-	return dp_mon_desc_pool_init(&mon_soc_be->tx_desc_mon);
+	num_entries =
+		wlan_cfg_get_dp_soc_rx_mon_buf_ring_size(soc->wlan_cfg_ctx);
+	return dp_mon_desc_pool_init(&mon_soc_be->tx_desc_mon, num_entries);
 }
 
 void dp_tx_mon_buf_desc_pool_free(struct dp_soc *soc)
 {
 	struct dp_mon_soc *mon_soc = soc->monitor_soc;
-	struct dp_mon_soc_be *mon_soc_be = dp_get_be_mon_soc_from_dp_mon_soc(mon_soc);
+	struct dp_mon_soc_be *mon_soc_be =
+		dp_get_be_mon_soc_from_dp_mon_soc(mon_soc);
 
 	if (mon_soc_be)
 		dp_mon_desc_pool_free(&mon_soc_be->tx_desc_mon);
@@ -158,7 +164,8 @@ dp_tx_mon_buf_desc_pool_alloc(struct dp_soc *soc)
 	int entries;
 	struct wlan_cfg_dp_soc_ctxt *soc_cfg_ctx;
 	struct dp_mon_soc *mon_soc = soc->monitor_soc;
-	struct dp_mon_soc_be *mon_soc_be = dp_get_be_mon_soc_from_dp_mon_soc(mon_soc);
+	struct dp_mon_soc_be *mon_soc_be =
+		dp_get_be_mon_soc_from_dp_mon_soc(mon_soc);
 
 	soc_cfg_ctx = soc->wlan_cfg_ctx;
 
@@ -177,7 +184,8 @@ dp_tx_mon_buffers_free(struct dp_soc *soc)
 {
 	struct dp_mon_desc_pool *tx_mon_desc_pool;
 	struct dp_mon_soc *mon_soc = soc->monitor_soc;
-	struct dp_mon_soc_be *mon_soc_be = dp_get_be_mon_soc_from_dp_mon_soc(mon_soc);
+	struct dp_mon_soc_be *mon_soc_be =
+		dp_get_be_mon_soc_from_dp_mon_soc(mon_soc);
 
 	tx_mon_desc_pool = &mon_soc_be->tx_desc_mon;
 
@@ -192,7 +200,8 @@ dp_tx_mon_buffers_alloc(struct dp_soc *soc, uint32_t size)
 	union dp_mon_desc_list_elem_t *desc_list = NULL;
 	union dp_mon_desc_list_elem_t *tail = NULL;
 	struct dp_mon_soc *mon_soc = soc->monitor_soc;
-	struct dp_mon_soc_be *mon_soc_be = dp_get_be_mon_soc_from_dp_mon_soc(mon_soc);
+	struct dp_mon_soc_be *mon_soc_be =
+		dp_get_be_mon_soc_from_dp_mon_soc(mon_soc);
 
 	mon_buf_ring = &mon_soc_be->tx_mon_buf_ring;
 

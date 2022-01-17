@@ -418,6 +418,8 @@ struct dp_mon_ops {
 	QDF_STATUS (*mon_soc_attach)(struct dp_soc *soc);
 	QDF_STATUS (*mon_soc_detach)(struct dp_soc *soc);
 	QDF_STATUS (*mon_pdev_alloc)(struct dp_pdev *pdev);
+	QDF_STATUS (*mon_soc_init)(struct dp_soc *soc);
+	void (*mon_soc_deinit)(struct dp_soc *soc);
 	void (*mon_pdev_free)(struct dp_pdev *pdev);
 	QDF_STATUS (*mon_pdev_attach)(struct dp_pdev *pdev);
 	QDF_STATUS (*mon_pdev_detach)(struct dp_pdev *pdev);

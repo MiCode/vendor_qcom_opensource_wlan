@@ -501,9 +501,6 @@ QDF_STATUS dp_mon_filter_update(struct dp_pdev *pdev)
 	if (mon_ops && mon_ops->tx_mon_filter_update)
 		mon_ops->tx_mon_filter_update(pdev);
 
-	if (mon_ops && mon_ops->rx_mon_filter_update)
-		mon_ops->rx_mon_filter_update(pdev);
-
 	return QDF_STATUS_SUCCESS;
 }
 

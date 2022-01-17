@@ -220,6 +220,9 @@ dp_mon_buffers_replenish(struct dp_soc *dp_soc,
 						dp_soc->hal_soc,
 						mon_srng);
 
+		if (!mon_ring_entry)
+			break;
+
 		qdf_assert_always((*desc_list)->mon_desc.in_use == 0);
 
 		(*desc_list)->mon_desc.in_use = 1;
@@ -248,7 +251,9 @@ dp_mon_buffers_replenish(struct dp_soc *dp_soc,
 	return ret;
 }
 
-QDF_STATUS dp_mon_desc_pool_init(struct dp_mon_desc_pool *mon_desc_pool)
+QDF_STATUS
+dp_mon_desc_pool_init(struct dp_mon_desc_pool *mon_desc_pool,
+		      uint32_t pool_size)
 {
 	int desc_id;
 	/* Initialize monitor desc lock */
@@ -259,6 +264,7 @@ QDF_STATUS dp_mon_desc_pool_init(struct dp_mon_desc_pool *mon_desc_pool)
 	mon_desc_pool->buf_size = DP_MON_DATA_BUFFER_SIZE;
 	/* link SW descs into a freelist */
 	mon_desc_pool->freelist = &mon_desc_pool->array[0];
+	mon_desc_pool->pool_size = pool_size;
 	qdf_mem_zero(mon_desc_pool->freelist, mon_desc_pool->pool_size);
 
 	for (desc_id = 0; desc_id <= mon_desc_pool->pool_size - 1; desc_id++) {
@@ -545,8 +551,6 @@ QDF_STATUS dp_mon_soc_detach_2_0(struct dp_soc *soc)
 		return QDF_STATUS_E_FAILURE;
 	}
 
-	dp_tx_mon_buffers_free(soc);
-	dp_rx_mon_buffers_free(soc);
 	dp_tx_mon_buf_desc_pool_free(soc);
 	dp_rx_mon_buf_desc_pool_free(soc);
 	dp_srng_free(soc, &soc->rxdma_mon_buf_ring[0]);
@@ -555,16 +559,110 @@ QDF_STATUS dp_mon_soc_detach_2_0(struct dp_soc *soc)
 	return QDF_STATUS_SUCCESS;
 }
 
+static void dp_mon_soc_deinit_2_0(struct dp_soc *soc)
+{
+	struct dp_mon_soc *mon_soc = soc->monitor_soc;
+	struct dp_mon_soc_be *mon_soc_be =
+		dp_get_be_mon_soc_from_dp_mon_soc(mon_soc);
+
+	dp_tx_mon_buffers_free(soc);
+	dp_rx_mon_buffers_free(soc);
+
+	dp_tx_mon_buf_desc_pool_deinit(soc);
+	dp_rx_mon_buf_desc_pool_deinit(soc);
+
+	dp_srng_deinit(soc, &soc->rxdma_mon_buf_ring[0], RXDMA_MONITOR_BUF, 0);
+
+	dp_srng_deinit(soc, &mon_soc_be->tx_mon_buf_ring, TX_MONITOR_BUF, 0);
+}
+
+static
+QDF_STATUS dp_rx_mon_soc_init_2_0(struct dp_soc *soc)
+{
+	if (dp_srng_init(soc, &soc->rxdma_mon_buf_ring[0],
+			 RXDMA_MONITOR_BUF, 0, 0)) {
+		dp_mon_err("%pK: " RNG_ERR "rx_mon_buf_ring", soc);
+		goto fail;
+	}
+
+	if (dp_rx_mon_buf_desc_pool_init(soc)) {
+		dp_mon_err("%pK: " RNG_ERR "rx mon desc pool init", soc);
+		goto fail;
+	}
+
+	/* monitor buffers for src */
+	if (dp_rx_mon_buffers_alloc(soc, DP_MON_RING_FILL_LEVEL_DEFAULT)) {
+		dp_mon_err("%pK: Rx mon buffers allocation failed", soc);
+		goto fail;
+	}
+
+	return QDF_STATUS_SUCCESS;
+fail:
+	return QDF_STATUS_E_FAILURE;
+}
+
+static
+QDF_STATUS dp_tx_mon_soc_init_2_0(struct dp_soc *soc)
+{
+	struct dp_mon_soc *mon_soc = soc->monitor_soc;
+	struct dp_mon_soc_be *mon_soc_be =
+		dp_get_be_mon_soc_from_dp_mon_soc(mon_soc);
+
+	if (dp_srng_init(soc, &mon_soc_be->tx_mon_buf_ring,
+			 TX_MONITOR_BUF, 0, 0)) {
+		dp_mon_err("%pK: " RNG_ERR "tx_mon_buf_ring", soc);
+		goto fail;
+	}
+
+	if (dp_tx_mon_buf_desc_pool_init(soc)) {
+		dp_mon_err("%pK: " RNG_ERR "tx mon desc pool init", soc);
+		goto fail;
+	}
+
+	/* monitor buffers for src */
+	if (dp_tx_mon_buffers_alloc(soc, DP_MON_RING_FILL_LEVEL_DEFAULT)) {
+		dp_mon_err("%pK: Tx mon buffers allocation failed", soc);
+		goto fail;
+	}
+
+	return QDF_STATUS_SUCCESS;
+fail:
+	return QDF_STATUS_E_FAILURE;
+}
+
+static
+QDF_STATUS dp_mon_soc_init_2_0(struct dp_soc *soc)
+{
+	if (soc->rxdma_mon_buf_ring[0].hal_srng) {
+		dp_mon_info("%pK: mon soc init is done", soc);
+		return QDF_STATUS_SUCCESS;
+	}
+
+	if (dp_rx_mon_soc_init_2_0(soc)) {
+		dp_mon_err("%pK: " RNG_ERR "tx_mon_buf_ring", soc);
+		goto fail;
+	}
+
+	if (dp_tx_mon_soc_init_2_0(soc)) {
+		dp_mon_err("%pK: " RNG_ERR "tx_mon_buf_ring", soc);
+		goto fail;
+	}
+	return QDF_STATUS_SUCCESS;
+fail:
+	dp_mon_soc_deinit_2_0(soc);
+	return QDF_STATUS_E_FAILURE;
+}
+
 static
 QDF_STATUS dp_mon_soc_attach_2_0(struct dp_soc *soc)
 {
-	struct dp_mon_soc_be *mon_soc_be = NULL;
 	struct dp_mon_soc *mon_soc = soc->monitor_soc;
+	struct dp_mon_soc_be *mon_soc_be =
+		dp_get_be_mon_soc_from_dp_mon_soc(mon_soc);
 	int entries;
 	struct wlan_cfg_dp_soc_ctxt *soc_cfg_ctx;
 
 	soc_cfg_ctx = soc->wlan_cfg_ctx;
-	mon_soc_be = dp_get_be_mon_soc_from_dp_mon_soc(mon_soc);
 	if (!mon_soc_be) {
 		dp_mon_err("DP MON SOC is NULL");
 		return QDF_STATUS_E_FAILURE;
@@ -589,18 +687,6 @@ QDF_STATUS dp_mon_soc_attach_2_0(struct dp_soc *soc)
 		goto fail;
 	}
 
-	if (dp_srng_init(soc, &soc->rxdma_mon_buf_ring[0],
-			 RXDMA_MONITOR_BUF, 0, 0)) {
-		dp_mon_err("%pK: " RNG_ERR "rx_mon_buf_ring", soc);
-		goto fail;
-	}
-
-	if (dp_srng_init(soc, &mon_soc_be->tx_mon_buf_ring,
-			 TX_MONITOR_BUF, 0, 0)) {
-		dp_mon_err("%pK: " RNG_ERR "tx_mon_buf_ring", soc);
-		goto fail;
-	}
-
 	/* allocate sw desc pool */
 	if (dp_rx_mon_buf_desc_pool_alloc(soc)) {
 		dp_mon_err("%pK: Rx mon desc pool allocation failed", soc);
@@ -609,28 +695,6 @@ QDF_STATUS dp_mon_soc_attach_2_0(struct dp_soc *soc)
 
 	if (dp_tx_mon_buf_desc_pool_alloc(soc)) {
 		dp_mon_err("%pK: Tx mon desc pool allocation failed", soc);
-		goto fail;
-	}
-
-	/* initialize sw desc pool */
-	if (dp_tx_mon_buf_desc_pool_init(soc)) {
-		dp_mon_err("%pK: " RNG_ERR "tx mon desc pool init", soc);
-		goto fail;
-	}
-
-	if (dp_rx_mon_buf_desc_pool_init(soc)) {
-		dp_mon_err("%pK: " RNG_ERR "rx mon desc pool init", soc);
-		goto fail;
-	}
-
-	/* monitor buffers for src */
-	if (dp_rx_mon_buffers_alloc(soc, DP_MON_RING_FILL_LEVEL_DEFAULT)) {
-		dp_mon_err("%pK: Rx mon buffers allocation failed", soc);
-		goto fail;
-	}
-
-	if (dp_tx_mon_buffers_alloc(soc, DP_MON_RING_FILL_LEVEL_DEFAULT)) {
-		dp_mon_err("%pK: Tx mon buffers allocation failed", soc);
 		goto fail;
 	}
 
@@ -975,6 +1039,8 @@ struct dp_mon_ops monitor_ops_2_0 = {
 	.mon_soc_cfg_init = dp_mon_soc_cfg_init,
 	.mon_soc_attach = dp_mon_soc_attach_2_0,
 	.mon_soc_detach = dp_mon_soc_detach_2_0,
+	.mon_soc_init = dp_mon_soc_init_2_0,
+	.mon_soc_deinit = dp_mon_soc_deinit_2_0,
 	.mon_pdev_alloc = dp_mon_pdev_alloc_2_0,
 	.mon_pdev_free = dp_mon_pdev_free_2_0,
 	.mon_pdev_attach = dp_mon_pdev_attach,
