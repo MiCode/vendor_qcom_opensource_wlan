@@ -1795,6 +1795,22 @@ dp_srng_configure_interrupt_thresholds(struct dp_soc *soc,
 			wlan_cfg_get_int_batch_threshold_other(soc->wlan_cfg_ctx);
 	}
 
+	/* These rings donot require interrupt to host. Make them zero */
+	switch (ring_type) {
+	case REO_REINJECT:
+	case REO_CMD:
+	case TCL_DATA:
+	case TCL_CMD_CREDIT:
+	case TCL_STATUS:
+	case WBM_IDLE_LINK:
+	case SW2WBM_RELEASE:
+	case PPE2TCL:
+	case SW2RXDMA_NEW:
+		ring_params->intr_timer_thres_us = 0;
+		ring_params->intr_batch_cntr_thres_entries = 0;
+		break;
+	}
+
 	/* Enable low threshold interrupts for rx buffer rings (regular and
 	 * monitor buffer rings.
 	 * TODO: See if this is required for any other ring
