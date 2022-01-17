@@ -24,6 +24,8 @@
 #include <wlan_mgmt_txrx_rx_reo_tgt_api.h>
 #include "wlan_mgmt_txrx_main_i.h"
 #include <qdf_util.h>
+#include <wlan_cfr_utils_api.h>
+#include <wlan_mlo_mgr_cmn.h>
 
 static struct mgmt_rx_reo_context g_rx_reo_ctx;
 
@@ -128,23 +130,69 @@ mgmt_rx_reo_is_stale_frame(
 					ts_last_released_frame->global_ts);
 }
 
+QDF_STATUS
+mgmt_rx_reo_validate_mlo_hw_link_info(struct wlan_objmgr_psoc *psoc)
+{
+	uint16_t valid_link_bitmap_shmem;
+	uint16_t valid_link_bitmap;
+	int8_t num_active_links_shmem;
+	int8_t num_active_links;
+	QDF_STATUS status;
+
+	if (!psoc) {
+		mgmt_rx_reo_err("psoc is null");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	if (!wlan_mgmt_rx_reo_is_feature_enabled_at_psoc(psoc))
+		return QDF_STATUS_SUCCESS;
+
+	status = tgt_mgmt_rx_reo_get_num_active_hw_links(psoc,
+							 &num_active_links_shmem);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		mgmt_rx_reo_err("Failed to get number of active MLO HW links");
+		return QDF_STATUS_E_FAILURE;
+	}
+	qdf_assert_always(num_active_links_shmem > 0);
+
+	num_active_links = wlan_mlo_get_num_active_hw_links();
+	qdf_assert_always(num_active_links > 0);
+
+	qdf_assert_always(num_active_links_shmem == num_active_links);
+
+	status = tgt_mgmt_rx_reo_get_valid_hw_link_bitmap(psoc,
+							  &valid_link_bitmap_shmem);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		mgmt_rx_reo_err("Failed to get valid MLO HW link bitmap");
+		return QDF_STATUS_E_INVAL;
+	}
+	qdf_assert_always(valid_link_bitmap_shmem != 0);
+
+	valid_link_bitmap = wlan_mlo_get_valid_hw_link_bitmap();
+	qdf_assert_always(valid_link_bitmap_shmem != 0);
+
+	qdf_assert_always(valid_link_bitmap_shmem == valid_link_bitmap);
+
+	return QDF_STATUS_SUCCESS;
+}
+
 #ifndef WLAN_MGMT_RX_REO_SIM_SUPPORT
 /**
- * mgmt_rx_reo_get_num_mlo_links() - Get number of MLO HW links from the reo
- * context object
+ * mgmt_rx_reo_get_num_mlo_links() - Get number of MLO HW links active in the
+ * system
  * @reo_context: Pointer to reo context object
  *
- * Return: On success returns number of MLO HW links. On failure
- * returns MGMT_RX_REO_INVALID_NUM_LINKS.
+ * Return: On success returns number of active MLO HW links. On failure
+ * returns WLAN_MLO_INVALID_NUM_HW_LINKS.
  */
 static int8_t
 mgmt_rx_reo_get_num_mlo_links(struct mgmt_rx_reo_context *reo_context) {
 	if (!reo_context) {
 		mgmt_rx_reo_err("Mgmt reo context is null");
-		return MGMT_RX_REO_INVALID_NUM_LINKS;
+		return WLAN_MLO_INVALID_NUM_HW_LINKS;
 	}
 
-	return reo_context->num_mlo_links;
+	return wlan_mlo_get_num_active_hw_links();
 }
 
 static QDF_STATUS
@@ -172,7 +220,7 @@ mgmt_rx_reo_handle_stale_frame(struct mgmt_rx_reo_list *reo_list,
  * to have MLO capability.
  *
  * Return: On success returns number of MLO HW links. On failure
- * returns -1.
+ * returns WLAN_MLO_INVALID_NUM_HW_LINKS.
  */
 static int8_t
 mgmt_rx_reo_sim_get_num_mlo_links(struct mgmt_rx_reo_sim_context *sim_context)
@@ -181,7 +229,7 @@ mgmt_rx_reo_sim_get_num_mlo_links(struct mgmt_rx_reo_sim_context *sim_context)
 
 	if (!sim_context) {
 		mgmt_rx_reo_err("Mgmt reo simulation context is null");
-		return MGMT_RX_REO_INVALID_NUM_LINKS;
+		return WLAN_MLO_INVALID_NUM_HW_LINKS;
 	}
 
 	qdf_spin_lock(&sim_context->link_id_to_pdev_map.lock);
@@ -199,13 +247,13 @@ mgmt_rx_reo_sim_get_num_mlo_links(struct mgmt_rx_reo_sim_context *sim_context)
  * @reo_context: Pointer to reo context object
  *
  * Return: On success returns number of MLO HW links. On failure
- * returns -1.
+ * returns WLAN_MLO_INVALID_NUM_HW_LINKS.
  */
 static int8_t
 mgmt_rx_reo_get_num_mlo_links(struct mgmt_rx_reo_context *reo_context) {
 	if (!reo_context) {
 		mgmt_rx_reo_err("Mgmt reo context is null");
-		return MGMT_RX_REO_INVALID_NUM_LINKS;
+		return WLAN_MLO_INVALID_NUM_HW_LINKS;
 	}
 
 	return mgmt_rx_reo_sim_get_num_mlo_links(&reo_context->sim_context);

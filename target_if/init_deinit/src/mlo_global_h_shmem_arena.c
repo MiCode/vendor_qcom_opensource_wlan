@@ -804,6 +804,19 @@ success:
 qdf_export_symbol(mlo_glb_h_shmem_arena_ctx_deinit);
 
 #ifdef WLAN_MGMT_RX_REO_SUPPORT
+uint16_t mgmt_rx_reo_get_valid_link_bitmap(void)
+{
+	struct wlan_host_mlo_glb_h_shmem_arena_ctx *shmem_arena_ctx;
+
+	shmem_arena_ctx = get_shmem_arena_ctx();
+	if (!shmem_arena_ctx) {
+		target_if_err("mlo_glb_h_shmem_arena context is NULL");
+		return 0;
+	}
+
+	return shmem_arena_ctx->rx_reo_snapshot_info.valid_link_bmap;
+}
+
 int mgmt_rx_reo_get_num_links(void)
 {
 	struct wlan_host_mlo_glb_h_shmem_arena_ctx *shmem_arena_ctx;
@@ -867,4 +880,4 @@ void *mgmt_rx_reo_get_snapshot_address(
 
 	return NULL;
 }
-#endif
+#endif /* WLAN_MGMT_RX_REO_SUPPORT */

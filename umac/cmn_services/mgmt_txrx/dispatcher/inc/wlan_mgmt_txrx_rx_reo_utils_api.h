@@ -210,6 +210,21 @@ QDF_STATUS
 wlan_mgmt_rx_reo_deinit(void);
 
 /**
+ * wlan_mgmt_rx_reo_validate_mlo_hw_link_info() - Validate the MLO HW link
+ * related information extracted from the MLO global shared memory arena
+ * @psoc: pointer to psoc object
+ *
+ * This function validates the MLO HW link related information extracted from
+ * the MLO global shared memory arena. This includes number of active HW links
+ * and the valid link bitmap. Same information is available with MLO manager and
+ * it is considered as the source of truth.
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+wlan_mgmt_rx_reo_validate_mlo_hw_link_info(struct wlan_objmgr_psoc *psoc);
+
+/**
  * wlan_mgmt_rx_reo_pdev_obj_create_notification() - pdev create handler for
  * management rx-reorder module
  * @pdev: pointer to pdev object
@@ -270,6 +285,12 @@ wlan_mgmt_rx_reo_is_feature_enabled_at_pdev(struct wlan_objmgr_pdev *pdev);
 bool
 wlan_mgmt_rx_reo_is_simulation_in_progress(void);
 #else
+static inline QDF_STATUS
+wlan_mgmt_rx_reo_validate_mlo_hw_link_info(struct wlan_objmgr_psoc *psoc)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
 /**
  * wlan_mgmt_rx_reo_pdev_obj_create_notification() - pdev create handler for
  * management rx-reorder feature

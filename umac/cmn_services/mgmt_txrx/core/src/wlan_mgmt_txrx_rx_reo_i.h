@@ -49,7 +49,6 @@
  * Remove this once the actual one is implemented.
  */
 #define MGMT_RX_REO_MAX_LINKS (4)
-#define MGMT_RX_REO_INVALID_NUM_LINKS (-1)
 #define MGMT_RX_REO_INVALID_LINK_ID   (-1)
 
 /* Reason to release an entry from the reorder list */
@@ -573,7 +572,6 @@ struct reo_egress_debug_info {
  * disconnection. Hence it is required to serialize the delivery
  * of management frames to upper layers in the strict order of MLO
  * global time stamp.
- * @num_mlo_links: Number of MLO links on the system
  * @sim_context: Management rx-reorder simulation context
  * @ingress_frame_debug_info: Debug object to log incoming frames
  * @egress_frame_debug_info: Debug object to log outgoing frames
@@ -584,9 +582,7 @@ struct mgmt_rx_reo_context {
 	struct mgmt_rx_reo_list reo_list;
 	qdf_spinlock_t reo_algo_entry_lock;
 	qdf_spinlock_t frame_release_lock;
-#ifndef WLAN_MGMT_RX_REO_SIM_SUPPORT
-	uint8_t num_mlo_links;
-#else
+#ifdef WLAN_MGMT_RX_REO_SIM_SUPPORT
 	struct mgmt_rx_reo_sim_context sim_context;
 #endif /* WLAN_MGMT_RX_REO_SIM_SUPPORT */
 #ifdef WLAN_MGMT_RX_REO_DEBUG_SUPPORT
@@ -908,5 +904,20 @@ mgmt_rx_reo_list_max_size_exceeded(struct mgmt_rx_reo_list *reo_list)
 {
 	return (qdf_list_size(&reo_list->list) > reo_list->max_list_size);
 }
+
+/**
+ * mgmt_rx_reo_validate_mlo_hw_link_info() - Validate the MLO HW link info
+ * obtained from the global shared memory arena
+ * @psoc: Pointer to psoc object
+ *
+ * Validate the following MLO HW link related information extracted from
+ * management Rx reorder related TLVs in global shared memory arena.
+ *         1. Number of active MLO HW links
+ *         2. Valid MLO HW link bitmap
+ *
+ * Return: QDF_STATUS of operation
+ */
+QDF_STATUS
+mgmt_rx_reo_validate_mlo_hw_link_info(struct wlan_objmgr_psoc *psoc);
 #endif /* WLAN_MGMT_RX_REO_SUPPORT */
 #endif /* _WLAN_MGMT_TXRX_RX_REO_I_H */

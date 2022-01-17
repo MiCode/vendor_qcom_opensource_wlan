@@ -24,6 +24,48 @@
 #include "../../core/src/wlan_mgmt_txrx_rx_reo_i.h"
 
 QDF_STATUS
+tgt_mgmt_rx_reo_get_num_active_hw_links(struct wlan_objmgr_psoc *psoc,
+					int8_t *num_active_hw_links)
+{
+	struct wlan_lmac_if_mgmt_rx_reo_tx_ops *mgmt_rx_reo_txops;
+
+	mgmt_rx_reo_txops = wlan_psoc_get_mgmt_rx_reo_txops(psoc);
+	if (!mgmt_rx_reo_txops) {
+		mgmt_rx_reo_err("mgmt rx reo txops is NULL");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	if (!mgmt_rx_reo_txops->get_num_active_hw_links) {
+		mgmt_rx_reo_err("get num active hw links txops is NULL");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	return mgmt_rx_reo_txops->get_num_active_hw_links(psoc,
+							  num_active_hw_links);
+}
+
+QDF_STATUS
+tgt_mgmt_rx_reo_get_valid_hw_link_bitmap(struct wlan_objmgr_psoc *psoc,
+					 uint16_t *valid_hw_link_bitmap)
+{
+	struct wlan_lmac_if_mgmt_rx_reo_tx_ops *mgmt_rx_reo_txops;
+
+	mgmt_rx_reo_txops = wlan_psoc_get_mgmt_rx_reo_txops(psoc);
+	if (!mgmt_rx_reo_txops) {
+		mgmt_rx_reo_err("mgmt rx reo txops is NULL");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	if (!mgmt_rx_reo_txops->get_valid_hw_link_bitmap) {
+		mgmt_rx_reo_err("get valid hw link bitmap txops is NULL");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	return mgmt_rx_reo_txops->get_valid_hw_link_bitmap(psoc,
+						valid_hw_link_bitmap);
+}
+
+QDF_STATUS
 tgt_mgmt_rx_reo_read_snapshot(
 			struct wlan_objmgr_pdev *pdev,
 			struct mgmt_rx_reo_snapshot *address,

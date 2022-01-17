@@ -99,6 +99,8 @@ QDF_STATUS mgmt_rx_reo_register_wifi3_0_ops(
 		return QDF_STATUS_E_NULL_VALUE;
 	}
 
+	reo_low_level_ops->get_valid_link_bitmap =
+		mgmt_rx_reo_get_valid_link_bitmap;
 	reo_low_level_ops->get_num_links = mgmt_rx_reo_get_num_links;
 	reo_low_level_ops->get_snapshot_address =
 		mgmt_rx_reo_get_snapshot_address;

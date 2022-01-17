@@ -21,10 +21,12 @@
  */
 
 #include <wlan_mgmt_txrx_rx_reo_utils_api.h>
+#include <wlan_mgmt_txrx_rx_reo_tgt_api.h>
 #include "../../core/src/wlan_mgmt_txrx_rx_reo_i.h"
 #include <cfg_ucfg_api.h>
 #include <wlan_mgmt_txrx_tgt_api.h>
 #include<wlan_mgmt_txrx_rx_reo_tgt_api.h>
+#include <wlan_mlo_mgr_cmn.h>
 
 QDF_STATUS
 wlan_mgmt_rx_reo_deinit(void)
@@ -153,6 +155,12 @@ wlan_get_pdev_from_mlo_link_id(uint8_t mlo_link_id,
 
 qdf_export_symbol(wlan_get_pdev_from_mlo_link_id);
 #endif /* WLAN_MGMT_RX_REO_SIM_SUPPORT */
+
+QDF_STATUS
+wlan_mgmt_rx_reo_validate_mlo_hw_link_info(struct wlan_objmgr_psoc *psoc)
+{
+	return mgmt_rx_reo_validate_mlo_hw_link_info(psoc);
+}
 
 QDF_STATUS
 wlan_mgmt_rx_reo_pdev_obj_create_notification(

@@ -149,6 +149,13 @@ uint8_t mlo_glb_h_shmem_arena_get_no_of_chips_from_crash_info(void);
 
 #ifdef WLAN_MGMT_RX_REO_SUPPORT
 /**
+ * mgmt_rx_reo_get_valid_link_bitmap() - Get valid link bitmap
+ *
+ * Return: valid link bitmap
+ */
+uint16_t mgmt_rx_reo_get_valid_link_bitmap(void);
+
+/**
  * mgmt_rx_reo_get_num_links() - Get number of links to be used by MGMT Rx REO
  *
  * Return: number of links in case of success, else -1

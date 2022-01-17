@@ -255,6 +255,8 @@ struct wlan_lmac_if_global_shmem_local_ops {
  * table of MGMT Rx REO module
  * @implemented: Whether functions pointers are implemented
  * @get_num_links: Get number of links to be used by MGMT Rx REO module
+ * @get_valid_link_bitmap: Get valid link bitmap to be used by MGMT Rx
+ * REO module
  * @get_snapshot_address: Get address of an MGMT Rx REO snapshot
  * @snapshot_is_valid: Check if a snapshot is valid
  * @snapshot_get_mgmt_pkt_ctr: Get management packet counter from snapshot
@@ -266,6 +268,7 @@ struct wlan_lmac_if_global_shmem_local_ops {
 struct wlan_lmac_if_mgmt_rx_reo_low_level_ops {
 	bool implemented;
 	int (*get_num_links)(void);
+	uint16_t (*get_valid_link_bitmap)(void);
 	void* (*get_snapshot_address)(
 			uint8_t link_id,
 			enum mgmt_rx_reo_shared_snapshot_id snapshot_id);
@@ -281,12 +284,18 @@ struct wlan_lmac_if_mgmt_rx_reo_low_level_ops {
 /**
  * struct wlan_lmac_if_mgmt_txrx_tx_ops - structure of tx function
  * pointers for mgmt rx reo
+ * @get_num_active_hw_links: Get number of active MLO HW links
+ * @get_valid_hw_link_bitmap: Get valid MLO HW link bitmap
  * @read_mgmt_rx_reo_snapshot: Read rx-reorder snapshots
  * @get_mgmt_rx_reo_snapshot_address: Get rx-reorder snapshot address
  * @mgmt_rx_reo_filter_config:  Configure MGMT Rx REO filter
  * @low_level_ops:  Low level operations of MGMT Rx REO module
  */
 struct wlan_lmac_if_mgmt_rx_reo_tx_ops {
+	QDF_STATUS (*get_num_active_hw_links)(struct wlan_objmgr_psoc *psoc,
+					      int8_t *num_active_hw_links);
+	QDF_STATUS (*get_valid_hw_link_bitmap)(struct wlan_objmgr_psoc *psoc,
+					       uint16_t *valid_hw_link_bitmap);
 	QDF_STATUS (*read_mgmt_rx_reo_snapshot)
 			(struct wlan_objmgr_pdev *pdev,
 			 struct mgmt_rx_reo_snapshot *address,
