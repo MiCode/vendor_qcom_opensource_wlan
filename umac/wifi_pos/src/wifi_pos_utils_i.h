@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -262,6 +262,8 @@ typedef void (*wifi_pos_send_rsp_handler)(struct wlan_objmgr_psoc *, uint32_t,
  *|          |resp |init |resp  |init  |resp   |init   |resp |init |
  *+----------+-----+-----+------+------+-------+-------+-----+-----+
  * resp - responder role; init- initiator role
+ * @wifi_pos_get_max_fw_phymode_for_channels: function pointer to get max
+ *            supported FW phymode for the given channels
  *
  */
 struct wifi_pos_psoc_priv_obj {
@@ -305,6 +307,10 @@ struct wifi_pos_psoc_priv_obj {
 			struct wlan_objmgr_pdev *pdev,
 			struct rtt_channel_info *chinfo);
 	uint32_t rsp_version;
+	QDF_STATUS (*wifi_pos_get_max_fw_phymode_for_channels)(
+			struct wlan_objmgr_pdev *pdev,
+			struct wifi_pos_channel_power *chan_list,
+			uint16_t wifi_pos_num_chans);
 };
 
 /**

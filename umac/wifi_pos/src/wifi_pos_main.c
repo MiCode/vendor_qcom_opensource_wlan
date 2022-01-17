@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -505,6 +505,13 @@ static void wifi_pos_pdev_iterator(struct wlan_objmgr_psoc *psoc,
 	struct channel_power *ch_info = NULL;
 	struct wifi_pos_channel_power *wifi_pos_ch;
 	int i;
+	struct wifi_pos_psoc_priv_obj *wifi_pos_psoc =
+		wifi_pos_get_psoc_priv_obj(wifi_pos_get_psoc());
+
+	if (!wifi_pos_psoc) {
+		wifi_pos_err("wifi_pos priv obj is null");
+		return;
+	}
 
 	if (!chan_list) {
 		wifi_pos_err("wifi_pos priv arg is null");
@@ -544,6 +551,16 @@ static void wifi_pos_pdev_iterator(struct wlan_objmgr_psoc *psoc,
 		wifi_update_channel_bw_info(
 				psoc, pdev,
 				ch_info[i].center_freq, &wifi_pos_ch[i]);
+	}
+
+	if (wifi_pos_psoc->wifi_pos_get_max_fw_phymode_for_channels) {
+		status = wifi_pos_psoc->wifi_pos_get_max_fw_phymode_for_channels(
+				pdev, wifi_pos_ch, num_channels);
+		if (QDF_IS_STATUS_ERROR(status)) {
+			wifi_pos_err("Failed to get phymode");
+			qdf_mem_free(ch_info);
+			return;
+		}
 	}
 
 	chan_list->num_channels += num_channels;
@@ -712,11 +729,11 @@ static QDF_STATUS wifi_pos_process_ch_info_req(struct wlan_objmgr_psoc *psoc,
 		REG_SET_CHANNEL_MAX_TX_POWER(ch_info[idx].reg_info_2,
 					     ch[idx].ch_power.tx_power);
 
-		if (ch[i].is_dfs_chan)
+		if (ch[idx].is_dfs_chan)
 			WIFI_POS_SET_DFS(ch_info[idx].info);
 
-		if (ch[i].phy_mode)
-			REG_SET_CHANNEL_MODE(&ch_info[idx], ch[i].phy_mode);
+		if (ch[idx].phy_mode)
+			REG_SET_CHANNEL_MODE(&ch_info[idx], ch[idx].phy_mode);
 	}
 
 	wifi_pos_obj->wifi_pos_send_rsp(psoc, wifi_pos_obj->app_pid,

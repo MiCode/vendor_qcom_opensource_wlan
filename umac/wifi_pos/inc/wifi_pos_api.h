@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2012-2020 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -513,6 +513,20 @@ QDF_STATUS wifi_pos_register_get_pdev_id_by_dev_name(
 		struct wlan_objmgr_psoc *psoc,
 		QDF_STATUS (*handler)(char *dev_name, uint8_t *pdev_id,
 				      struct wlan_objmgr_psoc **psoc));
+
+/**
+ * wifi_pos_register_get_max_fw_phymode_for_channels: API to register callback
+ * to get FW phymode for the given channels.
+ * @psoc:  pointer to global psoc object
+ * @handler: callback to be registered
+ *
+ * Return: QDF_STATUS_SUCCESS in case of success, error codes in case of failure
+ */
+QDF_STATUS wifi_pos_register_get_max_fw_phymode_for_channels(
+		struct wlan_objmgr_psoc *psoc,
+		QDF_STATUS (*handler)(struct wlan_objmgr_pdev *pdev,
+				      struct wifi_pos_channel_power *chan_list,
+				      uint16_t wifi_pos_num_chans));
 #endif /* CNSS_GENL */
 
 #if !defined(CNSS_GENL) && defined(WLAN_RTT_MEASUREMENT_NOTIFICATION)
