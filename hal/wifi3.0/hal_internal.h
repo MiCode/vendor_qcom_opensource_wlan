@@ -1299,4 +1299,9 @@ struct hal_srng *hal_ring_handle_to_hal_srng(hal_ring_handle_t hal_ring)
 #define REO_QUEUE_REF_ML_TABLE_SIZE 69632
 #define HAL_ML_PEER_ID_START 0x2000
 #define HAL_PEER_ID_IS_MLO(peer_id) ((peer_id) & HAL_ML_PEER_ID_START)
+
+/*
+ * REO2PPE destination indication
+ */
+#define REO2PPE_DST_IND 11
 #endif /* _HAL_INTERNAL_H_ */

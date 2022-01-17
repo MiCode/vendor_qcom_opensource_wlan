@@ -6173,6 +6173,53 @@ static inline QDF_STATUS dp_print_swlm_stats(struct dp_soc *soc)
 }
 #endif /* !WLAN_DP_FEATURE_SW_LATENCY_MGR */
 
+#ifdef WLAN_SUPPORT_PPEDS
+/*
+ * dp_soc_target_ppe_rxole_rxdma_cfg() - Configure the RxOLe and RxDMA for PPE
+ * @soc: DP Tx/Rx handle
+ *
+ * Return: QDF_STATUS
+ */
+static
+QDF_STATUS dp_soc_target_ppe_rxole_rxdma_cfg(struct dp_soc *soc)
+{
+	struct dp_htt_rxdma_rxole_ppe_config htt_cfg = {0};
+	QDF_STATUS status;
+
+	/*
+	 * Program RxDMA to override the reo destination indication
+	 * with REO2PPE_DST_IND, when use_ppe is set to 1 in RX_MSDU_END,
+	 * thereby driving the packet to REO2PPE ring.
+	 * If the MSDU is spanning more than 1 buffer, then this
+	 * override is not done.
+	 */
+	htt_cfg.override = 1;
+	htt_cfg.reo_destination_indication = REO2PPE_DST_IND;
+	htt_cfg.multi_buffer_msdu_override_en = 0;
+
+	/*
+	 * Override use_ppe to 0 in RxOLE for the following
+	 * cases.
+	 */
+	htt_cfg.intra_bss_override = 1;
+	htt_cfg.decap_raw_override = 1;
+	htt_cfg.decap_nwifi_override = 1;
+	htt_cfg.ip_frag_override = 1;
+
+	status = dp_htt_rxdma_rxole_ppe_cfg_set(soc, &htt_cfg);
+	if (status != QDF_STATUS_SUCCESS)
+		dp_err("RxOLE and RxDMA PPE config failed %d", status);
+
+	return status;
+}
+#else
+static inline
+QDF_STATUS dp_soc_target_ppe_rxole_rxdma_cfg(struct dp_soc *soc)
+{
+	return QDF_STATUS_SUCCESS;
+}
+#endif /* WLAN_SUPPORT_PPEDS */
+
 /*
  * dp_soc_attach_target_wifi3() - SOC initialization in the target
  * @cdp_soc: Opaque Datapath SOC handle
@@ -6186,6 +6233,12 @@ dp_soc_attach_target_wifi3(struct cdp_soc_t *cdp_soc)
 	QDF_STATUS status = QDF_STATUS_SUCCESS;
 
 	htt_soc_attach_target(soc->htt_handle);
+
+	status = dp_soc_target_ppe_rxole_rxdma_cfg(soc);
+	if (status != QDF_STATUS_SUCCESS) {
+		dp_err("Failed to send htt RxOLE and RxDMA messages to target");
+		return status;
+	}
 
 	status = dp_rxdma_ring_config(soc);
 	if (status != QDF_STATUS_SUCCESS) {
