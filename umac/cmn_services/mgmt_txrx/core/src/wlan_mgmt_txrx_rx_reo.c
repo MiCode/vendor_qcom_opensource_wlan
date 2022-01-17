@@ -797,24 +797,12 @@ wlan_mgmt_rx_reo_algo_calculate_wait_count(
 				  fw_consumed_ss->global_timestamp);
 
 		/**
-		 * If MAC HW snapshot is invalid, we need to assume the worst
-		 * and wait for UINT_MAX frames, but this should not be a
-		 * concern because if subsequent frames read a valid snapshot,
-		 * the REO algorithm will take care of updating the wait count
-		 * of this frame as well.
-		 * There may be more optimal ways to handle invalid snapshot
-		 * reads.  For e.g., making use of previously read valid
-		 * snapshot, but they come with complex logic.
-		 * Keeping this simple for now.
+		 * If MAC HW snapshot is invalid, the link has not started
+		 * receiving management frames. Set wait count to zero.
 		 */
 		if (!mac_hw_ss->valid) {
-			wait_count->per_link_count[link] = UINT_MAX;
-			wait_count->total_count += UINT_MAX;
-			mgmt_rx_reo_debug("link_id = %u wait count: per link = 0x%x, total = 0x%llx",
-					  link,
-					  wait_count->per_link_count[link],
-					  wait_count->total_count);
-			continue;
+			frames_pending = 0;
+			goto update_pending_frames;
 		}
 
 		/**
