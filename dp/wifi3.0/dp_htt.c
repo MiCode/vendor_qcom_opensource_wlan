@@ -4520,6 +4520,112 @@ dp_htt_rx_fisa_config(struct dp_pdev *pdev,
 	return status;
 }
 
+#ifdef WLAN_SUPPORT_PPEDS
+/**
+ * dp_htt_rxdma_rxole_ppe_cfg_set() - Send RxOLE and RxDMA PPE config
+ * @dp_osc: Data path SoC handle
+ * @cfg: RxDMA and RxOLE PPE config
+ *
+ * Return: Success when HTT message is sent, error on failure
+ */
+QDF_STATUS
+dp_htt_rxdma_rxole_ppe_cfg_set(struct dp_soc *soc,
+			       struct dp_htt_rxdma_rxole_ppe_config *cfg)
+{
+	struct htt_soc *htt_handle = soc->htt_handle;
+	uint32_t len;
+	qdf_nbuf_t msg;
+	u_int32_t *msg_word;
+	QDF_STATUS status;
+	uint8_t *htt_logger_bufp;
+	struct dp_htt_htc_pkt *pkt;
+
+	len = HTT_MSG_BUF_SIZE(
+	      sizeof(struct htt_h2t_msg_type_rxdma_rxole_ppe_cfg_t));
+
+	msg = qdf_nbuf_alloc(soc->osdev,
+			     len,
+			     /* reserve room for the HTC header */
+			     HTC_HEADER_LEN + HTC_HDR_ALIGNMENT_PADDING,
+			     4,
+			     TRUE);
+	if (!msg)
+		return QDF_STATUS_E_NOMEM;
+
+	/*
+	 * Set the length of the message.
+	 * The contribution from the HTC_HDR_ALIGNMENT_PADDING is added
+	 * separately during the below call to qdf_nbuf_push_head.
+	 * The contribution from the HTC header is added separately inside HTC.
+	 */
+	if (!qdf_nbuf_put_tail(
+		msg, sizeof(struct htt_h2t_msg_type_rxdma_rxole_ppe_cfg_t))) {
+		qdf_err("Failed to expand head for HTT_H2T_MSG_TYPE_RXDMA_RXOLE_PPE_CFG msg");
+		qdf_nbuf_free(msg);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	/* fill in the message contents */
+	msg_word = (u_int32_t *)qdf_nbuf_data(msg);
+
+	memset(msg_word, 0,
+	       sizeof(struct htt_h2t_msg_type_rxdma_rxole_ppe_cfg_t));
+
+	/* Rewind beyond alignment pad to get to the HTC header reserved area */
+	qdf_nbuf_push_head(msg, HTC_HDR_ALIGNMENT_PADDING);
+	htt_logger_bufp = (uint8_t *)msg_word;
+
+	*msg_word = 0;
+	HTT_H2T_MSG_TYPE_SET(*msg_word, HTT_H2T_MSG_TYPE_RXDMA_RXOLE_PPE_CFG);
+	HTT_PPE_CFG_OVERRIDE_SET(*msg_word, cfg->override);
+	HTT_PPE_CFG_REO_DEST_IND_SET(
+			*msg_word, cfg->reo_destination_indication);
+	HTT_PPE_CFG_MULTI_BUF_MSDU_OVERRIDE_EN_SET(
+			*msg_word, cfg->multi_buffer_msdu_override_en);
+	HTT_PPE_CFG_INTRA_BSS_OVERRIDE_EN_SET(
+			*msg_word, cfg->intra_bss_override);
+	HTT_PPE_CFG_DECAP_RAW_OVERRIDE_EN_SET(
+			*msg_word, cfg->decap_raw_override);
+	HTT_PPE_CFG_DECAP_NWIFI_OVERRIDE_EN_SET(
+			*msg_word, cfg->decap_nwifi_override);
+	HTT_PPE_CFG_IP_FRAG_OVERRIDE_EN_SET(
+			*msg_word, cfg->ip_frag_override);
+
+	pkt = htt_htc_pkt_alloc(htt_handle);
+	if (!pkt) {
+		qdf_err("Fail to allocate dp_htt_htc_pkt buffer");
+		qdf_assert(0);
+		qdf_nbuf_free(msg);
+		return QDF_STATUS_E_RESOURCES; /* failure */
+	}
+
+	pkt->soc_ctxt = NULL; /* not used during send-done callback */
+
+	SET_HTC_PACKET_INFO_TX(&pkt->htc_pkt,
+			       dp_htt_h2t_send_complete_free_netbuf,
+			       qdf_nbuf_data(msg),
+			       qdf_nbuf_len(msg),
+			       htt_handle->htc_endpoint,
+			       /* tag for no FW response msg */
+			       HTC_TX_PACKET_TAG_RUNTIME_PUT);
+
+	SET_HTC_PACKET_NET_BUF_CONTEXT(&pkt->htc_pkt, msg);
+
+	status = DP_HTT_SEND_HTC_PKT(htt_handle, pkt,
+				     HTT_H2T_MSG_TYPE_RXDMA_RXOLE_PPE_CFG,
+				     htt_logger_bufp);
+
+	if (status != QDF_STATUS_SUCCESS) {
+		qdf_nbuf_free(msg);
+		htt_htc_pkt_free(htt_handle, pkt);
+		return status;
+	}
+
+	dp_info("HTT_H2T_MSG_TYPE_RXDMA_RXOLE_PPE_CFG sent");
+	return status;
+}
+#endif /* WLAN_SUPPORT_PPEDS */
+
 /**
  * dp_bk_pressure_stats_handler(): worker function to print back pressure
  *				   stats
