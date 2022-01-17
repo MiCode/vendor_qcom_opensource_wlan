@@ -243,3 +243,28 @@ wlan_mgmt_rx_reo_is_simulation_in_progress(void)
 {
 	return mgmt_rx_reo_is_simulation_in_progress();
 }
+
+QDF_STATUS
+wlan_mgmt_rx_reo_print_ingress_frame_debug_info(void)
+{
+	return mgmt_rx_reo_print_ingress_frame_debug_info();
+}
+
+qdf_export_symbol(wlan_mgmt_rx_reo_print_ingress_frame_debug_info);
+
+QDF_STATUS
+wlan_mgmt_rx_reo_print_egress_frame_debug_info(void)
+{
+	return mgmt_rx_reo_print_egress_frame_debug_info();
+}
+
+qdf_export_symbol(wlan_mgmt_rx_reo_print_egress_frame_debug_info);
+
+QDF_STATUS
+wlan_mgmt_rx_reo_set_mlo_link_info(uint8_t num_mlo_links,
+				   uint16_t valid_link_bitmap)
+{
+	return mgmt_rx_reo_set_mlo_link_info(num_mlo_links, valid_link_bitmap);
+}
+
+qdf_export_symbol(wlan_mgmt_rx_reo_set_mlo_link_info);

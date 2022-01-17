@@ -734,6 +734,30 @@ mgmt_rx_reo_deinit_context(void);
 bool
 mgmt_rx_reo_is_simulation_in_progress(void);
 
+/**
+ * mgmt_rx_reo_print_ingress_frame_debug_info() - Helper API to print
+ * stats related to incoming management frames
+ *
+ * This API prints stats related to management frames entering management
+ * Rx reorder module.
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+mgmt_rx_reo_print_ingress_frame_debug_info(void);
+
+/**
+ * mgmt_rx_reo_print_egress_frame_debug_info() - Helper API to print
+ * stats related to outgoing management frames
+ *
+ * This API prints stats related to management frames exiting management
+ * Rx reorder module.
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+mgmt_rx_reo_print_egress_frame_debug_info(void);
+
 #ifdef WLAN_MGMT_RX_REO_SIM_SUPPORT
 /**
  * mgmt_rx_reo_sim_start() - Helper API to start management Rx reorder

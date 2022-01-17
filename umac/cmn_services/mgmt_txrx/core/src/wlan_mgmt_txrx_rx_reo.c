@@ -3988,28 +3988,16 @@ mgmt_rx_reo_sim_stop(void)
 				sim_context->host_mgmt_frame_handler[link_id]);
 	}
 
-	status = mgmt_rx_reo_print_ingress_frame_stats(reo_context);
+	status = mgmt_rx_reo_print_ingress_frame_debug_info();
 	if (QDF_IS_STATUS_ERROR(status)) {
-		mgmt_rx_reo_err("Failed to print ingress frame stats");
-		return QDF_STATUS_E_FAILURE;
+		mgmt_rx_reo_err("Failed to print ingress frame debug info");
+		return status;
 	}
 
-	status = mgmt_rx_reo_print_egress_frame_stats(reo_context);
+	status = mgmt_rx_reo_print_egress_frame_debug_info();
 	if (QDF_IS_STATUS_ERROR(status)) {
-		mgmt_rx_reo_err("Failed to print egress frame stats");
-		return QDF_STATUS_E_FAILURE;
-	}
-
-	status = mgmt_rx_reo_print_ingress_frame_info(reo_context);
-	if (QDF_IS_STATUS_ERROR(status)) {
-		mgmt_rx_reo_err("Failed to print ingress frame info");
-		return QDF_STATUS_E_FAILURE;
-	}
-
-	status = mgmt_rx_reo_print_egress_frame_info(reo_context);
-	if (QDF_IS_STATUS_ERROR(status)) {
-		mgmt_rx_reo_err("Failed to print egress frame info");
-		return QDF_STATUS_E_FAILURE;
+		mgmt_rx_reo_err("Failed to print egress frame debug info");
+		return status;
 	}
 
 	master_frame_list = &sim_context->master_frame_list;
@@ -4410,3 +4398,71 @@ mgmt_rx_reo_is_simulation_in_progress(void)
 
 	return reo_context->simulation_in_progress;
 }
+
+#ifdef WLAN_MGMT_RX_REO_DEBUG_SUPPORT
+QDF_STATUS
+mgmt_rx_reo_print_ingress_frame_debug_info(void)
+{
+	struct mgmt_rx_reo_context *reo_context;
+	QDF_STATUS status;
+
+	reo_context = mgmt_rx_reo_get_context();
+	if (!reo_context) {
+		mgmt_rx_reo_err("reo context is null");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	status = mgmt_rx_reo_print_ingress_frame_stats(reo_context);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		mgmt_rx_reo_err("Failed to print ingress frame stats");
+		return status;
+	}
+
+	status = mgmt_rx_reo_print_ingress_frame_info(reo_context);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		mgmt_rx_reo_err("Failed to print ingress frame info");
+		return status;
+	}
+
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS
+mgmt_rx_reo_print_egress_frame_debug_info(void)
+{
+	struct mgmt_rx_reo_context *reo_context;
+	QDF_STATUS status;
+
+	reo_context = mgmt_rx_reo_get_context();
+	if (!reo_context) {
+		mgmt_rx_reo_err("reo context is null");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	status = mgmt_rx_reo_print_egress_frame_stats(reo_context);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		mgmt_rx_reo_err("Failed to print egress frame stats");
+		return status;
+	}
+
+	status = mgmt_rx_reo_print_egress_frame_info(reo_context);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		mgmt_rx_reo_err("Failed to print egress frame info");
+		return status;
+	}
+
+	return QDF_STATUS_SUCCESS;
+}
+#else
+QDF_STATUS
+mgmt_rx_reo_print_ingress_frame_debug_info(void)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS
+mgmt_rx_reo_print_egress_frame_debug_info(void)
+{
+	return QDF_STATUS_SUCCESS;
+}
+#endif /* WLAN_MGMT_RX_REO_DEBUG_SUPPORT */
