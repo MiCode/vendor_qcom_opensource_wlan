@@ -225,6 +225,21 @@ QDF_STATUS
 wlan_mgmt_rx_reo_validate_mlo_hw_link_info(struct wlan_objmgr_psoc *psoc);
 
 /**
+ * wlan_mgmt_rx_reo_pdev_obj_open_notification() - pdev open handler for
+ * management rx-reorder module
+ * @pdev: pointer to pdev object
+ * @mgmt_txrx_pdev_ctx: pdev private object of mgmt txrx module
+ *
+ * This function gets called from object manager when pdev is being opened and
+ * creates management rx-reorder pdev context
+ *
+ * Return: QDF_STATUS
+ */
+wlan_mgmt_rx_reo_pdev_obj_open_notification
+		(struct wlan_objmgr_pdev *pdev,
+		 struct mgmt_txrx_priv_pdev_context *mgmt_txrx_pdev_ctx);
+
+/**
  * wlan_mgmt_rx_reo_pdev_obj_create_notification() - pdev create handler for
  * management rx-reorder module
  * @pdev: pointer to pdev object
@@ -284,9 +299,52 @@ wlan_mgmt_rx_reo_is_feature_enabled_at_pdev(struct wlan_objmgr_pdev *pdev);
  */
 bool
 wlan_mgmt_rx_reo_is_simulation_in_progress(void);
+
+/**
+ * wlan_mgmt_rx_reo_print_ingress_frame_debug_info() - Helper API to print
+ * stats related to incoming management frames
+ *
+ * This API prints stats related to management frames entering management
+ * Rx reorder module.
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+wlan_mgmt_rx_reo_print_ingress_frame_debug_info(void);
+
+/**
+ * wlan_mgmt_rx_reo_print_egress_frame_debug_info() - Helper API to print
+ * stats related to outgoing management frames
+ *
+ * This API prints stats related to management frames exiting management
+ * Rx reorder module.
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+wlan_mgmt_rx_reo_print_egress_frame_debug_info(void);
 #else
 static inline QDF_STATUS
 wlan_mgmt_rx_reo_validate_mlo_hw_link_info(struct wlan_objmgr_psoc *psoc)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+/**
+ * wlan_mgmt_rx_reo_pdev_obj_open_notification() - pdev open handler for
+ * management rx-reorder feature
+ * @pdev: pointer to pdev object
+ * @mgmt_txrx_pdev_ctx: pdev private object of mgmt txrx module
+ *
+ * This function gets called from object manager when pdev is being opened and
+ * creates management rx-reorder pdev context
+ *
+ * Return: QDF_STATUS
+ */
+static inline QDF_STATUS
+wlan_mgmt_rx_reo_pdev_obj_open_notification
+			(struct wlan_objmgr_pdev *pdev,
+			 struct mgmt_txrx_priv_pdev_context *mgmt_txrx_pdev_ctx)
 {
 	return QDF_STATUS_SUCCESS;
 }

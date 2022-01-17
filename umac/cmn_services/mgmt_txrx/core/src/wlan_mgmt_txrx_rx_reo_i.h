@@ -95,6 +95,22 @@ struct mgmt_rx_reo_pdev_info {
 };
 
 /**
+ * mgmt_rx_reo_pdev_obj_open_notification() - pdev open handler for
+ * management rx-reorder module
+ * @pdev: pointer to pdev object
+ * @mgmt_txrx_pdev_ctx: pdev private object of mgmt txrx module
+ *
+ * This function gets called from object manager when pdev is being opened and
+ * creates management rx-reorder pdev context
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+mgmt_rx_reo_pdev_obj_open_notification
+		(struct wlan_objmgr_pdev *pdev,
+		 struct mgmt_txrx_priv_pdev_context *mgmt_txrx_pdev_ctx);
+
+/**
  * mgmt_rx_reo_pdev_obj_create_notification() - pdev create handler for
  * management rx-reorder module
  * @pdev: pointer to pdev object

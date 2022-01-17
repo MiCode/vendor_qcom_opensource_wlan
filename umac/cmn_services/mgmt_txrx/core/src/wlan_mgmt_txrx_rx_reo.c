@@ -4292,12 +4292,55 @@ wlan_mgmt_rx_reo_initialize_snapshot_params(
 }
 
 QDF_STATUS
+mgmt_rx_reo_pdev_obj_open_notification
+	(struct wlan_objmgr_pdev *pdev,
+	 struct mgmt_txrx_priv_pdev_context *mgmt_txrx_pdev_ctx)
+{
+	QDF_STATUS status;
+	enum mgmt_rx_reo_shared_snapshot_id snapshot_id;
+
+	if (!pdev) {
+		mgmt_rx_reo_err("pdev is null");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	if (!mgmt_txrx_pdev_ctx) {
+		mgmt_rx_reo_err("Management txrx pdev context is null");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	if (!wlan_mgmt_rx_reo_is_feature_enabled_at_pdev(pdev))
+		return QDF_STATUS_SUCCESS;
+
+	snapshot_id = 0;
+	while (snapshot_id < MGMT_RX_REO_SHARED_SNAPSHOT_MAX) {
+		struct mgmt_rx_reo_snapshot **snapshot_address;
+		struct mgmt_rx_reo_pdev_info *mgmt_rx_reo_pdev_ctx;
+
+		mgmt_rx_reo_pdev_ctx =
+				mgmt_txrx_pdev_ctx->mgmt_rx_reo_pdev_ctx;
+		snapshot_address =
+			&mgmt_rx_reo_pdev_ctx->host_target_shared_snapshot[snapshot_id];
+		status = wlan_mgmt_rx_reo_get_snapshot_address
+					(pdev, snapshot_id, snapshot_address);
+		if (QDF_IS_STATUS_ERROR(status)) {
+			mgmt_rx_reo_err("Get snapshot address failed, id = %u",
+					snapshot_id);
+			return status;
+		}
+
+		snapshot_id++;
+	}
+
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS
 mgmt_rx_reo_pdev_obj_create_notification(
 	struct wlan_objmgr_pdev *pdev,
 	struct mgmt_txrx_priv_pdev_context *mgmt_txrx_pdev_ctx)
 {
 	QDF_STATUS status;
-	QDF_STATUS temp_status;
 	struct mgmt_rx_reo_pdev_info *mgmt_rx_reo_pdev_ctx = NULL;
 	enum mgmt_rx_reo_shared_snapshot_id snapshot_id;
 
@@ -4327,19 +4370,6 @@ mgmt_rx_reo_pdev_obj_create_notification(
 
 	snapshot_id = 0;
 	while (snapshot_id < MGMT_RX_REO_SHARED_SNAPSHOT_MAX) {
-		struct mgmt_rx_reo_snapshot **snapshot_address;
-
-		snapshot_address = &mgmt_rx_reo_pdev_ctx->
-				host_target_shared_snapshot[snapshot_id];
-		temp_status = wlan_mgmt_rx_reo_get_snapshot_address(
-				pdev, snapshot_id, snapshot_address);
-		if (QDF_IS_STATUS_ERROR(temp_status)) {
-			mgmt_rx_reo_err("Get snapshot address failed, id = %u",
-					snapshot_id);
-			status = temp_status;
-			goto failure;
-		}
-
 		wlan_mgmt_rx_reo_initialize_snapshot_params(
 				&mgmt_rx_reo_pdev_ctx->
 				last_valid_shared_snapshot[snapshot_id]);
