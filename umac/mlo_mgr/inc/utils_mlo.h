@@ -210,10 +210,7 @@ util_get_bvmlie_primary_linkid(uint8_t *mlieseq, qdf_size_t mlieseqlen,
  *
  * Get partner link information in the per-STA profiles present in a Basic
  * variant Multi-Link element. The partner link information is returned only for
- * those per-STA profiles which have a MAC address in the STA Info field. The
- * current implementation does not have support for per-STA profile
- * fragmentation - this may be added once it is introduced in the IEEE802.11be
- * standard.
+ * those per-STA profiles which have a MAC address in the STA Info field.
  *
  * Return: QDF_STATUS_SUCCESS in the case of success, QDF_STATUS value giving
  * the reason for error in the case of failure

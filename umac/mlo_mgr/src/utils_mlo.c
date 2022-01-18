@@ -221,48 +221,59 @@ util_parse_multi_link_ctrl(uint8_t *mlieseqpayload,
 	return QDF_STATUS_SUCCESS;
 }
 
-static
-uint8_t *util_parse_bvmlie_perstaprofile(uint8_t *subelement,
-					 qdf_size_t len,
-					 bool is_staprof_reqd,
-					 qdf_size_t *staprof_len,
-					 uint8_t *linkid,
-					 bool *is_macaddr_valid,
-					 struct qdf_mac_addr *macaddr)
+static QDF_STATUS
+util_parse_bvmlie_perstaprofile_stactrl(uint8_t *subelempayload,
+					qdf_size_t subelempayloadlen,
+					uint8_t *linkid,
+					bool *is_macaddr_valid,
+					struct qdf_mac_addr *macaddr,
+					bool is_staprof_reqd,
+					uint8_t **staprof,
+					qdf_size_t *staprof_len)
 {
-	qdf_size_t subelement_len = 0;
-	struct wlan_ml_bv_linfo_perstaprof *perstaprof_fixed;
+	qdf_size_t parsed_payload_len = 0;
 	uint16_t stacontrol;
 	uint8_t completeprofile;
 	uint8_t nstrlppresent;
 	enum wlan_ml_bv_linfo_perstaprof_stactrl_nstrbmsz nstrbmsz;
 
-	if (!subelement) {
-		mlo_err("Pointer to subelement is NULL");
-		return NULL;
+	/* This helper returns the location(s) and where required, the length(s)
+	 * of (sub)field(s) inferable after parsing the STA Control field in the
+	 * per-STA profile subelement. These location(s) and length(s) is/are in
+	 * reference to the payload section of the per-STA profile subelement
+	 * (after defragmentation, if applicable).  Here, the payload is the
+	 * point after the subelement length in the subelement, and includes the
+	 * payloads of all subsequent fragments (if any) but not the headers of
+	 * those fragments.
+	 *
+	 * Currently, the helper returns the link ID, MAC address, and STA
+	 * profile. More (sub)fields can be added when required.
+	 */
+
+	if (!subelempayload) {
+		mlo_err("Pointer to subelement payload is NULL");
+		return QDF_STATUS_E_NULL_VALUE;
 	}
 
-	if (!len) {
-		mlo_err("Length is zero");
-		return NULL;
+	if (!subelempayloadlen) {
+		mlo_err("Length of subelement payload is zero");
+		return QDF_STATUS_E_INVAL;
 	}
 
-	if (subelement[0] != WLAN_ML_BV_LINFO_SUBELEMID_PERSTAPROFILE) {
-		mlo_err_rl("Pointer to subelement does not point to per-STA profile");
-		return NULL;
+	if (subelempayloadlen < WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_SIZE) {
+		mlo_err_rl("Subelement payload length %zu octets is smaller than STA control field of per-STA profile subelement %u octets",
+			   subelempayloadlen,
+			   WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_SIZE);
+		return QDF_STATUS_E_PROTO;
 	}
 
-	if (len < sizeof(struct wlan_ml_bv_linfo_perstaprof)) {
-		mlo_err_rl("len %zu octets is smaller than that required for the fixed portion of per-STA profile (%zu octets)",
-			   len, sizeof(struct wlan_ml_bv_linfo_perstaprof));
-		return NULL;
-	}
+	parsed_payload_len = 0;
 
-	perstaprof_fixed = (struct wlan_ml_bv_linfo_perstaprof *)subelement;
-
-	subelement_len = sizeof(*perstaprof_fixed);
-
-	stacontrol = le16toh(perstaprof_fixed->stacontrol);
+	qdf_mem_copy(&stacontrol,
+		     subelempayload,
+		     WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_SIZE);
+	stacontrol = le16toh(stacontrol);
+	parsed_payload_len += WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_SIZE;
 
 	if (linkid) {
 		*linkid = QDF_GET_BITS(stacontrol,
@@ -275,12 +286,6 @@ uint8_t *util_parse_bvmlie_perstaprofile(uint8_t *subelement,
 				       WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_CMPLTPROF_IDX,
 				       WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_CMPLTPROF_BITS);
 
-	/*  We increment the measured length of the per-STA profile by checking
-	 *  for the presence of individual fields. We validate this length
-	 *  against the total length of the sublement only at the end, except in
-	 *  cases where we are actually about to access a given field.
-	 */
-
 	if (is_macaddr_valid)
 		*is_macaddr_valid = false;
 
@@ -288,44 +293,64 @@ uint8_t *util_parse_bvmlie_perstaprofile(uint8_t *subelement,
 	if (QDF_GET_BITS(stacontrol,
 			 WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_MACADDRP_IDX,
 			 WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_MACADDRP_BITS)) {
-		if (macaddr) {
-			/* Explicityly check if the length is sufficient to hold
-			 * the STA MAC address, since we are about to attempt to
-			 * access the STA MAC address.
-			 */
-			if (len < (subelement_len + QDF_MAC_ADDR_SIZE)) {
-				mlo_err_rl("len %zu octets is smaller than min size of per-STA profile required to accommodate STA MAC address (%zu octets)",
-					   len,
-					   (subelement_len + QDF_MAC_ADDR_SIZE));
-				return NULL;
-			}
+		if (subelempayloadlen <
+				(parsed_payload_len + QDF_MAC_ADDR_SIZE)) {
+			mlo_err_rl("Length of subelement payload %zu octets not sufficient to contain MAC address of size %u octets after parsed payload length of %zu octets.",
+				   subelempayloadlen,
+				   QDF_MAC_ADDR_SIZE,
+				   parsed_payload_len);
+			return QDF_STATUS_E_PROTO;
+		}
 
+		if (macaddr) {
 			qdf_mem_copy(macaddr->bytes,
-				     subelement + subelement_len,
+				     subelempayload + parsed_payload_len,
 				     QDF_MAC_ADDR_SIZE);
 
 			mlo_nofl_debug("Copied MAC address: " QDF_MAC_ADDR_FMT,
-				       subelement + subelement_len);
+				       subelempayload + parsed_payload_len);
 
 			if (is_macaddr_valid)
 				*is_macaddr_valid = true;
 		}
 
-		subelement_len += QDF_MAC_ADDR_SIZE;
+		parsed_payload_len += QDF_MAC_ADDR_SIZE;
 	}
 
 	/* Check Beacon Interval present bit */
 	if (QDF_GET_BITS(stacontrol,
 			 WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_BCNINTP_IDX,
-			 WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_BCNINTP_BITS))
-		subelement_len += WLAN_BEACONINTERVAL_LEN;
+			 WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_BCNINTP_BITS)) {
+		if (subelempayloadlen <
+				(parsed_payload_len +
+				 WLAN_BEACONINTERVAL_LEN)) {
+			mlo_err_rl("Length of subelement payload %zu octets not sufficient to contain Beacon Interval of size %u octets after parsed payload length of %zu octets.",
+				   subelempayloadlen,
+				   WLAN_BEACONINTERVAL_LEN,
+				   parsed_payload_len);
+			return QDF_STATUS_E_PROTO;
+		}
+
+		parsed_payload_len += WLAN_BEACONINTERVAL_LEN;
+	}
 
 	/* Check DTIM Info present bit */
 	if (QDF_GET_BITS(stacontrol,
 			 WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_DTIMINFOP_IDX,
-			 WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_DTIMINFOP_BITS))
-		subelement_len +=
+			 WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_DTIMINFOP_BITS)) {
+		if (subelempayloadlen <
+				(parsed_payload_len +
+				 sizeof(struct wlan_ml_bv_linfo_perstaprof_stainfo_dtiminfo))) {
+			mlo_err_rl("Length of subelement payload %zu octets not sufficient to contain DTIM Info of size %zu octets after parsed payload length of %zu octets.",
+				   subelempayloadlen,
+				   sizeof(struct wlan_ml_bv_linfo_perstaprof_stainfo_dtiminfo),
+				   parsed_payload_len);
+			return QDF_STATUS_E_PROTO;
+		}
+
+		parsed_payload_len +=
 			sizeof(struct wlan_ml_bv_linfo_perstaprof_stainfo_dtiminfo);
+	}
 
 	/* Check NTSR Link pair present bit */
 	nstrlppresent =
@@ -341,16 +366,32 @@ uint8_t *util_parse_bvmlie_perstaprofile(uint8_t *subelement,
 				     WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_NSTRBMSZ_BITS);
 
 		if (nstrbmsz == WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_NSTRBMSZ_1_OCTET) {
-			subelement_len += 1;
+			if (subelempayloadlen <
+					(parsed_payload_len + 1)) {
+				mlo_err_rl("Length of subelement payload %zu octets not sufficient to contain NTSR Bitmap of size 1 octet after parsed payload length of %zu octets.",
+					   subelempayloadlen,
+					   parsed_payload_len);
+				return QDF_STATUS_E_PROTO;
+			}
+
+			parsed_payload_len += 1;
 		} else if (nstrbmsz == WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_NSTRBMSZ_2_OCTETS) {
-			subelement_len += 2;
+			if (subelempayloadlen <
+					(parsed_payload_len + 2)) {
+				mlo_err_rl("Length of subelement payload %zu octets not sufficient to contain NTSR Bitmap  of size 2 octets after parsed payload length of %zu octets.",
+					   subelempayloadlen,
+					   parsed_payload_len);
+				return QDF_STATUS_E_PROTO;
+			}
+
+			parsed_payload_len += 2;
 		} else {
 			/* Though an invalid value cannot occur if only 1 bit is
 			 * used, we check for it in a generic manner in case the
 			 * number of bits is increased in the future.
 			 */
 			mlo_err_rl("Invalid NSTR Bitmap size %u", nstrbmsz);
-			return NULL;
+			return QDF_STATUS_E_PROTO;
 		}
 	}
 
@@ -359,28 +400,23 @@ uint8_t *util_parse_bvmlie_perstaprofile(uint8_t *subelement,
 	 * indicate whether a STA profile is required to be found. This may be
 	 * revisited as upstreaming progresses.
 	 */
-	if (!is_staprof_reqd) {
-		if (len < subelement_len) {
-			mlo_err_rl("len %zu < subelement_len %zu",
-				   len,
-				   subelement_len);
-			return NULL;
-		}
+	if (!is_staprof_reqd)
+		return QDF_STATUS_SUCCESS;
 
-		return &subelement[subelement_len - 1];
-	}
-
-	if (len <= subelement_len) {
-		mlo_err_rl("len %zu <= subelement_len %zu",
-			   len,
-			   subelement_len);
-		return NULL;
+	if (subelempayloadlen == parsed_payload_len) {
+		mlo_err_rl("Subelement payload length %zu == parsed payload length %zu. Unable to get STA profile.",
+			   subelempayloadlen,
+			   parsed_payload_len);
+		return QDF_STATUS_E_PROTO;
 	}
 
 	if (staprof_len)
-		*staprof_len = len - subelement_len;
+		*staprof_len = subelempayloadlen - parsed_payload_len;
 
-	return &subelement[subelement_len];
+	if (staprof)
+		*staprof = subelempayload + parsed_payload_len;
+
+	return QDF_STATUS_SUCCESS;
 }
 
 static
@@ -418,9 +454,26 @@ QDF_STATUS util_parse_partner_info_from_linkinfo(uint8_t *linkinfo,
 	uint8_t linkid;
 	struct qdf_mac_addr macaddr;
 	bool is_macaddr_valid;
-	uint8_t *currpos;
-	qdf_size_t currlen;
-	uint8_t *endofstainfo;
+	uint8_t *linkinfo_currpos;
+	qdf_size_t linkinfo_remlen;
+	bool is_subelemfragseq;
+	uint8_t subelemid;
+	qdf_size_t subelemseqtotallen;
+	qdf_size_t subelemseqpayloadlen;
+	qdf_size_t defragpayload_len;
+	QDF_STATUS ret;
+
+	/* This helper function parses partner info from the per-STA profiles
+	 * present (if any) in the Link Info field in the payload of a Multi
+	 * Link element (after defragmentation if required). The caller should
+	 * pass a copy of the payload so that inline defragmentation of
+	 * subelements can be carried out if required. The subelement
+	 * defragmentation (if applicable) in this Control Path helper is
+	 * required for maintainability, accuracy and eliminating current and
+	 * future per-field-access multi-level fragment boundary checks and
+	 * adjustments, given the complex format of Multi Link elements. It is
+	 * also most likely to be required mainly at the client side.
+	 */
 
 	if (!linkinfo) {
 		mlo_err("linkinfo is NULL");
@@ -438,41 +491,92 @@ QDF_STATUS util_parse_partner_info_from_linkinfo(uint8_t *linkinfo,
 	}
 
 	partner_info->num_partner_links = 0;
-	currpos = linkinfo;
-	currlen = linkinfo_len;
+	linkinfo_currpos = linkinfo;
+	linkinfo_remlen = linkinfo_len;
 
-	while (currlen) {
-		if (currlen <  MIN_IE_LEN) {
-			mlo_err_rl("currlen %zu is smaller than minimum IE length %u",
-				   currlen, MIN_IE_LEN);
+	while (linkinfo_remlen) {
+		if (linkinfo_remlen <  sizeof(struct subelem_header)) {
+			mlo_err_rl("Remaining length in link info %zu octets is smaller than subelement header length %zu octets",
+				   linkinfo_remlen,
+				   sizeof(struct subelem_header));
 			return QDF_STATUS_E_PROTO;
 		}
 
-		if (currlen <  (MIN_IE_LEN + currpos[TAG_LEN_POS])) {
-			mlo_err_rl("currlen %zu is smaller than length of current IE %u",
-				   currlen, MIN_IE_LEN + currpos[TAG_LEN_POS]);
-			return QDF_STATUS_E_PROTO;
+		subelemid = linkinfo_currpos[ID_POS];
+		is_subelemfragseq = false;
+		subelemseqtotallen = 0;
+		subelemseqpayloadlen = 0;
+
+		ret = wlan_get_subelem_fragseq_info(WLAN_ML_BV_LINFO_SUBELEMID_FRAGMENT,
+						    linkinfo_currpos,
+						    linkinfo_remlen,
+						    &is_subelemfragseq,
+						    &subelemseqtotallen,
+						    &subelemseqpayloadlen);
+		if (QDF_IS_STATUS_ERROR(ret))
+			return ret;
+
+		if (is_subelemfragseq) {
+			if (!subelemseqpayloadlen) {
+				mlo_err_rl("Subelement fragment sequence payload is reported as 0, investigate");
+				return QDF_STATUS_E_FAILURE;
+			}
+
+			mlo_debug("Subelement fragment sequence found with payload len %zu",
+				  subelemseqpayloadlen);
+
+			ret = wlan_defrag_subelem_fragseq(true,
+							  WLAN_ML_BV_LINFO_SUBELEMID_FRAGMENT,
+							  linkinfo_currpos,
+							  linkinfo_remlen,
+							  NULL,
+							  0,
+							  &defragpayload_len);
+			if (QDF_IS_STATUS_ERROR(ret))
+				return ret;
+
+			if (defragpayload_len != subelemseqpayloadlen) {
+				mlo_err_rl("Length of defragmented payload %zu octets is not equal to length of subelement fragment sequence payload %zu octets",
+					   defragpayload_len,
+					   subelemseqpayloadlen);
+				return QDF_STATUS_E_FAILURE;
+			}
+
+			/* Adjust linkinfo_remlen to reflect removal of all
+			 * subelement headers except the header of the lead
+			 * subelement.
+			 */
+			linkinfo_remlen -= (subelemseqtotallen -
+					    subelemseqpayloadlen -
+					    sizeof(struct subelem_header));
+		} else {
+			if (linkinfo_remlen <
+				(sizeof(struct subelem_header) +
+				 linkinfo_currpos[TAG_LEN_POS])) {
+				mlo_err_rl("Remaining length in link info %zu octets is smaller than total size of current subelement %zu octets",
+					   linkinfo_remlen,
+					   sizeof(struct subelem_header) +
+					   linkinfo_currpos[TAG_LEN_POS]);
+				return QDF_STATUS_E_PROTO;
+			}
+
+			subelemseqpayloadlen = linkinfo_currpos[TAG_LEN_POS];
 		}
 
-		if (currpos[ID_POS] ==
-				WLAN_ML_BV_LINFO_SUBELEMID_PERSTAPROFILE) {
+		if (subelemid == WLAN_ML_BV_LINFO_SUBELEMID_PERSTAPROFILE) {
 			is_macaddr_valid = false;
 
-			/* Per-STA profile fragmentation support may be added
-			 * once support for this is introduced in the standard.
-			 */
-			endofstainfo =
-				util_parse_bvmlie_perstaprofile(currpos,
-								currlen,
-								false,
-								NULL,
-								&linkid,
-								&is_macaddr_valid,
-								&macaddr);
-
-			if (!endofstainfo) {
-				mlo_err_rl("Error in parsing per-STA profile");
-				return QDF_STATUS_E_EMPTY;
+			ret = util_parse_bvmlie_perstaprofile_stactrl(linkinfo_currpos +
+								      sizeof(struct subelem_header),
+								      subelemseqpayloadlen,
+								      &linkid,
+								      &is_macaddr_valid,
+								      &macaddr,
+								      false,
+								      NULL,
+								      NULL);
+			if (QDF_IS_STATUS_ERROR(ret)) {
+				return ret;
 			}
 
 			if (is_macaddr_valid) {
@@ -496,8 +600,10 @@ QDF_STATUS util_parse_partner_info_from_linkinfo(uint8_t *linkinfo,
 			}
 		}
 
-		currlen -= (MIN_IE_LEN + currpos[TAG_LEN_POS]);
-		currpos += (MIN_IE_LEN + currpos[TAG_LEN_POS]);
+		linkinfo_remlen -= (sizeof(struct subelem_header) +
+				    subelemseqpayloadlen);
+		linkinfo_currpos += (sizeof(struct subelem_header) +
+				     subelemseqpayloadlen);
 	}
 
 	mlo_debug("Number of ML partner links found=%u",
@@ -1017,6 +1123,12 @@ QDF_STATUS util_gen_link_assoc_reqrsp_cmn(uint8_t *frame, qdf_size_t frame_len,
 	/* MAC address of reported STA */
 	struct qdf_mac_addr reportedmacaddr;
 
+	/* Pointer to per-STA profile */
+	uint8_t *persta_prof;
+	/* Length of the containing buffer which starts with the per-STA profile
+	 */
+	qdf_size_t persta_prof_bufflen;
+
 	/* Other variables for temporary purposes */
 
 	/* Variable into which API for determining fragment information will
@@ -1028,6 +1140,19 @@ QDF_STATUS util_gen_link_assoc_reqrsp_cmn(uint8_t *frame, qdf_size_t frame_len,
 	 *  defragmentation.
 	 */
 	qdf_size_t defragpayload_len;
+	/* Variable into which API for determining fragment information will
+	 * indicate whether the subelement is the start of a fragment sequence
+	 * or not.
+	 */
+	bool is_subelemfragseq;
+	/* Total length of the subelement fragment sequence, inclusive of
+	 * subelement header and the headers of fragments if any.
+	 */
+	qdf_size_t subelemseqtotallen;
+	/* Total length of the subelement fragment sequence payload, excluding
+	 * subelement header and fragment headers if any.
+	 */
+	qdf_size_t subelemseqpayloadlen;
 
 	qdf_size_t tmplen;
 	QDF_STATUS ret;
@@ -1232,29 +1357,98 @@ QDF_STATUS util_gen_link_assoc_reqrsp_cmn(uint8_t *frame, qdf_size_t frame_len,
 	QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_MLO, QDF_TRACE_LEVEL_DEBUG,
 			   link_info, link_info_len);
 
-	sta_prof_remlen = 0;
-	is_reportedmacaddr_valid = false;
-
 	/* Note: We may have a future change to skip subelements which are not
 	 * Per-STA Profile, handle more than two links in MLO, handle cases
 	 * where we unexpectedly find more Per-STA Profiles than expected, etc.
 	 */
 
-	/* Parse per-STA profile */
-	sta_prof_currpos = util_parse_bvmlie_perstaprofile(link_info,
-							   link_info_len,
-							   true,
-							   &sta_prof_remlen,
-							   NULL,
-							   &is_reportedmacaddr_valid,
-							   &reportedmacaddr);
+	persta_prof = link_info;
+	persta_prof_bufflen = link_info_len;
 
-	/* If we do not successfully find a STA Profile, we return an error.
-	 * This is because we need to get at least the expected fixed fields,
+	is_subelemfragseq = false;
+	subelemseqtotallen = 0;
+	subelemseqpayloadlen = 0;
+
+	ret = wlan_get_subelem_fragseq_info(WLAN_ML_BV_LINFO_SUBELEMID_FRAGMENT,
+					    persta_prof,
+					    persta_prof_bufflen,
+					    &is_subelemfragseq,
+					    &subelemseqtotallen,
+					    &subelemseqpayloadlen);
+	if (QDF_IS_STATUS_ERROR(ret)) {
+		qdf_mem_free(mlieseqpayload_copy);
+		return ret;
+	}
+
+	if (is_subelemfragseq) {
+		if (!subelemseqpayloadlen) {
+			mlo_err_rl("Subelement fragment sequence payload is reported as 0, investigate");
+			qdf_mem_free(mlieseqpayload_copy);
+			return QDF_STATUS_E_FAILURE;
+		}
+
+		mlo_debug("Subelement fragment sequence found with payload len %zu",
+			  subelemseqpayloadlen);
+
+		ret = wlan_defrag_subelem_fragseq(true,
+						  WLAN_ML_BV_LINFO_SUBELEMID_FRAGMENT,
+						  persta_prof,
+						  persta_prof_bufflen,
+						  NULL,
+						  0,
+						  &defragpayload_len);
+		if (QDF_IS_STATUS_ERROR(ret)) {
+			qdf_mem_free(mlieseqpayload_copy);
+			return ret;
+		}
+
+		if (defragpayload_len != subelemseqpayloadlen) {
+			mlo_err_rl("Length of defragmented payload %zu octets is not equal to length of subelement fragment sequence payload %zu octets",
+				   defragpayload_len,
+				   subelemseqpayloadlen);
+			qdf_mem_free(mlieseqpayload_copy);
+			return QDF_STATUS_E_FAILURE;
+		}
+	} else {
+		if (persta_prof_bufflen <
+			(sizeof(struct subelem_header) +
+			 persta_prof[TAG_LEN_POS])) {
+			mlo_err_rl("Length of buffer containing per-STA profile %zu octets is smaller than total size of current subelement %zu octets",
+				   persta_prof_bufflen,
+				   sizeof(struct subelem_header) +
+						persta_prof[TAG_LEN_POS]);
+			return QDF_STATUS_E_PROTO;
+		}
+
+		subelemseqpayloadlen = persta_prof[TAG_LEN_POS];
+	}
+
+	sta_prof_remlen = 0;
+	sta_prof_currpos = NULL;
+	is_reportedmacaddr_valid = false;
+
+	/* Parse per-STA profile */
+	ret = util_parse_bvmlie_perstaprofile_stactrl(persta_prof +
+						      sizeof(struct subelem_header),
+						      subelemseqpayloadlen,
+						      NULL,
+						      &is_reportedmacaddr_valid,
+						      &reportedmacaddr,
+						      true,
+						      &sta_prof_currpos,
+						      &sta_prof_remlen);
+	if (QDF_IS_STATUS_ERROR(ret)) {
+		qdf_mem_free(mlieseqpayload_copy);
+		return ret;
+	}
+
+	/* We double check for a NULL STA Profile, though the helper function
+	 * above would have taken care of this. We need to get a non-NULL STA
+	 * profile, because we need to get at least the expected fixed fields,
 	 * even if there is an (improbable) total inheritance.
 	 */
 	if (!sta_prof_currpos) {
-		mlo_err_rl("Unable to find STA profile");
+		mlo_err_rl("STA profile is NULL");
 		qdf_mem_free(mlieseqpayload_copy);
 		return QDF_STATUS_E_PROTO;
 	}
