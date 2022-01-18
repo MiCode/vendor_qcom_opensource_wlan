@@ -2833,6 +2833,8 @@ struct dp_pdev {
 #ifdef WLAN_FEATURE_11BE_MLO
 	struct dp_mlo_sync_timestamp timestamp;
 #endif
+	/* Is isolation mode enabled */
+	bool  isolation;
 };
 
 struct dp_peer;

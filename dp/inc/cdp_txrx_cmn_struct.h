@@ -1178,6 +1178,7 @@ enum cdp_peer_param_type {
  * @CDP_SET_ATF_STATS_ENABLE: set ATF stats flag
  * @CDP_CONFIG_SPECIAL_VAP: Configure Special vap
  * @CDP_RESET_SCAN_SPCL_VAP_STATS_ENABLE: Enable scan spcl vap stats reset
+ * @CDP_ISOLATION: set isolation flag
  */
 enum cdp_pdev_param_type {
 	CDP_CONFIG_DEBUG_SNIFFER,
@@ -1211,6 +1212,7 @@ enum cdp_pdev_param_type {
 	CDP_CONFIG_SPECIAL_VAP,
 	CDP_RESET_SCAN_SPCL_VAP_STATS_ENABLE,
 	CDP_CONFIG_ENHANCED_STATS_ENABLE,
+	CDP_ISOLATION,
 };
 
 /*
@@ -1275,6 +1277,7 @@ enum cdp_pdev_param_type {
  * @cdp_pdev_param_monitor_chan: monitor channel
  * @cdp_pdev_param_atf_stats_enable: ATF stats enable
  * @cdp_pdev_param_config_special_vap: Configure Special vap
+ * @cdp_pdev_param_isolation : set isolation mode
  *
  * @cdp_psoc_param_en_rate_stats: set rate stats enable/disable
  * @cdp_psoc_param_en_nss_cfg: set nss cfg
@@ -1350,6 +1353,7 @@ typedef union cdp_config_param_t {
 	bool cdp_pdev_param_config_special_vap;
 	bool cdp_pdev_param_reset_scan_spcl_vap_stats_enable;
 	bool cdp_pdev_param_enhanced_stats_enable;
+	bool cdp_pdev_param_isolation;
 
 	/* psoc params */
 	bool cdp_psoc_param_en_rate_stats;

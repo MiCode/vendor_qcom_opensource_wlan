@@ -565,6 +565,7 @@ static QDF_STATUS dp_vdev_attach_be(struct dp_soc *soc, struct dp_vdev *vdev)
 {
 	struct dp_soc_be *be_soc = dp_get_be_soc_from_dp_soc(soc);
 	struct dp_vdev_be *be_vdev = dp_get_be_vdev_from_dp_vdev(vdev);
+	struct dp_pdev *pdev = vdev->pdev;
 
 	be_vdev->vdev_id_check_en = DP_TX_VDEV_ID_CHECK_ENABLE;
 
@@ -582,8 +583,12 @@ static QDF_STATUS dp_vdev_attach_be(struct dp_soc *soc, struct dp_vdev *vdev)
 					vdev->vdev_id,
 					DP_AST_AGING_TIMER_DEFAULT_MS);
 
-		hal_tx_vdev_mcast_ctrl_set(soc->hal_soc, vdev->vdev_id,
-					   HAL_TX_MCAST_CTRL_MEC_NOTIFY);
+		if (pdev->isolation)
+			hal_tx_vdev_mcast_ctrl_set(soc->hal_soc, vdev->vdev_id,
+						   HAL_TX_MCAST_CTRL_FW_EXCEPTION);
+		else
+			hal_tx_vdev_mcast_ctrl_set(soc->hal_soc, vdev->vdev_id,
+						   HAL_TX_MCAST_CTRL_MEC_NOTIFY);
 	}
 
 	dp_mlo_init_ptnr_list(vdev);

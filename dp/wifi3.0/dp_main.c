@@ -9407,6 +9407,9 @@ static QDF_STATUS dp_set_pdev_param(struct cdp_soc_t *cdp_soc, uint8_t pdev_id,
 	case CDP_CONFIG_ENHANCED_STATS_ENABLE:
 		pdev->enhanced_stats_en = val.cdp_pdev_param_enhanced_stats_enable;
 		break;
+	case CDP_ISOLATION:
+		pdev->isolation = val.cdp_pdev_param_isolation;
+		break;
 	default:
 		return QDF_STATUS_E_INVAL;
 	}
