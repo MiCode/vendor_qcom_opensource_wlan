@@ -64,12 +64,21 @@ wlan_mgmt_rx_reo_get_snapshot_address(
  * @pdev: Pointer to pdev object
  *
  * Return: On success returns the MLO HW link id corresponding to the pdev
- * object. On failure returns -1.
+ * object. On failure returns -EINVAL
  */
 int8_t
 wlan_get_mlo_link_id_from_pdev(struct wlan_objmgr_pdev *pdev)
 {
-	return -EINVAL;
+	uint16_t hw_link_id;
+
+	hw_link_id = wlan_mlo_get_pdev_hw_link_id(pdev);
+
+	if (hw_link_id == INVALID_HW_LINK_ID) {
+		mgmt_rx_reo_err("Invalid HW link id for the pdev");
+		return -EINVAL;
+	}
+
+	return hw_link_id;
 }
 
 qdf_export_symbol(wlan_get_mlo_link_id_from_pdev);
@@ -87,7 +96,7 @@ struct wlan_objmgr_pdev *
 wlan_get_pdev_from_mlo_link_id(uint8_t mlo_link_id,
 			       wlan_objmgr_ref_dbgid refdbgid)
 {
-	return NULL;
+	return wlan_mlo_get_pdev_by_hw_link_id(mlo_link_id, refdbgid);
 }
 
 qdf_export_symbol(wlan_get_pdev_from_mlo_link_id);
