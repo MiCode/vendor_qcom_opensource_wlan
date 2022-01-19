@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2018-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -147,8 +148,8 @@ wlan_vdev_mlme_ser_vdev_restart(struct wlan_serialization_command *cmd)
 	return wlan_serialization_request(cmd);
 }
 
-void wlan_mlme_restart_pdev_iter_cb(struct wlan_objmgr_pdev *pdev,
-				    void *object, void *arg)
+static void wlan_mlme_restart_pdev_iter_cb(struct wlan_objmgr_pdev *pdev,
+					   void *object, void *arg)
 {
 	struct wlan_objmgr_vdev *vdev = (struct wlan_objmgr_vdev *)object;
 	uint8_t *pdev_restart_pending = (uint8_t *)arg;
