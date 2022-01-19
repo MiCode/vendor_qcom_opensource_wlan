@@ -360,6 +360,7 @@ static const uint32_t pdev_param_tlv[] = {
 	[wmi_pdev_param_truncate_sr] = WMI_PDEV_PARAM_TRUNCATE_SR,
 	[wmi_pdev_param_ctrl_frame_obss_pd_threshold] =
 			WMI_PDEV_PARAM_CTRL_FRAME_OBSS_PD_THRESHOLD,
+	[wmi_pdev_param_rate_upper_cap] = WMI_PDEV_PARAM_RATE_UPPER_CAP,
 };
 
 /**

@@ -2813,6 +2813,12 @@ QDF_STATUS (*extract_update_mac_address_event)(wmi_unified_t wmi_handle,
 QDF_STATUS
 (*send_soc_tqm_reset_enable_disable_cmd)(wmi_unified_t wmi_handle,
 					 uint32_t enable);
+
+#ifdef CONFIG_SAWF_DEF_QUEUES
+QDF_STATUS
+(*send_set_rate_upper_cap_cmd)(wmi_unified_t wmi_handle, uint8_t pdev_id,
+			       struct wmi_rc_params *param);
+#endif
 };
 
 /* Forward declartion for psoc*/
