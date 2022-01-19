@@ -18352,6 +18352,8 @@ static void populate_tlv_service(uint32_t *wmi_service)
 	wmi_service[wmi_service_mlo_sta_nan_ndi_support] =
 			WMI_SERVICE_MLO_STA_NAN_NDI_SUPPORT;
 #endif
+	wmi_service[wmi_service_pdev_rate_config_support] =
+			WMI_SERVICE_PDEV_RATE_CONFIG_SUPPORT;
 }
 
 /**
