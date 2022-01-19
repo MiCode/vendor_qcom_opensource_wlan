@@ -9842,9 +9842,10 @@ static int dp_txrx_get_ratekbps(int preamb, int mcs,
 {
 	uint32_t rix;
 	uint16_t ratecode;
+	enum PUNCTURED_MODES punc_mode = NO_PUNCTURE;
 
 	return dp_getrateindex((uint32_t)gintval, (uint16_t)mcs, 1,
-			       (uint8_t)preamb, 1, NO_PUNCTURE,
+			       (uint8_t)preamb, 1, punc_mode,
 			       &rix, &ratecode);
 }
 #else
