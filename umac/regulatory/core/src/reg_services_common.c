@@ -5786,6 +5786,31 @@ QDF_STATUS reg_afc_start(struct wlan_objmgr_pdev *pdev, uint64_t req_id)
 	return QDF_STATUS_SUCCESS;
 }
 
+QDF_STATUS reg_send_afc_power_event(struct wlan_objmgr_pdev *pdev,
+				    struct reg_fw_afc_power_event *power_info)
+{
+	afc_power_tx_evt_handler cbf;
+	void *arg;
+	struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj;
+
+	pdev_priv_obj = reg_get_pdev_obj(pdev);
+	if (!IS_VALID_PDEV_REG_OBJ(pdev_priv_obj)) {
+		reg_err("pdev reg component is NULL");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	qdf_spin_lock_bh(&pdev_priv_obj->afc_cb_lock);
+	cbf = pdev_priv_obj->afc_pow_evt_cb_obj.func;
+	if (cbf) {
+		arg = pdev_priv_obj->afc_pow_evt_cb_obj.arg;
+		cbf(pdev, power_info, arg);
+	}
+
+	qdf_spin_unlock_bh(&pdev_priv_obj->afc_cb_lock);
+
+	return QDF_STATUS_SUCCESS;
+}
+
 QDF_STATUS reg_register_afc_req_rx_callback(struct wlan_objmgr_pdev *pdev,
 					    afc_req_rx_evt_handler cbf,
 					    void *arg)
@@ -5830,6 +5855,51 @@ QDF_STATUS reg_unregister_afc_req_rx_callback(struct wlan_objmgr_pdev *pdev,
 	return QDF_STATUS_SUCCESS;
 }
 
+QDF_STATUS
+reg_register_afc_power_event_callback(struct wlan_objmgr_pdev *pdev,
+				      afc_power_tx_evt_handler cbf,
+				      void *arg)
+{
+	struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj;
+
+	pdev_priv_obj = reg_get_pdev_obj(pdev);
+	if (!IS_VALID_PDEV_REG_OBJ(pdev_priv_obj)) {
+		reg_err("pdev reg component is NULL");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	qdf_spin_lock_bh(&pdev_priv_obj->afc_cb_lock);
+	pdev_priv_obj->afc_pow_evt_cb_obj.func = cbf;
+	pdev_priv_obj->afc_pow_evt_cb_obj.arg = arg;
+	qdf_spin_unlock_bh(&pdev_priv_obj->afc_cb_lock);
+	reg_debug("afc_power_event_cb: 0x%pK, arg: 0x%pK", cbf, arg);
+
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS
+reg_unregister_afc_power_event_callback(struct wlan_objmgr_pdev *pdev,
+					afc_power_tx_evt_handler cbf)
+{
+	struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj;
+
+	pdev_priv_obj = reg_get_pdev_obj(pdev);
+	if (!IS_VALID_PDEV_REG_OBJ(pdev_priv_obj)) {
+		reg_err("pdev reg component is NULL");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	qdf_spin_lock_bh(&pdev_priv_obj->afc_cb_lock);
+	if (pdev_priv_obj->afc_pow_evt_cb_obj.func == cbf) {
+		pdev_priv_obj->afc_pow_evt_cb_obj.func = NULL;
+		pdev_priv_obj->afc_pow_evt_cb_obj.arg = NULL;
+	} else {
+		reg_err("cb function=0x%pK not found", cbf);
+	}
+	qdf_spin_unlock_bh(&pdev_priv_obj->afc_cb_lock);
+
+	return QDF_STATUS_SUCCESS;
+}
 #endif /* CONFIG_AFC_SUPPORT */
 
 QDF_STATUS

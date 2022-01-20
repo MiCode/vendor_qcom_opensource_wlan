@@ -177,6 +177,17 @@ struct afc_cb_handler {
 };
 
 /**
+ * struct afc_pow_evt_cb_handler - defines structure for afc power received
+ * event  handler call back function and argument
+ * @func: handler function pointer
+ * @arg: argument to handler function
+ */
+struct afc_pow_evt_cb_handler {
+	afc_power_tx_evt_handler func;
+	void *arg;
+};
+
+/**
  * reg_init_freq_range() - Initialize a freq_range object
  * @left: The left frequency range
  * @right: The right frequency range
@@ -1313,6 +1324,41 @@ QDF_STATUS reg_register_afc_req_rx_callback(struct wlan_objmgr_pdev *pdev,
  */
 QDF_STATUS reg_unregister_afc_req_rx_callback(struct wlan_objmgr_pdev *pdev,
 					      afc_req_rx_evt_handler cbf);
+
+/**
+ * reg_register_afc_power_event_callback() - add AFC power event received
+ * @pdev: Pointer to pdev
+ * @cbf: Pointer to callback function
+ * @arg: Pointer to opaque argument
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+reg_register_afc_power_event_callback(struct wlan_objmgr_pdev *pdev,
+				      afc_power_tx_evt_handler cbf,
+				      void *arg);
+/**
+ * reg_unregister_afc_power_event_callback() - remove AFC power event received
+ * callback
+ * @pdev: Pointer to pdev
+ * @cbf: Pointer to callback function
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+reg_unregister_afc_power_event_callback(struct wlan_objmgr_pdev *pdev,
+					afc_power_tx_evt_handler cbf);
+
+/**
+ * reg_send_afc_power_event() - Send AFC power event to registered
+ * recipient
+ * @pdev: Pointer to pdev
+ * @power_info: Pointer to afc power info
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS reg_send_afc_power_event(struct wlan_objmgr_pdev *pdev,
+				    struct reg_fw_afc_power_event *power_info);
 #endif
 
 /**

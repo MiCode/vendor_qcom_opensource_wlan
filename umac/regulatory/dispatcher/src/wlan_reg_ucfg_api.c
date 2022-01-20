@@ -260,6 +260,23 @@ QDF_STATUS ucfg_reg_unregister_afc_req_rx_callback(struct wlan_objmgr_pdev *pdev
 	return reg_unregister_afc_req_rx_callback(pdev, cbf);
 }
 
+QDF_STATUS
+ucfg_reg_register_afc_power_event_callback(struct wlan_objmgr_pdev *pdev,
+					   afc_power_tx_evt_handler cbf,
+					   void *arg)
+{
+	return reg_register_afc_power_event_callback(pdev, cbf, arg);
+}
+
+qdf_export_symbol(ucfg_reg_register_afc_power_event_callback);
+
+QDF_STATUS
+ucfg_reg_unregister_afc_power_event_callback(struct wlan_objmgr_pdev *pdev,
+					     afc_power_tx_evt_handler cbf)
+{
+	return reg_unregister_afc_power_event_callback(pdev, cbf);
+}
+
 QDF_STATUS ucfg_reg_get_partial_afc_req_info(
 		struct wlan_objmgr_pdev *pdev,
 		struct wlan_afc_host_partial_request **afc_req,

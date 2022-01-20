@@ -211,6 +211,8 @@ struct wlan_regulatory_psoc_priv_obj {
  * @avoid_chan_ext_list: the extended avoid frequency list.
  * @afc_cb_lock: The spinlock to synchronize afc callbacks
  * @afc_cb_obj: The object containing the callback function and opaque argument
+ * @afc_pow_evt_cb_obj: The object containing the callback function and opaque
+ * argument for the AFC power event
  * @afc_request_id: The last AFC request id received from FW/halphy
  * @is_6g_afc_power_event_received: indicates if the AFC power event is
  * received
@@ -287,6 +289,7 @@ struct wlan_regulatory_pdev_priv_obj {
 #ifdef CONFIG_AFC_SUPPORT
 	qdf_spinlock_t afc_cb_lock;
 	struct afc_cb_handler afc_cb_obj;
+	struct afc_pow_evt_cb_handler afc_pow_evt_cb_obj;
 	uint64_t afc_request_id;
 	bool is_6g_afc_power_event_received;
 	bool is_6g_afc_expiry_event_received;

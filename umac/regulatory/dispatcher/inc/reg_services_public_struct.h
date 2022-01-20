@@ -2180,5 +2180,19 @@ struct reg_afc_resp_rx_ind_info {
 typedef void (*afc_req_rx_evt_handler)(struct wlan_objmgr_pdev *pdev,
 				       struct wlan_afc_host_partial_request *afc_par_req,
 				       void *arg);
+
+/**
+ * afc_power_tx_evt_handler() - Function prototype of AFC power event sent
+ * handler
+ * @pdev: Pointer to pdev
+ * @power_info: Pointer to AFC power event data
+ * @arg: Pointer to void (opaque) argument object
+ *
+ * Return: void
+ */
+typedef void
+(*afc_power_tx_evt_handler)(struct wlan_objmgr_pdev *pdev,
+			    struct reg_fw_afc_power_event *power_info,
+			    void *arg);
 #endif
 #endif

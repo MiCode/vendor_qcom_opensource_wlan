@@ -350,6 +350,31 @@ QDF_STATUS ucfg_reg_get_partial_afc_req_info(
 		struct wlan_objmgr_pdev *pdev,
 		struct wlan_afc_host_partial_request **afc_req,
 		uint64_t req_id);
+
+/**
+ * ucfg_reg_register_afc_power_event_callback() - add AFC power event received
+ * @pdev: Pointer to pdev
+ * @cbf: Pointer to callback function
+ * @arg: Pointer to opaque argument
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+ucfg_reg_register_afc_power_event_callback(struct wlan_objmgr_pdev *pdev,
+					   afc_power_tx_evt_handler cbf,
+					   void *arg);
+
+/**
+ * ucfg_reg_unregister_afc_power_event_callback() - remove AFC power event
+ * received callback
+ * @pdev: Pointer to pdev
+ * @cbf: Pointer to callback function
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+ucfg_reg_unregister_afc_power_event_callback(struct wlan_objmgr_pdev *pdev,
+					     afc_power_tx_evt_handler cbf);
 #endif
 
 /**
