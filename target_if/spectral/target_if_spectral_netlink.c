@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2011,2017-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  *
  * Permission to use, copy, modify, and/or distribute this software for
@@ -76,10 +77,11 @@ target_if_spectral_fill_samp_msg(struct target_if_spectral *spectral,
 
 	qdf_spin_lock_bh(&spectral->session_det_map_lock);
 
-	if (!spectral->det_map[params->hw_detector_id].det_map_valid) {
+	if (!spectral->det_map[params->hw_detector_id].
+				det_map_valid[spectral_mode]) {
 		qdf_spin_unlock_bh(&spectral->session_det_map_lock);
-		spectral_info("Detector Map not valid for det id = %d",
-			      params->hw_detector_id);
+		spectral_info("Detector Map not valid for det id = %d and spectral mode = %d",
+			      params->hw_detector_id, spectral_mode);
 		return QDF_STATUS_E_FAILURE;
 	}
 

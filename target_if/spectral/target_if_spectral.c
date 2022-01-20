@@ -5758,7 +5758,7 @@ target_if_spectral_populate_session_det_host_info(
 			}
 			is_sec80 = !is_sec80;
 		}
-		det_map->det_map_valid = true;
+		det_map->det_map_valid[smode] = true;
 		qdf_spin_unlock_bh(&spectral->session_det_map_lock);
 	}
 	qdf_spin_unlock_bh(&spectral->detector_list_lock);
@@ -6124,7 +6124,7 @@ target_if_stop_spectral_scan(struct wlan_objmgr_pdev *pdev,
 
 	qdf_spin_lock_bh(&spectral->session_det_map_lock);
 	for (det = 0; det < MAX_DETECTORS_PER_PDEV; det++)
-		spectral->det_map[det].det_map_valid = false;
+		spectral->det_map[det].det_map_valid[smode] = false;
 
 	qdf_spin_unlock_bh(&spectral->session_det_map_lock);
 
