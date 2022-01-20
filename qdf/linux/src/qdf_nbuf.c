@@ -2188,6 +2188,9 @@ bool __qdf_nbuf_data_is_ipv6_dhcp_pkt(uint8_t *data)
 	uint16_t dport;
 	uint8_t ipv6_offset;
 
+	if (!__qdf_nbuf_data_is_ipv6_pkt(data))
+		return false;
+
 	ipv6_offset = __qdf_nbuf_get_ip_offset(data);
 	sport = *(uint16_t *)(data + ipv6_offset +
 			      QDF_NBUF_TRAC_IPV6_HEADER_SIZE);

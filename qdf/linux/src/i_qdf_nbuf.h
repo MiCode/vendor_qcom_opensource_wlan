@@ -70,6 +70,7 @@ typedef struct sk_buff_head __qdf_nbuf_queue_head_t;
 #define QDF_NBUF_CB_PACKET_TYPE_DHCP   4
 #define QDF_NBUF_CB_PACKET_TYPE_ICMP   5
 #define QDF_NBUF_CB_PACKET_TYPE_ICMPv6 6
+#define QDF_NBUF_CB_PACKET_TYPE_DHCPV6 7
 
 #define RADIOTAP_BASE_HEADER_LEN sizeof(struct ieee80211_radiotap_header)
 
