@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2019-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021,2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -37,6 +37,8 @@
 #include "reo_destination_ring_with_pn.h"
 
 #include <hal_be_rx.h>
+
+struct tcl_data_cmd gtcl_data_symbol __attribute__((used));
 
 #define UNIFIED_RXPCU_PPDU_END_INFO_8_RX_PPDU_DURATION_OFFSET \
 	RXPCU_PPDU_END_INFO_RX_PPDU_DURATION_OFFSET
