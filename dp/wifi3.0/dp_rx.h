@@ -2618,4 +2618,98 @@ dp_peer_rx_reorder_queue_setup(struct dp_soc *soc, struct dp_peer *peer,
 							    peer, tid,
 							    ba_window_size);
 }
+
+static inline
+void dp_rx_nbuf_list_deliver(struct dp_soc *soc,
+			     struct dp_vdev *vdev,
+			     struct dp_txrx_peer *txrx_peer,
+			     uint16_t peer_id,
+			     uint8_t pkt_capture_offload,
+			     qdf_nbuf_t deliver_list_head,
+			     qdf_nbuf_t deliver_list_tail)
+{
+	qdf_nbuf_t nbuf, next;
+
+	if (qdf_likely(deliver_list_head)) {
+		if (qdf_likely(txrx_peer)) {
+			dp_rx_deliver_to_pkt_capture(soc, vdev->pdev, peer_id,
+						     pkt_capture_offload,
+						     deliver_list_head);
+			if (!pkt_capture_offload)
+				dp_rx_deliver_to_stack(soc, vdev, txrx_peer,
+						       deliver_list_head,
+						       deliver_list_tail);
+		} else {
+			nbuf = deliver_list_head;
+			while (nbuf) {
+				next = nbuf->next;
+				nbuf->next = NULL;
+				dp_rx_deliver_to_stack_no_peer(soc, nbuf);
+				nbuf = next;
+			}
+		}
+	}
+}
+
+#ifdef DP_TX_RX_TPUT_SIMULATE
+/*
+ * Change this macro value to simulate different RX T-put,
+ * if OTA is 100 Mbps, to simulate 200 Mbps, then multiplication factor
+ * is 2, set macro value as 1 (multiplication factor - 1).
+ */
+#define DP_RX_PKTS_DUPLICATE_CNT 0
+static inline
+void dp_rx_nbuf_list_dup_deliver(struct dp_soc *soc,
+				 struct dp_vdev *vdev,
+				 struct dp_txrx_peer *txrx_peer,
+				 uint16_t peer_id,
+				 uint8_t pkt_capture_offload,
+				 qdf_nbuf_t ori_list_head,
+				 qdf_nbuf_t ori_list_tail)
+{
+	qdf_nbuf_t new_skb = NULL;
+	qdf_nbuf_t new_list_head = NULL;
+	qdf_nbuf_t new_list_tail = NULL;
+	qdf_nbuf_t nbuf = NULL;
+	int i;
+
+	for (i = 0; i < DP_RX_PKTS_DUPLICATE_CNT; i++) {
+		nbuf = ori_list_head;
+		new_list_head = NULL;
+		new_list_tail = NULL;
+
+		while (nbuf) {
+			new_skb = qdf_nbuf_copy(nbuf);
+			if (qdf_likely(new_skb))
+				DP_RX_LIST_APPEND(new_list_head,
+						  new_list_tail,
+						  new_skb);
+			else
+				dp_err("copy skb failed");
+
+			nbuf = qdf_nbuf_next(nbuf);
+		}
+
+		/* deliver the copied nbuf list */
+		dp_rx_nbuf_list_deliver(soc, vdev, txrx_peer, peer_id,
+					pkt_capture_offload,
+					new_list_head,
+					new_list_tail);
+	}
+
+	/* deliver the original skb_list */
+	dp_rx_nbuf_list_deliver(soc, vdev, txrx_peer, peer_id,
+				pkt_capture_offload,
+				ori_list_head,
+				ori_list_tail);
+}
+
+#define DP_RX_DELIVER_TO_STACK dp_rx_nbuf_list_dup_deliver
+
+#else /* !DP_TX_RX_TPUT_SIMULATE */
+
+#define DP_RX_DELIVER_TO_STACK dp_rx_nbuf_list_deliver
+
+#endif /* DP_TX_RX_TPUT_SIMULATE */
+
 #endif /* _DP_RX_H */
