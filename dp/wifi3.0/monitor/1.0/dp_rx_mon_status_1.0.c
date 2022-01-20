@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -554,6 +554,13 @@ dp_rx_mon_status_srng_process(struct dp_soc *soc, struct dp_intr *int_ctx,
 						hbi.sw_cookie);
 
 			qdf_assert_always(rx_desc);
+
+			if (qdf_unlikely(!dp_rx_desc_paddr_sanity_check(rx_desc,
+								buf_addr))) {
+				DP_STATS_INC(soc, rx.err.nbuf_sanity_fail, 1);
+				hal_srng_src_get_next(hal_soc, mon_status_srng);
+				continue;
+			}
 
 			status_nbuf = rx_desc->nbuf;
 
