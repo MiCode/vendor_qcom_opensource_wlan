@@ -208,7 +208,7 @@ typedef union {
  * @tx.flags.bits.flag_chfrag_cont: middle or part of MSDU in an AMSDU
  * @tx.flags.bits.flag_chfrag_end: last MSDU in an AMSDU
  * @tx.flags.bits.flag_ext_header: extended flags
- * @tx.flags.bits.reserved: reserved
+ * @tx.flags.bits.is_critical: flag indicating a critical frame
  * @tx.trace: combined structure for DP and protocol trace
  * @tx.trace.packet_stat: {NBUF_TX_PKT_[(HDD)|(TXRX_ENQUEUE)|(TXRX_DEQUEUE)|
  *                       +          (TXRX)|(HTT)|(HTC)|(HIF)|(CE)|(FREE)]
@@ -347,7 +347,7 @@ struct qdf_nbuf_cb {
 						flag_chfrag_cont:1,
 						flag_chfrag_end:1,
 						flag_ext_header:1,
-						reserved:1;
+						is_critical:1;
 				} bits;
 				uint8_t u8;
 			} flags;
@@ -507,6 +507,9 @@ QDF_COMPILE_TIME_ASSERT(qdf_nbuf_cb_size,
 		((skb)->cb))->u.tx.flags.bits.flag_ext_header)
 #define QDF_NBUF_CB_TX_EXTRA_FRAG_WORDSTR_FLAGS(skb) \
 	(((struct qdf_nbuf_cb *)((skb)->cb))->u.tx.flags.u8)
+
+#define QDF_NBUF_CB_TX_EXTRA_IS_CRITICAL(skb) \
+	(((struct qdf_nbuf_cb *)((skb)->cb))->u.tx.flags.bits.is_critical)
 /* End of Tx Flags Accessor Macros */
 
 /* Tx trace accessor macros */
