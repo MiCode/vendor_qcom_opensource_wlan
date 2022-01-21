@@ -1529,28 +1529,13 @@ end:
 	return 0;
 }
 
-static uint16_t reg_compute_chan_to_freq(struct wlan_objmgr_pdev *pdev,
-					 uint8_t chan_num,
-					 enum channel_enum min_chan_range,
-					 enum channel_enum max_chan_range)
+static uint16_t
+reg_compute_chan_to_freq_for_chlist(struct regulatory_channel *chan_list,
+				    uint8_t chan_num,
+				    enum channel_enum min_chan_range,
+				    enum channel_enum max_chan_range)
 {
 	uint16_t count;
-	struct regulatory_channel *chan_list;
-	struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj;
-
-	pdev_priv_obj = reg_get_pdev_obj(pdev);
-
-	if (!IS_VALID_PDEV_REG_OBJ(pdev_priv_obj)) {
-		reg_err("reg pdev priv obj is NULL");
-		return 0;
-	}
-
-	if (min_chan_range < MIN_CHANNEL || max_chan_range > MAX_CHANNEL) {
-		reg_err_rl("Channel range is invalid");
-		return 0;
-	}
-
-	chan_list = pdev_priv_obj->mas_chan_list;
 
 	for (count = min_chan_range; count <= max_chan_range; count++) {
 		if ((chan_list[count].state != CHANNEL_STATE_DISABLE) &&
@@ -1594,6 +1579,70 @@ end:
 
 	reg_debug_rl("Invalid channel %d", chan_num);
 	return 0;
+}
+
+static uint16_t reg_compute_chan_to_freq(struct wlan_objmgr_pdev *pdev,
+					 uint8_t chan_num,
+					 enum channel_enum min_chan_range,
+					 enum channel_enum max_chan_range)
+{
+	struct regulatory_channel *chan_list;
+	struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj;
+	uint16_t freq;
+	enum supported_6g_pwr_types input_6g_pwr_mode;
+
+	pdev_priv_obj = reg_get_pdev_obj(pdev);
+
+	if (!IS_VALID_PDEV_REG_OBJ(pdev_priv_obj)) {
+		reg_err("reg pdev priv obj is NULL");
+		return 0;
+	}
+
+	if (min_chan_range < MIN_CHANNEL || max_chan_range > MAX_CHANNEL) {
+		reg_err_rl("Channel range is invalid");
+		return 0;
+	}
+
+	chan_list = pdev_priv_obj->mas_chan_list;
+
+	freq = reg_compute_chan_to_freq_for_chlist(chan_list, chan_num,
+						   min_chan_range,
+						   max_chan_range);
+
+	/* If the frequency is a 2G or 5G frequency, then it should be found
+	 * in the regulatory mas_chan_list.
+	 * If a valid 6G frequency has been returned with the current power mode
+	 * itself, then return the freq computed.
+	 */
+	if (freq)
+		return freq;
+
+	min_chan_range = reg_convert_enum_to_6g_idx(min_chan_range);
+	max_chan_range = reg_convert_enum_to_6g_idx(max_chan_range);
+	if ((min_chan_range == INVALID_CHANNEL) ||
+	    (max_chan_range == INVALID_CHANNEL))
+		return freq;
+
+	/* If a valid 6G frequency has not been found, then search in a
+	 * power mode's master channel list.
+	 */
+	input_6g_pwr_mode = REG_AP_LPI;
+	while (input_6g_pwr_mode <= REG_CLI_SUB_VLP) {
+		chan_list = reg_get_reg_maschan_lst_frm_6g_pwr_mode(
+							input_6g_pwr_mode,
+							pdev_priv_obj, 0);
+		if (!chan_list)
+			return 0;
+
+		freq = reg_compute_chan_to_freq_for_chlist(chan_list, chan_num,
+							   min_chan_range,
+							   max_chan_range);
+		if (freq)
+			break;
+		input_6g_pwr_mode++;
+	}
+
+	return freq;
 }
 
 uint16_t reg_legacy_chan_to_freq(struct wlan_objmgr_pdev *pdev,

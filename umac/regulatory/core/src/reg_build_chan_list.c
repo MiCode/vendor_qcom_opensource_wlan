@@ -1995,19 +1995,10 @@ const struct ap_cli_pwr_mode_info reg_pwr_enum_2_ap_cli_pwrmode[] = {
 							REG_VERY_LOW_POWER_AP},
 };
 
-/**
- * reg_get_reg_maschan_lst_frm_6g_pwr_mode() - Return the mas_chan_list entry
- * for based on the channel index and input power mode
- * @supp_pwr_mode: 6G supported power mode
- * @pdev_priv_obj: Pointer to pdev_priv_obj
- * @chan_idx: Channel index
- *
- * Return: Pointer to struct regulatory_channel
- */
-static struct regulatory_channel *reg_get_reg_maschan_lst_frm_6g_pwr_mode(
-		enum supported_6g_pwr_types supp_pwr_mode,
-		struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj,
-		uint16_t chan_idx)
+struct regulatory_channel *reg_get_reg_maschan_lst_frm_6g_pwr_mode(
+			enum supported_6g_pwr_types supp_pwr_mode,
+			struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj,
+			uint16_t chan_idx)
 {
 	struct regulatory_channel *mas_chan_list = NULL;
 	bool is_ap_chan_lst;
@@ -2708,7 +2699,6 @@ QDF_STATUS reg_get_pwrmode_chan_list(struct wlan_objmgr_pdev *pdev,
 				     enum supported_6g_pwr_types in_6g_pwr_mode)
 {
 	struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj;
-	struct wlan_objmgr_psoc *psoc;
 
 	if (!pdev) {
 		reg_err_rl("invalid pdev");
@@ -2721,7 +2711,6 @@ QDF_STATUS reg_get_pwrmode_chan_list(struct wlan_objmgr_pdev *pdev,
 	}
 
 	pdev_priv_obj = reg_get_pdev_obj(pdev);
-	psoc = wlan_pdev_get_psoc(pdev);
 
 	/* Get the current channel list */
 	qdf_mem_copy(chan_list, pdev_priv_obj->cur_chan_list,
