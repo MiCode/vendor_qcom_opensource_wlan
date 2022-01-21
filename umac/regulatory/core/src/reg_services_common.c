@@ -2599,6 +2599,42 @@ reg_get_band_channel_list(struct wlan_objmgr_pdev *pdev,
 					       pdev_priv_obj->cur_chan_list);
 }
 
+#ifdef CONFIG_REG_6G_PWRMODE
+uint16_t
+reg_get_band_channel_list_for_pwrmode(struct wlan_objmgr_pdev *pdev,
+				      uint8_t band_mask,
+				      struct regulatory_channel *channel_list,
+				      enum supported_6g_pwr_types
+				      in_6g_pwr_mode)
+{
+	struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj;
+	struct regulatory_channel *reg_chan_list;
+	uint16_t nchan = 0;
+
+	reg_chan_list = qdf_mem_malloc(NUM_CHANNELS * sizeof(*reg_chan_list));
+
+	if (!reg_chan_list)
+		return 0;
+
+	pdev_priv_obj = reg_get_pdev_obj(pdev);
+	if (!IS_VALID_PDEV_REG_OBJ(pdev_priv_obj)) {
+		reg_err("reg pdev priv obj is NULL");
+		goto err;
+	}
+
+	if (reg_get_pwrmode_chan_list(pdev, reg_chan_list, in_6g_pwr_mode)) {
+		reg_debug_rl("Unable to get powermode channel list");
+		goto err;
+	}
+
+	nchan = reg_get_band_from_cur_chan_list(pdev, band_mask, channel_list,
+						reg_chan_list);
+err:
+	qdf_mem_free(reg_chan_list);
+	return nchan;
+}
+#endif
+
 #ifdef CONFIG_REG_CLIENT
 uint16_t
 reg_get_secondary_band_channel_list(struct wlan_objmgr_pdev *pdev,

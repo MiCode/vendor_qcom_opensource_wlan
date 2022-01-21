@@ -924,6 +924,26 @@ wlan_reg_get_band_channel_list(struct wlan_objmgr_pdev *pdev,
 	return reg_get_band_channel_list(pdev, band_mask, channel_list);
 }
 
+#ifdef CONFIG_REG_6G_PWRMODE
+uint16_t
+wlan_reg_get_band_channel_list_for_pwrmode(struct wlan_objmgr_pdev *pdev,
+					   uint8_t band_mask,
+					   struct regulatory_channel
+					   *channel_list,
+					   enum supported_6g_pwr_types
+					   in_6g_pwr_type)
+{
+	if (!pdev) {
+		reg_err("pdev object is NULL");
+		return 0;
+	}
+
+	return reg_get_band_channel_list_for_pwrmode(pdev, band_mask,
+						     channel_list,
+						     in_6g_pwr_type);
+}
+#endif
+
 #ifdef CONFIG_REG_CLIENT
 uint16_t
 wlan_reg_get_secondary_band_channel_list(struct wlan_objmgr_pdev *pdev,

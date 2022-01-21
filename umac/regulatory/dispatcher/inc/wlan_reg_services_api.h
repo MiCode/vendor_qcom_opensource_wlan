@@ -408,6 +408,29 @@ wlan_reg_get_band_channel_list(struct wlan_objmgr_pdev *pdev,
 			       uint8_t band_mask,
 			       struct regulatory_channel *channel_list);
 
+#ifdef CONFIG_REG_6G_PWRMODE
+/**
+ * wlan_reg_get_band_channel_list_for_pwrmode() - Get channel list based on the
+ * band_mask and input 6G power mode.
+ * @pdev: pdev ptr
+ * @band_mask: Input bitmap with band set
+ * @channel_list: Pointer to Channel List
+ * @in_6g_pwr_type: 6g power type which decides 6G channel list lookup.
+ *
+ * Get the given channel list and number of channels from the current channel
+ * list based on input band bitmap.
+ *
+ * Return: Number of channels, else 0 to indicate error
+ */
+uint16_t
+wlan_reg_get_band_channel_list_for_pwrmode(struct wlan_objmgr_pdev *pdev,
+					   uint8_t band_mask,
+					   struct regulatory_channel
+					   *channel_list,
+					   enum supported_6g_pwr_types
+					   in_6g_pwr_type);
+#endif
+
 #ifdef CONFIG_REG_CLIENT
 /**
  * wlan_reg_get_secondary_band_channel_list() - Get secondary channel list for
