@@ -33,10 +33,14 @@
 #endif
 
 /* MAX MLO dev support */
+#ifndef WLAN_UMAC_MLO_MAX_VDEVS
 #define WLAN_UMAC_MLO_MAX_VDEVS 2
+#endif
 
 /* MAX instances of ML devices */
+#ifndef WLAN_UMAC_MLO_MAX_DEV
 #define WLAN_UMAC_MLO_MAX_DEV 2
+#endif
 
 /* Max PEER support */
 #define MAX_MLO_PEER 512
