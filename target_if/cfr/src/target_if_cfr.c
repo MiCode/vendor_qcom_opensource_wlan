@@ -246,7 +246,8 @@ void target_if_cfr_fill_header(struct csi_cfr_header *hdr,
 	} else {
 		if (target_type == TARGET_TYPE_QCN9000 ||
 		    target_type == TARGET_TYPE_QCN9224 ||
-		    target_type == TARGET_TYPE_QCA6490)
+		    target_type == TARGET_TYPE_QCA6490 ||
+		    target_type == TARGET_TYPE_KIWI)
 			hdr->cmn.cfr_metadata_version = CFR_META_VERSION_7;
 		else if ((target_type == TARGET_TYPE_QCA6018) ||
 			 ((target_type == TARGET_TYPE_QCA5018) && (!is_rcc)))
@@ -266,6 +267,8 @@ void target_if_cfr_fill_header(struct csi_cfr_header *hdr,
 			hdr->cmn.chip_type = CFR_CAPTURE_RADIO_HSP;
 		else if (target_type == TARGET_TYPE_QCA6750)
 			hdr->cmn.chip_type = CFR_CAPTURE_RADIO_MOSELLE;
+		else if (target_type == TARGET_TYPE_KIWI)
+			hdr->cmn.chip_type = CFR_CAPTURE_RADIO_KIWI;
 		else
 			hdr->cmn.chip_type = CFR_CAPTURE_RADIO_CYP;
 	}
@@ -329,6 +332,8 @@ static QDF_STATUS target_if_cfr_init_target(struct wlan_objmgr_psoc *psoc,
 		cfr_pdev->chip_type = CFR_CAPTURE_RADIO_HSP;
 	else if (target == TARGET_TYPE_QCA6750)
 		cfr_pdev->chip_type = CFR_CAPTURE_RADIO_MOSELLE;
+	else if (target == TARGET_TYPE_KIWI)
+		cfr_pdev->chip_type = CFR_CAPTURE_RADIO_KIWI;
 
 	return status;
 }
@@ -368,7 +373,8 @@ target_if_cfr_init_pdev(struct wlan_objmgr_psoc *psoc,
 	target_type = target_if_cfr_get_target_type(psoc);
 
 	if (target_type == TARGET_TYPE_QCA6490 ||
-	    target_type == TARGET_TYPE_QCA6750) {
+	    target_type == TARGET_TYPE_QCA6750 ||
+	    target_type == TARGET_TYPE_KIWI) {
 		status = target_if_cfr_init_target(psoc,
 						   pdev, target_type);
 	} else if (target_type == TARGET_TYPE_ADRASTEA) {
@@ -391,7 +397,8 @@ target_if_cfr_deinit_pdev(struct wlan_objmgr_psoc *psoc,
 	target_type = target_if_cfr_get_target_type(psoc);
 
 	if (target_type == TARGET_TYPE_QCA6490 ||
-	    target_type == TARGET_TYPE_QCA6750) {
+	    target_type == TARGET_TYPE_QCA6750 ||
+	    target_type == TARGET_TYPE_KIWI) {
 		status = target_if_cfr_deinit_target(psoc, pdev);
 	} else if (target_type == TARGET_TYPE_ADRASTEA) {
 		status = cfr_adrastea_deinit_pdev(psoc, pdev);
