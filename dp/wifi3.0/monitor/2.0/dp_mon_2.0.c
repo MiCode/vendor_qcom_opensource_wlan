@@ -315,6 +315,7 @@ void dp_vdev_set_monitor_mode_buf_rings_2_0(struct dp_pdev *pdev)
 	struct dp_soc *soc = pdev->soc;
 	struct dp_mon_soc *mon_soc = soc->monitor_soc;
 	struct dp_mon_soc_be *mon_soc_be = dp_get_be_mon_soc_from_dp_mon_soc(mon_soc);
+	QDF_STATUS status;
 
 	if (!mon_soc_be) {
 		dp_mon_err("DP MON SOC is NULL");
@@ -323,6 +324,27 @@ void dp_vdev_set_monitor_mode_buf_rings_2_0(struct dp_pdev *pdev)
 
 	soc_cfg_ctx = soc->wlan_cfg_ctx;
 	rx_mon_max_entries = wlan_cfg_get_dp_soc_rx_mon_buf_ring_size(soc_cfg_ctx);
+	tx_mon_max_entries = wlan_cfg_get_dp_soc_tx_mon_buf_ring_size(soc_cfg_ctx);
+
+	hal_set_low_threshold(soc->rxdma_mon_buf_ring[0].hal_srng,
+			      rx_mon_max_entries >> 2);
+	status = htt_srng_setup(soc->htt_handle, 0,
+				soc->rxdma_mon_buf_ring[0].hal_srng,
+				RXDMA_MONITOR_BUF);
+	if (status != QDF_STATUS_SUCCESS) {
+		dp_err("Failed to send htt srng setup message for Rx mon buf ring");
+		return;
+	}
+
+	hal_set_low_threshold(mon_soc_be->tx_mon_buf_ring.hal_srng,
+			      tx_mon_max_entries >> 2);
+	status = htt_srng_setup(soc->htt_handle, 0,
+				mon_soc_be->tx_mon_buf_ring.hal_srng,
+				TX_MONITOR_BUF);
+	if (status != QDF_STATUS_SUCCESS) {
+		dp_err("Failed to send htt srng setup message for Tx mon buf ring");
+		return;
+	}
 
 	if (dp_rx_mon_buffers_alloc(soc,
 				    (rx_mon_max_entries - mon_soc_be->tx_mon_ring_fill_level))) {
@@ -330,7 +352,6 @@ void dp_vdev_set_monitor_mode_buf_rings_2_0(struct dp_pdev *pdev)
 		return;
 	}
 
-	tx_mon_max_entries = wlan_cfg_get_dp_soc_tx_mon_buf_ring_size(soc_cfg_ctx);
 	if (dp_tx_mon_buffers_alloc(soc,
 				    (tx_mon_max_entries - mon_soc_be->tx_mon_ring_fill_level))) {
 		dp_mon_err("%pK: Tx mon buffers allocation failed", soc);
@@ -424,6 +445,7 @@ QDF_STATUS dp_mon_soc_htt_srng_setup_2_0(struct dp_soc *soc)
 
 	QDF_STATUS status;
 
+	hal_set_low_threshold(soc->rxdma_mon_buf_ring[0].hal_srng, 0);
 	status = htt_srng_setup(soc->htt_handle, 0,
 				soc->rxdma_mon_buf_ring[0].hal_srng,
 				RXDMA_MONITOR_BUF);
@@ -433,6 +455,7 @@ QDF_STATUS dp_mon_soc_htt_srng_setup_2_0(struct dp_soc *soc)
 		return status;
 	}
 
+	hal_set_low_threshold(mon_soc_be->tx_mon_buf_ring.hal_srng, 0);
 	status = htt_srng_setup(soc->htt_handle, 0,
 				mon_soc_be->tx_mon_buf_ring.hal_srng,
 				TX_MONITOR_BUF);
