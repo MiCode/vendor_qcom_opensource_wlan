@@ -687,6 +687,12 @@ void dp_peer_ast_send_wds_del(struct dp_soc *soc,
 			      struct dp_ast_entry *ast_entry,
 			      struct dp_peer *peer);
 
+#ifdef WLAN_FEATURE_MULTI_AST_DEL
+void dp_peer_ast_send_multi_wds_del(
+		struct dp_soc *soc, uint8_t vdev_id,
+		struct peer_del_multi_wds_entries *wds_list);
+#endif
+
 void dp_peer_free_hmwds_cb(struct cdp_ctrl_objmgr_psoc *ctrl_psoc,
 			   struct cdp_soc *dp_soc,
 			   void *cookie,

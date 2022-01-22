@@ -2102,6 +2102,20 @@ void dp_peer_ast_send_wds_del(struct dp_soc *soc,
 
 }
 
+#ifdef WLAN_FEATURE_MULTI_AST_DEL
+void dp_peer_ast_send_multi_wds_del(
+		struct dp_soc *soc, uint8_t vdev_id,
+		struct peer_del_multi_wds_entries *wds_list)
+{
+	struct cdp_soc_t *cdp_soc = &soc->cdp_soc;
+
+	if (cdp_soc && cdp_soc->ol_ops &&
+	    cdp_soc->ol_ops->peer_del_multi_wds_entry)
+		cdp_soc->ol_ops->peer_del_multi_wds_entry(soc->ctrl_psoc,
+							  vdev_id, wds_list);
+}
+#endif
+
 #ifdef FEATURE_WDS
 /**
  * dp_peer_ast_free_wds_entries() - Free wds ast entries associated with peer

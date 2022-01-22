@@ -44,6 +44,116 @@
 #define DP_PEER_AST3_FLOW_MASK 0x2
 #define DP_MAX_AST_INDEX_PER_PEER 4
 
+#ifdef WLAN_FEATURE_MULTI_AST_DEL
+
+void dp_peer_free_peer_ase_list(struct dp_soc *soc,
+				struct peer_del_multi_wds_entries *wds_list)
+{
+	struct peer_wds_entry_list *wds_entry, *tmp_entry;
+
+	TAILQ_FOREACH_SAFE(wds_entry, &wds_list->ase_list,
+			   ase_list_elem, tmp_entry) {
+		dp_peer_debug("type: %d mac_addr: " QDF_MAC_ADDR_FMT,
+			      wds_entry->type,
+			      QDF_MAC_ADDR_REF(wds_entry->dest_addr));
+		TAILQ_REMOVE(&wds_list->ase_list, wds_entry, ase_list_elem);
+		wds_list->num_entries--;
+		qdf_mem_free(wds_entry);
+	}
+}
+
+static void
+dp_pdev_build_peer_ase_list(struct dp_soc *soc, struct dp_peer *peer,
+			    void *arg)
+{
+	struct dp_ast_entry *ase, *temp_ase;
+	struct peer_del_multi_wds_entries *list = arg;
+	struct peer_wds_entry_list *wds_entry;
+
+	if (!soc || !peer || !arg) {
+		dp_peer_err("Invalid input");
+		return;
+	}
+
+	list->vdev_id = peer->vdev->vdev_id;
+	DP_PEER_ITERATE_ASE_LIST(peer, ase, temp_ase) {
+		if (ase->type != CDP_TXRX_AST_TYPE_WDS &&
+		    ase->type != CDP_TXRX_AST_TYPE_DA)
+			continue;
+
+		if (ase->is_active) {
+			ase->is_active = false;
+			continue;
+		}
+
+		if (ase->delete_in_progress) {
+			dp_info_rl("Del set addr:" QDF_MAC_ADDR_FMT " type:%d",
+				   QDF_MAC_ADDR_REF(ase->mac_addr.raw),
+				   ase->type);
+			continue;
+		}
+
+		if (ase->is_mapped)
+			soc->ast_table[ase->ast_idx] = NULL;
+
+		if (!ase->next_hop) {
+			dp_peer_unlink_ast_entry(soc, ase, peer);
+			continue;
+		}
+
+		wds_entry = (struct peer_wds_entry_list *)
+			    qdf_mem_malloc(sizeof(*wds_entry));
+		if (!wds_entry) {
+			dp_peer_err("%pK: fail to allocate wds_entry", soc);
+			dp_peer_free_peer_ase_list(soc, list);
+			return;
+		}
+
+		DP_STATS_INC(soc, ast.aged_out, 1);
+		ase->delete_in_progress = true;
+		wds_entry->dest_addr = ase->mac_addr.raw;
+		wds_entry->type = ase->type;
+
+		if (dp_peer_state_cmp(peer, DP_PEER_STATE_LOGICAL_DELETE))
+			wds_entry->delete_in_fw = false;
+		else
+			wds_entry->delete_in_fw = true;
+
+		dp_peer_debug("ase->type: %d pdev: %u vdev: %u mac_addr: " QDF_MAC_ADDR_FMT " next_hop: %u peer: %u",
+			      ase->type, ase->pdev_id, ase->vdev_id,
+			      QDF_MAC_ADDR_REF(ase->mac_addr.raw),
+			      ase->next_hop, ase->peer_id);
+		TAILQ_INSERT_TAIL(&list->ase_list, wds_entry, ase_list_elem);
+		list->num_entries++;
+	}
+	dp_peer_info("Total num of entries :%d", list->num_entries);
+}
+
+static void
+dp_peer_age_multi_ast_entries(struct dp_soc *soc, void *arg,
+			      enum dp_mod_id mod_id)
+{
+	uint8_t i;
+	struct dp_pdev *pdev = NULL;
+	struct peer_del_multi_wds_entries wds_list = {0};
+
+	TAILQ_INIT(&wds_list.ase_list);
+	for (i = 0; i < MAX_PDEV_CNT && soc->pdev_list[i]; i++) {
+		pdev = soc->pdev_list[i];
+		dp_pdev_iterate_peer(pdev, dp_pdev_build_peer_ase_list,
+				     &wds_list, mod_id);
+		if (wds_list.num_entries > 0) {
+			dp_peer_ast_send_multi_wds_del(soc, wds_list.vdev_id,
+						       &wds_list);
+			dp_peer_free_peer_ase_list(soc, &wds_list);
+		} else {
+			dp_peer_debug("No AST entries for pdev:%u",
+				      pdev->pdev_id);
+		}
+	}
+}
+#endif /* WLAN_FEATURE_MULTI_AST_DEL */
+
 static void
 dp_peer_age_ast_entries(struct dp_soc *soc, struct dp_peer *peer, void *arg)
 {
@@ -113,11 +223,11 @@ dp_peer_age_mec_entries(struct dp_soc *soc)
 	dp_peer_mec_free_list(soc, &free_list);
 }
 
+#ifdef WLAN_FEATURE_MULTI_AST_DEL
 static void dp_ast_aging_timer_fn(void *soc_hdl)
 {
 	struct dp_soc *soc = (struct dp_soc *)soc_hdl;
 	struct ast_del_ctxt del_ctxt = {0};
-
 
 	if (soc->wds_ast_aging_timer_cnt++ >= DP_WDS_AST_AGING_TIMER_CNT) {
 		del_ctxt.age = true;
@@ -130,8 +240,11 @@ static void dp_ast_aging_timer_fn(void *soc_hdl)
 		/* AST list access lock */
 		qdf_spin_lock_bh(&soc->ast_lock);
 
-		dp_soc_iterate_peer(soc, dp_peer_age_ast_entries, &del_ctxt,
-				    DP_MOD_ID_AST);
+		if (soc->multi_peer_grp_cmd_supported)
+			dp_peer_age_multi_ast_entries(soc, NULL, DP_MOD_ID_AST);
+		else
+			dp_soc_iterate_peer(soc, dp_peer_age_ast_entries,
+					    &del_ctxt, DP_MOD_ID_AST);
 		qdf_spin_unlock_bh(&soc->ast_lock);
 	}
 
@@ -147,6 +260,40 @@ static void dp_ast_aging_timer_fn(void *soc_hdl)
 		qdf_timer_mod(&soc->ast_aging_timer,
 			      DP_AST_AGING_TIMER_DEFAULT_MS);
 }
+#else
+static void dp_ast_aging_timer_fn(void *soc_hdl)
+{
+	struct dp_soc *soc = (struct dp_soc *)soc_hdl;
+	struct ast_del_ctxt del_ctxt = {0};
+
+	if (soc->wds_ast_aging_timer_cnt++ >= DP_WDS_AST_AGING_TIMER_CNT) {
+		del_ctxt.age = true;
+		soc->wds_ast_aging_timer_cnt = 0;
+	}
+
+	if (soc->pending_ageout || del_ctxt.age) {
+		soc->pending_ageout = false;
+
+		/* AST list access lock */
+		qdf_spin_lock_bh(&soc->ast_lock);
+		dp_soc_iterate_peer(soc, dp_peer_age_ast_entries,
+				    &del_ctxt, DP_MOD_ID_AST);
+		qdf_spin_unlock_bh(&soc->ast_lock);
+	}
+
+	/*
+	 * If NSS offload is enabled, the MEC timeout
+	 * will be managed by NSS.
+	 */
+	if (qdf_atomic_read(&soc->mec_cnt) &&
+	    !wlan_cfg_get_dp_soc_nss_cfg(soc->wlan_cfg_ctx))
+		dp_peer_age_mec_entries(soc);
+
+	if (qdf_atomic_read(&soc->cmn_init_done))
+		qdf_timer_mod(&soc->ast_aging_timer,
+			      DP_AST_AGING_TIMER_DEFAULT_MS);
+}
+#endif /* WLAN_FEATURE_MULTI_AST_DEL */
 
 /*
  * dp_soc_wds_attach() - Setup WDS timer and AST table
