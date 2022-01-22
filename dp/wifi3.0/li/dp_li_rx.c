@@ -348,21 +348,8 @@ more_data:
 		if (QDF_IS_STATUS_ERROR(status)) {
 			if (qdf_unlikely(rx_desc && rx_desc->nbuf)) {
 				qdf_assert_always(!rx_desc->unmapped);
-				dp_ipa_reo_ctx_buf_mapping_lock(soc,
-								reo_ring_num);
-				dp_ipa_handle_rx_buf_smmu_mapping(
-							soc,
-							rx_desc->nbuf,
-							RX_DATA_BUFFER_SIZE,
-							false);
-				qdf_nbuf_unmap_nbytes_single(
-							soc->osdev,
-							rx_desc->nbuf,
-							QDF_DMA_FROM_DEVICE,
-							RX_DATA_BUFFER_SIZE);
+				dp_rx_nbuf_unmap(soc, rx_desc, reo_ring_num);
 				rx_desc->unmapped = 1;
-				dp_ipa_reo_ctx_buf_mapping_unlock(soc,
-								  reo_ring_num);
 				dp_rx_buffer_pool_nbuf_free(soc, rx_desc->nbuf,
 							    rx_desc->pool_id);
 				dp_rx_add_to_free_desc_list(
@@ -608,7 +595,7 @@ done:
 			tid = qdf_nbuf_get_tid_val(nbuf);
 			if (tid >= CDP_MAX_DATA_TIDS) {
 				DP_STATS_INC(soc, rx.err.rx_invalid_tid_err, 1);
-				qdf_nbuf_free(nbuf);
+				dp_rx_nbuf_free(nbuf);
 				nbuf = next;
 				continue;
 			}
@@ -679,13 +666,13 @@ done:
 						     QDF_TRACE_LEVEL_INFO);
 				tid_stats->fail_cnt[MSDU_DONE_FAILURE]++;
 				qdf_assert(0);
-				qdf_nbuf_free(nbuf);
+				dp_rx_nbuf_free(nbuf);
 				nbuf = next;
 				continue;
 			} else if (qdf_unlikely(hal_rx_attn_msdu_len_err_get_li(
 								 rx_tlv_hdr))) {
 				DP_STATS_INC(soc, rx.err.msdu_len_err, 1);
-				qdf_nbuf_free(nbuf);
+				dp_rx_nbuf_free(nbuf);
 				nbuf = next;
 				continue;
 			}
@@ -744,7 +731,7 @@ done:
 				DP_STATS_INC(vdev->pdev, rx_raw_pkts, 1);
 				DP_STATS_INC_PKT(peer, rx.raw, 1, msdu_len);
 			} else {
-				qdf_nbuf_free(nbuf);
+				dp_rx_nbuf_free(nbuf);
 				DP_STATS_INC(soc, rx.err.scatter_msdu, 1);
 				dp_info_rl("scatter msdu len %d, dropped",
 					   msdu_len);
@@ -767,7 +754,7 @@ done:
 		if (qdf_unlikely(vdev->multipass_en)) {
 			if (dp_rx_multipass_process(peer, nbuf, tid) == false) {
 				DP_STATS_INC(peer, rx.multipass_rx_pkt_drop, 1);
-				qdf_nbuf_free(nbuf);
+				dp_rx_nbuf_free(nbuf);
 				nbuf = next;
 				continue;
 			}
@@ -778,7 +765,7 @@ done:
 			DP_STATS_INC(peer, rx.policy_check_drop, 1);
 			tid_stats->fail_cnt[POLICY_CHECK_DROP]++;
 			/* Drop & free packet */
-			qdf_nbuf_free(nbuf);
+			dp_rx_nbuf_free(nbuf);
 			/* Statistics */
 			nbuf = next;
 			continue;
@@ -791,7 +778,7 @@ done:
 				  false))) {
 			tid_stats->fail_cnt[NAWDS_MCAST_DROP]++;
 			DP_STATS_INC(peer, rx.nawds_mcast_drop, 1);
-			qdf_nbuf_free(nbuf);
+			dp_rx_nbuf_free(nbuf);
 			nbuf = next;
 			continue;
 		}
@@ -807,7 +794,7 @@ done:
 			if (!is_eapol) {
 				DP_STATS_INC(peer,
 					     rx.peer_unauth_rx_pkt_drop, 1);
-				qdf_nbuf_free(nbuf);
+				dp_rx_nbuf_free(nbuf);
 				nbuf = next;
 				continue;
 			}
@@ -834,7 +821,7 @@ done:
 				DP_STATS_INC(vdev->pdev, dropped.mesh_filter,
 					     1);
 
-				qdf_nbuf_free(nbuf);
+				dp_rx_nbuf_free(nbuf);
 				nbuf = next;
 				continue;
 			}
@@ -856,7 +843,7 @@ done:
 			 */
 			if (!is_sa_da_idx_valid(max_ast, nbuf,
 						msdu_metadata)) {
-				qdf_nbuf_free(nbuf);
+				dp_rx_nbuf_free(nbuf);
 				nbuf = next;
 				DP_STATS_INC(soc, rx.err.invalid_sa_da_idx, 1);
 				continue;
@@ -868,7 +855,7 @@ done:
 				/* this is a looped back MCBC pkt,drop it */
 				DP_STATS_INC_PKT(peer, rx.mec_drop, 1,
 						 QDF_NBUF_CB_RX_PKT_LEN(nbuf));
-				qdf_nbuf_free(nbuf);
+				dp_rx_nbuf_free(nbuf);
 				nbuf = next;
 				continue;
 			}

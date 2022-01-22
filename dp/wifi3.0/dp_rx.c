@@ -845,7 +845,7 @@ bool dp_rx_intrabss_mcbc_fwd(struct dp_soc *soc, struct dp_peer *ta_peer,
 		       ta_peer->vdev->vdev_id, nbuf_copy)) {
 		DP_STATS_INC_PKT(ta_peer, rx.intra_bss.fail, 1, len);
 		tid_stats->fail_cnt[INTRABSS_DROP]++;
-		qdf_nbuf_free(nbuf_copy);
+		dp_rx_nbuf_free(nbuf_copy);
 	} else {
 		DP_STATS_INC_PKT(ta_peer, rx.intra_bss.pkts, 1, len);
 		tid_stats->intrabss_cnt++;
@@ -1172,7 +1172,7 @@ free:
 	curr_nbuf = mpdu;
 	while (curr_nbuf) {
 		next_nbuf = qdf_nbuf_next(curr_nbuf);
-		qdf_nbuf_free(curr_nbuf);
+		dp_rx_nbuf_free(curr_nbuf);
 		curr_nbuf = next_nbuf;
 	}
 
@@ -1257,7 +1257,7 @@ free:
 	curr_nbuf = mpdu;
 	while (curr_nbuf) {
 		next_nbuf = qdf_nbuf_next(curr_nbuf);
-		qdf_nbuf_free(curr_nbuf);
+		dp_rx_nbuf_free(curr_nbuf);
 		curr_nbuf = next_nbuf;
 	}
 
@@ -1594,7 +1594,7 @@ static inline int dp_rx_drop_nbuf_list(struct dp_pdev *pdev,
 			stats->fail_cnt[INVALID_PEER_VDEV]++;
 			stats->delivered_to_stack--;
 		}
-		qdf_nbuf_free(buf);
+		dp_rx_nbuf_free(buf);
 		buf = next_buf;
 		num_dropped++;
 	}
@@ -2193,7 +2193,7 @@ void dp_rx_deliver_to_stack_no_peer(struct dp_soc *soc, qdf_nbuf_t nbuf)
 deliver_fail:
 	DP_STATS_INC_PKT(soc, rx.err.rx_invalid_peer, 1,
 			 QDF_NBUF_CB_RX_PKT_LEN(nbuf));
-	qdf_nbuf_free(nbuf);
+	dp_rx_nbuf_free(nbuf);
 	if (vdev)
 		dp_vdev_unref_delete(soc, vdev, DP_MOD_ID_RX);
 }
@@ -2202,7 +2202,7 @@ void dp_rx_deliver_to_stack_no_peer(struct dp_soc *soc, qdf_nbuf_t nbuf)
 {
 	DP_STATS_INC_PKT(soc, rx.err.rx_invalid_peer, 1,
 			 QDF_NBUF_CB_RX_PKT_LEN(nbuf));
-	qdf_nbuf_free(nbuf);
+	dp_rx_nbuf_free(nbuf);
 }
 #endif
 
@@ -2288,7 +2288,7 @@ void dp_rx_set_hdr_pad(qdf_nbuf_t nbuf, uint32_t l3_padding)
 bool dp_rx_is_raw_frame_dropped(qdf_nbuf_t nbuf)
 {
 	if (qdf_nbuf_is_raw_frame(nbuf)) {
-		qdf_nbuf_free(nbuf);
+		dp_rx_nbuf_free(nbuf);
 		return true;
 	}
 

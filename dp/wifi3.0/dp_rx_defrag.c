@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2017-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -81,7 +81,7 @@ static void dp_rx_defrag_frames_free(qdf_nbuf_t frames)
 
 	while (frag) {
 		next = qdf_nbuf_next(frag);
-		qdf_nbuf_free(frag);
+		dp_rx_nbuf_free(frag);
 		frag = next;
 	}
 }
@@ -367,7 +367,7 @@ static QDF_STATUS dp_rx_defrag_fraglist_insert(struct dp_peer *peer, unsigned ti
 							      rx_desc_info);
 
 		if (cur_fragno == head_fragno) {
-			qdf_nbuf_free(frag);
+			dp_rx_nbuf_free(frag);
 			goto insert_fail;
 		} else if (head_fragno > cur_fragno) {
 			qdf_nbuf_set_next(frag, cur);
@@ -387,7 +387,7 @@ static QDF_STATUS dp_rx_defrag_fraglist_insert(struct dp_peer *peer, unsigned ti
 			}
 
 			if (cur_fragno == head_fragno) {
-				qdf_nbuf_free(frag);
+				dp_rx_nbuf_free(frag);
 				goto insert_fail;
 			}
 
@@ -832,7 +832,7 @@ static QDF_STATUS dp_rx_defrag_tkip_demic(struct dp_soc *soc,
 	pktlen -= dp_f_tkip.ic_miclen;
 
 	if (((qdf_nbuf_len(prev) - hdrlen) == 0) && prev != msdu) {
-		qdf_nbuf_free(prev);
+		dp_rx_nbuf_free(prev);
 		qdf_nbuf_set_next(prev0, NULL);
 	}
 
@@ -1943,7 +1943,7 @@ dp_rx_defrag_store_fragment(struct dp_soc *soc,
 	return QDF_STATUS_SUCCESS;
 
 discard_frag:
-	qdf_nbuf_free(frag);
+	dp_rx_nbuf_free(frag);
 err_free_desc:
 	dp_rx_add_to_free_desc_list(head, tail, rx_desc);
 	if (dp_rx_link_desc_return(soc, ring_desc,
@@ -2026,12 +2026,7 @@ uint32_t dp_rx_frag_handle(struct dp_soc *soc, hal_ring_desc_t ring_desc,
 		return rx_bufs_used;
 
 	dp_ipa_rx_buf_smmu_mapping_lock(soc);
-	dp_ipa_handle_rx_buf_smmu_mapping(soc, rx_desc->nbuf,
-					  rx_desc_pool->buf_size,
-					  false);
-	qdf_nbuf_unmap_nbytes_single(soc->osdev, rx_desc->nbuf,
-				     QDF_DMA_FROM_DEVICE,
-				     rx_desc_pool->buf_size);
+	dp_rx_nbuf_unmap_pool(soc, rx_desc_pool, rx_desc->nbuf);
 	rx_desc->unmapped = 1;
 	dp_ipa_rx_buf_smmu_mapping_unlock(soc);
 
@@ -2082,7 +2077,7 @@ QDF_STATUS dp_rx_defrag_add_last_frag(struct dp_soc *soc,
 			peer->peer_id,
 			QDF_MAC_ADDR_REF(peer->mac_addr.raw));
 		DP_STATS_INC(soc, rx.err.defrag_peer_uninit, 1);
-		qdf_nbuf_free(nbuf);
+		dp_rx_nbuf_free(nbuf);
 		goto fail;
 	}
 
@@ -2096,7 +2091,7 @@ QDF_STATUS dp_rx_defrag_add_last_frag(struct dp_soc *soc,
 		QDF_TRACE(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_ERROR,
 			  "%s: No list found for TID %d Seq# %d",
 				__func__, tid, rxseq);
-		qdf_nbuf_free(nbuf);
+		dp_rx_nbuf_free(nbuf);
 		goto fail;
 	}
 

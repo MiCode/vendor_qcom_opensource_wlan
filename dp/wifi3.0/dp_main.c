@@ -5386,7 +5386,7 @@ static void dp_pdev_deinit(struct cdp_pdev *txrx_pdev, int force)
 	curr_nbuf = pdev->invalid_peer_head_msdu;
 	while (curr_nbuf) {
 		next_nbuf = qdf_nbuf_next(curr_nbuf);
-		qdf_nbuf_free(curr_nbuf);
+		dp_rx_nbuf_free(curr_nbuf);
 		curr_nbuf = next_nbuf;
 	}
 	pdev->invalid_peer_head_msdu = NULL;

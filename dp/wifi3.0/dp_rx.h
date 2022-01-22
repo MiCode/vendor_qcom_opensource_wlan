@@ -2230,11 +2230,28 @@ void dp_rx_nbuf_unmap(struct dp_soc *soc,
 	qdf_nbuf_dma_inv_range((void *)nbuf->data,
 			       (void *)(nbuf->data + rx_desc_pool->buf_size));
 }
+
+static inline
+void dp_rx_nbuf_unmap_pool(struct dp_soc *soc,
+			   struct rx_desc_pool *rx_desc_pool,
+			   qdf_nbuf_t nbuf)
+{
+	qdf_nbuf_dma_inv_range((void *)nbuf->data,
+			       (void *)(nbuf->data + rx_desc_pool->buf_size));
+}
+
 #else
 static inline
 void dp_rx_nbuf_unmap(struct dp_soc *soc,
 		      struct dp_rx_desc *rx_desc,
 		      uint8_t reo_ring_num)
+{
+}
+
+static inline
+void dp_rx_nbuf_unmap_pool(struct dp_soc *soc,
+			   struct rx_desc_pool *rx_desc_pool,
+			   qdf_nbuf_t nbuf)
 {
 }
 #endif
@@ -2252,6 +2269,11 @@ qdf_nbuf_t dp_rx_nbuf_alloc(struct dp_soc *soc,
 	return qdf_nbuf_alloc_simple(soc->osdev, rx_desc_pool->buf_size);
 }
 
+static inline
+void  dp_rx_nbuf_free(qdf_nbuf_t nbuf)
+{
+	qdf_nbuf_free_simple(nbuf);
+}
 #else
 static inline
 QDF_STATUS dp_pdev_rx_buffers_attach_simple(struct dp_soc *soc, uint32_t mac_id,
@@ -2326,6 +2348,17 @@ void dp_rx_nbuf_unmap(struct dp_soc *soc,
 }
 
 static inline
+void dp_rx_nbuf_unmap_pool(struct dp_soc *soc,
+			   struct rx_desc_pool *rx_desc_pool,
+			   qdf_nbuf_t nbuf)
+{
+	dp_ipa_handle_rx_buf_smmu_mapping(soc, nbuf, rx_desc_pool->buf_size,
+					  false);
+	qdf_nbuf_unmap_nbytes_single(soc->osdev, nbuf, QDF_DMA_FROM_DEVICE,
+				     rx_desc_pool->buf_size);
+}
+
+static inline
 void dp_rx_per_core_stats_update(struct dp_soc *soc, uint8_t ring_id,
 				 uint32_t bufs_reaped)
 {
@@ -2340,6 +2373,12 @@ qdf_nbuf_t dp_rx_nbuf_alloc(struct dp_soc *soc,
 	return qdf_nbuf_alloc(soc->osdev, rx_desc_pool->buf_size,
 			      RX_BUFFER_RESERVATION,
 			      rx_desc_pool->buf_alignment, FALSE);
+}
+
+static inline
+void dp_rx_nbuf_free(qdf_nbuf_t nbuf)
+{
+	qdf_nbuf_free(nbuf);
 }
 #endif
 
