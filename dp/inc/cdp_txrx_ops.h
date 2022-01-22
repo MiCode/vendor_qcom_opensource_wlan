@@ -1160,6 +1160,12 @@ struct ol_if_ops {
 				   uint8_t *wds_macaddr,
 				   uint8_t type,
 				   uint8_t delete_in_fw);
+#ifdef WLAN_FEATURE_MULTI_AST_DEL
+	void (*peer_del_multi_wds_entry)(
+			struct cdp_ctrl_objmgr_psoc *soc,
+			uint8_t vdev_id,
+			struct peer_del_multi_wds_entries *wds_list);
+#endif
 	QDF_STATUS
 	(*lro_hash_config)(struct cdp_ctrl_objmgr_psoc *psoc, uint8_t pdev_id,
 			   struct cdp_lro_hash_config *rx_offld_hash);
