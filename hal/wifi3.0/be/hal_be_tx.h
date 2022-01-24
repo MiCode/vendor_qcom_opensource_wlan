@@ -64,6 +64,19 @@ enum hal_tx_vdev_mismatch_notify {
 	HAL_TX_VDEV_MISMATCH_FW_NOTIFY,
 };
 
+/* enum hal_tx_notify_frame_type - TX notify frame type
+ * @NO_TX_NOTIFY: Not a notify frame
+ * @TX_HARD_NOTIFY: Hard notify TX frame
+ * @TX_SOFT_NOTIFY_E: Soft Notify Tx frame
+ * @TX_SEMI_HARD_NOTIFY_E: Semi Hard notify TX frame
+ */
+enum hal_tx_notify_frame_type {
+	NO_TX_NOTIFY = 0,
+	TX_HARD_NOTIFY = 1,
+	TX_SOFT_NOTIFY_E = 2,
+	TX_SEMI_HARD_NOTIFY_E = 3
+};
+
 /*---------------------------------------------------------------------------
  * Structures
  * ---------------------------------------------------------------------------
@@ -224,6 +237,62 @@ union hal_tx_ppe_pri2tid_map1_config {
  *  TCL Descriptor accessor APIs
  *---------------------------------------------------------------------------
  */
+
+/**
+ * hal_tx_desc_set_tx_notify_frame - Set TX notify_frame field in Tx desc
+ * @desc: Handle to Tx Descriptor
+ * @val: Value to be set
+ *
+ * Return: None
+ */
+static inline void hal_tx_desc_set_tx_notify_frame(void *desc,
+						   uint8_t val)
+{
+	HAL_SET_FLD(desc, TCL_DATA_CMD, TX_NOTIFY_FRAME) |=
+		HAL_TX_SM(TCL_DATA_CMD, TX_NOTIFY_FRAME, val);
+}
+
+/**
+ * hal_tx_desc_set_flow_override_enable - Set flow_override_enable field
+ * @desc: Handle to Tx Descriptor
+ * @val: Value to be set
+ *
+ * Return: None
+ */
+static inline void  hal_tx_desc_set_flow_override_enable(void *desc,
+							 uint8_t val)
+{
+	HAL_SET_FLD(desc, TCL_DATA_CMD, FLOW_OVERRIDE_ENABLE) |=
+		HAL_TX_SM(TCL_DATA_CMD, FLOW_OVERRIDE_ENABLE, val);
+}
+
+/**
+ * hal_tx_desc_set_flow_override - Set flow_override field in TX desc
+ * @desc: Handle to Tx Descriptor
+ * @val: Value to be set
+ *
+ * Return: None
+ */
+static inline void  hal_tx_desc_set_flow_override(void *desc,
+						  uint8_t val)
+{
+	HAL_SET_FLD(desc, TCL_DATA_CMD, FLOW_OVERRIDE) |=
+		HAL_TX_SM(TCL_DATA_CMD, FLOW_OVERRIDE, val);
+}
+
+/**
+ * hal_tx_desc_set_who_classify_info_sel - Set who_classify_info_sel field
+ * @desc: Handle to Tx Descriptor
+ * @val: Value to be set
+ *
+ * Return: None
+ */
+static inline void  hal_tx_desc_set_who_classify_info_sel(void *desc,
+							  uint8_t val)
+{
+	HAL_SET_FLD(desc, TCL_DATA_CMD, WHO_CLASSIFY_INFO_SEL) |=
+		HAL_TX_SM(TCL_DATA_CMD, WHO_CLASSIFY_INFO_SEL, val);
+}
 
 /**
  * hal_tx_desc_set_buf_length - Set Data length in bytes in Tx Descriptor
