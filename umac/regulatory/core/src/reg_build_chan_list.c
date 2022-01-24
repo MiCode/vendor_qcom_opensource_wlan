@@ -2768,6 +2768,7 @@ static void reg_store_regulatory_ext_info_to_socpriv(
 		regulat_info->reg_dmn_pair;
 	soc_reg->mas_chan_params[phy_id].reg_6g_superid =
 		regulat_info->domain_code_6g_super_id;
+	soc_reg->mas_chan_params[phy_id].max_bw_5g = regulat_info->max_bw_5g;
 	qdf_mem_copy(soc_reg->mas_chan_params[phy_id].current_country,
 		     regulat_info->alpha2,
 		     REG_ALPHA2_LEN + 1);
@@ -3928,7 +3929,7 @@ QDF_STATUS reg_process_master_chan_list(
 	num_5g_reg_rules = regulat_info->num_5g_reg_rules;
 	reg_update_max_bw_per_rule(num_5g_reg_rules,
 				   reg_rule_5g, max_bw_5g);
-
+	soc_reg->mas_chan_params[phy_id].max_bw_5g = regulat_info->max_bw_5g;
 	reg_rules = &soc_reg->mas_chan_params[phy_id].reg_rules;
 	reg_reset_reg_rules(reg_rules);
 

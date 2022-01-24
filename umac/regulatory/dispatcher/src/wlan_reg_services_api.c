@@ -67,22 +67,26 @@ QDF_STATUS wlan_reg_read_current_country(struct wlan_objmgr_psoc *psoc,
 	return reg_read_current_country(psoc, country);
 }
 
-QDF_STATUS wlan_reg_get_max_5g_bw_from_country_code(uint16_t cc,
-						    uint16_t *max_bw_5g)
+QDF_STATUS wlan_reg_get_max_5g_bw_from_country_code(
+					struct wlan_objmgr_pdev *pdev,
+					uint16_t cc,
+					uint16_t *max_bw_5g)
 {
 	/*
 	 * Get the max 5G bandwidth from country code
 	 */
-	return reg_get_max_5g_bw_from_country_code(cc, max_bw_5g);
+	return reg_get_max_5g_bw_from_country_code(pdev, cc, max_bw_5g);
 }
 
-QDF_STATUS wlan_reg_get_max_5g_bw_from_regdomain(uint16_t regdmn,
-						 uint16_t *max_bw_5g)
+QDF_STATUS wlan_reg_get_max_5g_bw_from_regdomain(
+					struct wlan_objmgr_pdev *pdev,
+					uint16_t regdmn,
+					uint16_t *max_bw_5g)
 {
 	/*
 	 * Get the max 5G bandwidth from regdomain pair value
 	 */
-	return reg_get_max_5g_bw_from_regdomain(regdmn, max_bw_5g);
+	return reg_get_max_5g_bw_from_regdomain(pdev, regdmn, max_bw_5g);
 }
 
 #ifdef CONFIG_REG_CLIENT
@@ -921,10 +925,12 @@ qdf_freq_t wlan_reg_ch_to_freq(uint32_t ch_enum)
 	return reg_ch_to_freq(ch_enum);
 }
 
+#ifdef WLAN_REG_PARTIAL_OFFLOAD
 bool wlan_reg_is_regdmn_en302502_applicable(struct wlan_objmgr_pdev *pdev)
 {
 	return reg_is_regdmn_en302502_applicable(pdev);
 }
+#endif
 
 /**
  * wlan_reg_modify_pdev_chan_range() - Compute current channel list for the

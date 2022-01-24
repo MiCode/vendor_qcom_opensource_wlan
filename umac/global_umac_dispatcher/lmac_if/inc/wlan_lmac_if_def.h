@@ -1478,10 +1478,12 @@ struct wlan_lmac_if_reg_rx_ops {
 	QDF_STATUS (*reg_set_chan_144)(struct wlan_objmgr_pdev *pdev,
 			bool enable_ch_144);
 	bool (*reg_get_chan_144)(struct wlan_objmgr_pdev *pdev);
+#ifdef WLAN_REG_PARTIAL_OFFLOAD
 	QDF_STATUS (*reg_program_default_cc)(struct wlan_objmgr_pdev *pdev,
 			uint16_t regdmn);
 	QDF_STATUS (*reg_get_current_regdomain)(struct wlan_objmgr_pdev *pdev,
 			struct cur_regdmn_info *cur_regdmn);
+#endif
 	QDF_STATUS (*reg_enable_dfs_channels)(struct wlan_objmgr_pdev *pdev,
 					      bool dfs_enable);
 	QDF_STATUS (*reg_modify_pdev_chan_range)(struct

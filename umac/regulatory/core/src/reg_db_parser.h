@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2017-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  *
  * Permission to use, copy, modify, and/or distribute this software for
@@ -37,6 +38,7 @@ extern const uint32_t reg_2g_sub_dmn_code[];
 extern const uint32_t reg_5g_sub_dmn_code[];
 #endif
 
+#ifdef WLAN_REG_PARTIAL_OFFLOAD
 /**
  * reg_is_country_code_valid() - Check if the given country code is valid
  * @alpha2: Country string
@@ -104,4 +106,12 @@ QDF_STATUS reg_get_rdpair_from_country_code(uint16_t cc,
  */
 QDF_STATUS reg_get_rdpair_from_regdmn_id(uint16_t regdmn_id,
 					 uint16_t *regdmn_pair);
-#endif
+#else
+static inline
+QDF_STATUS reg_get_rdpair_from_regdmn_id(uint16_t regdmn_id,
+					 uint16_t *regdmn_pair)
+{
+	return QDF_STATUS_E_FAILURE;
+}
+#endif /* WLAN_REG_PARTIAL_OFFLOAD */
+#endif /* __REG_DB_PARSER_H */

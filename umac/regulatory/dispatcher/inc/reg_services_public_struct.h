@@ -1529,6 +1529,7 @@ enum direction {
  * @client_type: type of client
  * @rnr_tpe_usable: if RNR TPE octet is usable for country
  * @unspecified_ap_usable: if not set, AP usable for country
+ * @max_bw_5g: Maximum 5g Bandwidth
  */
 struct mas_chan_params {
 	enum dfs_reg dfs_region;
@@ -1557,6 +1558,7 @@ struct mas_chan_params {
 	bool rnr_tpe_usable;
 	bool unspecified_ap_usable;
 #endif
+	uint16_t max_bw_5g;
 };
 
 /**

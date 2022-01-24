@@ -201,25 +201,29 @@ QDF_STATUS reg_read_default_country(struct wlan_objmgr_psoc *psoc,
 /**
  * reg_get_ctry_idx_max_bw_from_country_code() - Get the max 5G bandwidth
  * from country code
- * @cc : Country Code
- * @max_bw_5g : Max 5G bandwidth supported by the country
+ * @pdev: Pointer to pdev
+ * @cc: Country Code
+ * @max_bw_5g: Max 5G bandwidth supported by the country
  *
- * Return : QDF_STATUS
+ * Return: QDF_STATUS
  */
 
-QDF_STATUS reg_get_max_5g_bw_from_country_code(uint16_t cc,
+QDF_STATUS reg_get_max_5g_bw_from_country_code(struct wlan_objmgr_pdev *pdev,
+					       uint16_t cc,
 					       uint16_t *max_bw_5g);
 
 /**
  * reg_get_max_5g_bw_from_regdomain() - Get the max 5G bandwidth
  * supported by the regdomain
- * @orig_regdmn : Regdomain pair value
- * @max_bw_5g : Max 5G bandwidth supported by the country
+ * @pdev: Pointer to pdev
+ * @orig_regdmn: Regdomain pair value
+ * @max_bw_5g: Max 5G bandwidth supported by the country
  *
- * Return : QDF_STATUS
+ * Return: QDF_STATUS
  */
 
-QDF_STATUS reg_get_max_5g_bw_from_regdomain(uint16_t regdmn,
+QDF_STATUS reg_get_max_5g_bw_from_regdomain(struct wlan_objmgr_pdev *pdev,
+					    uint16_t regdmn,
 					    uint16_t *max_bw_5g);
 
 /**
@@ -278,16 +282,6 @@ uint8_t reg_freq_to_chan(struct wlan_objmgr_pdev *pdev, qdf_freq_t freq);
  */
 uint16_t reg_legacy_chan_to_freq(struct wlan_objmgr_pdev *pdev,
 				 uint8_t chan_num);
-
-/**
- * reg_program_default_cc() - Program default country code
- * @pdev: Pdev pointer
- * @regdmn: Regdomain value
- *
- * Return: QDF_STATUS
- */
-QDF_STATUS reg_program_default_cc(struct wlan_objmgr_pdev *pdev,
-				  uint16_t regdmn);
 
 /**
  * reg_get_current_cc() - Get current country code
@@ -736,6 +730,17 @@ qdf_freq_t reg_max_5ghz_chan_freq(void);
  */
 QDF_STATUS reg_enable_dfs_channels(struct wlan_objmgr_pdev *pdev, bool enable);
 
+#ifdef WLAN_REG_PARTIAL_OFFLOAD
+/**
+ * reg_program_default_cc() - Program default country code
+ * @pdev: Pdev pointer
+ * @regdmn: Regdomain value
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS reg_program_default_cc(struct wlan_objmgr_pdev *pdev,
+				  uint16_t regdmn);
+
 /**
  * reg_is_regdmn_en302502_applicable() - Find if ETSI EN302_502 radar pattern
  * is applicable in current regulatory domain.
@@ -744,6 +749,7 @@ QDF_STATUS reg_enable_dfs_channels(struct wlan_objmgr_pdev *pdev, bool enable);
  * Return: True if en302_502 is applicable, else false.
  */
 bool reg_is_regdmn_en302502_applicable(struct wlan_objmgr_pdev *pdev);
+#endif
 
 /**
  * reg_modify_pdev_chan_range() - Compute current channel list

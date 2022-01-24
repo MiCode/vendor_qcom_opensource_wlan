@@ -1227,7 +1227,9 @@ QDF_STATUS reg_read_default_country(struct wlan_objmgr_psoc *psoc,
 	return QDF_STATUS_SUCCESS;
 }
 
-QDF_STATUS reg_get_max_5g_bw_from_country_code(uint16_t cc,
+#ifdef WLAN_REG_PARTIAL_OFFLOAD
+QDF_STATUS reg_get_max_5g_bw_from_country_code(struct wlan_objmgr_pdev *pdev,
+					       uint16_t cc,
 					       uint16_t *max_bw_5g)
 {
 	uint16_t i;
@@ -1249,7 +1251,8 @@ QDF_STATUS reg_get_max_5g_bw_from_country_code(uint16_t cc,
 	return QDF_STATUS_SUCCESS;
 }
 
-QDF_STATUS reg_get_max_5g_bw_from_regdomain(uint16_t regdmn,
+QDF_STATUS reg_get_max_5g_bw_from_regdomain(struct wlan_objmgr_pdev *pdev,
+					    uint16_t regdmn,
 					    uint16_t *max_bw_5g)
 {
 	uint16_t i;
@@ -1270,6 +1273,52 @@ QDF_STATUS reg_get_max_5g_bw_from_regdomain(uint16_t regdmn,
 
 	return QDF_STATUS_SUCCESS;
 }
+#else
+/**
+ * reg_get_max_bw_5g_for_fo() - get max_5g_bw for FullOffload
+ * @pdev: PDEV object
+ *
+ * API to get max_bw_5g from pdev object
+ *
+ * Return: @max_bw_5g
+ */
+static uint16_t reg_get_max_bw_5G_for_fo(struct wlan_objmgr_pdev *pdev)
+{
+	struct wlan_objmgr_psoc *psoc = wlan_pdev_get_psoc(pdev);
+	struct wlan_regulatory_psoc_priv_obj *soc_reg;
+	uint8_t pdev_id;
+	uint8_t phy_id;
+	struct wlan_lmac_if_reg_tx_ops *reg_tx_ops;
+
+	soc_reg = reg_get_psoc_obj(psoc);
+	pdev_id = wlan_objmgr_pdev_get_pdev_id(pdev);
+	reg_tx_ops = reg_get_psoc_tx_ops(psoc);
+	if (reg_tx_ops->get_phy_id_from_pdev_id)
+		reg_tx_ops->get_phy_id_from_pdev_id(psoc, pdev_id, &phy_id);
+	else
+		phy_id = pdev_id;
+
+	return soc_reg->mas_chan_params[phy_id].max_bw_5g;
+}
+
+QDF_STATUS reg_get_max_5g_bw_from_country_code(struct wlan_objmgr_pdev *pdev,
+					       uint16_t cc,
+					       uint16_t *max_bw_5g)
+{
+	*max_bw_5g = reg_get_max_bw_5G_for_fo(pdev);
+
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS reg_get_max_5g_bw_from_regdomain(struct wlan_objmgr_pdev *pdev,
+					    uint16_t regdmn,
+					    uint16_t *max_bw_5g)
+{
+	*max_bw_5g = reg_get_max_bw_5G_for_fo(pdev);
+
+	return QDF_STATUS_SUCCESS;
+}
+#endif
 
 void reg_get_current_dfs_region(struct wlan_objmgr_pdev *pdev,
 				enum dfs_reg *dfs_reg)
@@ -1432,6 +1481,7 @@ uint16_t reg_legacy_chan_to_freq(struct wlan_objmgr_pdev *pdev,
 					max_chan_range);
 }
 
+#ifdef WLAN_REG_PARTIAL_OFFLOAD
 QDF_STATUS reg_program_default_cc(struct wlan_objmgr_pdev *pdev,
 				  uint16_t regdmn)
 {
@@ -1487,7 +1537,15 @@ QDF_STATUS reg_program_default_cc(struct wlan_objmgr_pdev *pdev,
 		pdev_priv_obj->ctry_code = cc;
 
 	} else {
-		reg_get_rdpair_from_regdmn_id(regdmn, &regdmn_pair);
+		err = reg_get_rdpair_from_regdmn_id(regdmn, &regdmn_pair);
+		if (err == QDF_STATUS_E_FAILURE) {
+			reg_err("Failed to get regdmn idx for regdmn pair: %x",
+				regdmn);
+			qdf_mem_free(reg_info->reg_rules_2g_ptr);
+			qdf_mem_free(reg_info->reg_rules_5g_ptr);
+			qdf_mem_free(reg_info);
+			return QDF_STATUS_E_FAILURE;
+		}
 
 		err = reg_get_cur_reginfo(reg_info, country_index, regdmn_pair);
 		if (err == QDF_STATUS_E_FAILURE) {
@@ -1511,18 +1569,88 @@ QDF_STATUS reg_program_default_cc(struct wlan_objmgr_pdev *pdev,
 	return QDF_STATUS_SUCCESS;
 }
 
+/**
+ * reg_program_chan_list_po() - API to program channel list in Partial Offload
+ * @psoc: Pointer to psoc object manager
+ * @pdev: Pointer to pdev object
+ * @rd: Pointer to cc_regdmn_s structure
+ *
+ * Return: QDF_STATUS
+ */
+static QDF_STATUS reg_program_chan_list_po(struct wlan_objmgr_psoc *psoc,
+					   struct wlan_objmgr_pdev *pdev,
+					   struct cc_regdmn_s *rd)
+{
+	struct cur_regulatory_info *reg_info;
+	uint16_t country_index = -1, regdmn_pair = -1;
+	QDF_STATUS err;
+
+	reg_info = (struct cur_regulatory_info *)qdf_mem_malloc
+		(sizeof(struct cur_regulatory_info));
+	if (!reg_info)
+		return QDF_STATUS_E_NOMEM;
+
+	reg_info->psoc = psoc;
+	reg_info->phy_id = wlan_objmgr_pdev_get_pdev_id(pdev);
+
+	if (rd->flags == CC_IS_SET) {
+		reg_get_rdpair_from_country_code(rd->cc.country_code,
+						 &country_index,
+						 &regdmn_pair);
+	} else if (rd->flags == ALPHA_IS_SET) {
+		reg_get_rdpair_from_country_iso(rd->cc.alpha,
+						&country_index,
+						&regdmn_pair);
+	} else if (rd->flags == REGDMN_IS_SET) {
+		err = reg_get_rdpair_from_regdmn_id(
+				rd->cc.regdmn.reg_2g_5g_pair_id,
+				&regdmn_pair);
+		if (err == QDF_STATUS_E_FAILURE) {
+			reg_err("Failed to get regdmn idx for regdmn pair: %x",
+				rd->cc.regdmn.reg_2g_5g_pair_id);
+			qdf_mem_free(reg_info->reg_rules_2g_ptr);
+			qdf_mem_free(reg_info->reg_rules_5g_ptr);
+			qdf_mem_free(reg_info);
+			return QDF_STATUS_E_FAILURE;
+		}
+	}
+
+	err = reg_get_cur_reginfo(reg_info, country_index, regdmn_pair);
+	if (err == QDF_STATUS_E_FAILURE) {
+		reg_err("Unable to set country code\n");
+		qdf_mem_free(reg_info->reg_rules_2g_ptr);
+		qdf_mem_free(reg_info->reg_rules_5g_ptr);
+		qdf_mem_free(reg_info);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	reg_info->offload_enabled = false;
+	reg_process_master_chan_list(reg_info);
+
+	qdf_mem_free(reg_info->reg_rules_2g_ptr);
+	qdf_mem_free(reg_info->reg_rules_5g_ptr);
+	qdf_mem_free(reg_info);
+
+	return QDF_STATUS_SUCCESS;
+}
+#else
+static QDF_STATUS reg_program_chan_list_po(struct wlan_objmgr_psoc *psoc,
+					   struct wlan_objmgr_pdev *pdev,
+					   struct cc_regdmn_s *rd)
+{
+	return QDF_STATUS_SUCCESS;
+}
+#endif /* WLAN_REG_PARTIAL_OFFLOAD */
+
 QDF_STATUS reg_program_chan_list(struct wlan_objmgr_pdev *pdev,
 				 struct cc_regdmn_s *rd)
 {
-	struct cur_regulatory_info *reg_info;
 	struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj;
-	uint16_t country_index = -1, regdmn_pair = -1;
 	struct wlan_objmgr_psoc *psoc;
 	struct wlan_lmac_if_reg_tx_ops *tx_ops;
 	struct wlan_regulatory_psoc_priv_obj *psoc_priv_obj;
 	uint8_t pdev_id;
 	uint8_t phy_id;
-	QDF_STATUS err;
 
 	pdev_priv_obj = reg_get_pdev_obj(pdev);
 	if (!pdev_priv_obj) {
@@ -1564,44 +1692,7 @@ QDF_STATUS reg_program_chan_list(struct wlan_objmgr_pdev *pdev,
 		return QDF_STATUS_E_FAILURE;
 	}
 
-	reg_info = (struct cur_regulatory_info *)qdf_mem_malloc
-		(sizeof(struct cur_regulatory_info));
-	if (!reg_info)
-		return QDF_STATUS_E_NOMEM;
-
-	reg_info->psoc = psoc;
-	reg_info->phy_id = wlan_objmgr_pdev_get_pdev_id(pdev);
-
-	if (rd->flags == CC_IS_SET) {
-		reg_get_rdpair_from_country_code(rd->cc.country_code,
-						 &country_index,
-						 &regdmn_pair);
-	} else if (rd->flags == ALPHA_IS_SET) {
-		reg_get_rdpair_from_country_iso(rd->cc.alpha,
-						&country_index,
-						&regdmn_pair);
-	} else if (rd->flags == REGDMN_IS_SET) {
-		reg_get_rdpair_from_regdmn_id(rd->cc.regdmn.reg_2g_5g_pair_id,
-					      &regdmn_pair);
-	}
-
-	err = reg_get_cur_reginfo(reg_info, country_index, regdmn_pair);
-	if (err == QDF_STATUS_E_FAILURE) {
-		reg_err("Unable to set country code\n");
-		qdf_mem_free(reg_info->reg_rules_2g_ptr);
-		qdf_mem_free(reg_info->reg_rules_5g_ptr);
-		qdf_mem_free(reg_info);
-		return QDF_STATUS_E_FAILURE;
-	}
-
-	reg_info->offload_enabled = false;
-	reg_process_master_chan_list(reg_info);
-
-	qdf_mem_free(reg_info->reg_rules_2g_ptr);
-	qdf_mem_free(reg_info->reg_rules_5g_ptr);
-	qdf_mem_free(reg_info);
-
-	return QDF_STATUS_SUCCESS;
+	return reg_program_chan_list_po(psoc, pdev, rd);
 }
 
 QDF_STATUS reg_get_current_cc(struct wlan_objmgr_pdev *pdev,
@@ -2476,6 +2567,7 @@ QDF_STATUS reg_enable_dfs_channels(struct wlan_objmgr_pdev *pdev,
 	return status;
 }
 
+#ifdef WLAN_REG_PARTIAL_OFFLOAD
 bool reg_is_regdmn_en302502_applicable(struct wlan_objmgr_pdev *pdev)
 {
 	struct cur_regdmn_info cur_reg_dmn;
@@ -2489,6 +2581,7 @@ bool reg_is_regdmn_en302502_applicable(struct wlan_objmgr_pdev *pdev)
 
 	return reg_en302_502_regdmn(cur_reg_dmn.regdmn_pair_id);
 }
+#endif
 
 QDF_STATUS reg_get_phybitmap(struct wlan_objmgr_pdev *pdev,
 			     uint16_t *phybitmap)

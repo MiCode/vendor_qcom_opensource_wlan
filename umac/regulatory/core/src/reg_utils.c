@@ -205,6 +205,37 @@ static QDF_STATUS reg_set_non_offload_country(struct wlan_objmgr_pdev *pdev,
 	return QDF_STATUS_SUCCESS;
 }
 
+#ifdef WLAN_REG_PARTIAL_OFFLOAD
+/**
+ * reg_restore_def_country_for_po() - API to restore country code to default
+ * value if given country is invalid for Partial Offload
+ * @offload_enabled: Is offload enabled
+ * @country: Country code
+ * @cc_country: Country code array
+ * Return- void
+ */
+static void reg_restore_def_country_for_po(bool offload_enabled,
+					   uint8_t *country,
+					   uint8_t cc_country[]){
+	if (!offload_enabled && !reg_is_world_alpha2(country)) {
+		QDF_STATUS status;
+
+		status = reg_is_country_code_valid(country);
+		if (!QDF_IS_STATUS_SUCCESS(status)) {
+			reg_err("Unable to set country code: %s\n", country);
+			reg_err("Restoring to world domain");
+			qdf_mem_copy(cc_country, REG_WORLD_ALPHA2,
+				     REG_ALPHA2_LEN + 1);
+		}
+	}
+}
+#else
+static void reg_restore_def_country_for_po(bool offload_enabled,
+					   uint8_t *country,
+					   uint8_t cc_country[]){
+}
+#endif
+
 QDF_STATUS reg_set_country(struct wlan_objmgr_pdev *pdev,
 			   uint8_t *country)
 {
@@ -254,18 +285,9 @@ QDF_STATUS reg_set_country(struct wlan_objmgr_pdev *pdev,
 	qdf_mem_copy(cc.country, country, REG_ALPHA2_LEN + 1);
 	cc.pdev_id = pdev_id;
 
-	if (!psoc_reg->offload_enabled && !reg_is_world_alpha2(country)) {
-		QDF_STATUS status;
-
-		status = reg_is_country_code_valid(country);
-		if (!QDF_IS_STATUS_SUCCESS(status)) {
-			reg_err("Unable to set country code: %s\n", country);
-			reg_err("Restoring to world domain");
-			qdf_mem_copy(cc.country, REG_WORLD_ALPHA2,
-				     REG_ALPHA2_LEN + 1);
-		}
-	}
-
+	reg_restore_def_country_for_po(psoc_reg->offload_enabled,
+				       country,
+				       cc.country);
 
 	if (reg_is_world_alpha2(cc.country))
 		psoc_reg->world_country_pending[phy_id] = true;

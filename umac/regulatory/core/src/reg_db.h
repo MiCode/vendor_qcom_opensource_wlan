@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2017-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  *
  * Permission to use, copy, modify, and/or distribute this software for
@@ -222,8 +222,6 @@ QDF_STATUS reg_get_num_countries(int *num_countries);
 
 QDF_STATUS reg_get_num_reg_dmn_pairs(int *num_reg_dmn);
 
-QDF_STATUS reg_get_default_country(uint16_t *default_country);
-
 /**
  * reg_etsi13_regdmn () - Checks if the reg domain is ETSI13 or not
  * @reg_dmn: reg domain
@@ -240,6 +238,9 @@ bool reg_etsi13_regdmn(uint8_t reg_dmn);
  */
 bool reg_fcc_regdmn(uint8_t reg_dmn);
 
+#ifdef WLAN_REG_PARTIAL_OFFLOAD
+QDF_STATUS reg_get_default_country(uint16_t *default_country);
+
 /**
  * reg_en302_502_regdmn() - Check if the reg domain is en302_502 applicable.
  * @reg_dmn: Regulatory domain pair ID.
@@ -247,4 +248,5 @@ bool reg_fcc_regdmn(uint8_t reg_dmn);
  * Return: True if EN302_502 applicable, else false.
  */
 bool reg_en302_502_regdmn(uint16_t reg_dmn);
+#endif
 #endif

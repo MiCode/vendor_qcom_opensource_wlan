@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -338,6 +338,30 @@ static inline void wlan_lmac_if_register_6g_edge_chan_supp(
 }
 #endif
 
+#ifdef WLAN_REG_PARTIAL_OFFLOAD
+/**
+ * wlan_lmac_if_umac_reg_rx_ops_register_po() - Function to register Reg RX ops
+ * for Partial Offload
+ * rx_ops: Pointer to wlan_lmac_if_dfs_rx_ops
+ *
+ * Return: void
+ */
+static void wlan_lmac_if_umac_reg_rx_ops_register_po(
+					struct wlan_lmac_if_rx_ops *rx_ops)
+{
+	rx_ops->reg_rx_ops.reg_program_default_cc =
+		ucfg_reg_program_default_cc;
+
+	rx_ops->reg_rx_ops.reg_get_current_regdomain =
+		wlan_reg_get_curr_regdomain;
+}
+#else
+static void wlan_lmac_if_umac_reg_rx_ops_register_po(
+					struct wlan_lmac_if_rx_ops *rx_ops)
+{
+}
+#endif
+
 static void wlan_lmac_if_umac_reg_rx_ops_register(
 	struct wlan_lmac_if_rx_ops *rx_ops)
 {
@@ -376,11 +400,7 @@ static void wlan_lmac_if_umac_reg_rx_ops_register(
 	rx_ops->reg_rx_ops.reg_get_chan_144 =
 		ucfg_reg_get_en_chan_144;
 
-	rx_ops->reg_rx_ops.reg_program_default_cc =
-		ucfg_reg_program_default_cc;
-
-	rx_ops->reg_rx_ops.reg_get_current_regdomain =
-		wlan_reg_get_curr_regdomain;
+	wlan_lmac_if_umac_reg_rx_ops_register_po(rx_ops);
 
 	rx_ops->reg_rx_ops.reg_enable_dfs_channels =
 		ucfg_reg_enable_dfs_channels;
