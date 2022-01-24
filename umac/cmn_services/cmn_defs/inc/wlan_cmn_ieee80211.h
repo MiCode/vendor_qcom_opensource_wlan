@@ -342,6 +342,9 @@
 #define WLAN_EHT_CHWIDTH_320          4 /* 320MHz Oper Ch width */
 #endif
 
+/* Max length of 802.11 subelement */
+#define WLAN_MAX_SUBELEM_LEN          255
+
 #define WLAN_RATE_VAL              0x7f
 #define WLAN_BASIC_RATE_MASK       0x80
 
@@ -1535,6 +1538,16 @@ struct wlan_ie_hecaps {
 	} qdf_packed mcs_bw_map[WLAN_HE_MAX_MCS_MAPS];
 } qdf_packed;
 
+/**
+ * struct subelem_header: Subelement header
+ * @subelem_id: Subelement ID
+ * @subelem_len: Subelement length
+ */
+struct subelem_header {
+	uint8_t subelem_id;
+	uint8_t subelem_len;
+} qdf_packed;
+
 #ifdef WLAN_FEATURE_11BE
 #define WLAN_EHT_MACCAP_LEN 2
 #define WLAN_EHT_PHYCAP_LEN 8
@@ -1726,6 +1739,9 @@ struct wlan_ie_multilink {
 /* Definitions related to Multi-Link element Control field applicable across
  * variants.
  */
+
+/* Size in octets of Multi-Link element Control field */
+#define WLAN_ML_CTRL_SIZE                                          2
 
 /* Definitions for subfields in Multi-Link element Control field. Any unused
  * bits are reserved.
@@ -1961,10 +1977,12 @@ enum wlan_ml_bv_cinfo_emlcap_transtimeout {
  *  Multi-Link element Link Info field.
  *  @WLAN_ML_BV_LINFO_SUBELEMID_PERSTAPROFILE: Per-STA Profile
  *  @WLAN_ML_BV_LINFO_SUBELEMID_VENDOR: Vendor specific
+ *  @WLAN_ML_BV_LINFO_SUBELEMID_FRAGMENT: Fragment
  */
 enum wlan_ml_bv_linfo_subelementid {
 	WLAN_ML_BV_LINFO_SUBELEMID_PERSTAPROFILE  = 0,
 	WLAN_ML_BV_LINFO_SUBELEMID_VENDOR = 221,
+	WLAN_ML_BV_LINFO_SUBELEMID_FRAGMENT = 254,
 };
 
 /**
@@ -1984,6 +2002,11 @@ struct wlan_ml_bv_linfo_perstaprof {
  * STA Info (variable size)
  * STA Profile (variable size)
  */
+
+/* Size in octets of STA Control field of Per-STA Profile subelement in Basic
+ * variant Multi-Link element Link Info field.
+ */
+#define WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_SIZE                   2
 
 /* Definitions for subfields in STA Control field of Per-STA Profile subelement
  * in Basic variant Multi-Link element Link Info field. Any unused bits are
