@@ -41,6 +41,7 @@
 #endif
 #include "dp_hist.h"
 #include "dp_rx_buffer_pool.h"
+#include "dp_li.h"
 
 static inline
 bool is_sa_da_idx_valid(uint32_t max_ast,
@@ -252,6 +253,7 @@ uint32_t dp_rx_process_li(struct dp_intr *int_ctx,
 	uint32_t peer_ext_stats;
 	uint32_t dsf;
 	uint32_t max_ast;
+	uint64_t current_time = 0;
 
 	DP_HIST_INIT();
 
@@ -288,6 +290,8 @@ more_data:
 	max_ast = 0;
 	rx_pdev = NULL;
 	tid_stats = NULL;
+
+	dp_pkt_get_timestamp(&current_time);
 
 	if (qdf_unlikely(dp_rx_srng_access_start(int_ctx, soc, hal_ring_hdl))) {
 		/*
@@ -882,6 +886,10 @@ done:
 		dp_rx_fill_gro_info(soc, rx_tlv_hdr, nbuf, &rx_ol_pkt_cnt);
 
 		dp_rx_update_stats(soc, nbuf);
+
+		dp_pkt_add_timestamp(peer->vdev, QDF_PKT_RX_DRIVER_ENTRY,
+				     current_time, nbuf);
+
 		DP_RX_LIST_APPEND(deliver_list_head,
 				  deliver_list_tail,
 				  nbuf);

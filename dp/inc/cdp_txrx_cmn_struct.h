@@ -997,6 +997,12 @@ typedef void (*ol_txrx_pktdump_cb)(ol_txrx_soc_handle soc,
 				   uint8_t type);
 
 /**
+ * ol_txrx_get_tsf_time - callback to get tsf time
+ */
+typedef QDF_STATUS(*ol_txrx_get_tsf_time)(void *osif_dev, uint64_t input_time,
+					  uint64_t *tsf_time);
+
+/**
  * ol_txrx_ops - (pointers to) the functions used for tx and rx
  * data xfer
  *
@@ -1083,6 +1089,7 @@ struct ol_txrx_ops {
 	ol_txrx_mcast_me_fp          me_convert;
 
 	ol_txrx_get_key_fp  get_key;
+	ol_txrx_get_tsf_time get_tsf_time;
 };
 
 /**

@@ -2990,6 +2990,8 @@ struct dp_vdev {
 	/* completion function used by this vdev*/
 	ol_txrx_completion_fp tx_comp;
 
+	ol_txrx_get_tsf_time get_tsf_time;
+
 	/* deferred vdev deletion state */
 	struct {
 		/* VDEV delete pending */
