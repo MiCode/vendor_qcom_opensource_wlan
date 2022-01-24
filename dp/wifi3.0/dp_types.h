@@ -3002,6 +3002,9 @@ struct dp_vdev {
 
 	ol_txrx_get_tsf_time get_tsf_time;
 
+	/* callback to classify critical packets */
+	ol_txrx_classify_critical_pkt_fp tx_classify_critical_pkt_cb;
+
 	/* deferred vdev deletion state */
 	struct {
 		/* VDEV delete pending */

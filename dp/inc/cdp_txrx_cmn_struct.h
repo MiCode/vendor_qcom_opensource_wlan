@@ -865,6 +865,14 @@ typedef qdf_nbuf_t (*ol_txrx_tx_exc_fp)(struct cdp_soc_t *soc, uint8_t vdev_id,
  */
 typedef void (*ol_txrx_completion_fp)(qdf_nbuf_t skb,
 				      void *osif_dev, uint16_t flag);
+
+/**
+ * ol_txrx_classify_critical_pkt_fp - classification cb for critical frames
+ * @osif_dev: the virtual device's OS shim object
+ * @skb: skb data
+ */
+typedef void (*ol_txrx_classify_critical_pkt_fp)(void *osif_dev,
+						 qdf_nbuf_t skb);
 /**
  * ol_txrx_tx_flow_control_fp - tx flow control notification
  * function from txrx to OS shim
@@ -1066,6 +1074,7 @@ struct ol_txrx_ops {
 		ol_txrx_tx_exc_fp     tx_exception;
 		ol_txrx_tx_free_ext_fp tx_free_ext;
 		ol_txrx_completion_fp tx_comp;
+		ol_txrx_classify_critical_pkt_fp tx_classify_critical_pkt_cb;
 	} tx;
 
 	/* rx function pointers - specified by OS shim, stored by txrx */

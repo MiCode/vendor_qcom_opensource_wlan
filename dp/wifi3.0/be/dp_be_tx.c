@@ -368,6 +368,50 @@ static inline uint8_t dp_tx_get_rbm_id_be(struct dp_soc *soc,
 	return rbm;
 }
 #endif
+#ifdef QCA_SUPPORT_TX_MIN_RATES_FOR_SPECIAL_FRAMES
+
+/*
+ * dp_tx_set_min_rates_for_critical_frames()- sets min-rates for critical pkts
+ * @dp_soc - DP soc structure pointer
+ * @hal_tx_desc - HAL descriptor where fields are set
+ * nbuf - skb to be considered for min rates
+ *
+ * The function relies on upper layers to set QDF_NBUF_CB_TX_EXTRA_IS_CRITICAL
+ * and uses it to determine if the frame is critical. For a critical frame,
+ * flow override bits are set to classify the frame into HW's high priority
+ * queue. The HW will pick pre-configured min rates for such packets.
+ *
+ * Return - None
+ */
+static void
+dp_tx_set_min_rates_for_critical_frames(struct dp_soc *soc,
+					uint32_t *hal_tx_desc,
+					qdf_nbuf_t nbuf)
+{
+/*
+ * Critical frames should be queued to the high priority queue for the TID on
+ * on which they are sent out (for the concerned peer).
+ * FW is using HTT_MSDU_Q_IDX 2 for HOL (high priority) queue.
+ * htt_msdu_idx = (2 * who_classify_info_sel) + flow_override
+ * Hence, using who_classify_info_sel = 1, flow_override = 0 to select
+ * HOL queue.
+ */
+	if (QDF_NBUF_CB_TX_EXTRA_IS_CRITICAL(nbuf)) {
+		hal_tx_desc_set_flow_override_enable(hal_tx_desc, 1);
+		hal_tx_desc_set_flow_override(hal_tx_desc, 0);
+		hal_tx_desc_set_who_classify_info_sel(hal_tx_desc, 1);
+		hal_tx_desc_set_tx_notify_frame(hal_tx_desc,
+						TX_SEMI_HARD_NOTIFY_E);
+	}
+}
+#else
+static inline void
+dp_tx_set_min_rates_for_critical_frames(struct dp_soc *soc,
+					uint32_t *hal_tx_desc_cached,
+					qdf_nbuf_t nbuf)
+{
+}
+#endif
 
 #if defined(WLAN_FEATURE_11BE_MLO) && defined(WLAN_MLO_MULTI_CHIP) && \
 	defined(WLAN_MCAST_MLO)
@@ -533,6 +577,9 @@ dp_tx_hw_enqueue_be(struct dp_soc *soc, struct dp_vdev *vdev,
 
 	if (tid != HTT_TX_EXT_TID_INVALID)
 		hal_tx_desc_set_hlos_tid(hal_tx_desc_cached, tid);
+
+	dp_tx_set_min_rates_for_critical_frames(soc, hal_tx_desc_cached,
+						tx_desc->nbuf);
 
 	if (qdf_unlikely(vdev->pdev->delay_stats_flag) ||
 	    qdf_unlikely(wlan_cfg_is_peer_ext_stats_enabled(soc->wlan_cfg_ctx)) ||
