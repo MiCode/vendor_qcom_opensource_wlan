@@ -949,11 +949,9 @@ dp_mon_register_feature_ops_1_0(struct dp_soc *soc)
 				dp_mon_filter_setup_rx_pkt_log_cbf_1_0;
 	mon_ops->mon_filter_reset_rx_pkt_log_cbf =
 				dp_mon_filter_reset_rx_pktlog_cbf_1_0;
-#ifdef QCA_WIFI_QCN9224
-	mon_ops->mon_filter_setup_pktlog_hybrid =
-				dp_mon_filter_setup_pktlog_hybrid_1_0;
-	mon_ops->mon_filter_reset_pktlog_hybrid =
-				dp_mon_filter_reset_pktlog_hybrid_1_0;
+#ifdef BE_PKTLOG_SUPPORT
+	mon_ops->mon_filter_setup_pktlog_hybrid = NULL;
+	mon_ops->mon_filter_reset_pktlog_hybrid = NULL;
 #endif
 #endif
 #if defined(DP_CON_MON) && !defined(REMOVE_PKT_LOG)

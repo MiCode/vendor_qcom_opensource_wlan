@@ -778,6 +778,61 @@ dp_set_bpr_enable(struct dp_pdev *pdev, int val)
 #endif
 
 #ifdef WDI_EVENT_ENABLE
+#ifdef BE_PKTLOG_SUPPORT
+static bool
+dp_set_hybrid_pktlog_enable(struct dp_pdev *pdev,
+			    struct dp_mon_pdev *mon_pdev,
+			    struct dp_mon_soc *mon_soc)
+{
+	if (mon_pdev->mvdev) {
+		/* Nothing needs to be done if monitor mode is
+		 * enabled
+		 */
+		mon_pdev->pktlog_hybrid_mode = true;
+		return false;
+	}
+
+	if (!mon_pdev->pktlog_hybrid_mode) {
+		mon_pdev->pktlog_hybrid_mode = true;
+		dp_mon_filter_setup_pktlog_hybrid(pdev);
+		if (dp_mon_filter_update(pdev) !=
+		    QDF_STATUS_SUCCESS) {
+			dp_cdp_err("Set hybrid filters failed");
+			dp_mon_filter_reset_pktlog_hybrid(pdev);
+			mon_pdev->rx_pktlog_mode =
+				DP_RX_PKTLOG_DISABLED;
+			return false;
+		}
+
+		if (mon_soc->reap_timer_init &&
+		    !dp_mon_is_enable_reap_timer_non_pkt(pdev))
+			qdf_timer_mod(&mon_soc->mon_reap_timer,
+				      DP_INTR_POLL_TIMER_MS);
+	}
+
+	return true;
+}
+
+static void
+dp_set_hybrid_pktlog_disable(struct dp_mon_pdev *mon_pdev)
+{
+	mon_pdev->pktlog_hybrid_mode = false;
+}
+#else
+static void
+dp_set_hybrid_pktlog_disable(struct dp_mon_pdev *mon_pdev)
+{
+}
+
+static bool
+dp_set_hybrid_pktlog_enable(struct dp_pdev *pdev,
+			    struct dp_mon_pdev *mon_pdev,
+			    struct dp_mon_soc *mon_soc)
+{
+	dp_cdp_err("Hybrid mode is supported only on beryllium");
+	return true;
+}
+#endif
 int dp_set_pktlog_wifi3(struct dp_pdev *pdev, uint32_t event,
 		        bool enable)
 {
@@ -912,35 +967,11 @@ int dp_set_pktlog_wifi3(struct dp_pdev *pdev, uint32_t event,
 			}
 			break;
 
-#ifdef QCA_WIFI_QCN9224
 		case WDI_EVENT_HYBRID_TX:
-			if (mon_pdev->mvdev) {
-				/* Nothing needs to be done if monitor mode is
-				 * enabled
-				 */
-				mon_pdev->pktlog_hybrid_mode = true;
+			if (!dp_set_hybrid_pktlog_enable(pdev,
+							 mon_pdev, mon_soc))
 				return 0;
-			}
-
-			if (!mon_pdev->pktlog_hybrid_mode) {
-				mon_pdev->pktlog_hybrid_mode = true;
-				dp_mon_filter_setup_pktlog_hybrid(pdev);
-				if (dp_mon_filter_update(pdev) !=
-				    QDF_STATUS_SUCCESS) {
-					dp_cdp_err("Set hybrid filters failed");
-					dp_mon_filter_reset_pktlog_hybrid(pdev);
-					mon_pdev->rx_pktlog_mode =
-						DP_RX_PKTLOG_DISABLED;
-					return 0;
-				}
-
-				if (mon_soc->reap_timer_init &&
-				    !dp_mon_is_enable_reap_timer_non_pkt(pdev))
-					qdf_timer_mod(&mon_soc->mon_reap_timer,
-						      DP_INTR_POLL_TIMER_MS);
-			}
 			break;
-#endif
 
 		default:
 			/* Nothing needs to be done for other pktlog types */
@@ -1014,11 +1045,9 @@ int dp_set_pktlog_wifi3(struct dp_pdev *pdev, uint32_t event,
 			mon_pdev->rx_pktlog_cbf = false;
 			break;
 
-#ifdef QCA_WIFI_QCN9224
 		case WDI_EVENT_HYBRID_TX:
-			mon_pdev->pktlog_hybrid_mode = false;
+			dp_set_hybrid_pktlog_disable(mon_pdev);
 			break;
-#endif
 
 		default:
 			/* Nothing needs to be done for other pktlog types */

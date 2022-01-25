@@ -196,7 +196,7 @@ struct cdp_soc_rate_stats_ctx;
 struct dp_rx_fst;
 struct dp_mon_filter;
 struct dp_mon_mpdu;
-#ifdef QCA_WIFI_QCN9224
+#ifdef BE_PKTLOG_SUPPORT
 struct dp_mon_filter_be;
 #endif
 

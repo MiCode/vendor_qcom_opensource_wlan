@@ -45,7 +45,7 @@
 #endif
 
 #define RX_BUFFER_RESERVATION   0
-#ifdef QCA_WIFI_QCN9224
+#ifdef BE_PKTLOG_SUPPORT
 #define RX_MON_MIN_HEAD_ROOM   64
 #endif
 

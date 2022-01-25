@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2021,2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -155,19 +155,6 @@ void dp_mon_filter_setup_rx_pkt_log_cbf_1_0(struct dp_pdev *pdev);
  * @pdev: DP pdev handle
  */
 void dp_mon_filter_reset_rx_pktlog_cbf_1_0(struct dp_pdev *pdev);
-#ifdef QCA_WIFI_QCN9224
-/**
- * dp_mon_filter_setup_pktlog_hybrid_1_0() - Setup the pktlog hybrid mode filter
- * @pdev: DP pdev handle
- */
-void dp_mon_filter_setup_pktlog_hybrid_1_0(struct dp_pdev *pdev);
-
-/**
- * dp_mon_filter_reset_pktlog_hybrid_1_0() - Reset pktlog hybrid mode filter
- * @pdev: DP pdev handle
- */
-void dp_mon_filter_reset_pktlog_hybrid_1_0(struct dp_pdev *pdev);
-#endif
 #else
 static inline void dp_mon_filter_setup_rx_pkt_log_full_1_0(struct dp_pdev *pdev)
 {
@@ -192,16 +179,6 @@ static inline void dp_mon_filter_setup_rx_pkt_log_cbf_1_0(struct dp_pdev *pdev)
 static inline void dp_mon_filter_reset_rx_pktlog_cbf_1_0(struct dp_pdev *pdev)
 {
 }
-
-#ifdef QCA_WIFI_QCN9224
-static inline void dp_mon_filter_setup_pktlog_hybrid_1_0(struct dp_pdev *pdev)
-{
-}
-
-static inline void dp_mon_filter_reset_pktlog_hybrid_1_0(struct dp_pdev *pdev)
-{
-}
-#endif
 #endif
 
 QDF_STATUS dp_mon_filter_update_1_0(struct dp_pdev *pdev);
