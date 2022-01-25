@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021,2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -40,8 +40,10 @@
 #include <wbm_release_ring_tx.h>
 #include <wbm_release_ring_rx.h>
 #include <phyrx_location.h>
+#ifdef QCA_MONITOR_2_0_SUPPORT
 #include <mon_ingress_ring.h>
 #include <mon_destination_ring.h>
+#endif
 
 #include <hal_be_rx.h>
 
@@ -2172,6 +2174,7 @@ struct hal_hw_srng_config hw_srng_table_9224[] = {
 		.reg_size = {},
 		.max_size = HAL_RXDMA_MAX_RING_SIZE,
 	},
+#ifdef QCA_MONITOR_2_0_SUPPORT
 	{ /* RXDMA_MONITOR_BUF */
 		.start_ring_id = HAL_SRNG_WMAC1_SW2RXDMA2_BUF,
 		.max_rings = 1,
@@ -2185,6 +2188,9 @@ struct hal_hw_srng_config hw_srng_table_9224[] = {
 		.reg_size = {},
 		.max_size = HAL_RXDMA_MAX_RING_SIZE_BE,
 	},
+#else
+	{},
+#endif
 	{ /* RXDMA_MONITOR_STATUS */
 		.start_ring_id = HAL_SRNG_WMAC1_SW2RXDMA1_STATBUF,
 		.max_rings = 0,
@@ -2198,6 +2204,7 @@ struct hal_hw_srng_config hw_srng_table_9224[] = {
 		.reg_size = {},
 		.max_size = HAL_RXDMA_MAX_RING_SIZE,
 	},
+#ifdef QCA_MONITOR_2_0_SUPPORT
 	{ /* RXDMA_MONITOR_DST */
 		.start_ring_id = HAL_SRNG_WMAC1_RXMON2SW0,
 		.max_rings = 1,
@@ -2211,6 +2218,9 @@ struct hal_hw_srng_config hw_srng_table_9224[] = {
 		.reg_size = {},
 		.max_size = HAL_RXDMA_MAX_RING_SIZE_BE,
 	},
+#else
+	{},
+#endif
 	{ /* RXDMA_MONITOR_DESC */
 		.start_ring_id = HAL_SRNG_WMAC1_SW2RXDMA1_DESC,
 		.max_rings = 0,
