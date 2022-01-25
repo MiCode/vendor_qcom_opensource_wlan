@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2014-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -31,7 +32,7 @@
  * beginning with kernel version msm-4.19 since that is
  * when msm_minidump_removerefion() was added.
  */
-#if defined(CONFIG_QCOM_MINIDUMP) && \
+#if IS_ENABLED(CONFIG_QCOM_MINIDUMP) && \
 	(LINUX_VERSION_CODE >= KERNEL_VERSION(4, 19, 0))
 #define WLAN_QCOM_MINIDUMP
 #endif
