@@ -1478,6 +1478,35 @@ reg_modify_6g_afc_chan_list(struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj)
 }
 #endif /* CONFIG_BAND_6GHZ */
 
+#if defined(CONFIG_BAND_6GHZ) && (CONFIG_REG_CLIENT)
+/**
+ * reg_modify_sec_chan_list_for_6g_edge_chan() - Modify 6 GHz edge channels
+ * for SAP (for MCC use case)
+ *
+ * @pdev_priv_obj: pointer to pdev_priv_obj.
+ *
+ * This is a wrapper function that calls the API
+ * reg_modify_chan_list_for_6g_edge_channels() by passing secondary channel
+ * list (used by beaconing entities like SAP). This API enables/disables 6GHz
+ * edge channels ch2 (5935 MHz) and ch233 (7115 MHz) based on service bits.
+ *
+ */
+static void
+reg_modify_sec_chan_list_for_6g_edge_chan(struct wlan_regulatory_pdev_priv_obj
+					  *pdev_priv_obj)
+{
+	reg_modify_chan_list_for_6g_edge_channels(pdev_priv_obj->pdev_ptr,
+						  pdev_priv_obj->
+						  secondary_cur_chan_list);
+}
+#else
+static inline void
+reg_modify_sec_chan_list_for_6g_edge_chan(struct wlan_regulatory_pdev_priv_obj
+					  *pdev_priv_obj)
+{
+}
+#endif
+
 #ifdef FEATURE_WLAN_CH_AVOID_EXT
 struct chan_5g_center_freq center_5g[MAX_5G_CHAN_NUM] = {
 	/*36*/
@@ -2351,6 +2380,8 @@ void reg_compute_pdev_current_chan_list(struct wlan_regulatory_pdev_priv_obj
 	reg_populate_secondary_cur_chan_list(pdev_priv_obj);
 
 	reg_modify_chan_list_for_avoid_chan_ext(pdev_priv_obj);
+
+	reg_modify_sec_chan_list_for_6g_edge_chan(pdev_priv_obj);
 }
 
 void reg_reset_reg_rules(struct reg_rule_info *reg_rules)
