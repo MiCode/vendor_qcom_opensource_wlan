@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2018-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021,2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -447,7 +447,33 @@
 #define WLAN_CFG_MLO_RX_RING_MAP_MAX 0xFF
 #endif
 
-/* DP INI Declerations */
+#define WLAN_CFG_TX_CAPT_MAX_MEM_MIN 0
+#define WLAN_CFG_TX_CAPT_MAX_MEM_MAX 512
+#define WLAN_CFG_TX_CAPT_MAX_MEM_DEFAULT 0
+
+/*
+ * <ini>
+ * "dp_tx_capt_max_mem_mb"- maximum memory used by Tx capture
+ * @Min: 0
+ * @Max: 512 MB
+ * @Default: 0 (disabled)
+ *
+ * This ini entry is used to set a max limit beyond which frames
+ * are dropped by Tx capture. User needs to set a non-zero value
+ * to enable it.
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_DP_TX_CAPT_MAX_MEM_MB \
+		CFG_INI_UINT("dp_tx_capt_max_mem_mb", \
+		WLAN_CFG_TX_CAPT_MAX_MEM_MIN, \
+		WLAN_CFG_TX_CAPT_MAX_MEM_MAX, \
+		WLAN_CFG_TX_CAPT_MAX_MEM_DEFAULT, \
+			CFG_VALUE_OR_DEFAULT, "Max Memory (in MB) used by Tx Capture")
+
+/* DP INI Declarations */
 #define CFG_DP_HTT_PACKET_TYPE \
 		CFG_INI_UINT("dp_htt_packet_type", \
 		WLAN_CFG_HTT_PKT_TYPE_MIN, \
@@ -1564,5 +1590,6 @@
 		CFG_DP_PPE_CONFIG \
 		CFG_DP_IPA_TX_ALT_RING_CFG \
 		CFG_DP_MLO_CONFIG \
-		CFG_DP_VDEV_STATS_HW_OFFLOAD
+		CFG_DP_VDEV_STATS_HW_OFFLOAD \
+		CFG(CFG_DP_TX_CAPT_MAX_MEM_MB)
 #endif /* _CFG_DP_H_ */

@@ -412,6 +412,9 @@ struct wlan_cfg_dp_soc_ctxt {
 	uint8_t num_rxdma_dst_rings_per_pdev;
 	bool txmon_hw_support;
 	uint8_t num_rxdma_status_rings_per_pdev;
+#ifdef WLAN_TX_PKT_CAPTURE_ENH
+	uint32_t tx_capt_max_mem_allowed;
+#endif
 };
 
 /**
@@ -2089,4 +2092,19 @@ void wlan_cfg_set_txmon_hw_support(struct wlan_cfg_dp_soc_ctxt *cfg,
  * Return: txmon_hw_support
  */
 bool wlan_cfg_get_txmon_hw_support(struct wlan_cfg_dp_soc_ctxt *cfg);
+
+#ifdef WLAN_TX_PKT_CAPTURE_ENH
+/*
+ * wlan_cfg_get_tx_capt_max_mem - Get max memory allowed for TX capture feature
+ * @wlan_cfg_soc_ctx
+ *
+ * Return: user given size in bytes
+ */
+static inline int
+wlan_cfg_get_tx_capt_max_mem(struct wlan_cfg_dp_soc_ctxt *cfg)
+{
+	return cfg->tx_capt_max_mem_allowed;
+}
+#endif /* WLAN_TX_PKT_CAPTURE_ENH */
+
 #endif /*__WLAN_CFG_H*/
