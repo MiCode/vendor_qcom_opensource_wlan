@@ -37,6 +37,9 @@
 #include "dp_ratetable.h"
 #endif
 #include <qdf_module.h>
+#ifdef CONFIG_SAWF_DEF_QUEUEUS
+#include <dp_sawf_htt.h>
+#endif
 
 #define HTT_TLV_HDR_LEN HTT_T2H_EXT_STATS_CONF_TLV_HDR_SIZE
 
@@ -2324,6 +2327,20 @@ static void dp_vdev_txrx_hw_stats_handler(struct htt_soc *soc,
 {}
 #endif
 
+#ifdef CONFIG_SAWF_DEF_QEUEUES
+static void dp_sawf_def_queues_update_map_report_conf(struct htt_soc *soc,
+						      uint32_t *msg_word,
+						      qdf_nbuf_t htt_t2h_msg)
+{
+	dp_htt_sawf_def_queues_map_report_conf(soc, msg_word, htt_t2h_msg);
+}
+#else
+static void dp_sawf_def_queues_update_map_report_conf(struct htt_soc *soc,
+						      uint32_t *msg_word,
+						      qdf_nbuf_t htt_t2h_msg)
+{}
+#endif
+
 /*
  * time_allow_print() - time allow print
  * @htt_ring_tt:	ringi_id array of timestamps
@@ -3306,6 +3323,12 @@ static void dp_htt_t2h_msg_handler(void *context, HTC_PACKET *pkt)
 	case HTT_T2H_MSG_TYPE_VDEVS_TXRX_STATS_PERIODIC_IND:
 	{
 		dp_vdev_txrx_hw_stats_handler(soc, msg_word);
+		break;
+	}
+	case HTT_T2H_SAWF_DEF_QUEUES_MAP_REPORT_CONF:
+	{
+		dp_sawf_def_queues_update_map_report_conf(soc, msg_word,
+							  htt_t2h_msg);
 		break;
 	}
 	default:
