@@ -18344,6 +18344,10 @@ static void populate_tlv_service(uint32_t *wmi_service)
 			WMI_SERVICE_PROBE_ALL_BW_SUPPORT;
 	wmi_service[wmi_service_pno_scan_conf_per_ch_support] =
 			WMI_SERVICE_PNO_SCAN_CONFIG_PER_CHANNEL;
+#ifdef QCA_UNDECODED_METADATA_SUPPORT
+	wmi_service[wmi_service_fp_phy_err_filter_support] =
+			WMI_SERVICE_FP_PHY_ERR_FILTER_SUPPORT;
+#endif
 }
 
 /**

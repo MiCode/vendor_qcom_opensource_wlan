@@ -5493,6 +5493,9 @@ typedef enum {
 #endif
 	wmi_service_probe_all_bw_support,
 	wmi_service_pno_scan_conf_per_ch_support,
+#ifdef QCA_UNDECODED_METADATA_SUPPORT
+	wmi_service_fp_phy_err_filter_support,
+#endif
 	wmi_services_max,
 } wmi_conv_service_ids;
 #define WMI_SERVICE_UNAVAILABLE 0xFFFF
