@@ -2926,6 +2926,12 @@ QDF_STATUS
 (*send_set_nss_probe_intvl_cmd)(wmi_unified_t wmi_handle, uint8_t pdev_id,
 				struct wmi_rc_params *param);
 #endif
+
+#ifdef WLAN_FEATURE_11BE_MLO
+QDF_STATUS (*extract_quiet_offload_event)(
+				wmi_unified_t wmi_handle, void *evt_buf,
+				struct vdev_sta_quiet_event *quiet_event);
+#endif
 };
 
 /* Forward declartion for psoc*/
