@@ -558,6 +558,8 @@ QDF_STATUS wlan_objmgr_iterate_peerobj_list(
 	return QDF_STATUS_SUCCESS;
 }
 
+qdf_export_symbol(wlan_objmgr_iterate_peerobj_list);
+
 /**
  ** APIs to get a peer with given mac in a vdev
  */

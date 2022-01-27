@@ -2153,21 +2153,40 @@ struct wlan_lmac_if_green_ap_rx_ops {
  * struct wlan_lmac_if_rx_ops - south bound rx function pointers
  * @mgmt_txrx_tx_ops: mgmt txrx rx ops
  * @scan: scan rx ops
- * @dfs_rx_ops: dfs rx ops.
+ * @son_rx_ops: son rx ops
+ * @p2p: p2p rx ops
+ * @iot_sim_rx_ops: iot simulation rx ops
+ * @atf_rx_ops: air time fairness rx ops
  * @cp_stats_rx_ops: cp stats rx ops
+ * @dfs_rx_ops: dfs rx ops.
+ * @dcs_rx_ops: dcs rx ops
+ * @sa_api_rx_ops: sa api rx ops
  * @cfr_rx_ops: cfr rx ops
+ * @sptrl_rx_ops: spectral rx ops
+ * @crypto_rx_ops: crypto rx ops
+ * @wifi_pos_rx_ops: wifi positioning rx ops
+ * @reg_rx_ops: regulatory rx ops
+ * @dfs_rx_ops: dfs rx ops
+ * @tdls_rx_ops: tdls rx ops
+ * @fd_rx_ops: fils rx ops
+ * @mops: mlme rx ops
+ * @green_ap_rx_ops: green ap rx ops
+ * @ftm_rx_ops: ftm rx ops
+ * @mlo_rx_ops: mlo rx ops
  *
  * Callback function tabled to be registered with lmac/wmi.
  * lmac will use the functional table to send events/frames to umac
  */
 struct wlan_lmac_if_rx_ops {
-	/* Components to declare function pointers required by the module
+	/**
+	 * Components to declare function pointers required by the module
 	 * in component specific structure.
 	 * The component specific ops structure can be declared in this file
 	 * only
 	 */
-	 struct wlan_lmac_if_mgmt_txrx_rx_ops mgmt_txrx_rx_ops;
-	 struct wlan_lmac_if_scan_rx_ops scan;
+	struct wlan_lmac_if_mgmt_txrx_rx_ops mgmt_txrx_rx_ops;
+	struct wlan_lmac_if_scan_rx_ops scan;
+	struct wlan_lmac_if_son_rx_ops son_rx_ops;
 
 #ifdef CONVERGED_P2P_ENABLE
 	struct wlan_lmac_if_p2p_rx_ops p2p;
@@ -2217,7 +2236,6 @@ struct wlan_lmac_if_rx_ops {
 #endif
 
 	struct wlan_lmac_if_ftm_rx_ops ftm_rx_ops;
-	struct wlan_lmac_if_son_rx_ops son_rx_ops;
 #ifdef WLAN_FEATURE_11BE_MLO
 	struct wlan_lmac_if_mlo_rx_ops mlo_rx_ops;
 #endif
@@ -2230,4 +2248,16 @@ struct wlan_lmac_if_rx_ops {
  */
 extern QDF_STATUS (*wlan_lmac_if_umac_tx_ops_register)
 				(struct wlan_lmac_if_tx_ops *tx_ops);
+#ifdef WLAN_FEATURE_SON
+/**
+ * wlan_lmac_if_son_mod_register_rx_ops() - SON Module lmac_if rx_ops
+ *                                          registration API
+ * @rx_ops: lmac_if rx_ops function pointer table
+ *
+ * Function to register SON rx_ops with lmac_if.
+ *
+ * Return: void
+ */
+void wlan_lmac_if_son_mod_register_rx_ops(struct wlan_lmac_if_rx_ops *rx_ops);
+#endif
 #endif /* _WLAN_LMAC_IF_DEF_H_ */

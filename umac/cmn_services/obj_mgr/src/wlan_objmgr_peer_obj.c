@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -617,6 +617,8 @@ QDF_STATUS wlan_objmgr_peer_component_obj_attach(
 	return QDF_STATUS_SUCCESS;
 }
 
+qdf_export_symbol(wlan_objmgr_peer_component_obj_attach);
+
 QDF_STATUS wlan_objmgr_peer_component_obj_detach(
 		struct wlan_objmgr_peer *peer,
 		enum wlan_umac_comp_id id,
@@ -681,6 +683,7 @@ QDF_STATUS wlan_objmgr_peer_component_obj_detach(
 	return QDF_STATUS_SUCCESS;
 }
 
+qdf_export_symbol(wlan_objmgr_peer_component_obj_detach);
 
 QDF_STATUS wlan_objmgr_trigger_peer_comp_priv_object_creation(
 		struct wlan_objmgr_peer *peer,
