@@ -805,6 +805,324 @@ wlan_create_elemsubelem_fragseq(bool inline_frag,
 	return QDF_STATUS_SUCCESS;
 }
 
+static inline QDF_STATUS
+wlan_get_elemsubelem_successorfrag(bool is_subelem,
+				   uint8_t subelemfragid,
+				   uint8_t *curr_elemunit_ptr,
+				   uint8_t *buff,
+				   qdf_size_t buff_maxsize,
+				   uint8_t **successorfrag,
+				   qdf_size_t *successorfrag_totallen,
+				   qdf_size_t *successorfrag_payloadlen)
+{
+	/* elemunit, i.e. 'element unit' here refers to either an 802.11 element
+	 * or a 802.11 subelement.
+	 */
+	uint8_t elemunit_fragid;
+	qdf_size_t elemunit_hdrlen;
+	qdf_size_t elemunit_maxpayloadlen;
+	int elemunit_id_pos;
+	int elemunit_len_pos;
+
+	qdf_size_t curr_elemunit_totallen;
+
+	uint8_t *next_elemunit_ptr;
+	qdf_size_t next_elemunit_totallen;
+
+	QDF_STATUS ret;
+
+	/* This helper checks if the very next element unit after the current
+	 * one is a valid fragment element unit and that there is sufficient
+	 * space in the buffer for this next element, and if so, it returns a
+	 * pointer to this fragment element unit as well as the total length of
+	 * this fragment element unit and the length of the payload of this
+	 * fragment element unit.
+	 */
+
+	ret = wlan_get_elemunit_info(is_subelem,
+				     subelemfragid,
+				     &elemunit_fragid,
+				     &elemunit_hdrlen,
+				     &elemunit_maxpayloadlen,
+				     &elemunit_id_pos,
+				     &elemunit_len_pos,
+				     NULL);
+	if (QDF_IS_STATUS_ERROR(ret)) {
+		qdf_rl_nofl_err("Investigate error %d when trying to get element unit info",
+				ret);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	if (!curr_elemunit_ptr) {
+		qdf_nofl_err("Pointer to current element unit is NULL");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	if (!buff) {
+		qdf_nofl_err("Buffer for element units is NULL");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	if (buff_maxsize == 0) {
+		qdf_nofl_err("Max size of buffer for element units is 0");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	if (!successorfrag) {
+		qdf_nofl_err("Pointer to pointer to successor fragment is NULL");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	if (!successorfrag_totallen) {
+		qdf_nofl_err("Pointer to successor fragment's total length is NULL");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	if (!successorfrag_payloadlen) {
+		qdf_nofl_err("Pointer to successor fragment's payload length is NULL");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	if ((buff + buff_maxsize) < (curr_elemunit_ptr + elemunit_hdrlen)) {
+		qdf_rl_nofl_err("Space %zu octets after current element unit offset %zu in buffer for element units is lesser than header size of element unit %zu octets",
+				buff_maxsize - (curr_elemunit_ptr - buff),
+				curr_elemunit_ptr - buff,
+				elemunit_hdrlen);
+		return QDF_STATUS_E_PROTO;
+	}
+
+	curr_elemunit_totallen =
+		elemunit_hdrlen + curr_elemunit_ptr[elemunit_len_pos];
+
+	if ((buff + buff_maxsize) <
+		(curr_elemunit_ptr + curr_elemunit_totallen)) {
+		qdf_rl_nofl_err("Space %zu octets after current element unit offset %zu in buffer for element units is lesser than indicated total length of element unit %zu octets",
+				buff_maxsize - (curr_elemunit_ptr - buff),
+				curr_elemunit_ptr - buff,
+				curr_elemunit_totallen);
+		return QDF_STATUS_E_PROTO;
+	}
+
+	if ((buff + buff_maxsize) ==
+		(curr_elemunit_ptr + curr_elemunit_totallen)) {
+		/* We have reached the end of the buffer. There is no successor
+		 * fragment.
+		 */
+		*successorfrag = NULL;
+		return QDF_STATUS_SUCCESS;
+	}
+
+	next_elemunit_ptr = curr_elemunit_ptr + curr_elemunit_totallen;
+
+	if ((buff + buff_maxsize) < (next_elemunit_ptr + elemunit_hdrlen)) {
+		qdf_rl_nofl_err("Space %zu octets after next element unit offset %zu in buffer for element units is lesser than header size of element unit %zu octets",
+				buff_maxsize - (next_elemunit_ptr - buff),
+				next_elemunit_ptr - buff,
+				elemunit_hdrlen);
+		return QDF_STATUS_E_PROTO;
+	}
+
+	next_elemunit_totallen =
+		elemunit_hdrlen + next_elemunit_ptr[elemunit_len_pos];
+
+	if ((buff + buff_maxsize) <
+		(next_elemunit_ptr + next_elemunit_totallen)) {
+		qdf_rl_nofl_err("Space %zu octets after next element unit offset %zu in buffer for element units is lesser than indicated total length of element unit %zu octets",
+				buff_maxsize - (next_elemunit_ptr - buff),
+				next_elemunit_ptr - buff,
+				next_elemunit_totallen);
+		return QDF_STATUS_E_PROTO;
+	}
+
+	if (next_elemunit_ptr[elemunit_id_pos] != elemunit_fragid) {
+		*successorfrag = NULL;
+		return QDF_STATUS_SUCCESS;
+	}
+
+	/* We should not be seeing a successor fragment if the length of the
+	 * current element unit is lesser than the max.
+	 */
+	if (curr_elemunit_ptr[elemunit_len_pos] != elemunit_maxpayloadlen) {
+		qdf_rl_nofl_err("Potential successor fragment found though length %u octets of payload of current element unit is not equal to max payload length %zu",
+				curr_elemunit_ptr[elemunit_len_pos],
+				elemunit_maxpayloadlen);
+		return QDF_STATUS_E_PROTO;
+	}
+
+	if (next_elemunit_ptr[elemunit_len_pos] == 0) {
+		qdf_rl_nofl_err("Potential successor fragment's length is 0");
+		return QDF_STATUS_E_PROTO;
+	}
+
+	*successorfrag = next_elemunit_ptr;
+	*successorfrag_totallen = next_elemunit_totallen;
+	*successorfrag_payloadlen = next_elemunit_ptr[elemunit_len_pos];
+
+	return QDF_STATUS_SUCCESS;
+}
+
+static QDF_STATUS
+wlan_get_elemsubelem_fragseq_info(bool is_subelem,
+				  uint8_t subelemfragid,
+				  uint8_t *buff,
+				  qdf_size_t buff_maxsize,
+				  bool *is_fragseq,
+				  qdf_size_t *fragseq_totallen,
+				  qdf_size_t *fragseq_payloadlen)
+{
+	/* elemunit, i.e. 'element unit' here refers to either an 802.11 element
+	 * or a 802.11 subelement.
+	 */
+	qdf_size_t elemunit_hdrlen;
+	int elemunit_id_pos;
+	int elemunit_len_pos;
+
+	uint8_t *curr_elemunit_ptr;
+	qdf_size_t curr_elemunit_totallen;
+
+	qdf_size_t fragseq_currtotallen;
+	qdf_size_t fragseq_currpayloadlen;
+
+	uint8_t *successorfrag;
+	qdf_size_t successorfrag_totallen;
+	qdf_size_t successorfrag_payloadlen;
+
+	QDF_STATUS ret;
+
+	/* Helper function to get element or subelement fragment sequence
+	 * information. Refer to the documentation of the public APIs which
+	 * call this helper, for more information. These APIs are mainly
+	 * wrappers over this helper.
+	 *
+	 * If this helper reports that an element fragment sequence is present,
+	 * it also serves to check for the sanity of various lengths and
+	 * protocol requirements related to the fragment sequence (either by
+	 * itself or though other helpers).
+	 */
+
+	ret = wlan_get_elemunit_info(is_subelem,
+				     0,
+				     NULL,
+				     &elemunit_hdrlen,
+				     NULL,
+				     &elemunit_id_pos,
+				     &elemunit_len_pos,
+				     NULL);
+	if (QDF_IS_STATUS_ERROR(ret)) {
+		qdf_rl_nofl_err("Investigate error %d when trying to get element unit info",
+				ret);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	if (!buff) {
+		qdf_nofl_err("Buffer for element units is NULL");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	if (buff_maxsize == 0) {
+		qdf_nofl_err("Max size of buffer for element units is 0");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	if (!is_fragseq) {
+		qdf_nofl_err("Pointer to location for status of fragment sequence presence is NULL");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	if (!fragseq_totallen) {
+		qdf_nofl_err("Pointer to location for total length of fragment sequence is NULL");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	if (!fragseq_payloadlen) {
+		qdf_nofl_err("Pointer to location of payload length of fragment sequence is NULL");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	curr_elemunit_ptr = buff;
+	fragseq_currtotallen = 0;
+	fragseq_currpayloadlen = 0;
+
+	if ((buff + buff_maxsize) < (curr_elemunit_ptr + elemunit_hdrlen)) {
+		qdf_rl_nofl_err("Space %zu octets after current element unit offset %zu in buffer for element units is lesser than header size of element unit %zu octets",
+				buff_maxsize - (curr_elemunit_ptr - buff),
+				curr_elemunit_ptr - buff,
+				elemunit_hdrlen);
+		return QDF_STATUS_E_PROTO;
+	}
+
+	curr_elemunit_totallen =
+		elemunit_hdrlen + curr_elemunit_ptr[elemunit_len_pos];
+
+	if ((buff + buff_maxsize) <
+		(curr_elemunit_ptr + curr_elemunit_totallen)) {
+		qdf_rl_nofl_err("Space %zu octets after current element unit offset %zu in buffer for element units is lesser than indicated total length of element unit %zu octets",
+				buff_maxsize - (curr_elemunit_ptr - buff),
+				curr_elemunit_ptr - buff,
+				curr_elemunit_totallen);
+		return QDF_STATUS_E_PROTO;
+	}
+
+	successorfrag = NULL;
+
+	ret = wlan_get_elemsubelem_successorfrag(is_subelem,
+						 subelemfragid,
+						 curr_elemunit_ptr,
+						 buff,
+						 buff_maxsize,
+						 &successorfrag,
+						 &successorfrag_totallen,
+						 &successorfrag_payloadlen);
+	if (QDF_IS_STATUS_ERROR(ret))
+		return ret;
+
+	if (!successorfrag) {
+		*is_fragseq = false;
+		*fragseq_totallen = 0;
+		*fragseq_payloadlen = 0;
+		return QDF_STATUS_SUCCESS;
+	}
+
+	fragseq_currtotallen += curr_elemunit_totallen;
+
+	if (!is_subelem &&
+	    (curr_elemunit_ptr[elemunit_id_pos] == WLAN_ELEMID_EXTN_ELEM)) {
+		fragseq_currpayloadlen +=
+			(curr_elemunit_ptr[elemunit_len_pos] - 1);
+	} else {
+		fragseq_currpayloadlen +=
+			curr_elemunit_ptr[elemunit_len_pos];
+	}
+
+	while (successorfrag) {
+		/* wlan_get_elemsubelem_successorfrag() has already validated
+		 * the length values for the successor fragment.
+		 */
+		fragseq_currtotallen += successorfrag_totallen;
+		fragseq_currpayloadlen += successorfrag_payloadlen;
+
+		curr_elemunit_ptr = successorfrag;
+		successorfrag = NULL;
+
+		ret = wlan_get_elemsubelem_successorfrag(is_subelem,
+							 subelemfragid,
+							 curr_elemunit_ptr,
+							 buff,
+							 buff_maxsize,
+							 &successorfrag,
+							 &successorfrag_totallen,
+							 &successorfrag_payloadlen);
+		if (QDF_IS_STATUS_ERROR(ret))
+			return ret;
+	}
+
+	*is_fragseq = true;
+	*fragseq_totallen = fragseq_currtotallen;
+	*fragseq_payloadlen = fragseq_currpayloadlen;
+
+	return QDF_STATUS_SUCCESS;
+}
+
 QDF_STATUS
 wlan_get_elem_fragseq_requirements(uint8_t elemid,
 				   qdf_size_t payloadlen,
@@ -883,6 +1201,37 @@ QDF_STATUS wlan_create_subelem_fragseq(bool inline_frag,
 						fragbuff,
 						fragbuff_maxsize,
 						fragseqlen);
+}
+
+QDF_STATUS wlan_get_elem_fragseq_info(uint8_t *elembuff,
+				      qdf_size_t elembuff_maxsize,
+				      bool *is_fragseq,
+				      qdf_size_t *fragseq_totallen,
+				      qdf_size_t *fragseq_payloadlen)
+{
+	return wlan_get_elemsubelem_fragseq_info(false,
+						 0,
+						 elembuff,
+						 elembuff_maxsize,
+						 is_fragseq,
+						 fragseq_totallen,
+						 fragseq_payloadlen);
+}
+
+QDF_STATUS wlan_get_subelem_fragseq_info(uint8_t subelemfragid,
+					 uint8_t *subelembuff,
+					 qdf_size_t subelembuff_maxsize,
+					 bool *is_fragseq,
+					 qdf_size_t *fragseq_totallen,
+					 qdf_size_t *fragseq_payloadlen)
+{
+	return wlan_get_elemsubelem_fragseq_info(true,
+						 subelemfragid,
+						 subelembuff,
+						 subelembuff_maxsize,
+						 is_fragseq,
+						 fragseq_totallen,
+						 fragseq_payloadlen);
 }
 
 bool wlan_is_emulation_platform(uint32_t phy_version)

@@ -351,6 +351,137 @@ QDF_STATUS wlan_create_subelem_fragseq(bool inline_frag,
 				       qdf_size_t *fragseqlen);
 
 /**
+ * wlan_get_elem_fragseq_info() - Get information about element fragment
+ * sequence
+ *
+ * @elembuff: Buffer containing a series of elements to be checked for whether a
+ * contiguous subset of these elements (starting with the first element in the
+ * buffer) form an element fragment sequence. The buffer should start with the
+ * Element ID of the first element. The buffer should not contain any material
+ * other than elements.
+ * @elembuff_maxsize: Maximum size of elembuff
+ * @is_fragseq: Pointer to location of a flag indicating whether this is an
+ * element fragment sequence or not. The flag will be set to true if elembuff
+ * contains an element fragment sequence starting with the element present in
+ * the beginning of the buffer, or the flag will be set to false if the buffer
+ * contains a single non-fragmented element in the beginning. Please note
+ * standards related limitation given in function description below.
+ * @fragseq_totallen: Pointer to location of total length of element fragment
+ * sequence. If is_fragseq is true, then this is set to the total length of the
+ * element fragment sequence, inclusive of the header and payload of the leading
+ * element and the headers and payloads of all subsequent fragments applicable
+ * to that element. If is_fragseq is false, the caller should ignore this.
+ * Please note standards related limitation given in function description below.
+ * @fragseq_payloadlen: Pointer to location of length of payload of element
+ * fragment sequence. If is_fragseq is true, then this length is set to the
+ * total size of the element fragment sequence payload, which does not include
+ * the sizes of the headers of the lead element and subsequent fragments, and
+ * which (if the lead element's element ID is WLAN_ELEMID_EXTN_ELEM) does not
+ * include the size of the lead element's element ID extension. If is_fragseq is
+ * false, the caller should ignore this. Please note standards related
+ * limitation given in function description below.
+ *
+ * Get the following information for a first element present in the beginning of
+ * a given buffer, and a series of elements after it in the given buffer: a)
+ * Whether a contiguous subset of these elements starting with the first element
+ * form an element fragment sequence. b) If they form an element fragment
+ * sequence, then the total length of this sequence inclusive of headers and
+ * payloads of all the elements in the sequence. c) If they form an element
+ * fragment sequence, then the total size of the payloads of all the elements in
+ * the sequence (not including the element ID extension of the lead element, if
+ * applicable). While determining this information, the function may return
+ * errors, including for protocol parsing issues. These protocol parsing issues
+ * include one in which the first element has a length lesser than 255, but the
+ * very next element after it is a fragment element (which is not allowed by the
+ * standard).  Separately, please note a limitation arising from the standard
+ * wherein if the caller passes a truncated maximum buffer size such that the
+ * buffer ends prematurely just at the end of a potential lead element with
+ * length 255 or just at the end of a non-lead fragment element with length 255,
+ * the function will have to conclude that the last successfully parsed element
+ * is the final one in the non-fragment or fragment sequence, and return results
+ * accordingly. If another fragment actually exists beyond the given buffer,
+ * this function cannot detect the condition since there is no provision in the
+ * standard to indicate a total fragment sequence size in one place in the
+ * beginning or anywhere else. Hence the caller should take care to provide the
+ * complete buffer with the max size set accordingly.
+ *
+ * Return: QDF_STATUS_SUCCESS in the case of success, QDF_STATUS value giving
+ * the reason for error in the case of failure
+ */
+QDF_STATUS wlan_get_elem_fragseq_info(uint8_t *elembuff,
+				      qdf_size_t elembuff_maxsize,
+				      bool *is_fragseq,
+				      qdf_size_t *fragseq_totallen,
+				      qdf_size_t *fragseq_payloadlen);
+
+/**
+ * wlan_get_subelem_fragseq_info() - Get information about subelement fragment
+ * sequence
+ *
+ * @subelemid: Fragment ID applicable for the subelement (this can potentially
+ * vary across protocol areas)
+ * @subelembuff: Buffer containing a series of subelements to be checked for
+ * whether a contiguous subset of these subelements (starting with the first
+ * subelement in the buffer) form a subelement fragment sequence. The containing
+ * element is required to have already been defragmented (if applicable). The
+ * buffer should start with the subelement ID of the first subelement. The
+ * buffer should not contain any material apart from subelements.
+ * @subelembuff_maxsize: Maximum size of subelembuff
+ * @is_fragseq: Pointer to location of a flag indicating whether this is a
+ * subelement fragment sequence or not. The flag will be set to true if the
+ * buffer contains a subelement fragment sequence starting with the subelement
+ * present in the beginning of the buffer, or the flag will be set to false if
+ * the buffer contains a single non-fragmented subelement in the beginning.
+ * Please note standards related limitation given in function description below.
+ * @fragseq_totallen: Pointer to location of total length of subelement fragment
+ * sequence. If is_fragseq is true, then this is set to the total length of the
+ * subelement fragment sequence, inclusive of the header and payload of the
+ * leading subelement and the headers and payloads of all subsequent fragments
+ * applicable to that subelement. If is_fragseq is false, the caller should
+ * ignore this. Please note standards related limitation given in function
+ * description below.
+ * @fragseq_payloadlen: Pointer to location of length of payload of subelement
+ * fragment sequence. If is_fragseq is true, then this length is set to the
+ * total size of the subelement fragment sequence payload, which does not
+ * include the sizes of the headers of the lead subelement and subsequent
+ * fragments. If is_fragseq is false, the caller should ignore this. Please note
+ * standards related limitation given in function description below.
+ *
+ * Get the following information for a first subelement present in the beginning
+ * of a given buffer, and a series of subelements after it in the given buffer:
+ * a) Whether a contiguous subset of these subelements starting with the first
+ * subelement form a subelement fragment sequence. b) If they form a subelement
+ * fragment sequence, then the total length of this sequence inclusive of
+ * headers and payloads of all the subelements in the sequence. c) If they form
+ * a subelement fragment sequence, then the total size of the payloads of all
+ * the subelements in the sequence.  While determining this information, the
+ * function may return errors, including for protocol parsing issues. These
+ * protocol parsing issues include one in which the first subelement has a
+ * length lesser than 255, but the very next subelement after it is a fragment
+ * subelement (which is not allowed by the standard so far). Separately, please
+ * note a limitation arising from the standard wherein if the caller passes a
+ * truncated maximum buffer size such that the buffer ends prematurely just at
+ * the end of a potential lead subelement with length 255 or just at the end of
+ * a non-lead fragment subelement with length 255, the function will have to
+ * conclude that the last successfully parsed subelement is the final one in the
+ * non-fragment or fragment sequence, and return results accordingly. If another
+ * fragment actually exists beyond the given buffer, this function cannot detect
+ * the condition since there is no provision in the standard to indicate a total
+ * fragment sequence size in one place in the beginning or anywhere else. Hence
+ * the caller should take care to provide the complete buffer with the max size
+ * set accordingly.
+ *
+ * Return: QDF_STATUS_SUCCESS in the case of success, QDF_STATUS value giving
+ * the reason for error in the case of failure
+ */
+QDF_STATUS wlan_get_subelem_fragseq_info(uint8_t subelemfragid,
+					 uint8_t *subelembuff,
+					 qdf_size_t subelembuff_maxsize,
+					 bool *is_fragseq,
+					 qdf_size_t *fragseq_totallen,
+					 qdf_size_t *fragseq_payloadlen);
+
+/**
  * wlan_is_emulation_platform() - check if platform is emulation based
  * @phy_version - psoc nif phy_version
  *
