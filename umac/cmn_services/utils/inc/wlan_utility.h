@@ -195,6 +195,66 @@ wlan_get_elem_fragseq_requirements(uint8_t elemid,
 				   qdf_size_t *required_fragbuff_size);
 
 /**
+ * wlan_create_elem_fragseq() - Create sequence of element fragments
+ *
+ * @inline_frag: Whether to use inline fragmentation, wherein the fragmentation
+ * is carried out inline within the source buffer and no memmoves/memcopy would
+ * be required for the lead element.
+ * @elemid: Element ID
+ * @elemidext: Element ID extension. This is applicable only if elemid is
+ * WLAN_ELEMID_EXTN_ELEM, otherwise it is ignored.
+ * @payloadbuff: Buffer containing the element payload to be fragmented. If
+ * inline fragmentation is selected, the corresponding element fragment sequence
+ * will be generated inline into this buffer, and prior to the payload the
+ * buffer should have two bytes reserved in the beginning for the element ID and
+ * element length fields to be written, and a third byte reserved after them for
+ * the element ID extension to be written (if the element ID is
+ * WLAN_ELEMID_EXTN_ELEM).
+ * @payloadbuff_maxsize: Maximum size of payloadbuff
+ * @payloadlen: Length of element payload to be fragmented. Irrespective of
+ * whether inline fragmentation is to be used or not, this should not include
+ * the length of the element ID and element length, and if the element ID is
+ * WLAN_ELEMID_EXTN_ELEM, it should not include the length of the element ID
+ * extension.
+ * @fragbuff: The buffer into which the element fragment sequence should be
+ * generated. This is inapplicable and ignored if inline fragmentation is used.
+ * @fragbuff_maxsize: The maximum size of fragbuff. This is inapplicable and
+ * ignored if inline fragmentation is used.
+ * @fragseqlen: Pointer to location where the length of the fragment sequence
+ * created should be written. This is the total length of the element fragment
+ * sequence, inclusive of the header and payload of the leading element and the
+ * headers and payloads of all subsequent fragments applicable to that element.
+ * If the element ID is WLAN_ELEMID_EXTN_ELEM, this also includes the length of
+ * the element ID extension. The caller should ignore this if the function
+ * returns failure.
+ *
+ * Create a sequence of element fragments. In case fragmentation is not required
+ * for the given element ID and payload length, the function returns an error.
+ * This function is intended to be used by callers which do not have the ability
+ * (or for maintainability purposes do not desire the complexity) to inject new
+ * fragments on the fly where required, when populating the fields in the
+ * element (which would completely eliminate memory moves/copies). An inline
+ * mode is available to carry out the fragmentation within the source buffer in
+ * order to reduce buffer requirements and to eliminate memory copies/moves for
+ * the lead element. In the inline mode, the source buffer should have bytes
+ * reserved in the beginning for the element ID, element length, and if
+ * applicable, the element ID extension. In the inline mode the buffer content
+ * (if any) after the fragments is moved as well.
+ *
+ * Return: QDF_STATUS_SUCCESS in the case of success, QDF_STATUS value giving
+ * the reason for error in the case of failure
+ */
+QDF_STATUS wlan_create_elem_fragseq(bool inline_frag,
+				    uint8_t elemid,
+				    uint8_t elemidext,
+				    uint8_t *payloadbuff,
+				    qdf_size_t payloadbuff_maxsize,
+				    qdf_size_t payloadlen,
+				    uint8_t *fragbuff,
+				    qdf_size_t fragbuff_maxsize,
+				    qdf_size_t *fragseqlen);
+
+/**
  * wlan_get_subelem_fragseq_requirements() - Get requirements related to
  * generation of subelement fragment sequence.
  *
@@ -234,6 +294,61 @@ wlan_get_subelem_fragseq_requirements(uint8_t subelemid,
 				      qdf_size_t payloadlen,
 				      bool *is_frag_required,
 				      qdf_size_t *required_fragbuff_size);
+
+/**
+ * wlan_create_subelem_fragseq() - Create sequence of subelement fragments
+ *
+ * @inline_frag: Whether to use inline fragmentation, wherein the fragmentation
+ * is carried out inline within the source buffer and no memmoves/memcopy would
+ * be required for the lead subelement.
+ * @subelemid: Subelement ID
+ * @subelemid: Fragment ID to be used for the subelement (this can potentially
+ * vary across protocol areas)
+ * @payloadbuff: Buffer containing the subelement payload to be fragmented. If
+ * inline fragmentation is selected, the corresponding subelement fragment
+ * sequence will be generated inline into this buffer, and prior to the payload
+ * the buffer should have two bytes reserved in the beginning for the subelement
+ * ID and subelement length fields to be written.
+ * @payloadbuff_maxsize: Maximum size of payloadbuff
+ * @payloadlen: Length of subelement payload to be fragmented. Irrespective of
+ * whether inline fragmentation is to be used or not, this should not include
+ * the length of the subelement ID and subelement length.
+ * @fragbuff: The buffer into which the subelement fragment sequence should be
+ * generated. This is inapplicable and ignored if inline fragmentation is used.
+ * @fragbuff_maxsize: The maximum size of fragbuff. This is inapplicable and
+ * ignored if inline fragmentation is used.
+ * @fragseqlen: Pointer to location where the length of the fragment sequence
+ * created should be written. This is the total length of the subelement
+ * fragment sequence, inclusive of the header and payload of the leading
+ * subelement and the headers and payloads of all subsequent fragments
+ * applicable to that subelement. The caller should ignore this if the function
+ * returns failure.
+ *
+ * Create a sequence of subelement fragments. In case fragmentation is not
+ * required for the given payload length, the function returns an error. This
+ * function is intended to be used by callers which do not have the ability (or
+ * for maintainability purposes do not desire the complexity) to inject new
+ * fragments on the fly where required, when populating the fields in the
+ * subelement (which would completely eliminate memory moves/copies). An inline
+ * mode is available to carry out the fragmentation within the source buffer in
+ * order to reduce buffer requirements and to eliminate memory copies/moves for
+ * the lead subelement. In the inline mode, the source buffer should have bytes
+ * reserved in the beginning for the subelement ID and the subelement length. In
+ * the inline mode the buffer content (if any) after the fragments is moved as
+ * well.
+ *
+ * Return: QDF_STATUS_SUCCESS in the case of success, QDF_STATUS value giving
+ * the reason for error in the case of failure
+ */
+QDF_STATUS wlan_create_subelem_fragseq(bool inline_frag,
+				       uint8_t subelemid,
+				       uint8_t subelemfragid,
+				       uint8_t *payloadbuff,
+				       qdf_size_t payloadbuff_maxsize,
+				       qdf_size_t payloadlen,
+				       uint8_t *fragbuff,
+				       qdf_size_t fragbuff_maxsize,
+				       qdf_size_t *fragseqlen);
 
 /**
  * wlan_is_emulation_platform() - check if platform is emulation based
