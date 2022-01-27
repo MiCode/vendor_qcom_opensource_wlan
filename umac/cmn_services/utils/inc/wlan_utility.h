@@ -155,6 +155,87 @@ const uint8_t *wlan_get_ext_ie_ptr_from_ext_id(const uint8_t *oui,
 					       uint16_t ie_len);
 
 /**
+ * wlan_get_elem_fragseq_requirements() - Get requirements related to generation
+ * of element fragment sequence.
+ *
+ * @elemid: Element ID
+ * @payloadlen: Length of element payload to be fragmented. Irrespective of
+ * whether inline fragmentation in wlan_create_elem_fragseq() is to be used or
+ * not, this length should not include the length of the element ID and element
+ * length, and if the element ID is WLAN_ELEMID_EXTN_ELEM, it should not include
+ * the length of the element ID extension.
+ * @is_frag_required: Pointer to location where the function should update
+ * whether fragmentation is required or not for the given element ID and payload
+ * length. The caller should ignore this if the function returns failure.
+ * @required_fragbuff_size: Pointer to location where the function should update
+ * the required minimum size of the buffer where the fragment sequence created
+ * would be written, starting from the beginning of the buffer (irrespective of
+ * whether inline fragmentation in wlan_create_elem_fragseq() is to be used or
+ * not). This is the total size of the element fragment sequence, inclusive of
+ * the header and payload of the leading element and the headers and payloads of
+ * all subsequent fragments applicable to that element. If the element ID is
+ * WLAN_ELEMID_EXTN_ELEM, this also includes the length of the element ID
+ * extension. The caller should ignore this if the function returns a value of
+ * false for is_frag_required, or if the function returns failure.
+ *
+ * Get information on requirements related to generation of element fragment
+ * sequence. Currently this includes an indication of whether fragmentation is
+ * required or not for the given element ID and payload length, and if
+ * fragmentation is applicable, the minimum required size of the buffer where
+ * the fragment sequence created would be written (irrespective of whether
+ * inline fragmentation in wlan_create_elem_fragseq() is to be used or not).
+ *
+ * Return: QDF_STATUS_SUCCESS in the case of success, QDF_STATUS value giving
+ * the reason for error in the case of failure
+ */
+QDF_STATUS
+wlan_get_elem_fragseq_requirements(uint8_t elemid,
+				   qdf_size_t payloadlen,
+				   bool *is_frag_required,
+				   qdf_size_t *required_fragbuff_size);
+
+/**
+ * wlan_get_subelem_fragseq_requirements() - Get requirements related to
+ * generation of subelement fragment sequence.
+ *
+ * @subelemid: Subelement ID
+ * @payloadlen: Length of subelement payload to be fragmented. Irrespective of
+ * whether inline fragmentation in wlan_create_subelem_fragseq() is to be used
+ * or not, this length should not include the length of the subelement ID and
+ * subelement length.
+ * @is_frag_required: Pointer to location where the function should update
+ * whether fragmentation is required or not for the given payload length. The
+ * caller should ignore this if the function returns failure.
+ * @required_fragbuff_size: Pointer to location where the function should update
+ * the required minimum size of the buffer where the fragment sequence created
+ * would be written, starting from the beginning of the buffer (irrespective of
+ * whether inline fragmentation in wlan_create_subelem_fragseq() is to be used
+ * or not). This is the total size of the subelement fragment sequence,
+ * inclusive of the header and payload of the leading subelement and the headers
+ * and payloads of all subsequent fragments applicable to that subelement. The
+ * caller should ignore this if the function returns a value of false for
+ * is_frag_required, or if the function returns failure.
+ *
+ * Get information on requirements related to generation of subelement fragment
+ * sequence. Currently this includes an indication of whether fragmentation is
+ * required or not for the given payload length, and if fragmentation is
+ * applicable, the minimum required size of the buffer where the fragment
+ * sequence created would be written (irrespective of whether inline
+ * fragmentation in wlan_create_subelem_fragseq() is to be used or not). Note
+ * that the subelement ID does not currently play a role in determining the
+ * requirements, but is added as an argument in case it is required in the
+ * future.
+ *
+ * Return: QDF_STATUS_SUCCESS in the case of success, QDF_STATUS value giving
+ * the reason for error in the case of failure
+ */
+QDF_STATUS
+wlan_get_subelem_fragseq_requirements(uint8_t subelemid,
+				      qdf_size_t payloadlen,
+				      bool *is_frag_required,
+				      qdf_size_t *required_fragbuff_size);
+
+/**
  * wlan_is_emulation_platform() - check if platform is emulation based
  * @phy_version - psoc nif phy_version
  *

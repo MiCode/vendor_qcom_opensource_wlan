@@ -252,6 +252,287 @@ const uint8_t *wlan_get_ext_ie_ptr_from_ext_id(const uint8_t *oui,
 					      oui, oui_size, ie, ie_len);
 }
 
+static inline
+QDF_STATUS wlan_get_elemunit_info(bool is_subelem,
+				  uint8_t subelemfragid,
+				  uint8_t *elemunit_fragid,
+				  qdf_size_t *elemunit_hdrlen,
+				  qdf_size_t *elemunit_maxpayloadlen,
+				  int *elemunit_id_pos,
+				  int *elemunit_len_pos,
+				  int *elemunit_idext_pos)
+{
+	/* Helper function to populate information about the given element unit.
+	 * Here, an 'element unit' refers to either an 802.11 element or a
+	 * 802.11 subelement.
+	 *
+	 * Populating this information in a central helper here allows for
+	 * better control over handling of future variances, and also for common
+	 * code for handling different types of element units.
+	 */
+
+	if (is_subelem) {
+		/* Populate the subelement header length */
+		if (elemunit_hdrlen)
+			*elemunit_hdrlen = sizeof(struct subelem_header);
+
+		/* Populate the subelement's max payload length */
+		if (elemunit_maxpayloadlen)
+			*elemunit_maxpayloadlen = WLAN_MAX_SUBELEM_LEN;
+
+		/* Populate the index position for the subelement ID */
+		if (elemunit_id_pos)
+			*elemunit_id_pos = qdf_offsetof(struct subelem_header,
+							subelem_id);
+
+		/* Populate the index position for the subelement length */
+		if (elemunit_len_pos)
+			*elemunit_len_pos = qdf_offsetof(struct subelem_header,
+							 subelem_len);
+
+		/* Mark that there is (currently) no valid value for subelement
+		 * ID extension.
+		 */
+		if (elemunit_idext_pos)
+			*elemunit_idext_pos = -1;
+
+		/* Populate the subelement fragment ID (which can vary by
+		 * protocol area). This could also have been directly populated
+		 * by the caller, but we populate it here for uniformity and
+		 * future control of variability.
+		 */
+		if (elemunit_fragid)
+			*elemunit_fragid = subelemfragid;
+	} else {
+		/* Populate the element header length */
+		if (elemunit_hdrlen)
+			*elemunit_hdrlen = sizeof(struct ie_header);
+
+		/* Populate the element's max payload length */
+		if (elemunit_maxpayloadlen)
+			*elemunit_maxpayloadlen = WLAN_MAX_IE_LEN;
+
+		/* Populate the index position for the element ID */
+		if (elemunit_id_pos)
+			*elemunit_id_pos = qdf_offsetof(struct ie_header,
+							ie_id);
+
+		/* Populate the index position for the element length */
+		if (elemunit_len_pos)
+			*elemunit_len_pos = qdf_offsetof(struct ie_header,
+							 ie_len);
+
+		/* Populate the index position for the element ID extension
+		 */
+		if (elemunit_idext_pos)
+			*elemunit_idext_pos =
+				qdf_offsetof(struct extn_ie_header, ie_extn_id);
+
+		/* Populate the element fragment ID. */
+		if (elemunit_fragid)
+			*elemunit_fragid = WLAN_ELEMID_FRAGMENT;
+	}
+
+	return QDF_STATUS_SUCCESS;
+}
+
+static QDF_STATUS
+wlan_get_elemsubelem_fragseq_creationparams(bool is_subelem,
+					    uint8_t id,
+					    qdf_size_t payloadlen,
+					    bool *is_frag_required,
+					    qdf_size_t *expected_fragseqlen,
+					    qdf_size_t *prepayload_leadbytes,
+					    uint32_t *num_maxsizefrags,
+					    qdf_size_t *smallerfrag_size,
+					    qdf_size_t *extrahdrbytes)
+{
+	/* elemunit, i.e. 'element unit' here refers to either an 802.11 element
+	 * or a 802.11 subelement.
+	 */
+	qdf_size_t elemunit_hdrlen;
+	qdf_size_t elemunit_maxpayloadlen;
+
+	qdf_size_t tmp_expected_fragseqlen;
+	qdf_size_t tmp_prepayload_leadbytes;
+	uint32_t tmp_num_maxsizefrags;
+	qdf_size_t tmp_smallerfrag_size;
+	qdf_size_t tmp_extrahdrbytes;
+
+	QDF_STATUS ret;
+
+	/* Helper function to determine element or subelement fragment sequence
+	 * creation parameters. Currently, this helper determines the following
+	 * parameters (it is mandatory for the caller to provide the pointer
+	 * for the first parameter, those for the remaining are optional):
+	 *
+	 * - Whether fragmentation is required
+	 * If fragmentation is required then the following are determined, else
+	 * they should be ignored by the caller:
+	 * - Expected fragment sequence length (inclusive of payload and all
+	 *   headers)
+	 * - The lead bytes that occur before the payload (i.e. the lead
+	 *   element/subelement's header, and if applicable, the element's
+	 *   element ID extension)
+	 * - The number of max sized fragments (inclusive of the lead element)
+	 * - The size of the smaller sized fragment at the end (non-zero if such
+	 *   a fragment would be present, zero if it would be absent)
+	 * - The number of extra header bytes that would be introduced (not
+	 *   inclusive of the header of the lead fragment).
+	 */
+
+	if (!is_frag_required) {
+		qdf_nofl_err("Pointer to indication of whether fragmentation is required or not is NULL");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	ret = wlan_get_elemunit_info(is_subelem,
+				     0,
+				     NULL,
+				     &elemunit_hdrlen,
+				     &elemunit_maxpayloadlen,
+				     NULL,
+				     NULL,
+				     NULL);
+	if (QDF_IS_STATUS_ERROR(ret)) {
+		qdf_rl_nofl_err("Get elem unit info: Error %d",
+				ret);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	if (!is_subelem && (id == WLAN_ELEMID_EXTN_ELEM)) {
+		if (payloadlen <= (elemunit_maxpayloadlen - 1)) {
+			*is_frag_required = false;
+			return QDF_STATUS_SUCCESS;
+		}
+	} else {
+		if (payloadlen <= elemunit_maxpayloadlen) {
+			*is_frag_required = false;
+			return QDF_STATUS_SUCCESS;
+		}
+	}
+
+	*is_frag_required = true;
+
+	if (!expected_fragseqlen &&
+	    !prepayload_leadbytes && !num_maxsizefrags &&
+	    !smallerfrag_size && !extrahdrbytes)
+		return QDF_STATUS_SUCCESS;
+
+	tmp_expected_fragseqlen = 0;
+	tmp_prepayload_leadbytes = 0;
+	tmp_num_maxsizefrags = 0;
+	tmp_smallerfrag_size = 0;
+	tmp_extrahdrbytes = 0;
+
+	/* As per the standard, the information to be fragmented is divided into
+	 * M + N portions, where the following define each variable:
+	 *
+	 * I)For an element without an Element ID Extension field, or for a
+	 * subelement:
+	 * L is the size of the information in octets (this does not include the
+	 * element/subelement header)
+	 * M is L/255 floored
+	 * N is equal to 1 if L mod 255 > 0 and equal to 0 otherwise.
+	 * The size of each of the M fragments is 255 octets
+	 * If N is 1, then the size of this single fragment is L mod 255 octets
+	 *
+	 * II) For an element with an Element ID Extension field:
+	 * L is the size of the information in octets (this does not include the
+	 * element header and the element ID extension field)
+	 * M is (L + 1)/255 floored
+	 * N is equal to 1 if (L - 254) mod 255 > 0 and equal to 0 otherwise.
+	 * The size of each of the M fragments is 255 octets
+	 * If N is 1, then the size of this single fragment is (L - 254) mod 255
+	 * octets.
+	 *
+	 * For both I and II above, the mapping of code variables is as follows:
+	 * payloadlen = L
+	 * tmp_num_maxsizefrags = M
+	 * tmp_smallerfrag_size = Size of N if N is 1, else 0
+	 * Additionally, elemunit_maxpayloadlen is used to denote the value
+	 * 255 for future extensibility if and when required.
+	 */
+
+	if (!is_subelem && (id == WLAN_ELEMID_EXTN_ELEM)) {
+		tmp_num_maxsizefrags = (payloadlen + 1) /
+						elemunit_maxpayloadlen;
+		tmp_smallerfrag_size =
+				(payloadlen - (elemunit_maxpayloadlen - 1)) %
+						elemunit_maxpayloadlen;
+	} else {
+		tmp_num_maxsizefrags = payloadlen / elemunit_maxpayloadlen;
+		tmp_smallerfrag_size = payloadlen %
+						elemunit_maxpayloadlen;
+	}
+
+	/* Determine the number of extra bytes introduced due to the headers of
+	 * non-leading fragments.
+	 */
+	tmp_extrahdrbytes = (tmp_num_maxsizefrags - 1) * elemunit_hdrlen;
+	if (tmp_smallerfrag_size)
+		tmp_extrahdrbytes += elemunit_hdrlen;
+
+	if (!is_subelem && (id == WLAN_ELEMID_EXTN_ELEM))
+		tmp_prepayload_leadbytes = elemunit_hdrlen + 1;
+	else
+		tmp_prepayload_leadbytes = elemunit_hdrlen;
+
+	tmp_expected_fragseqlen = tmp_prepayload_leadbytes +
+					payloadlen + tmp_extrahdrbytes;
+
+	if (expected_fragseqlen)
+		*expected_fragseqlen = tmp_expected_fragseqlen;
+
+	if (prepayload_leadbytes)
+		*prepayload_leadbytes = tmp_prepayload_leadbytes;
+
+	if (num_maxsizefrags)
+		*num_maxsizefrags = tmp_num_maxsizefrags;
+
+	if (smallerfrag_size)
+		*smallerfrag_size = tmp_smallerfrag_size;
+
+	if (extrahdrbytes)
+		*extrahdrbytes = tmp_extrahdrbytes;
+
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS
+wlan_get_elem_fragseq_requirements(uint8_t elemid,
+				   qdf_size_t payloadlen,
+				   bool *is_frag_required,
+				   qdf_size_t *required_fragbuff_size)
+{
+	return wlan_get_elemsubelem_fragseq_creationparams(false,
+							   elemid,
+							   payloadlen,
+							   is_frag_required,
+							   required_fragbuff_size,
+							   NULL,
+							   NULL,
+							   NULL,
+							   NULL);
+}
+
+QDF_STATUS
+wlan_get_subelem_fragseq_requirements(uint8_t subelemid,
+				      qdf_size_t payloadlen,
+				      bool *is_frag_required,
+				      qdf_size_t *required_fragbuff_size)
+{
+	return wlan_get_elemsubelem_fragseq_creationparams(true,
+							   subelemid,
+							   payloadlen,
+							   is_frag_required,
+							   required_fragbuff_size,
+							   NULL,
+							   NULL,
+							   NULL,
+							   NULL);
+}
+
 bool wlan_is_emulation_platform(uint32_t phy_version)
 {
 	if ((phy_version == 0xABC0) || (phy_version == 0xABC1) ||
