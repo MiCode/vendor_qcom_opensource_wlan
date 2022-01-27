@@ -23,6 +23,7 @@
 #include "dp_types.h"
 #include "dp_htt.h"
 
+#include <dp_mon_filter.h>
 #ifdef WLAN_TX_PKT_CAPTURE_ENH
 #include "dp_tx_capture.h"
 #endif
@@ -852,6 +853,7 @@ struct  dp_mon_pdev {
 	bool reset_scan_spcl_vap_stats_enable;
 #endif
 	bool is_tlv_hdr_64_bit;
+	enum dp_mon_filter_mode current_filter_mode;
 };
 
 struct  dp_mon_vdev {

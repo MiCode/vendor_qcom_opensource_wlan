@@ -35,9 +35,9 @@ void dp_rx_mon_process_status_tlv(struct dp_soc *soc,
 }
 
 void
-dp_rx_process_pktlog(struct dp_soc *soc, struct dp_pdev *pdev,
-		     struct hal_rx_ppdu_info *ppdu_info,
-		     void *status_frag, uint32_t end_offset)
+dp_rx_process_pktlog_be(struct dp_soc *soc, struct dp_pdev *pdev,
+			struct hal_rx_ppdu_info *ppdu_info,
+			void *status_frag, uint32_t end_offset)
 {
 	struct dp_mon_pdev *mon_pdev = pdev->monitor_pdev;
 	qdf_nbuf_t nbuf = NULL;

@@ -1047,6 +1047,7 @@ void dp_mon_filter_setup_tx_mon_mode_2_0(struct dp_pdev *pdev)
 		return;
 	}
 
+	mon_pdev->current_filter_mode = mode;
 	filter.tx_valid = true;
 	mon_pdev_be->filter_be[mode][srng_type] = filter;
 }
@@ -1081,6 +1082,7 @@ void dp_mon_filter_reset_tx_mon_mode_2_0(struct dp_pdev *pdev)
 	mon_soc_be->tx_mon_ring_fill_level = DP_MON_RING_FILL_LEVEL_DEFAULT;
 	mon_soc_be->rx_mon_ring_fill_level = DP_MON_RING_FILL_LEVEL_DEFAULT;
 
+	mon_pdev->current_filter_mode = mode;
 	mon_pdev_be->filter_be[mode][srng_type] = filter;
 }
 
@@ -1119,6 +1121,7 @@ void dp_mon_filter_setup_rx_mon_mode_2_0(struct dp_pdev *pdev)
 	dp_mon_filter_set_status_cmn(mon_pdev, rx_tlv_filter);
 	dp_mon_filter_show_filter(mon_pdev, mode, rx_tlv_filter);
 
+	mon_pdev->current_filter_mode = mode;
 	/* Store the above filter */
 	mon_pdev_be->filter_be[mode][srng_type] = filter;
 }
@@ -1159,21 +1162,15 @@ void dp_mon_filter_reset_rx_mon_mode_2_0(struct dp_pdev *pdev)
 	qdf_mem_zero(&(filter), sizeof(struct dp_mon_filter));
 	/* Store the above filter */
 	srng_type = DP_MON_FILTER_SRNG_TYPE_RXMON_DEST;
+	mon_pdev->current_filter_mode = mode;
 	mon_pdev_be->filter_be[mode][srng_type] = filter;
 }
 
-void dp_mon_filter_show_filter_be(struct dp_mon_pdev_be *mon_pdev,
-				  enum dp_mon_filter_mode mode,
-				  struct dp_mon_filter_be *filter)
+static void dp_rx_mon_filter_show_filter(struct dp_mon_filter_be *filter)
 {
 	struct htt_rx_ring_tlv_filter *rx_tlv_filter =
 		&filter->rx_tlv_filter.tlv_filter;
-	struct htt_tx_ring_tlv_filter *tx_tlv_filter =
-		&filter->tx_tlv_filter;
 
-	DP_MON_FILTER_PRINT("RX MON RING TLV FILTER CONFIG:");
-	DP_MON_FILTER_PRINT("[Mode%d]: Valid: %d",
-			    mode, filter->rx_tlv_filter.valid);
 	DP_MON_FILTER_PRINT("mpdu_start: %d", rx_tlv_filter->mpdu_start);
 	DP_MON_FILTER_PRINT("msdu_start: %d", rx_tlv_filter->msdu_start);
 	DP_MON_FILTER_PRINT("packet: %d", rx_tlv_filter->packet);
@@ -1213,34 +1210,208 @@ void dp_mon_filter_show_filter_be(struct dp_mon_pdev_be *mon_pdev,
 			    rx_tlv_filter->md_mgmt_filter);
 	DP_MON_FILTER_PRINT("md_ctrl_filter: 0x%x",
 			    rx_tlv_filter->md_ctrl_filter);
-	DP_MON_FILTER_PRINT("\nTX MON RING TLV FILTER CONFIG:");
-	DP_MON_FILTER_PRINT("[Mode%d]: Valid: %d", mode, filter->tx_valid);
-	DP_MON_FILTER_PRINT("tx_fes_status_start: %d",
-			    tx_tlv_filter->utlvs.tx_fes_status_start);
-	DP_MON_FILTER_PRINT("tx_fes_status_start_prot: %d",
-			    tx_tlv_filter->utlvs.tx_fes_status_start_prot);
-	DP_MON_FILTER_PRINT("tx_fes_status_prot: %d",
-			    tx_tlv_filter->utlvs.tx_fes_status_prot);
-	DP_MON_FILTER_PRINT("tx_fes_status_start_ppdu: %d",
-			    tx_tlv_filter->utlvs.tx_fes_status_start_ppdu);
-	DP_MON_FILTER_PRINT("tx_fes_status_user_ppdu: %d",
-			    tx_tlv_filter->utlvs.tx_fes_status_user_ppdu);
-	DP_MON_FILTER_PRINT("tx_fes_status_ack_or_ba: %d",
-			    tx_tlv_filter->utlvs.tx_fes_status_ack_or_ba);
-	DP_MON_FILTER_PRINT("tx_fes_status_1k_ba: %d",
-			    tx_tlv_filter->utlvs.tx_fes_status_1k_ba);
-	DP_MON_FILTER_PRINT("tx_fes_status_user_response: %d",
-			    tx_tlv_filter->utlvs.tx_fes_status_user_response);
-	DP_MON_FILTER_PRINT("tx_fes_status_end: %d",
-			    tx_tlv_filter->utlvs.tx_fes_status_end);
+}
+
+static void dp_tx_mon_filter_show_filter(struct dp_mon_filter_be *filter)
+{
+	struct htt_tx_ring_tlv_filter *tlv_filter = &filter->tx_tlv_filter;
+
+	DP_MON_FILTER_PRINT("mgmt_filter: %d", tlv_filter->mgmt_filter);
+	DP_MON_FILTER_PRINT("data_filter: %d", tlv_filter->data_filter);
+	DP_MON_FILTER_PRINT("ctrl_filter: %d", tlv_filter->ctrl_filter);
+	DP_MON_FILTER_PRINT("mgmt_dma_length: %d", tlv_filter->mgmt_dma_length);
+	DP_MON_FILTER_PRINT("ctrl_dma_length: %d", tlv_filter->ctrl_dma_length);
+	DP_MON_FILTER_PRINT("data_dma_length: %d", tlv_filter->data_dma_length);
+	DP_MON_FILTER_PRINT("mgmt_mpdu_end: %d", tlv_filter->mgmt_mpdu_end);
+	DP_MON_FILTER_PRINT("mgmt_msdu_end: %d", tlv_filter->mgmt_msdu_end);
+	DP_MON_FILTER_PRINT("mgmt_mpdu_start: %d", tlv_filter->mgmt_mpdu_start);
+	DP_MON_FILTER_PRINT("mgmt_msdu_start: %d", tlv_filter->mgmt_msdu_start);
+	DP_MON_FILTER_PRINT("ctrl_mpdu_end: %d", tlv_filter->ctrl_mpdu_end);
+	DP_MON_FILTER_PRINT("ctrl_msdu_end: %d", tlv_filter->ctrl_msdu_end);
+	DP_MON_FILTER_PRINT("ctrl_mpdu_start: %d", tlv_filter->ctrl_mpdu_start);
+	DP_MON_FILTER_PRINT("ctrl_msdu_start: %d", tlv_filter->ctrl_msdu_start);
+	DP_MON_FILTER_PRINT("data_mpdu_end: %d", tlv_filter->data_mpdu_end);
+	DP_MON_FILTER_PRINT("data_msdu_end: %d", tlv_filter->data_msdu_end);
+	DP_MON_FILTER_PRINT("data_mpdu_start: %d", tlv_filter->data_mpdu_start);
+	DP_MON_FILTER_PRINT("data_msdu_start: %d", tlv_filter->data_msdu_start);
+	DP_MON_FILTER_PRINT("mgmt_mpdu_log: %d", tlv_filter->mgmt_mpdu_log);
+	DP_MON_FILTER_PRINT("ctrl_mpdu_log: %d", tlv_filter->ctrl_mpdu_log);
+	DP_MON_FILTER_PRINT("data_mpdu_log: %d", tlv_filter->data_mpdu_log);
+	DP_MON_FILTER_PRINT("tx_fes_setup: %d", tlv_filter->dtlvs.tx_fes_setup);
+	DP_MON_FILTER_PRINT("tx_peer_entry: %d",
+			    tlv_filter->dtlvs.tx_peer_entry);
+	DP_MON_FILTER_PRINT("tx_queue_extension: %d",
+			    tlv_filter->dtlvs.tx_queue_extension);
+	DP_MON_FILTER_PRINT("tx_last_mpdu_fetched: %d",
+			    tlv_filter->dtlvs.tx_last_mpdu_fetched);
+	DP_MON_FILTER_PRINT("tx_data_sync: %d", tlv_filter->dtlvs.tx_data_sync);
+	DP_MON_FILTER_PRINT("pcu_ppdu_setup_init: %d",
+			    tlv_filter->dtlvs.pcu_ppdu_setup_init);
+	DP_MON_FILTER_PRINT("fw2s_mon: %d", tlv_filter->dtlvs.fw2s_mon);
+	DP_MON_FILTER_PRINT("tx_loopback_setup: %d",
+			    tlv_filter->dtlvs.tx_loopback_setup);
+	DP_MON_FILTER_PRINT("ndp_preamble_done: %d",
+			    tlv_filter->dtlvs.ndp_preamble_done);
+	DP_MON_FILTER_PRINT("tx_raw_frame_setup: %d",
+			    tlv_filter->dtlvs.tx_raw_frame_setup);
+	DP_MON_FILTER_PRINT("txpcu_user_setup: %d",
+			    tlv_filter->dtlvs.txpcu_user_setup);
+	DP_MON_FILTER_PRINT("rxpcu_setup: %d", tlv_filter->dtlvs.rxpcu_setup);
+	DP_MON_FILTER_PRINT("rxpcu_setup_complete: %d",
+			    tlv_filter->dtlvs.rxpcu_setup_complete);
+	DP_MON_FILTER_PRINT("coex_tx_req: %d", tlv_filter->dtlvs.coex_tx_req);
+	DP_MON_FILTER_PRINT("rxpcu_user_setup: %d",
+			    tlv_filter->dtlvs.rxpcu_user_setup);
+	DP_MON_FILTER_PRINT("rxpcu_user_setup_ext: %d",
+			    tlv_filter->dtlvs.rxpcu_user_setup_ext);
+	DP_MON_FILTER_PRINT("wur_data: %d", tlv_filter->dtlvs.wur_data);
+	DP_MON_FILTER_PRINT("tqm_mpdu_global_start: %d",
+			    tlv_filter->dtlvs.tqm_mpdu_global_start);
+	DP_MON_FILTER_PRINT("tx_fes_setup_complete: %d",
+			    tlv_filter->dtlvs.tx_fes_setup_complete);
+	DP_MON_FILTER_PRINT("scheduler_end: %d",
+			    tlv_filter->dtlvs.scheduler_end);
+	DP_MON_FILTER_PRINT("sch_wait_instr_tx_path: %d",
+			    tlv_filter->dtlvs.sch_wait_instr_tx_path);
+	DP_MON_FILTER_PRINT("rx_response_required_info: %d",
+			    tlv_filter->utlvs.rx_response_required_info);
 	DP_MON_FILTER_PRINT("response_start_status: %d",
-			    tx_tlv_filter->utlvs.response_start_status);
+			    tlv_filter->utlvs.response_start_status);
 	DP_MON_FILTER_PRINT("response_end_status: %d",
-			    tx_tlv_filter->utlvs.response_end_status);
+			    tlv_filter->utlvs.response_end_status);
+	DP_MON_FILTER_PRINT("tx_fes_status_start: %d",
+			    tlv_filter->utlvs.tx_fes_status_start);
+	DP_MON_FILTER_PRINT("tx_fes_status_end: %d",
+			    tlv_filter->utlvs.tx_fes_status_end);
+	DP_MON_FILTER_PRINT("tx_fes_status_start_ppdu: %d",
+			    tlv_filter->utlvs.tx_fes_status_start_ppdu);
+	DP_MON_FILTER_PRINT("tx_fes_status_user_ppdu: %d",
+			    tlv_filter->utlvs.tx_fes_status_user_ppdu);
+	DP_MON_FILTER_PRINT("tx_fes_status_ack_or_ba: %d",
+			    tlv_filter->utlvs.tx_fes_status_ack_or_ba);
+	DP_MON_FILTER_PRINT("tx_fes_status_1k_ba: %d",
+			    tlv_filter->utlvs.tx_fes_status_1k_ba);
+	DP_MON_FILTER_PRINT("tx_fes_status_start_prot: %d",
+			    tlv_filter->utlvs.tx_fes_status_start_prot);
+	DP_MON_FILTER_PRINT("tx_fes_status_prot: %d",
+			    tlv_filter->utlvs.tx_fes_status_prot);
+	DP_MON_FILTER_PRINT("tx_fes_status_user_response: %d",
+			    tlv_filter->utlvs.tx_fes_status_user_response);
+	DP_MON_FILTER_PRINT("rx_frame_bitmap_ack: %d",
+			    tlv_filter->utlvs.rx_frame_bitmap_ack);
+	DP_MON_FILTER_PRINT("rx_frame_1k_bitmap_ack: %d",
+			    tlv_filter->utlvs.rx_frame_1k_bitmap_ack);
+	DP_MON_FILTER_PRINT("coex_tx_status: %d",
+			    tlv_filter->utlvs.coex_tx_status);
 	DP_MON_FILTER_PRINT("recevied_response_info: %d",
-			    tx_tlv_filter->utlvs.recevied_response_info);
+			    tlv_filter->utlvs.recevied_response_info);
 	DP_MON_FILTER_PRINT("recevied_response_info_p2: %d",
-			    tx_tlv_filter->utlvs.recevied_response_info_p2);
+			    tlv_filter->utlvs.recevied_response_info_p2);
+	DP_MON_FILTER_PRINT("ofdma_trigger_details: %d",
+			    tlv_filter->utlvs.ofdma_trigger_details);
+	DP_MON_FILTER_PRINT("recevied_trigger_info: %d",
+			    tlv_filter->utlvs.recevied_trigger_info);
+	DP_MON_FILTER_PRINT("pdg_tx_request: %d",
+			    tlv_filter->utlvs.pdg_tx_request);
+	DP_MON_FILTER_PRINT("pdg_response: %d",
+			    tlv_filter->utlvs.pdg_response);
+	DP_MON_FILTER_PRINT("pdg_trig_response: %d",
+			    tlv_filter->utlvs.pdg_trig_response);
+	DP_MON_FILTER_PRINT("trigger_response_tx_done: %d",
+			    tlv_filter->utlvs.trigger_response_tx_done);
+	DP_MON_FILTER_PRINT("prot_tx_end: %d", tlv_filter->utlvs.prot_tx_end);
+	DP_MON_FILTER_PRINT("ppdu_tx_end: %d", tlv_filter->utlvs.ppdu_tx_end);
+	DP_MON_FILTER_PRINT("r2r_status_end: %d",
+			    tlv_filter->utlvs.r2r_status_end);
+	DP_MON_FILTER_PRINT("flush_req: %d", tlv_filter->utlvs.flush_req);
+	DP_MON_FILTER_PRINT("mactx_phy_desc: %d",
+			    tlv_filter->utlvs.mactx_phy_desc);
+	DP_MON_FILTER_PRINT("mactx_user_desc_cmn: %d",
+			    tlv_filter->utlvs.mactx_user_desc_cmn);
+	DP_MON_FILTER_PRINT("mactx_user_desc_per_usr: %d",
+			    tlv_filter->utlvs.mactx_user_desc_per_usr);
+	DP_MON_FILTER_PRINT("tqm_acked_1k_mpdu: %d",
+			    tlv_filter->utlvs.tqm_acked_1k_mpdu);
+	DP_MON_FILTER_PRINT("tqm_acked_mpdu: %d",
+			    tlv_filter->utlvs.tqm_acked_mpdu);
+	DP_MON_FILTER_PRINT("tqm_update_tx_mpdu_count: %d",
+			    tlv_filter->utlvs.tqm_update_tx_mpdu_count);
+	DP_MON_FILTER_PRINT("phytx_ppdu_header_info_request: %d",
+			    tlv_filter->utlvs.phytx_ppdu_header_info_request);
+	DP_MON_FILTER_PRINT("u_sig_eht_su_mu: %d",
+			    tlv_filter->utlvs.u_sig_eht_su_mu);
+	DP_MON_FILTER_PRINT("u_sig_eht_su: %d", tlv_filter->utlvs.u_sig_eht_su);
+	DP_MON_FILTER_PRINT("u_sig_eht_tb: %d", tlv_filter->utlvs.u_sig_eht_tb);
+	DP_MON_FILTER_PRINT("eht_sig_usr_su: %d",
+			    tlv_filter->utlvs.eht_sig_usr_su);
+	DP_MON_FILTER_PRINT("eht_sig_usr_mu_mimo: %d",
+			    tlv_filter->utlvs.eht_sig_usr_mu_mimo);
+	DP_MON_FILTER_PRINT("eht_sig_usr_ofdma: %d",
+			    tlv_filter->utlvs.eht_sig_usr_ofdma);
+	DP_MON_FILTER_PRINT("he_sig_a_su: %d",
+			    tlv_filter->utlvs.he_sig_a_su);
+	DP_MON_FILTER_PRINT("he_sig_a_mu_dl: %d",
+			    tlv_filter->utlvs.he_sig_a_mu_dl);
+	DP_MON_FILTER_PRINT("he_sig_a_mu_ul: %d",
+			    tlv_filter->utlvs.he_sig_a_mu_ul);
+	DP_MON_FILTER_PRINT("he_sig_b1_mu: %d",
+			    tlv_filter->utlvs.he_sig_b1_mu);
+	DP_MON_FILTER_PRINT("he_sig_b2_mu: %d",
+			    tlv_filter->utlvs.he_sig_b2_mu);
+	DP_MON_FILTER_PRINT("he_sig_b2_ofdma: %d",
+			    tlv_filter->utlvs.he_sig_b2_ofdma);
+	DP_MON_FILTER_PRINT("vht_sig_b_mu160: %d",
+			    tlv_filter->utlvs.vht_sig_b_mu160);
+	DP_MON_FILTER_PRINT("vht_sig_b_mu80: %d",
+			    tlv_filter->utlvs.vht_sig_b_mu80);
+	DP_MON_FILTER_PRINT("vht_sig_b_mu40: %d",
+			    tlv_filter->utlvs.vht_sig_b_mu40);
+	DP_MON_FILTER_PRINT("vht_sig_b_mu20: %d",
+			    tlv_filter->utlvs.vht_sig_b_mu20);
+	DP_MON_FILTER_PRINT("vht_sig_b_su160: %d",
+			    tlv_filter->utlvs.vht_sig_b_su160);
+	DP_MON_FILTER_PRINT("vht_sig_b_su80: %d",
+			    tlv_filter->utlvs.vht_sig_b_su80);
+	DP_MON_FILTER_PRINT("vht_sig_b_su40: %d",
+			    tlv_filter->utlvs.vht_sig_b_su40);
+	DP_MON_FILTER_PRINT("vht_sig_b_su20: %d",
+			    tlv_filter->utlvs.vht_sig_b_su20);
+	DP_MON_FILTER_PRINT("vht_sig_a: %d", tlv_filter->utlvs.vht_sig_a);
+	DP_MON_FILTER_PRINT("ht_sig: %d", tlv_filter->utlvs.ht_sig);
+	DP_MON_FILTER_PRINT("l_sig_b: %d", tlv_filter->utlvs.l_sig_b);
+	DP_MON_FILTER_PRINT("l_sig_a: %d", tlv_filter->utlvs.l_sig_a);
+	DP_MON_FILTER_PRINT("tx_service: %d", tlv_filter->utlvs.tx_service);
+	DP_MON_FILTER_PRINT("wmask tx_fes_setup: %d",
+			    tlv_filter->wmask.tx_fes_setup);
+	DP_MON_FILTER_PRINT("wmask tx_peer_entry: %d",
+			    tlv_filter->wmask.tx_peer_entry);
+	DP_MON_FILTER_PRINT("wmask tx_queue_ext: %d",
+			    tlv_filter->wmask.tx_queue_ext);
+	DP_MON_FILTER_PRINT("wmask tx_msdu_start: %d",
+			    tlv_filter->wmask.tx_msdu_start);
+	DP_MON_FILTER_PRINT("wmask tx_mpdu_start: %d",
+			    tlv_filter->wmask.tx_mpdu_start);
+	DP_MON_FILTER_PRINT("wmask pcu_ppdu_setup_init: %d",
+			    tlv_filter->wmask.pcu_ppdu_setup_init);
+	DP_MON_FILTER_PRINT("wmask rxpcu_user_setup: %d",
+			    tlv_filter->wmask.rxpcu_user_setup);
+}
+
+void dp_mon_filter_show_filter_be(enum dp_mon_filter_mode mode,
+				  struct dp_mon_filter_be *filter)
+{
+	DP_MON_FILTER_PRINT("RX MON RING TLV FILTER CONFIG:");
+	DP_MON_FILTER_PRINT("[Mode %d]: Valid: %d",
+			    mode, filter->rx_tlv_filter.valid);
+
+	if (filter->rx_tlv_filter.valid)
+		dp_rx_mon_filter_show_filter(filter);
+
+	DP_MON_FILTER_PRINT("TX MON RING TLV FILTER CONFIG:");
+	DP_MON_FILTER_PRINT("[Mode %d]: Valid: %d", mode, filter->tx_valid);
+
+	if (filter->tx_valid)
+		dp_tx_mon_filter_show_filter(filter);
 }
 
 #ifdef WDI_EVENT_ENABLE
@@ -1271,9 +1442,9 @@ void dp_mon_filter_setup_rx_pkt_log_full_2_0(struct dp_pdev *pdev)
 	rx_tlv_filter->msdu_start = 1;
 	rx_tlv_filter->msdu_end = 1;
 	rx_tlv_filter->mpdu_end = 1;
-	rx_tlv_filter->attention = 1;
 
-	dp_mon_filter_show_filter_be(mon_pdev_be, mode, &filter);
+	mon_pdev->current_filter_mode = mode;
+	dp_mon_filter_show_filter_be(mode, &filter);
 	mon_pdev_be->filter_be[mode][srng_type] = filter;
 }
 
@@ -1292,6 +1463,7 @@ void dp_mon_filter_reset_rx_pkt_log_full_2_0(struct dp_pdev *pdev)
 		return;
 	}
 
+	mon_pdev->current_filter_mode = mode;
 	mon_pdev_be->filter_be[mode][srng_type] = filter;
 }
 
@@ -1315,7 +1487,8 @@ void dp_mon_filter_setup_rx_pkt_log_lite_2_0(struct dp_pdev *pdev)
 	dp_mon_filter_set_status_cmn(&mon_pdev_be->mon_pdev,
 				     &filter.rx_tlv_filter);
 
-	dp_mon_filter_show_filter_be(mon_pdev_be, mode, &filter);
+	mon_pdev->current_filter_mode = mode;
+	dp_mon_filter_show_filter_be(mode, &filter);
 	mon_pdev_be->filter_be[mode][srng_type] = filter;
 }
 
@@ -1334,6 +1507,7 @@ void dp_mon_filter_reset_rx_pkt_log_lite_2_0(struct dp_pdev *pdev)
 		return;
 	}
 
+	mon_pdev->current_filter_mode = mode;
 	mon_pdev_be->filter_be[mode][srng_type] = filter;
 }
 
@@ -1353,12 +1527,13 @@ dp_mon_filter_set_reset_rx_pkt_log_cbf_dest_2_0(struct dp_pdev_be *pdev_be,
 		     DP_MON_FILTER_SRNG_TYPE_RXDMA_MON_BUF :
 		     DP_MON_FILTER_SRNG_TYPE_RXDMA_BUF);
 
+	mon_pdev->current_filter_mode = mode;
 	/*set the filter */
 	if (filter->rx_tlv_filter.valid) {
 		dp_mon_filter_set_cbf_cmn(&pdev_be->pdev,
 					  &filter->rx_tlv_filter);
 
-		dp_mon_filter_show_filter_be(mon_pdev_be, mode, filter);
+		dp_mon_filter_show_filter_be(mode, filter);
 		mon_pdev_be->filter_be[mode][srng_type] = *filter;
 	} else /* reset the filter */
 		mon_pdev_be->filter_be[mode][srng_type] = *filter;
@@ -1397,8 +1572,9 @@ void dp_mon_filter_setup_rx_pkt_log_cbf_2_0(struct dp_pdev *pdev)
 	/* Enabled the filter */
 	filter.rx_tlv_filter.valid = true;
 
+	mon_pdev->current_filter_mode = mode;
 	dp_mon_filter_set_status_cbf(pdev, &filter.rx_tlv_filter);
-	dp_mon_filter_show_filter_be(mon_pdev_be, mode, &filter);
+	dp_mon_filter_show_filter_be(mode, &filter);
 	mon_pdev_be->filter_be[mode][srng_type] = filter;
 
 	/* Clear the filter as the same filter will be used to set the
@@ -1440,6 +1616,7 @@ void dp_mon_filter_reset_rx_pktlog_cbf_2_0(struct dp_pdev *pdev)
 	dp_mon_filter_set_reset_rx_pkt_log_cbf_dest_2_0(pdev_be, &filter);
 
 	srng_type = DP_MON_FILTER_SRNG_TYPE_RXMON_DEST;
+	mon_pdev->current_filter_mode = mode;
 	mon_pdev_be->filter_be[mode][srng_type] = filter;
 }
 
@@ -1477,7 +1654,8 @@ void dp_mon_filter_setup_pktlog_hybrid_2_0(struct dp_pdev *pdev)
 	tlv_filter->utlvs.recevied_response_info_p2 = 1;
 	tlv_filter->utlvs.response_end_status = 1;
 
-	dp_mon_filter_show_filter_be(mon_pdev_be, mode, &filter);
+	mon_pdev->current_filter_mode = mode;
+	dp_mon_filter_show_filter_be(mode, &filter);
 	mon_pdev_be->filter_be[mode][srng_type] = filter;
 }
 
@@ -1496,127 +1674,155 @@ void dp_mon_filter_reset_pktlog_hybrid_2_0(struct dp_pdev *pdev)
 		return;
 	}
 
+	mon_pdev->current_filter_mode = mode;
 	mon_pdev_be->filter_be[mode][srng_type] = filter;
 }
 #endif /* WDI_EVENT_ENABLE */
 
-static void dp_tx_mon_filter_show_filter(struct dp_mon_pdev *mon_pdev,
-					 struct dp_mon_filter_be *filter)
+/**
+ * dp_rx_mon_filter_h2t_setup() - Setup the filter for the Target setup
+ * @soc: DP soc handle
+ * @pdev: DP pdev handle
+ * @srng_type: The srng type for which filter wll be set
+ * @tlv_filter: tlv filter
+ */
+static void
+dp_rx_mon_filter_h2t_setup(struct dp_soc *soc, struct dp_pdev *pdev,
+			   enum dp_mon_filter_srng_type srng_type,
+			   struct dp_mon_filter *filter)
 {
-	struct htt_tx_ring_tlv_filter *tlv_filter = &filter->tx_tlv_filter;
+	int32_t current_mode = 0;
+	struct htt_rx_ring_tlv_filter *tlv_filter = &filter->tlv_filter;
+	struct dp_mon_pdev *mon_pdev = pdev->monitor_pdev;
+	struct dp_mon_pdev_be *mon_pdev_be =
+		dp_get_be_mon_pdev_from_dp_mon_pdev(mon_pdev);
+	struct dp_mon_filter_be *mon_filter;
+	uint32_t src_filter = 0, dst_filter = 0;
 
-	DP_MON_FILTER_PRINT("mgmt_filter: %d", tlv_filter->mgmt_filter);
-	DP_MON_FILTER_PRINT("data_filter: %d", tlv_filter->data_filter);
-	DP_MON_FILTER_PRINT("ctrl_filter: %d", tlv_filter->ctrl_filter);
-	DP_MON_FILTER_PRINT("mgmt_dma_length: %d", tlv_filter->mgmt_dma_length);
-	DP_MON_FILTER_PRINT("ctrl_dma_length: %d", tlv_filter->ctrl_dma_length);
-	DP_MON_FILTER_PRINT("data_dma_length: %d", tlv_filter->data_dma_length);
-	DP_MON_FILTER_PRINT("mgmt_mpdu_end: %d", tlv_filter->mgmt_mpdu_end);
-	DP_MON_FILTER_PRINT("mgmt_msdu_end: %d", tlv_filter->mgmt_msdu_end);
-	DP_MON_FILTER_PRINT("mgmt_mpdu_start: %d", tlv_filter->mgmt_mpdu_start);
-	DP_MON_FILTER_PRINT("mgmt_msdu_start: %d", tlv_filter->mgmt_msdu_start);
-	DP_MON_FILTER_PRINT("ctrl_mpdu_end: %d", tlv_filter->ctrl_mpdu_end);
-	DP_MON_FILTER_PRINT("ctrl_msdu_end: %d", tlv_filter->ctrl_msdu_end);
-	DP_MON_FILTER_PRINT("ctrl_mpdu_start: %d", tlv_filter->ctrl_mpdu_start);
-	DP_MON_FILTER_PRINT("ctrl_msdu_start: %d", tlv_filter->ctrl_msdu_start);
-	DP_MON_FILTER_PRINT("data_mpdu_end: %d", tlv_filter->data_mpdu_end);
-	DP_MON_FILTER_PRINT("data_msdu_end: %d", tlv_filter->data_msdu_end);
-	DP_MON_FILTER_PRINT("data_mpdu_start: %d", tlv_filter->data_mpdu_start);
-	DP_MON_FILTER_PRINT("data_msdu_start: %d", tlv_filter->data_msdu_start);
-	DP_MON_FILTER_PRINT("mgmt_mpdu_log: %d", tlv_filter->mgmt_mpdu_log);
-	DP_MON_FILTER_PRINT("ctrl_mpdu_log: %d", tlv_filter->ctrl_mpdu_log);
-	DP_MON_FILTER_PRINT("data_mpdu_log: %d", tlv_filter->data_mpdu_log);
-	DP_MON_FILTER_PRINT("tx_fes_setup: %d", tlv_filter->dtlvs.tx_fes_setup);
-	DP_MON_FILTER_PRINT("tx_peer_entry: %d", tlv_filter->dtlvs.tx_peer_entry);
-	DP_MON_FILTER_PRINT("tx_queue_extension: %d", tlv_filter->dtlvs.tx_queue_extension);
-	DP_MON_FILTER_PRINT("tx_last_mpdu_fetched: %d", tlv_filter->dtlvs.tx_last_mpdu_fetched);
-	DP_MON_FILTER_PRINT("tx_data_sync: %d", tlv_filter->dtlvs.tx_data_sync);
-	DP_MON_FILTER_PRINT("pcu_ppdu_setup_init: %d", tlv_filter->dtlvs.pcu_ppdu_setup_init);
-	DP_MON_FILTER_PRINT("fw2s_mon: %d", tlv_filter->dtlvs.fw2s_mon);
-	DP_MON_FILTER_PRINT("tx_loopback_setup: %d", tlv_filter->dtlvs.tx_loopback_setup);
-	DP_MON_FILTER_PRINT("ndp_preamble_done: %d", tlv_filter->dtlvs.ndp_preamble_done);
-	DP_MON_FILTER_PRINT("tx_raw_frame_setup: %d", tlv_filter->dtlvs.tx_raw_frame_setup);
-	DP_MON_FILTER_PRINT("txpcu_user_setup: %d", tlv_filter->dtlvs.txpcu_user_setup);
-	DP_MON_FILTER_PRINT("rxpcu_setup: %d", tlv_filter->dtlvs.rxpcu_setup);
-	DP_MON_FILTER_PRINT("rxpcu_setup_complete: %d", tlv_filter->dtlvs.rxpcu_setup_complete);
-	DP_MON_FILTER_PRINT("coex_tx_req: %d", tlv_filter->dtlvs.coex_tx_req);
-	DP_MON_FILTER_PRINT("rxpcu_user_setup: %d", tlv_filter->dtlvs.rxpcu_user_setup);
-	DP_MON_FILTER_PRINT("rxpcu_user_setup_ext: %d", tlv_filter->dtlvs.rxpcu_user_setup_ext);
-	DP_MON_FILTER_PRINT("wur_data: %d", tlv_filter->dtlvs.wur_data);
-	DP_MON_FILTER_PRINT("tqm_mpdu_global_start: %d", tlv_filter->dtlvs.tqm_mpdu_global_start);
-	DP_MON_FILTER_PRINT("tx_fes_setup_complete: %d", tlv_filter->dtlvs.tx_fes_setup_complete);
-	DP_MON_FILTER_PRINT("scheduler_end: %d", tlv_filter->dtlvs.scheduler_end);
-	DP_MON_FILTER_PRINT("sch_wait_instr_tx_path: %d", tlv_filter->dtlvs.sch_wait_instr_tx_path);
-	DP_MON_FILTER_PRINT("rx_response_required_info: %d", tlv_filter->utlvs.rx_response_required_info);
-	DP_MON_FILTER_PRINT("response_start_status: %d", tlv_filter->utlvs.response_start_status);
-	DP_MON_FILTER_PRINT("response_end_status: %d", tlv_filter->utlvs.response_end_status);
-	DP_MON_FILTER_PRINT("tx_fes_status_start: %d", tlv_filter->utlvs.tx_fes_status_start);
-	DP_MON_FILTER_PRINT("tx_fes_status_end: %d", tlv_filter->utlvs.tx_fes_status_end);
-	DP_MON_FILTER_PRINT("tx_fes_status_start_ppdu: %d", tlv_filter->utlvs.tx_fes_status_start_ppdu);
-	DP_MON_FILTER_PRINT("tx_fes_status_user_ppdu: %d", tlv_filter->utlvs.tx_fes_status_user_ppdu);
-	DP_MON_FILTER_PRINT("tx_fes_status_ack_or_ba: %d", tlv_filter->utlvs.tx_fes_status_ack_or_ba);
-	DP_MON_FILTER_PRINT("tx_fes_status_1k_ba: %d", tlv_filter->utlvs.tx_fes_status_1k_ba);
-	DP_MON_FILTER_PRINT("tx_fes_status_start_prot: %d", tlv_filter->utlvs.tx_fes_status_start_prot);
-	DP_MON_FILTER_PRINT("tx_fes_status_prot: %d", tlv_filter->utlvs.tx_fes_status_prot);
-	DP_MON_FILTER_PRINT("tx_fes_status_user_response: %d", tlv_filter->utlvs.tx_fes_status_user_response);
-	DP_MON_FILTER_PRINT("rx_frame_bitmap_ack: %d", tlv_filter->utlvs.rx_frame_bitmap_ack);
-	DP_MON_FILTER_PRINT("rx_frame_1k_bitmap_ack: %d", tlv_filter->utlvs.rx_frame_1k_bitmap_ack);
-	DP_MON_FILTER_PRINT("coex_tx_status: %d", tlv_filter->utlvs.coex_tx_status);
-	DP_MON_FILTER_PRINT("recevied_response_info: %d", tlv_filter->utlvs.recevied_response_info);
-	DP_MON_FILTER_PRINT("recevied_response_info_p2: %d", tlv_filter->utlvs.recevied_response_info_p2);
-	DP_MON_FILTER_PRINT("ofdma_trigger_details: %d", tlv_filter->utlvs.ofdma_trigger_details);
-	DP_MON_FILTER_PRINT("recevied_trigger_info: %d", tlv_filter->utlvs.recevied_trigger_info);
-	DP_MON_FILTER_PRINT("pdg_tx_request: %d", tlv_filter->utlvs.pdg_tx_request);
-	DP_MON_FILTER_PRINT("pdg_response: %d", tlv_filter->utlvs.pdg_response);
-	DP_MON_FILTER_PRINT("pdg_trig_response: %d", tlv_filter->utlvs.pdg_trig_response);
-	DP_MON_FILTER_PRINT("trigger_response_tx_done: %d", tlv_filter->utlvs.trigger_response_tx_done);
-	DP_MON_FILTER_PRINT("prot_tx_end: %d", tlv_filter->utlvs.prot_tx_end);
-	DP_MON_FILTER_PRINT("ppdu_tx_end: %d", tlv_filter->utlvs.ppdu_tx_end);
-	DP_MON_FILTER_PRINT("r2r_status_end: %d", tlv_filter->utlvs.r2r_status_end);
-	DP_MON_FILTER_PRINT("flush_req: %d", tlv_filter->utlvs.flush_req);
-	DP_MON_FILTER_PRINT("mactx_phy_desc: %d", tlv_filter->utlvs.mactx_phy_desc);
-	DP_MON_FILTER_PRINT("mactx_user_desc_cmn: %d", tlv_filter->utlvs.mactx_user_desc_cmn);
-	DP_MON_FILTER_PRINT("mactx_user_desc_per_usr: %d", tlv_filter->utlvs.mactx_user_desc_per_usr);
-	DP_MON_FILTER_PRINT("tqm_acked_1k_mpdu: %d", tlv_filter->utlvs.tqm_acked_1k_mpdu);
-	DP_MON_FILTER_PRINT("tqm_acked_mpdu: %d", tlv_filter->utlvs.tqm_acked_mpdu);
-	DP_MON_FILTER_PRINT("tqm_update_tx_mpdu_count: %d", tlv_filter->utlvs.tqm_update_tx_mpdu_count);
-	DP_MON_FILTER_PRINT("phytx_ppdu_header_info_request: %d", tlv_filter->utlvs.phytx_ppdu_header_info_request);
-	DP_MON_FILTER_PRINT("u_sig_eht_su_mu: %d", tlv_filter->utlvs.u_sig_eht_su_mu);
-	DP_MON_FILTER_PRINT("u_sig_eht_su: %d", tlv_filter->utlvs.u_sig_eht_su);
-	DP_MON_FILTER_PRINT("u_sig_eht_tb: %d", tlv_filter->utlvs.u_sig_eht_tb);
-	DP_MON_FILTER_PRINT("eht_sig_usr_su: %d", tlv_filter->utlvs.eht_sig_usr_su);
-	DP_MON_FILTER_PRINT("eht_sig_usr_mu_mimo: %d", tlv_filter->utlvs.eht_sig_usr_mu_mimo);
-	DP_MON_FILTER_PRINT("eht_sig_usr_ofdma: %d", tlv_filter->utlvs.eht_sig_usr_ofdma);
-	DP_MON_FILTER_PRINT("he_sig_a_su: %d", tlv_filter->utlvs.he_sig_a_su);
-	DP_MON_FILTER_PRINT("he_sig_a_mu_dl: %d", tlv_filter->utlvs.he_sig_a_mu_dl);
-	DP_MON_FILTER_PRINT("he_sig_a_mu_ul: %d", tlv_filter->utlvs.he_sig_a_mu_ul);
-	DP_MON_FILTER_PRINT("he_sig_b1_mu: %d", tlv_filter->utlvs.he_sig_b1_mu);
-	DP_MON_FILTER_PRINT("he_sig_b2_mu: %d", tlv_filter->utlvs.he_sig_b2_mu);
-	DP_MON_FILTER_PRINT("he_sig_b2_ofdma: %d", tlv_filter->utlvs.he_sig_b2_ofdma);
-	DP_MON_FILTER_PRINT("vht_sig_b_mu160: %d", tlv_filter->utlvs.vht_sig_b_mu160);
-	DP_MON_FILTER_PRINT("vht_sig_b_mu80: %d", tlv_filter->utlvs.vht_sig_b_mu80);
-	DP_MON_FILTER_PRINT("vht_sig_b_mu40: %d", tlv_filter->utlvs.vht_sig_b_mu40);
-	DP_MON_FILTER_PRINT("vht_sig_b_mu20: %d", tlv_filter->utlvs.vht_sig_b_mu20);
-	DP_MON_FILTER_PRINT("vht_sig_b_su160: %d", tlv_filter->utlvs.vht_sig_b_su160);
-	DP_MON_FILTER_PRINT("vht_sig_b_su80: %d", tlv_filter->utlvs.vht_sig_b_su80);
-	DP_MON_FILTER_PRINT("vht_sig_b_su40: %d", tlv_filter->utlvs.vht_sig_b_su40);
-	DP_MON_FILTER_PRINT("vht_sig_b_su20: %d", tlv_filter->utlvs.vht_sig_b_su20);
-	DP_MON_FILTER_PRINT("vht_sig_a: %d", tlv_filter->utlvs.vht_sig_a);
-	DP_MON_FILTER_PRINT("ht_sig: %d", tlv_filter->utlvs.ht_sig);
-	DP_MON_FILTER_PRINT("l_sig_b: %d", tlv_filter->utlvs.l_sig_b);
-	DP_MON_FILTER_PRINT("l_sig_a: %d", tlv_filter->utlvs.l_sig_a);
-	DP_MON_FILTER_PRINT("tx_service: %d", tlv_filter->utlvs.tx_service);
-	DP_MON_FILTER_PRINT("wmask tx_fes_setup: %d", tlv_filter->wmask.tx_fes_setup);
-	DP_MON_FILTER_PRINT("wmask tx_peer_entry: %d", tlv_filter->wmask.tx_peer_entry);
-	DP_MON_FILTER_PRINT("wmask tx_queue_ext: %d", tlv_filter->wmask.tx_queue_ext);
-	DP_MON_FILTER_PRINT("wmask tx_msdu_start: %d", tlv_filter->wmask.tx_msdu_start);
-	DP_MON_FILTER_PRINT("wmask tx_mpdu_start: %d", tlv_filter->wmask.tx_mpdu_start);
-	DP_MON_FILTER_PRINT("wmask pcu_ppdu_setup_init: %d", tlv_filter->wmask.pcu_ppdu_setup_init);
-	DP_MON_FILTER_PRINT("wmask rxpcu_user_setup: %d", tlv_filter->wmask.rxpcu_user_setup);
+	/*
+	 * Loop through all the modes.
+	 */
+	for (current_mode = 0; current_mode < DP_MON_FILTER_MAX_MODE;
+	     current_mode++) {
+		mon_filter =
+			&mon_pdev_be->filter_be[current_mode][srng_type];
+
+		/*
+		 * Check if the correct mode is enabled or not.
+		 */
+		if (!mon_filter->rx_tlv_filter.valid)
+			continue;
+
+		filter->valid = true;
+
+		/*
+		 * Set the super bit fields
+		 */
+		src_filter =
+			DP_MON_FILTER_GET(&mon_filter->rx_tlv_filter.tlv_filter,
+					  FILTER_TLV);
+		dst_filter = DP_MON_FILTER_GET(tlv_filter, FILTER_TLV);
+		dst_filter |= src_filter;
+		DP_MON_FILTER_SET(tlv_filter, FILTER_TLV, dst_filter);
+
+		/*
+		 * Set the filter management filter.
+		 */
+		src_filter =
+			DP_MON_FILTER_GET(&mon_filter->rx_tlv_filter.tlv_filter,
+					  FILTER_FP_MGMT);
+		dst_filter = DP_MON_FILTER_GET(tlv_filter, FILTER_FP_MGMT);
+		dst_filter |= src_filter;
+		DP_MON_FILTER_SET(tlv_filter, FILTER_FP_MGMT, dst_filter);
+
+		/*
+		 * Set the monitor other management filter.
+		 */
+		src_filter =
+			DP_MON_FILTER_GET(&mon_filter->rx_tlv_filter.tlv_filter,
+					  FILTER_MO_MGMT);
+		dst_filter = DP_MON_FILTER_GET(tlv_filter, FILTER_MO_MGMT);
+		dst_filter |= src_filter;
+		DP_MON_FILTER_SET(tlv_filter, FILTER_MO_MGMT, dst_filter);
+
+		/*
+		 * Set the filter pass control filter.
+		 */
+		src_filter =
+			DP_MON_FILTER_GET(&mon_filter->rx_tlv_filter.tlv_filter,
+					  FILTER_FP_CTRL);
+		dst_filter = DP_MON_FILTER_GET(tlv_filter, FILTER_FP_CTRL);
+		dst_filter |= src_filter;
+		DP_MON_FILTER_SET(tlv_filter, FILTER_FP_CTRL, dst_filter);
+
+		/*
+		 * Set the monitor other control filter.
+		 */
+		src_filter =
+			DP_MON_FILTER_GET(&mon_filter->rx_tlv_filter.tlv_filter,
+					  FILTER_MO_CTRL);
+		dst_filter = DP_MON_FILTER_GET(tlv_filter, FILTER_MO_CTRL);
+		dst_filter |= src_filter;
+		DP_MON_FILTER_SET(tlv_filter, FILTER_MO_CTRL, dst_filter);
+
+		/*
+		 * Set the filter pass data filter.
+		 */
+		src_filter =
+			DP_MON_FILTER_GET(&mon_filter->rx_tlv_filter.tlv_filter,
+					  FILTER_FP_DATA);
+		dst_filter = DP_MON_FILTER_GET(tlv_filter,
+					       FILTER_FP_DATA);
+		dst_filter |= src_filter;
+		DP_MON_FILTER_SET(tlv_filter, FILTER_FP_DATA, dst_filter);
+
+		/*
+		 * Set the monitor other data filter.
+		 */
+		src_filter =
+			DP_MON_FILTER_GET(&mon_filter->rx_tlv_filter.tlv_filter,
+					  FILTER_MO_DATA);
+		dst_filter = DP_MON_FILTER_GET(tlv_filter, FILTER_MO_DATA);
+		dst_filter |= src_filter;
+		DP_MON_FILTER_SET(tlv_filter, FILTER_MO_DATA, dst_filter);
+
+		/*
+		 * Set the monitor direct data filter.
+		 */
+		src_filter =
+			DP_MON_FILTER_GET(&mon_filter->rx_tlv_filter.tlv_filter,
+					  FILTER_MD_DATA);
+		dst_filter = DP_MON_FILTER_GET(tlv_filter,
+					       FILTER_MD_DATA);
+		dst_filter |= src_filter;
+		DP_MON_FILTER_SET(tlv_filter,
+				  FILTER_MD_DATA, dst_filter);
+
+		/*
+		 * Set the monitor direct management filter.
+		 */
+		src_filter =
+			DP_MON_FILTER_GET(&mon_filter->rx_tlv_filter.tlv_filter,
+					  FILTER_MD_MGMT);
+		dst_filter = DP_MON_FILTER_GET(tlv_filter, FILTER_MD_MGMT);
+		dst_filter |= src_filter;
+		DP_MON_FILTER_SET(tlv_filter, FILTER_MD_MGMT, dst_filter);
+
+		/*
+		 * Set the monitor direct management filter.
+		 */
+		src_filter =
+			DP_MON_FILTER_GET(&mon_filter->rx_tlv_filter.tlv_filter,
+					  FILTER_MD_CTRL);
+		dst_filter = DP_MON_FILTER_GET(tlv_filter, FILTER_MD_CTRL);
+		dst_filter |= src_filter;
+		DP_MON_FILTER_SET(tlv_filter, FILTER_MD_CTRL, dst_filter);
+		dp_mon_filter_show_filter_be(current_mode, mon_filter);
+	}
 }
 
 /**
- * dp_mon_filter_h2t_setup() - Setup the filter for the Target setup
+ * dp_tx_mon_filter_h2t_setup() - Setup the filter for the Target setup
  * @soc: DP soc handle
  * @pdev: DP pdev handle
  * @srng_type: The srng type for which filter wll be set
@@ -1626,10 +1832,8 @@ static
 void dp_tx_mon_filter_h2t_setup(struct dp_soc *soc, struct dp_pdev *pdev,
 				struct dp_mon_filter_be *filter)
 {
-	struct dp_mon_pdev *mon_pdev = pdev->monitor_pdev;
-
 	/* currently all available filter configuration enabled  */
-	dp_tx_mon_filter_show_filter(mon_pdev, filter);
+	dp_tx_mon_filter_show_filter(filter);
 }
 
 static QDF_STATUS
@@ -1721,32 +1925,23 @@ QDF_STATUS dp_rx_mon_filter_update_2_0(struct dp_pdev *pdev)
 {
 	struct dp_soc *soc = pdev->soc;
 	struct dp_mon_filter_be filter = {0};
-	struct dp_mon_filter_be *filter_ptr;
 	struct htt_rx_ring_tlv_filter *rx_tlv_filter;
-	enum dp_mon_filter_mode mode = DP_MON_FILTER_MONITOR_MODE;
+	enum dp_mon_filter_mode mode;
 	enum dp_mon_filter_srng_type srng_type =
 		DP_MON_FILTER_SRNG_TYPE_RXMON_DEST;
 	struct dp_mon_pdev *mon_pdev = pdev->monitor_pdev;
-	struct dp_mon_pdev_be *mon_pdev_be =
-		dp_get_be_mon_pdev_from_dp_mon_pdev(mon_pdev);
 
 	if (!pdev) {
 		dp_mon_filter_err("pdev Context is null");
 		return QDF_STATUS_E_FAILURE;
 	}
 
-	filter_ptr = &mon_pdev_be->filter_be[mode][srng_type];
-	if (!filter_ptr) {
-		dp_mon_filter_err("Filter not allocated");
-		return QDF_STATUS_E_FAILURE;
-	}
-
+	mode = mon_pdev->current_filter_mode;
 	rx_tlv_filter = &filter.rx_tlv_filter.tlv_filter;
-	dp_mon_filter_h2t_setup(soc, pdev, srng_type, &filter.rx_tlv_filter);
+	dp_rx_mon_filter_h2t_setup(soc, pdev, srng_type, &filter.rx_tlv_filter);
 	dp_mon_ht2_rx_ring_cfg(soc, pdev, srng_type,
 			       &filter.rx_tlv_filter.tlv_filter);
-	dp_mon_filter_show_filter(mon_pdev,
-				  DP_MON_FILTER_MONITOR_MODE,
-				  &filter.rx_tlv_filter);
+	dp_mon_filter_show_filter_be(mode,
+				     &filter);
 	return QDF_STATUS_SUCCESS;
 }

@@ -125,7 +125,7 @@ dp_rx_mon_populate_ppdu_info_2_0(struct hal_rx_ppdu_info *hal_ppdu_info,
 				 struct cdp_rx_indication_ppdu *ppdu);
 
 /*
- * dp_rx_process_pktlog() - process pktlog
+ * dp_rx_process_pktlog_be() - process pktlog
  * @soc: dp soc handle
  * @pdev: dp pdev handle
  * @ppdu_info: HAL PPDU info
@@ -134,9 +134,9 @@ dp_rx_mon_populate_ppdu_info_2_0(struct hal_rx_ppdu_info *hal_ppdu_info,
  *
  * Return: void
  */
-void dp_rx_process_pktlog(struct dp_soc *soc, struct dp_pdev *pdev,
-			  struct hal_rx_ppdu_info *ppdu_info,
-			  void *status_frag, uint32_t end_offset);
+void dp_rx_process_pktlog_be(struct dp_soc *soc, struct dp_pdev *pdev,
+			     struct hal_rx_ppdu_info *ppdu_info,
+			     void *status_frag, uint32_t end_offset);
 
 #if !defined(DISABLE_MON_CONFIG)
 /*

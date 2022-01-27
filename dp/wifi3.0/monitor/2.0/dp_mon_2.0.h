@@ -206,12 +206,10 @@ QDF_STATUS dp_mon_buffers_replenish(struct dp_soc *dp_soc,
 
 /**
  * dp_mon_filter_show_filter_be() - Show the set filters
- * @pdev: DP pdev handle
  * @mode: The filter modes
  * @tlv_filter: tlv filter
  */
-void dp_mon_filter_show_filter_be(struct dp_mon_pdev_be *mon_pdev,
-				  enum dp_mon_filter_mode mode,
+void dp_mon_filter_show_filter_be(enum dp_mon_filter_mode mode,
 				  struct dp_mon_filter_be *filter);
 
 /**

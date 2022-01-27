@@ -95,9 +95,9 @@ dp_rx_mon_srng_process_2_0(struct dp_soc *soc, struct dp_intr *int_ctx,
 			mon_desc->unmapped = 1;
 		}
 
-		dp_rx_process_pktlog(soc, pdev, ppdu_info,
-				     mon_desc->buf_addr,
-				     hal_mon_rx_desc.end_offset);
+		dp_rx_process_pktlog_be(soc, pdev, ppdu_info,
+					mon_desc->buf_addr,
+					hal_mon_rx_desc.end_offset);
 
 		dp_rx_mon_process_status_tlv(soc, pdev,
 					     &hal_mon_rx_desc,
