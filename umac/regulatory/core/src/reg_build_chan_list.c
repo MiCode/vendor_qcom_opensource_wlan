@@ -1795,6 +1795,8 @@ reg_modify_chan_list_for_avoid_chan_ext(struct wlan_regulatory_pdev_priv_obj
 {
 }
 #endif
+
+#ifdef CONFIG_BAND_6GHZ
 /**
  * reg_is_supp_pwr_mode_invalid() - Check if the input power mode is invalid
  * @supp_pwr_mode: 6G supported power mode
@@ -2275,6 +2277,12 @@ reg_compute_super_chan_list(struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj)
 	for (i = 0; i < NUM_6GHZ_CHANNELS; i++)
 		reg_update_super_chan_entry(pdev_priv_obj, i);
 }
+#else /* CONFIG_BAND_6GHZ */
+static inline void
+reg_compute_super_chan_list(struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj)
+{
+}
+#endif /* CONFIG_BAND_6GHZ */
 
 void reg_compute_pdev_current_chan_list(struct wlan_regulatory_pdev_priv_obj
 					*pdev_priv_obj)
