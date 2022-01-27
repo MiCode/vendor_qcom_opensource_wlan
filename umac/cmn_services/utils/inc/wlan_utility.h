@@ -415,6 +415,78 @@ QDF_STATUS wlan_get_elem_fragseq_info(uint8_t *elembuff,
 				      qdf_size_t *fragseq_payloadlen);
 
 /**
+ * wlan_defrag_elem_fragseq() - Defragment sequence of element fragments
+ *
+ * @inline_defrag: Whether to use inline defragmentation, wherein the
+ * defragmentation is carried out inline within the source buffer and no
+ * memmoves/memcopy would be required for the lead element.
+ * @fragbuff: Source buffer containing the element fragment sequence starting
+ * with the Element ID of the lead element. The buffer should not contain any
+ * material other than elements. If inline defragmentation is enabled, the
+ * corresponding defragmented payload will be generated inline into this buffer
+ * and the defragmented payload will start after the location of the lead
+ * element's element ID, element length, and (if the lead element's element ID
+ * is WLAN_ELEMID_EXTN_ELEM), the element ID extension. This defragmented
+ * payload will not contain the headers of any of the other fragments in the
+ * fragment sequence.
+ * @fragbuff_maxsize: Maximum size of fragbuff. This should be greater than or
+ * equal to the total size of the element fragment sequence, inclusive of the
+ * header and payload of the leading element and the headers and payloads of all
+ * subsequent fragments applicable to that element.
+ * @defragbuff: The destination buffer into which the defragmented payload
+ * should be copied. This is inapplicable and ignored if inline_defrag is true.
+ * The defragmented payload will be copied to the start of the destination
+ * buffer without including the headers of the lead element and the subsequent
+ * fragment elements, and (if the lead element's element ID is
+ * WLAN_ELEMID_EXTN_ELEM), without including the element ID extension.
+ * @defragbuff_maxsize: Maximum size of defragbuff. This is inapplicable and
+ * ignored if inline_defrag is true. The size should be large enough to contain
+ * the entire defragmented payload, otherwise an error will be returned.
+ * @defragpayload_len: Pointer to the location where the length of the
+ * defragmented payload should be updated. Irrespective of whether inline_defrag
+ * is true or false, this will not include the sizes of the headers of the lead
+ * element and subsequent fragments, and (if the lead element's element ID is
+ * WLAN_ELEMID_EXTN_ELEM), it will not include the size of the lead element's
+ * element ID extension. Please note standards related limitation given in
+ * function description below.
+ *
+ * Defragment a sequence of element fragments. If the source buffer does not
+ * contain an element fragment sequence (in the beginning), an error is
+ * returned. An inline mode is available to carry out the defragmentation within
+ * the source buffer in order to reduce buffer requirements and to eliminate
+ * memory copies/moves for the lead element. In the inline mode, the buffer
+ * content (if any) after the fragments is moved as well. The contents of the
+ * defragmented payload are intended for end consumption by control path
+ * protocol processing code within the driver in a manner uniform with other
+ * protocol data in byte buffers, and not for onward forwarding to other
+ * subsystems or for intrusive specialized processing different from other
+ * protocol data. Hence zero copy methods such as network buffer fragment
+ * processing, etc. are not used in this use case.  Additionally, this API is
+ * intended for use cases where the nature of the payload is complex and it is
+ * infeasible for the caller to skip the (un-defragmented) fragment boundaries
+ * on its own in a scalable and maintainable manner. Separately, please note a
+ * limitation arising from the standard wherein if the caller passes a truncated
+ * maximum buffer size such that the buffer ends prematurely just at the end of
+ * a fragment element with length 255, the function will have to conclude that
+ * the last successfully parsed fragment element is the final one in the
+ * fragment sequence, and return results accordingly. If another fragment
+ * actually exists beyond the given buffer, this function cannot detect the
+ * condition since there is no provision in the standard to indicate a total
+ * fragment sequence size in one place in the beginning or anywhere else. Hence
+ * the caller should take care to provide the complete buffer with the max size
+ * set accordingly.
+ *
+ * Return: QDF_STATUS_SUCCESS in the case of success, QDF_STATUS value giving
+ * the reason for error in the case of failure
+ */
+QDF_STATUS wlan_defrag_elem_fragseq(bool inline_defrag,
+				    uint8_t *fragbuff,
+				    qdf_size_t fragbuff_maxsize,
+				    uint8_t *defragbuff,
+				    qdf_size_t defragbuff_maxsize,
+				    qdf_size_t *defragpayload_len);
+
+/**
  * wlan_get_subelem_fragseq_info() - Get information about subelement fragment
  * sequence
  *
@@ -480,6 +552,78 @@ QDF_STATUS wlan_get_subelem_fragseq_info(uint8_t subelemfragid,
 					 bool *is_fragseq,
 					 qdf_size_t *fragseq_totallen,
 					 qdf_size_t *fragseq_payloadlen);
+
+/**
+ * wlan_defrag_subelem_fragseq() - Defragment sequence of subelement fragments
+ *
+ * @inline_defrag: Whether to use inline defragmentation, wherein the
+ * defragmentation is carried out inline within the source buffer and no
+ * memmoves/memcopy would be required for the lead subelement.
+ * @subelemid: Fragment ID applicable for the subelement (this can potentially
+ * vary across protocol areas)
+ * @fragbuff: Source buffer containing the subelement fragment sequence starting
+ * with the subelement ID of the lead subelement. The containing element is
+ * required to have already been defragmented (if applicable). If inline
+ * defragmentation is enabled, the corresponding defragmented payload will be
+ * generated inline into this buffer and the defragmented payload will start
+ * after the location of the lead subelement's subelement ID and subelement
+ * length. This defragmented payload will not contain the headers of any of the
+ * other fragments in the fragment sequence.
+ * @fragbuff_maxsize: Maximum size of fragbuff. This should be greater than or
+ * equal to the total size of the subelement fragment sequence, inclusive of the
+ * header and payload of the leading subelement and the headers and payloads of
+ * all subsequent fragments applicable to that subelement.
+ * @defragbuff: The destination buffer into which the defragmented payload
+ * should be copied. This is inapplicable and ignored if inline_defrag is true.
+ * The defragmented payload will be copied to the start of the destination
+ * buffer without including the headers of the lead subelement and the
+ * subsequent fragment subelements.
+ * @defragbuff_maxsize: Maximum size of defragbuff. This is inapplicable and
+ * ignored if inline_defrag is true. The size should be large enough to contain
+ * the entire defragmented payload, otherwise an error will be returned.
+ * @defragpayload_len: Pointer to the location where the length of the
+ * defragmented payload should be updated. Irrespective of whether inline_defrag
+ * is true or false, this will not include the sizes of the headers of the lead
+ * subelement and subsequent fragments. Please note standards related limitation
+ * given in function description below.
+ *
+ * Defragment a sequence of subelement fragments. If the source buffer does not
+ * contain a subelement fragment sequence (in the beginning), the function
+ * returns an error. The containing element is required to have already been
+ * defragmented. An inline mode is available to carry out the defragmentation
+ * within the source buffer in order to reduce buffer requirements and to
+ * eliminate memory copies/moves for the lead subelement. In the inline mode,
+ * the buffer content (if any) after the fragments is moved as well. The
+ * contents of the defragmented payload are intended for end consumption by
+ * control path protocol processing code within the driver in a manner uniform
+ * with other protocol data in byte buffers, and not for onward forwarding to
+ * other subsystems or for intrusive specialized processing different from other
+ * protocol data. Hence zero copy methods such as network buffer fragment
+ * processing, etc. are not used in this use case.  Additionally, this API is
+ * intended for use cases where the nature of the payload is complex and it is
+ * infeasible for the caller to skip the (un-defragmented) fragment boundaries
+ * on its own in a scalable and maintainable manner.  Separately, please note a
+ * limitation arising from the standard wherein if the caller passes a truncated
+ * maximum buffer size such that the buffer ends prematurely just at the end of
+ * a fragment subelement with length 255, the function will have to conclude
+ * that the last successfully parsed fragment subelement is the final one in the
+ * fragment sequence, and return results accordingly. If another fragment
+ * actually exists beyond the given buffer, this function cannot detect the
+ * condition since there is no provision in the standard to indicate a total
+ * fragment sequence size in one place in the beginning or anywhere else. Hence
+ * the caller should take care to provide the complete buffer with the max size
+ * set accordingly.
+ *
+ * Return: QDF_STATUS_SUCCESS in the case of success, QDF_STATUS value giving
+ * the reason for error in the case of failure
+ */
+QDF_STATUS wlan_defrag_subelem_fragseq(bool inline_defrag,
+				       uint8_t subelemfragid,
+				       uint8_t *fragbuff,
+				       qdf_size_t fragbuff_maxsize,
+				       uint8_t *defragbuff,
+				       qdf_size_t defragbuff_maxsize,
+				       qdf_size_t *defragpayload_len);
 
 /**
  * wlan_is_emulation_platform() - check if platform is emulation based
