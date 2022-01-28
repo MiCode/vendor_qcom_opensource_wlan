@@ -2818,7 +2818,7 @@ QDF_STATUS reg_modify_pdev_chan_range(struct wlan_objmgr_pdev *pdev)
 }
 
 QDF_STATUS reg_update_pdev_wireless_modes(struct wlan_objmgr_pdev *pdev,
-					  uint32_t wireless_modes)
+					  uint64_t wireless_modes)
 {
 	struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj;
 

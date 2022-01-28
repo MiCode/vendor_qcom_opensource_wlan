@@ -1164,7 +1164,7 @@ QDF_STATUS wlan_reg_get_phybitmap(struct wlan_objmgr_pdev *pdev,
  * Return : QDF_STATUS
  */
 QDF_STATUS wlan_reg_update_pdev_wireless_modes(struct wlan_objmgr_pdev *pdev,
-					       uint32_t wireless_modes);
+					       uint64_t wireless_modes);
 /**
  * wlan_reg_disable_chan_coex() - Disable Coexisting channels based on the input
  * bitmask

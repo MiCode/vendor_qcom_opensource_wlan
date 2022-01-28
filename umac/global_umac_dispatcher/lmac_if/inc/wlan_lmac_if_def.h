@@ -1492,7 +1492,7 @@ struct wlan_lmac_if_reg_rx_ops {
 						 wlan_objmgr_pdev *pdev);
 	QDF_STATUS
 	(*reg_update_pdev_wireless_modes)(struct wlan_objmgr_pdev *pdev,
-					  uint32_t wireless_modes);
+					  uint64_t wireless_modes);
 	bool
 	(*reg_is_range_only6g)(qdf_freq_t low_freq, qdf_freq_t high_freq);
 	bool
