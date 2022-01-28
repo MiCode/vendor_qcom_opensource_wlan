@@ -146,7 +146,7 @@ static const struct bonded_channel_freq bonded_chan_160mhz_list_freq[] = {
 #ifdef WLAN_FEATURE_11BE
 /* bonded_chan_320mhz_list_freq - List of 320MHz bonnded channel frequencies */
 static const struct bonded_channel_freq bonded_chan_320mhz_list_freq[] = {
-	{5500, 5800}, /* center freq: 5650 */
+	{5500, 5720}, /* center freq: 5650: The 5Ghz 240MHz chan */
 #ifdef CONFIG_BAND_6GHZ
 	{5955, 6255}, /* center freq: 6105 */
 	{6115, 6415}, /* center freq: 6265 */
@@ -3653,6 +3653,12 @@ reg_get_2g_bonded_channel_state_for_freq(struct wlan_objmgr_pdev *pdev,
 }
 
 #ifdef WLAN_FEATURE_11BE
+static inline qdf_freq_t
+reg_get_band_cen_from_bandstart(uint16_t bw, qdf_freq_t bandstart)
+{
+	return bandstart - BW_10_MHZ + bw / 2;
+}
+
 /**
  * reg_get_320_bonded_chan_array() - Fetches a list of bonded channel pointers
  * for the given bonded channel array. If 320 band center is specified,
@@ -3696,9 +3702,11 @@ reg_get_320_bonded_chan_array(struct wlan_objmgr_pdev *pdev,
 	} else {
 		/* Fetch the bonded channel pointer for the given band_center */
 		for (i = 0; i < array_size; i++) {
-			if (((bonded_chan_ar[i].start_freq +
-			      bonded_chan_ar[i].end_freq) / 2) ==
-				band_center_320) {
+			qdf_freq_t bandstart = bonded_chan_ar[i].start_freq;
+
+			if (band_center_320 ==
+			    reg_get_band_cen_from_bandstart(BW_320_MHZ,
+							    bandstart)) {
 				bonded_chan_ptr[num_bonded_pairs] =
 					&bonded_chan_ar[i];
 				num_bonded_pairs++;
@@ -3729,6 +3737,15 @@ reg_get_320_bonded_chan_array(struct wlan_objmgr_pdev *pdev,
 #define REG_IS_PRIMARY_CHAN_NOT_ALLOWED(_x, _y) \
 	(!reg_is_state_allowed(reg_get_channel_state_for_freq((_x), (_y))))
 
+static inline qdf_freq_t
+reg_get_endchan_cen_from_bandstart(qdf_freq_t band_start,
+				   uint16_t bw)
+{
+	uint16_t left_edge_freq = band_start - BW_10_MHZ;
+
+	return left_edge_freq + bw - BW_10_MHZ;
+}
+
 static enum channel_state
 reg_get_320_bonded_channel_state(struct wlan_objmgr_pdev *pdev,
 				 qdf_freq_t freq,
@@ -3739,7 +3756,7 @@ reg_get_320_bonded_channel_state(struct wlan_objmgr_pdev *pdev,
 {
 	enum channel_state chan_state = CHANNEL_STATE_INVALID;
 	enum channel_state temp_chan_state;
-	uint16_t chan_cfreq;
+	uint16_t startchan_cfreq, endchan_cfreq;
 	uint16_t max_cont_bw, i;
 
 	*out_punc_bitmap = ALL_SCHANS_PUNC;
@@ -3747,14 +3764,17 @@ reg_get_320_bonded_channel_state(struct wlan_objmgr_pdev *pdev,
 	if (!bonded_chan_ptr)
 		return chan_state;
 
-	chan_cfreq =  bonded_chan_ptr->start_freq;
-
+	startchan_cfreq =  bonded_chan_ptr->start_freq;
+	endchan_cfreq =
+		reg_get_endchan_cen_from_bandstart(startchan_cfreq,
+						   BW_320_MHZ);
 	max_cont_bw = 0;
 	i = 0;
 
-	while (chan_cfreq <= bonded_chan_ptr->end_freq) {
-		temp_chan_state = reg_get_channel_state_for_freq(pdev,
-								 chan_cfreq);
+	while (startchan_cfreq <= endchan_cfreq) {
+		temp_chan_state =
+			reg_get_channel_state_for_freq(pdev,
+						       startchan_cfreq);
 		if (reg_is_state_allowed(temp_chan_state)) {
 			max_cont_bw += SUB_CHAN_BW;
 			*out_punc_bitmap &= ~BIT(i);
@@ -3763,7 +3783,7 @@ reg_get_320_bonded_channel_state(struct wlan_objmgr_pdev *pdev,
 		if (temp_chan_state < chan_state)
 			chan_state = temp_chan_state;
 
-		chan_cfreq = chan_cfreq + SUB_CHAN_BW;
+		startchan_cfreq = startchan_cfreq + SUB_CHAN_BW;
 		i++;
 	}
 
@@ -3785,9 +3805,15 @@ reg_get_320_bonded_channel_state(struct wlan_objmgr_pdev *pdev,
 		return CHANNEL_STATE_ENABLE;
 }
 
+static inline bool reg_is_pri_within_240mhz_chan(qdf_freq_t freq)
+{
+	return (freq >= CHAN_FREQ_5660 && freq <= CHAN_FREQ_5720);
+}
+
 /**
- * reg_fill_primary_160mhz_centers() - Fill the primary 160MHz segment centers
- * for a 320MHz channel in the given channel param.
+ * reg_fill_chan320mhz_seg0_center() - Fill the primary segment center
+ * for a 320MHz channel in the given channel param. Primary segment center
+ * of a 320MHZ is the 160MHZ segment center of the given freq.
  * @pdev: Pointer to struct wlan_objmgr_pdev.
  * @ch_param: channel params to be filled.
  * @freq: Input primary frequency in MHZ.
@@ -3795,7 +3821,7 @@ reg_get_320_bonded_channel_state(struct wlan_objmgr_pdev *pdev,
  * Return: void.
  */
 static void
-reg_fill_primary_160mhz_centers(struct wlan_objmgr_pdev *pdev,
+reg_fill_chan320mhz_seg0_center(struct wlan_objmgr_pdev *pdev,
 				struct ch_params *ch_param, qdf_freq_t freq)
 {
 	const struct bonded_channel_freq *t_bonded_ch_ptr;
@@ -3809,8 +3835,21 @@ reg_fill_primary_160mhz_centers(struct wlan_objmgr_pdev *pdev,
 			reg_freq_to_chan(pdev,
 					 ch_param->mhz_freq_seg0);
 	} else {
-		reg_err("Cannot find 160Mhz centers for freq %d", freq);
-		ch_param->ch_width = CH_WIDTH_INVALID;
+		/**
+		 * If we do not find a 160Mhz  bonded  pair, since it is
+		 * for a 320Mhz channel we need to also see if we can find a
+		 * pseudo 160Mhz channel for the special case of
+		 * 5Ghz 240Mhz channel.
+		 */
+		if (reg_is_pri_within_240mhz_chan(freq)) {
+			ch_param->mhz_freq_seg0 =
+				PRIM_SEG_FREQ_CENTER_240MHZ_5G_CHAN;
+			ch_param->center_freq_seg0 =
+				PRIM_SEG_IEEE_CENTER_240MHZ_5G_CHAN;
+		} else {
+			ch_param->ch_width = CH_WIDTH_INVALID;
+			reg_err("Cannot find 160Mhz centers for freq %d", freq);
+		}
 	}
 }
 
@@ -3913,17 +3952,18 @@ reg_fill_channel_list_for_320(struct wlan_objmgr_pdev *pdev,
 		if (chan_state == CHANNEL_STATE_ENABLE) {
 			struct ch_params *t_chan_param =
 			    &chan_list->chan_param[num_ch_params];
+			qdf_freq_t start_freq = bonded_ch_ptr[i]->start_freq;
 
 			t_chan_param->mhz_freq_seg1 =
-				(bonded_ch_ptr[i]->start_freq +
-				 bonded_ch_ptr[i]->end_freq) / 2;
+				reg_get_band_cen_from_bandstart(BW_320_MHZ,
+								start_freq);
 			t_chan_param->center_freq_seg1 =
 				reg_freq_to_chan(pdev,
 						 t_chan_param->mhz_freq_seg1);
 			t_chan_param->ch_width = *in_ch_width;
 			t_chan_param->reg_punc_bitmap = out_punc_bitmap;
 
-			reg_fill_primary_160mhz_centers(pdev,
+			reg_fill_chan320mhz_seg0_center(pdev,
 							t_chan_param,
 							freq);
 			num_ch_params++;

@@ -1033,6 +1033,8 @@ struct wlan_lmac_if_reg_tx_ops {
 				(struct wlan_objmgr_psoc *psoc, void *arg);
 	QDF_STATUS (*trigger_acs_for_afc)(struct wlan_objmgr_pdev *pdev);
 #endif
+	bool (*is_chip_11be)(struct wlan_objmgr_psoc *psoc,
+			     uint16_t phy_id);
 };
 
 /**

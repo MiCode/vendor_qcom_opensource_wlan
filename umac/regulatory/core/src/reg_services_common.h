@@ -158,6 +158,12 @@ extern const struct chan_map channel_map_global[];
 #define ALL_SCHANS_PUNC 0xFFFF /* all subchannels punctured */
 #endif
 
+#define CHAN_FREQ_5660 5660
+#define CHAN_FREQ_5720 5720
+
+#define PRIM_SEG_IEEE_CENTER_240MHZ_5G_CHAN 146
+#define PRIM_SEG_FREQ_CENTER_240MHZ_5G_CHAN 5730
+
 #ifdef CONFIG_AFC_SUPPORT
 /**
  * struct afc_cb_handler - defines structure for afc request received  event

@@ -2818,6 +2818,122 @@ static void reg_store_regulatory_ext_info_to_socpriv(
 	}
 }
 
+#ifdef WLAN_FEATURE_11BE
+static bool
+reg_is_bonded_ch_subset_of_regrule(struct cur_reg_rule *cur_rule_ptr,
+				   const struct bonded_channel_freq
+				   *bonded_ch_ptr)
+{
+	if (bonded_ch_ptr->start_freq >= cur_rule_ptr->start_freq &&
+	    bonded_ch_ptr->end_freq <= cur_rule_ptr->end_freq)
+		return true;
+
+	return false;
+}
+#endif
+
+/**
+ * reg_is_5g_240chan_in_rule() - Determine if the given reg rule supports
+ * 5g 240MHZ chan [100 - 144] and the BW of the rule is greater than 160MHZ.
+ * @cur_rule_ptr: Pointer to struct cur_reg_rule
+ * @bonded_ch_ptr: Pointer to  const struct bonded_channel_freq
+ *
+ * Return -True if 240 chan rule is found, false otherwise.
+ */
+#ifdef WLAN_FEATURE_11BE
+static bool
+reg_is_5g_240chan_in_rule(struct cur_reg_rule *cur_rule_ptr,
+			  const struct bonded_channel_freq *bonded_ch_ptr)
+{
+	if (!bonded_ch_ptr)
+		return false;
+
+	if (reg_is_bonded_ch_subset_of_regrule(cur_rule_ptr, bonded_ch_ptr) &&
+	    cur_rule_ptr->max_bw > BW_160_MHZ)
+		return true;
+
+	return false;
+}
+#endif
+
+/**
+ * reg_is_chip_cc_11be_cap() - Determine if country supports a max BW
+ * greater than 160MHZ and if chip is 11BE capable.
+ * @psoc: Pointer to struct wlan_objmgr_psoc
+ * @phy_id: Phy-id
+ * @max_cc_bw: Maximum 5g BW supported by the country
+ *
+ * Return - True if cc_max is greater than 160MHZ and chip is 11BE cap,
+ * false otherwise.
+ */
+#ifdef WLAN_FEATURE_11BE
+static bool reg_is_chip_cc_11be_cap(struct wlan_objmgr_psoc *psoc,
+				    uint16_t phy_id,
+				    uint16_t max_cc_bw)
+{
+	struct wlan_lmac_if_reg_tx_ops *tx_ops;
+
+	tx_ops = reg_get_psoc_tx_ops(psoc);
+	if (!tx_ops)
+		return false;
+
+	if (max_cc_bw > BW_160_MHZ && tx_ops->is_chip_11be(psoc, phy_id))
+		return true;
+
+	return false;
+}
+#endif
+
+/**
+ * reg_modify_max_bw_for_240mhz_5g_chans() - Manually update the bandwidh
+ * of the 240MHz channels in 5GHz band [IEEE channels 100 - 144 support 240MHz
+ * bandwidth using puncturing; 240MHz = 320MHz - 80Mhz(punctured)].
+ * The max bandwidth for these channels should be 320MHz.
+ *
+ * Modify reg rule BW of 100 - 144 channels to 320 if
+ * a) Chip supports 11BE
+ * b) Country supports 320MHZ BW.
+ * c) Reg rule BW advertised by FW is 240MHZ.
+ * d) Channel is between 5500 and 5720.
+ *
+ * @regulat_info: Pointer to struct cur_regulatory_info
+ * @reg_rule_5g: Pointer to  struct cur_reg_rule
+ */
+#ifdef WLAN_FEATURE_11BE
+static void
+reg_modify_max_bw_for_240mhz_5g_chans(struct cur_regulatory_info *regulat_info,
+				      struct cur_reg_rule *reg_rule_5g)
+
+{
+#define FREQ_5500_MHZ  5500
+
+	uint16_t num_5g_reg_rules = regulat_info->num_5g_reg_rules;
+	uint16_t rule_num;
+	struct cur_reg_rule *cur_rule_ptr;
+	const struct bonded_channel_freq *bonded_ch_ptr;
+
+	bonded_ch_ptr = reg_get_bonded_chan_entry(FREQ_5500_MHZ,
+						  CH_WIDTH_320MHZ);
+	if (!reg_is_chip_cc_11be_cap(regulat_info->psoc,
+				     regulat_info->phy_id,
+				     regulat_info->max_bw_5g))
+		return;
+
+	for (rule_num = 0, cur_rule_ptr = reg_rule_5g;
+	     rule_num < num_5g_reg_rules; cur_rule_ptr++, rule_num++) {
+		if (reg_is_5g_240chan_in_rule(cur_rule_ptr, bonded_ch_ptr)) {
+			cur_rule_ptr->max_bw = BW_320_MHZ;
+			break;
+		}
+	}
+}
+#else
+static void
+reg_modify_max_bw_for_240mhz_5g_chans(struct cur_regulatory_info *regulat_info,
+				      struct cur_reg_rule *reg_rule_5g)
+{
+}
+#endif
 /**
  * reg_fill_master_channels() - Fill the master channel lists based on the
  *	regulatory rules
@@ -2920,11 +3036,14 @@ reg_fill_master_channels(struct cur_regulatory_info *regulat_info,
 				     reg_rule_2g, num_2g_reg_rules *
 				     sizeof(struct cur_reg_rule));
 		curr_reg_rule_location = num_2g_reg_rules;
-		if (num_5g_reg_rules)
+		if (num_5g_reg_rules) {
+			reg_modify_max_bw_for_240mhz_5g_chans(regulat_info,
+							      reg_rule_5g);
 			qdf_mem_copy(reg_rules->reg_rules +
 				     curr_reg_rule_location, reg_rule_5g,
 				     num_5g_reg_rules *
 				     sizeof(struct cur_reg_rule));
+		}
 	}
 
 	for (i = 0; i < REG_CURRENT_MAX_AP_TYPE; i++) {
