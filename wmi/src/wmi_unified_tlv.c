@@ -13891,6 +13891,10 @@ copy_afc_chan_eirp_info(struct chan_eirp_obj *chan_eirp_info,
 				chan_eirp_power_info_hdr[*index].channel_cfi;
 		chan_eirp_info[chan_idx].eirp_power =
 				chan_eirp_power_info_hdr[*index].eirp_pwr;
+		wmi_debug("Chan idx = %d chan freq idx = %d EIRP power = %d",
+			  chan_idx,
+			  chan_eirp_info[chan_idx].cfi,
+			  chan_eirp_info[chan_idx].eirp_power);
 	}
 }
 
@@ -13918,6 +13922,11 @@ copy_afc_chan_obj_info(struct afc_chan_obj *afc_chan_info,
 			channel_info_hdr[count].global_operating_class;
 		afc_chan_info[count].num_chans =
 					channel_info_hdr[count].num_channels;
+		wmi_debug("Chan object count = %d global opclasss = %d",
+			  count,
+			  afc_chan_info[count].global_opclass);
+		wmi_debug("Number of Channel EIRP objects = %d",
+			  afc_chan_info[count].num_chans);
 
 		if (afc_chan_info[count].num_chans > 0) {
 			struct chan_eirp_obj *chan_eirp_info;
@@ -13954,6 +13963,11 @@ static void copy_afc_freq_obj_info(struct afc_freq_obj *afc_freq_info,
 		WMI_REG_RULE_END_FREQ_GET(freq_info_hdr[count].freq_info);
 		afc_freq_info[count].max_psd =
 					freq_info_hdr[count].psd_power_info;
+		wmi_debug("count = %d low_freq = %d high_freq = %d max_psd = %d",
+			  count,
+			  afc_freq_info[count].low_freq,
+			  afc_freq_info[count].high_freq,
+			  afc_freq_info[count].max_psd);
 	}
 }
 
@@ -13992,6 +14006,14 @@ copy_afc_event_fixed_hdr_power_info(
 	WMI_AVAIL_EXPIRY_TIME_MINUTE_GET(afc_power_event_hdr->avail_exp_time_t);
 	power_info->avail_exp_time_t |=
 	WMI_AVAIL_EXPIRY_TIME_HOUR_GET(afc_power_event_hdr->avail_exp_time_t);
+	wmi_debug("FW status = %d resp_id = %d serv_resp_code = %d",
+		  power_info->fw_status_code,
+		  power_info->resp_id,
+		  power_info->serv_resp_code);
+	wmi_debug("AFC version = %u exp_date = %u exp_time = %u",
+		  power_info->afc_wfa_version,
+		  power_info->avail_exp_time_d,
+		  power_info->avail_exp_time_t);
 }
 
 /**
@@ -14019,6 +14041,8 @@ static void copy_power_event(struct afc_regulatory_info *afc_info,
 	afc_info->power_info = power_info;
 
 	power_info->num_freq_objs = param_buf->num_freq_info_array;
+	wmi_debug("Number of frequency objects = %d",
+		  power_info->num_freq_objs);
 	if (power_info->num_freq_objs > 0) {
 		wmi_6g_afc_frequency_info *freq_info_hdr;
 
@@ -14037,6 +14061,7 @@ static void copy_power_event(struct afc_regulatory_info *afc_info,
 	}
 
 	power_info->num_chan_objs = param_buf->num_channel_info_array;
+	wmi_debug("Number of channel objects = %d", power_info->num_chan_objs);
 	if (power_info->num_chan_objs > 0) {
 		struct afc_chan_obj *afc_chan_info;
 		wmi_6g_afc_channel_info *channel_info_hdr;
@@ -14072,6 +14097,9 @@ static void copy_expiry_event(struct afc_regulatory_info *afc_info,
 				param_buf->expiry_event_param->request_id;
 	expiry_info->event_subtype =
 				param_buf->expiry_event_param->event_subtype;
+	wmi_debug("Event subtype %d request ID %d",
+		  expiry_info->event_subtype,
+		  expiry_info->request_id);
 	afc_info->expiry_info = expiry_info;
 }
 
@@ -14092,6 +14120,7 @@ copy_afc_event_common_info(wmi_unified_t wmi_handle,
 {
 	afc_info->phy_id = wmi_handle->ops->convert_phy_id_target_to_host(
 				wmi_handle, event_fixed_hdr->phy_id);
+	wmi_debug("phy_id %d", afc_info->phy_id);
 	afc_info->event_type = event_fixed_hdr->event_type;
 }
 
@@ -14111,6 +14140,7 @@ static QDF_STATUS extract_afc_event_tlv(wmi_unified_t wmi_handle,
 
 	event_fixed_hdr = param_buf->fixed_param;
 	copy_afc_event_common_info(wmi_handle, afc_info, event_fixed_hdr);
+	wmi_debug("AFC event type %d received", afc_info->event_type);
 
 	switch (afc_info->event_type) {
 	case WMI_AFC_EVENT_POWER_INFO:
