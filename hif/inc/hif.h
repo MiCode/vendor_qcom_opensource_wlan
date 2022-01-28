@@ -1065,6 +1065,7 @@ hif_pm_wake_irq_type hif_pm_get_wake_irq_type(struct hif_opaque_softc *hif_ctx);
  * @RTPM_ID_DRIVER_UNLOAD: operation in driver unload
  * @RTPM_ID_CE_INTR_HANDLER: operation from ce interrupt handler
  * @RTPM_ID_WAKE_INTR_HANDLER: operation from wake interrupt handler
+ * @RTPM_ID_SOC_IDLE_SHUTDOWN: operation in soc idle shutdown
  */
 /* New value added to the enum must also be reflected in function
  *  rtpm_string_from_dbgid()
@@ -1086,6 +1087,7 @@ typedef enum {
 	RTPM_ID_DRIVER_UNLOAD,
 	RTPM_ID_CE_INTR_HANDLER,
 	RTPM_ID_WAKE_INTR_HANDLER,
+	RTPM_ID_SOC_IDLE_SHUTDOWN,
 
 	RTPM_ID_MAX,
 } wlan_rtpm_dbgid;
@@ -1113,6 +1115,7 @@ static inline char *rtpm_string_from_dbgid(wlan_rtpm_dbgid id)
 					"RTPM_ID_PM_STOP",
 					"RTPM_ID_CONN_DISCONNECT",
 					"RTPM_ID_SOC_REMOVE",
+					"RTPM_ID_SOC_IDLE_SHUTDOWN"
 					"RTPM_ID_DRIVER_UNLOAD",
 					"RTPM_ID_CE_INTR_HANDLER",
 					"RTPM_ID_WAKE_INTR_HANDLER",
