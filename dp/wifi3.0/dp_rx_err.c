@@ -2472,6 +2472,28 @@ static inline bool dp_handle_rxdma_decrypt_err(void)
 }
 #endif
 
+/*
+ * dp_rx_wbm_sg_list_last_msdu_war() - war for HW issue
+ *
+ * This is a war for HW issue where length is only valid in last msdu
+ *@soc: DP SOC handle
+ */
+static inline void dp_rx_wbm_sg_list_last_msdu_war(struct dp_soc *soc)
+{
+	if (soc->wbm_sg_last_msdu_war) {
+		uint32_t len;
+		qdf_nbuf_t temp = soc->wbm_sg_param.wbm_sg_nbuf_tail;
+
+		len = hal_rx_msdu_start_msdu_len_get(soc->hal_soc,
+						     qdf_nbuf_data(temp));
+		temp = soc->wbm_sg_param.wbm_sg_nbuf_head;
+		while (temp) {
+			QDF_NBUF_CB_RX_PKT_LEN(temp) = len;
+			temp = temp->next;
+		}
+	}
+}
+
 static inline bool
 dp_rx_is_sg_formation_required(struct hal_wbm_err_desc_info *info)
 {
@@ -2645,6 +2667,7 @@ dp_rx_wbm_err_process(struct dp_intr *int_ctx, struct dp_soc *soc,
 						nbuf_head, nbuf_tail,
 						soc->wbm_sg_param.wbm_sg_nbuf_head,
 						soc->wbm_sg_param.wbm_sg_nbuf_tail);
+				dp_rx_wbm_sg_list_last_msdu_war(soc);
 				dp_rx_wbm_sg_list_reset(soc);
 				process_sg_buf = false;
 			}

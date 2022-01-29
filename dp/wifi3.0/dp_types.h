@@ -2309,6 +2309,7 @@ struct dp_soc {
 	struct dp_mon_soc *monitor_soc;
 #endif
 	uint8_t rxdma2sw_rings_not_supported:1,
+		wbm_sg_last_msdu_war:1,
 		mec_fw_offload:1;
 
 	/* Number of Rx refill rings */

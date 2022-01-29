@@ -14637,6 +14637,7 @@ static void dp_soc_cfg_init(struct dp_soc *soc)
 		soc->per_tid_basize_max_tid = 8;
 		soc->wbm_release_desc_rx_sg_support = 1;
 		soc->rxdma2sw_rings_not_supported = 1;
+		soc->wbm_sg_last_msdu_war = 1;
 		soc->ast_offload_support = AST_OFFLOAD_ENABLE_STATUS;
 		soc->mec_fw_offload = FW_MEC_FW_OFFLOAD_ENABLED;
 		soc->num_hw_dscp_tid_map = HAL_MAX_HW_DSCP_TID_V2_MAPS;
