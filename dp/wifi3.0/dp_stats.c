@@ -7558,7 +7558,9 @@ void dp_update_pdev_stats(struct dp_pdev *tgtobj,
 {
 	uint8_t i;
 	uint8_t pream_type;
+	struct cdp_pdev_stats *pdev_stats = NULL;
 
+	pdev_stats = &tgtobj->stats;
 	for (pream_type = 0; pream_type < DOT11_MAX; pream_type++) {
 		for (i = 0; i < MAX_MCS; i++) {
 			tgtobj->stats.tx.pkt_type[pream_type].
@@ -7730,6 +7732,8 @@ void dp_update_pdev_stats(struct dp_pdev *tgtobj,
 		srcobj->rx.peer_unauth_rx_pkt_drop;
 	tgtobj->stats.rx.policy_check_drop +=
 		srcobj->rx.policy_check_drop;
+
+	DP_UPDATE_11BE_STATS(pdev_stats, srcobj);
 }
 
 void dp_update_vdev_ingress_stats(struct dp_vdev *tgtobj)
