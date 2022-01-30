@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2018-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -164,6 +165,19 @@ QDF_STATUS cfg_psoc_parse(struct wlan_objmgr_psoc *psoc, const char *path);
  */
 QDF_STATUS cfg_parse_to_psoc_store(struct wlan_objmgr_psoc *psoc,
 				   const char *path);
+
+/**
+ * cfg_section_parse_to_psoc_store() - Parse specific section from file @path
+ *                                     and update psoc ini store
+ * @psoc: The psoc whose config store should be updated
+ * @path: The full file path of the ini file to parse
+ * @section_name: Section name to be parsed
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS cfg_section_parse_to_psoc_store(struct wlan_objmgr_psoc *psoc,
+					   const char *path,
+					   const char *section_name);
 
 /**
  * cfg_parse_to_global_store() Parse file @path and update global ini store

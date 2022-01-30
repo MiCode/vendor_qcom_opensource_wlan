@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2018-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -556,6 +557,21 @@ cfg_ini_parse_to_store(const char *path, struct cfg_value_store *store)
 	return status;
 }
 
+static QDF_STATUS
+cfg_ini_section_parse_to_store(const char *path, const char *section_name,
+			       struct cfg_value_store *store)
+{
+	QDF_STATUS status;
+
+	status = qdf_ini_section_parse(path, store, cfg_ini_item_handler,
+				       section_name);
+	if (QDF_IS_STATUS_ERROR(status))
+		cfg_err("Failed to parse *.ini file @ %s; status:%d",
+			path, status);
+
+	return status;
+}
+
 QDF_STATUS cfg_parse_to_psoc_store(struct wlan_objmgr_psoc *psoc,
 				   const char *path)
 {
@@ -563,6 +579,16 @@ QDF_STATUS cfg_parse_to_psoc_store(struct wlan_objmgr_psoc *psoc,
 }
 
 qdf_export_symbol(cfg_parse_to_psoc_store);
+
+QDF_STATUS cfg_section_parse_to_psoc_store(struct wlan_objmgr_psoc *psoc,
+					   const char *path,
+					   const char *section_name)
+{
+	return cfg_ini_section_parse_to_store(path, section_name,
+			cfg_psoc_get_ctx(psoc)->store);
+}
+
+qdf_export_symbol(cfg_section_parse_to_psoc_store);
 
 QDF_STATUS cfg_parse_to_global_store(const char *path)
 {
@@ -940,4 +966,3 @@ put_store:
 }
 
 qdf_export_symbol(cfg_psoc_parse);
-
