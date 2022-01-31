@@ -498,8 +498,10 @@ QDF_STATUS dp_mon_filter_update(struct dp_pdev *pdev)
 		return QDF_STATUS_E_FAILURE;
 	}
 
+#ifdef QCA_TXMON_HW_SUPPORT
 	if (mon_ops && mon_ops->tx_mon_filter_update)
 		mon_ops->tx_mon_filter_update(pdev);
+#endif
 
 	if (mon_ops && mon_ops->rx_mon_filter_update)
 		mon_ops->rx_mon_filter_update(pdev);

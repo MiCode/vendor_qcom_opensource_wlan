@@ -173,6 +173,16 @@ dp_mon_buffers_replenish(struct dp_soc *dp_soc,
 
 	mon_srng = dp_mon_srng->hal_srng;
 
+	hal_srng_access_start(dp_soc->hal_soc, mon_srng);
+
+	num_entries_avail = hal_srng_src_num_avail(dp_soc->hal_soc,
+						   mon_srng, sync_hw_ptr);
+
+	if (num_entries_avail < num_req_buffers) {
+		num_desc_to_free = num_req_buffers - num_entries_avail;
+		num_req_buffers = num_entries_avail;
+	}
+
 	/*
 	 * if desc_list is NULL, allocate the descs from freelist
 	 */
@@ -185,6 +195,7 @@ dp_mon_buffers_replenish(struct dp_soc *dp_soc,
 
 		if (!num_alloc_desc) {
 			dp_mon_debug("%pK: no free rx_descs in freelist", dp_soc);
+			hal_srng_access_end(dp_soc->hal_soc, mon_srng);
 			return QDF_STATUS_E_NOMEM;
 		}
 
@@ -194,16 +205,7 @@ dp_mon_buffers_replenish(struct dp_soc *dp_soc,
 		num_req_buffers = num_alloc_desc;
 	}
 
-	hal_srng_access_start(dp_soc->hal_soc, mon_srng);
-	num_entries_avail = hal_srng_src_num_avail(dp_soc->hal_soc,
-						   mon_srng, sync_hw_ptr);
-
-	if (num_entries_avail < num_req_buffers) {
-		num_desc_to_free = num_req_buffers - num_entries_avail;
-		num_req_buffers = num_entries_avail;
-	}
-
-	while (count <= num_req_buffers - 1) {
+	while (count < num_req_buffers - 1) {
 		ret = dp_mon_frag_alloc_and_map(dp_soc,
 						&mon_desc,
 						mon_desc_pool);
@@ -440,10 +442,11 @@ dp_set_bpr_enable_2_0(struct dp_pdev *pdev, int val)
 static
 QDF_STATUS dp_mon_soc_htt_srng_setup_2_0(struct dp_soc *soc)
 {
+	QDF_STATUS status;
+#ifdef QCA_TXMON_HW_SUPPORT
 	struct dp_mon_soc *mon_soc = soc->monitor_soc;
 	struct dp_mon_soc_be *mon_soc_be = dp_get_be_mon_soc_from_dp_mon_soc(mon_soc);
-
-	QDF_STATUS status;
+#endif
 
 	hal_set_low_threshold(soc->rxdma_mon_buf_ring[0].hal_srng, 0);
 	status = htt_srng_setup(soc->htt_handle, 0,
@@ -455,6 +458,7 @@ QDF_STATUS dp_mon_soc_htt_srng_setup_2_0(struct dp_soc *soc)
 		return status;
 	}
 
+#ifdef QCA_TXMON_HW_SUPPORT
 	hal_set_low_threshold(mon_soc_be->tx_mon_buf_ring.hal_srng, 0);
 	status = htt_srng_setup(soc->htt_handle, 0,
 				mon_soc_be->tx_mon_buf_ring.hal_srng,
@@ -464,6 +468,7 @@ QDF_STATUS dp_mon_soc_htt_srng_setup_2_0(struct dp_soc *soc)
 		dp_err("Failed to send htt srng setup message for Tx mon buf ring");
 		return status;
 	}
+#endif
 
 	return status;
 }
@@ -474,8 +479,10 @@ QDF_STATUS dp_mon_pdev_htt_srng_setup_2_0(struct dp_soc *soc,
 					  int mac_id,
 					  int mac_for_pdev)
 {
+#ifdef QCA_TXMON_HW_SUPPORT
 	struct dp_mon_soc *mon_soc = soc->monitor_soc;
 	struct dp_mon_soc_be *mon_soc_be = dp_get_be_mon_soc_from_dp_mon_soc(mon_soc);
+#endif
 	QDF_STATUS status;
 
 	status = htt_srng_setup(soc->htt_handle, mac_for_pdev,
@@ -487,6 +494,7 @@ QDF_STATUS dp_mon_pdev_htt_srng_setup_2_0(struct dp_soc *soc,
 		return status;
 	}
 
+#ifdef QCA_TXMON_HW_SUPPORT
 	status = htt_srng_setup(soc->htt_handle, mac_for_pdev,
 				mon_soc_be->tx_mon_dst_ring[mac_id].hal_srng,
 				TX_MONITOR_DST);
@@ -495,6 +503,7 @@ QDF_STATUS dp_mon_pdev_htt_srng_setup_2_0(struct dp_soc *soc,
 		dp_mon_err("Failed to send htt srng message for Tx mon dst ring");
 		return status;
 	}
+#endif
 
 	return status;
 }
@@ -967,9 +976,11 @@ static void dp_mon_register_intr_ops_2_0(struct dp_soc *soc)
 	struct dp_mon_soc *mon_soc = soc->monitor_soc;
 
 	mon_soc->mon_ops->rx_mon_refill_buf_ring =
-			dp_rx_mon_refill_buf_ring_2_0,
+			NULL,
+#ifdef QCA_TXMON_HW_SUPPORT
 	mon_soc->mon_ops->tx_mon_refill_buf_ring =
 			dp_tx_mon_refill_buf_ring_2_0,
+#endif
 	mon_soc->mon_rx_process = dp_rx_mon_process_2_0;
 }
 

@@ -151,8 +151,12 @@ hal_be_get_mon_dest_status(hal_soc_handle_t hal_soc,
 {
 	struct mon_destination_ring *desc = hw_desc;
 
-	status->buf_addr = ((u64)desc->stat_buf_virt_addr_31_0 |
-				((u64)desc->stat_buf_virt_addr_63_32 << 32));
+	status->buf_addr = HAL_RX_GET(desc, MON_DESTINATION_RING_STAT,
+				      BUF_VIRT_ADDR_31_0) |
+				      (((uint64_t)HAL_RX_GET(desc,
+				      MON_DESTINATION_RING_STAT,
+				      BUF_VIRT_ADDR_63_32)) << 32);
+
 	status->ppdu_id = desc->ppdu_id;
 	status->end_offset = desc->end_offset;
 	status->end_reason = desc->end_reason;
@@ -177,8 +181,8 @@ void hal_mon_buff_addr_info_set(hal_soc_handle_t hal_soc_hdl,
 {
 	uint32_t paddr_lo = ((u64)phy_addr & 0x00000000ffffffff);
 	uint32_t paddr_hi = ((u64)phy_addr & 0xffffffff00000000) >> 32;
-	uint32_t vaddr_lo = ((u64)(uintptr_t)mon_desc_addr & 0x00000000ffffffff);
-	uint32_t vaddr_hi = ((u64)(uintptr_t)mon_desc_addr & 0xffffffff00000000) >> 32;
+	uint32_t vaddr_lo = ((u64)mon_desc_addr & 0x00000000ffffffff);
+	uint32_t vaddr_hi = ((u64)mon_desc_addr & 0xffffffff00000000) >> 32;
 
 	HAL_MON_PADDR_LO_SET(mon_entry, paddr_lo);
 	HAL_MON_PADDR_HI_SET(mon_entry, paddr_hi);
