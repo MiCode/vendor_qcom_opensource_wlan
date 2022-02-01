@@ -320,6 +320,7 @@ enum dp_intr_mode {
 	DP_INTR_INTEGRATED = 0,
 	DP_INTR_MSI,
 	DP_INTR_POLL,
+	DP_INTR_LEGACY_VIRTUAL_IRQ,
 };
 
 /**

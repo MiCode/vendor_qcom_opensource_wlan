@@ -2929,6 +2929,84 @@ static QDF_STATUS dp_soc_interrupt_attach_wrapper(struct cdp_soc_t *txrx_soc)
 #endif
 #endif
 
+#ifdef QCA_SUPPORT_LEGACY_INTERRUPTS
+/**
+ * dp_soc_interrupt_map_calculate_wifi3_pci_legacy()
+ * Calculate interrupt map for legacy interrupts
+ * @soc: DP soc handle
+ * @intr_ctx_num: Interrupt context number
+ * @irq_id_map: IRQ map
+ * num_irq_r: Number of interrupts assigned for this context
+ *
+ * Return: void
+ */
+static void dp_soc_interrupt_map_calculate_wifi3_pci_legacy(struct dp_soc *soc,
+							    int intr_ctx_num,
+							    int *irq_id_map,
+							    int *num_irq_r)
+{
+	int j;
+	int num_irq = 0;
+	int tx_mask = wlan_cfg_get_tx_ring_mask(
+					soc->wlan_cfg_ctx, intr_ctx_num);
+	int rx_mask = wlan_cfg_get_rx_ring_mask(
+					soc->wlan_cfg_ctx, intr_ctx_num);
+	int rx_mon_mask = wlan_cfg_get_rx_mon_ring_mask(
+					soc->wlan_cfg_ctx, intr_ctx_num);
+	int rx_err_ring_mask = wlan_cfg_get_rx_err_ring_mask(
+					soc->wlan_cfg_ctx, intr_ctx_num);
+	int rx_wbm_rel_ring_mask = wlan_cfg_get_rx_wbm_rel_ring_mask(
+					soc->wlan_cfg_ctx, intr_ctx_num);
+	int reo_status_ring_mask = wlan_cfg_get_reo_status_ring_mask(
+					soc->wlan_cfg_ctx, intr_ctx_num);
+	int rxdma2host_ring_mask = wlan_cfg_get_rxdma2host_ring_mask(
+					soc->wlan_cfg_ctx, intr_ctx_num);
+	int host2rxdma_ring_mask = wlan_cfg_get_host2rxdma_ring_mask(
+					soc->wlan_cfg_ctx, intr_ctx_num);
+	int host2rxdma_mon_ring_mask = wlan_cfg_get_host2rxdma_mon_ring_mask(
+					soc->wlan_cfg_ctx, intr_ctx_num);
+	soc->intr_mode = DP_INTR_LEGACY_VIRTUAL_IRQ;
+	for (j = 0; j < HIF_MAX_GRP_IRQ; j++) {
+		if (tx_mask & (1 << j))
+			irq_id_map[num_irq++] = (wbm2sw0_release - j);
+		if (rx_mask & (1 << j))
+			irq_id_map[num_irq++] = (reo2sw1_intr - j);
+		if (rx_mon_mask & (1 << j))
+			irq_id_map[num_irq++] = (rxmon2sw_p0_dest0 - j);
+		if (rx_err_ring_mask & (1 << j))
+			irq_id_map[num_irq++] = (reo2sw0_intr - j);
+		if (rx_wbm_rel_ring_mask & (1 << j))
+			irq_id_map[num_irq++] = (wbm2sw5_release - j);
+		if (reo_status_ring_mask & (1 << j))
+			irq_id_map[num_irq++] = (reo_status - j);
+		if (rxdma2host_ring_mask & (1 << j))
+			irq_id_map[num_irq++] = (rxdma2sw_dst_ring0 - j);
+		if (host2rxdma_ring_mask & (1 << j))
+			irq_id_map[num_irq++] = (sw2rxdma_0 - j);
+		if (host2rxdma_mon_ring_mask & (1 << j))
+			irq_id_map[num_irq++] = (sw2rxmon_src_ring - j);
+	}
+	*num_irq_r = num_irq;
+}
+#else
+/**
+ * dp_soc_interrupt_map_calculate_wifi3_pci_legacy()
+ * Calculate interrupt map for legacy interrupts
+ * @soc: DP soc handle
+ * @intr_ctx_num: Interrupt context number
+ * @irq_id_map: IRQ map
+ * num_irq_r: Number of interrupts assigned for this context
+ *
+ * Return: void
+ */
+static void dp_soc_interrupt_map_calculate_wifi3_pci_legacy(struct dp_soc *soc,
+							    int intr_ctx_num,
+							    int *irq_id_map,
+							    int *num_irq_r)
+{
+}
+#endif
+
 static void dp_soc_interrupt_map_calculate_integrated(struct dp_soc *soc,
 		int intr_ctx_num, int *irq_id_map, int *num_irq_r)
 {
@@ -3064,6 +3142,11 @@ static void dp_soc_interrupt_map_calculate(struct dp_soc *soc, int intr_ctx_num,
 {
 	int msi_vector_count, ret;
 	uint32_t msi_base_data, msi_vector_start;
+
+	if (pld_get_enable_intx(soc->osdev->dev)) {
+		return dp_soc_interrupt_map_calculate_wifi3_pci_legacy(soc,
+				intr_ctx_num, irq_id_map, num_irq);
+	}
 
 	ret = pld_get_user_msi_assignment(soc->osdev->dev, "DP",
 					    &msi_vector_count,
