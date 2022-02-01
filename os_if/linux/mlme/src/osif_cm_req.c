@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2012-2015,2020-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -492,6 +492,11 @@ QDF_STATUS osif_update_mlo_partner_info(
 
 	if (!vdev || !connect_req || !req)
 		return status;
+
+	if (!vdev->mlo_dev_ctx) {
+		osif_debug("ML ctx is NULL, ignore ML IE");
+		return QDF_STATUS_SUCCESS;
+	}
 
 	osif_debug("ML IE search start");
 	if (req->ie_len) {
