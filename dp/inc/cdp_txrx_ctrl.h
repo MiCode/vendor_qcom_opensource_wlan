@@ -1348,7 +1348,7 @@ void cdp_txrx_peer_flush_frags(ol_txrx_soc_handle soc, uint8_t vdev_id,
 							 peer_mac);
 }
 
-#ifdef WLAN_FEATURE_TSF_UPLINK_DELAY
+#if defined(WLAN_FEATURE_TSF_UPLINK_DELAY) || defined(CONFIG_SAWF)
 /**
  * cdp_set_delta_tsf() - wrapper function to set delta_tsf
  * @soc: SOC TXRX handle
@@ -1372,7 +1372,8 @@ static inline void cdp_set_delta_tsf(ol_txrx_soc_handle soc, uint8_t vdev_id,
 
 	soc->ops->ctrl_ops->txrx_set_delta_tsf(soc, vdev_id, delta_tsf);
 }
-
+#endif
+#ifdef WLAN_FEATURE_TSF_UPLINK_DELAY
 /**
  * cdp_set_tsf_ul_delay_report() - Enable or disable reporting uplink delay
  * @soc: SOC TXRX handle

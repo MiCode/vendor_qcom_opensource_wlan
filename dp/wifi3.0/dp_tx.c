@@ -50,6 +50,9 @@
 #include "dp_txrx_wds.h"
 #endif
 #include "cdp_txrx_cmn_reg.h"
+#ifdef CONFIG_SAWF
+#include <dp_sawf.h>
+#endif
 
 /* Flag to skip CCE classify when mesh or tid override enabled */
 #define DP_TX_SKIP_CCE_CLASSIFY \
@@ -3661,6 +3664,30 @@ void dp_tx_comp_fill_tx_completion_stats(struct dp_tx_desc_s *tx_desc,
 
 #endif
 
+#ifdef CONFIG_SAWF
+static void dp_tx_update_peer_sawf_stats(struct dp_soc *soc,
+					 struct dp_vdev *vdev,
+					 struct dp_txrx_peer *txrx_peer,
+					 struct dp_tx_desc_s *tx_desc,
+					 struct hal_tx_completion_status *ts,
+					 uint8_t tid)
+{
+	dp_sawf_tx_compl_update_peer_stats(soc, vdev, txrx_peer, tx_desc,
+					   ts, tid);
+}
+
+#else
+static void dp_tx_update_peer_sawf_stats(struct dp_soc *soc,
+					 struct dp_vdev *vdev,
+					 struct dp_txrx_peer *txrx_peer,
+					 struct dp_tx_desc_s *tx_desc,
+					 struct hal_tx_completion_status *ts,
+					 uint8_t tid)
+{
+}
+
+#endif
+
 #ifdef QCA_PEER_EXT_STATS
 /*
  * dp_tx_compute_tid_delay() - Compute per TID delay
@@ -4291,7 +4318,7 @@ void dp_tx_update_connectivity_stats(struct dp_soc *soc,
 }
 #endif
 
-#ifdef WLAN_FEATURE_TSF_UPLINK_DELAY
+#if defined(WLAN_FEATURE_TSF_UPLINK_DELAY) || defined(CONFIG_SAWF)
 void dp_set_delta_tsf(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
 		      uint32_t delta_tsf)
 {
@@ -4309,7 +4336,8 @@ void dp_set_delta_tsf(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
 
 	dp_vdev_unref_delete(soc, vdev, DP_MOD_ID_CDP);
 }
-
+#endif
+#ifdef WLAN_FEATURE_TSF_UPLINK_DELAY
 QDF_STATUS dp_set_tsf_ul_delay_report(struct cdp_soc_t *soc_hdl,
 				      uint8_t vdev_id, bool enable)
 {
@@ -4540,6 +4568,8 @@ void dp_tx_comp_process_tx_status(struct dp_soc *soc,
 
 	dp_tx_update_peer_stats(tx_desc, ts, txrx_peer, ring_id);
 	dp_tx_update_peer_delay_stats(txrx_peer, tx_desc, ts->tid, ring_id);
+	dp_tx_update_peer_sawf_stats(soc, vdev, txrx_peer, tx_desc,
+				     ts, ts->tid);
 
 #ifdef QCA_SUPPORT_RDK_STATS
 	if (soc->rdkstats_enabled)

@@ -69,7 +69,7 @@ void hal_rx_wbm_err_info_get_generic_li(void *wbm_desc,
 	wbm_er_info->rxdma_err_code = HAL_RX_WBM_RXDMA_ERROR_CODE_GET(wbm_desc);
 }
 
-#ifdef WLAN_FEATURE_TSF_UPLINK_DELAY
+#if defined(WLAN_FEATURE_TSF_UPLINK_DELAY) || defined(CONFIG_SAWF)
 static inline void
 hal_tx_comp_get_buffer_timestamp(void *desc,
 				 struct hal_tx_completion_status *ts)
@@ -77,13 +77,13 @@ hal_tx_comp_get_buffer_timestamp(void *desc,
 	ts->buffer_timestamp = HAL_TX_DESC_GET(desc, WBM_RELEASE_RING_4,
 					       BUFFER_TIMESTAMP);
 }
-#else /* !WLAN_FEATURE_TSF_UPLINK_DELAY */
+#else /* !WLAN_FEATURE_TSF_UPLINK_DELAY || CONFIG_SAWF */
 static inline void
 hal_tx_comp_get_buffer_timestamp(void *desc,
 				 struct hal_tx_completion_status *ts)
 {
 }
-#endif /* WLAN_FEATURE_TSF_UPLINK_DELAY */
+#endif /* WLAN_FEATURE_TSF_UPLINK_DELAY || CONFIG_SAWF */
 
 #ifdef QCA_UNDECODED_METADATA_SUPPORT
 static inline void

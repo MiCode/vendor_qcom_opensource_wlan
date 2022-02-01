@@ -3138,12 +3138,13 @@ struct dp_vdev {
 #ifdef WIFI_MONITOR_SUPPORT
 	struct dp_mon_vdev *monitor_vdev;
 #endif
-
+#if defined(WLAN_FEATURE_TSF_UPLINK_DELAY) || defined(CONFIG_SAWF)
+	/* Delta between TQM clock and TSF clock */
+	uint32_t delta_tsf;
+#endif
 #ifdef WLAN_FEATURE_TSF_UPLINK_DELAY
 	/* Indicate if uplink delay report is enabled or not */
 	qdf_atomic_t ul_delay_report;
-	/* Delta between TQM clock and TSF clock */
-	uint32_t delta_tsf;
 	/* accumulative delay for every TX completion */
 	qdf_atomic_t ul_delay_accum;
 	/* accumulative number of packets delay has accumulated */

@@ -213,7 +213,7 @@ struct hal_tx_completion_status {
 	uint8_t transmit_cnt;
 	uint8_t tid;
 	uint16_t peer_id;
-#ifdef WLAN_FEATURE_TSF_UPLINK_DELAY
+#if defined(WLAN_FEATURE_TSF_UPLINK_DELAY) || defined(CONFIG_SAWF)
 	uint32_t buffer_timestamp:19;
 #endif
 };
