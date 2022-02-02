@@ -6775,6 +6775,7 @@ reg_is_freq_idx_enabled_on_cur_chan_list(struct wlan_regulatory_pdev_priv_obj
 	return !reg_is_chan_disabled_and_not_nol(&cur_chan_list[freq_idx]);
 }
 
+#ifdef CONFIG_BAND_6GHZ
 static inline bool
 reg_is_supr_entry_mode_disabled(const struct super_chan_info *super_chan_ent,
 				enum supported_6g_pwr_types in_6g_pwr_mode)
@@ -6818,6 +6819,18 @@ reg_is_freq_idx_enabled_on_given_pwr_mode(struct wlan_regulatory_pdev_priv_obj
 
 	return !reg_is_supr_entry_mode_disabled(super_chan_ent, in_6g_pwr_mode);
 }
+#else
+static inline bool
+reg_is_freq_idx_enabled_on_given_pwr_mode(struct wlan_regulatory_pdev_priv_obj
+					  *pdev_priv_obj,
+					  enum channel_enum freq_idx,
+					  enum supported_6g_pwr_types
+					  in_6g_pwr_mode)
+{
+	return reg_is_freq_idx_enabled_on_cur_chan_list(pdev_priv_obj,
+							freq_idx);
+}
+#endif /* CONFIG_BAND_6GHZ */
 
 bool
 reg_is_freq_enabled(struct wlan_objmgr_pdev *pdev,
