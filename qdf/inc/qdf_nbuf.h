@@ -1900,6 +1900,9 @@ qdf_net_buf_debug_update_unmap_node(qdf_nbuf_t net_buf,
 }
 /* Nbuf allocation rouines */
 
+#define qdf_nbuf_alloc_simple(d, s) \
+	__qdf_nbuf_alloc_simple(d, s)
+
 #define qdf_nbuf_alloc(osdev, size, reserve, align, prio) \
 	qdf_nbuf_alloc_fl(osdev, size, reserve, align, prio, \
 			  __func__, __LINE__)
