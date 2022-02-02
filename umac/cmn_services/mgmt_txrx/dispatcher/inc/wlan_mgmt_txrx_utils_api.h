@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -767,6 +768,7 @@ enum mgmt_frame_type {
  *          WMI_HOST_RXERR_DECRYPT = 0x08
  *          WMI_HOST_RXERR_MIC = 0x10
  *          WMI_HOST_RXERR_KEY_CACHE_MISS = 0x20
+ *          WMI_HOST_RXERR_PN = 0x80
  * @flags: information about the management frame e.g. can give a
  *         scan source for a scan result mgmt frame
  * @rssi: combined RSSI, i.e. the sum of the snr + noise floor (dBm units)

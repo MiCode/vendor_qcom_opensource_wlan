@@ -6367,6 +6367,7 @@ enum wmi_host_ap_ps_peer_param {
 #define WMI_HOST_RXERR_DECRYPT	0x08 /* non-Michael decrypt error */
 #define WMI_HOST_RXERR_MIC	0x10 /* Michael MIC decrypt error */
 #define WMI_HOST_RXERR_KEY_CACHE_MISS 0x20 /* No/incorrect key matter in h/w */
+#define WMI_HOST_RXERR_PN	0x80 /* invalid PN in frame */
 
 enum wmi_host_sta_ps_param_rx_wake_policy {
 	/* Wake up when ever there is an  RX activity on the VDEV. In this mode

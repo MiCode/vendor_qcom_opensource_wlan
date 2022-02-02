@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2022 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2021 The Linux Foundation. All rights reserved.
  * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
@@ -1448,6 +1448,43 @@ static bool ce_mark_datapath(struct CE_state *ce_state)
 		}
 	}
 	return rc;
+}
+
+/**
+ * hif_get_max_wmi_ep() - Get max WMI EPs configured in target svc map
+ * @hif_ctx: hif opaque handle
+ *
+ * Description:
+ *   Gets number of WMI EPs configured in target svc map. Since EP map
+ *   include IN and OUT direction pipes, count only OUT pipes to get EPs
+ *   configured for WMI service.
+ *
+ * Return:
+ *  uint8_t: count for WMI eps in target svc map
+ */
+uint8_t hif_get_max_wmi_ep(struct hif_opaque_softc *hif_ctx)
+{
+	struct hif_softc *scn = HIF_GET_SOFTC(hif_ctx);
+	struct service_to_pipe *svc_map;
+	uint32_t map_sz, map_len;
+	int    i;
+	uint8_t   wmi_ep_count = 0;
+
+	hif_select_service_to_pipe_map(scn, &svc_map,
+				       &map_sz);
+	map_len = map_sz / sizeof(struct service_to_pipe);
+
+	for (i = 0; i < map_len; i++) {
+		/* Count number of WMI EPs based on out direction */
+		if ((svc_map[i].pipedir == PIPEDIR_OUT) &&
+		    ((svc_map[i].service_id == WMI_CONTROL_SVC)  ||
+		    (svc_map[i].service_id == WMI_CONTROL_SVC_WMAC1) ||
+		    (svc_map[i].service_id == WMI_CONTROL_SVC_WMAC2))) {
+			wmi_ep_count++;
+		}
+	}
+
+	return wmi_ep_count;
 }
 
 /**
