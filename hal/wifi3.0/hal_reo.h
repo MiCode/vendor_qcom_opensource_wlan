@@ -321,8 +321,8 @@ struct hal_reo_cmd_update_queue_params {
 		pn_uneven:1,
 		pn_hand_enab:1,
 		ignore_ampdu:1;
-	uint32_t ba_window_size:9,
-		pn_size:8,
+	uint32_t ba_window_size:15,
+		pn_size:2,
 		svld:1,
 		ssn:12,
 		seq_2k_err_detect:1,

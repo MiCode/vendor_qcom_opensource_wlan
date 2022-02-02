@@ -28,6 +28,12 @@
 
 static uint32_t hal_get_reo_qdesc_size_li(uint32_t ba_window_size, int tid)
 {
+	/* Hardcode the ba_window_size to HAL_RX_MAX_BA_WINDOW for
+	 * NON_QOS_TID until HW issues are resolved.
+	 */
+	if (tid != HAL_NON_QOS_TID)
+		ba_window_size = HAL_RX_MAX_BA_WINDOW;
+
 	/* Return descriptor size corresponding to window size of 2 since
 	 * we set ba_window_size to 2 while setting up REO descriptors as
 	 * a WAR to get 2k jump exception aggregates are received without

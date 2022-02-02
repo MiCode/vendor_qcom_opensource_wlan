@@ -44,6 +44,7 @@
 #include <mon_ingress_ring.h>
 #include <mon_destination_ring.h>
 #endif
+#include "rx_reo_queue_1k.h"
 
 #include <hal_be_rx.h>
 
@@ -1631,6 +1632,50 @@ static void hal_reo_setup_9224(struct hal_soc *soc, void *reoparams)
 	hal_reo_shared_qaddr_init((hal_soc_handle_t)soc);
 }
 
+/**
+ * hal_qcn9224_get_reo_qdesc_size()- Get the reo queue descriptor size
+ *			  from the give Block-Ack window size
+ * Return: reo queue descriptor size
+ */
+static uint32_t hal_qcn9224_get_reo_qdesc_size(uint32_t ba_window_size, int tid)
+{
+	/* Hardcode the ba_window_size to HAL_RX_MAX_BA_WINDOW for
+	 * NON_QOS_TID until HW issues are resolved.
+	 */
+#define HAL_RX_MAX_BA_WINDOW_BE 1024
+	if (tid != HAL_NON_QOS_TID)
+		ba_window_size = HAL_RX_MAX_BA_WINDOW_BE;
+
+	/* Return descriptor size corresponding to window size of 2 since
+	 * we set ba_window_size to 2 while setting up REO descriptors as
+	 * a WAR to get 2k jump exception aggregates are received without
+	 * a BA session.
+	 */
+	if (ba_window_size <= 1) {
+		if (tid != HAL_NON_QOS_TID)
+			return sizeof(struct rx_reo_queue) +
+				sizeof(struct rx_reo_queue_ext);
+		else
+			return sizeof(struct rx_reo_queue);
+	}
+
+	if (ba_window_size <= 105)
+		return sizeof(struct rx_reo_queue) +
+			sizeof(struct rx_reo_queue_ext);
+
+	if (ba_window_size <= 210)
+		return sizeof(struct rx_reo_queue) +
+			(2 * sizeof(struct rx_reo_queue_ext));
+
+	if (ba_window_size <= 256)
+		return sizeof(struct rx_reo_queue) +
+			(3 * sizeof(struct rx_reo_queue_ext));
+
+	return sizeof(struct rx_reo_queue) +
+		(10 * sizeof(struct rx_reo_queue_ext)) +
+		sizeof(struct rx_reo_queue_1k);
+}
+
 static void hal_hw_txrx_ops_attach_qcn9224(struct hal_soc *hal_soc)
 {
 	/* init and setup */
@@ -1840,6 +1885,8 @@ static void hal_hw_txrx_ops_attach_qcn9224(struct hal_soc *hal_soc)
 	hal_soc->ops->hal_reo_shared_qaddr_detach = hal_reo_shared_qaddr_detach_be;
 	hal_soc->ops->hal_reo_shared_qaddr_write = hal_reo_shared_qaddr_write_be;
 #endif
+	/* Overwrite the default BE ops */
+	hal_soc->ops->hal_get_reo_qdesc_size = hal_qcn9224_get_reo_qdesc_size;
 	/* TX MONITOR */
 #ifdef QCA_MONITOR_2_0_SUPPORT
 	hal_soc->ops->hal_txmon_status_parse_tlv =

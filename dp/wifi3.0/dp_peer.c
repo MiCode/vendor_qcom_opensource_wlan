@@ -3268,12 +3268,8 @@ QDF_STATUS dp_rx_tid_setup_wifi3(struct dp_peer *peer, int tid,
 	 * send WMI message to FW to change the REO queue descriptor in Rx
 	 * peer entry as part of dp_rx_tid_update.
 	 */
-	if (tid != DP_NON_QOS_TID)
-		hw_qdesc_size = hal_get_reo_qdesc_size(soc->hal_soc,
-			HAL_RX_MAX_BA_WINDOW, tid);
-	else
-		hw_qdesc_size = hal_get_reo_qdesc_size(soc->hal_soc,
-			ba_window_size, tid);
+	hw_qdesc_size = hal_get_reo_qdesc_size(soc->hal_soc,
+					       ba_window_size, tid);
 
 	hw_qdesc_align = hal_get_reo_qdesc_align(soc->hal_soc);
 	/* To avoid unnecessary extra allocation for alignment, try allocating
@@ -4047,6 +4043,9 @@ int dp_addba_resp_tx_completion_wifi3(struct cdp_soc_t *cdp_soc,
 	if (peer->active_ba_session_cnt == 0) {
 		if (rx_tid->ba_win_size > 64 && rx_tid->ba_win_size <= 256)
 			peer->hw_buffer_size = 256;
+		else if (rx_tid->ba_win_size <= 1024 &&
+			 rx_tid->ba_win_size > 256)
+			peer->hw_buffer_size = 1024;
 		else
 			peer->hw_buffer_size = 64;
 	}
@@ -4472,12 +4471,12 @@ dp_set_pn_check_wifi3(struct cdp_soc_t *soc, uint8_t vdev_id,
 	case cdp_sec_type_aes_gcmp:
 	case cdp_sec_type_aes_gcmp_256:
 		params.u.upd_queue_params.pn_check_needed = 1;
-		params.u.upd_queue_params.pn_size = 48;
+		params.u.upd_queue_params.pn_size = PN_SIZE_48;
 		pn_size = 48;
 		break;
 	case cdp_sec_type_wapi:
 		params.u.upd_queue_params.pn_check_needed = 1;
-		params.u.upd_queue_params.pn_size = 128;
+		params.u.upd_queue_params.pn_size = PN_SIZE_128;
 		pn_size = 128;
 		if (vdev->opmode == wlan_op_mode_ap) {
 			params.u.upd_queue_params.pn_even = 1;
