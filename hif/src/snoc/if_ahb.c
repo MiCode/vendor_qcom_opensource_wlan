@@ -541,6 +541,7 @@ void hif_ahb_disable_bus(struct hif_softc *scn)
 			pfrm_devm_release_mem_region(&pdev->dev, scn->mem_pa,
 						     mem_pa_size);
 			sc->mem = NULL;
+			pld_set_bar_addr(&pdev->dev, NULL);
 		}
 	}
 	scn->mem = NULL;
@@ -625,6 +626,7 @@ QDF_STATUS hif_ahb_enable_bus(struct hif_softc *ol_sc,
 		}
 
 		sc->mem = mem;
+		pld_set_bar_addr(dev, mem);
 		ol_sc->mem = mem;
 		ol_sc->mem_pa = memres->start;
 	}
