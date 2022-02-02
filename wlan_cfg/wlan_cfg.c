@@ -3378,3 +3378,5 @@ bool wlan_cfg_get_txmon_hw_support(struct wlan_cfg_dp_soc_ctxt *cfg)
 {
 	return cfg->txmon_hw_support;
 }
+
+qdf_export_symbol(wlan_cfg_get_txmon_hw_support);

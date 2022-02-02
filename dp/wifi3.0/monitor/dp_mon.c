@@ -1668,6 +1668,10 @@ dp_enable_enhanced_stats(struct cdp_soc_t *soc, uint8_t pdev_id)
 		dp_cal_client_timer_start(mon_pdev->cal_client_ctx);
 
 	mon_pdev->enhanced_stats_en = 1;
+	pdev->enhanced_stats_en = true;
+
+	if (wlan_cfg_get_txmon_hw_support(pdev->soc->wlan_cfg_ctx))
+		return QDF_STATUS_SUCCESS;
 
 	dp_mon_filter_setup_enhanced_stats(pdev);
 	status = dp_mon_filter_update(pdev);
@@ -1676,10 +1680,10 @@ dp_enable_enhanced_stats(struct cdp_soc_t *soc, uint8_t pdev_id)
 		dp_mon_filter_reset_enhanced_stats(pdev);
 		dp_cal_client_timer_stop(mon_pdev->cal_client_ctx);
 		mon_pdev->enhanced_stats_en = 0;
+		pdev->enhanced_stats_en = false;
 		return QDF_STATUS_E_FAILURE;
 	}
 
-	pdev->enhanced_stats_en = true;
 	if (is_ppdu_txrx_capture_enabled(pdev) && !mon_pdev->bpr_enable) {
 		dp_h2t_cfg_stats_msg_send(pdev, DP_PPDU_STATS_CFG_ENH_STATS,
 					  pdev->pdev_id);
@@ -1719,6 +1723,9 @@ dp_disable_enhanced_stats(struct cdp_soc_t *soc, uint8_t pdev_id)
 
 	mon_pdev->enhanced_stats_en = 0;
 	pdev->enhanced_stats_en = false;
+
+	if (wlan_cfg_get_txmon_hw_support(pdev->soc->wlan_cfg_ctx))
+		return QDF_STATUS_SUCCESS;
 
 	if (is_ppdu_txrx_capture_enabled(pdev) && !mon_pdev->bpr_enable) {
 		dp_h2t_cfg_stats_msg_send(pdev, 0, pdev->pdev_id);

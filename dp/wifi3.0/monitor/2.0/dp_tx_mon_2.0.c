@@ -78,9 +78,7 @@ dp_tx_mon_srng_process_2_0(struct dp_soc *soc, struct dp_intr *int_ctx,
 				&& quota--)) {
 		struct hal_mon_desc hal_mon_tx_desc;
 		struct dp_mon_desc *mon_desc;
-		struct dp_mon_desc_pool *tx_desc_pool;
 
-		tx_desc_pool = &mon_soc_be->tx_desc_mon;
 		hal_be_get_mon_dest_status(soc->hal_soc,
 					   tx_mon_dst_ring_desc,
 					   &hal_mon_tx_desc);
