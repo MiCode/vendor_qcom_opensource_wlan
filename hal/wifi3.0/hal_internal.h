@@ -1148,6 +1148,20 @@ struct reo_queue_ref_table {
 };
 
 /**
+ * union hal_shadow_reg_cfg - Shadow register config
+ * @addr: Place holder where shadow address is saved
+ * @v2: shadow config v2 format
+ * @v3: shadow config v3 format
+ */
+union hal_shadow_reg_cfg {
+	uint32_t addr;
+	struct pld_shadow_reg_v2_cfg v2;
+#ifdef CONFIG_SHADOW_V3
+	struct pld_shadow_reg_v3_cfg v3;
+#endif
+};
+
+/**
  * struct hal_soc - HAL context to be used to access SRNG APIs
  *		    (currently used by data path and
  *		    transport (CE) modules)
@@ -1187,7 +1201,7 @@ struct hal_soc {
 	uint32_t target_type;
 
 	/* shadow register configuration */
-	struct pld_shadow_reg_v2_cfg shadow_config[MAX_SHADOW_REGISTERS];
+	union hal_shadow_reg_cfg shadow_config[MAX_SHADOW_REGISTERS];
 	int num_shadow_registers_configured;
 	bool use_register_windowing;
 	uint32_t register_window;
