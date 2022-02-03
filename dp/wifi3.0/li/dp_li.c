@@ -42,7 +42,13 @@ static struct wlan_cfg_tcl_wbm_ring_num_map g_tcl_wbm_map_array[MAX_TCL_DATA_RIN
 static struct wlan_cfg_tcl_wbm_ring_num_map g_tcl_wbm_map_array[MAX_TCL_DATA_RINGS] = {
 	{.tcl_ring_num = 0, .wbm_ring_num = 0, .wbm_rbm_id = HAL_LI_WBM_SW0_BM_ID, .for_ipa = 0},
 	{1, 1, HAL_LI_WBM_SW1_BM_ID, 0},
-	{2, 2, HAL_LI_WBM_SW2_BM_ID, 0}
+	{2, 2, HAL_LI_WBM_SW2_BM_ID, 0},
+	/*
+	 * Although using wbm_ring 4, wbm_ring 3 is mentioned in order to match
+	 * with the tx_mask in dp_service_srngs. Please be carefull while using
+	 * this table anywhere else.
+	 */
+	{3, 3, HAL_LI_WBM_SW4_BM_ID, 0}
 };
 #endif
 

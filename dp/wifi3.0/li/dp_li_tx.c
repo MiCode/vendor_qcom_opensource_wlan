@@ -265,8 +265,9 @@ static inline uint8_t dp_tx_get_rbm_id_li(struct dp_soc *soc,
 static inline uint8_t dp_tx_get_rbm_id_li(struct dp_soc *soc,
 					  uint8_t ring_id)
 {
-	return (ring_id ? soc->wbm_sw0_bm_id + (ring_id - 1) :
-			  HAL_WBM_SW2_BM_ID(soc->wbm_sw0_bm_id));
+	if (ring_id == soc->num_tcl_data_rings)
+		return HAL_WBM_SW4_BM_ID(soc->wbm_sw0_bm_id);
+	return (ring_id + HAL_WBM_SW0_BM_ID(soc->wbm_sw0_bm_id));
 }
 #endif
 #else
