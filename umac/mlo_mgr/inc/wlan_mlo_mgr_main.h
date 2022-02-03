@@ -660,6 +660,26 @@ QDF_STATUS wlan_mlo_mgr_psoc_disable(struct wlan_objmgr_psoc *psoc);
  */
 QDF_STATUS wlan_mlo_mgr_update_mld_addr(struct qdf_mac_addr *old_mac,
 					struct qdf_mac_addr *new_mac);
+#ifdef CONFIG_AP_PLATFORM
+/**
+ * wlan_mlo_vdev_cmp_same_pdev() - Compare pdev of the given vdevs
+ * @vdev: Objmgr vdev of existing MLD vdev
+ * @tmp_vdev: Objmgr vdev of newly added vdev
+ *
+ * API to compare pdev of the vdevs forming MLD.
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS wlan_mlo_vdev_cmp_same_pdev(struct wlan_objmgr_vdev *vdev,
+				       struct wlan_objmgr_vdev *tmp_vdev);
+#else
+static inline
+QDF_STATUS wlan_mlo_vdev_cmp_same_pdev(struct wlan_objmgr_vdev *vdev,
+				       struct wlan_objmgr_vdev *tmp_vdev)
+{
+	return QDF_STATUS_E_FAILURE;
+}
+#endif /* CONFIG_AP_PLATFORM */
 #else
 static inline QDF_STATUS wlan_mlo_mgr_init(void)
 {

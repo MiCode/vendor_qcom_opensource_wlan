@@ -274,6 +274,18 @@ static QDF_STATUS mlo_ap_ctx_init(struct wlan_mlo_dev_context *ml_dev)
 	return QDF_STATUS_SUCCESS;
 }
 
+#ifdef CONFIG_AP_PLATFORM
+QDF_STATUS wlan_mlo_vdev_cmp_same_pdev(struct wlan_objmgr_vdev *vdev,
+				       struct wlan_objmgr_vdev *tmp_vdev)
+{
+	if (wlan_vdev_get_pdev(vdev) ==
+			wlan_vdev_get_pdev(tmp_vdev))
+		return QDF_STATUS_SUCCESS;
+
+	return QDF_STATUS_E_FAILURE;
+}
+#endif
+
 static QDF_STATUS mlo_dev_ctx_init(struct wlan_objmgr_vdev *vdev)
 {
 	struct wlan_mlo_dev_context *ml_dev;
@@ -293,6 +305,14 @@ static QDF_STATUS mlo_dev_ctx_init(struct wlan_objmgr_vdev *vdev)
 					ml_dev->wlan_vdev_list[id]) !=
 						opmode) {
 					mlo_err("Invalid opmode type found, investigate config");
+					mlo_dev_lock_release(ml_dev);
+					return QDF_STATUS_E_FAILURE;
+				}
+
+				if (wlan_mlo_vdev_cmp_same_pdev(
+						ml_dev->wlan_vdev_list[id],
+						vdev) == QDF_STATUS_SUCCESS) {
+					mlo_err("Invalid pdev type found, investigate config");
 					mlo_dev_lock_release(ml_dev);
 					return QDF_STATUS_E_FAILURE;
 				}
