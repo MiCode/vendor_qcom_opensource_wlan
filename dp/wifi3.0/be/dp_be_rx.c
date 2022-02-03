@@ -29,6 +29,7 @@
 #include "hal_api.h"
 #include "hal_be_api.h"
 #include "qdf_nbuf.h"
+#include "hal_be_rx_tlv.h"
 #ifdef MESH_MODE_SUPPORT
 #include "if_meta_hdr.h"
 #endif
@@ -84,7 +85,7 @@ static inline void dp_wds_ext_peer_learn_be(struct dp_soc *soc,
 				&ta_txrx_peer->wds_ext.init))
 		return;
 
-	if (hal_rx_get_mpdu_mac_ad4_valid(soc->hal_soc, rx_tlv_hdr)) {
+	if (hal_rx_get_mpdu_mac_ad4_valid_be(rx_tlv_hdr)) {
 		qdf_atomic_test_and_set_bit(WDS_EXT_PEER_INIT_BIT,
 					    &ta_txrx_peer->wds_ext.init);
 
@@ -584,8 +585,7 @@ done:
 		 * to be written
 		 */
 		if (qdf_unlikely(!qdf_nbuf_is_rx_chfrag_cont(nbuf) &&
-				 !hal_rx_attn_msdu_done_get(hal_soc,
-							    rx_tlv_hdr))) {
+				 !hal_rx_tlv_msdu_done_get_be(rx_tlv_hdr))) {
 			dp_err("MSDU DONE failure");
 			DP_STATS_INC(soc, rx.err.msdu_done_fail, 1);
 			hal_rx_dump_pkt_tlvs(hal_soc, rx_tlv_hdr,
@@ -623,7 +623,8 @@ done:
 		 * This is the most likely case, we receive 802.3 pkts
 		 * decapsulated by HW, here we need to set the pkt length.
 		 */
-		hal_rx_msdu_metadata_get(hal_soc, rx_tlv_hdr, &msdu_metadata);
+		hal_rx_msdu_packet_metadata_get_generic_be(rx_tlv_hdr,
+							   &msdu_metadata);
 		if (qdf_unlikely(qdf_nbuf_is_frag(nbuf))) {
 			bool is_mcbc, is_sa_vld, is_da_vld;
 
@@ -698,9 +699,8 @@ done:
 
 		if (qdf_unlikely(txrx_peer && (txrx_peer->nawds_enabled) &&
 				 (qdf_nbuf_is_da_mcbc(nbuf)) &&
-				 (hal_rx_get_mpdu_mac_ad4_valid(soc->hal_soc,
-								rx_tlv_hdr) ==
-				  false))) {
+				 (hal_rx_get_mpdu_mac_ad4_valid_be(rx_tlv_hdr)
+				  == false))) {
 			tid_stats->fail_cnt[NAWDS_MCAST_DROP]++;
 			DP_PEER_PER_PKT_STATS_INC(txrx_peer,
 						  rx.nawds_mcast_drop, 1);
