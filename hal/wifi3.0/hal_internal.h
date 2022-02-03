@@ -801,6 +801,10 @@ struct hal_hw_txrx_ops {
 					       void *ppdu_info,
 					       hal_soc_handle_t hal_soc_hdl,
 					       qdf_nbuf_t nbuf);
+
+	void (*hal_rx_wbm_rel_buf_paddr_get)(hal_ring_desc_t rx_desc,
+					     struct hal_buf_info *buf_info);
+
 	void (*hal_rx_wbm_err_info_get)(void *wbm_desc,
 				void *wbm_er_info);
 	void (*hal_rx_dump_mpdu_start_tlv)(void *mpdustart,

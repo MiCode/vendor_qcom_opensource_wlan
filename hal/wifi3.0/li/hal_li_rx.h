@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -799,6 +799,16 @@ void hal_rx_msdu_link_desc_reinject(struct hal_soc *soc,
 #define HAL_RX_WBM_BUF_COOKIE_GET(wbm_desc) \
 	HAL_RX_BUF_COOKIE_GET(&((struct wbm_release_ring *) \
 	wbm_desc)->released_buff_or_desc_addr_info)
+
+#define HAL_RX_WBM_BUF_ADDR_39_32_GET(wbm_desc)	\
+	(HAL_RX_BUFFER_ADDR_39_32_GET(&			\
+	(((struct wbm_release_ring *) \
+	wbm_desc)->released_buff_or_desc_addr_info)))
+
+#define HAL_RX_WBM_BUF_ADDR_31_0_GET(wbm_desc)	\
+	(HAL_RX_BUFFER_ADDR_31_0_GET(&			\
+	(((struct wbm_release_ring *) \
+	wbm_desc)->released_buff_or_desc_addr_info)))
 
 static inline
 uint32_t

@@ -993,6 +993,20 @@ uint8_t hal_get_idle_link_bm_id_be(uint8_t chip_id)
 	return (WBM_IDLE_DESC_LIST + chip_id);
 }
 
+static inline void
+hal_rx_wbm_rel_buf_paddr_get_be(hal_ring_desc_t rx_desc,
+				struct hal_buf_info *buf_info)
+{
+	struct wbm_release_ring *wbm_rel_ring =
+		 (struct wbm_release_ring *)rx_desc;
+
+	buf_info->paddr =
+	 (HAL_RX_WBM_BUF_ADDR_31_0_GET(wbm_rel_ring) |
+	  ((uint64_t)(HAL_RX_WBM_BUF_ADDR_39_32_GET(wbm_rel_ring)) << 32));
+
+	buf_info->sw_cookie = HAL_RX_WBM_BUF_COOKIE_GET(wbm_rel_ring);
+}
+
 /**
  * hal_hw_txrx_default_ops_attach_be() - Attach the default hal ops for
  *		beryllium chipsets.
@@ -1036,6 +1050,8 @@ void hal_hw_txrx_default_ops_attach_be(struct hal_soc *hal_soc)
 	hal_soc->ops->hal_rx_err_status_get = hal_rx_err_status_get_be;
 	hal_soc->ops->hal_rx_reo_buf_type_get = hal_rx_reo_buf_type_get_be;
 	hal_soc->ops->hal_rx_wbm_err_src_get = hal_rx_wbm_err_src_get_be;
+	hal_soc->ops->hal_rx_wbm_rel_buf_paddr_get =
+					hal_rx_wbm_rel_buf_paddr_get_be;
 
 	hal_soc->ops->hal_reo_send_cmd = hal_reo_send_cmd_be;
 	hal_soc->ops->hal_reo_qdesc_setup = hal_reo_qdesc_setup_be;
