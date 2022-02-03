@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021,2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -192,6 +192,7 @@ void htt_htc_pkt_pool_free(struct htt_soc *soc);
 	__QDF_TRACE_FL(QDF_TRACE_LEVEL_INFO_HIGH, QDF_MODULE_ID_DP_HTT_TX_STATS, ## params)
 #define dp_htt_tx_stats_debug(params...) QDF_TRACE_DEBUG(QDF_MODULE_ID_DP_HTT_TX_STATS, params)
 
+#define RXMON_GLOBAL_EN_SHIFT 28
 /**
  * enum dp_full_mon_config - enum to enable/disable full monitor mode
  *
@@ -653,6 +654,7 @@ struct htt_rx_ring_tlv_filter {
 		 ctrl_mpdu_log:1,
 		 data_mpdu_log:1;
 #endif
+	uint8_t rx_mon_global_en;
 };
 
 /**

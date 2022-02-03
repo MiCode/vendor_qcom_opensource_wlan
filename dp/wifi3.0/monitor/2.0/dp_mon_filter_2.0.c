@@ -1117,6 +1117,7 @@ void dp_mon_filter_setup_rx_mon_mode_2_0(struct dp_pdev *pdev)
 
 	rx_tlv_filter = &filter.rx_tlv_filter;
 	rx_tlv_filter->valid = true;
+	rx_tlv_filter->tlv_filter.rx_mon_global_en = 1;
 
 	dp_mon_filter_set_status_cmn(mon_pdev, rx_tlv_filter);
 	dp_mon_filter_show_filter(mon_pdev, mode, rx_tlv_filter);
@@ -1434,6 +1435,7 @@ void dp_mon_filter_setup_rx_pkt_log_full_2_0(struct dp_pdev *pdev)
 
 	/* Enabled the filter */
 	filter.rx_tlv_filter.valid = true;
+	rx_tlv_filter->rx_mon_global_en = 1;
 	dp_mon_filter_set_status_cmn(&mon_pdev_be->mon_pdev,
 				     &filter.rx_tlv_filter);
 
@@ -1484,6 +1486,7 @@ void dp_mon_filter_setup_rx_pkt_log_lite_2_0(struct dp_pdev *pdev)
 
 	/* Enabled the filter */
 	filter.rx_tlv_filter.valid = true;
+	filter.rx_tlv_filter.tlv_filter.rx_mon_global_en = 1;
 	dp_mon_filter_set_status_cmn(&mon_pdev_be->mon_pdev,
 				     &filter.rx_tlv_filter);
 
@@ -1714,6 +1717,7 @@ dp_rx_mon_filter_h2t_setup(struct dp_soc *soc, struct dp_pdev *pdev,
 			continue;
 
 		filter->valid = true;
+		tlv_filter->rx_mon_global_en = 1;
 
 		/*
 		 * Set the super bit fields
