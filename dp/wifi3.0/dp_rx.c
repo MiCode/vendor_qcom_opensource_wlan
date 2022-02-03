@@ -875,6 +875,10 @@ bool dp_rx_intrabss_mcbc_fwd(struct dp_soc *soc, struct dp_txrx_peer *ta_peer,
 
 	dp_classify_critical_pkts(soc, ta_peer->vdev, nbuf_copy);
 
+	if (soc->arch_ops.dp_rx_intrabss_handle_nawds(soc, ta_peer, nbuf_copy,
+						      tid_stats))
+		return false;
+
 	if (dp_tx_send((struct cdp_soc_t *)soc,
 		       ta_peer->vdev->vdev_id, nbuf_copy)) {
 		DP_PEER_PER_PKT_STATS_INC_PKT(ta_peer, rx.intra_bss.fail, 1,

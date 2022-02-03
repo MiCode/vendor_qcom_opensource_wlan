@@ -2737,6 +2737,9 @@ static bool dp_check_exc_metadata(struct cdp_tx_exception_metadata *tx_exc)
 	bool invalid_cookie = (tx_exc->is_tx_sniffer == 1 &&
 			       tx_exc->ppdu_cookie == 0);
 
+	if (tx_exc->is_intrabss_fwd)
+		return true;
+
 	if (invalid_tid || invalid_encap_type || invalid_sec_type ||
 	    invalid_cookie) {
 		return false;
@@ -2826,6 +2829,77 @@ dp_tx_per_pkt_vdev_id_check(qdf_nbuf_t nbuf, struct dp_vdev *vdev)
 	qdf_spin_unlock_bh(&vdev->pdev->soc->ast_lock);
 
 	return QDF_STATUS_SUCCESS;
+}
+
+/**
+ * dp_tx_nawds_handler() - NAWDS handler
+ *
+ * @soc: DP soc handle
+ * @vdev_id: id of DP vdev handle
+ * @msdu_info: msdu_info required to create HTT metadata
+ * @nbuf: skb
+ *
+ * This API transfers the multicast frames with the peer id
+ * on NAWDS enabled peer.
+
+ * Return: none
+ */
+
+static inline
+void dp_tx_nawds_handler(struct dp_soc *soc, struct dp_vdev *vdev,
+			 struct dp_tx_msdu_info_s *msdu_info,
+			 qdf_nbuf_t nbuf, uint16_t sa_peer_id)
+{
+	struct dp_peer *peer = NULL;
+	qdf_nbuf_t nbuf_clone = NULL;
+	uint16_t peer_id = DP_INVALID_PEER;
+	struct dp_txrx_peer *txrx_peer;
+
+	qdf_spin_lock_bh(&vdev->peer_list_lock);
+	TAILQ_FOREACH(peer, &vdev->peer_list, peer_list_elem) {
+		txrx_peer = dp_get_txrx_peer(peer);
+		if (!txrx_peer)
+			continue;
+
+		if (!txrx_peer->bss_peer && txrx_peer->nawds_enabled) {
+			peer_id = peer->peer_id;
+			/* Multicast packets needs to be
+			 * dropped in case of intra bss forwarding
+			 */
+			if (sa_peer_id == peer->peer_id) {
+				dp_tx_debug("multicast packet");
+				DP_PEER_PER_PKT_STATS_INC(txrx_peer,
+							  tx.nawds_mcast_drop,
+							  1);
+				continue;
+			}
+
+			nbuf_clone = qdf_nbuf_clone(nbuf);
+
+			if (!nbuf_clone) {
+				QDF_TRACE(QDF_MODULE_ID_DP,
+					  QDF_TRACE_LEVEL_ERROR,
+					  FL("nbuf clone failed"));
+				break;
+			}
+
+			nbuf_clone = dp_tx_send_msdu_single(vdev, nbuf_clone,
+							    msdu_info, peer_id,
+							    NULL);
+
+			if (nbuf_clone) {
+				dp_tx_debug("pkt send failed");
+				qdf_nbuf_free(nbuf_clone);
+			} else {
+				if (peer_id != DP_INVALID_PEER)
+					DP_PEER_PER_PKT_STATS_INC_PKT(txrx_peer,
+								      tx.nawds_mcast,
+								      1, qdf_nbuf_len(nbuf));
+			}
+		}
+	}
+
+	qdf_spin_unlock_bh(&vdev->peer_list_lock);
 }
 
 /**
@@ -2935,20 +3009,36 @@ dp_tx_send_exception(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
 	 */
 	dp_tx_get_queue(vdev, nbuf, &msdu_info.tx_queue);
 
-	/*
-	 * Check exception descriptors
-	 */
-	if (dp_tx_exception_limit_check(vdev))
-		goto fail;
+	if (qdf_likely(tx_exc_metadata->is_intrabss_fwd)) {
+		if (qdf_unlikely(vdev->nawds_enabled)) {
+			/*
+			 * This is a multicast packet
+			 */
+			dp_tx_nawds_handler(soc, vdev, &msdu_info, nbuf,
+					    tx_exc_metadata->peer_id);
+			DP_STATS_INC_PKT(vdev, tx_i.nawds_mcast,
+					 1, qdf_nbuf_len(nbuf));
+		}
 
-	/*  Single linear frame */
-	/*
-	 * If nbuf is a simple linear frame, use send_single function to
-	 * prepare direct-buffer type TCL descriptor and enqueue to TCL
-	 * SRNG. There is no need to setup a MSDU extension descriptor.
-	 */
-	nbuf = dp_tx_send_msdu_single(vdev, nbuf, &msdu_info,
-			tx_exc_metadata->peer_id, tx_exc_metadata);
+		nbuf = dp_tx_send_msdu_single(vdev, nbuf, &msdu_info,
+					      DP_INVALID_PEER, NULL);
+	} else {
+		/*
+		 * Check exception descriptors
+		 */
+		if (dp_tx_exception_limit_check(vdev))
+			goto fail;
+
+		/*  Single linear frame */
+		/*
+		 * If nbuf is a simple linear frame, use send_single function to
+		 * prepare direct-buffer type TCL descriptor and enqueue to TCL
+		 * SRNG. There is no need to setup a MSDU extension descriptor.
+		 */
+		nbuf = dp_tx_send_msdu_single(vdev, nbuf, &msdu_info,
+					      tx_exc_metadata->peer_id,
+					      tx_exc_metadata);
+	}
 
 	dp_vdev_unref_delete(soc, vdev, DP_MOD_ID_TX_EXCEPTION);
 	return nbuf;
@@ -3098,97 +3188,6 @@ qdf_nbuf_t dp_tx_send_mesh(struct cdp_soc_t *soc, uint8_t vdev_id,
 }
 
 #endif
-
-/**
- * dp_tx_nawds_handler() - NAWDS handler
- *
- * @soc: DP soc handle
- * @vdev_id: id of DP vdev handle
- * @msdu_info: msdu_info required to create HTT metadata
- * @nbuf: skb
- *
- * This API transfers the multicast frames with the peer id
- * on NAWDS enabled peer.
-
- * Return: none
- */
-
-static inline
-void dp_tx_nawds_handler(struct dp_soc *soc, struct dp_vdev *vdev,
-			 struct dp_tx_msdu_info_s *msdu_info, qdf_nbuf_t nbuf)
-{
-	struct dp_peer *peer = NULL;
-	qdf_nbuf_t nbuf_clone = NULL;
-	uint16_t peer_id = DP_INVALID_PEER;
-	uint16_t sa_peer_id = DP_INVALID_PEER;
-	struct dp_ast_entry *ast_entry = NULL;
-	qdf_ether_header_t *eh = (qdf_ether_header_t *)qdf_nbuf_data(nbuf);
-	struct dp_txrx_peer *txrx_peer;
-
-	if (!soc->ast_offload_support) {
-		if (qdf_nbuf_get_tx_ftype(nbuf) == CB_FTYPE_INTRABSS_FWD) {
-			qdf_spin_lock_bh(&soc->ast_lock);
-			ast_entry = dp_peer_ast_hash_find_by_pdevid
-				(soc,
-				 (uint8_t *)(eh->ether_shost),
-				 vdev->pdev->pdev_id);
-			if (ast_entry)
-				sa_peer_id = ast_entry->peer_id;
-			qdf_spin_unlock_bh(&soc->ast_lock);
-		}
-	} else {
-		if ((qdf_nbuf_get_tx_ftype(nbuf) == CB_FTYPE_INTRABSS_FWD) &&
-		    qdf_nbuf_get_tx_fctx(nbuf))
-			sa_peer_id = *(uint32_t *)qdf_nbuf_get_tx_fctx(nbuf);
-	}
-
-	qdf_spin_lock_bh(&vdev->peer_list_lock);
-	TAILQ_FOREACH(peer, &vdev->peer_list, peer_list_elem) {
-		txrx_peer = dp_get_txrx_peer(peer);
-		if (!txrx_peer)
-			continue;
-
-		if (!txrx_peer->bss_peer && txrx_peer->nawds_enabled) {
-			peer_id = peer->peer_id;
-			/* Multicast packets needs to be
-			 * dropped in case of intra bss forwarding
-			 */
-			if (sa_peer_id == peer->peer_id) {
-				dp_tx_debug("multicast packet");
-				DP_PEER_PER_PKT_STATS_INC(txrx_peer,
-							  tx.nawds_mcast_drop,
-							  1);
-				continue;
-			}
-
-			nbuf_clone = qdf_nbuf_clone(nbuf);
-
-			if (!nbuf_clone) {
-				QDF_TRACE(QDF_MODULE_ID_DP,
-					  QDF_TRACE_LEVEL_ERROR,
-					  FL("nbuf clone failed"));
-				break;
-			}
-
-			nbuf_clone = dp_tx_send_msdu_single(vdev, nbuf_clone,
-							    msdu_info, peer_id,
-							    NULL);
-
-			if (nbuf_clone) {
-				dp_tx_debug("pkt send failed");
-				qdf_nbuf_free(nbuf_clone);
-			} else {
-				if (peer_id != DP_INVALID_PEER) {
-					DP_PEER_PER_PKT_STATS_INC_PKT(txrx_peer,
-								      tx.nawds_mcast,
-								      1, qdf_nbuf_len(nbuf));
-				}
-			}
-		}
-	}
-
-	qdf_spin_unlock_bh(&vdev->peer_list_lock);
-}
 
 #ifdef QCA_DP_TX_NBUF_AND_NBUF_DATA_PREFETCH
 static inline
@@ -3350,8 +3349,27 @@ qdf_nbuf_t dp_tx_send(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
 	if (qdf_unlikely(vdev->nawds_enabled)) {
 		qdf_ether_header_t *eh = (qdf_ether_header_t *)
 					  qdf_nbuf_data(nbuf);
-		if (DP_FRAME_IS_MULTICAST((eh)->ether_dhost))
-			dp_tx_nawds_handler(soc, vdev, &msdu_info, nbuf);
+		if (DP_FRAME_IS_MULTICAST((eh)->ether_dhost)) {
+			uint16_t sa_peer_id = DP_INVALID_PEER;
+
+			if (!soc->ast_offload_support &&
+			    qdf_nbuf_get_tx_ftype(nbuf) ==
+							CB_FTYPE_INTRABSS_FWD) {
+				struct dp_ast_entry *ast_entry = NULL;
+
+				qdf_spin_lock_bh(&soc->ast_lock);
+				ast_entry = dp_peer_ast_hash_find_by_pdevid
+					(soc,
+					 (uint8_t *)(eh->ether_shost),
+					 vdev->pdev->pdev_id);
+				if (ast_entry)
+					sa_peer_id = ast_entry->peer_id;
+				qdf_spin_unlock_bh(&soc->ast_lock);
+			}
+
+			dp_tx_nawds_handler(soc, vdev, &msdu_info, nbuf,
+					    sa_peer_id);
+		}
 
 		peer_id = DP_INVALID_PEER;
 		DP_STATS_INC_PKT(vdev, tx_i.nawds_mcast,

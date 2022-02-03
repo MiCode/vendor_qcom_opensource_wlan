@@ -21,6 +21,7 @@
 #include "hal_hw_headers.h"
 #include "dp_types.h"
 #include "dp_rx.h"
+#include "dp_tx.h"
 #include "dp_be_rx.h"
 #include "dp_peer.h"
 #include "hal_rx.h"
@@ -1372,6 +1373,48 @@ rel_da_peer:
 }
 #endif /* WLAN_MLO_MULTI_CHIP */
 #endif /* INTRA_BSS_FWD_OFFLOAD */
+
+/*
+ * dp_rx_intrabss_handle_nawds_be() - Forward mcbc intrabss pkts in nawds case
+ * @soc: core txrx main context
+ * @ta_txrx_peer: source txrx_peer entry
+ * @nbuf_copy: nbuf that has to be intrabss forwarded
+ * @tid_stats: tid_stats structure
+ *
+ * Return: true if it is forwarded else false
+ */
+bool
+dp_rx_intrabss_handle_nawds_be(struct dp_soc *soc,
+			       struct dp_txrx_peer *ta_txrx_peer,
+			       qdf_nbuf_t nbuf_copy,
+			       struct cdp_tid_rx_stats *tid_stats)
+{
+	if (qdf_unlikely(ta_txrx_peer->vdev->nawds_enabled)) {
+		struct cdp_tx_exception_metadata tx_exc_metadata = {0};
+		uint16_t len = QDF_NBUF_CB_RX_PKT_LEN(nbuf_copy);
+
+		tx_exc_metadata.peer_id = ta_txrx_peer->peer_id;
+		tx_exc_metadata.is_intrabss_fwd = 1;
+		tx_exc_metadata.tid = HTT_TX_EXT_TID_INVALID;
+		if (dp_tx_send_exception((struct cdp_soc_t *)soc,
+					 ta_txrx_peer->vdev->vdev_id,
+					 nbuf_copy,
+					 &tx_exc_metadata)) {
+			DP_PEER_PER_PKT_STATS_INC_PKT(ta_txrx_peer,
+						      rx.intra_bss.fail, 1,
+						      len);
+			tid_stats->fail_cnt[INTRABSS_DROP]++;
+			qdf_nbuf_free(nbuf_copy);
+		} else {
+			DP_PEER_PER_PKT_STATS_INC_PKT(ta_txrx_peer,
+						      rx.intra_bss.pkts, 1,
+						      len);
+			tid_stats->intrabss_cnt++;
+		}
+		return true;
+	}
+	return false;
+}
 
 /*
  * dp_rx_intrabss_fwd_be() - API for intrabss fwd. For EAPOL

@@ -1728,6 +1728,12 @@ struct dp_arch_ops {
 						void *ring_desc,
 						struct dp_rx_desc **r_rx_desc);
 
+	bool
+	(*dp_rx_intrabss_handle_nawds)(struct dp_soc *soc,
+				       struct dp_txrx_peer *ta_txrx_peer,
+				       qdf_nbuf_t nbuf_copy,
+				       struct cdp_tid_rx_stats *tid_stats);
+
 	struct dp_rx_desc *(*dp_rx_desc_cookie_2_va)(struct dp_soc *soc,
 						     uint32_t cookie);
 	uint32_t (*dp_service_near_full_srngs)(struct dp_soc *soc,

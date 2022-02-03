@@ -1589,6 +1589,7 @@ void dp_initialize_arch_ops_be(struct dp_arch_ops *arch_ops)
 	arch_ops->txrx_get_mon_context_size = dp_mon_get_context_size_be;
 	arch_ops->dp_rx_desc_cookie_2_va =
 			dp_rx_desc_cookie_2_va_be;
+	arch_ops->dp_rx_intrabss_handle_nawds = dp_rx_intrabss_handle_nawds_be;
 
 	arch_ops->txrx_soc_attach = dp_soc_attach_be;
 	arch_ops->txrx_soc_detach = dp_soc_detach_be;
