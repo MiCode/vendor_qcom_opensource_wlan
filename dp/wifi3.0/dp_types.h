@@ -2310,7 +2310,8 @@ struct dp_soc {
 #endif
 	uint8_t rxdma2sw_rings_not_supported:1,
 		wbm_sg_last_msdu_war:1,
-		mec_fw_offload:1;
+		mec_fw_offload:1,
+		multi_peer_grp_cmd_supported:1;
 
 	/* Number of Rx refill rings */
 	uint8_t num_rx_refill_buf_rings;

@@ -11648,6 +11648,11 @@ static QDF_STATUS dp_soc_set_param(struct cdp_soc_t  *soc_hdl,
 		dp_info("Eapol over control_port:%d",
 			soc->eapol_over_control_port);
 		break;
+	case DP_SOC_PARAM_MULTI_PEER_GRP_CMD_SUPPORT:
+		soc->multi_peer_grp_cmd_supported = value;
+		dp_info("Multi Peer group command support:%d",
+			soc->multi_peer_grp_cmd_supported);
+		break;
 	default:
 		dp_info("not handled param %d ", param);
 		break;
