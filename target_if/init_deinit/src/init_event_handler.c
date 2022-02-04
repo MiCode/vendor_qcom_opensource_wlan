@@ -793,10 +793,10 @@ static int init_deinit_ready_event_handler(ol_scn_t scn_handle,
 			wlan_psoc_set_hw_macaddr(psoc, myaddr);
 	}
 
-	init_deinit_mlo_update_pdev_ready(psoc, num_radios);
 out:
 	target_if_btcoex_cfg_enable(psoc, tgt_hdl, event);
 	tgt_hdl->info.wmi_ready = TRUE;
+	init_deinit_mlo_update_pdev_ready(psoc, num_radios);
 exit:
 	init_deinit_wakeup_host_wait(psoc, tgt_hdl);
 
