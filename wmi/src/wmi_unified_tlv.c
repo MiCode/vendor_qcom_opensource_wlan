@@ -18423,6 +18423,8 @@ static void populate_tlv_service(uint32_t *wmi_service)
 #endif
 	wmi_service[wmi_service_pdev_rate_config_support] =
 			WMI_SERVICE_PDEV_RATE_CONFIG_SUPPORT;
+	wmi_service[wmi_service_multi_peer_group_cmd_support] =
+			WMI_SERVICE_MULTIPLE_PEER_GROUP_CMD_SUPPORT;
 }
 
 /**

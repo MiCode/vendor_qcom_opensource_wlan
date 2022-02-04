@@ -268,6 +268,12 @@ static int init_deinit_service_ready_event_handler(ol_scn_t scn_handle,
 		cdp_soc_set_param(wlan_psoc_get_dp_handle(psoc),
 				  DP_SOC_PARAM_CMEM_FSE_SUPPORT, 1);
 
+	/* Send multi_peer_group support to DP layer */
+	if (wmi_service_enabled(wmi_handle,
+				wmi_service_multi_peer_group_cmd_support))
+		cdp_soc_set_param(wlan_psoc_get_dp_handle(psoc),
+				  DP_SOC_PARAM_MULTI_PEER_GRP_CMD_SUPPORT, 1);
+
 	if (wmi_service_enabled(wmi_handle, wmi_service_ext_msg)) {
 		target_if_debug("Wait for EXT message");
 	} else {

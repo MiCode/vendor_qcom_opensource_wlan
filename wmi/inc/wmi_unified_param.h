@@ -5507,6 +5507,7 @@ typedef enum {
 	wmi_service_mlo_sta_nan_ndi_support,
 #endif
 	wmi_service_pdev_rate_config_support,
+	wmi_service_multi_peer_group_cmd_support,
 	wmi_services_max,
 } wmi_conv_service_ids;
 #define WMI_SERVICE_UNAVAILABLE 0xFFFF
