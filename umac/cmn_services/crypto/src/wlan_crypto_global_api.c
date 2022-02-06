@@ -4803,3 +4803,46 @@ QDF_STATUS wlan_crypto_create_fils_rik(uint8_t *rrk, uint8_t rrk_len,
 	return QDF_STATUS_SUCCESS;
 }
 #endif /* WLAN_FEATURE_FILS_SK */
+
+#if defined(WIFI_POS_CONVERGED) && defined(WLAN_FEATURE_RTT_11AZ_SUPPORT)
+QDF_STATUS
+wlan_crypto_set_ltf_keyseed(struct wlan_objmgr_psoc *psoc,
+			    struct wlan_crypto_ltf_keyseed_data *data)
+{
+	QDF_STATUS status = QDF_STATUS_SUCCESS;
+	struct wlan_lmac_if_tx_ops *tx_ops;
+
+	tx_ops = wlan_psoc_get_lmac_if_txops(psoc);
+	if (!tx_ops) {
+		crypto_err("tx_ops is NULL");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	if (WLAN_CRYPTO_TX_OPS_SET_LTF_KEYSEED(tx_ops))
+		status = WLAN_CRYPTO_TX_OPS_SET_LTF_KEYSEED(tx_ops)(psoc, data);
+
+	return status;
+}
+#endif
+
+QDF_STATUS
+wlan_crypto_vdev_set_param(struct wlan_objmgr_psoc *psoc, uint32_t vdev_id,
+			   uint32_t param_id, uint32_t param_value)
+{
+	QDF_STATUS status = QDF_STATUS_SUCCESS;
+	struct wlan_lmac_if_tx_ops *tx_ops;
+
+	tx_ops = wlan_psoc_get_lmac_if_txops(psoc);
+	if (!tx_ops) {
+		crypto_err("tx_ops is NULL");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	if (WLAN_CRYPTO_TX_OPS_SET_VDEV_PARAM(tx_ops))
+		status = WLAN_CRYPTO_TX_OPS_SET_VDEV_PARAM(tx_ops) (psoc,
+								    vdev_id,
+								    param_id,
+								    param_value);
+
+	return status;
+}

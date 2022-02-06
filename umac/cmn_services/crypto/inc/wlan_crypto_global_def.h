@@ -193,6 +193,22 @@ enum wlan_crypto_rsnx_cap {
 	WLAN_CRYPTO_RSNX_CAP_PROTECTED_TWT = 0x10,
 	WLAN_CRYPTO_RSNX_CAP_SAE_H2E = 0x20,
 	WLAN_CRYPTO_RSNX_CAP_SAE_PK = 0x40,
+	WLAN_CRYPTO_RSNX_CAP_SECURE_LTF = 0x400,
+	WLAN_CRYPTO_RSNX_CAP_SECURE_RTT = 0x1000,
+	WLAN_CRYPTO_RSNX_CAP_URNM_MFPR = 0x2000,
+};
+
+/**
+ * wlan_crypto_vdev_pasn_caps  - PASN peer related vdev
+ * crypto parameters
+ * @WLAN_CRYPTO_URNM_MFPR: URNM MFP required in RSNXE
+ * @WLAN_CRYPTO_MFPC: MFP capable bit from RSN IE
+ * @WLAN_CRYPTO_MFPR: MFP required from RSNIE
+ */
+enum wlan_crypto_vdev_pasn_caps {
+	WLAN_CRYPTO_URNM_MFPR = BIT(0),
+	WLAN_CRYPTO_MFPC = BIT(1),
+	WLAN_CRYPTO_MFPR = BIT(2),
 };
 
 typedef enum wlan_crypto_key_mgmt {
@@ -323,6 +339,24 @@ struct wlan_crypto_params {
 	uint16_t rsn_caps;
 };
 
+/**
+ * struct wlan_crypto_ltf_keyseed_data - LTF keyseed parameters
+ * @vdev_id: Vdev id
+ * @peer_mac_addr: Peer mac address
+ * @src_mac_addr: Source mac address
+ * @rsn_authmode: Cipher suite
+ * @key_seed: Secure LTF key seed
+ * @key_seed_len: Key seed length
+ */
+struct wlan_crypto_ltf_keyseed_data {
+	uint8_t vdev_id;
+	struct qdf_mac_addr peer_mac_addr;
+	struct qdf_mac_addr src_mac_addr;
+	uint8_t rsn_authmode;
+	uint8_t key_seed[WLAN_MAX_SECURE_LTF_KEYSEED_LEN];
+	uint16_t key_seed_len;
+};
+
 typedef enum wlan_crypto_param_type {
 	WLAN_CRYPTO_PARAM_AUTH_MODE,
 	WLAN_CRYPTO_PARAM_UCAST_CIPHER,
@@ -342,6 +376,7 @@ typedef enum wlan_crypto_param_type {
  * @keyix:          key id
  * @cipher_type:    cipher type being used for this key
  * @mac_addr:       MAC address of the peer
+ * @src_addr:       Source mac address associated with the key
  * @cipher_table:   table which stores cipher related info
  * @private:        private pointer to save cipher context
  * @keylock:        spin lock
@@ -363,6 +398,7 @@ struct wlan_crypto_key {
 	uint16_t    keyix;
 	enum wlan_crypto_cipher_type cipher_type;
 	uint8_t     macaddr[QDF_MAC_ADDR_SIZE];
+	struct qdf_mac_addr src_addr;
 	void        *cipher_table;
 	void        *private;
 	qdf_spinlock_t	keylock;
@@ -423,6 +459,8 @@ struct wlan_crypto_req_key {
  * @defaultkey: function pointer to set default key
  * @set_key: converged function pointer to set key in hw
  * @getpn: function pointer to get current pn value of peer
+ * @set_ltf_keyseed: Set LTF keyseed
+ * @set_vdev_param: Set the vdev crypto parameter
  * @register_events: function pointer to register wmi event handler
  * @deregister_events: function pointer to deregister wmi event handler
  */
@@ -444,6 +482,11 @@ struct wlan_lmac_if_crypto_tx_ops {
 			      enum wlan_crypto_key_type key_type);
 	QDF_STATUS(*getpn)(struct wlan_objmgr_vdev *vdev,
 			   uint8_t *macaddr, uint32_t key_type);
+	QDF_STATUS (*set_ltf_keyseed)(struct wlan_objmgr_psoc *psoc,
+				      struct wlan_crypto_ltf_keyseed_data *ks);
+	QDF_STATUS (*set_vdev_param)(struct wlan_objmgr_psoc *psoc,
+				     uint32_t vdev_id, uint32_t param_id,
+				     uint32_t param_value);
 	QDF_STATUS (*register_events)(struct wlan_objmgr_psoc *psoc);
 	QDF_STATUS (*deregister_events)(struct wlan_objmgr_psoc *psoc);
 };

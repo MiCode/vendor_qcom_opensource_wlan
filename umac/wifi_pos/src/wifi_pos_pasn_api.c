@@ -369,6 +369,18 @@ QDF_STATUS wifi_pos_handle_ranging_peer_create(struct wlan_objmgr_psoc *psoc,
 			continue;
 		}
 
+		if (req[i].is_ltf_keyseed_required) {
+			peer = wlan_objmgr_get_peer_by_mac(psoc,
+							   req[i].peer_mac.bytes,
+							   WLAN_WIFI_POS_CORE_ID);
+			if (peer) {
+				wifi_pos_set_peer_ltf_keyseed_required(peer,
+								       true);
+				wlan_objmgr_peer_release_ref(peer,
+							     WLAN_WIFI_POS_CORE_ID);
+			}
+		}
+
 		/* Track the peers only for I-STA mode */
 		if (wlan_vdev_mlme_get_opmode(vdev) == QDF_STA_MODE)
 			wifi_pos_add_peer_to_list(vdev, &req[i], true);
@@ -522,4 +534,109 @@ no_peer:
 	qdf_mem_free(del_peer_list);
 
 	return status;
+}
+
+QDF_STATUS
+wifi_pos_send_pasn_auth_status(struct wlan_objmgr_psoc *psoc,
+			       struct wlan_pasn_auth_status *data)
+{
+	struct wlan_lmac_if_wifi_pos_tx_ops *tx_ops;
+	QDF_STATUS status;
+	uint8_t vdev_id = data->vdev_id;
+	struct wifi_pos_vdev_priv_obj *vdev_pos_obj;
+	struct wifi_pos_11az_context *pasn_context;
+	struct wlan_objmgr_vdev *vdev;
+	uint8_t i, failed_peers_counter = 0, total_peers_to_fill = 0;
+
+	tx_ops = wifi_pos_get_tx_ops(psoc);
+	if (!tx_ops || !tx_ops->send_rtt_pasn_auth_status) {
+		wifi_pos_err("%s is null",
+			     tx_ops ? "Tx_ops" : "send_auth_status cb");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(psoc, vdev_id,
+						    WLAN_WIFI_POS_CORE_ID);
+	if (!vdev) {
+		wifi_pos_err("vdev obj is null");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	vdev_pos_obj = wifi_pos_get_vdev_priv_obj(vdev);
+	if (!vdev_pos_obj) {
+		wifi_pos_err("Wifi pos vdev priv obj is null");
+		wlan_objmgr_vdev_release_ref(vdev, WLAN_WIFI_POS_CORE_ID);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	pasn_context = &vdev_pos_obj->pasn_context;
+	total_peers_to_fill = data->num_peers + pasn_context->num_failed_peers;
+	for (i = data->num_peers; i < total_peers_to_fill; i++) {
+		data->auth_status[i].peer_mac =
+			pasn_context->failed_peer_list[failed_peers_counter];
+		data->auth_status[i].status =
+			WLAN_PASN_AUTH_STATUS_PEER_CREATE_FAILED;
+
+		failed_peers_counter++;
+		if (failed_peers_counter >= pasn_context->num_failed_peers)
+			break;
+	}
+
+	status = tx_ops->send_rtt_pasn_auth_status(psoc, data);
+	if (QDF_IS_STATUS_ERROR(status))
+		wifi_pos_err("Failed to send PASN authentication status");
+
+	wifi_pos_init_11az_context(vdev_pos_obj);
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_WIFI_POS_CORE_ID);
+
+	return status;
+}
+
+QDF_STATUS
+wifi_pos_send_pasn_peer_deauth(struct wlan_objmgr_psoc *psoc,
+			       struct qdf_mac_addr *peer_mac)
+{
+	struct wlan_lmac_if_wifi_pos_tx_ops *tx_ops;
+	QDF_STATUS status;
+
+	tx_ops = wifi_pos_get_tx_ops(psoc);
+	if (!tx_ops || !tx_ops->send_rtt_pasn_deauth) {
+		wifi_pos_err("%s is null",
+			     tx_ops ? "Tx_ops" : "send_pasn deauth cb");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	status = tx_ops->send_rtt_pasn_deauth(psoc, peer_mac);
+
+	return status;
+}
+
+QDF_STATUS
+wifi_pos_set_peer_ltf_keyseed_required(struct wlan_objmgr_peer *peer,
+				       bool value)
+{
+	struct wlan_wifi_pos_peer_priv_obj *peer_priv;
+
+	peer_priv = wifi_pos_get_peer_private_object(peer);
+	if (!peer_priv) {
+		wifi_pos_err("peer private object is null");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	peer_priv->is_ltf_keyseed_required = value;
+
+	return QDF_STATUS_SUCCESS;
+}
+
+bool wifi_pos_is_ltf_keyseed_required_for_peer(struct wlan_objmgr_peer *peer)
+{
+	struct wlan_wifi_pos_peer_priv_obj *peer_priv;
+
+	peer_priv = wifi_pos_get_peer_private_object(peer);
+	if (!peer_priv) {
+		wifi_pos_err("peer private object is null");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	return peer_priv->is_ltf_keyseed_required;
 }

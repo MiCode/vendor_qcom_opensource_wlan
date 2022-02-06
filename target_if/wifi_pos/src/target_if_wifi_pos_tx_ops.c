@@ -102,6 +102,59 @@ target_if_wifi_pos_parse_measreq_chan_info(struct wlan_objmgr_pdev *pdev,
 }
 #endif /* WLAN_RTT_MEASUREMENT_NOTIFICATION */
 
+#ifdef WLAN_FEATURE_RTT_11AZ_SUPPORT
+static QDF_STATUS
+target_if_wifi_pos_send_rtt_pasn_auth_status(struct wlan_objmgr_psoc *psoc,
+					     struct wlan_pasn_auth_status *data)
+{
+	QDF_STATUS status;
+	wmi_unified_t wmi = GET_WMI_HDL_FROM_PSOC(psoc);
+
+	if (!psoc || !wmi) {
+		target_if_err("%s is null", !psoc ? "psoc" : "wmi_handle");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	status = wmi_send_rtt_pasn_auth_status_cmd(wmi, data);
+	if (QDF_IS_STATUS_ERROR(status))
+		target_if_err("send pasn auth status cmd failed");
+
+	return status;
+}
+
+static QDF_STATUS
+target_if_wifi_pos_send_rtt_pasn_deauth(struct wlan_objmgr_psoc *psoc,
+					struct qdf_mac_addr *peer_mac)
+{
+	QDF_STATUS status;
+	wmi_unified_t wmi = GET_WMI_HDL_FROM_PSOC(psoc);
+
+	if (!psoc || !wmi) {
+		target_if_err("%s is null", !psoc ? "psoc" : "wmi_handle");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	status = wmi_send_rtt_pasn_deauth_cmd(wmi, peer_mac);
+	if (QDF_IS_STATUS_ERROR(status))
+		target_if_err("send pasn deauth cmd failed");
+
+	return status;
+}
+
+static void target_if_wifi_pos_register_11az_ops(
+			struct wlan_lmac_if_wifi_pos_tx_ops *tx_ops)
+{
+	tx_ops->send_rtt_pasn_auth_status =
+			target_if_wifi_pos_send_rtt_pasn_auth_status;
+	tx_ops->send_rtt_pasn_deauth = target_if_wifi_pos_send_rtt_pasn_deauth;
+}
+#else
+static inline
+void target_if_wifi_pos_register_11az_ops(
+			struct wlan_lmac_if_wifi_pos_tx_ops *tx_ops)
+{}
+#endif
+
 #ifdef WIFI_POS_CONVERGED
 #ifdef WLAN_FEATURE_RTT_11AZ_SUPPORT
 static QDF_STATUS
@@ -258,5 +311,7 @@ void target_if_wifi_pos_register_tx_ops(struct wlan_lmac_if_tx_ops *tx_ops)
 	wifi_pos_tx_ops->data_req_tx = target_if_wifi_pos_oem_data_req;
 	wifi_pos_tx_ops->wifi_pos_parse_measreq_chan_info =
 			target_if_wifi_pos_parse_measreq_chan_info;
+
+	target_if_wifi_pos_register_11az_ops(wifi_pos_tx_ops);
 }
 #endif

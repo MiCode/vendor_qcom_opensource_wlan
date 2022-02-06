@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2019-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -131,6 +132,31 @@ static inline void wlan_crypto_set_wapi_key(struct wlan_objmgr_vdev *vdev,
 }
 #endif /* FEATURE_WLAN_WAPI */
 
+QDF_STATUS
+target_if_crypto_vdev_set_param(struct wlan_objmgr_psoc *psoc, uint32_t vdev_id,
+				uint32_t param_id, uint32_t param_value)
+{
+	wmi_unified_t wmi_handle = get_wmi_unified_hdl_from_psoc(psoc);
+	struct vdev_set_params param = {0};
+
+	if (!wmi_handle) {
+		target_if_err("Invalid wmi handle");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	if (vdev_id >= WLAN_MAX_VDEVS) {
+		target_if_err("vdev_id: %d is invalid, reject the req: param id %d val %d",
+			      vdev_id, param_id, param_value);
+		return QDF_STATUS_E_INVAL;
+	}
+
+	param.vdev_id = vdev_id;
+	param.param_id = param_id;
+	param.param_value = param_value;
+
+	return wmi_unified_vdev_set_param_send(wmi_handle, &param);
+}
+
 QDF_STATUS target_if_crypto_set_key(struct wlan_objmgr_vdev *vdev,
 				    struct wlan_crypto_key *req,
 				    enum wlan_crypto_key_type key_type)
@@ -138,7 +164,9 @@ QDF_STATUS target_if_crypto_set_key(struct wlan_objmgr_vdev *vdev,
 	struct set_key_params params = {0};
 	struct wlan_objmgr_psoc *psoc;
 	struct wlan_objmgr_pdev *pdev;
+	struct wlan_objmgr_peer *peer;
 	enum cdp_sec_type sec_type = cdp_sec_type_none;
+	enum wlan_peer_type peer_type = 0;
 	void *soc = cds_get_context(QDF_MODULE_ID_SOC);
 	uint32_t pn[4] = {0, 0, 0, 0};
 	bool peer_exist = false;
@@ -185,6 +213,15 @@ QDF_STATUS target_if_crypto_set_key(struct wlan_objmgr_vdev *vdev,
 
 	peer_exist = cdp_find_peer_exist(soc, pdev->pdev_objmgr.wlan_pdev_id,
 					 req->macaddr);
+	peer = wlan_objmgr_get_peer_by_mac(psoc, req->macaddr, WLAN_CRYPTO_ID);
+	if (peer) {
+		peer_type = wlan_peer_get_peer_type(peer);
+		if (peer_type == WLAN_PEER_RTT_PASN &&
+		    key_type == WLAN_CRYPTO_KEY_TYPE_UNICAST)
+			peer_exist = true;
+
+		wlan_objmgr_peer_release_ref(peer, WLAN_CRYPTO_ID);
+	}
 	target_if_debug("key_type %d, mac: %02x:%02x:%02x:%02x:%02x:%02x",
 			key_type, req->macaddr[0], req->macaddr[1],
 			req->macaddr[2], req->macaddr[3], req->macaddr[4],
@@ -223,6 +260,10 @@ QDF_STATUS target_if_crypto_set_key(struct wlan_objmgr_vdev *vdev,
 
 	/* Set PN check & security type in data path */
 	qdf_mem_copy(&pn[0], &params.key_rsc_ctr, sizeof(uint64_t));
+
+	if (peer_type == WLAN_PEER_RTT_PASN)
+		goto send_install_key;
+
 	cdp_set_pn_check(soc, vdev->vdev_objmgr.vdev_id, req->macaddr,
 			 sec_type, pn);
 
@@ -232,7 +273,7 @@ QDF_STATUS target_if_crypto_set_key(struct wlan_objmgr_vdev *vdev,
 	cdp_set_key(soc, vdev->vdev_objmgr.vdev_id, req->macaddr, pairwise,
 		    (uint32_t *)(req->keyval + WLAN_CRYPTO_IV_SIZE +
 		     WLAN_CRYPTO_MIC_LEN));
-
+send_install_key:
 	target_if_debug("vdev_id:%d, key: idx:%d,len:%d", params.vdev_id,
 			params.key_idx, params.key_len);
 	target_if_debug("peer mac "QDF_MAC_ADDR_FMT,
@@ -366,6 +407,25 @@ target_if_crypto_deregister_events(struct wlan_objmgr_psoc *psoc)
 	return QDF_STATUS_SUCCESS;
 }
 
+static QDF_STATUS
+target_if_crypto_set_ltf_keyseed(struct wlan_objmgr_psoc *psoc,
+				 struct wlan_crypto_ltf_keyseed_data *data)
+{
+	QDF_STATUS status;
+	wmi_unified_t wmi = GET_WMI_HDL_FROM_PSOC(psoc);
+
+	if (!psoc || !wmi) {
+		target_if_err("%s is null", !psoc ? "psoc" : "wmi_handle");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	status = wmi_send_vdev_set_ltf_key_seed_cmd(wmi, data);
+	if (QDF_IS_STATUS_ERROR(status))
+		target_if_err("set LTF keyseed failed");
+
+	return status;
+}
+
 QDF_STATUS target_if_crypto_register_tx_ops(struct wlan_lmac_if_tx_ops *tx_ops)
 {
 	struct wlan_lmac_if_crypto_tx_ops *crypto;
@@ -377,6 +437,8 @@ QDF_STATUS target_if_crypto_register_tx_ops(struct wlan_lmac_if_tx_ops *tx_ops)
 	crypto = &tx_ops->crypto_tx_ops;
 
 	crypto->set_key = target_if_crypto_set_key;
+	crypto->set_ltf_keyseed = target_if_crypto_set_ltf_keyseed;
+	crypto->set_vdev_param  = target_if_crypto_vdev_set_param;
 	crypto->register_events = target_if_crypto_register_events;
 	crypto->deregister_events = target_if_crypto_deregister_events;
 

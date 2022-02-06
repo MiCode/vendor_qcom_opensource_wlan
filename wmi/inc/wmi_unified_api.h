@@ -4411,6 +4411,28 @@ wmi_extract_pasn_peer_create_req(wmi_unified_t wmi, void *evt_buf,
 QDF_STATUS
 wmi_extract_pasn_peer_delete_req(wmi_unified_t wmi, void *evt_buf,
 				 struct wifi_pos_pasn_peer_data *dst);
+
+/**
+ * wmi_send_rtt_pasn_auth_status_cmd  - Send PASN authentication status of all
+ * the PASN peers.
+ * @wmi: WMI handle
+ * @data: Auth status data
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+wmi_send_rtt_pasn_auth_status_cmd(wmi_unified_t wmi,
+				  struct wlan_pasn_auth_status *data);
+
+/**
+ * wmi_send_rtt_pasn_deauth_cmd  - Send RTT pasn deauthentication command
+ * @wmi: WMI handle
+ * @peer_mac: peer mac address
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+wmi_send_rtt_pasn_deauth_cmd(wmi_unified_t wmi, struct qdf_mac_addr *peer_mac);
 #endif
 
 /**

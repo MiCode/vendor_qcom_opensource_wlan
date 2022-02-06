@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2019-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -35,6 +36,24 @@
 int wlan_cfg80211_set_default_key(struct wlan_objmgr_vdev *vdev,
 				  uint8_t key_index,
 				  struct qdf_mac_addr *bssid);
+/**
+ * wlan_cfg80211_translate_key() - Translate the cfg80211 keys to
+ * internal
+ * @vdev: Pointer to vdev object
+ * @key_index: Key index
+ * @key_type: key type
+ * @mac_addr: mac address
+ * @params: Params
+ * @crypto_key: Crypto keys
+ *
+ * Return: None
+ */
+void wlan_cfg80211_translate_key(struct wlan_objmgr_vdev *vdev,
+				 uint8_t key_index,
+				 enum wlan_crypto_key_type key_type,
+				 const u8 *mac_addr,
+				 struct key_params *params,
+				 struct wlan_crypto_key *crypto_key);
 
 /**
  * wlan_cfg80211_store_key() - Store the key

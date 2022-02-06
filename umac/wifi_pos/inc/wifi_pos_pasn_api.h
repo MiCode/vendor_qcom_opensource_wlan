@@ -28,6 +28,26 @@
 
 #if defined(WIFI_POS_CONVERGED) && defined(WLAN_FEATURE_RTT_11AZ_SUPPORT)
 /**
+ * wifi_pos_set_peer_ltf_keyseed_required() - Set LTF keyseed required
+ * for the peer
+ * @peer:  Peer object
+ * @value: Value to set
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+wifi_pos_set_peer_ltf_keyseed_required(struct wlan_objmgr_peer *peer,
+				       bool value);
+/**
+ * wifi_pos_is_ltf_keyseed_required_for_peer() - Is LTF keyseed required for
+ * the given peer
+ * @peer: Peer object
+ *
+ * Return: true or false
+ */
+bool wifi_pos_is_ltf_keyseed_required_for_peer(struct wlan_objmgr_peer *peer);
+
+/**
  * wifi_pos_handle_ranging_peer_create() - Handle ranging peer create
  * @psoc: Pointer to PSOC
  * @req: PASN request
@@ -92,6 +112,28 @@ wifi_pos_handle_ranging_peer_delete(struct wlan_objmgr_psoc *psoc,
 				    struct wlan_pasn_request *req,
 				    uint8_t vdev_id,
 				    uint8_t total_entries);
+
+/**
+ * wifi_pos_send_pasn_auth_status  - Send PASN auth status to firmware
+ * @psoc: Pointer to PSOC object
+ * @data: pointer  to auth status data
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+wifi_pos_send_pasn_auth_status(struct wlan_objmgr_psoc *psoc,
+			       struct wlan_pasn_auth_status *data);
+
+/**
+ * wifi_pos_send_pasn_peer_deauth  - Send PASN peer deauth
+ * @psoc: Pointer to PSOC object
+ * @peer_mac: Peer mac address
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+wifi_pos_send_pasn_peer_deauth(struct wlan_objmgr_psoc *psoc,
+			       struct qdf_mac_addr *peer_mac);
 #else
 static inline
 QDF_STATUS wifi_pos_handle_ranging_peer_create(struct wlan_objmgr_psoc *psoc,
@@ -127,6 +169,13 @@ wifi_pos_handle_ranging_peer_delete(struct wlan_objmgr_psoc *psoc,
 				    struct wlan_pasn_request *req,
 				    uint8_t vdev_id,
 				    uint8_t total_entries)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static inline QDF_STATUS
+wifi_pos_send_pasn_peer_deauth(struct wlan_objmgr_psoc *psoc,
+			       struct qdf_mac_addr *peer_mac)
 {
 	return QDF_STATUS_SUCCESS;
 }

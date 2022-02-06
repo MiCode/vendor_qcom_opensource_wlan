@@ -641,6 +641,15 @@ QDF_STATUS wifi_pos_convert_host_pdev_id_to_target(
 
 #ifdef WIFI_POS_CONVERGED
 /**
+ * wifi_pos_get_peer_private_object() - Wifi Pos get peer private object
+ * @peer: Peer object pointer
+ *
+ * Return: Peer private object pointer
+ */
+struct wlan_wifi_pos_peer_priv_obj *
+wifi_pos_get_peer_private_object(struct wlan_objmgr_peer *peer);
+
+/**
  * wifi_pos_register_osif_callbacks() - Register OSIF callbacks
  * @psoc: Pointer to psoc object
  * @ops: Osif callbacks pointer

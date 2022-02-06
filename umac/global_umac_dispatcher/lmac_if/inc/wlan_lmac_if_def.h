@@ -890,6 +890,8 @@ struct wlan_lmac_if_iot_sim_tx_ops {
  * @wifi_pos_get_vht_ch_width: Function pointer to get max supported bw by FW
  * @wifi_pos_parse_measreq_chan_info: Parse channel info from LOWI measurement
  *                                    request buffer.
+ * @send_rtt_pasn_auth_status: Send PASN peers authentication status
+ * @send_rtt_pasn_deauth: Send PASN peer deauth command
  */
 struct wlan_lmac_if_wifi_pos_tx_ops {
 	QDF_STATUS (*wifi_pos_register_events)(struct wlan_objmgr_psoc *psoc);
@@ -907,7 +909,11 @@ struct wlan_lmac_if_wifi_pos_tx_ops {
 	QDF_STATUS (*wifi_pos_parse_measreq_chan_info)(
 			struct wlan_objmgr_pdev *pdev, uint32_t data_len,
 			uint8_t *data, struct rtt_channel_info *chinfo);
-
+	QDF_STATUS (*send_rtt_pasn_auth_status)
+			(struct wlan_objmgr_psoc *psoc,
+			 struct wlan_pasn_auth_status *data);
+	QDF_STATUS (*send_rtt_pasn_deauth)(struct wlan_objmgr_psoc *psoc,
+					   struct qdf_mac_addr *peer_mac);
 };
 #endif
 

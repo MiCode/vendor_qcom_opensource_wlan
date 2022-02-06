@@ -144,7 +144,35 @@ QDF_STATUS wifi_pos_init(void)
 		goto fail_vdev_destroy_handler;
 	}
 
+	status =  wlan_objmgr_register_peer_create_handler(
+			WLAN_UMAC_COMP_WIFI_POS,
+			wifi_pos_peer_object_created_notification,
+			NULL);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		wifi_pos_err("peer create register notification failed");
+		goto fail_peer_create_handler;
+	}
+
+	status = wlan_objmgr_register_peer_destroy_handler(
+				WLAN_UMAC_COMP_WIFI_POS,
+				wifi_pos_peer_object_destroyed_notification,
+				NULL);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		wifi_pos_err("peer destroy register notification failed");
+		goto fail_peer_destroy_handler;
+	}
+
 	return status;
+
+fail_peer_destroy_handler:
+	wlan_objmgr_unregister_peer_create_handler(
+			WLAN_UMAC_COMP_WIFI_POS,
+			wifi_pos_peer_object_created_notification,
+			NULL);
+fail_peer_create_handler:
+	wlan_objmgr_unregister_vdev_destroy_handler(
+			WLAN_UMAC_COMP_WIFI_POS,
+			wifi_pos_vdev_destroyed_notification, NULL);
 
 fail_vdev_destroy_handler:
 	wlan_objmgr_unregister_vdev_create_handler(
@@ -167,6 +195,20 @@ fail_psoc_destroy_handler:
 QDF_STATUS wifi_pos_deinit(void)
 {
 	QDF_STATUS status;
+
+	status = wlan_objmgr_unregister_peer_destroy_handler(
+				WLAN_UMAC_COMP_WIFI_POS,
+				wifi_pos_peer_object_destroyed_notification,
+				NULL);
+	if (QDF_IS_STATUS_ERROR(status))
+		wifi_pos_err("unable to unregister peer destroy handle");
+
+	status = wlan_objmgr_unregister_peer_create_handler(
+				WLAN_UMAC_COMP_WIFI_POS,
+				wifi_pos_peer_object_created_notification,
+				NULL);
+	if (QDF_IS_STATUS_ERROR(status))
+		wifi_pos_err("unable to unregister peer create handle");
 
 	status = wlan_objmgr_unregister_vdev_destroy_handler(
 				WLAN_UMAC_COMP_WIFI_POS,
@@ -244,6 +286,23 @@ QDF_STATUS wifi_pos_psoc_disable(struct wlan_objmgr_psoc *psoc)
 		wifi_pos_err("target_if_wifi_pos_deregister_events failed");
 
 	return QDF_STATUS_SUCCESS;
+}
+
+struct wlan_wifi_pos_peer_priv_obj *
+wifi_pos_get_peer_private_object(struct wlan_objmgr_peer *peer)
+{
+	struct wlan_wifi_pos_peer_priv_obj *peer_priv;
+
+	if (!peer) {
+		wifi_pos_err("Peer is NULL");
+		return NULL;
+	}
+
+	peer_priv =
+		wlan_objmgr_peer_get_comp_private_obj(peer,
+						      WLAN_UMAC_COMP_WIFI_POS);
+
+	return peer_priv;
 }
 
 void wifi_pos_set_oem_target_type(struct wlan_objmgr_psoc *psoc, uint32_t val)
