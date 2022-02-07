@@ -4387,6 +4387,9 @@ static bool dp_txrx_ppdu_stats_handler(struct dp_soc *soc,
 	if (!pdev)
 		return true;
 
+	if (wlan_cfg_get_txmon_hw_support(soc->wlan_cfg_ctx))
+		return free_buf;
+
 	if (!mon_pdev->enhanced_stats_en && !mon_pdev->tx_sniffer_enable &&
 	    !mon_pdev->mcopy_mode && !mon_pdev->bpr_enable)
 		return free_buf;

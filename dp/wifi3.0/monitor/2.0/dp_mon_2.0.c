@@ -178,6 +178,11 @@ dp_mon_buffers_replenish(struct dp_soc *dp_soc,
 	num_entries_avail = hal_srng_src_num_avail(dp_soc->hal_soc,
 						   mon_srng, sync_hw_ptr);
 
+	if (!num_entries_avail) {
+		num_desc_to_free = num_req_buffers;
+		hal_srng_access_end(dp_soc->hal_soc, mon_srng);
+		goto free_desc;
+	}
 	if (num_entries_avail < num_req_buffers) {
 		num_desc_to_free = num_req_buffers - num_entries_avail;
 		num_req_buffers = num_entries_avail;
@@ -205,7 +210,7 @@ dp_mon_buffers_replenish(struct dp_soc *dp_soc,
 		num_req_buffers = num_alloc_desc;
 	}
 
-	while (count < num_req_buffers - 1) {
+	while (count <= num_req_buffers - 1) {
 		ret = dp_mon_frag_alloc_and_map(dp_soc,
 						&mon_desc,
 						mon_desc_pool);
@@ -242,6 +247,7 @@ dp_mon_buffers_replenish(struct dp_soc *dp_soc,
 
 	hal_srng_access_end(dp_soc->hal_soc, mon_srng);
 
+free_desc:
 	/*
 	 * add any available free desc back to the free list
 	 */
@@ -267,9 +273,11 @@ dp_mon_desc_pool_init(struct dp_mon_desc_pool *mon_desc_pool,
 	/* link SW descs into a freelist */
 	mon_desc_pool->freelist = &mon_desc_pool->array[0];
 	mon_desc_pool->pool_size = pool_size;
-	qdf_mem_zero(mon_desc_pool->freelist, mon_desc_pool->pool_size);
+	qdf_mem_zero(mon_desc_pool->freelist,
+		     mon_desc_pool->pool_size *
+		     sizeof(union dp_mon_desc_list_elem_t));
 
-	for (desc_id = 0; desc_id <= mon_desc_pool->pool_size - 1; desc_id++) {
+	for (desc_id = 0; desc_id <= mon_desc_pool->pool_size; desc_id++) {
 		if (desc_id == mon_desc_pool->pool_size - 1)
 			mon_desc_pool->array[desc_id].next = NULL;
 		else
@@ -302,8 +310,8 @@ void dp_mon_desc_pool_free(struct dp_mon_desc_pool *mon_desc_pool)
 QDF_STATUS dp_mon_desc_pool_alloc(uint32_t pool_size,
 				  struct dp_mon_desc_pool *mon_desc_pool)
 {
-	mon_desc_pool->pool_size = pool_size;
-	mon_desc_pool->array = qdf_mem_malloc(pool_size *
+	mon_desc_pool->pool_size = pool_size - 1;
+	mon_desc_pool->array = qdf_mem_malloc((pool_size - 1) *
 				     sizeof(union dp_mon_desc_list_elem_t));
 
 	return QDF_STATUS_SUCCESS;

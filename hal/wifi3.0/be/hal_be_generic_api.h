@@ -1742,9 +1742,9 @@ hal_txmon_get_buffer_addr_generic_be(void *tx_tlv,
 						   HAL_RX_TLV32_HDR_SIZE);
 	qdf_frag_t buf_addr = NULL;
 
-	buf_addr = (qdf_frag_t)((u64)hal_buffer_addr->buffer_virt_addr_31_0 |
-				((u64)hal_buffer_addr->buffer_virt_addr_63_32 <<
-				 32));
+	buf_addr = (qdf_frag_t)(uintptr_t)((hal_buffer_addr->buffer_virt_addr_31_0 |
+				((unsigned long long)hal_buffer_addr->buffer_virt_addr_63_32 <<
+				 32)));
 
 	/* qdf_frag_t is derived from buffer address tlv */
 	if (qdf_unlikely(status)) {
