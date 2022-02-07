@@ -1371,6 +1371,7 @@ typedef union cdp_config_param_t {
 	bool cdp_skip_bar_update;
 	bool cdp_ipa_enabled;
 	bool cdp_psoc_param_vdev_stats_hw_offload;
+	bool cdp_sawf_enabled;
 } cdp_config_param_type;
 
 /**
@@ -1507,6 +1508,7 @@ enum cdp_psoc_param_type {
 	CDP_CFG_PEER_EXT_STATS,
 	CDP_IPA_ENABLE,
 	CDP_SET_VDEV_STATS_HW_OFFLOAD,
+	CDP_SAWF_ENABLE,
 };
 
 #define TXRX_FW_STATS_TXSTATS                     1

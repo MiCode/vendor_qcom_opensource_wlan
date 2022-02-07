@@ -417,6 +417,9 @@ struct wlan_cfg_dp_soc_ctxt {
 #ifdef WLAN_TX_PKT_CAPTURE_ENH
 	uint32_t tx_capt_max_mem_allowed;
 #endif
+#ifdef CONFIG_SAWF
+	bool sawf_enabled;
+#endif
 };
 
 /**
@@ -2029,6 +2032,25 @@ wlan_cfg_get_vdev_stats_hw_offload_config(struct wlan_cfg_dp_soc_ctxt *cfg);
  * Return: value of hw vdev stats timer duration
  */
 int wlan_cfg_get_vdev_stats_hw_offload_timer(struct wlan_cfg_dp_soc_ctxt *cfg);
+
+/**
+ * wlan_cfg_set_sawf_config() - Set SAWF config enable/disable
+ * @cfg: config context
+ * @value: value to be set
+ *
+ * Return: none
+ */
+void
+wlan_cfg_set_sawf_config(struct wlan_cfg_dp_soc_ctxt *cfg, bool value);
+
+/**
+ * wlan_cfg_get_sawf_config() - Get SAWF config enable/disable
+ * @cfg: config context
+ *
+ * Return: true or false
+ */
+bool
+wlan_cfg_get_sawf_config(struct wlan_cfg_dp_soc_ctxt *cfg);
 
 #if defined(WLAN_FEATURE_11BE_MLO) && defined(WLAN_MLO_MULTI_CHIP)
 /**

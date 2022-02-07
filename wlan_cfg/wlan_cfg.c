@@ -3339,6 +3339,27 @@ wlan_cfg_set_vdev_stats_hw_offload_config(struct wlan_cfg_dp_soc_ctxt *cfg,
 {}
 #endif
 
+#ifdef CONFIG_SAWF
+bool wlan_cfg_get_sawf_config(struct wlan_cfg_dp_soc_ctxt *cfg)
+{
+	return cfg->sawf_enabled;
+}
+
+void wlan_cfg_set_sawf_config(struct wlan_cfg_dp_soc_ctxt *cfg, bool val)
+{
+	cfg->sawf_enabled = val;
+}
+#else
+bool wlan_cfg_get_sawf_config(struct wlan_cfg_dp_soc_ctxt *cfg)
+{
+	return false;
+}
+
+void wlan_cfg_set_sawf_config(struct wlan_cfg_dp_soc_ctxt *cfg, bool val)
+{
+}
+#endif
+
 #ifdef CONFIG_BERYLLIUM
 int wlan_cfg_get_host2txmon_ring_mask(struct wlan_cfg_dp_soc_ctxt *cfg,
 				      int context)
