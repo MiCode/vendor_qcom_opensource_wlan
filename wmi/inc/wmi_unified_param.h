@@ -5778,6 +5778,7 @@ typedef struct {
 	bool afc_timer_check_disable;
 	bool afc_req_id_check_disable;
 	uint32_t carrier_profile_config;
+	bool sawf;
 } target_resource_config;
 
 /**

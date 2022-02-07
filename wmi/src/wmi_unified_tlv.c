@@ -7920,6 +7920,12 @@ void wmi_copy_resource_config(wmi_resource_config *resource_cfg,
 		WMI_SET_BITS(resource_cfg->flags2, 0, 4,
 			     tgt_res_cfg->re_ul_resp);
 
+	/*
+	 * Enable Service Aware Wifi
+	 */
+	if (tgt_res_cfg->sawf)
+		WMI_RSRC_CFG_FLAGS2_SAWF_CONFIG_ENABLE_SET(resource_cfg->flags2,
+							   tgt_res_cfg->sawf);
 
 	/*
 	 * Enable ast flow override per peer
