@@ -510,14 +510,6 @@ QDF_STATUS target_if_free_psoc_tgt_info(struct wlan_objmgr_psoc *psoc);
 bool target_is_tgt_type_ar900b(uint32_t target_type);
 
 /**
- * target_is_tgt_type_ipq4019() - Check if the target type is IPQ4019
- * @target_type: target type to be checked.
- *
- * Return: true if the target_type is IPQ4019, else false.
- */
-bool target_is_tgt_type_ipq4019(uint32_t target_type);
-
-/**
  * target_is_tgt_type_qca9984() - Check if the target type is QCA9984
  * @target_type: target type to be checked.
  *

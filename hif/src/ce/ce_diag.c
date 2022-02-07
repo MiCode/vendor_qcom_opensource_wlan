@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2015-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -72,18 +73,12 @@ hif_ce_dump_target_memory(struct hif_softc *scn, void *ramdump_base,
 	 | 0x100000 | ((addr) & 0xfffff))
 #endif
 
-#define TARG_CPU_SPACE_TO_CE_SPACE_IPQ4019(scn, pci_addr, addr) \
-	(hif_read32_mb(scn, (pci_addr) + (WIFICMN_PCIE_BAR_REG_ADDRESS)) \
-	| ((addr) & 0xfffff))
-
 #define TARG_CPU_SPACE_TO_CE_SPACE_AR900B(scn, pci_addr, addr) \
 	(hif_read32_mb(scn, (pci_addr) + (WIFICMN_PCIE_BAR_REG_ADDRESS)) \
 	| 0x100000 | ((addr) & 0xfffff))
 
 #define SRAM_BASE_ADDRESS 0xc0000
 #define SRAM_END_ADDRESS 0x100000
-#define WIFI0_IPQ4019_BAR 0xa000000
-#define WIFI1_IPQ4019_BAR 0xa800000
 
 /* Wait up to this many Ms for a Diagnostic Access CE operation to complete */
 #define DIAG_ACCESS_CE_TIMEOUT_MS 10
@@ -101,23 +96,9 @@ static qdf_dma_addr_t get_ce_phy_addr(struct hif_softc *sc, uint32_t  address,
 {
 	qdf_dma_addr_t ce_phy_addr;
 	struct hif_softc *scn = sc;
-	unsigned int region = address & 0xfffff;
-	unsigned int bar = address & 0xfff00000;
-	unsigned int sramregion = 0;
 
-	if ((target_type == TARGET_TYPE_IPQ4019) &&
-		(region >= SRAM_BASE_ADDRESS && region <= SRAM_END_ADDRESS)
-		&& (bar == WIFI0_IPQ4019_BAR ||
-		    bar == WIFI1_IPQ4019_BAR || bar == 0)) {
-		sramregion = 1;
-	}
-
-	if ((target_type == TARGET_TYPE_IPQ4019) && sramregion == 1) {
-		ce_phy_addr = TARG_CPU_SPACE_TO_CE_SPACE_IPQ4019(sc, sc->mem,
-								 address);
-	} else if ((target_type == TARGET_TYPE_AR900B) ||
+	if ((target_type == TARGET_TYPE_AR900B) ||
 	    (target_type == TARGET_TYPE_QCA9984) ||
-	    (target_type == TARGET_TYPE_IPQ4019) ||
 	    (target_type == TARGET_TYPE_QCA9888)) {
 		ce_phy_addr =
 		    TARG_CPU_SPACE_TO_CE_SPACE_AR900B(sc, sc->mem, address);
@@ -180,8 +161,7 @@ QDF_STATUS hif_diag_read_mem(struct hif_opaque_softc *hif_ctx,
 	 * register read fn but preserve the multi word read capability of
 	 * this fn
 	 */
-	if ((target_type == TARGET_TYPE_IPQ4019) ||
-	    (target_type == TARGET_TYPE_AR900B)  ||
+	if ((target_type == TARGET_TYPE_AR900B)  ||
 	    (target_type == TARGET_TYPE_QCA9984) ||
 	    (target_type == TARGET_TYPE_AR9888) ||
 	    (target_type == TARGET_TYPE_QCA9888))

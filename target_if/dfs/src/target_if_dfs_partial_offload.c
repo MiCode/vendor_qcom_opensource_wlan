@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2017-2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved
  *
  *
  * Permission to use, copy, modify, and/or distribute this software for
@@ -68,10 +69,6 @@ QDF_STATUS target_if_dfs_get_caps(struct wlan_objmgr_pdev *pdev,
 
 	switch (target_psoc_get_target_type(tgt_psoc_info)) {
 	case TARGET_TYPE_AR900B:
-		break;
-
-	case TARGET_TYPE_IPQ4019:
-		dfs_caps->wlan_chip_is_false_detect = 0;
 		break;
 
 	case TARGET_TYPE_AR9888:

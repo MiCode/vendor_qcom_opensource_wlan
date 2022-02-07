@@ -1936,8 +1936,7 @@ static int hif_pci_configure_legacy_irq(struct hif_pci_softc *sc)
 	hif_write32_mb(sc, sc->mem + PCIE_LOCAL_BASE_ADDRESS +
 		      PCIE_SOC_WAKE_ADDRESS, PCIE_SOC_WAKE_RESET);
 
-	if ((target_type == TARGET_TYPE_IPQ4019) ||
-			(target_type == TARGET_TYPE_AR900B)  ||
+	if ((target_type == TARGET_TYPE_AR900B)  ||
 			(target_type == TARGET_TYPE_QCA9984) ||
 			(target_type == TARGET_TYPE_AR9888) ||
 			(target_type == TARGET_TYPE_QCA9888) ||

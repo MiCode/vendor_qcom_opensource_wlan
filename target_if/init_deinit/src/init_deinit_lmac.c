@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2018-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -169,7 +170,6 @@ bool lmac_is_target_ar900b(struct wlan_objmgr_psoc *psoc)
 	switch (target_type) {
 	case TARGET_TYPE_AR900B:
 	case TARGET_TYPE_QCA9984:
-	case TARGET_TYPE_IPQ4019:
 	case TARGET_TYPE_QCA9888:
 		return true;
 	default:

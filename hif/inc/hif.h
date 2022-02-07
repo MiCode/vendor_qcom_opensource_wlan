@@ -65,7 +65,6 @@ typedef void *hif_handle_t;
 #define HIF_TYPE_ADRASTEA 10
 #define HIF_TYPE_AR900B 11
 #define HIF_TYPE_QCA9984 12
-#define HIF_TYPE_IPQ4019 13
 #define HIF_TYPE_QCA9888 14
 #define HIF_TYPE_QCA8074 15
 #define HIF_TYPE_QCA6290 16

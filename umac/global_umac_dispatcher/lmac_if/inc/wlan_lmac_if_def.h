@@ -1141,7 +1141,6 @@ struct wlan_lmac_if_dfs_tx_ops {
  * struct wlan_lmac_if_target_tx_ops - Function pointers to call target
  *                                     functions from other modules.
  * @tgt_is_tgt_type_ar900b:  To check AR900B target type.
- * @tgt_is_tgt_type_ipq4019: To check IPQ4019 target type.
  * @tgt_is_tgt_type_qca9984: To check QCA9984 target type.
  * @tgt_is_tgt_type_qca9888: To check QCA9888 target type.
  * @tgt_is_tgt_type_adrastea: To check QCS40X target type.
@@ -1154,7 +1153,6 @@ struct wlan_lmac_if_dfs_tx_ops {
  */
 struct wlan_lmac_if_target_tx_ops {
 	bool (*tgt_is_tgt_type_ar900b)(uint32_t);
-	bool (*tgt_is_tgt_type_ipq4019)(uint32_t);
 	bool (*tgt_is_tgt_type_qca9984)(uint32_t);
 	bool (*tgt_is_tgt_type_qca9888)(uint32_t);
 	bool (*tgt_is_tgt_type_adrastea)(uint32_t);
