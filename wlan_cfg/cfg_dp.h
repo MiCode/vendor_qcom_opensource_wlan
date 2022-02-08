@@ -732,6 +732,122 @@
 	CFG_INI_BOOL("LROEnable", WLAN_LRO_ENABLE, \
 	"DP LRO Enable")
 
+#ifdef WLAN_USE_CONFIG_PARAMS
+/*
+ * <ini>
+ * dp_tx_desc_use_512p - Use 512M tx descriptor size
+ * @Min: 0
+ * @Max: 1
+ * @Default: 0
+ *
+ * This ini entry is used as flag to use 512M tx descriptor size or not
+ *
+ * Usage: Internal
+ *
+ * </ini>
+ */
+#define CFG_DP_TX_DESC_512P \
+	CFG_INI_BOOL("dp_tx_desc_use_512p", false, \
+	"DP TX DESC PINE SPECIFIC")
+
+/*
+ * <ini>
+ * dp_nss_3radio_ring - Use 3 Radio NSS comp ring size
+ * @Min: 0
+ * @Max: 1
+ * @Default: 0
+ *
+ * This ini entry is used as flag to use 3 Radio NSS com ring size or not
+ *
+ * Usage: Internal
+ *
+ * </ini>
+ */
+#define CFG_DP_NSS_3RADIO_RING \
+	CFG_INI_BOOL("dp_nss_3radio_ring", false, \
+	"DP NSS 3 RADIO RING SIZE")
+
+/*
+ * <ini>
+ * dp_mon_ring_per_512M - Update monitor status ring as 512M profile
+ * @Min: 0
+ * @Max: 1
+ * @Default: 0
+ *
+ * This ini entry is used as flag to update monitor status ring as 512M profile
+ *
+ * Usage: Internal
+ *
+ * </ini>
+ */
+#define CFG_DP_MON_STATUS_512M \
+	CFG_INI_BOOL("dp_mon_ring_per_512M", false, \
+	"DP MON STATUS RING SIZE PER 512M PROFILE")
+
+/*
+ * <ini>
+ * dp_mon_2chain_ring - Reduce monitor rings size as for 2 Chains case
+ * @Min: 0
+ * @Max: 1
+ * @Default: 0
+ *
+ * This ini entry is used as flag to reduce monitor rings size as those used
+ * in case of 2 Tx/RxChains
+ *
+ * Usage: Internal
+ *
+ * </ini>
+ */
+#define CFG_DP_MON_2CHAIN_RING \
+	CFG_INI_BOOL("dp_mon_2chain_ring", false, \
+	"DP MON UPDATE RINGS FOR 2CHAIN")
+
+/*
+ * <ini>
+ * dp_mon_4chain_ring - Update monitor rings size for 4 Chains case
+ * @Min: 0
+ * @Max: 1
+ * @Default: 0
+ *
+ * This ini entry is used as flag to reduce monitor rings size as those used
+ * in case of 4 Tx/RxChains
+ *
+ * Usage: Internal
+ *
+ * </ini>
+ */
+#define CFG_DP_MON_4CHAIN_RING \
+	CFG_INI_BOOL("dp_mon_4chain_ring", false, \
+	"DP MON UPDATE RINGS FOR 4CHAIN")
+
+/*
+ * <ini>
+ * dp_4radip_rdp_reo - Update RDP REO map based on 4 radio config
+ * @Min: 0
+ * @Max: 1
+ * @Default: 0
+ *
+ * This ini entry is used as flag to update RDP reo map based on 4 Radio config
+ *
+ * Usage: Internal
+ *
+ * </ini>
+ */
+#define CFG_DP_4RADIO_RDP_REO \
+	CFG_INI_BOOL("dp_nss_4radio_rdp_reo", \
+	false, "Update REO destination mapping for 4radio")
+
+#define CFG_DP_INI_SECTION_PARAMS \
+		CFG(CFG_DP_NSS_3RADIO_RING) \
+		CFG(CFG_DP_TX_DESC_512P) \
+		CFG(CFG_DP_MON_STATUS_512M) \
+		CFG(CFG_DP_MON_2CHAIN_RING) \
+		CFG(CFG_DP_MON_4CHAIN_RING) \
+		CFG(CFG_DP_4RADIO_RDP_REO)
+#else
+#define CFG_DP_INI_SECTION_PARAMS
+#endif
+
 /*
  * <ini>
  * CFG_DP_SG - Enable the SG feature standalonely
@@ -1606,6 +1722,7 @@
 		CFG_DP_PPE_CONFIG \
 		CFG_DP_IPA_TX_ALT_RING_CFG \
 		CFG_DP_MLO_CONFIG \
+		CFG_DP_INI_SECTION_PARAMS \
 		CFG_DP_VDEV_STATS_HW_OFFLOAD \
 		CFG(CFG_DP_TX_CAPT_MAX_MEM_MB)
 #endif /* _CFG_DP_H_ */
