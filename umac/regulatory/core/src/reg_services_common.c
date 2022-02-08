@@ -2246,30 +2246,75 @@ bool reg_is_range_overlap_5g(qdf_freq_t low_freq, qdf_freq_t high_freq)
 				     FIVE_GIG_ENDING_EDGE_FREQ);
 }
 
-bool reg_is_freq_indoor(struct wlan_objmgr_pdev *pdev, qdf_freq_t freq)
+static struct regulatory_channel *
+reg_get_reg_chan(struct wlan_objmgr_pdev *pdev, qdf_freq_t freq)
 {
 	struct regulatory_channel *cur_chan_list;
 	struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj;
 	enum channel_enum chan_enum;
 
 	pdev_priv_obj = reg_get_pdev_obj(pdev);
-
 	if (!IS_VALID_PDEV_REG_OBJ(pdev_priv_obj)) {
 		reg_err("reg pdev priv obj is NULL");
-		return false;
+		return NULL;
 	}
 
 	chan_enum = reg_get_chan_enum_for_freq(freq);
-
 	if (chan_enum == INVALID_CHANNEL) {
 		reg_err_rl("Invalid chan enum %d", chan_enum);
-		return false;
+		return NULL;
 	}
 
 	cur_chan_list = pdev_priv_obj->cur_chan_list;
+	if (cur_chan_list[chan_enum].state == CHANNEL_STATE_DISABLE) {
+		reg_err("Channel %u is not enabled for this pdev", freq);
+		return NULL;
+	}
 
-	return (cur_chan_list[chan_enum].chan_flags &
+	return &cur_chan_list[chan_enum];
+}
+
+bool reg_is_freq_indoor(struct wlan_objmgr_pdev *pdev, qdf_freq_t freq)
+{
+	struct regulatory_channel *reg_chan;
+
+	reg_chan = reg_get_reg_chan(pdev, freq);
+
+	if (!reg_chan) {
+		reg_err("reg channel is NULL");
+		return false;
+	}
+
+	return (reg_chan->chan_flags &
 		REGULATORY_CHAN_INDOOR_ONLY);
+}
+
+uint16_t reg_get_min_chwidth(struct wlan_objmgr_pdev *pdev, qdf_freq_t freq)
+{
+	struct regulatory_channel *reg_chan;
+
+	reg_chan = reg_get_reg_chan(pdev, freq);
+
+	if (!reg_chan) {
+		reg_err("reg channel is NULL");
+		return 0;
+	}
+
+	return reg_chan->min_bw;
+}
+
+uint16_t reg_get_max_chwidth(struct wlan_objmgr_pdev *pdev, qdf_freq_t freq)
+{
+	struct regulatory_channel *reg_chan;
+
+	reg_chan = reg_get_reg_chan(pdev, freq);
+
+	if (!reg_chan) {
+		reg_err("reg channel is NULL");
+		return 0;
+	}
+
+	return reg_chan->max_bw;
 }
 
 #ifdef CONFIG_REG_CLIENT

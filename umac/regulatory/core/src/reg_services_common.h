@@ -456,6 +456,24 @@ bool reg_is_range_overlap_5g(qdf_freq_t low_freq, qdf_freq_t high_freq);
  */
 bool reg_is_freq_indoor(struct wlan_objmgr_pdev *pdev, qdf_freq_t freq);
 
+/**
+ * reg_get_min_chwidth() - Return min chanwidth supported by freq.
+ * @pdev: Pointer to pdev.
+ * @freq: Channel frequency.
+ *
+ * Return: Min chwidth supported by freq as per regulatory DB.
+ */
+uint16_t reg_get_min_chwidth(struct wlan_objmgr_pdev *pdev, qdf_freq_t freq);
+
+/**
+ * reg_get_max_chwidth() - Return max chanwidth supported by freq.
+ * @pdev: Pointer to pdev.
+ * @freq: Channel frequency.
+ *
+ * Return: Max chwidth supported by freq as per regulatory DB.
+ */
+uint16_t reg_get_max_chwidth(struct wlan_objmgr_pdev *pdev, qdf_freq_t freq);
+
 #ifdef CONFIG_REG_CLIENT
 /**
  * reg_is_freq_indoor_in_secondary_list() - Check if the input frequency is

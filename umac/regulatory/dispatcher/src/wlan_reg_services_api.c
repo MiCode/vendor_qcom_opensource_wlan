@@ -832,6 +832,18 @@ bool wlan_reg_is_freq_indoor(struct wlan_objmgr_pdev *pdev, qdf_freq_t freq)
 	return reg_is_freq_indoor(pdev, freq);
 }
 
+uint16_t wlan_reg_get_min_chwidth(struct wlan_objmgr_pdev *pdev,
+				  qdf_freq_t freq)
+{
+	return reg_get_min_chwidth(pdev, freq);
+}
+
+uint16_t wlan_reg_get_max_chwidth(struct wlan_objmgr_pdev *pdev,
+				  qdf_freq_t freq)
+{
+	return reg_get_max_chwidth(pdev, freq);
+}
+
 enum phy_ch_width
 wlan_reg_get_next_lower_bandwidth(enum phy_ch_width ch_width)
 {
