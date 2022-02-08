@@ -786,7 +786,7 @@ QDF_STATUS reg_modify_pdev_chan_range(struct wlan_objmgr_pdev *pdev);
  * Return : QDF_STATUS
  */
 QDF_STATUS reg_update_pdev_wireless_modes(struct wlan_objmgr_pdev *pdev,
-					  uint32_t wireless_modes);
+					  uint64_t wireless_modes);
 
 /**
  * reg_get_phybitmap() - Get phybitmap from regulatory pdev_priv_obj
