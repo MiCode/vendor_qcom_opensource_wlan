@@ -2649,6 +2649,33 @@ copy_from_super_chan_info_to_reg_channel(struct regulatory_channel *chan,
 	chan->psd_flag = sc_entry.reg_chan_pwr[in_6g_pwr_mode].psd_flag;
 	chan->psd_eirp = sc_entry.reg_chan_pwr[in_6g_pwr_mode].psd_eirp;
 }
+
+static QDF_STATUS
+reg_get_6g_pwrmode_chan_list(struct wlan_regulatory_pdev_priv_obj
+			     *pdev_priv_obj,
+			     struct regulatory_channel *chan_list,
+			     enum supported_6g_pwr_types in_6g_pwr_mode)
+{
+	uint8_t i;
+
+	/*
+	 * If 6GHz channel list is present, populate it with desired
+	 * power type
+	 */
+	if (!pdev_priv_obj->is_6g_channel_list_populated) {
+		reg_debug("6G channel list is empty");
+		return QDF_STATUS_SUCCESS;
+	}
+
+	/* Copy the regulatory_channel fields from super_chan_info */
+	for (i = 0; i < NUM_6GHZ_CHANNELS; i++)
+		copy_from_super_chan_info_to_reg_channel(
+					&chan_list[i + MIN_6GHZ_CHANNEL],
+					pdev_priv_obj->super_chan_list[i],
+					in_6g_pwr_mode);
+
+	return QDF_STATUS_SUCCESS;
+}
 #else
 static void
 reg_populate_6g_band_channels(struct cur_reg_rule *reg_rule_5g,
@@ -2665,6 +2692,15 @@ copy_from_super_chan_info_to_reg_channel(struct regulatory_channel *chan,
 					 in_6g_pwr_mode)
 {
 }
+
+static inline QDF_STATUS
+reg_get_6g_pwrmode_chan_list(struct wlan_regulatory_pdev_priv_obj
+			     *pdev_priv_obj,
+			     struct regulatory_channel *chan_list,
+			     enum supported_6g_pwr_types in_6g_pwr_mode)
+{
+	return QDF_STATUS_E_INVAL;
+}
 #endif /* CONFIG_BAND_6GHZ */
 
 QDF_STATUS reg_get_pwrmode_chan_list(struct wlan_objmgr_pdev *pdev,
@@ -2673,7 +2709,6 @@ QDF_STATUS reg_get_pwrmode_chan_list(struct wlan_objmgr_pdev *pdev,
 {
 	struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj;
 	struct wlan_objmgr_psoc *psoc;
-	uint8_t i;
 
 	if (!pdev) {
 		reg_err_rl("invalid pdev");
@@ -2695,23 +2730,8 @@ QDF_STATUS reg_get_pwrmode_chan_list(struct wlan_objmgr_pdev *pdev,
 	if (in_6g_pwr_mode == REG_CURRENT_PWR_MODE)
 		return QDF_STATUS_SUCCESS;
 
-	/*
-	 * If 6GHz channel list is present, populate it with desired
-	 * power type
-	 */
-	if (!pdev_priv_obj->is_6g_channel_list_populated) {
-		reg_debug("6G channel list is empty");
-		return QDF_STATUS_SUCCESS;
-	}
-
-	/* Copy the regulatory_channel fields from super_chan_info */
-	for (i = 0; i < NUM_6GHZ_CHANNELS; i++)
-		copy_from_super_chan_info_to_reg_channel(
-					&chan_list[i + MIN_6GHZ_CHANNEL],
-					pdev_priv_obj->super_chan_list[i],
-					in_6g_pwr_mode);
-
-	return QDF_STATUS_SUCCESS;
+	return reg_get_6g_pwrmode_chan_list(pdev_priv_obj, chan_list,
+					    in_6g_pwr_mode);
 }
 
 #ifdef CONFIG_REG_CLIENT
