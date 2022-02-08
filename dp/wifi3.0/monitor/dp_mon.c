@@ -3174,7 +3174,7 @@ static void dp_process_ppdu_stats_user_cmpltn_common_tlv(
 
 	ppdu_user_desc->short_retries =
 	HTT_PPDU_STATS_USER_CMPLTN_COMMON_TLV_SHORT_RETRY_GET(*tag_buf);
-	ppdu_user_desc->retry_msdus =
+	ppdu_user_desc->retry_mpdus =
 		ppdu_user_desc->long_retries + ppdu_user_desc->short_retries;
 
 	ppdu_user_desc->is_ampdu =

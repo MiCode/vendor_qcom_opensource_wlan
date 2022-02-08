@@ -1791,6 +1791,7 @@ struct cdp_delayed_tx_completion_ppdu_user {
  * @is_ampdu: mpdu aggregate or non-aggregate?
  * @success_bytes: bytes successfully transmitted
  * @retry_bytes: bytes retried
+ * @retry_mpdus: mpdus retried
  * @failed_msdus: MSDUs failed transmission
  * @duration: user duration in ppdu
  * @ltf_size: ltf_size
@@ -1874,6 +1875,7 @@ struct cdp_tx_completion_ppdu_user {
 	uint32_t failed_bytes;
 	uint32_t success_msdus:16,
 		 retry_msdus:16;
+	uint32_t retry_mpdus;
 	uint32_t failed_msdus:16,
 		 duration:16;
 	uint32_t ltf_size:2,
