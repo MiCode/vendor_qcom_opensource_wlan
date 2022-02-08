@@ -5582,6 +5582,12 @@ typedef enum {
 #ifdef QCA_RSSI_DB2DBM
 	wmi_service_pdev_rssi_dbm_conv_event_support,
 #endif
+#ifdef WIFI_POS_CONVERGED
+	wmi_service_rtt_11az_mac_phy_sec_support,
+	wmi_service_rtt_11az_mac_sec_support,
+	wmi_service_rtt_11az_ntb_support,
+	wmi_service_rtt_11az_tb_support,
+#endif
 	wmi_services_max,
 } wmi_conv_service_ids;
 #define WMI_SERVICE_UNAVAILABLE 0xFFFF
