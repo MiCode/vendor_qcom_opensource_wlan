@@ -49,38 +49,22 @@ dp_rx_mon_handle_cfr_mu_info(struct dp_pdev *pdev,
 {
 	struct dp_peer *peer;
 	struct dp_soc *soc = pdev->soc;
-	struct dp_ast_entry *ast_entry;
 	struct mon_rx_user_status *rx_user_status;
 	struct cdp_rx_stats_ppdu_user *rx_stats_peruser;
 	uint32_t num_users;
 	int user_id;
-	uint32_t ast_index;
-
-	qdf_spin_lock_bh(&soc->ast_lock);
+	uint16_t sw_peer_id;
 
 	num_users = ppdu_info->com_info.num_users;
 	for (user_id = 0; user_id < num_users; user_id++) {
 		if (user_id > OFDMA_NUM_USERS) {
-			qdf_spin_unlock_bh(&soc->ast_lock);
 			return;
 		}
 
 		rx_user_status =  &ppdu_info->rx_user_status[user_id];
 		rx_stats_peruser = &cdp_rx_ppdu->user[user_id];
-		ast_index = rx_user_status->ast_index;
-
-		if (ast_index >= wlan_cfg_get_max_ast_idx(soc->wlan_cfg_ctx)) {
-			rx_stats_peruser->peer_id = HTT_INVALID_PEER;
-			continue;
-		}
-
-		ast_entry = soc->ast_table[ast_index];
-		if (!ast_entry || ast_entry->peer_id == HTT_INVALID_PEER) {
-			rx_stats_peruser->peer_id = HTT_INVALID_PEER;
-			continue;
-		}
-
-		peer = dp_peer_get_ref_by_id(soc, ast_entry->peer_id,
+		sw_peer_id = rx_user_status->sw_peer_id;
+		peer = dp_peer_get_ref_by_id(soc, sw_peer_id,
 					     DP_MOD_ID_RX_PPDU_STATS);
 		if (!peer) {
 			rx_stats_peruser->peer_id = HTT_INVALID_PEER;
@@ -91,8 +75,6 @@ dp_rx_mon_handle_cfr_mu_info(struct dp_pdev *pdev,
 			     peer->mac_addr.raw, QDF_MAC_ADDR_SIZE);
 		dp_peer_unref_delete(peer, DP_MOD_ID_RX_PPDU_STATS);
 	}
-
-	qdf_spin_unlock_bh(&soc->ast_lock);
 }
 
 void
@@ -395,8 +377,6 @@ dp_rx_populate_cdp_indication_ppdu_user(struct dp_pdev *pdev,
 {
 	struct dp_peer *peer;
 	struct dp_soc *soc = pdev->soc;
-	struct dp_ast_entry *ast_entry;
-	uint32_t ast_index;
 	int i;
 	struct mon_rx_user_status *rx_user_status;
 	struct mon_rx_user_info *rx_user_info;
@@ -405,6 +385,7 @@ dp_rx_populate_cdp_indication_ppdu_user(struct dp_pdev *pdev,
 	bool is_data = false;
 	uint32_t num_users;
 	struct dp_mon_ops *mon_ops;
+	uint16_t sw_peer_id;
 
 	num_users = ppdu_info->com_info.num_users;
 	for (i = 0; i < num_users; i++) {
@@ -415,19 +396,8 @@ dp_rx_populate_cdp_indication_ppdu_user(struct dp_pdev *pdev,
 		rx_user_info = &ppdu_info->rx_user_info[i];
 		rx_stats_peruser = &cdp_rx_ppdu->user[i];
 
-		ast_index = rx_user_status->ast_index;
-		if (ast_index >= wlan_cfg_get_max_ast_idx(soc->wlan_cfg_ctx)) {
-			rx_stats_peruser->peer_id = HTT_INVALID_PEER;
-			continue;
-		}
-
-		ast_entry = soc->ast_table[ast_index];
-		if (!ast_entry || ast_entry->peer_id == HTT_INVALID_PEER) {
-			rx_stats_peruser->peer_id = HTT_INVALID_PEER;
-			continue;
-		}
-
-		peer = dp_peer_get_ref_by_id(soc, ast_entry->peer_id,
+		sw_peer_id = rx_user_status->sw_peer_id;
+		peer = dp_peer_get_ref_by_id(soc, sw_peer_id,
 					     DP_MOD_ID_RX_PPDU_STATS);
 		if (!peer) {
 			rx_stats_peruser->peer_id = HTT_INVALID_PEER;
@@ -549,10 +519,11 @@ dp_rx_populate_cdp_indication_ppdu(struct dp_pdev *pdev,
 {
 	struct dp_peer *peer;
 	struct dp_soc *soc = pdev->soc;
-	struct dp_ast_entry *ast_entry;
-	uint32_t ast_index;
 	uint32_t i;
 	struct dp_mon_ops *mon_ops;
+	uint16_t sw_peer_id;
+	struct mon_rx_user_status *rx_user_status;
+	uint32_t num_users = ppdu_info->com_info.num_users;
 
 	cdp_rx_ppdu->first_data_seq_ctrl =
 		ppdu_info->rx_status.first_data_seq_ctrl;
@@ -578,21 +549,10 @@ dp_rx_populate_cdp_indication_ppdu(struct dp_pdev *pdev,
 		cdp_rx_ppdu->is_ampdu = 0;
 	cdp_rx_ppdu->tid = ppdu_info->rx_status.tid;
 
-
-	ast_index = ppdu_info->rx_status.ast_index;
-	if (ast_index >= wlan_cfg_get_max_ast_idx(soc->wlan_cfg_ctx)) {
-		cdp_rx_ppdu->peer_id = HTT_INVALID_PEER;
-		cdp_rx_ppdu->num_users = 0;
-		goto end;
-	}
-
-	ast_entry = soc->ast_table[ast_index];
-	if (!ast_entry || ast_entry->peer_id == HTT_INVALID_PEER) {
-		cdp_rx_ppdu->peer_id = HTT_INVALID_PEER;
-		cdp_rx_ppdu->num_users = 0;
-		goto end;
-	}
-	peer = dp_peer_get_ref_by_id(soc, ast_entry->peer_id,
+	qdf_assert_always(num_users <= CDP_MU_MAX_USERS);
+	rx_user_status = &ppdu_info->rx_user_status[num_users - 1];
+	sw_peer_id = rx_user_status->sw_peer_id;
+	peer = dp_peer_get_ref_by_id(soc, sw_peer_id,
 				     DP_MOD_ID_RX_PPDU_STATS);
 	if (!peer) {
 		cdp_rx_ppdu->peer_id = HTT_INVALID_PEER;
@@ -684,7 +644,7 @@ static inline void dp_rx_rate_stats_update(struct dp_peer *peer,
 	uint32_t nss = 0;
 	uint8_t mcs = 0;
 	uint32_t rix;
-	uint16_t ratecode;
+	uint16_t ratecode = 0;
 	struct cdp_rx_stats_ppdu_user *ppdu_user = NULL;
 	enum PUNCTURED_MODES punc_mode = NO_PUNCTURE;
 
