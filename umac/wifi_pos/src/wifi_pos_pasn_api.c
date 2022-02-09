@@ -86,6 +86,9 @@ void wifi_pos_add_peer_to_list(struct wlan_objmgr_vdev *vdev,
 	struct wlan_pasn_request *secure_list, *unsecure_list, *dst_entry;
 	uint8_t i;
 
+	if (wlan_vdev_mlme_get_opmode(vdev) != QDF_STA_MODE)
+		return;
+
 	vdev_pos_obj = wifi_pos_get_vdev_priv_obj(vdev);
 	if (!vdev_pos_obj) {
 		wifi_pos_err("Wifi pos vdev priv obj is null");
@@ -143,6 +146,9 @@ void wifi_pos_move_peers_to_fail_list(struct wlan_objmgr_vdev *vdev,
 	struct wifi_pos_11az_context *pasn_context;
 	struct wlan_pasn_request *secure_list, *unsecure_list, *list;
 	struct qdf_mac_addr entry_to_copy;
+
+	if (wlan_vdev_mlme_get_opmode(vdev) != QDF_STA_MODE)
+		return;
 
 	vdev_pos_obj = wifi_pos_get_vdev_priv_obj(vdev);
 	if (!vdev_pos_obj) {
@@ -362,8 +368,14 @@ QDF_STATUS wifi_pos_handle_ranging_peer_create(struct wlan_objmgr_psoc *psoc,
 			wifi_pos_set_11az_failed_peers(vdev, &req[i].peer_mac);
 			continue;
 		}
-		wifi_pos_add_peer_to_list(vdev, &req[i], true);
+
+		/* Track the peers only for I-STA mode */
+		if (wlan_vdev_mlme_get_opmode(vdev) == QDF_STA_MODE)
+			wifi_pos_add_peer_to_list(vdev, &req[i], true);
 	}
+
+	if (wlan_vdev_mlme_get_opmode(vdev) != QDF_STA_MODE)
+		goto end;
 
 	vdev_pos_obj = wifi_pos_get_vdev_priv_obj(vdev);
 	if (!vdev_pos_obj) {
@@ -382,6 +394,7 @@ QDF_STATUS wifi_pos_handle_ranging_peer_create(struct wlan_objmgr_psoc *psoc,
 	pasn_context = &vdev_pos_obj->pasn_context;
 	status = wifi_pos_check_and_initiate_pasn_authentication(psoc, vdev,
 								 pasn_context);
+end:
 	wlan_objmgr_vdev_release_ref(vdev, WLAN_WIFI_POS_CORE_ID);
 
 	return status;
