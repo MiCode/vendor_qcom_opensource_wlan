@@ -401,6 +401,7 @@ const int dp_stats_mapping_table[][STATS_TYPE_MAX] = {
 	{TXRX_FW_STATS_INVALID, TXRX_SOC_FSE_STATS},
 	{TXRX_FW_STATS_INVALID, TXRX_HAL_REG_WRITE_STATS},
 	{TXRX_FW_STATS_INVALID, TXRX_SOC_REO_HW_DESC_DUMP},
+	{TXRX_FW_STATS_INVALID, TXRX_SOC_WBM_IDLE_HPTP_DUMP},
 	{HTT_DBG_EXT_STATS_PDEV_RX_RATE_EXT, TXRX_HOST_STATS_INVALID}
 };
 
@@ -9112,6 +9113,44 @@ dp_get_host_peer_stats(struct cdp_soc_t *soc, uint8_t *mac_addr)
 	return QDF_STATUS_SUCCESS;
 }
 
+/* *
+ * dp_dump_wbm_idle_hptp() -dump wbm idle ring, hw hp tp info.
+ * @soc: dp soc.
+ * @pdev: dp pdev.
+ *
+ * Return: None.
+ */
+static void
+dp_dump_wbm_idle_hptp(struct dp_soc *soc, struct dp_pdev *pdev)
+{
+	uint32_t hw_head;
+	uint32_t hw_tail;
+	struct dp_srng *srng;
+
+	if (!soc) {
+		dp_err("soc is NULL");
+		return;
+	}
+
+	if (!pdev) {
+		dp_err("pdev is NULL");
+		return;
+	}
+
+	srng = &pdev->soc->wbm_idle_link_ring;
+	if (!srng) {
+		dp_err("wbm_idle_link_ring srng is NULL");
+		return;
+	}
+
+	hal_get_hw_hptp(soc->hal_soc, srng->hal_srng, &hw_head,
+			&hw_tail, WBM_IDLE_LINK);
+
+	dp_debug("WBM_IDLE_LINK: HW hp: %d, HW tp: %d",
+			hw_head, hw_tail);
+}
+
+
 /**
  * dp_txrx_stats_help() - Helper function for Txrx_Stats
  *
@@ -9228,6 +9267,9 @@ dp_print_host_stats(struct dp_vdev *vdev,
 	case TXRX_SOC_REO_HW_DESC_DUMP:
 		dp_get_rx_reo_queue_info((struct cdp_soc_t *)pdev->soc,
 					 vdev->vdev_id);
+		break;
+	case TXRX_SOC_WBM_IDLE_HPTP_DUMP:
+		dp_dump_wbm_idle_hptp(pdev->soc, pdev);
 		break;
 	default:
 		dp_info("Wrong Input For TxRx Host Stats");
