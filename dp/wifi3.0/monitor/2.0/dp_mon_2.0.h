@@ -29,6 +29,7 @@
 
 #define DP_MON_RING_FILL_LEVEL_DEFAULT 2048
 #define DP_MON_DATA_BUFFER_SIZE     2048
+#define DP_MON_DESC_MAGIC 0xdeadabcd
 
 /**
  * struct dp_mon_filter_be - Monitor TLV filter
@@ -53,6 +54,7 @@ struct dp_mon_filter_be {
  * @unmapped: used to mark desc an unmapped if the corresponding
  * nbuf is already unmapped
  * @cookie: unique desc identifier
+ * @magic: magic number to validate desc data
  */
 struct dp_mon_desc {
 	uint8_t *buf_addr;
@@ -60,6 +62,7 @@ struct dp_mon_desc {
 	uint8_t in_use:1,
 		unmapped:1;
 	uint32_t cookie;
+	uint32_t magic;
 };
 
 /**

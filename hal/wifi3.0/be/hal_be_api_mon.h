@@ -52,25 +52,25 @@
 #define HAL_MON_PADDR_LO_SET(buff_addr_info, paddr_lo) \
 		((*(((unsigned int *) buff_addr_info) + \
 		(HAL_MON_BUFFER_ADDR_INFO_0_BUFFER_ADDR_31_0_OFFSET >> 2))) = \
-		(paddr_lo << HAL_MON_BUFFER_ADDR_INFO_0_BUFFER_ADDR_31_0_LSB) & \
+		((paddr_lo) << HAL_MON_BUFFER_ADDR_INFO_0_BUFFER_ADDR_31_0_LSB) & \
 		HAL_MON_BUFFER_ADDR_INFO_0_BUFFER_ADDR_31_0_MASK)
 
 #define HAL_MON_PADDR_HI_SET(buff_addr_info, paddr_hi) \
 		((*(((unsigned int *) buff_addr_info) + \
 		(HAL_MON_BUFFER_ADDR_INFO_1_BUFFER_ADDR_39_32_OFFSET >> 2))) = \
-		(paddr_hi << HAL_MON_BUFFER_ADDR_INFO_1_BUFFER_ADDR_39_32_LSB) & \
+		((paddr_hi) << HAL_MON_BUFFER_ADDR_INFO_1_BUFFER_ADDR_39_32_LSB) & \
 		HAL_MON_BUFFER_ADDR_INFO_1_BUFFER_ADDR_39_32_MASK)
 
-#define HAL_MON_VADDR_LO_SET(buff_addr_info, paddr_lo) \
+#define HAL_MON_VADDR_LO_SET(buff_addr_info, vaddr_lo) \
 		((*(((unsigned int *) buff_addr_info) + \
 		(HAL_MON_MON_INGRESS_RING_BUFFER_VIRT_ADDR_31_0_OFFSET >> 2))) = \
-		(paddr_lo << HAL_MON_MON_INGRESS_RING_BUFFER_VIRT_ADDR_31_0_LSB) & \
+		((vaddr_lo) << HAL_MON_MON_INGRESS_RING_BUFFER_VIRT_ADDR_31_0_LSB) & \
 		HAL_MON_MON_INGRESS_RING_BUFFER_VIRT_ADDR_31_0_MASK)
 
-#define HAL_MON_VADDR_HI_SET(buff_addr_info, paddr_hi) \
+#define HAL_MON_VADDR_HI_SET(buff_addr_info, vaddr_hi) \
 		((*(((unsigned int *) buff_addr_info) + \
 		(HAL_MON_MON_INGRESS_RING_BUFFER_VIRT_ADDR_63_32_OFFSET >> 2))) = \
-		(paddr_hi << HAL_MON_MON_INGRESS_RING_BUFFER_VIRT_ADDR_63_32_LSB) & \
+		((vaddr_hi) << HAL_MON_MON_INGRESS_RING_BUFFER_VIRT_ADDR_63_32_LSB) & \
 		HAL_MON_MON_INGRESS_RING_BUFFER_VIRT_ADDR_63_32_MASK)
 
 enum hal_dest_desc_end_reason {
@@ -190,33 +190,6 @@ void hal_mon_buff_addr_info_set(hal_soc_handle_t hal_soc_hdl,
 	HAL_MON_VADDR_HI_SET(mon_entry, vaddr_hi);
 }
 
-/**
- * hal_mon_buf_get() - Get monitor descriptor
- * @hal_soc_hdl: HAL Soc handle
- * @desc: HAL monitor descriptor
- *
- * Return: none
- */
-static inline
-void hal_mon_buf_get(hal_soc_handle_t hal_soc_hdl,
-		     void *dst_ring_desc,
-		     struct hal_mon_desc *mon_desc)
-{
-	struct mon_destination_ring *hal_dst_ring =
-			(struct mon_destination_ring *)dst_ring_desc;
-
-	mon_desc->buf_addr =
-		((u64)hal_dst_ring->stat_buf_virt_addr_31_0 |
-		 ((u64)hal_dst_ring->stat_buf_virt_addr_63_32 << 32));
-	mon_desc->ppdu_id = hal_dst_ring->ppdu_id;
-	mon_desc->end_offset = hal_dst_ring->end_offset;
-	mon_desc->end_reason = hal_dst_ring->end_reason;
-	mon_desc->initiator = hal_dst_ring->initiator;
-	mon_desc->ring_id = hal_dst_ring->ring_id;
-	mon_desc->empty_descriptor = hal_dst_ring->empty_descriptor;
-	mon_desc->looping_count = hal_dst_ring->looping_count;
-}
-
 /* TX monitor */
 #define TX_MON_STATUS_BUF_SIZE 2048
 
@@ -295,7 +268,8 @@ hal_txmon_status_free_buffer(hal_soc_handle_t hal_soc_hdl,
 {
 	struct hal_soc *hal_soc = (struct hal_soc *)hal_soc_hdl;
 
-	hal_soc->ops->hal_txmon_status_free_buffer(status_frag);
+	if (hal_soc->ops->hal_txmon_status_free_buffer)
+		hal_soc->ops->hal_txmon_status_free_buffer(status_frag);
 }
 #endif /* QCA_MONITOR_2_0_SUPPORT */
 #endif /* _HAL_BE_API_MON_H_ */

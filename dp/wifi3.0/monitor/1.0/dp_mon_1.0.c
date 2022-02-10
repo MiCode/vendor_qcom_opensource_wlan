@@ -969,6 +969,7 @@ dp_mon_register_feature_ops_1_0(struct dp_soc *soc)
 	mon_ops->mon_pktlogmod_exit = dp_pktlogmod_exit;
 #endif
 	mon_ops->rx_packet_length_set = NULL;
+	mon_ops->rx_mon_enable = NULL;
 	mon_ops->rx_wmask_subscribe = NULL;
 	mon_ops->rx_enable_mpdu_logging = NULL;
 	mon_ops->mon_neighbour_peers_detach = dp_neighbour_peers_detach;

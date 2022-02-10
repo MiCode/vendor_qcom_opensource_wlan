@@ -74,7 +74,7 @@ dp_tx_mon_srng_process_2_0(struct dp_soc *soc, struct dp_intr *int_ctx,
 	}
 
 	while (qdf_likely((tx_mon_dst_ring_desc =
-		(void *)hal_srng_dst_get_next(hal_soc, mon_dst_srng))
+		(void *)hal_srng_dst_peek(hal_soc, mon_dst_srng))
 				&& quota--)) {
 		struct hal_mon_desc hal_mon_tx_desc;
 		struct dp_mon_desc *mon_desc;
@@ -82,6 +82,7 @@ dp_tx_mon_srng_process_2_0(struct dp_soc *soc, struct dp_intr *int_ctx,
 		hal_be_get_mon_dest_status(soc->hal_soc,
 					   tx_mon_dst_ring_desc,
 					   &hal_mon_tx_desc);
+
 		mon_desc = (struct dp_mon_desc *)(uintptr_t)(hal_mon_tx_desc.buf_addr);
 		qdf_assert_always(mon_desc);
 
@@ -92,23 +93,32 @@ dp_tx_mon_srng_process_2_0(struct dp_soc *soc, struct dp_intr *int_ctx,
 			mon_desc->unmapped = 1;
 		}
 
+		if (mon_desc->magic != DP_MON_DESC_MAGIC) {
+			dp_mon_err("Invalid monitor descriptor");
+			qdf_assert_always(mon_desc);
+		}
+
 		status = dp_tx_mon_process_status_tlv(soc, pdev,
 						      &hal_mon_tx_desc,
 						      mon_desc->paddr);
 		if (status != QDF_STATUS_SUCCESS) {
 			hal_txmon_status_free_buffer(pdev->soc->hal_soc,
 						     mon_desc->buf_addr);
-			qdf_frag_free(mon_desc->buf_addr);
 		}
 
+		qdf_frag_free(mon_desc->buf_addr);
 		dp_mon_add_to_free_desc_list(&desc_list, &tail, mon_desc);
+
 		work_done++;
+		hal_srng_dst_get_next(hal_soc, mon_dst_srng);
 	}
 	dp_srng_access_end(int_ctx, soc, mon_dst_srng);
 
 	if (desc_list)
-		dp_mon_add_desc_list_to_free_list(soc, &desc_list,
-						  &tail, tx_mon_desc_pool);
+		dp_mon_buffers_replenish(soc, &mon_soc_be->tx_mon_buf_ring,
+					 tx_mon_desc_pool,
+					 work_done,
+					 &desc_list, &tail);
 
 	qdf_spin_unlock_bh(&mon_pdev->mon_lock);
 	dp_mon_info("mac_id: %d, work_done:%d", mac_id, work_done);

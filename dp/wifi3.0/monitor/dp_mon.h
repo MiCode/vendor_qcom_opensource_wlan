@@ -697,6 +697,8 @@ struct dp_mon_ops {
 	void (*tx_mon_desc_pool_deinit)(struct dp_pdev *pdev);
 	QDF_STATUS (*tx_mon_desc_pool_alloc)(struct dp_pdev *pdev);
 	void (*tx_mon_desc_pool_free)(struct dp_pdev *pdev);
+	void (*rx_mon_enable)(uint32_t *msg_word,
+			      struct htt_rx_ring_tlv_filter *tlv_filter);
 	void (*rx_packet_length_set)(uint32_t *msg_word,
 				     struct htt_rx_ring_tlv_filter *tlv_filter);
 	void (*rx_wmask_subscribe)(uint32_t *msg_word,
@@ -3539,6 +3541,27 @@ dp_mon_rx_packet_length_set(struct dp_soc *soc, uint32_t *msg_word,
 	}
 
 	monitor_ops->rx_packet_length_set(msg_word, tlv_filter);
+}
+
+static inline void
+dp_rx_mon_enable(struct dp_soc *soc, uint32_t *msg_word,
+		 struct htt_rx_ring_tlv_filter *tlv_filter)
+{
+	struct dp_mon_soc *mon_soc = soc->monitor_soc;
+	struct dp_mon_ops *monitor_ops;
+
+	if (!mon_soc) {
+		dp_mon_debug("mon soc is NULL");
+		return;
+	}
+
+	monitor_ops = mon_soc->mon_ops;
+	if (!monitor_ops || !monitor_ops->rx_mon_enable) {
+		dp_mon_debug("callback not registered");
+		return;
+	}
+
+	monitor_ops->rx_mon_enable(msg_word, tlv_filter);
 }
 
 #ifdef QCA_ENHANCED_STATS_SUPPORT

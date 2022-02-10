@@ -236,6 +236,7 @@ dp_mon_buffers_replenish(struct dp_soc *dp_soc,
 		(*desc_list)->mon_desc.unmapped = 0;
 		(*desc_list)->mon_desc.buf_addr = mon_desc.buf_addr;
 		(*desc_list)->mon_desc.paddr = mon_desc.paddr;
+		(*desc_list)->mon_desc.magic = DP_MON_DESC_MAGIC;
 
 		hal_mon_buff_addr_info_set(dp_soc->hal_soc,
 					   mon_ring_entry,
@@ -450,11 +451,9 @@ dp_set_bpr_enable_2_0(struct dp_pdev *pdev, int val)
 static
 QDF_STATUS dp_mon_soc_htt_srng_setup_2_0(struct dp_soc *soc)
 {
-	QDF_STATUS status;
-#ifdef QCA_TXMON_HW_SUPPORT
 	struct dp_mon_soc *mon_soc = soc->monitor_soc;
 	struct dp_mon_soc_be *mon_soc_be = dp_get_be_mon_soc_from_dp_mon_soc(mon_soc);
-#endif
+	QDF_STATUS status;
 
 	hal_set_low_threshold(soc->rxdma_mon_buf_ring[0].hal_srng, 0);
 	status = htt_srng_setup(soc->htt_handle, 0,
@@ -466,17 +465,14 @@ QDF_STATUS dp_mon_soc_htt_srng_setup_2_0(struct dp_soc *soc)
 		return status;
 	}
 
-#ifdef QCA_TXMON_HW_SUPPORT
 	hal_set_low_threshold(mon_soc_be->tx_mon_buf_ring.hal_srng, 0);
 	status = htt_srng_setup(soc->htt_handle, 0,
 				mon_soc_be->tx_mon_buf_ring.hal_srng,
 				TX_MONITOR_BUF);
-
 	if (status != QDF_STATUS_SUCCESS) {
 		dp_err("Failed to send htt srng setup message for Tx mon buf ring");
 		return status;
 	}
-#endif
 
 	return status;
 }
@@ -487,10 +483,8 @@ QDF_STATUS dp_mon_pdev_htt_srng_setup_2_0(struct dp_soc *soc,
 					  int mac_id,
 					  int mac_for_pdev)
 {
-#ifdef QCA_TXMON_HW_SUPPORT
 	struct dp_mon_soc *mon_soc = soc->monitor_soc;
 	struct dp_mon_soc_be *mon_soc_be = dp_get_be_mon_soc_from_dp_mon_soc(mon_soc);
-#endif
 	QDF_STATUS status;
 
 	status = htt_srng_setup(soc->htt_handle, mac_for_pdev,
@@ -502,7 +496,6 @@ QDF_STATUS dp_mon_pdev_htt_srng_setup_2_0(struct dp_soc *soc,
 		return status;
 	}
 
-#ifdef QCA_TXMON_HW_SUPPORT
 	status = htt_srng_setup(soc->htt_handle, mac_for_pdev,
 				mon_soc_be->tx_mon_dst_ring[mac_id].hal_srng,
 				TX_MONITOR_DST);
@@ -511,7 +504,6 @@ QDF_STATUS dp_mon_pdev_htt_srng_setup_2_0(struct dp_soc *soc,
 		dp_mon_err("Failed to send htt srng message for Tx mon dst ring");
 		return status;
 	}
-#endif
 
 	return status;
 }
@@ -985,10 +977,8 @@ static void dp_mon_register_intr_ops_2_0(struct dp_soc *soc)
 
 	mon_soc->mon_ops->rx_mon_refill_buf_ring =
 			NULL,
-#ifdef QCA_TXMON_HW_SUPPORT
 	mon_soc->mon_ops->tx_mon_refill_buf_ring =
-			dp_tx_mon_refill_buf_ring_2_0,
-#endif
+			NULL,
 	mon_soc->mon_rx_process = dp_rx_mon_process_2_0;
 }
 
@@ -1106,6 +1096,7 @@ dp_mon_register_feature_ops_2_0(struct dp_soc *soc)
 	mon_ops->mon_pktlogmod_exit = dp_pktlogmod_exit;
 #endif
 	mon_ops->rx_packet_length_set = dp_rx_mon_packet_length_set;
+	mon_ops->rx_mon_enable = dp_rx_mon_enable_set;
 	mon_ops->rx_wmask_subscribe = dp_rx_mon_word_mask_subscribe;
 	mon_ops->rx_enable_mpdu_logging = dp_rx_mon_enable_mpdu_logging;
 	mon_ops->mon_neighbour_peers_detach = dp_neighbour_peers_detach;

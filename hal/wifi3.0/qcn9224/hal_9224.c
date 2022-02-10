@@ -2326,10 +2326,11 @@ struct hal_hw_srng_config hw_srng_table_9224[] = {
 		HWIO_WBM_R0_PPE_RELEASE_RING_BASE_MSB_RING_SIZE_BMSK >>
 		HWIO_WBM_R0_PPE_RELEASE_RING_BASE_MSB_RING_SIZE_SHFT,
 	},
+#ifdef QCA_MONITOR_2_0_SUPPORT
 	{ /* TX_MONITOR_BUF */
 		.start_ring_id = HAL_SRNG_SW2TXMON_BUF0,
 		.max_rings = 1,
-		.entry_size = sizeof(struct wbm_buffer_ring) >> 2,
+		.entry_size = sizeof(struct mon_ingress_ring) >> 2,
 		.lmac_ring = TRUE,
 		.ring_dir = HAL_SRNG_SRC_RING,
 		/* reg_start is not set because LMAC rings are not accessed
@@ -2342,7 +2343,7 @@ struct hal_hw_srng_config hw_srng_table_9224[] = {
 	{ /* TX_MONITOR_DST */
 		.start_ring_id = HAL_SRNG_WMAC1_TXMON2SW0,
 		.max_rings = 1,
-		.entry_size = sizeof(struct sw_monitor_ring) >> 2,
+		.entry_size = sizeof(struct mon_destination_ring) >> 2,
 		.lmac_ring = TRUE,
 		.ring_dir = HAL_SRNG_DST_RING,
 		/* reg_start is not set because LMAC rings are not accessed
@@ -2352,6 +2353,10 @@ struct hal_hw_srng_config hw_srng_table_9224[] = {
 		.reg_size = {},
 		.max_size = HAL_RXDMA_MAX_RING_SIZE_BE,
 	},
+#else
+	{},
+	{},
+#endif
 	{ /* SW2RXDMA */
 		.start_ring_id = HAL_SRNG_SW2RXDMA_BUF0,
 		.max_rings = 3,

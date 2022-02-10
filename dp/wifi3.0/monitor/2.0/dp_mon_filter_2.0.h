@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2021,2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -23,13 +23,22 @@
 #define DEFAULT_DMA_LENGTH 7
 
 /**
+ * dp_rx_mon_enable_set() - Setup rx monitor feature
+ * @msg_word: msg word
+ * @htt_tlv_filter: rx ring filter configuration
+ */
+void
+dp_rx_mon_enable_set(uint32_t *msg_word,
+		     struct htt_rx_ring_tlv_filter *tlv_filter);
+
+/**
  * dp_rx_mon_packet_length_set() - Setup rx monitor per packet type length
  * @msg_word: msg word
  * @htt_tlv_filter: rx ring filter configuration
  */
 void
 dp_rx_mon_packet_length_set(uint32_t *msg_word,
-			    struct htt_rx_ring_tlv_filter *tlvi_filter);
+			    struct htt_rx_ring_tlv_filter *tlv_filter);
 
 /**
  * dp_rx_mon_word_mask_subscribe() - Setup rx monitor word mask subscription
