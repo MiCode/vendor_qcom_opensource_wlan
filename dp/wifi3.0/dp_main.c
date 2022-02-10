@@ -8904,7 +8904,7 @@ dp_txrx_host_stats_clr(struct dp_vdev *vdev, struct dp_soc *soc)
 	}
 
 	dp_vdev_stats_hw_offload_target_clear(soc, vdev->pdev->pdev_id,
-					      vdev->vdev_id);
+					      (1 << vdev->vdev_id));
 
 	DP_STATS_CLR(vdev->pdev);
 	DP_STATS_CLR(vdev->pdev->soc);
