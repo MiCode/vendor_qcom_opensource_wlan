@@ -1115,10 +1115,10 @@ static inline char *rtpm_string_from_dbgid(wlan_rtpm_dbgid id)
 					"RTPM_ID_PM_STOP",
 					"RTPM_ID_CONN_DISCONNECT",
 					"RTPM_ID_SOC_REMOVE",
-					"RTPM_ID_SOC_IDLE_SHUTDOWN"
 					"RTPM_ID_DRIVER_UNLOAD",
 					"RTPM_ID_CE_INTR_HANDLER",
 					"RTPM_ID_WAKE_INTR_HANDLER",
+					"RTPM_ID_SOC_IDLE_SHUTDOWN",
 					"RTPM_ID_MAX"};
 
 	return (char *)strings[id];
