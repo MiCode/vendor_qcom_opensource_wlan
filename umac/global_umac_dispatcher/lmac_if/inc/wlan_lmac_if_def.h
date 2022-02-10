@@ -233,6 +233,10 @@ struct wlan_target_if_dcs_rx_ops {
  * @implemented: Whether functions pointers are implemented
  * @init_shmem_arena_ctx: Initialize shmem arena context
  * @deinit_shmem_arena_ctx: De-initialize shmem arena context
+ * @get_crash_reason_address: Get the address of the crash reason associated
+ * with chip_id
+ * @get_no_of_chips_from_crash_info: Get the number of chips participated in the
+ * mlo from global shmem crash info
  */
 struct wlan_lmac_if_global_shmem_local_ops {
 	bool implemented;
@@ -240,6 +244,8 @@ struct wlan_lmac_if_global_shmem_local_ops {
 	QDF_STATUS (*init_shmem_arena_ctx)(void *arena_vaddr,
 					   size_t arena_len);
 	QDF_STATUS (*deinit_shmem_arena_ctx)(void);
+	void *(*get_crash_reason_address)(uint8_t chip_id);
+	uint8_t (*get_no_of_chips_from_crash_info)(void);
 };
 #endif
 
