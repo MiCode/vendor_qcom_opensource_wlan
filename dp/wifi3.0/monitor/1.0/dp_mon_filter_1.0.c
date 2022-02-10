@@ -147,6 +147,12 @@ void dp_mon_filter_setup_enhanced_stats_1_0(struct dp_pdev *pdev)
 
 	mon_pdev = pdev->monitor_pdev;
 	dp_mon_filter_set_status_cmn(mon_pdev, &filter);
+
+	filter.tlv_filter.enable_mo = 0;
+	filter.tlv_filter.mo_mgmt_filter = 0;
+	filter.tlv_filter.mo_ctrl_filter = 0;
+	filter.tlv_filter.mo_data_filter = 0;
+
 	dp_mon_filter_show_filter(mon_pdev, mode, &filter);
 	mon_pdev->filter[mode][srng_type] = filter;
 }
@@ -315,6 +321,11 @@ void dp_mon_filter_setup_smart_monitor_1_0(struct dp_pdev *pdev)
 	/* Enabled the filter */
 	filter.valid = true;
 	dp_mon_filter_set_status_cmn(mon_pdev, &filter);
+
+	filter.tlv_filter.enable_mo = 0;
+	filter.tlv_filter.mo_mgmt_filter = 0;
+	filter.tlv_filter.mo_ctrl_filter = 0;
+	filter.tlv_filter.mo_data_filter = 0;
 
 	if (mon_soc->hw_nac_monitor_support) {
 		filter.tlv_filter.enable_md = 1;
