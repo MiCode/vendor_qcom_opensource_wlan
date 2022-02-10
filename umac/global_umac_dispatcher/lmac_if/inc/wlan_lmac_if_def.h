@@ -226,13 +226,28 @@ struct wlan_target_if_dcs_rx_ops {
 };
 #endif
 
+#ifdef WLAN_MLO_GLOBAL_SHMEM_SUPPORT
+/**
+ * struct wlan_lmac_if_global_shmem_local_ops - local ops function pointer
+ * table of local shared mem arena
+ * @implemented: Whether functions pointers are implemented
+ * @init_shmem_arena_ctx: Initialize shmem arena context
+ * @deinit_shmem_arena_ctx: De-initialize shmem arena context
+ */
+struct wlan_lmac_if_global_shmem_local_ops {
+	bool implemented;
+
+	QDF_STATUS (*init_shmem_arena_ctx)(void *arena_vaddr,
+					   size_t arena_len);
+	QDF_STATUS (*deinit_shmem_arena_ctx)(void);
+};
+#endif
+
 #ifdef WLAN_MGMT_RX_REO_SUPPORT
 /**
  * struct wlan_lmac_if_mgmt_rx_reo_low_level_ops - Low level function pointer
  * table of MGMT Rx REO module
  * @implemented: Whether functions pointers are implemented
- * @init_shmem_arena_ctx: Initialize shmem arena context
- * @deinit_shmem_arena_ctx: De-initialize shmem arena context
  * @get_num_links: Get number of links to be used by MGMT Rx REO module
  * @get_snapshot_address: Get address of an MGMT Rx REO snapshot
  * @snapshot_is_valid: Check if a snapshot is valid
@@ -244,9 +259,6 @@ struct wlan_target_if_dcs_rx_ops {
  */
 struct wlan_lmac_if_mgmt_rx_reo_low_level_ops {
 	bool implemented;
-	QDF_STATUS (*init_shmem_arena_ctx)(void *arena_vaddr,
-					   size_t arena_len);
-	QDF_STATUS (*deinit_shmem_arena_ctx)(void);
 	int (*get_num_links)(void);
 	void* (*get_snapshot_address)(
 			uint8_t link_id,
@@ -1306,6 +1318,9 @@ struct wlan_lmac_if_mlo_tx_ops {
 	QDF_STATUS (*unregister_events)(struct wlan_objmgr_psoc *psoc);
 	QDF_STATUS (*link_set_active)(struct wlan_objmgr_psoc *psoc,
 		struct mlo_link_set_active_param *param);
+#ifdef WLAN_MLO_GLOBAL_SHMEM_SUPPORT
+	struct wlan_lmac_if_global_shmem_local_ops shmem_local_ops;
+#endif
 };
 
 /**
