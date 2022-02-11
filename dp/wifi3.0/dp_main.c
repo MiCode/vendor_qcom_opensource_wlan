@@ -88,6 +88,9 @@ cdp_dump_flow_pool_info(struct cdp_soc_t *soc)
 #ifdef WLAN_DP_FEATURE_SW_LATENCY_MGR
 #include <dp_swlm.h>
 #endif
+#ifdef CONFIG_SAWF_DEF_QUEUES
+#include "dp_sawf.h"
+#endif
 
 #ifdef WLAN_FEATURE_STATS_EXT
 #define INIT_RX_HW_STATS_LOCK(_soc) \
@@ -7084,6 +7087,9 @@ dp_peer_create_wifi3(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
 	dp_local_peer_id_alloc(pdev, peer);
 	DP_STATS_INIT(peer);
 
+	if (dp_peer_sawf_ctx_alloc(soc, peer) != QDF_STATUS_SUCCESS)
+		dp_warn("peer sawf context alloc failed");
+
 	dp_peer_update_state(soc, peer, DP_PEER_STATE_INIT);
 
 	dp_vdev_unref_delete(soc, vdev, DP_MOD_ID_CDP);
@@ -8027,6 +8033,8 @@ void dp_peer_unref_delete(struct dp_peer *peer, enum dp_mod_id mod_id)
 
 		dp_peer_debug("Deleting peer %pK ("QDF_MAC_ADDR_FMT")", peer,
 			      QDF_MAC_ADDR_REF(peer->mac_addr.raw));
+
+		dp_peer_sawf_ctx_free(soc, peer);
 
 		wlan_minidump_remove(peer, sizeof(*peer), soc->ctrl_psoc,
 				     WLAN_MD_DP_PEER, "dp_peer");
@@ -12317,6 +12325,15 @@ static struct cdp_mesh_latency_ops dp_ops_mesh_latency = {
 };
 #endif
 
+#ifdef CONFIG_SAWF_DEF_QUEUES
+static struct cdp_sawf_ops dp_ops_sawf = {
+	.sawf_def_queues_map_req = dp_sawf_def_queues_map_req,
+	.sawf_def_queues_unmap_req = dp_sawf_def_queues_unmap_req,
+	.sawf_def_queues_get_map_report =
+		dp_sawf_def_queues_get_map_report,
+};
+#endif
+
 #if defined(DP_POWER_SAVE) || defined(FEATURE_RUNTIME_PM)
 /**
  * dp_flush_ring_hptp() - Update ring shadow
@@ -13146,6 +13163,9 @@ static void dp_soc_txrx_ops_attach(struct dp_soc *soc)
 #endif
 #ifdef WLAN_SUPPORT_MESH_LATENCY
 	soc->cdp_soc.ops->mesh_latency_ops = &dp_ops_mesh_latency;
+#endif
+#ifdef CONFIG_SAWF_DEF_QUEUES
+	soc->cdp_soc.ops->sawf_ops = &dp_ops_sawf;
 #endif
 };
 

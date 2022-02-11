@@ -1899,6 +1899,20 @@ struct cdp_mesh_latency_ops {
 };
 #endif
 
+#ifdef CONFIG_SAWF_DEF_QUEUES
+struct cdp_sawf_ops {
+	QDF_STATUS
+	(*sawf_def_queues_map_req)(struct cdp_soc_t *soc, uint8_t *mac_addr,
+				   uint8_t svc_class_id);
+	QDF_STATUS
+	(*sawf_def_queues_unmap_req)(struct cdp_soc_t *soc, uint8_t *mac_addr,
+				     uint8_t svc_class_id);
+	QDF_STATUS
+	(*sawf_def_queues_get_map_report)(struct cdp_soc_t *soc,
+					  uint8_t *mac_addr);
+};
+#endif
+
 struct cdp_ops {
 	struct cdp_cmn_ops          *cmn_drv_ops;
 	struct cdp_ctrl_ops         *ctrl_ops;
@@ -1942,6 +1956,9 @@ struct cdp_ops {
 #endif
 #if defined(WLAN_FEATURE_11BE_MLO) && defined(WLAN_MLO_MULTI_CHIP)
 	struct cdp_mlo_ops  *mlo_ops;
+#endif
+#ifdef CONFIG_SAWF_DEF_QUEUES
+	struct cdp_sawf_ops  *sawf_ops;
 #endif
 };
 #endif

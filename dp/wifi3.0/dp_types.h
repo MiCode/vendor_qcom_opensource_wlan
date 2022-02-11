@@ -3863,6 +3863,9 @@ struct dp_peer {
 	uint8_t num_links;
 	DP_MUTEX_TYPE link_peers_info_lock;
 #endif
+#ifdef CONFIG_SAWF_DEF_QUEUES
+	struct dp_peer_sawf *sawf;
+#endif
 };
 
 /*

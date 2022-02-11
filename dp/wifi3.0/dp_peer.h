@@ -945,6 +945,20 @@ void dp_peer_jitter_stats_ctx_clr(struct dp_txrx_peer *txrx_peer)
 }
 #endif
 
+#ifndef CONFIG_SAWF_DEF_QUEUES
+static inline QDF_STATUS dp_peer_sawf_ctx_alloc(struct dp_soc *soc,
+						struct dp_peer *peer)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static inline QDF_STATUS dp_peer_sawf_ctx_free(struct dp_soc *soc,
+					       struct dp_peer *peer)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+#endif
 struct dp_peer *dp_vdev_bss_peer_ref_n_get(struct dp_soc *soc,
 					   struct dp_vdev *vdev,
 					   enum dp_mod_id mod_id);
