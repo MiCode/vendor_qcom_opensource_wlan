@@ -34,7 +34,7 @@ void dp_rx_mon_process_status_tlv(struct dp_soc *soc,
 	/* API to process status tlv */
 }
 
-void
+QDF_STATUS
 dp_rx_process_pktlog_be(struct dp_soc *soc, struct dp_pdev *pdev,
 			struct hal_rx_ppdu_info *ppdu_info,
 			void *status_frag, uint32_t end_offset)
@@ -44,14 +44,14 @@ dp_rx_process_pktlog_be(struct dp_soc *soc, struct dp_pdev *pdev,
 	enum WDI_EVENT pktlog_mode = WDI_NO_VAL;
 
 	if (mon_pdev->dp_peer_based_pktlog &&
-	    (mon_pdev->rx_pktlog_mode != DP_RX_PKTLOG_DISABLED)) {
-		return;
+	    (mon_pdev->rx_pktlog_mode == DP_RX_PKTLOG_DISABLED)) {
+		return QDF_STATUS_E_INVAL;
 	}
 
 	nbuf = qdf_nbuf_alloc(soc->osdev, RX_MON_MIN_HEAD_ROOM,
 			      RX_BUFFER_RESERVATION, 0, FALSE);
 	if (!nbuf)
-		return;
+		return QDF_STATUS_E_NOMEM;
 
 	qdf_nbuf_add_rx_frag(status_frag, nbuf, 0,
 			     end_offset,
@@ -71,5 +71,8 @@ dp_rx_process_pktlog_be(struct dp_soc *soc, struct dp_pdev *pdev,
 					     nbuf, HTT_INVALID_PEER,
 					     WDI_NO_VAL, pdev->pdev_id);
 	}
+	qdf_nbuf_free(nbuf);
+
+	return QDF_STATUS_SUCCESS;
 }
 

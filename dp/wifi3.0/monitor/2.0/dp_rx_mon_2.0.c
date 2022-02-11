@@ -45,6 +45,7 @@ dp_rx_mon_srng_process_2_0(struct dp_soc *soc, struct dp_intr *int_ctx,
 	union dp_mon_desc_list_elem_t *desc_list = NULL;
 	union dp_mon_desc_list_elem_t *tail = NULL;
 	struct dp_mon_desc_pool *rx_mon_desc_pool = &mon_soc_be->rx_desc_mon;
+	QDF_STATUS status;
 
 	if (!pdev) {
 		dp_mon_err("%pK: pdev is null for mac_id = %d", soc, mac_id);
@@ -95,15 +96,17 @@ dp_rx_mon_srng_process_2_0(struct dp_soc *soc, struct dp_intr *int_ctx,
 			mon_desc->unmapped = 1;
 		}
 
-		dp_rx_process_pktlog_be(soc, pdev, ppdu_info,
-					mon_desc->buf_addr,
-					hal_mon_rx_desc.end_offset);
-
 		dp_rx_mon_process_status_tlv(soc, pdev,
 					     &hal_mon_rx_desc,
 					     mon_desc->paddr);
 
-		qdf_frag_free(mon_desc->buf_addr);
+		status = dp_rx_process_pktlog_be(soc, pdev, ppdu_info,
+						 mon_desc->buf_addr,
+						 hal_mon_rx_desc.end_offset);
+
+		if (status != QDF_STATUS_SUCCESS)
+			qdf_frag_free(mon_desc->buf_addr);
+
 		dp_mon_add_to_free_desc_list(&desc_list, &tail, mon_desc);
 		work_done++;
 		hal_srng_dst_get_next(hal_soc, mon_dst_srng);

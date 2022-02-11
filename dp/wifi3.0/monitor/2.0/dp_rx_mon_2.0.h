@@ -132,11 +132,11 @@ dp_rx_mon_populate_ppdu_info_2_0(struct hal_rx_ppdu_info *hal_ppdu_info,
  * @status_frag: frag pointer which needs to be added to nbuf
  * @end_offset: Offset in frag to be added to nbuf_frags
  *
- * Return: void
+ * Return: SUCCESS or Failure
  */
-void dp_rx_process_pktlog_be(struct dp_soc *soc, struct dp_pdev *pdev,
-			     struct hal_rx_ppdu_info *ppdu_info,
-			     void *status_frag, uint32_t end_offset);
+QDF_STATUS dp_rx_process_pktlog_be(struct dp_soc *soc, struct dp_pdev *pdev,
+				   struct hal_rx_ppdu_info *ppdu_info,
+				   void *status_frag, uint32_t end_offset);
 
 #if !defined(DISABLE_MON_CONFIG)
 /*
