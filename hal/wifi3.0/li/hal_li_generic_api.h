@@ -85,6 +85,119 @@ hal_tx_comp_get_buffer_timestamp(void *desc,
 }
 #endif /* WLAN_FEATURE_TSF_UPLINK_DELAY */
 
+#ifdef QCA_UNDECODED_METADATA_SUPPORT
+static inline void
+hal_rx_get_phyrx_abort(struct hal_soc *hal, void *rx_tlv,
+		       struct hal_rx_ppdu_info *ppdu_info){
+	switch (hal->target_type) {
+	case TARGET_TYPE_QCN9000:
+		ppdu_info->rx_status.phyrx_abort =
+			HAL_RX_GET(rx_tlv, RXPCU_PPDU_END_INFO_2,
+				   PHYRX_ABORT_REQUEST_INFO_VALID);
+		ppdu_info->rx_status.phyrx_abort_reason =
+			HAL_RX_GET(rx_tlv, UNIFIED_RXPCU_PPDU_END_INFO_11,
+				   PHYRX_ABORT_REQUEST_INFO_DETAILS_PHYRX_ABORT_REASON);
+		break;
+	default:
+		break;
+	}
+}
+
+static inline void
+hal_rx_get_ht_sig_info(struct hal_rx_ppdu_info *ppdu_info,
+		       uint8_t *ht_sig_info)
+{
+	ppdu_info->rx_status.ht_length =
+		HAL_RX_GET(ht_sig_info, HT_SIG_INFO_0, LENGTH);
+	ppdu_info->rx_status.smoothing =
+		HAL_RX_GET(ht_sig_info, HT_SIG_INFO_1, SMOOTHING);
+	ppdu_info->rx_status.not_sounding =
+		HAL_RX_GET(ht_sig_info, HT_SIG_INFO_1, NOT_SOUNDING);
+	ppdu_info->rx_status.aggregation =
+		HAL_RX_GET(ht_sig_info, HT_SIG_INFO_1, AGGREGATION);
+	ppdu_info->rx_status.ht_stbc =
+		HAL_RX_GET(ht_sig_info, HT_SIG_INFO_1, STBC);
+	ppdu_info->rx_status.ht_crc =
+		HAL_RX_GET(ht_sig_info, HT_SIG_INFO_1, CRC);
+}
+
+static inline void
+hal_rx_get_l_sig_a_info(struct hal_rx_ppdu_info *ppdu_info,
+			uint8_t *l_sig_a_info)
+{
+	ppdu_info->rx_status.l_sig_length =
+		HAL_RX_GET(l_sig_a_info, L_SIG_A_INFO_0, LENGTH);
+	ppdu_info->rx_status.l_sig_a_parity =
+		HAL_RX_GET(l_sig_a_info, L_SIG_A_INFO_0, PARITY);
+	ppdu_info->rx_status.l_sig_a_pkt_type =
+		HAL_RX_GET(l_sig_a_info, L_SIG_A_INFO_0, PKT_TYPE);
+	ppdu_info->rx_status.l_sig_a_implicit_sounding =
+		HAL_RX_GET(l_sig_a_info, L_SIG_A_INFO_0,
+			   CAPTURED_IMPLICIT_SOUNDING);
+}
+
+static inline void
+hal_rx_get_vht_sig_a_info(struct hal_rx_ppdu_info *ppdu_info,
+			  uint8_t *vht_sig_a_info)
+{
+	ppdu_info->rx_status.vht_no_txop_ps =
+		HAL_RX_GET(vht_sig_a_info, VHT_SIG_A_INFO_0,
+			   TXOP_PS_NOT_ALLOWED);
+	ppdu_info->rx_status.vht_crc =
+		HAL_RX_GET(vht_sig_a_info, VHT_SIG_A_INFO_1, CRC);
+}
+
+static inline void
+hal_rx_get_crc_he_sig_a_su_info(struct hal_rx_ppdu_info *ppdu_info,
+				uint8_t *he_sig_a_su_info) {
+	ppdu_info->rx_status.he_crc =
+		HAL_RX_GET(he_sig_a_su_info, HE_SIG_A_SU_INFO_1, CRC);
+}
+
+static inline void
+hal_rx_get_crc_he_sig_a_mu_dl_info(struct hal_rx_ppdu_info *ppdu_info,
+				   uint8_t *he_sig_a_mu_dl_info) {
+	ppdu_info->rx_status.he_crc =
+		HAL_RX_GET(he_sig_a_mu_dl_info, HE_SIG_A_MU_DL_INFO_1, CRC);
+}
+#else
+static inline void
+hal_rx_get_phyrx_abort(struct hal_soc *hal, void *rx_tlv,
+		       struct hal_rx_ppdu_info *ppdu_info)
+{
+}
+
+static inline void
+hal_rx_get_ht_sig_info(struct hal_rx_ppdu_info *ppdu_info,
+		       uint8_t *ht_sig_info)
+{
+}
+
+static inline void
+hal_rx_get_l_sig_a_info(struct hal_rx_ppdu_info *ppdu_info,
+			uint8_t *l_sig_a_info)
+{
+}
+
+static inline void
+hal_rx_get_vht_sig_a_info(struct hal_rx_ppdu_info *ppdu_info,
+			  uint8_t *vht_sig_a_info)
+{
+}
+
+static inline void
+hal_rx_get_crc_he_sig_a_su_info(struct hal_rx_ppdu_info *ppdu_info,
+				uint8_t *he_sig_a_su_info)
+{
+}
+
+static inline void
+hal_rx_get_crc_he_sig_a_mu_dl_info(struct hal_rx_ppdu_info *ppdu_info,
+				   uint8_t *he_sig_a_mu_dl_info)
+{
+}
+#endif /* QCA_UNDECODED_METADATA_SUPPORT */
+
 /**
  * hal_tx_comp_get_status() - TQM Release reason
  * @hal_desc: completion ring Tx status
@@ -618,6 +731,7 @@ hal_rx_status_get_tlv_info_generic_li(void *rx_tlv_hdr, void *ppduinfo,
 			HAL_RX_GET(rx_tlv, UNIFIED_RXPCU_PPDU_END_INFO_8,
 				RX_PPDU_DURATION);
 		hal_rx_get_bb_info(hal_soc_hdl, rx_tlv, ppdu_info);
+		hal_rx_get_phyrx_abort(hal, rx_tlv, ppdu_info);
 		break;
 
 	/*
@@ -783,6 +897,7 @@ hal_rx_status_get_tlv_info_generic_li(void *rx_tlv_hdr, void *ppduinfo,
 		ppdu_info->rx_status.nss = ((ppdu_info->rx_status.mcs) >>
 				HT_SIG_SU_NSS_SHIFT) + 1;
 		ppdu_info->rx_status.mcs &= ((1 << HT_SIG_SU_NSS_SHIFT) - 1);
+		hal_rx_get_ht_sig_info(ppdu_info, ht_sig_info);
 		break;
 	}
 
@@ -877,6 +992,7 @@ hal_rx_status_get_tlv_info_generic_li(void *rx_tlv_hdr, void *ppduinfo,
 		}
 		ppdu_info->rx_status.ofdm_flag = 1;
 		ppdu_info->rx_status.reception_type = HAL_RX_TYPE_SU;
+		hal_rx_get_l_sig_a_info(ppdu_info, l_sig_a_info);
 	break;
 	}
 
@@ -962,6 +1078,7 @@ hal_rx_status_get_tlv_info_generic_li(void *rx_tlv_hdr, void *ppduinfo,
 			ppdu_info->rx_status.reception_type =
 				HAL_RX_TYPE_MU_MIMO;
 
+		hal_rx_get_vht_sig_a_info(ppdu_info, vht_sig_a_info);
 		break;
 	}
 	case WIFIPHYRX_HE_SIG_A_SU_E:
@@ -1122,6 +1239,7 @@ hal_rx_status_get_tlv_info_generic_li(void *rx_tlv_hdr, void *ppduinfo,
 		ppdu_info->rx_status.beamformed = HAL_RX_GET(he_sig_a_su_info,
 					HE_SIG_A_SU_INFO_1, TXBF);
 		ppdu_info->rx_status.reception_type = HAL_RX_TYPE_SU;
+		hal_rx_get_crc_he_sig_a_su_info(ppdu_info, he_sig_a_su_info);
 		break;
 	}
 	case WIFIPHYRX_HE_SIG_A_MU_DL_E:
@@ -1276,6 +1394,8 @@ hal_rx_status_get_tlv_info_generic_li(void *rx_tlv_hdr, void *ppduinfo,
 		value = value << QDF_MON_STATUS_NUM_SIG_B_SYMBOLS_SHIFT;
 		ppdu_info->rx_status.he_flags2 |= value;
 		ppdu_info->rx_status.reception_type = HAL_RX_TYPE_MU_MIMO;
+		hal_rx_get_crc_he_sig_a_mu_dl_info(ppdu_info,
+						   he_sig_a_mu_dl_info);
 		break;
 	}
 	case WIFIPHYRX_HE_SIG_B1_MU_E:
