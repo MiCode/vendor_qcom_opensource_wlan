@@ -862,6 +862,16 @@ struct cdp_ctrl_ops {
 					    uint8_t vdev_id,
 					    uint32_t *val);
 #endif
+#ifdef QCA_UNDECODED_METADATA_SUPPORT
+	QDF_STATUS (*txrx_set_pdev_phyrx_error_mask)(struct cdp_soc_t *soc,
+						     uint8_t pdev_id,
+						     uint32_t mask,
+						     uint32_t mask_cont);
+	QDF_STATUS (*txrx_get_pdev_phyrx_error_mask)(struct cdp_soc_t *soc,
+						     uint8_t pdev_id,
+						     uint32_t *mask,
+						     uint32_t *mask_cont);
+#endif
 };
 
 struct cdp_me_ops {

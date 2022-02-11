@@ -1001,6 +1001,10 @@ struct  dp_mon_pdev {
 	/* indicates if spcl vap is configured */
 	bool scan_spcl_vap_configured;
 	bool undecoded_metadata_capture;
+#ifdef QCA_UNDECODED_METADATA_SUPPORT
+	uint32_t phyrx_error_mask;
+	uint32_t phyrx_error_mask_cont;
+#endif
 #ifdef QCA_SUPPORT_SCAN_SPCL_VAP_STATS
 	/* enable spcl vap stats reset on ch change */
 	bool reset_scan_spcl_vap_stats_enable;
@@ -2035,6 +2039,53 @@ QDF_STATUS dp_monitor_config_undecoded_metadata_capture(struct dp_pdev *pdev,
 
 	return monitor_ops->mon_config_undecoded_metadata_capture(pdev, val);
 }
+
+static inline QDF_STATUS
+dp_monitor_config_undecoded_metadata_phyrx_error_mask(struct dp_pdev *pdev,
+						      int mask, int mask_cont)
+{
+	struct dp_mon_ops *monitor_ops;
+	struct dp_mon_pdev *mon_pdev = pdev->monitor_pdev;
+	struct dp_mon_soc *mon_soc = pdev->soc->monitor_soc;
+
+	if (!mon_soc)
+		return QDF_STATUS_E_FAILURE;
+
+	if (!mon_pdev)
+		return QDF_STATUS_E_FAILURE;
+
+	monitor_ops = mon_soc->mon_ops;
+	if (!monitor_ops ||
+	    !monitor_ops->mon_config_undecoded_metadata_capture) {
+		dp_mon_debug("callback not registered");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	if (!mon_pdev->undecoded_metadata_capture) {
+		qdf_info("mask:0x%x mask_cont:0x%x", mask, mask_cont);
+		return QDF_STATUS_SUCCESS;
+	}
+
+	mon_pdev->phyrx_error_mask = mask;
+	mon_pdev->phyrx_error_mask_cont = mask_cont;
+
+	return monitor_ops->mon_config_undecoded_metadata_capture(pdev, 1);
+}
+
+static inline QDF_STATUS
+dp_monitor_get_undecoded_metadata_phyrx_error_mask(struct dp_pdev *pdev,
+						   int *mask, int *mask_cont)
+{
+	struct dp_mon_pdev *mon_pdev = pdev->monitor_pdev;
+
+	if (!mon_pdev)
+		return QDF_STATUS_E_FAILURE;
+
+	*mask = mon_pdev->phyrx_error_mask;
+	*mask_cont = mon_pdev->phyrx_error_mask_cont;
+
+	return QDF_STATUS_SUCCESS;
+}
 #else
 static inline
 QDF_STATUS dp_monitor_config_undecoded_metadata_capture(struct dp_pdev *pdev,
@@ -2042,7 +2093,21 @@ QDF_STATUS dp_monitor_config_undecoded_metadata_capture(struct dp_pdev *pdev,
 {
 	return QDF_STATUS_SUCCESS;
 }
-#endif
+
+static inline QDF_STATUS
+dp_monitor_config_undecoded_metadata_phyrx_error_mask(struct dp_pdev *pdev,
+						      int mask1, int mask2)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static inline QDF_STATUS
+dp_monitor_get_undecoded_metadata_phyrx_error_mask(struct dp_pdev *pdev,
+						   int *mask, int *mask_cont)
+{
+	return QDF_STATUS_SUCCESS;
+}
+#endif /* QCA_UNDECODED_METADATA_SUPPORT */
 
 /*
  * dp_monitor_htt_srng_setup() - Setup htt srng

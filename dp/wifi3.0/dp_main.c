@@ -9630,6 +9630,40 @@ static QDF_STATUS dp_set_pdev_param(struct cdp_soc_t *cdp_soc, uint8_t pdev_id,
 	return QDF_STATUS_SUCCESS;
 }
 
+#ifdef QCA_UNDECODED_METADATA_SUPPORT
+static
+QDF_STATUS dp_set_pdev_phyrx_error_mask(struct cdp_soc_t *cdp_soc,
+					uint8_t pdev_id, uint32_t mask,
+					uint32_t mask_cont)
+{
+	struct dp_pdev *pdev =
+		dp_get_pdev_from_soc_pdev_id_wifi3((struct dp_soc *)cdp_soc,
+						   pdev_id);
+
+	if (!pdev)
+		return QDF_STATUS_E_FAILURE;
+
+	return dp_monitor_config_undecoded_metadata_phyrx_error_mask(pdev,
+				mask, mask_cont);
+}
+
+static
+QDF_STATUS dp_get_pdev_phyrx_error_mask(struct cdp_soc_t *cdp_soc,
+					uint8_t pdev_id, uint32_t *mask,
+					uint32_t *mask_cont)
+{
+	struct dp_pdev *pdev =
+		dp_get_pdev_from_soc_pdev_id_wifi3((struct dp_soc *)cdp_soc,
+						   pdev_id);
+
+	if (!pdev)
+		return QDF_STATUS_E_FAILURE;
+
+	return dp_monitor_get_undecoded_metadata_phyrx_error_mask(pdev,
+				mask, mask_cont);
+}
+#endif
+
 #ifdef QCA_PEER_EXT_STATS
 static void dp_rx_update_peer_delay_stats(struct dp_soc *soc,
 					  qdf_nbuf_t nbuf)
@@ -12164,6 +12198,10 @@ static struct cdp_ctrl_ops dp_ops_ctrl = {
 	.txrx_set_delta_tsf = dp_set_delta_tsf,
 	.txrx_set_tsf_ul_delay_report = dp_set_tsf_ul_delay_report,
 	.txrx_get_uplink_delay = dp_get_uplink_delay,
+#endif
+#ifdef QCA_UNDECODED_METADATA_SUPPORT
+	.txrx_set_pdev_phyrx_error_mask = dp_set_pdev_phyrx_error_mask,
+	.txrx_get_pdev_phyrx_error_mask = dp_get_pdev_phyrx_error_mask,
 #endif
 };
 

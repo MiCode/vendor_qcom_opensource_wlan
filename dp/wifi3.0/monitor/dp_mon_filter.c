@@ -49,6 +49,9 @@ int8_t *dp_mon_filter_mode_type_to_str[DP_MON_FILTER_MAX_MODE] = {
 	"DP MON FILTER PKT LOG HYBRID MODE",
 #endif
 #endif /* WDI_EVENT_ENABLE */
+#ifdef QCA_UNDECODED_METADATA_SUPPORT
+	"DP MON FILTER RX UNDECODED METADATA CAPTURE MODE",
+#endif
 };
 
 void dp_mon_filter_show_filter(struct dp_mon_pdev *mon_pdev,

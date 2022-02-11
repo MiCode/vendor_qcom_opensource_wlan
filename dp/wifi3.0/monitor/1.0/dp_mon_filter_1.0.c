@@ -209,6 +209,8 @@ void dp_mon_filter_setup_undecoded_metadata_capture_1_0(struct dp_pdev *pdev)
 	filter.tlv_filter.fp_phy_err = 1;
 	filter.tlv_filter.fp_phy_err_buf_src = SW2RXDMA_BUF_SOURCE_RING;
 	filter.tlv_filter.fp_phy_err_buf_dest = RXDMA2SW_RING;
+	filter.tlv_filter.phy_err_mask = mon_pdev->phyrx_error_mask;
+	filter.tlv_filter.phy_err_mask_cont = mon_pdev->phyrx_error_mask_cont;
 
 	filter.tlv_filter.phy_err_filter_valid = 1;
 
