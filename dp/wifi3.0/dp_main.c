@@ -8623,7 +8623,7 @@ static QDF_STATUS dp_vdev_getstats(struct cdp_vdev *vdev_handle,
 
 	soc = pdev->soc;
 
-	vdev_stats = qdf_mem_malloc(sizeof(struct cdp_vdev_stats));
+	vdev_stats = qdf_mem_malloc_atomic(sizeof(struct cdp_vdev_stats));
 
 	if (!vdev_stats) {
 		dp_cdp_err("%pK: DP alloc failure - unable to get alloc vdev stats",
