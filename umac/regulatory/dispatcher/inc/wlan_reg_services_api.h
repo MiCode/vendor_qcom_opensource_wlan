@@ -790,6 +790,7 @@ wlan_reg_get_6g_afc_chan_list(struct wlan_objmgr_pdev *pdev,
  * @freq: channel frequency
  * @bw: channel band width
  * @sec_freq: secondary frequency
+ * @in_6g_pwr_type: 6g power type which decides 6G channel list lookup.
  *
  * Return: channel state
  */
@@ -797,7 +798,9 @@ enum channel_state
 wlan_reg_get_bonded_channel_state_for_freq(struct wlan_objmgr_pdev *pdev,
 					   qdf_freq_t freq,
 					   enum phy_ch_width bw,
-					   qdf_freq_t sec_freq);
+					   qdf_freq_t sec_freq,
+					   enum supported_6g_pwr_types
+					   in_6g_pwr_mode);
 
 /**
  * wlan_reg_set_dfs_region() - set the dfs region
@@ -1301,13 +1304,16 @@ wlan_reg_get_channel_list_with_power_for_freq(struct wlan_objmgr_pdev *pdev,
  * @pdev: The physical dev to program country code or regdomain
  * @freq: channel frequency.
  * @bw: channel band width
+ * @in_6g_pwr_type: 6g power type which decides 6G channel list lookup.
  *
  * Return: channel state
  */
 enum channel_state
 wlan_reg_get_5g_bonded_channel_state_for_freq(struct wlan_objmgr_pdev *pdev,
 					      qdf_freq_t freq,
-					      enum phy_ch_width bw);
+					      enum phy_ch_width bw,
+					      enum supported_6g_pwr_types
+					      in_6g_pwr_type);
 /**
  * wlan_reg_get_2g_bonded_channel_state_for_freq() - Get 2G bonded channel state
  * @pdev: The physical dev to program country code or regdomain
@@ -1327,12 +1333,14 @@ wlan_reg_get_2g_bonded_channel_state_for_freq(struct wlan_objmgr_pdev *pdev,
  * wlan_reg_get_channel_state_for_freq() - Get channel state from regulatory
  * @pdev: Pointer to pdev
  * @freq: channel center frequency.
+ * @in_6g_pwr_type: 6g power type which decides 6G channel list lookup.
  *
  * Return: channel state
  */
 enum channel_state
 wlan_reg_get_channel_state_for_freq(struct wlan_objmgr_pdev *pdev,
-				    qdf_freq_t freq);
+				    qdf_freq_t freq,
+				    enum supported_6g_pwr_types in_6g_pwr_type);
 
 #ifdef CONFIG_REG_CLIENT
 /**
@@ -1356,6 +1364,7 @@ enum channel_state wlan_reg_get_channel_state_from_secondary_list_for_freq(
  * @ch_width: Channel width of type 'enum phy_ch_width'.
  * @band_center_320: Center frequency of 320MHZ channel.
  * @chan_list: Pointer to struct reg_channel_list to be filled (Output param).
+ * @in_6g_pwr_type: 6g power type which decides 6G channel list lookup.
  *
  * Return: None
  */
@@ -1365,7 +1374,8 @@ void wlan_reg_fill_channel_list(struct wlan_objmgr_pdev *pdev,
 				qdf_freq_t sec_ch_2g_freq,
 				enum phy_ch_width ch_width,
 				qdf_freq_t band_center_320,
-				struct reg_channel_list *chan_list);
+				struct reg_channel_list *chan_list,
+				enum supported_6g_pwr_types in_6g_pwr_type);
 
 /**
  * wlan_reg_is_punc_bitmap_valid() - is puncture bitmap valid or not
@@ -1400,13 +1410,16 @@ static inline void wlan_reg_set_create_punc_bitmap(struct ch_params *ch_params,
  * @freq: channel center frequency.
  * @sec_ch_2g_freq: Secondary channel center frequency.
  * @ch_params: pointer to the channel parameters.
+ * @in_6g_pwr_type: 6g power type which decides 6G channel list lookup.
  *
  * Return: None
  */
 void wlan_reg_set_channel_params_for_freq(struct wlan_objmgr_pdev *pdev,
 					  qdf_freq_t freq,
 					  qdf_freq_t sec_ch_2g_freq,
-					  struct ch_params *ch_params);
+					  struct ch_params *ch_params,
+					  enum supported_6g_pwr_types
+					  in_6g_pwr_mode);
 
 /**
  * wlan_reg_get_channel_cfreq_reg_power_for_freq() - Provide the channel
@@ -1463,11 +1476,13 @@ bool wlan_reg_is_passive_or_disable_for_freq(struct wlan_objmgr_pdev *pdev,
  * wlan_reg_is_disable_for_freq() - Checks chan state for disabled
  * @pdev: pdev ptr
  * @freq: Channel center frequency
+ * @in_6g_pwr_type: 6g power type which decides 6G channel list lookup.
  *
  * Return: true or false
  */
 bool wlan_reg_is_disable_for_freq(struct wlan_objmgr_pdev *pdev,
-				  qdf_freq_t freq);
+				  qdf_freq_t freq,
+				  enum supported_6g_pwr_types in_6g_pwr_mode);
 
 #ifdef CONFIG_REG_CLIENT
 /**
@@ -1609,6 +1624,7 @@ bool wlan_reg_is_freq_in_country_opclass(struct wlan_objmgr_pdev *pdev,
  * @freq: Channel center frequency.
  * @bw Channel Width.
  * @bonded_chan_ptr_ptr: Pointer to bonded_channel_freq.
+ * @in_6g_pwr_type: 6g power type which decides 6G channel list lookup.
  *
  * Return: Channel State
  */
@@ -1618,7 +1634,9 @@ wlan_reg_get_5g_bonded_channel_and_state_for_freq(struct wlan_objmgr_pdev *pdev,
 						  enum phy_ch_width bw,
 						  const
 						  struct bonded_channel_freq
-						  **bonded_chan_ptr_ptr);
+						  **bonded_chan_ptr_ptr,
+						  enum supported_6g_pwr_types
+						  in_6g_pwr_mode);
 #endif /*CONFIG_CHAN_FREQ_API */
 
 /**

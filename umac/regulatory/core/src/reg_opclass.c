@@ -1224,7 +1224,8 @@ void reg_freq_to_chan_op_class(struct wlan_objmgr_pdev *pdev,
 	}
 
 	chan_params.ch_width = CH_WIDTH_MAX;
-	reg_set_channel_params_for_freq(pdev, freq, 0, &chan_params);
+	reg_set_channel_params_for_freq(pdev, freq, 0, &chan_params,
+					REG_CURRENT_PWR_MODE);
 
 	reg_freq_width_to_chan_op_class(pdev, freq,
 					reg_get_bw_value(chan_params.ch_width),

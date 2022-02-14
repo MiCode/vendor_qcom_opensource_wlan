@@ -3957,7 +3957,7 @@ target_if_calculate_center_freq(struct target_if_spectral *spectral,
 
 		state = wlan_reg_get_5g_bonded_channel_and_state_for_freq
 			(spectral->pdev_obj, chan_freq, agile_ch_width,
-			 &bonded_chan_ptr);
+			 &bonded_chan_ptr, REG_CURRENT_PWR_MODE);
 		if (state == CHANNEL_STATE_DISABLE ||
 		    state == CHANNEL_STATE_INVALID) {
 			spectral_err("Channel state is disable or invalid");
@@ -4038,7 +4038,8 @@ target_if_validate_center_freq(struct target_if_spectral *spectral,
 			st = wlan_reg_get_5g_bonded_channel_and_state_for_freq
 				(pdev, center_freq + FREQ_OFFSET_10MHZ,
 				 agile_ch_width,
-				 &bonded_chan_ptr);
+				 &bonded_chan_ptr,
+				 REG_CURRENT_PWR_MODE);
 			if (st == CHANNEL_STATE_DISABLE ||
 			    st == CHANNEL_STATE_INVALID) {
 				spectral_err("Channel state disable/invalid");
@@ -4145,7 +4146,8 @@ target_if_is_agile_span_overlap_with_operating_span
 		enum channel_state state;
 
 		state = wlan_reg_get_5g_bonded_channel_and_state_for_freq
-			(pdev, chan_freq, op_ch_width, &bonded_chan_ptr);
+			(pdev, chan_freq, op_ch_width, &bonded_chan_ptr,
+			 REG_CURRENT_PWR_MODE);
 		if (state == CHANNEL_STATE_DISABLE ||
 		    state == CHANNEL_STATE_INVALID) {
 			spectral_err("Channel state is disable or invalid");
@@ -4296,7 +4298,8 @@ target_if_spectral_is_valid_80p80_freq(struct wlan_objmgr_pdev *pdev,
 	ch_params.mhz_freq_seg1 = cfreq2;
 	ch_params.ch_width = CH_WIDTH_80P80MHZ;
 	wlan_reg_set_channel_params_for_freq(pdev, cfreq1 - FREQ_OFFSET_10MHZ,
-					     0, &ch_params);
+					     0, &ch_params,
+					     REG_CURRENT_PWR_MODE);
 
 	if (ch_params.ch_width != CH_WIDTH_80P80MHZ)
 		return false;
@@ -4308,7 +4311,8 @@ target_if_spectral_is_valid_80p80_freq(struct wlan_objmgr_pdev *pdev,
 	chan_state1 = wlan_reg_get_5g_bonded_channel_state_for_freq(
 				pdev,
 				ch_params.mhz_freq_seg0 - FREQ_OFFSET_10MHZ,
-				CH_WIDTH_80MHZ);
+				CH_WIDTH_80MHZ,
+				REG_CURRENT_PWR_MODE);
 	if ((chan_state1 == CHANNEL_STATE_DISABLE) ||
 	    (chan_state1 == CHANNEL_STATE_INVALID))
 		return false;
@@ -4316,7 +4320,8 @@ target_if_spectral_is_valid_80p80_freq(struct wlan_objmgr_pdev *pdev,
 	chan_state2 = wlan_reg_get_5g_bonded_channel_state_for_freq(
 				pdev,
 				ch_params.mhz_freq_seg1 - FREQ_OFFSET_10MHZ,
-				CH_WIDTH_80MHZ);
+				CH_WIDTH_80MHZ,
+				REG_CURRENT_PWR_MODE);
 	if ((chan_state2 == CHANNEL_STATE_DISABLE) ||
 	    (chan_state2 == CHANNEL_STATE_INVALID))
 		return false;

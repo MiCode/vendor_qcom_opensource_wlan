@@ -329,7 +329,8 @@ util_scan_get_chan_from_he_6g_params(struct wlan_objmgr_pdev *pdev,
 						he_6g_params->primary_channel,
 						band_mask);
 	if (scan_obj->drop_bcn_on_invalid_freq &&
-	    wlan_reg_is_disable_for_freq(pdev, *chan_freq)) {
+	    wlan_reg_is_disable_for_freq(pdev, *chan_freq,
+					 REG_CURRENT_PWR_MODE)) {
 		scm_debug_rl(QDF_MAC_ADDR_FMT": Drop as invalid channel %d freq %d in HE 6Ghz params",
 			     QDF_MAC_ADDR_REF(scan_params->bssid.bytes),
 			     he_6g_params->primary_channel, *chan_freq);
@@ -1285,7 +1286,9 @@ util_scan_populate_bcn_ie_list(struct wlan_objmgr_pdev *pdev,
 								band_mask);
 			/* Drop if invalid freq */
 			if (scan_obj->drop_bcn_on_invalid_freq &&
-			    wlan_reg_is_disable_for_freq(pdev, *chan_freq)) {
+			    wlan_reg_is_disable_for_freq(
+						pdev, *chan_freq,
+						REG_CURRENT_PWR_MODE)) {
 				scm_debug_rl(QDF_MAC_ADDR_FMT": Drop as invalid channel %d freq %d in HT_INFO IE",
 					     QDF_MAC_ADDR_REF(scan_params->bssid.bytes),
 					     chan_idx, *chan_freq);

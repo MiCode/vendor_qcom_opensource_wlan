@@ -679,6 +679,7 @@ reg_modify_chan_list_for_japan(struct wlan_objmgr_pdev *pdev)
 {
 }
 #endif
+
 /**
  * reg_modify_chan_list_for_freq_range() - Modify channel list for the given low
  * and high frequency range.
@@ -2366,7 +2367,8 @@ void reg_compute_pdev_current_chan_list(struct wlan_regulatory_pdev_priv_obj
 						    cur_chan_list);
 
 	reg_modify_chan_list_for_max_chwidth(pdev_priv_obj->pdev_ptr,
-					     pdev_priv_obj->cur_chan_list);
+					     pdev_priv_obj->cur_chan_list,
+					     REG_CURRENT_PWR_MODE);
 
 	reg_modify_chan_list_for_6g_edge_channels(pdev_priv_obj->pdev_ptr,
 						  pdev_priv_obj->

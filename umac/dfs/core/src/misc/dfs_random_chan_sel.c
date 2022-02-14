@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1566,9 +1566,11 @@ uint16_t dfs_prepare_random_channel_for_freq(struct wlan_dfs *dfs,
 		if ((*chan_wd == DFS_CH_WIDTH_80P80MHZ) &&
 		    (flags & DFS_RANDOM_CH_FLAG_RESTRICTED_80P80_ENABLED) &&
 		    target_freq) {
-			wlan_reg_set_channel_params_for_freq(dfs->dfs_pdev_obj,
-							     target_freq,
-							     0, chan_params);
+			wlan_reg_set_channel_params_for_freq(
+						dfs->dfs_pdev_obj,
+						target_freq,
+						0, chan_params,
+						REG_CURRENT_PWR_MODE);
 			if (!(CHAN_WITHIN_RESTRICTED_80P80(
 						chan_params->mhz_freq_seg0,
 						chan_params->mhz_freq_seg1))) {
