@@ -539,6 +539,9 @@ dp_rx_err_nbuf_pn_check(struct dp_soc *soc, hal_ring_desc_t ring_desc,
 {
 	uint64_t prev_pn, curr_pn[2];
 
+	if (!hal_rx_encryption_info_valid(soc->hal_soc, qdf_nbuf_data(nbuf)))
+		return QDF_STATUS_SUCCESS;
+
 	hal_rx_reo_prev_pn_get(soc->hal_soc, ring_desc, &prev_pn);
 	hal_rx_tlv_get_pn_num(soc->hal_soc, qdf_nbuf_data(nbuf), curr_pn);
 
