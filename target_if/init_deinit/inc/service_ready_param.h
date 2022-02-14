@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2017-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -265,6 +265,8 @@ struct wlan_psoc_host_hw_mode_caps {
  * @eht_cap_info_internal: EHT PHY internal feature capability
  * @eht_supp_mcs_ext_2G: 2G EHT Supported MCS Set for Rx/Tx as per 11be D1.2
  * @eht_supp_mcs_ext_5G: 5G EHT Supported MCS Set for Rx/Tx as per 11be D1.2
+ * @eht_ppet2G: 2G EHT PPET info
+ * @eht_ppet5G: 5G EHT PPET info
  */
 struct wlan_psoc_host_mac_phy_caps_ext2 {
 	uint32_t hw_mode_id;
@@ -281,6 +283,8 @@ struct wlan_psoc_host_mac_phy_caps_ext2 {
 	uint32_t eht_cap_info_internal;
 	uint32_t eht_supp_mcs_ext_2G[PSOC_HOST_EHT_MCS_NSS_MAP_2G_SIZE];
 	uint32_t eht_supp_mcs_ext_5G[PSOC_HOST_EHT_MCS_NSS_MAP_5G_SIZE];
+	struct wlan_psoc_host_ppe_threshold eht_ppet2G;
+	struct wlan_psoc_host_ppe_threshold eht_ppet5G;
 #endif
 };
 

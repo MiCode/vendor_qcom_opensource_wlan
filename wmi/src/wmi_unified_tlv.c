@@ -2757,6 +2757,8 @@ static uint8_t *update_peer_flags_tlv_ehtinfo(
 		     sizeof(param->peer_eht_cap_macinfo));
 	qdf_mem_copy(&cmd->peer_eht_cap_phy, &param->peer_eht_cap_phyinfo,
 		     sizeof(param->peer_eht_cap_phyinfo));
+	qdf_mem_copy(&cmd->peer_eht_ppet, &param->peer_eht_ppet,
+		     sizeof(param->peer_eht_ppet));
 
 	WMITLV_SET_HDR(buf_ptr, WMITLV_TAG_ARRAY_STRUC,
 		       (param->peer_eht_mcs_count * sizeof(wmi_eht_rate_set)));
@@ -12645,6 +12647,11 @@ static void extract_mac_phy_cap_ehtcaps(
 		     &mac_phy_caps->eht_supp_mcs_ext_5G,
 		     sizeof(param->eht_supp_mcs_ext_5G));
 
+	qdf_mem_copy(&param->eht_ppet2G, &mac_phy_caps->eht_ppet2G,
+		     sizeof(param->eht_ppet2G));
+	qdf_mem_copy(&param->eht_ppet5G, &mac_phy_caps->eht_ppet5G,
+		     sizeof(param->eht_ppet5G));
+
 	wmi_debug("EHT mac caps: mac cap_info_2G %x, mac cap_info_5G %x, supp_mcs_2G %x, supp_mcs_5G %x, info_internal %x",
 		  mac_phy_caps->eht_cap_mac_info_2G[0],
 		  mac_phy_caps->eht_cap_mac_info_5G[0],
@@ -12655,23 +12662,37 @@ static void extract_mac_phy_cap_ehtcaps(
 
 	wmi_nofl_debug("2G:");
 	for (i = 0; i < PSOC_HOST_MAX_EHT_PHY_SIZE; i++) {
-		wmi_nofl_debug("index %d value %d",
+		wmi_nofl_debug("index %d value %x",
 			       i, param->eht_cap_phy_info_2G[i]);
 	}
 	wmi_nofl_debug("5G:");
 	for (i = 0; i < PSOC_HOST_MAX_EHT_PHY_SIZE; i++) {
-		wmi_nofl_debug("index %d value %d",
+		wmi_nofl_debug("index %d value %x",
 			       i, param->eht_cap_phy_info_5G[i]);
 	}
 	wmi_nofl_debug("2G MCS ext Map:");
 	for (i = 0; i < PSOC_HOST_EHT_MCS_NSS_MAP_2G_SIZE; i++) {
-		wmi_nofl_debug("index %d value %d",
+		wmi_nofl_debug("index %d value %x",
 			       i, param->eht_supp_mcs_ext_2G[i]);
 	}
 	wmi_nofl_debug("5G MCS ext Map:");
 	for (i = 0; i < PSOC_HOST_EHT_MCS_NSS_MAP_5G_SIZE; i++) {
-		wmi_nofl_debug("index %d value %d",
+		wmi_nofl_debug("index %d value %x",
 			       i, param->eht_supp_mcs_ext_5G[i]);
+	}
+	wmi_nofl_debug("2G PPET: numss_m1 %x ru_bit_mask %x",
+		       param->eht_ppet2G.numss_m1,
+		       param->eht_ppet2G.ru_bit_mask);
+	for (i = 0; i < PSOC_HOST_MAX_NUM_SS; i++) {
+		wmi_nofl_debug("index %d value %x",
+			       i, param->eht_ppet2G.ppet16_ppet8_ru3_ru0[i]);
+	}
+	wmi_nofl_debug("5G PPET: numss_m1 %x ru_bit_mask %x",
+		       param->eht_ppet5G.numss_m1,
+		       param->eht_ppet5G.ru_bit_mask);
+	for (i = 0; i < PSOC_HOST_MAX_NUM_SS; i++) {
+		wmi_nofl_debug("index %d value %x",
+			       i, param->eht_ppet5G.ppet16_ppet8_ru3_ru0[i]);
 	}
 }
 #else

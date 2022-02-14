@@ -1145,6 +1145,7 @@ struct peer_assoc_ml_partner_links {
  * @peer_eht_mcs_count: Peer EHT MCS TX/RX MAP count
  * @peer_eht_rx_mcs_set: Peer EHT RX MCS MAP
  * @peer_eht_tx_mcs_set: Peer EHT TX MCS MAP
+ * @peer_eht_ppet: Peer EHT PPET info
  * @peer_ppet: Peer HE PPET info
  * @peer_bss_max_idle_option: Peer BSS Max Idle option update
  * @akm: AKM info
@@ -1224,6 +1225,7 @@ struct peer_assoc_params {
 	uint32_t peer_eht_rx_mcs_set[WMI_HOST_MAX_EHT_RATE_SET];
 	uint32_t peer_eht_tx_mcs_set[WMI_HOST_MAX_EHT_RATE_SET];
 	uint16_t puncture_pattern;
+	struct wmi_host_ppe_threshold peer_eht_ppet;
 #endif
 	struct wmi_host_ppe_threshold peer_ppet;
 	u_int8_t peer_bsscolor_rept_info;
