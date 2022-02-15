@@ -1141,7 +1141,7 @@ struct ol_if_ops {
 				 uint8_t pdev_id,
 				 uint8_t *peer_mac,
 				 uint8_t *vdev_mac, enum wlan_op_mode opmode);
-	bool (*is_hw_dbs_2x2_capable)(struct wlan_objmgr_psoc *psoc);
+	bool (*is_hw_dbs_capable)(struct wlan_objmgr_psoc *psoc);
 	int (*peer_add_wds_entry)(struct cdp_ctrl_objmgr_psoc *soc,
 				  uint8_t vdev_id,
 				  uint8_t *peer_macaddr,
