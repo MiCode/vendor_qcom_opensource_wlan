@@ -1853,6 +1853,43 @@ QDF_STATUS
 reg_get_superchan_entry(struct wlan_objmgr_pdev *pdev,
 			enum channel_enum chan_enum,
 			const struct super_chan_info **p_sup_chan_entry);
+#else
+static inline QDF_STATUS
+reg_set_lower_6g_edge_ch_supp(struct wlan_objmgr_psoc *psoc, bool val)
+{
+	return QDF_STATUS_E_NOSUPPORT;
+}
+
+static inline QDF_STATUS
+reg_set_disable_upper_6g_edge_ch_supp(struct wlan_objmgr_psoc *psoc,
+				      bool val)
+{
+	return QDF_STATUS_E_NOSUPPORT;
+}
+
+static inline bool reg_is_lower_6g_edge_ch_supp(struct wlan_objmgr_psoc *psoc)
+{
+	return false;
+}
+
+static inline bool
+reg_is_upper_6g_edge_ch_disabled(struct wlan_objmgr_psoc *psoc)
+{
+	return false;
+}
+
+static inline QDF_STATUS
+reg_get_superchan_entry(struct wlan_objmgr_pdev *pdev,
+			enum channel_enum chan_enum,
+			const struct super_chan_info **p_sup_chan_entry)
+{
+	return QDF_STATUS_E_NOSUPPORT;
+}
+
+static inline uint16_t reg_convert_enum_to_6g_idx(enum channel_enum ch_idx)
+{
+	return INVALID_CHANNEL;
+}
 #endif
 
 #ifdef FEATURE_WLAN_CH_AVOID_EXT

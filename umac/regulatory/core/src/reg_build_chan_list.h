@@ -108,6 +108,20 @@ QDF_STATUS reg_get_6g_ap_master_chan_list(struct wlan_objmgr_pdev *pdev,
 					  enum reg_6g_ap_type ap_pwr_type,
 					  struct regulatory_channel *chan_list);
 
+/**
+ * reg_get_reg_maschan_lst_frm_6g_pwr_mode() - Return the mas_chan_list entry
+ * for based on the channel index and input power mode
+ * @supp_pwr_mode: 6G supported power mode
+ * @pdev_priv_obj: Pointer to pdev_priv_obj
+ * @chan_idx: Channel index
+ *
+ * Return: Pointer to struct regulatory_channel
+ */
+struct regulatory_channel *reg_get_reg_maschan_lst_frm_6g_pwr_mode(
+			enum supported_6g_pwr_types supp_pwr_mode,
+			struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj,
+			uint16_t chan_idx);
+
 #ifdef CONFIG_REG_CLIENT
 /**
  * reg_get_power_string() - get power string from power enum type
@@ -137,6 +151,15 @@ reg_get_6g_ap_master_chan_list(struct wlan_objmgr_pdev *pdev,
 			       struct regulatory_channel *chan_list)
 {
 	return QDF_STATUS_E_FAILURE;
+}
+
+static inline
+struct regulatory_channel *reg_get_reg_maschan_lst_frm_6g_pwr_mode(
+			enum supported_6g_pwr_types supp_pwr_mode,
+			struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj,
+			uint16_t chan_idx)
+{
+	return NULL;
 }
 #endif /* CONFIG_BAND_6GHZ */
 /**
@@ -238,18 +261,4 @@ reg_get_secondary_current_chan_list(struct wlan_objmgr_pdev *pdev,
  * Return - True,  the channel is disabled, but not due to radar, else false.
  */
 bool reg_is_chan_disabled_and_not_nol(struct regulatory_channel *chan);
-
-/**
- * reg_get_reg_maschan_lst_frm_6g_pwr_mode() - Return the mas_chan_list entry
- * for based on the channel index and input power mode
- * @supp_pwr_mode: 6G supported power mode
- * @pdev_priv_obj: Pointer to pdev_priv_obj
- * @chan_idx: Channel index
- *
- * Return: Pointer to struct regulatory_channel
- */
-struct regulatory_channel *reg_get_reg_maschan_lst_frm_6g_pwr_mode(
-			enum supported_6g_pwr_types supp_pwr_mode,
-			struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj,
-			uint16_t chan_idx);
 #endif
