@@ -1906,23 +1906,23 @@ static void wlan_pdev_chan_match(struct wlan_objmgr_pdev *pdev, void *object,
 	if (wlan_chan_eq(&vdev_chan, iter_vdev_chan)
 		!= QDF_STATUS_SUCCESS) {
 		ch_filter->flag = 1;
-		qdf_nofl_err("==> iter vdev id: %d: ieee %d, mode %d",
-			     wlan_vdev_get_id(comp_vdev),
-			     vdev_chan.ch_ieee,
-			     vdev_chan.ch_phymode);
-		qdf_nofl_err("fl %016llx, fl-ext %08x, s1 %d, s2 %d ",
-			     vdev_chan.ch_flags, vdev_chan.ch_flagext,
-			     vdev_chan.ch_freq_seg1,
-			     vdev_chan.ch_freq_seg2);
-		qdf_nofl_err("==> base vdev id: %d: ieee %d mode %d",
-			     wlan_vdev_get_id(ch_filter->vdev),
-			     iter_vdev_chan->ch_ieee,
-			     iter_vdev_chan->ch_phymode);
-		qdf_nofl_err("fl %016llx, fl-ext %08x s1 %d, s2 %d",
-			     iter_vdev_chan->ch_flags,
-			     iter_vdev_chan->ch_flagext,
-			     iter_vdev_chan->ch_freq_seg1,
-			     iter_vdev_chan->ch_freq_seg2);
+		qdf_debug("==> iter vdev id: %d: ieee %d, mode %d",
+			  wlan_vdev_get_id(comp_vdev),
+			  vdev_chan.ch_ieee,
+			  vdev_chan.ch_phymode);
+		qdf_debug("fl %016llx, fl-ext %08x, s1 %d, s2 %d ",
+			  vdev_chan.ch_flags, vdev_chan.ch_flagext,
+			  vdev_chan.ch_freq_seg1,
+			  vdev_chan.ch_freq_seg2);
+		qdf_debug("==> base vdev id: %d: ieee %d mode %d",
+			  wlan_vdev_get_id(ch_filter->vdev),
+			  iter_vdev_chan->ch_ieee,
+			  iter_vdev_chan->ch_phymode);
+		qdf_debug("fl %016llx, fl-ext %08x s1 %d, s2 %d",
+			  iter_vdev_chan->ch_flags,
+			  iter_vdev_chan->ch_flagext,
+			  iter_vdev_chan->ch_freq_seg1,
+			  iter_vdev_chan->ch_freq_seg2);
 	}
 	wlan_vdev_obj_unlock(ch_filter->vdev);
 }
