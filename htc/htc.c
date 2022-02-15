@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2013-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -46,8 +47,7 @@ ATH_DEBUG_INSTANTIATE_MODULE_VAR(htc,
 
 #endif
 
-#if (defined(WMI_MULTI_MAC_SVC) || defined(QCA_WIFI_QCA8074) || \
-	defined(QCA_WIFI_QCA6018) || defined(QCA_WIFI_QCA9574))
+#if defined(WMI_MULTI_MAC_SVC)
 static const uint32_t svc_id[] = {WMI_CONTROL_SVC, WMI_CONTROL_SVC_WMAC1,
 						WMI_CONTROL_SVC_WMAC2};
 #else
