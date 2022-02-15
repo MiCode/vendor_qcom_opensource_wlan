@@ -3776,6 +3776,9 @@ struct dp_txrx_peer {
 	ol_txrx_rx_fp osif_rx;
 #endif
 	struct dp_rx_tid_defrag rx_tid[DP_MAX_TIDS];
+#ifdef CONFIG_SAWF
+	struct dp_peer_sawf_stats *sawf_stats;
+#endif
 };
 
 /* Peer structure for data path state */

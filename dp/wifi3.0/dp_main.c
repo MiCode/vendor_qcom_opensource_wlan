@@ -6832,6 +6832,7 @@ static QDF_STATUS dp_txrx_peer_detach(struct dp_soc *soc, struct dp_peer *peer)
 		dp_peer_delay_stats_ctx_dealloc(soc, txrx_peer);
 		dp_peer_rx_bufq_resources_deinit(txrx_peer);
 		dp_peer_jitter_stats_ctx_dealloc(pdev, txrx_peer);
+		dp_peer_sawf_stats_ctx_free(soc, txrx_peer);
 
 		qdf_mem_free(txrx_peer);
 	}
@@ -6880,6 +6881,10 @@ static QDF_STATUS dp_txrx_peer_attach(struct dp_soc *soc, struct dp_peer *peer)
 	dp_set_peer_isolation(txrx_peer, false);
 
 	dp_peer_defrag_rx_tids_init(txrx_peer);
+
+	if (dp_peer_sawf_stats_ctx_alloc(soc, txrx_peer) != QDF_STATUS_SUCCESS)
+		dp_warn("peer sawf stats alloc failed");
+
 	dp_txrx_peer_attach_add(soc, peer, txrx_peer);
 
 	return QDF_STATUS_SUCCESS;
