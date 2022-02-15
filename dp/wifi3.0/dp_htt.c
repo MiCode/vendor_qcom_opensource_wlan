@@ -502,8 +502,10 @@ int htt_srng_setup(struct htt_soc *soc, int mac_id,
 		HTT_MSG_BUF_SIZE(HTT_SRING_SETUP_SZ),
 		/* reserve room for the HTC header */
 		HTC_HEADER_LEN + HTC_HDR_ALIGNMENT_PADDING, 4, TRUE);
-	if (!htt_msg)
+	if (!htt_msg) {
+		dp_err("htt_msg alloc failed ring type %d", hal_ring_type);
 		goto fail0;
+	}
 
 	hal_get_srng_params(soc->hal_soc, hal_ring_hdl, &srng_params);
 	hp_addr = hal_srng_get_hp_addr(soc->hal_soc, hal_ring_hdl);
@@ -547,10 +549,6 @@ int htt_srng_setup(struct htt_soc *soc, int mac_id,
 			goto fail1;
 		}
 
-		dp_info("ring_type %d ring_id %d htt_ring_id %d hp_addr 0x%llx tp_addr 0x%llx",
-			hal_ring_type, srng_params.ring_id, htt_ring_id,
-			(uint64_t)hp_addr,
-			(uint64_t)tp_addr);
 		break;
 	case RXDMA_MONITOR_BUF:
 		htt_ring_id = dp_htt_get_mon_htt_ring_id(soc->dp_soc,
@@ -589,6 +587,10 @@ int htt_srng_setup(struct htt_soc *soc, int mac_id,
 			goto fail1;
 	}
 
+	dp_info("ring_type %d ring_id %d htt_ring_id %d hp_addr 0x%llx tp_addr 0x%llx",
+		hal_ring_type, srng_params.ring_id, htt_ring_id,
+		(uint64_t)hp_addr,
+		(uint64_t)tp_addr);
 	/*
 	 * Set the length of the message.
 	 * The contribution from the HTC_HDR_ALIGNMENT_PADDING is added
@@ -723,8 +725,11 @@ int htt_srng_setup(struct htt_soc *soc, int mac_id,
 	 * required after setting up the ring.
 	 */
 	pkt = htt_htc_pkt_alloc(soc);
-	if (!pkt)
+	if (!pkt) {
+		dp_err("pkt alloc failed, ring_type %d ring_id %d htt_ring_id %d",
+		       hal_ring_type, srng_params.ring_id, htt_ring_id);
 		goto fail1;
+	}
 
 	pkt->soc_ctxt = NULL; /* not used during send-done callback */
 
@@ -931,6 +936,7 @@ int htt_h2t_rx_ring_cfg(struct htt_soc *htt_soc, int pdev_id,
 	struct dp_htt_htc_pkt *pkt;
 	qdf_nbuf_t htt_msg;
 	uint32_t *msg_word;
+	uint32_t *msg_word_data;
 	struct hal_srng_params srng_params;
 	uint32_t htt_ring_type, htt_ring_id;
 	uint32_t tlv_filter;
@@ -944,8 +950,10 @@ int htt_h2t_rx_ring_cfg(struct htt_soc *htt_soc, int pdev_id,
 		HTT_MSG_BUF_SIZE(HTT_RX_RING_SELECTION_CFG_SZ),
 	/* reserve room for the HTC header */
 	HTC_HEADER_LEN + HTC_HDR_ALIGNMENT_PADDING, 4, TRUE);
-	if (!htt_msg)
+	if (!htt_msg) {
+		dp_err("htt_msg alloc failed ring type %d", hal_ring_type);
 		goto fail0;
+	}
 
 	hal_get_srng_params(soc->hal_soc, hal_ring_hdl, &srng_params);
 
@@ -982,6 +990,9 @@ int htt_h2t_rx_ring_cfg(struct htt_soc *htt_soc, int pdev_id,
 			"%s: Ring currently not supported", __func__);
 		goto fail1;
 	}
+
+	dp_info("ring_type %d ring_id %d htt_ring_id %d",
+		hal_ring_type, srng_params.ring_id, htt_ring_id);
 
 	/*
 	 * Set the length of the message.
@@ -1579,6 +1590,12 @@ int htt_h2t_rx_ring_cfg(struct htt_soc *htt_soc, int pdev_id,
 
 	HTT_RX_RING_SELECTION_CFG_TLV_FILTER_IN_FLAG_SET(*msg_word, tlv_filter);
 
+	msg_word_data = (uint32_t *)qdf_nbuf_data(htt_msg);
+	dp_info("config_data: [0x%x][0x%x][0x%x][0x%x][0x%x][0x%x][0x%x]",
+		msg_word_data[0], msg_word_data[1], msg_word_data[2],
+		msg_word_data[3], msg_word_data[4], msg_word_data[5],
+		msg_word_data[6]);
+
 	/* word 7 */
 	msg_word++;
 	*msg_word = 0;
@@ -1632,8 +1649,11 @@ int htt_h2t_rx_ring_cfg(struct htt_soc *htt_soc, int pdev_id,
 	 * required after setting up the ring.
 	 */
 	pkt = htt_htc_pkt_alloc(soc);
-	if (!pkt)
+	if (!pkt) {
+		dp_err("pkt alloc failed, ring_type %d ring_id %d htt_ring_id %d",
+		       hal_ring_type, srng_params.ring_id, htt_ring_id);
 		goto fail1;
+	}
 
 	pkt->soc_ctxt = NULL; /* not used during send-done callback */
 
