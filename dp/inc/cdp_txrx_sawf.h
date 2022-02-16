@@ -72,4 +72,74 @@ cdp_sawf_peer_get_map_conf(ol_txrx_soc_handle soc,
 
 	return soc->ops->sawf_ops->sawf_def_queues_get_map_report(soc, mac);
 }
+
+#ifdef CONFIG_SAWF
+/**
+ * cdp_get_peer_sawf_delay_stats() - Call to get SAWF delay stats
+ * @soc: soc handle
+ * @svc_class_id: service class ID
+ * @mac: peer mac addrees
+ * @data: opaque pointer
+ *
+ * return: status Success/Failure
+ */
+static inline QDF_STATUS
+cdp_get_peer_sawf_delay_stats(ol_txrx_soc_handle soc, uint32_t svc_id,
+			      uint8_t *mac, void *data)
+{
+	if (!soc || !soc->ops) {
+		dp_cdp_debug("Invalid Instance");
+		QDF_BUG(0);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	if (!soc->ops->sawf_ops ||
+	    !soc->ops->sawf_ops->txrx_get_peer_sawf_delay_stats)
+		return QDF_STATUS_E_FAILURE;
+
+	return soc->ops->sawf_ops->txrx_get_peer_sawf_delay_stats(soc, svc_id,
+								  mac, data);
+}
+
+/**
+ * cdp_get_peer_sawf_tx_stats() - Call to get SAWF Tx stats
+ * @soc: soc handle
+ * @svc_class_id: service class ID
+ * @mac: peer mac addrees
+ * @data: opaque pointer
+ *
+ * return: status Success/Failure
+ */
+static inline QDF_STATUS
+cdp_get_peer_sawf_tx_stats(ol_txrx_soc_handle soc, uint32_t svc_id,
+			   uint8_t *mac, void *data)
+{
+	if (!soc || !soc->ops) {
+		dp_cdp_debug("Invalid Instance");
+		QDF_BUG(0);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	if (!soc->ops->sawf_ops ||
+	    !soc->ops->sawf_ops->txrx_get_peer_sawf_tx_stats)
+		return QDF_STATUS_E_FAILURE;
+
+	return soc->ops->sawf_ops->txrx_get_peer_sawf_tx_stats(soc, svc_id,
+							       mac, data);
+}
+#else
+static inline QDF_STATUS
+cdp_get_peer_sawf_delay_stats(ol_txrx_soc_handle soc, uint32_t svc_id,
+			      uint8_t *mac, void *data)
+{
+	return QDF_STATUS_E_FAILURE;
+}
+
+static inline QDF_STATUS
+cdp_get_peer_sawf_tx_stats(ol_txrx_soc_handle soc, uint32_t svc_id,
+			   uint8_t *mac, void *data)
+{
+	return QDF_STATUS_E_FAILURE;
+}
+#endif
 #endif /* _CDP_TXRX_SAWF_H_ */
