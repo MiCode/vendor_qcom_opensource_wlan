@@ -16747,6 +16747,10 @@ static QDF_STATUS send_set_tpc_power_cmd_tlv(wmi_unified_t wmi_handle,
 	tpc_power_info_param->psd_power = param->is_psd_power;
 	tpc_power_info_param->eirp_power = param->eirp_power;
 	tpc_power_info_param->power_type_6ghz = param->power_type_6g;
+	wmi_debug("eirp_power = %d is_psd_power = %d power_type_6ghz = %d",
+		  tpc_power_info_param->eirp_power,
+		  tpc_power_info_param->psd_power,
+		  tpc_power_info_param->power_type_6ghz);
 
 	buf_ptr += sizeof(wmi_vdev_set_tpc_power_fixed_param);
 	WMITLV_SET_HDR(buf_ptr, WMITLV_TAG_ARRAY_STRUC,
@@ -16763,6 +16767,9 @@ static QDF_STATUS send_set_tpc_power_cmd_tlv(wmi_unified_t wmi_handle,
 			param->chan_power_info[idx].chan_cfreq;
 		ch_power_info[idx].tx_power =
 			param->chan_power_info[idx].tx_power;
+		wmi_debug("chan_cfreq = %d tx_power = %d",
+			  ch_power_info[idx].chan_cfreq,
+			  ch_power_info[idx].tx_power);
 		buf_ptr += sizeof(wmi_vdev_ch_power_info);
 	}
 
