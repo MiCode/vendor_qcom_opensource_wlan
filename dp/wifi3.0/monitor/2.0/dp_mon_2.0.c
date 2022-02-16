@@ -382,6 +382,31 @@ QDF_STATUS dp_vdev_set_monitor_mode_rings_2_0(struct dp_pdev *pdev,
 	return QDF_STATUS_SUCCESS;
 }
 
+#ifdef QCA_ENHANCED_STATS_SUPPORT
+/**
+ * dp_mon_tx_enable_enhanced_stats_2_0() - Send HTT cmd to FW to enable stats
+ * @pdev: Datapath pdev handle
+ *
+ * Return: none
+ */
+static void dp_mon_tx_enable_enhanced_stats_2_0(struct dp_pdev *pdev)
+{
+	dp_h2t_cfg_stats_msg_send(pdev, DP_PPDU_STATS_CFG_ENH_STATS,
+				  pdev->pdev_id);
+}
+
+/**
+ * dp_mon_tx_disable_enhanced_stats_2_0() - Send HTT cmd to FW to disable stats
+ * @pdev: Datapath pdev handle
+ *
+ * Return: none
+ */
+static void dp_mon_tx_disable_enhanced_stats_2_0(struct dp_pdev *pdev)
+{
+	dp_h2t_cfg_stats_msg_send(pdev, 0, pdev->pdev_id);
+}
+#endif
+
 #if defined(QCA_ENHANCED_STATS_SUPPORT) && defined(WLAN_FEATURE_11BE)
 void
 dp_mon_tx_stats_update_2_0(struct dp_mon_peer *mon_peer,
@@ -396,37 +421,37 @@ dp_mon_tx_stats_update_2_0(struct dp_mon_peer *mon_peer,
 	DP_STATS_INCC(mon_peer,
 		      tx.pkt_type[preamble].mcs_count[MAX_MCS - 1],
 		      ppdu->num_msdu,
-		      ((mcs >= (MAX_MCS - 1)) && (preamble == DOT11_BE)));
+		      ((mcs >= MAX_MCS_11BE) && (preamble == DOT11_BE)));
 	DP_STATS_INCC(mon_peer,
 		      tx.pkt_type[preamble].mcs_count[mcs],
 		      ppdu->num_msdu,
-		      ((mcs < (MAX_MCS - 1)) && (preamble == DOT11_BE)));
+		      ((mcs < MAX_MCS_11BE) && (preamble == DOT11_BE)));
 	DP_STATS_INCC(mon_peer,
 		      tx.su_be_ppdu_cnt.mcs_count[MAX_MCS - 1], 1,
-		      ((mcs >= (MAX_MCS - 1)) && (preamble == DOT11_BE) &&
+		      ((mcs >= MAX_MCS_11BE) && (preamble == DOT11_BE) &&
 		      (ppdu->ppdu_type == HTT_PPDU_STATS_PPDU_TYPE_SU)));
 	DP_STATS_INCC(mon_peer,
 		      tx.su_be_ppdu_cnt.mcs_count[mcs], 1,
-		      ((mcs < (MAX_MCS - 1)) && (preamble == DOT11_BE) &&
+		      ((mcs < MAX_MCS_11BE) && (preamble == DOT11_BE) &&
 		      (ppdu->ppdu_type == HTT_PPDU_STATS_PPDU_TYPE_SU)));
 	DP_STATS_INCC(mon_peer,
 		      tx.mu_be_ppdu_cnt[TXRX_TYPE_MU_OFDMA].mcs_count[MAX_MCS - 1],
-		      1, ((mcs >= (MAX_MCS - 1)) &&
+		      1, ((mcs >= MAX_MCS_11BE) &&
 		      (preamble == DOT11_BE) &&
 		      (ppdu->ppdu_type == HTT_PPDU_STATS_PPDU_TYPE_MU_OFDMA)));
 	DP_STATS_INCC(mon_peer,
 		      tx.mu_be_ppdu_cnt[TXRX_TYPE_MU_OFDMA].mcs_count[mcs],
-		      1, ((mcs < (MAX_MCS - 1)) &&
+		      1, ((mcs < MAX_MCS_11BE) &&
 		      (preamble == DOT11_BE) &&
 		      (ppdu->ppdu_type == HTT_PPDU_STATS_PPDU_TYPE_MU_OFDMA)));
 	DP_STATS_INCC(mon_peer,
 		      tx.mu_be_ppdu_cnt[TXRX_TYPE_MU_MIMO].mcs_count[MAX_MCS - 1],
-		      1, ((mcs >= (MAX_MCS - 1)) &&
+		      1, ((mcs >= MAX_MCS_11BE) &&
 		      (preamble == DOT11_BE) &&
 		      (ppdu->ppdu_type == HTT_PPDU_STATS_PPDU_TYPE_MU_MIMO)));
 	DP_STATS_INCC(mon_peer,
 		      tx.mu_be_ppdu_cnt[TXRX_TYPE_MU_MIMO].mcs_count[mcs],
-		      1, ((mcs < (MAX_MCS - 1)) &&
+		      1, ((mcs < MAX_MCS_11BE) &&
 		      (preamble == DOT11_BE) &&
 		      (ppdu->ppdu_type == HTT_PPDU_STATS_PPDU_TYPE_MU_MIMO)));
 }
@@ -447,6 +472,48 @@ dp_set_bpr_enable_2_0(struct dp_pdev *pdev, int val)
 	return QDF_STATUS_SUCCESS;
 }
 #endif /* QCA_SUPPORT_BPR */
+
+#if defined(WDI_EVENT_ENABLE) &&\
+	(defined(QCA_ENHANCED_STATS_SUPPORT) || !defined(REMOVE_PKT_LOG))
+/**
+ * dp_ppdu_desc_notify_2_0 - Notify upper layer for PPDU indication via WDI
+ *
+ * @pdev: Datapath pdev handle
+ * @nbuf: Buffer to be shipped
+ *
+ * Return: void
+ */
+static void dp_ppdu_desc_notify_2_0(struct dp_pdev *pdev, qdf_nbuf_t nbuf)
+{
+	struct cdp_tx_completion_ppdu *ppdu_desc = NULL;
+
+	ppdu_desc = (struct cdp_tx_completion_ppdu *)qdf_nbuf_data(nbuf);
+
+	if (ppdu_desc->num_mpdu != 0 && ppdu_desc->num_users != 0 &&
+	    ppdu_desc->frame_ctrl & HTT_FRAMECTRL_DATATYPE) {
+		dp_wdi_event_handler(WDI_EVENT_TX_PPDU_DESC,
+				     pdev->soc,
+				     nbuf, HTT_INVALID_PEER,
+				     WDI_NO_VAL,
+				     pdev->pdev_id);
+	} else {
+		qdf_nbuf_free(nbuf);
+	}
+}
+
+/**
+ * dp_ppdu_stats_feat_enable_check_2_0 - Check if feature(s) is enabled to
+ *				consume ppdu stats from FW
+ *
+ * @pdev: Datapath pdev handle
+ *
+ * Return: true if enabled, else return false
+ */
+static bool dp_ppdu_stats_feat_enable_check_2_0(struct dp_pdev *pdev)
+{
+	return pdev->monitor_pdev->enhanced_stats_en;
+}
+#endif
 
 static
 QDF_STATUS dp_mon_soc_htt_srng_setup_2_0(struct dp_soc *soc)
@@ -1045,6 +1112,10 @@ dp_mon_register_feature_ops_2_0(struct dp_soc *soc)
 #if defined(WDI_EVENT_ENABLE) &&\
 	(defined(QCA_ENHANCED_STATS_SUPPORT) || !defined(REMOVE_PKT_LOG))
 	mon_ops->mon_ppdu_stats_ind_handler = dp_ppdu_stats_ind_handler;
+	mon_ops->mon_ppdu_desc_deliver = dp_ppdu_desc_deliver;
+	mon_ops->mon_ppdu_desc_notify = dp_ppdu_desc_notify_2_0;
+	mon_ops->mon_ppdu_stats_feat_enable_check =
+				dp_ppdu_stats_feat_enable_check_2_0;
 #endif
 #ifdef WLAN_RX_PKT_CAPTURE_ENH
 	mon_ops->mon_config_enh_rx_capture = NULL;
@@ -1073,6 +1144,10 @@ dp_mon_register_feature_ops_2_0(struct dp_soc *soc)
 				dp_mon_filter_setup_enhanced_stats_2_0;
 	mon_ops->mon_filter_reset_enhanced_stats =
 				dp_mon_filter_reset_enhanced_stats_2_0;
+	mon_ops->mon_tx_enable_enhanced_stats =
+				dp_mon_tx_enable_enhanced_stats_2_0;
+	mon_ops->mon_tx_disable_enhanced_stats =
+				dp_mon_tx_disable_enhanced_stats_2_0;
 	mon_ops->mon_tx_stats_update = dp_mon_tx_stats_update_2_0;
 #endif
 #if defined(ATH_SUPPORT_NAC_RSSI) || defined(ATH_SUPPORT_NAC)

@@ -97,9 +97,9 @@ static const struct cdp_rate_debug dp_ppdu_rate_string[DOT11_MAX][MAX_MCS] = {
 		{"HE MCS 11 (1024-QAM 5/6)", MCS_VALID},
 		{"HE MCS 12 (4096-QAM 3/4)", MCS_VALID},
 		{"HE MCS 13 (4096-QAM 5/6)", MCS_VALID},
-		{"INVALID ", MCS_VALID},
-		{"INVALID ", MCS_VALID},
-		{"INVALID ", MCS_VALID},
+		{"INVALID ", MCS_INVALID},
+		{"INVALID ", MCS_INVALID},
+		{"INVALID ", MCS_INVALID},
 	},
 	{
 		{"EHT MCS 0 (BPSK 1/2)     ", MCS_VALID},
@@ -138,7 +138,7 @@ static const struct cdp_rate_debug dp_ppdu_rate_string[DOT11_MAX][MAX_MCS] = {
 		{"HE MCS 11 (1024-QAM 5/6)", MCS_VALID},
 		{"HE MCS 12 (4096-QAM 3/4)", MCS_VALID},
 		{"HE MCS 13 (4096-QAM 5/6)", MCS_VALID},
-		{"INVALID ", MCS_VALID},
+		{"INVALID ", MCS_INVALID},
 	}
 };
 #endif
@@ -161,9 +161,9 @@ dp_mu_rate_string[TXRX_TYPE_MU_MAX][MAX_MCS] = {
 		{"HE MU-MIMO MCS 11 (1024-QAM 5/6)", MCS_VALID},
 		{"HE MU-MIMO MCS 12 (4096-QAM 3/4)", MCS_VALID},
 		{"HE MU-MIMO MCS 13 (4096-QAM 5/6)", MCS_VALID},
-		{"INVALID ", MCS_VALID},
-		{"INVALID ", MCS_VALID},
-		{"INVALID ", MCS_VALID},
+		{"INVALID ", MCS_INVALID},
+		{"INVALID ", MCS_INVALID},
+		{"INVALID ", MCS_INVALID},
 	},
 	{
 		{"HE OFDMA MCS 0 (BPSK 1/2)     ", MCS_VALID},
@@ -180,9 +180,9 @@ dp_mu_rate_string[TXRX_TYPE_MU_MAX][MAX_MCS] = {
 		{"HE OFDMA MCS 11 (1024-QAM 5/6)", MCS_VALID},
 		{"HE OFDMA MCS 12 (4096-QAM 3/4)", MCS_VALID},
 		{"HE OFDMA MCS 13 (4096-QAM 5/6)", MCS_VALID},
-		{"INVALID ", MCS_VALID},
-		{"INVALID ", MCS_VALID},
-		{"INVALID ", MCS_VALID},
+		{"INVALID ", MCS_INVALID},
+		{"INVALID ", MCS_INVALID},
+		{"INVALID ", MCS_INVALID},
 	}
 };
 
@@ -203,9 +203,9 @@ dp_mu_be_rate_string[TXRX_TYPE_MU_MAX][MAX_MCS] = {
 		{"EHT MU-MIMO MCS 11 (1024-QAM 5/6)", MCS_VALID},
 		{"EHT MU-MIMO MCS 12 (4096-QAM 3/4)", MCS_VALID},
 		{"EHT MU-MIMO MCS 13 (4096-QAM 5/6)", MCS_VALID},
-		{"EHT MU-MINO MCS 14 (BPSK-DCM 1/2)", MCS_VALID},
+		{"EHT MU-MIMO MCS 14 (BPSK-DCM 1/2)", MCS_VALID},
 		{"EHT MU-MIMO MCS 15 (BPSK-DCM 1/2)", MCS_VALID},
-		{"INVALID ", MCS_VALID},
+		{"INVALID ", MCS_INVALID},
 	},
 	{
 		{"EHT OFDMA MCS 0 (BPSK 1/2)     ", MCS_VALID},
@@ -224,7 +224,7 @@ dp_mu_be_rate_string[TXRX_TYPE_MU_MAX][MAX_MCS] = {
 		{"EHT OFDMA MCS 13 (4096-QAM 5/6)", MCS_VALID},
 		{"EHT OFDMA MCS 14 (BPSK-DCM 1/2)", MCS_VALID},
 		{"EHT OFDMA MCS 15 (BPSK-DCM 1/2)", MCS_VALID},
-		{"INVALID ", MCS_VALID},
+		{"INVALID ", MCS_INVALID},
 	}
 };
 #else
@@ -245,7 +245,7 @@ dp_mu_rate_string[TXRX_TYPE_MU_MAX][MAX_MCS] = {
 		{"HE MU-MIMO MCS 11 (1024-QAM 5/6)", MCS_VALID},
 		{"HE MU-MIMO MCS 12 (4096-QAM 3/4)", MCS_VALID},
 		{"HE MU-MIMO MCS 13 (4096-QAM 5/6)", MCS_VALID},
-		{"INVALID ", MCS_VALID},
+		{"INVALID ", MCS_INVALID},
 	},
 	{
 		{"HE OFDMA MCS 0 (BPSK 1/2)     ", MCS_VALID},
@@ -262,7 +262,7 @@ dp_mu_rate_string[TXRX_TYPE_MU_MAX][MAX_MCS] = {
 		{"HE OFDMA MCS 11 (1024-QAM 5/6)", MCS_VALID},
 		{"HE OFDMA MCS 12 (4096-QAM 3/4)", MCS_VALID},
 		{"HE OFDMA MCS 13 (4096-QAM 5/6)", MCS_VALID},
-		{"INVALID ", MCS_VALID},
+		{"INVALID ", MCS_INVALID},
 	}
 };
 #endif
@@ -5879,9 +5879,11 @@ void dp_print_peer_txrx_stats_be(struct cdp_peer_stats *peer_stats,
 
 	if (stats_type == PEER_TX_STATS) {
 		DP_PRINT_STATS("BW Counts = 20MHZ %d 40MHZ %d 80MHZ %d 160MHZ %d 320MHZ %d\n",
-			       peer_stats->tx.bw[0], peer_stats->tx.bw[1],
-			       peer_stats->tx.bw[2], peer_stats->tx.bw[3],
-			       peer_stats->tx.bw[4]);
+			       peer_stats->tx.bw[CMN_BW_20MHZ],
+			       peer_stats->tx.bw[CMN_BW_40MHZ],
+			       peer_stats->tx.bw[CMN_BW_80MHZ],
+			       peer_stats->tx.bw[CMN_BW_160MHZ],
+			       peer_stats->tx.bw[CMN_BW_320MHZ]);
 		DP_PRINT_STATS("RU Locations RU[26 52 52_26 106 106_26 242 484 484_242 996 996_484 996_484_242 2X996 2X996_484 3X996 3X996_484 4X996]:");
 		for (i = 0; i < RU_INDEX_MAX; i++)
 			DP_PRINT_STATS("%s:  %d", cdp_ru_string[i].ru_type,
@@ -5892,9 +5894,11 @@ void dp_print_peer_txrx_stats_be(struct cdp_peer_stats *peer_stats,
 
 	} else {
 		DP_PRINT_STATS("BW Counts = 20MHZ %d 40MHZ %d 80MHZ %d 160MHZ %d 320MHZ %d",
-			       peer_stats->rx.bw[0], peer_stats->rx.bw[1],
-			       peer_stats->rx.bw[2], peer_stats->rx.bw[3],
-			       peer_stats->rx.bw[4]);
+			       peer_stats->rx.bw[CMN_BW_20MHZ],
+			       peer_stats->rx.bw[CMN_BW_40MHZ],
+			       peer_stats->rx.bw[CMN_BW_80MHZ],
+			       peer_stats->rx.bw[CMN_BW_160MHZ],
+			       peer_stats->rx.bw[CMN_BW_320MHZ]);
 		dp_print_common_ppdu_rates_info(&peer_stats->rx.su_be_ppdu_cnt,
 						DOT11_BE);
 		dp_print_mu_be_ppdu_rates_info(&peer_stats->rx.mu_be_ppdu_cnt[0]);
@@ -5912,8 +5916,10 @@ void dp_print_peer_txrx_stats_li(struct cdp_peer_stats *peer_stats,
 {
 	if (stats_type == PEER_TX_STATS) {
 		DP_PRINT_STATS("BW Counts = 20MHZ %d 40MHZ %d 80MHZ %d 160MHZ %d\n",
-			       peer_stats->tx.bw[0], peer_stats->tx.bw[1],
-			       peer_stats->tx.bw[2], peer_stats->tx.bw[3]);
+			       peer_stats->tx.bw[CMN_BW_20MHZ],
+			       peer_stats->tx.bw[CMN_BW_40MHZ],
+			       peer_stats->tx.bw[CMN_BW_80MHZ],
+			       peer_stats->tx.bw[CMN_BW_160MHZ]);
 		DP_PRINT_STATS("RU Locations RU[26 52 106 242 484 996]:");
 		DP_PRINT_STATS("%s:  %d", cdp_ru_string[RU_26_INDEX].ru_type,
 			       peer_stats->tx.ru_loc[RU_26_INDEX].num_msdu);
@@ -5929,8 +5935,10 @@ void dp_print_peer_txrx_stats_li(struct cdp_peer_stats *peer_stats,
 			       peer_stats->tx.ru_loc[RU_996_INDEX].num_msdu);
 	} else {
 		DP_PRINT_STATS("BW Counts = 20MHZ %d 40MHZ %d 80MHZ %d 160MHZ %d",
-			       peer_stats->rx.bw[0], peer_stats->rx.bw[1],
-			       peer_stats->rx.bw[2], peer_stats->rx.bw[3]);
+			       peer_stats->rx.bw[CMN_BW_20MHZ],
+			       peer_stats->rx.bw[CMN_BW_40MHZ],
+			       peer_stats->rx.bw[CMN_BW_80MHZ],
+			       peer_stats->rx.bw[CMN_BW_160MHZ]);
 	}
 }
 

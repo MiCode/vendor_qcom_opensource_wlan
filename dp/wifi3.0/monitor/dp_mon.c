@@ -1721,25 +1721,23 @@ void dp_neighbour_peers_detach(struct dp_pdev *pdev)
 	qdf_spinlock_destroy(&mon_pdev->neighbour_peer_mutex);
 }
 
+#ifdef QCA_ENHANCED_STATS_SUPPORT
 /*
- * is_ppdu_txrx_capture_enabled() - API to check both pktlog and debug_sniffer
- *                              modes are enabled or not.
- * @dp_pdev: dp pdev handle.
+ * dp_mon_tx_enable_enhanced_stats() - Enable enhanced Tx stats
+ * @pdev: Datapath pdev handle
  *
- * Return: bool
+ * Return: void
  */
-static inline bool is_ppdu_txrx_capture_enabled(struct dp_pdev *pdev)
+static void dp_mon_tx_enable_enhanced_stats(struct dp_pdev *pdev)
 {
-	struct dp_mon_pdev *mon_pdev = pdev->monitor_pdev;
+	struct dp_soc *soc = pdev->soc;
+	struct dp_mon_ops *mon_ops = NULL;
 
-	if (!mon_pdev->pktlog_ppdu_stats && !mon_pdev->tx_sniffer_enable &&
-	    !mon_pdev->mcopy_mode)
-		return true;
-	else
-		return false;
+	mon_ops = dp_mon_ops_get(soc);
+	if (mon_ops && mon_ops->mon_tx_enable_enhanced_stats)
+		mon_ops->mon_tx_enable_enhanced_stats(pdev);
 }
 
-#ifdef QCA_ENHANCED_STATS_SUPPORT
 /*
  * dp_enable_enhanced_stats()- API to enable enhanced statistcs
  * @soc_handle: DP_SOC handle
@@ -1785,17 +1783,25 @@ dp_enable_enhanced_stats(struct cdp_soc_t *soc, uint8_t pdev_id)
 		return QDF_STATUS_E_FAILURE;
 	}
 
-	if (is_ppdu_txrx_capture_enabled(pdev) && !mon_pdev->bpr_enable) {
-		dp_h2t_cfg_stats_msg_send(pdev, DP_PPDU_STATS_CFG_ENH_STATS,
-					  pdev->pdev_id);
-	} else if (is_ppdu_txrx_capture_enabled(pdev) &&
-		   mon_pdev->bpr_enable) {
-		dp_h2t_cfg_stats_msg_send(pdev,
-					  DP_PPDU_STATS_CFG_BPR_ENH,
-					  pdev->pdev_id);
-	}
+	dp_mon_tx_enable_enhanced_stats(pdev);
 
 	return QDF_STATUS_SUCCESS;
+}
+
+/*
+ * dp_mon_tx_disable_enhanced_stats() - Disable enhanced Tx stats
+ * @pdev: Datapath pdev handle
+ *
+ * Return: void
+ */
+static void dp_mon_tx_disable_enhanced_stats(struct dp_pdev *pdev)
+{
+	struct dp_soc *soc = pdev->soc;
+	struct dp_mon_ops *mon_ops = NULL;
+
+	mon_ops = dp_mon_ops_get(soc);
+	if (mon_ops && mon_ops->mon_tx_disable_enhanced_stats)
+		mon_ops->mon_tx_disable_enhanced_stats(pdev);
 }
 
 /*
@@ -1828,13 +1834,7 @@ dp_disable_enhanced_stats(struct cdp_soc_t *soc, uint8_t pdev_id)
 	if (wlan_cfg_get_txmon_hw_support(pdev->soc->wlan_cfg_ctx))
 		return QDF_STATUS_SUCCESS;
 
-	if (is_ppdu_txrx_capture_enabled(pdev) && !mon_pdev->bpr_enable) {
-		dp_h2t_cfg_stats_msg_send(pdev, 0, pdev->pdev_id);
-	} else if (is_ppdu_txrx_capture_enabled(pdev) && mon_pdev->bpr_enable) {
-		dp_h2t_cfg_stats_msg_send(pdev,
-					  DP_PPDU_STATS_CFG_BPR,
-					  pdev->pdev_id);
-	}
+	dp_mon_tx_disable_enhanced_stats(pdev);
 
 	dp_mon_filter_reset_enhanced_stats(pdev);
 	if (dp_mon_filter_update(pdev) != QDF_STATUS_SUCCESS) {
@@ -2712,10 +2712,10 @@ dp_tx_stats_update(struct dp_pdev *pdev, struct dp_peer *peer,
 		      ((mcs < MAX_MCS_11AC) && (preamble == DOT11_AC)));
 	DP_STATS_INCC(mon_peer,
 		      tx.pkt_type[preamble].mcs_count[MAX_MCS - 1], num_msdu,
-		      ((mcs >= (MAX_MCS - 1)) && (preamble == DOT11_AX)));
+		      ((mcs >= MAX_MCS_11AX) && (preamble == DOT11_AX)));
 	DP_STATS_INCC(mon_peer,
 		      tx.pkt_type[preamble].mcs_count[mcs], num_msdu,
-		      ((mcs < (MAX_MCS - 1)) && (preamble == DOT11_AX)));
+		      ((mcs < MAX_MCS_11AX) && (preamble == DOT11_AX)));
 	DP_STATS_INCC(mon_peer, tx.ampdu_cnt, num_mpdu, ppdu->is_ampdu);
 	DP_STATS_INCC(mon_peer, tx.non_ampdu_cnt, num_mpdu, !(ppdu->is_ampdu));
 	DP_STATS_INCC(mon_peer, tx.pream_punct_cnt, 1, ppdu->pream_punct);
@@ -3032,6 +3032,7 @@ dp_process_ppdu_stats_user_rate_tlv(struct dp_pdev *pdev,
 	uint8_t curr_user_index = 0;
 	struct dp_vdev *vdev;
 	uint32_t tlv_type = HTT_STATS_TLV_TAG_GET(*tag_buf);
+	uint8_t bw;
 
 	ppdu_desc =
 		(struct cdp_tx_completion_ppdu *)qdf_nbuf_data(ppdu_info->nbuf);
@@ -3089,8 +3090,12 @@ dp_process_ppdu_stats_user_rate_tlv(struct dp_pdev *pdev,
 		HTT_PPDU_STATS_USER_RATE_TLV_HE_RE_GET(*tag_buf);
 	ppdu_user_desc->txbf =
 		HTT_PPDU_STATS_USER_RATE_TLV_TXBF_GET(*tag_buf);
-	ppdu_user_desc->bw =
-		HTT_PPDU_STATS_USER_RATE_TLV_BW_GET(*tag_buf) - 2;
+	bw = HTT_PPDU_STATS_USER_RATE_TLV_BW_GET(*tag_buf);
+	/* Align bw value as per host data structures */
+	if (bw == HTT_PPDU_STATS_BANDWIDTH_320MHZ)
+		ppdu_user_desc->bw = bw - 3;
+	else
+		ppdu_user_desc->bw = bw - 2;
 	ppdu_user_desc->nss = HTT_PPDU_STATS_USER_RATE_TLV_NSS_GET(*tag_buf);
 	ppdu_desc->usr_nss_sum += ppdu_user_desc->nss;
 	ppdu_user_desc->mcs = HTT_PPDU_STATS_USER_RATE_TLV_MCS_GET(*tag_buf);
@@ -4035,17 +4040,27 @@ dp_ppdu_desc_user_stats_update(struct dp_pdev *pdev,
 	}
 }
 
-#ifndef WLAN_TX_PKT_CAPTURE_ENH
-
-/**
- * dp_ppdu_desc_deliver(): Function to deliver Tx PPDU status descriptor
- * to upper layer
- * @pdev: DP pdev handle
- * @ppdu_info: per PPDU TLV descriptor
+#if !defined(WLAN_TX_PKT_CAPTURE_ENH) || defined(QCA_MONITOR_2_0_SUPPORT)
+/*
+ * dp_tx_ppdu_desc_notify() - Notify to upper layer about PPDU via WDI
  *
- * return: void
+ * @pdev: Datapath pdev handle
+ * @nbuf: Buffer to be delivered to upper layer
+ *
+ * Return: void
  */
-static
+static void dp_tx_ppdu_desc_notify(struct dp_pdev *pdev, qdf_nbuf_t nbuf)
+{
+	struct dp_soc *soc = pdev->soc;
+	struct dp_mon_ops *mon_ops = NULL;
+
+	mon_ops = dp_mon_ops_get(soc);
+	if (mon_ops && mon_ops->mon_ppdu_desc_notify)
+		mon_ops->mon_ppdu_desc_notify(pdev, nbuf);
+	else
+		qdf_nbuf_free(nbuf);
+}
+
 void dp_ppdu_desc_deliver(struct dp_pdev *pdev,
 			  struct ppdu_info *ppdu_info)
 {
@@ -4118,40 +4133,38 @@ void dp_ppdu_desc_deliver(struct dp_pdev *pdev,
 
 		qdf_mem_free(s_ppdu_info);
 
-		/**
-		 * Deliver PPDU stats only for valid (acked) data
-		 * frames if sniffer mode is not enabled.
-		 * If sniffer mode is enabled, PPDU stats
-		 * for all frames including mgmt/control
-		 * frames should be delivered to upper layer
-		 */
-		if (mon_pdev->tx_sniffer_enable || mon_pdev->mcopy_mode) {
-			dp_wdi_event_handler(WDI_EVENT_TX_PPDU_DESC,
-					     pdev->soc,
-					     nbuf, HTT_INVALID_PEER,
-					     WDI_NO_VAL,
-					     pdev->pdev_id);
-		} else {
-			if (ppdu_desc->num_mpdu != 0 &&
-			    ppdu_desc->num_users != 0 &&
-			    ppdu_desc->frame_ctrl &
-			    HTT_FRAMECTRL_DATATYPE) {
-				dp_wdi_event_handler(WDI_EVENT_TX_PPDU_DESC,
-						     pdev->soc,
-						     nbuf, HTT_INVALID_PEER,
-						     WDI_NO_VAL,
-						     pdev->pdev_id);
-			} else {
-				qdf_nbuf_free(nbuf);
-			}
-		}
+		dp_tx_ppdu_desc_notify(pdev, nbuf);
 
 		if (matched)
 			break;
 	}
 }
-
 #endif
+
+/*
+ * dp_tx_ppdu_desc_deliver() - Deliver PPDU desc to upper layer
+ *
+ * @pdev: Datapath pdev handle
+ * @ppdu_info: per PPDU TLV descriptor
+ *
+ * Return: void
+ */
+static void dp_tx_ppdu_desc_deliver(struct dp_pdev *pdev,
+				    struct ppdu_info *ppdu_info)
+{
+	struct dp_soc *soc = pdev->soc;
+	struct dp_mon_ops *mon_ops = NULL;
+
+	mon_ops = dp_mon_ops_get(soc);
+
+	if (mon_ops && mon_ops->mon_ppdu_desc_deliver) {
+		mon_ops->mon_ppdu_desc_deliver(pdev, ppdu_info);
+	} else {
+		qdf_nbuf_free(ppdu_info->nbuf);
+		ppdu_info->nbuf = NULL;
+		qdf_mem_free(ppdu_info);
+	}
+}
 
 /**
  * dp_get_ppdu_desc(): Function to allocate new PPDU status
@@ -4282,7 +4295,7 @@ struct ppdu_info *dp_get_ppdu_desc(struct dp_pdev *pdev, uint32_t ppdu_id,
 			     HTT_STATS_FTYPE_SGEN_MU_BAR))
 				return ppdu_info;
 
-			dp_ppdu_desc_deliver(pdev, ppdu_info);
+			dp_tx_ppdu_desc_deliver(pdev, ppdu_info);
 		} else {
 			return ppdu_info;
 		}
@@ -4515,6 +4528,27 @@ static struct ppdu_info *dp_htt_process_tlv(struct dp_pdev *pdev,
 }
 #endif /* QCA_ENHANCED_STATS_SUPPORT */
 
+#if defined(WDI_EVENT_ENABLE)
+#ifdef QCA_ENHANCED_STATS_SUPPORT
+/**
+ * dp_tx_ppdu_stats_feat_enable_check() - Check if feature(s) is enabled to
+ *			consume stats received from FW via HTT
+ * @pdev: Datapath pdev handle
+ *
+ * Return: void
+ */
+static bool dp_tx_ppdu_stats_feat_enable_check(struct dp_pdev *pdev)
+{
+	struct dp_soc *soc = pdev->soc;
+	struct dp_mon_ops *mon_ops = NULL;
+
+	mon_ops = dp_mon_ops_get(soc);
+	if (mon_ops && mon_ops->mon_ppdu_stats_feat_enable_check)
+		return mon_ops->mon_ppdu_stats_feat_enable_check(pdev);
+	else
+		return false;
+}
+
 /**
  * dp_txrx_ppdu_stats_handler() - Function to process HTT PPDU stats from FW
  * @soc: DP SOC handle
@@ -4523,15 +4557,13 @@ static struct ppdu_info *dp_htt_process_tlv(struct dp_pdev *pdev,
  *
  * return:void
  */
-#if defined(WDI_EVENT_ENABLE)
-#ifdef QCA_ENHANCED_STATS_SUPPORT
 static bool dp_txrx_ppdu_stats_handler(struct dp_soc *soc,
 				       uint8_t pdev_id, qdf_nbuf_t htt_t2h_msg)
 {
-	struct dp_pdev *pdev = soc->pdev_list[pdev_id];
+	struct dp_pdev *pdev;
 	struct ppdu_info *ppdu_info = NULL;
 	bool free_buf = true;
-	struct dp_mon_pdev *mon_pdev = pdev->monitor_pdev;
+	struct dp_mon_pdev *mon_pdev;
 
 	if (pdev_id >= MAX_PDEV_CNT)
 		return true;
@@ -4540,11 +4572,14 @@ static bool dp_txrx_ppdu_stats_handler(struct dp_soc *soc,
 	if (!pdev)
 		return true;
 
+	mon_pdev = pdev->monitor_pdev;
+	if (!mon_pdev)
+		return true;
+
 	if (wlan_cfg_get_txmon_hw_support(soc->wlan_cfg_ctx))
 		return free_buf;
 
-	if (!mon_pdev->enhanced_stats_en && !mon_pdev->tx_sniffer_enable &&
-	    !mon_pdev->mcopy_mode && !mon_pdev->bpr_enable)
+	if (!dp_tx_ppdu_stats_feat_enable_check(pdev))
 		return free_buf;
 
 	qdf_spin_lock_bh(&mon_pdev->ppdu_stats_lock);
@@ -4558,7 +4593,7 @@ static bool dp_txrx_ppdu_stats_handler(struct dp_soc *soc,
 	}
 
 	if (ppdu_info)
-		dp_ppdu_desc_deliver(pdev, ppdu_info);
+		dp_tx_ppdu_desc_deliver(pdev, ppdu_info);
 
 	mon_pdev->mgmtctrl_frm_info.mgmt_buf = NULL;
 	mon_pdev->mgmtctrl_frm_info.mgmt_buf_len = 0;
@@ -5539,6 +5574,9 @@ void dp_mon_feature_ops_deregister(struct dp_soc *soc)
 #if defined(WDI_EVENT_ENABLE) &&\
 	(defined(QCA_ENHANCED_STATS_SUPPORT) || !defined(REMOVE_PKT_LOG))
 	mon_ops->mon_ppdu_stats_ind_handler = NULL;
+	mon_ops->mon_ppdu_desc_deliver = NULL;
+	mon_ops->mon_ppdu_desc_notify = NULL;
+	mon_ops->mon_ppdu_stats_feat_enable_check = NULL;
 #endif
 #ifdef WLAN_RX_PKT_CAPTURE_ENH
 	mon_ops->mon_config_enh_rx_capture = NULL;
@@ -5562,6 +5600,8 @@ void dp_mon_feature_ops_deregister(struct dp_soc *soc)
 #endif
 #ifdef QCA_ENHANCED_STATS_SUPPORT
 	mon_ops->mon_filter_setup_enhanced_stats = NULL;
+	mon_ops->mon_tx_enable_enhanced_stats = NULL;
+	mon_ops->mon_tx_disable_enhanced_stats = NULL;
 #ifdef WLAN_FEATURE_11BE
 	mon_ops->mon_tx_stats_update = NULL;
 #endif
