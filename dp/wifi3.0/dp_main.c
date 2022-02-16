@@ -13995,6 +13995,7 @@ QDF_STATUS dp_wds_ext_set_peer_rx(ol_txrx_soc_handle soc,
 				  ol_txrx_rx_fp rx,
 				  ol_osif_peer_handle osif_peer)
 {
+	struct dp_txrx_peer *txrx_peer = NULL;
 	struct dp_peer *peer = dp_peer_find_hash_find((struct dp_soc *)soc,
 						       mac, 0, vdev_id,
 						       DP_MOD_ID_CDP);
@@ -14004,28 +14005,30 @@ QDF_STATUS dp_wds_ext_set_peer_rx(ol_txrx_soc_handle soc,
 		dp_cdp_debug("%pK: Peer is NULL!\n", (struct dp_soc *)soc);
 		return status;
 	}
-	if (!peer->txrx_peer) {
+
+	txrx_peer = dp_get_txrx_peer(peer);
+	if (!txrx_peer) {
 		dp_peer_unref_delete(peer, DP_MOD_ID_CDP);
 		return status;
 	}
 
 	if (rx) {
-		if (peer->txrx_peer->osif_rx) {
+		if (txrx_peer->osif_rx) {
 			status = QDF_STATUS_E_ALREADY;
 		} else {
-			peer->txrx_peer->osif_rx = rx;
+			txrx_peer->osif_rx = rx;
 			status = QDF_STATUS_SUCCESS;
 		}
 	} else {
-		if (peer->txrx_peer->osif_rx) {
-			peer->txrx_peer->osif_rx = NULL;
+		if (txrx_peer->osif_rx) {
+			txrx_peer->osif_rx = NULL;
 			status = QDF_STATUS_SUCCESS;
 		} else {
 			status = QDF_STATUS_E_ALREADY;
 		}
 	}
 
-	peer->txrx_peer->wds_ext.osif_peer = osif_peer;
+	txrx_peer->wds_ext.osif_peer = osif_peer;
 	dp_peer_unref_delete(peer, DP_MOD_ID_CDP);
 
 	return status;
