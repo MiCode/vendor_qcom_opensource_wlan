@@ -3142,7 +3142,8 @@ void dp_tx_nawds_handler(struct dp_soc *soc, struct dp_vdev *vdev,
 	qdf_spin_lock_bh(&vdev->peer_list_lock);
 	TAILQ_FOREACH(peer, &vdev->peer_list, peer_list_elem) {
 		txrx_peer = dp_get_txrx_peer(peer);
-		qdf_assert_always(txrx_peer);
+		if (!txrx_peer)
+			continue;
 
 		if (!txrx_peer->bss_peer && txrx_peer->nawds_enabled) {
 			peer_id = peer->peer_id;
@@ -3520,9 +3521,8 @@ void dp_tx_reinject_handler(struct dp_soc *soc,
 	qdf_spin_lock_bh(&vdev->peer_list_lock);
 	TAILQ_FOREACH(peer, &vdev->peer_list, peer_list_elem) {
 		txrx_peer = dp_get_txrx_peer(peer);
-		qdf_assert_always(txrx_peer);
 
-		if (txrx_peer->bss_peer)
+		if (!txrx_peer || txrx_peer->bss_peer)
 			continue;
 
 		/* Detect wds peers that use 3-addr framing for mcast.
@@ -3546,7 +3546,8 @@ void dp_tx_reinject_handler(struct dp_soc *soc,
 		qdf_spin_lock_bh(&vdev->peer_list_lock);
 		TAILQ_FOREACH(peer, &vdev->peer_list, peer_list_elem) {
 			txrx_peer = dp_get_txrx_peer(peer);
-			qdf_assert_always(txrx_peer);
+			if (!txrx_peer)
+				continue;
 
 			if ((txrx_peer->peer_id != HTT_INVALID_PEER) &&
 #ifdef WDS_VENDOR_EXTENSION
