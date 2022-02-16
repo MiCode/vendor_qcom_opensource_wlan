@@ -52,6 +52,12 @@
 #define HAL_SET_FLD_OFFSET(desc, block , field, offset) \
 	(*(uint32_t *) ((uint8_t *) desc + HAL_OFFSET(block, field) + (offset)))
 
+#define HAL_SET_FLD_64(desc, block, field) \
+	(*(uint64_t *)((uint8_t *)desc + HAL_OFFSET(block, field)))
+
+#define HAL_SET_FLD_OFFSET_64(desc, block, field, offset) \
+	(*(uint64_t *)((uint8_t *)desc + HAL_OFFSET(block, field) + (offset)))
+
 #define HAL_TX_DESC_SET_TLV_HDR(desc, tag, len) \
 do {                                            \
 	uint32_t temp = 0; \
@@ -79,6 +85,16 @@ do {                                            \
 
 #define HAL_TX_DESC_SUBBLOCK_GET(desc, block, sub, field) \
 	HAL_TX_MS(sub, field, HAL_SET_FLD(desc, block, sub))
+
+#define HAL_TX_DESC_GET_64(desc, block, field) \
+	HAL_TX_MS(block, field, HAL_SET_FLD_64(desc, block, field))
+
+#define HAL_TX_DESC_OFFSET_GET_64(desc, block, field, offset) \
+	HAL_TX_MS(block, field, HAL_SET_FLD_OFFSET_64(desc, block, field,\
+		  offset))
+
+#define HAL_TX_DESC_SUBBLOCK_GET_64(desc, block, sub, field) \
+	HAL_TX_MS(sub, field, HAL_SET_FLD_64(desc, block, sub))
 
 #define HAL_TX_BUF_TYPE_BUFFER 0
 #define HAL_TX_BUF_TYPE_EXT_DESC 1
