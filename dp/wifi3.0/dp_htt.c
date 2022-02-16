@@ -866,6 +866,51 @@ int htt_h2t_full_mon_cfg(struct htt_soc *htt_soc,
 qdf_export_symbol(htt_h2t_full_mon_cfg);
 #endif
 
+#ifdef QCA_UNDECODED_METADATA_SUPPORT
+static inline void
+dp_mon_rx_enable_phy_errors(uint32_t *msg_word,
+			    struct htt_rx_ring_tlv_filter *htt_tlv_filter)
+{
+	if (htt_tlv_filter->phy_err_filter_valid) {
+		HTT_RX_RING_SELECTION_CFG_FP_PHY_ERR_SET
+			(*msg_word, htt_tlv_filter->fp_phy_err);
+		HTT_RX_RING_SELECTION_CFG_FP_PHY_ERR_BUF_SRC_SET
+			(*msg_word, htt_tlv_filter->fp_phy_err_buf_src);
+		HTT_RX_RING_SELECTION_CFG_FP_PHY_ERR_BUF_DEST_SET
+			(*msg_word, htt_tlv_filter->fp_phy_err_buf_dest);
+
+		/* word 12*/
+		msg_word++;
+		*msg_word = 0;
+		HTT_RX_RING_SELECTION_CFG_PHY_ERR_MASK_SET
+			(*msg_word, htt_tlv_filter->phy_err_mask);
+
+		/* word 13*/
+		msg_word++;
+		*msg_word = 0;
+		HTT_RX_RING_SELECTION_CFG_PHY_ERR_MASK_CONT_SET
+			(*msg_word, htt_tlv_filter->phy_err_mask_cont);
+
+		/* word 14*/
+		msg_word++;
+		*msg_word = 0;
+	} else {
+		/* word 14*/
+		msg_word += 3;
+		*msg_word = 0;
+	}
+}
+#else
+static inline void
+dp_mon_rx_enable_phy_errors(uint32_t *msg_word,
+			    struct htt_rx_ring_tlv_filter *htt_tlv_filter)
+{
+	/* word 14*/
+	msg_word += 3;
+	*msg_word = 0;
+}
+#endif
+
 /*
  * htt_h2t_rx_ring_cfg() - Send SRNG packet and TLV filter
  * config message to target
@@ -1534,6 +1579,7 @@ int htt_h2t_rx_ring_cfg(struct htt_soc *htt_soc, int pdev_id,
 
 	HTT_RX_RING_SELECTION_CFG_TLV_FILTER_IN_FLAG_SET(*msg_word, tlv_filter);
 
+	/* word 7 */
 	msg_word++;
 	*msg_word = 0;
 	if (htt_tlv_filter->offset_valid) {
@@ -1542,6 +1588,7 @@ int htt_h2t_rx_ring_cfg(struct htt_soc *htt_soc, int pdev_id,
 		HTT_RX_RING_SELECTION_CFG_RX_HEADER_OFFSET_SET(*msg_word,
 					htt_tlv_filter->rx_header_offset);
 
+		/* word 8 */
 		msg_word++;
 		*msg_word = 0;
 		HTT_RX_RING_SELECTION_CFG_RX_MPDU_END_OFFSET_SET(*msg_word,
@@ -1549,6 +1596,7 @@ int htt_h2t_rx_ring_cfg(struct htt_soc *htt_soc, int pdev_id,
 		HTT_RX_RING_SELECTION_CFG_RX_MPDU_START_OFFSET_SET(*msg_word,
 					htt_tlv_filter->rx_mpdu_start_offset);
 
+		/* word 9 */
 		msg_word++;
 		*msg_word = 0;
 		HTT_RX_RING_SELECTION_CFG_RX_MSDU_END_OFFSET_SET(*msg_word,
@@ -1556,13 +1604,17 @@ int htt_h2t_rx_ring_cfg(struct htt_soc *htt_soc, int pdev_id,
 		HTT_RX_RING_SELECTION_CFG_RX_MSDU_START_OFFSET_SET(*msg_word,
 					htt_tlv_filter->rx_msdu_start_offset);
 
+		/* word 10 */
 		msg_word++;
 		*msg_word = 0;
 		HTT_RX_RING_SELECTION_CFG_RX_ATTENTION_OFFSET_SET(*msg_word,
 					htt_tlv_filter->rx_attn_offset);
+
+		/* word 11 */
 		msg_word++;
 		*msg_word = 0;
 	} else {
+		/* word 11 */
 		msg_word += 4;
 		*msg_word = 0;
 	}
@@ -1572,8 +1624,8 @@ int htt_h2t_rx_ring_cfg(struct htt_soc *htt_soc, int pdev_id,
 								mon_drop_th);
 	dp_mon_rx_enable_mpdu_logging(soc->dp_soc, msg_word, htt_tlv_filter);
 
-	msg_word++;
-	*msg_word = 0;
+	dp_mon_rx_enable_phy_errors(msg_word, htt_tlv_filter);
+
 	dp_mon_rx_wmask_subscribe(soc->dp_soc, msg_word, htt_tlv_filter);
 
 	/* "response_required" field should be set if a HTT response message is

@@ -241,6 +241,41 @@ dp_rx_mon_handle_mu_ul_info(struct hal_rx_ppdu_info *ppdu_info)
 }
 #endif
 
+#ifdef QCA_UNDECODED_METADATA_SUPPORT
+static inline bool
+dp_rx_mon_check_phyrx_abort(struct dp_pdev *pdev,
+			    struct hal_rx_ppdu_info *ppdu_info)
+{
+	return (pdev->monitor_pdev->undecoded_metadata_capture &&
+			ppdu_info->rx_status.phyrx_abort);
+}
+
+static inline void
+dp_rx_mon_handle_ppdu_undecoded_metadata(struct dp_soc *soc,
+					 struct dp_pdev *pdev,
+					 struct hal_rx_ppdu_info *ppdu_info)
+{
+	if (pdev->monitor_pdev->undecoded_metadata_capture)
+		dp_rx_handle_ppdu_undecoded_metadata(soc, pdev, ppdu_info);
+
+	pdev->monitor_pdev->mon_ppdu_status = DP_PPDU_STATUS_START;
+}
+#else
+static inline bool
+dp_rx_mon_check_phyrx_abort(struct dp_pdev *pdev,
+			    struct hal_rx_ppdu_info *ppdu_info)
+{
+	return false;
+}
+
+static inline void
+dp_rx_mon_handle_ppdu_undecoded_metadata(struct dp_soc *soc,
+					 struct dp_pdev *pdev,
+					 struct hal_rx_ppdu_info *ppdu_info)
+{
+}
+#endif
+
 #ifdef QCA_SUPPORT_SCAN_SPCL_VAP_STATS
 /**
  * dp_rx_mon_update_scan_spcl_vap_stats() - Update special vap stats
@@ -296,7 +331,7 @@ dp_rx_mon_update_scan_spcl_vap_stats(struct dp_pdev *pdev,
 
 /**
  * dp_rx_mon_status_process_tlv() - Process status TLV in status
- *	buffer on Rx status Queue posted by status SRNG processing.
+ * buffer on Rx status Queue posted by status SRNG processing.
  * @soc: core txrx main context
  * @int_ctx: interrupt context
  * @mac_id: mac_id which is one of 3 mac_ids _ring
@@ -351,6 +386,7 @@ dp_rx_mon_status_process_tlv(struct dp_soc *soc, struct dp_intr *int_ctx,
 
 		if ((mon_pdev->mvdev) || (mon_pdev->enhanced_stats_en) ||
 		    (mon_pdev->mcopy_mode) || (dp_cfr_rcc_mode_status(pdev)) ||
+		    (mon_pdev->undecoded_metadata_capture) ||
 		    (rx_enh_capture_mode != CDP_RX_ENH_CAPTURE_DISABLED)) {
 			do {
 				tlv_status = hal_rx_status_get_tlv_info(rx_tlv,
@@ -423,7 +459,8 @@ dp_rx_mon_status_process_tlv(struct dp_soc *soc, struct dp_intr *int_ctx,
 
 		if (tlv_status == HAL_TLV_STATUS_PPDU_NON_STD_DONE) {
 			dp_rx_mon_deliver_non_std(soc, mac_id);
-		} else if (tlv_status == HAL_TLV_STATUS_PPDU_DONE) {
+		} else if ((tlv_status == HAL_TLV_STATUS_PPDU_DONE) &&
+				(!dp_rx_mon_check_phyrx_abort(pdev, ppdu_info))) {
 			rx_mon_stats->status_ppdu_done++;
 			dp_rx_mon_handle_mu_ul_info(ppdu_info);
 
@@ -467,6 +504,9 @@ dp_rx_mon_status_process_tlv(struct dp_soc *soc, struct dp_intr *int_ctx,
 						       quota);
 
 			mon_pdev->mon_ppdu_status = DP_PPDU_STATUS_START;
+		} else {
+			dp_rx_mon_handle_ppdu_undecoded_metadata(soc, pdev,
+								 ppdu_info);
 		}
 	}
 	return;

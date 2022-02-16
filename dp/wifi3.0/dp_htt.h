@@ -597,6 +597,13 @@ struct htt_tx_ring_tlv_filter {
  * @rx_msdu_end_offset: Offset of rx_msdu_end tlv
  * @rx_msdu_start_offset: Offset of rx_msdu_start tlv
  * @rx_attn_offset: Offset of rx_attention tlv
+ * @fp_phy_err: Flag to indicate FP PHY status tlv
+ * @fp_phy_err_buf_src: source ring selection for the FP PHY ERR status tlv
+ * @fp_phy_err_buf_dest: dest ring selection for the FP PHY ERR status tlv
+ * @phy_err_mask: select the phy errors defined in phyrx_abort_request_reason
+ *  enums 0 to 31.
+ * @phy_err_mask_cont: select the fp phy errors defined in
+ *  phyrx_abort_request_reason enums 32 to 63
  * @rx_mpdu_start_wmask: word mask for mpdu start tlv
  * @rx_mpdu_end_wmask: word mask for mpdu end tlv
  * @rx_msdu_end_tlv: word mask for msdu end tlv
@@ -645,6 +652,14 @@ struct htt_rx_ring_tlv_filter {
 	uint16_t rx_msdu_end_offset;
 	uint16_t rx_msdu_start_offset;
 	uint16_t rx_attn_offset;
+#ifdef QCA_UNDECODED_METADATA_SUPPORT
+	u_int32_t fp_phy_err:1,
+		fp_phy_err_buf_src:2,
+		fp_phy_err_buf_dest:2,
+		phy_err_filter_valid:1;
+	u_int32_t phy_err_mask;
+	u_int32_t phy_err_mask_cont;
+#endif
 #ifdef QCA_MONITOR_2_0_SUPPORT
 	uint16_t rx_mpdu_start_wmask;
 	uint16_t rx_mpdu_end_wmask;

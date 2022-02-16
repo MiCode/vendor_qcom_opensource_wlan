@@ -344,6 +344,23 @@ dp_config_debug_sniffer(struct dp_pdev *pdev, int val) {
 #endif /* QCA_MCOPY_SUPPORT || QCA_TX_CAPTURE_SUPPORT */
 
 /*
+ * dp_config_debug_sniffer()- API to enable/disable debug sniffer
+ * @pdev: DP_PDEV handle
+ * @val: user provided value
+ *
+ * Return: 0 for success. nonzero for failure.
+ */
+#ifdef QCA_UNDECODED_METADATA_SUPPORT
+QDF_STATUS
+dp_mon_config_undecoded_metadata_capture(struct dp_pdev *pdev, int val);
+#else
+static inline QDF_STATUS
+dp_mon_config_undecoded_metadata_capture(struct dp_pdev *pdev, int val) {
+	return QDF_STATUS_E_INVAL;
+}
+#endif /* QCA_UNDECODED_METADATA_SUPPORT */
+
+/*
  * dp_htt_ppdu_stats_attach() - attach resources for HTT PPDU stats processing
  * @pdev: Datapath PDEV handle
  *
@@ -720,7 +737,14 @@ struct dp_mon_ops {
 #endif
 	QDF_STATUS (*rx_mon_refill_buf_ring)(struct dp_intr *int_ctx);
 	QDF_STATUS (*tx_mon_refill_buf_ring)(struct dp_intr *int_ctx);
-
+#ifdef QCA_UNDECODED_METADATA_SUPPORT
+	QDF_STATUS (*mon_config_undecoded_metadata_capture)
+	    (struct dp_pdev *pdev, int val);
+	void (*mon_filter_setup_undecoded_metadata_capture)
+	    (struct dp_pdev *pdev);
+	void (*mon_filter_reset_undecoded_metadata_capture)
+	    (struct dp_pdev *pdev);
+#endif
 };
 
 struct dp_mon_soc {
@@ -976,6 +1000,7 @@ struct  dp_mon_pdev {
 	bool is_dp_mon_pdev_initialized;
 	/* indicates if spcl vap is configured */
 	bool scan_spcl_vap_configured;
+	bool undecoded_metadata_capture;
 #ifdef QCA_SUPPORT_SCAN_SPCL_VAP_STATS
 	/* enable spcl vap stats reset on ch change */
 	bool reset_scan_spcl_vap_stats_enable;
@@ -1981,6 +2006,43 @@ static inline void dp_monitor_flush_rings(struct dp_soc *soc)
 
 	return monitor_ops->mon_flush_rings(soc);
 }
+
+/*
+ * dp_monitor_config_undecoded_metadata_capture() - Monitor config
+ * undecoded metatdata capture
+ * @pdev: point to pdev
+ * @val: val
+ *
+ * Return: return QDF_STATUS
+ */
+#ifdef QCA_UNDECODED_METADATA_SUPPORT
+static inline
+QDF_STATUS dp_monitor_config_undecoded_metadata_capture(struct dp_pdev *pdev,
+							int val)
+{
+	struct dp_mon_ops *monitor_ops;
+	struct dp_mon_soc *mon_soc = pdev->soc->monitor_soc;
+
+	if (!mon_soc)
+		return QDF_STATUS_E_FAILURE;
+
+	monitor_ops = mon_soc->mon_ops;
+	if (!monitor_ops ||
+	    !monitor_ops->mon_config_undecoded_metadata_capture) {
+		dp_mon_debug("callback not registered");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	return monitor_ops->mon_config_undecoded_metadata_capture(pdev, val);
+}
+#else
+static inline
+QDF_STATUS dp_monitor_config_undecoded_metadata_capture(struct dp_pdev *pdev,
+							int val)
+{
+	return QDF_STATUS_SUCCESS;
+}
+#endif
 
 /*
  * dp_monitor_htt_srng_setup() - Setup htt srng

@@ -107,6 +107,7 @@ struct dp_mon_filter {
  * @DP_MON_FILTER_PKT_LOG_LITE_MODE: Packet log lite mode
  * @DP_MON_FILTER_PKT_LOG_CBF_MODE: Packet log cbf mode
  * @DP_MON_FILTER_PKT_LOG_HYBRID_MODE: Packet log hybrid mode
+ * @DP_MON_FILTER_RX_UNDECODED_METADATA_CAPTURE_MODE: Undecoded frame capture
  */
 enum dp_mon_filter_mode {
 #ifdef QCA_ENHANCED_STATS_SUPPORT
@@ -131,6 +132,9 @@ enum dp_mon_filter_mode {
 	DP_MON_FILTER_PKT_LOG_HYBRID_MODE,
 #endif
 #endif /* WDI_EVENT_ENABLE */
+#ifdef QCA_UNDECODED_METADATA_SUPPORT
+	DP_MON_FILTER_UNDECODED_METADATA_CAPTURE_MODE,
+#endif
 	DP_MON_FILTER_MAX_MODE
 };
 
@@ -163,6 +167,38 @@ enum dp_mon_filter_action {
 	DP_MON_FILTER_CLEAR,
 	DP_MON_FILTER_SET,
 };
+
+#ifdef QCA_UNDECODED_METADATA_SUPPORT
+/**
+ * enum dp_mon_fp_phy_err_buf_source - fp_phy_err_buf_src indicates the source
+ * ring selection for the FP PHY ERR status tlv.
+ * @WBM2RXDMA_BUF_SOURCE_RING: 0 - wbm2rxdma_buf_source_ring
+ * @FW2RXDMA_BUF_SOURCE_RING: 1 - fw2rxdma_buf_source_ring
+ * @SW2RXDMA_BUF_SOURCE_RING: 2 - sw2rxdma_buf_source_ring
+ * @NO_BUFFER_RING: 3 - no_buffer_ring
+ */
+enum dp_mon_fp_phy_err_buf_source {
+	WBM2RXDMA_BUF_SOURCE_RING,
+	FW2RXDMA_BUF_SOURCE_RING,
+	SW2RXDMA_BUF_SOURCE_RING,
+	NO_BUFFER_RING
+};
+
+/**
+ * enum dp_mon_fp_phy_err_buf_dest - fp_phy_err_buf_dest indicates the
+ * destination ring selection for the FP PHY ERR status tlv.
+ * @RXDMA_RELEASING_RING: 0 - rxdma_release_ring
+ * @RXDMA2FW_RING: 1 - rxdma2fw_ring
+ * @RXDMA2SW_RING: 2 - rxdma2sw_ring
+ * @RXDMA2REO_RING: 3 - rxdma2reo_ring
+ */
+enum dp_mon_fp_phy_err_buf_dest {
+	RXDMA_RELEASING_RING,
+	RXDMA2FW_RING,
+	RXDMA2SW_RING,
+	RXDMA2REO_RING
+};
+#endif
 
 /**
  * dp_mon_filters_reset() - reset all filters
@@ -197,6 +233,22 @@ void dp_mon_filter_setup_mcopy_mode(struct dp_pdev *pdev);
  */
 void dp_mon_filter_reset_mcopy_mode(struct dp_pdev *pdev);
 #endif /* QCA_MCOPY_SUPPORT */
+
+#ifdef QCA_UNDECODED_METADATA_SUPPORT
+/**
+ * dp_mon_filter_setup_undecoded_metadata_mode() - Setup the undecoded
+ *  metadata capture mode filter
+ * @pdev: DP pdev handle
+ */
+void dp_mon_filter_setup_undecoded_metadata_mode(struct dp_pdev *pdev);
+
+/**
+ * dp_mon_filter_reset_undecoded_metadata_mode() - Reset the undecoded
+ * metadata capture mode filter
+ * @pdev: DP pdev handle
+ */
+void dp_mon_filter_reset_undecoded_metadata_mode(struct dp_pdev *pdev);
+#endif /* QCA_UNDECODED_METADATA_SUPPORT */
 
 #if defined(ATH_SUPPORT_NAC_RSSI) || defined(ATH_SUPPORT_NAC)
 /**

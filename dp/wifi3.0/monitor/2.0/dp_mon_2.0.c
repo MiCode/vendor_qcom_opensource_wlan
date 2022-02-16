@@ -1110,6 +1110,14 @@ dp_mon_register_feature_ops_2_0(struct dp_soc *soc)
 			dp_rx_mon_populate_ppdu_usr_info_2_0;
 	mon_ops->mon_rx_populate_ppdu_info = dp_rx_mon_populate_ppdu_info_2_0;
 #endif
+#ifdef QCA_UNDECODED_METADATA_SUPPORT
+	mon_ops->mon_config_undecoded_metadata_capture =
+		dp_mon_config_undecoded_metadata_capture;
+	mon_ops->mon_filter_setup_undecoded_metadata_capture =
+		dp_mon_filter_setup_undecoded_metadata_capture_2_0;
+	mon_ops->mon_filter_reset_undecoded_metadata_capture =
+		dp_mon_filter_reset_undecoded_metadata_capture_2_0;
+#endif
 }
 
 struct dp_mon_ops monitor_ops_2_0 = {

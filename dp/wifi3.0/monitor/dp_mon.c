@@ -133,6 +133,69 @@ dp_config_mcopy_mode(struct dp_pdev *pdev, int val)
 }
 #endif /* QCA_MCOPY_SUPPORT */
 
+#ifdef QCA_UNDECODED_METADATA_SUPPORT
+static QDF_STATUS
+dp_reset_undecoded_metadata_capture(struct dp_pdev *pdev)
+{
+	QDF_STATUS status = QDF_STATUS_SUCCESS;
+	struct dp_mon_pdev *mon_pdev = pdev->monitor_pdev;
+
+	if (mon_pdev->undecoded_metadata_capture) {
+		dp_mon_filter_reset_undecoded_metadata_mode(pdev);
+		status = dp_mon_filter_update(pdev);
+		if (status != QDF_STATUS_SUCCESS) {
+			QDF_TRACE(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_ERROR,
+				  FL("Undecoded capture filter reset failed"));
+		}
+		mon_pdev->monitor_configured = false;
+	}
+	mon_pdev->undecoded_metadata_capture = 0;
+	return status;
+}
+
+static QDF_STATUS
+dp_enable_undecoded_metadata_capture(struct dp_pdev *pdev, int val)
+{
+	QDF_STATUS status = QDF_STATUS_SUCCESS;
+	struct dp_mon_pdev *mon_pdev = pdev->monitor_pdev;
+	struct dp_mon_ops *mon_ops;
+
+	if (!mon_pdev->mvdev) {
+		qdf_err("monitor_pdev is NULL");
+		return QDF_STATUS_E_RESOURCES;
+	}
+
+	mon_pdev->undecoded_metadata_capture = val;
+	mon_pdev->monitor_configured = true;
+
+	mon_ops = dp_mon_ops_get(pdev->soc);
+
+	/* Setup the undecoded metadata capture mode filter. */
+	dp_mon_filter_setup_undecoded_metadata_mode(pdev);
+	status = dp_mon_filter_update(pdev);
+	if (status != QDF_STATUS_SUCCESS) {
+		QDF_TRACE(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_ERROR,
+			  FL("Failed to set Undecoded capture filters"));
+		dp_mon_filter_reset_undecoded_metadata_mode(pdev);
+		return status;
+	}
+
+	return status;
+}
+#else
+static inline QDF_STATUS
+dp_reset_undecoded_metadata_capture(struct dp_pdev *pdev)
+{
+	return QDF_STATUS_E_INVAL;
+}
+
+static inline QDF_STATUS
+dp_enable_undecoded_metadata_capture(struct dp_pdev *pdev, int val)
+{
+	return QDF_STATUS_E_INVAL;
+}
+#endif /* QCA_UNDECODED_METADATA_SUPPORT */
+
 QDF_STATUS dp_reset_monitor_mode(struct cdp_soc_t *soc_hdl,
 				 uint8_t pdev_id,
 				 uint8_t special_monitor)
@@ -171,10 +234,13 @@ QDF_STATUS dp_reset_monitor_mode(struct cdp_soc_t *soc_hdl,
 #if defined(ATH_SUPPORT_NAC)
 		dp_mon_filter_reset_smart_monitor(pdev);
 #endif /* ATH_SUPPORT_NAC */
+	} else if (mon_pdev->undecoded_metadata_capture) {
+#ifdef QCA_UNDECODED_METADATA_SUPPORT
+		dp_reset_undecoded_metadata_capture(pdev);
+#endif
 	} else {
 		dp_mon_filter_reset_mon_mode(pdev);
 	}
-
 	status = dp_mon_filter_update(pdev);
 	if (status != QDF_STATUS_SUCCESS) {
 		dp_rx_mon_dest_err("%pK: Failed to reset monitor filters",
@@ -536,6 +602,27 @@ dp_config_debug_sniffer(struct dp_pdev *pdev, int val)
 		status = QDF_STATUS_E_INVAL;
 		break;
 	}
+	return status;
+}
+#endif
+
+#ifdef QCA_UNDECODED_METADATA_SUPPORT
+QDF_STATUS
+dp_mon_config_undecoded_metadata_capture(struct dp_pdev *pdev, int val)
+{
+	QDF_STATUS status = QDF_STATUS_SUCCESS;
+	struct dp_mon_pdev *mon_pdev = pdev->monitor_pdev;
+
+	if (!mon_pdev->mvdev && !mon_pdev->scan_spcl_vap_configured) {
+		qdf_err("No monitor or Special vap, undecoded capture not supported");
+		return QDF_STATUS_E_RESOURCES;
+	}
+
+	if (val)
+		status = dp_enable_undecoded_metadata_capture(pdev, val);
+	else
+		status = dp_reset_undecoded_metadata_capture(pdev);
+
 	return status;
 }
 #endif

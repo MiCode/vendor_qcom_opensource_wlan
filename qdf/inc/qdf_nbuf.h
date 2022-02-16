@@ -332,6 +332,21 @@ typedef __qdf_nbuf_queue_t qdf_nbuf_queue_t;
  * @eht_known: EHT property of received frame
  * @eht_data: EHT property of received frame
  * @eht_user_info: EHT USER property of received frame
+ * @phyrx_abort: phy aborted undecoded frame indication
+ * @phyrx_abort_reason: abort reason in phyrx_abort_request_info
+ * @vht_crc: vht crc
+ * @vht_no_txop_ps: TXOP power save mode
+ * @he_crc: he crc
+ * @l_sig_length: L SIG A length
+ * @l_sig_a_parity: L SIG A parity
+ * @l_sig_a_pkt_type: L SIG A info pkt type
+ * @l_sig_a_implicit_sounding: L SIG A info captured implicit sounding
+ * @ht_length: num of bytes in PSDU
+ * @smoothing: Indicate smoothing
+ * @not_sounding: Indicate sounding
+ * @aggregation: Indicate A-MPDU format
+ * @ht_stbc: Indicate stbc
+ * @ht_crc: ht crc
  */
 struct mon_rx_status {
 	uint64_t tsft;
@@ -433,6 +448,23 @@ struct mon_rx_status {
 	uint32_t eht_known;
 	uint32_t eht_data[6];
 	uint32_t eht_user_info[4];
+#ifdef QCA_UNDECODED_METADATA_SUPPORT
+	uint32_t phyrx_abort:1,
+		 phyrx_abort_reason:8,
+		 vht_crc:8,
+		 vht_no_txop_ps:1,
+		 he_crc:4;
+	uint32_t l_sig_length:12,
+		l_sig_a_parity:1,
+		l_sig_a_pkt_type:4,
+		l_sig_a_implicit_sounding:1;
+	uint32_t ht_length:16,
+		smoothing:1,
+		not_sounding:1,
+		aggregation:1,
+		ht_stbc:2,
+		ht_crc:8;
+#endif
 };
 
 /**

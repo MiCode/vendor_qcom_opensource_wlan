@@ -1040,6 +1040,18 @@ void dp_mon_filter_reset_enhanced_stats_2_0(struct dp_pdev *pdev)
 }
 #endif /* QCA_ENHANCED_STATS_SUPPORT */
 
+#ifdef QCA_UNDECODED_METADATA_SUPPORT
+void
+dp_mon_filter_setup_undecoded_metadata_capture_2_0(struct dp_pdev *pdev)
+{
+}
+
+void
+dp_mon_filter_reset_undecoded_metadata_capture_2_0(struct dp_pdev *pdev)
+{
+}
+#endif
+
 #ifdef QCA_MCOPY_SUPPORT
 void dp_mon_filter_setup_mcopy_mode_2_0(struct dp_pdev *pdev)
 {
