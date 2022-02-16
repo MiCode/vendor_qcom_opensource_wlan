@@ -4896,9 +4896,7 @@ QDF_STATUS dp_register_peer(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
 	peer->state = OL_TXRX_PEER_STATE_CONN;
 	qdf_spin_unlock_bh(&peer->peer_info_lock);
 
-	/* For MLO connection, no RX packet to link peer */
-	if (!IS_MLO_DP_LINK_PEER(peer))
-		dp_rx_flush_rx_cached(peer, false);
+	dp_rx_flush_rx_cached(peer, false);
 
 	if (IS_MLO_DP_LINK_PEER(peer) && peer->first_link) {
 		dp_peer_info("register for mld peer" QDF_MAC_ADDR_FMT,

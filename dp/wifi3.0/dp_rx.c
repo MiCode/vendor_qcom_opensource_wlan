@@ -1693,6 +1693,13 @@ void dp_rx_flush_rx_cached(struct dp_peer *peer, bool drop)
 	int num_buff_elem;
 	QDF_STATUS status;
 
+	/*
+	 * Flush dp cached frames only for mld peers and legacy peers, as
+	 * link peers don't store cached frames
+	 */
+	if (IS_MLO_DP_LINK_PEER(peer))
+		return;
+
 	if (!peer->txrx_peer) {
 		if (!peer->sta_self_peer) {
 			qdf_err("txrx_peer NULL!!");
