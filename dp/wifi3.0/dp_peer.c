@@ -3752,6 +3752,7 @@ static void dp_peer_rx_tids_init(struct dp_peer *peer)
 			rx_tid_defrag->defrag_waitlist_elem.tqe_prev = NULL;
 			rx_tid_defrag->base.head = NULL;
 			rx_tid_defrag->base.tail = NULL;
+			rx_tid_defrag->tid = tid;
 			rx_tid_defrag->defrag_peer = peer->txrx_peer;
 		}
 	}
@@ -3786,6 +3787,7 @@ static void dp_peer_rx_tids_init(struct dp_peer *peer)
 
 		rx_tid_defrag->base.head = NULL;
 		rx_tid_defrag->base.tail = NULL;
+		rx_tid_defrag->tid = tid;
 		rx_tid_defrag->array = &rx_tid_defrag->base;
 		rx_tid_defrag->defrag_timeout_ms = 0;
 		rx_tid_defrag->defrag_waitlist_elem.tqe_next = NULL;
