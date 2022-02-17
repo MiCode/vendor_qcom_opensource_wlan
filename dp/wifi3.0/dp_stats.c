@@ -6026,6 +6026,24 @@ void dp_print_peer_stats(struct dp_peer *peer,
 		       peer_stats->tx.dropped.fw_rem_tx);
 	DP_PRINT_STATS("Dropped At FW: Removed Untransmitted = %d",
 		       peer_stats->tx.dropped.fw_rem_notx);
+	DP_PRINT_STATS("Dropped At FW: removed untransmitted fw_reason1 = %u",
+		       peer_stats->tx.dropped.fw_reason1);
+	DP_PRINT_STATS("Dropped At FW: removed untransmitted fw_reason2 = %u",
+		       peer_stats->tx.dropped.fw_reason2);
+	DP_PRINT_STATS("Dropped At FW: removed untransmitted fw_reason3 = %u",
+		       peer_stats->tx.dropped.fw_reason3);
+	DP_PRINT_STATS("Dropped At FW:removed untransmitted disable queue = %u",
+		       peer_stats->tx.dropped.fw_rem_queue_disable);
+	DP_PRINT_STATS("Dropped At FW: removed untransmitted no match = %u",
+		       peer_stats->tx.dropped.fw_rem_no_match);
+	DP_PRINT_STATS("Dropped due to HW threshold criteria = %u",
+		       peer_stats->tx.dropped.drop_threshold);
+	DP_PRINT_STATS("Dropped due Link desc not available drop in HW = %u",
+		       peer_stats->tx.dropped.drop_link_desc_na);
+	DP_PRINT_STATS("Drop bit set or invalid flow = %u",
+		       peer_stats->tx.dropped.invalid_drop);
+	DP_PRINT_STATS("MCAST vdev drop in HW = %u",
+		       peer_stats->tx.dropped.mcast_vdev_drop);
 	DP_PRINT_STATS("Dropped : Age Out = %d",
 		       peer_stats->tx.dropped.age_out);
 	DP_PRINT_STATS("NAWDS : ");
@@ -6523,12 +6541,12 @@ dp_print_pdev_tx_stats(struct dp_pdev *pdev)
 
 	DP_PRINT_STATS("PDEV Tx Stats:\n");
 	DP_PRINT_STATS("Received From Stack:");
-	DP_PRINT_STATS("	Packets = %d",
+	DP_PRINT_STATS("	Packets = %u",
 		       pdev->stats.tx_i.rcvd.num);
 	DP_PRINT_STATS("	Bytes = %llu",
 		       pdev->stats.tx_i.rcvd.bytes);
 	DP_PRINT_STATS("Processed:");
-	DP_PRINT_STATS("	Packets = %d",
+	DP_PRINT_STATS("	Packets = %u",
 		       pdev->stats.tx_i.processed.num);
 	DP_PRINT_STATS("	Bytes = %llu",
 		       pdev->stats.tx_i.processed.bytes);
@@ -6543,41 +6561,57 @@ dp_print_pdev_tx_stats(struct dp_pdev *pdev)
 	DP_PRINT_STATS("	Bytes = %llu",
 		       pdev->stats.tx.tx_success.bytes);
 	DP_PRINT_STATS("Dropped:");
-	DP_PRINT_STATS("	Total = %d",
+	DP_PRINT_STATS("	Total = %u",
 		       pdev->stats.tx_i.dropped.dropped_pkt.num);
-	DP_PRINT_STATS("	Dma_map_error = %d",
+	DP_PRINT_STATS("	Dma_map_error = %u",
 		       pdev->stats.tx_i.dropped.dma_error);
-	DP_PRINT_STATS("	Ring Full = %d",
+	DP_PRINT_STATS("	Ring Full = %u",
 		       pdev->stats.tx_i.dropped.ring_full);
-	DP_PRINT_STATS("	Descriptor Not available = %d",
+	DP_PRINT_STATS("	Descriptor Not available = %u",
 		       pdev->stats.tx_i.dropped.desc_na.num);
-	DP_PRINT_STATS("	HW enqueue failed= %d",
+	DP_PRINT_STATS("	HW enqueue failed= %u",
 		       pdev->stats.tx_i.dropped.enqueue_fail);
-	DP_PRINT_STATS("        Descriptor alloc fail = %d",
+	DP_PRINT_STATS("        Descriptor alloc fail = %u",
 		       pdev->stats.tx_i.dropped.desc_na_exc_alloc_fail.num);
-	DP_PRINT_STATS("        Tx outstanding too many = %d",
+	DP_PRINT_STATS("        Tx outstanding too many = %u",
 		       pdev->stats.tx_i.dropped.desc_na_exc_outstand.num);
-	DP_PRINT_STATS("	Pkt dropped in vdev-id check= %d",
+	DP_PRINT_STATS("	Pkt dropped in vdev-id check= %u",
 		       pdev->stats.tx_i.dropped.fail_per_pkt_vdev_id_check);
-	DP_PRINT_STATS("	Resources Full = %d",
+	DP_PRINT_STATS("	Resources Full = %u",
 		       pdev->stats.tx_i.dropped.res_full);
+	DP_PRINT_STATS("Tx failed = %u",
+		       pdev->stats.tx.tx_failed);
 	DP_PRINT_STATS("	FW removed Pkts = %u",
 		       pdev->stats.tx.dropped.fw_rem.num);
 	DP_PRINT_STATS("	FW removed bytes= %llu",
 		       pdev->stats.tx.dropped.fw_rem.bytes);
-	DP_PRINT_STATS("	FW removed transmitted = %d",
+	DP_PRINT_STATS("	FW removed transmitted = %u",
 		       pdev->stats.tx.dropped.fw_rem_tx);
-	DP_PRINT_STATS("	FW removed untransmitted = %d",
+	DP_PRINT_STATS("	FW removed untransmitted = %u",
 		       pdev->stats.tx.dropped.fw_rem_notx);
-	DP_PRINT_STATS("	FW removed untransmitted fw_reason1 = %d",
+	DP_PRINT_STATS("	FW removed untransmitted fw_reason1 = %u",
 		       pdev->stats.tx.dropped.fw_reason1);
-	DP_PRINT_STATS("	FW removed untransmitted fw_reason2 = %d",
+	DP_PRINT_STATS("	FW removed untransmitted fw_reason2 = %u",
 		       pdev->stats.tx.dropped.fw_reason2);
-	DP_PRINT_STATS("	FW removed untransmitted fw_reason3 = %d",
+	DP_PRINT_STATS("	FW removed untransmitted fw_reason3 = %u",
 		       pdev->stats.tx.dropped.fw_reason3);
-	DP_PRINT_STATS("	Aged Out from msdu/mpdu queues = %d",
+	DP_PRINT_STATS("	FW removed untransmitted disable queue = %u",
+		       pdev->stats.tx.dropped.fw_rem_queue_disable);
+	DP_PRINT_STATS("	FW removed untransmitted no match = %u",
+		       pdev->stats.tx.dropped.fw_rem_no_match);
+	DP_PRINT_STATS("	Dropped due to HW threshold criteria = %u",
+		       pdev->stats.tx.dropped.drop_threshold);
+	DP_PRINT_STATS("	Link desc not available drop = %u",
+		       pdev->stats.tx.dropped.drop_link_desc_na);
+	DP_PRINT_STATS("	Drop bit set or invalid flow = %u",
+		       pdev->stats.tx.dropped.invalid_drop);
+	DP_PRINT_STATS("	MCAST vdev drop in HW = %u",
+		       pdev->stats.tx.dropped.mcast_vdev_drop);
+	DP_PRINT_STATS("	Dropped with invalid reason = %u",
+		       pdev->stats.tx.dropped.invalid_rr);
+	DP_PRINT_STATS("	Aged Out from msdu/mpdu queues = %u",
 		       pdev->stats.tx.dropped.age_out);
-	DP_PRINT_STATS("	headroom insufficient = %d",
+	DP_PRINT_STATS("	headroom insufficient = %u",
 		       pdev->stats.tx_i.dropped.headroom_insufficient);
 	DP_PRINT_STATS("Multicast:");
 	DP_PRINT_STATS("	Packets: %u",
@@ -6589,41 +6623,41 @@ dp_print_pdev_tx_stats(struct dp_pdev *pdev)
 		       pdev->stats.tx_i.sg.sg_pkt.num);
 	DP_PRINT_STATS("	Bytes = %llu",
 		       pdev->stats.tx_i.sg.sg_pkt.bytes);
-	DP_PRINT_STATS("	Dropped By Host = %d",
+	DP_PRINT_STATS("	Dropped By Host = %u",
 		       pdev->stats.tx_i.sg.dropped_host.num);
-	DP_PRINT_STATS("	Dropped By Target = %d",
+	DP_PRINT_STATS("	Dropped By Target = %u",
 		       pdev->stats.tx_i.sg.dropped_target);
 	DP_PRINT_STATS("Mcast Enhancement:");
-	DP_PRINT_STATS("	Packets = %d",
+	DP_PRINT_STATS("	Packets = %u",
 		       pdev->stats.tx_i.mcast_en.mcast_pkt.num);
 	DP_PRINT_STATS("	Bytes = %llu",
 		       pdev->stats.tx_i.mcast_en.mcast_pkt.bytes);
-	DP_PRINT_STATS("	Dropped: Map Errors = %d",
+	DP_PRINT_STATS("	Dropped: Map Errors = %u",
 		       pdev->stats.tx_i.mcast_en.dropped_map_error);
-	DP_PRINT_STATS("	Dropped: Self Mac = %d",
+	DP_PRINT_STATS("	Dropped: Self Mac = %u",
 		       pdev->stats.tx_i.mcast_en.dropped_self_mac);
-	DP_PRINT_STATS("	Dropped: Send Fail = %d",
+	DP_PRINT_STATS("	Dropped: Send Fail = %u",
 		       pdev->stats.tx_i.mcast_en.dropped_send_fail);
-	DP_PRINT_STATS("	Unicast sent = %d",
+	DP_PRINT_STATS("	Unicast sent = %u",
 		       pdev->stats.tx_i.mcast_en.ucast);
 	DP_PRINT_STATS("IGMP Mcast Enhancement:");
-	DP_PRINT_STATS("	IGMP packets received = %d",
+	DP_PRINT_STATS("	IGMP packets received = %u",
 		       pdev->stats.tx_i.igmp_mcast_en.igmp_rcvd);
-	DP_PRINT_STATS("	Converted to uncast = %d",
+	DP_PRINT_STATS("	Converted to uncast = %u",
 		       pdev->stats.tx_i.igmp_mcast_en.igmp_ucast_converted);
 	DP_PRINT_STATS("Raw:");
-	DP_PRINT_STATS("	Packets = %d",
+	DP_PRINT_STATS("	Packets = %u",
 		       pdev->stats.tx_i.raw.raw_pkt.num);
 	DP_PRINT_STATS("	Bytes = %llu",
 		       pdev->stats.tx_i.raw.raw_pkt.bytes);
-	DP_PRINT_STATS("	DMA map error = %d",
+	DP_PRINT_STATS("	DMA map error = %u",
 		       pdev->stats.tx_i.raw.dma_map_error);
-	DP_PRINT_STATS("        RAW pkt type[!data] error = %d",
+	DP_PRINT_STATS("        RAW pkt type[!data] error = %u",
 		       pdev->stats.tx_i.raw.invalid_raw_pkt_datatype);
-	DP_PRINT_STATS("        Frags count overflow  error = %d",
+	DP_PRINT_STATS("        Frags count overflow  error = %u",
 		       pdev->stats.tx_i.raw.num_frags_overflow_err);
 	DP_PRINT_STATS("Reinjected:");
-	DP_PRINT_STATS("	Packets = %d",
+	DP_PRINT_STATS("	Packets = %u",
 		       pdev->stats.tx_i.reinject_pkts.num);
 	DP_PRINT_STATS("	Bytes = %llu\n",
 		       pdev->stats.tx_i.reinject_pkts.bytes);
@@ -6633,7 +6667,7 @@ dp_print_pdev_tx_stats(struct dp_pdev *pdev)
 	DP_PRINT_STATS("	Bytes = %llu",
 		       pdev->stats.tx_i.inspect_pkts.bytes);
 	DP_PRINT_STATS("Nawds Multicast:");
-	DP_PRINT_STATS("	Packets = %d",
+	DP_PRINT_STATS("	Packets = %u",
 		       pdev->stats.tx_i.nawds_mcast.num);
 	DP_PRINT_STATS("	Bytes = %llu",
 		       pdev->stats.tx_i.nawds_mcast.bytes);
@@ -6652,7 +6686,7 @@ dp_print_pdev_tx_stats(struct dp_pdev *pdev)
 		DP_PRINT_STATS("	Tag[%d] = %llu", index,
 			       pdev->stats.ppdu_stats_counter[index]);
 	}
-	DP_PRINT_STATS("BA not received for delayed_ba: %d",
+	DP_PRINT_STATS("BA not received for delayed_ba: %u",
 		       pdev->stats.cdp_delayed_ba_not_recev);
 
 	dp_monitor_print_tx_stats(pdev);
@@ -6768,18 +6802,19 @@ dp_print_soc_tx_stats(struct dp_soc *soc)
 		soc->stats.tx.desc_in_use +=
 			soc->tx_desc[desc_pool_id].num_allocated;
 
-	DP_PRINT_STATS("Tx Descriptors In Use = %d",
+	DP_PRINT_STATS("Tx Descriptors In Use = %u",
 		       soc->stats.tx.desc_in_use);
 	DP_PRINT_STATS("Tx Invalid peer:");
-	DP_PRINT_STATS("	Packets = %d",
+	DP_PRINT_STATS("	Packets = %u",
 		       soc->stats.tx.tx_invalid_peer.num);
 	DP_PRINT_STATS("	Bytes = %llu",
 		       soc->stats.tx.tx_invalid_peer.bytes);
-	DP_PRINT_STATS("Packets dropped due to TCL ring full = %d %d %d",
+	DP_PRINT_STATS("Packets dropped due to TCL ring full = %u %u %u %u",
 		       soc->stats.tx.tcl_ring_full[0],
 		       soc->stats.tx.tcl_ring_full[1],
-		       soc->stats.tx.tcl_ring_full[2]);
-	DP_PRINT_STATS("Tx invalid completion release = %d",
+		       soc->stats.tx.tcl_ring_full[2],
+		       soc->stats.tx.tcl_ring_full[3]);
+	DP_PRINT_STATS("Tx invalid completion release = %u",
 		       soc->stats.tx.invalid_release_source);
 	DP_PRINT_STATS("Tx comp wbm internal error = %d : [%d %d %d %d]",
 		       soc->stats.tx.wbm_internal_error[WBM_INT_ERROR_ALL],
@@ -7597,6 +7632,20 @@ void dp_update_pdev_stats(struct dp_pdev *tgtobj,
 			srcobj->tx.dropped.fw_reason2;
 	tgtobj->stats.tx.dropped.fw_reason3 +=
 			srcobj->tx.dropped.fw_reason3;
+	tgtobj->stats.tx.dropped.fw_rem_queue_disable +=
+				srcobj->tx.dropped.fw_rem_queue_disable;
+	tgtobj->stats.tx.dropped.fw_rem_no_match +=
+				srcobj->tx.dropped.fw_rem_no_match;
+	tgtobj->stats.tx.dropped.drop_threshold +=
+				srcobj->tx.dropped.drop_threshold;
+	tgtobj->stats.tx.dropped.drop_link_desc_na +=
+				srcobj->tx.dropped.drop_link_desc_na;
+	tgtobj->stats.tx.dropped.invalid_drop +=
+				srcobj->tx.dropped.invalid_drop;
+	tgtobj->stats.tx.dropped.mcast_vdev_drop +=
+					srcobj->tx.dropped.mcast_vdev_drop;
+	tgtobj->stats.tx.dropped.invalid_rr +=
+				srcobj->tx.dropped.invalid_rr;
 	tgtobj->stats.tx.dropped.age_out += srcobj->tx.dropped.age_out;
 	tgtobj->stats.rx.err.mic_err += srcobj->rx.err.mic_err;
 	tgtobj->stats.rx.err.decrypt_err += srcobj->rx.err.decrypt_err;

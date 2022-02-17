@@ -1409,6 +1409,13 @@ void dp_update_vdev_stats_on_peer_unmap(struct dp_vdev *vdev,
 		DP_STATS_AGGR(_tgtobj, _srcobj, tx.dropped.fw_reason1); \
 		DP_STATS_AGGR(_tgtobj, _srcobj, tx.dropped.fw_reason2); \
 		DP_STATS_AGGR(_tgtobj, _srcobj, tx.dropped.fw_reason3); \
+		DP_STATS_AGGR(_tgtobj, _srcobj, tx.dropped.fw_rem_queue_disable); \
+		DP_STATS_AGGR(_tgtobj, _srcobj, tx.dropped.fw_rem_no_match); \
+		DP_STATS_AGGR(_tgtobj, _srcobj, tx.dropped.drop_threshold); \
+		DP_STATS_AGGR(_tgtobj, _srcobj, tx.dropped.drop_link_desc_na); \
+		DP_STATS_AGGR(_tgtobj, _srcobj, tx.dropped.invalid_drop); \
+		DP_STATS_AGGR(_tgtobj, _srcobj, tx.dropped.mcast_vdev_drop); \
+		DP_STATS_AGGR(_tgtobj, _srcobj, tx.dropped.invalid_rr); \
 		DP_STATS_AGGR(_tgtobj, _srcobj, tx.dropped.age_out); \
 								\
 		DP_STATS_AGGR(_tgtobj, _srcobj, rx.err.mic_err); \
@@ -1527,6 +1534,20 @@ void dp_update_vdev_stats_on_peer_unmap(struct dp_vdev *vdev,
 					_srcobj->tx.dropped.fw_reason2; \
 		_tgtobj->tx.dropped.fw_reason3 += \
 					_srcobj->tx.dropped.fw_reason3; \
+		_tgtobj->tx.dropped.fw_rem_queue_disable += \
+					_srcobj->tx.dropped.fw_rem_queue_disable; \
+		_tgtobj->tx.dropped.fw_rem_no_match += \
+					_srcobj->tx.dropped.fw_rem_no_match; \
+		_tgtobj->tx.dropped.drop_threshold += \
+					_srcobj->tx.dropped.drop_threshold; \
+		_tgtobj->tx.dropped.drop_link_desc_na += \
+					_srcobj->tx.dropped.drop_link_desc_na; \
+		_tgtobj->tx.dropped.invalid_drop += \
+					_srcobj->tx.dropped.invalid_drop; \
+		_tgtobj->tx.dropped.mcast_vdev_drop += \
+					_srcobj->tx.dropped.mcast_vdev_drop; \
+		_tgtobj->tx.dropped.invalid_rr += \
+					_srcobj->tx.dropped.invalid_rr; \
 		_tgtobj->tx.failed_retry_count += \
 					_srcobj->tx.failed_retry_count; \
 		_tgtobj->tx.retry_count += _srcobj->tx.retry_count; \

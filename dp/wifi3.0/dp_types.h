@@ -3371,6 +3371,12 @@ typedef void *dp_txrx_ref_handle;
  * @fw_reason1: discarded by firmware reason 1
  * @fw_reason2: discarded by firmware reason 2
  * @fw_reason3: discarded by firmware reason  3
+ * @fw_rem_no_match: dropped due to fw no match command
+ * @drop_threshold: dropped due to HW threshold
+ * @drop_link_desc_na: dropped due resource not available in HW
+ * @invalid_drop: Invalid msdu drop
+ * @mcast_vdev_drop: MCAST drop configured for VDEV in HW
+ * @invalid_rr: Invalid TQM release reason
  * @failed_retry_count: packets failed due to retry above 802.11 retry limit
  * @retry_count: packets successfully send after one or more retry
  * @multiple_retry_count: packets successfully sent after more than one retry
@@ -3398,6 +3404,13 @@ struct dp_peer_per_pkt_tx_stats {
 		uint32_t fw_reason1;
 		uint32_t fw_reason2;
 		uint32_t fw_reason3;
+		uint32_t fw_rem_queue_disable;
+		uint32_t fw_rem_no_match;
+		uint32_t drop_threshold;
+		uint32_t drop_link_desc_na;
+		uint32_t invalid_drop;
+		uint32_t mcast_vdev_drop;
+		uint32_t invalid_rr;
 	} dropped;
 	uint32_t failed_retry_count;
 	uint32_t retry_count;
