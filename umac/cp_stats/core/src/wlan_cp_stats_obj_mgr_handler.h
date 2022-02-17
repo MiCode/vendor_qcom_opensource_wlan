@@ -165,12 +165,13 @@ wlan_cp_stats_infra_cp_get_context(struct wlan_objmgr_psoc *psoc,
 QDF_STATUS
 wlan_cp_stats_send_infra_cp_req(struct wlan_objmgr_psoc *psoc,
 				struct infra_cp_stats_cmd_info *req);
+#endif /* WLAN_SUPPORT_INFRA_CTRL_PATH_STATS */
 
 #if defined(WLAN_SUPPORT_TWT) && defined (WLAN_TWT_CONV_SUPPORTED)
 int wlan_cp_stats_twt_get_peer_session_params(
 					struct wlan_objmgr_psoc *psoc,
 					struct twt_session_stats_info *params);
 #endif
-#endif /* WLAN_SUPPORT_INFRA_CTRL_PATH_STATS */
+
 #endif /* QCA_SUPPORT_CP_STATS */
 #endif /* __WLAN_CP_STATS_OBJ_MGR_HANDLER_H__ */

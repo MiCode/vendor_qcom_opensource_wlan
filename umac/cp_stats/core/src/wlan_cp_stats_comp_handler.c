@@ -31,6 +31,7 @@
 #include "wlan_cp_stats_defs.h"
 #include <wlan_cp_stats_ucfg_api.h>
 #include <wlan_cp_stats_utils_api.h>
+#include <wmi_unified_twt_param.h>
 
 static QDF_STATUS
 wlan_cp_stats_psoc_comp_obj_config

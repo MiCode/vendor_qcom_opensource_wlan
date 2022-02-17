@@ -41,6 +41,7 @@ ucfg_send_infra_cp_stats_request(struct wlan_objmgr_vdev *vdev,
 {
 	return wlan_cp_stats_send_infra_cp_req(wlan_vdev_get_psoc(vdev), req);
 }
+#endif /* WLAN_SUPPORT_INFRA_CTRL_PATH_STATS */
 
 #if defined(WLAN_SUPPORT_TWT) && defined (WLAN_TWT_CONV_SUPPORTED)
 int ucfg_cp_stats_twt_get_peer_session_params(
@@ -50,4 +51,3 @@ int ucfg_cp_stats_twt_get_peer_session_params(
 	return wlan_cp_stats_twt_get_peer_session_params(psoc_obj, params);
 }
 #endif
-#endif /* WLAN_SUPPORT_INFRA_CTRL_PATH_STATS */
