@@ -85,7 +85,7 @@ static QDF_STATUS cm_fill_scan_req(struct cnx_mgr *cm_ctx,
 
 	ch_freq = cm_req->req.chan_freq;
 	if (ch_freq) {
-		state = wlan_reg_get_channel_state_for_freq(
+		state = wlan_reg_get_channel_state_for_pwrmode(
 							pdev,
 							ch_freq,
 							REG_CURRENT_PWR_MODE);

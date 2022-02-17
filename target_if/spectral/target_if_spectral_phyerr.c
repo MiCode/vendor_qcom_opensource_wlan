@@ -893,7 +893,8 @@ target_if_spectral_unify_cfreq_format(struct target_if_spectral *spectral,
 			enum channel_state state;
 
 			/* Get the 80MHz channel containing the pri20 freq */
-			state = wlan_reg_get_5g_bonded_channel_and_state_for_freq
+			state =
+			    wlan_reg_get_5g_bonded_channel_and_state_for_pwrmode
 				(spectral->pdev_obj, pri20_freq, CH_WIDTH_80MHZ,
 				 &bonded_chan_ptr, REG_CURRENT_PWR_MODE);
 

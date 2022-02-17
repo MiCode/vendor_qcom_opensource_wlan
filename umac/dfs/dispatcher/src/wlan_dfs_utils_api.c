@@ -915,7 +915,8 @@ QDF_STATUS utils_dfs_get_vdev_random_channel_for_freq(
 		 "input width=%d", chan_params->ch_width);
 
 	if (*target_chan_freq) {
-		wlan_reg_set_channel_params_for_freq(pdev, *target_chan_freq, 0,
+		wlan_reg_set_channel_params_for_pwrmode(
+						     pdev, *target_chan_freq, 0,
 						     chan_params,
 						     REG_CURRENT_PWR_MODE);
 		utils_dfs_get_max_phy_mode(pdev, hw_mode);
@@ -981,9 +982,9 @@ QDF_STATUS utils_dfs_bw_reduced_channel_for_freq(
 	}
 	dfs_curchan = dfs->dfs_curchan;
 	ch_state =
-	    wlan_reg_get_channel_state_for_freq(pdev,
-						dfs_curchan->dfs_ch_freq,
-						REG_CURRENT_PWR_MODE);
+		wlan_reg_get_channel_state_for_pwrmode(pdev,
+						       dfs_curchan->dfs_ch_freq,
+						       REG_CURRENT_PWR_MODE);
 
 	if (ch_state == CHANNEL_STATE_DFS ||
 	    ch_state == CHANNEL_STATE_ENABLE) {
@@ -1000,10 +1001,10 @@ QDF_STATUS utils_dfs_bw_reduced_channel_for_freq(
 			dfs_curchan->dfs_ch_mhz_freq_seg1;
 		chan_params->mhz_freq_seg1 =
 			dfs_curchan->dfs_ch_mhz_freq_seg2;
-		wlan_reg_set_channel_params_for_freq(pdev,
-						     dfs_curchan->dfs_ch_freq,
-						     0, chan_params,
-						     REG_CURRENT_PWR_MODE);
+		wlan_reg_set_channel_params_for_pwrmode(pdev, dfs_curchan->
+							dfs_ch_freq,
+							0, chan_params,
+							REG_CURRENT_PWR_MODE);
 
 		*target_chan_freq = dfs_curchan->dfs_ch_freq;
 		utils_dfs_get_max_phy_mode(pdev, hw_mode);

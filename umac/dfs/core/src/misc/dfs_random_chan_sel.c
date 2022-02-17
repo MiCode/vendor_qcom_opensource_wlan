@@ -1566,7 +1566,7 @@ uint16_t dfs_prepare_random_channel_for_freq(struct wlan_dfs *dfs,
 		if ((*chan_wd == DFS_CH_WIDTH_80P80MHZ) &&
 		    (flags & DFS_RANDOM_CH_FLAG_RESTRICTED_80P80_ENABLED) &&
 		    target_freq) {
-			wlan_reg_set_channel_params_for_freq(
+			wlan_reg_set_channel_params_for_pwrmode(
 						dfs->dfs_pdev_obj,
 						target_freq,
 						0, chan_params,

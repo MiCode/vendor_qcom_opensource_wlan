@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2020-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -783,7 +784,10 @@ static uint32_t wlan_dcs_get_pcl_for_sap(struct wlan_objmgr_vdev *vdev,
 
 	for (i = 0, j = 0; i < pcl->pcl_len && i < freq_list_sz; i++) {
 		freq = (qdf_freq_t)pcl->pcl_list[i];
-		state = wlan_reg_get_channel_state_for_freq(pdev, freq);
+		state = wlan_reg_get_channel_state_for_pwrmode(
+							pdev,
+							freq,
+							REG_CURRENT_PWR_MODE);
 		if (state != CHANNEL_STATE_ENABLE)
 			continue;
 
@@ -821,7 +825,10 @@ static uint32_t wlan_dcs_get_pcl_for_sap(struct wlan_objmgr_vdev *vdev,
 
 	for (i = 0, j = 0; i < NUM_CHANNELS && i < freq_list_sz; i++) {
 		freq = cur_chan_list[i].center_freq;
-		state = wlan_reg_get_channel_state_for_freq(pdev, freq);
+		state = wlan_reg_get_channel_state_for_pwrmode(
+						       pdev,
+						       freq,
+						       REG_CURRENT_PWR_MODE);
 		if (state != CHANNEL_STATE_ENABLE)
 			continue;
 
@@ -1029,8 +1036,9 @@ wlan_dcs_get_available_chan_for_bw(struct wlan_objmgr_pdev *pdev,
 			continue;
 		}
 
-		state = wlan_reg_get_5g_bonded_channel_and_state_for_freq(
-				pdev, freq, bw, &bonded_chan_ptr);
+		state = wlan_reg_get_5g_bonded_channel_and_state_for_pwrmode(
+				pdev, freq, bw, &bonded_chan_ptr,
+				REG_CURRENT_PWR_MODE);
 		if (state != CHANNEL_STATE_ENABLE)
 			continue;
 
