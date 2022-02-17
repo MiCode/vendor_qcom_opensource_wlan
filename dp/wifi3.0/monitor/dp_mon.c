@@ -42,6 +42,11 @@
 #include "dp_rx_mon_feature.h"
 #endif /* WLAN_RX_PKT_CAPTURE_ENH */
 
+#ifdef QCA_UNDECODED_METADATA_SUPPORT
+#define MAX_STRING_LEN_PER_FIELD 6
+#define DP_UNDECODED_ERR_LENGTH (MAX_STRING_LEN_PER_FIELD * CDP_PHYRX_ERR_MAX)
+#endif
+
 #ifdef QCA_MCOPY_SUPPORT
 static inline void
 dp_pdev_disable_mcopy_code(struct dp_pdev *pdev)
@@ -767,6 +772,40 @@ QDF_STATUS dp_pdev_get_rx_mon_stats(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
 	return QDF_STATUS_SUCCESS;
 }
 
+#ifdef QCA_UNDECODED_METADATA_SUPPORT
+/**
+ * dp_pdev_get_undecoded_capture_stats() - Get undecoded metadata captured
+ * monitor pdev stats
+ * @mon_pdev: Monitor PDEV handle
+ * @rx_mon_stats: Monitor pdev status/destination ring stats
+ *
+ * Return: None
+ */
+static inline void
+dp_pdev_get_undecoded_capture_stats(struct dp_mon_pdev *mon_pdev,
+				    struct cdp_pdev_mon_stats *rx_mon_stats)
+{
+	char undecoded_error[DP_UNDECODED_ERR_LENGTH];
+	uint8_t index = 0, i;
+
+	DP_PRINT_STATS("Rx Undecoded Frame count:%d",
+		       rx_mon_stats->rx_undecoded_count);
+	index = 0;
+	for (i = 0; i < (CDP_PHYRX_ERR_MAX); i++) {
+		index += qdf_snprint(&undecoded_error[index],
+				DP_UNDECODED_ERR_LENGTH - index,
+				" %d", rx_mon_stats->rx_undecoded_error[i]);
+	}
+	DP_PRINT_STATS("Undecoded Error (0-63):%s", undecoded_error);
+}
+#else
+static inline void
+dp_pdev_get_undecoded_capture_stats(struct dp_mon_pdev *mon_pdev,
+				    struct cdp_pdev_mon_stats *rx_mon_stats)
+{
+}
+#endif
+
 void
 dp_print_pdev_rx_mon_stats(struct dp_pdev *pdev)
 {
@@ -848,6 +887,8 @@ dp_print_pdev_rx_mon_stats(struct dp_pdev *pdev)
 	qdf_mem_free(dest_ring_ppdu_ids);
 	DP_PRINT_STATS("mon_rx_dest_stuck = %d",
 		       rx_mon_stats->mon_rx_dest_stuck);
+
+	dp_pdev_get_undecoded_capture_stats(mon_pdev, rx_mon_stats);
 }
 
 #ifdef QCA_SUPPORT_BPR

@@ -1222,6 +1222,8 @@ dp_rx_handle_ppdu_undecoded_metadata(struct dp_soc *soc, struct dp_pdev *pdev,
 {
 	qdf_nbuf_t ppdu_nbuf;
 	struct cdp_rx_indication_ppdu *cdp_rx_ppdu;
+	uint8_t abort_reason = 0;
+	struct dp_mon_pdev *mon_pdev = pdev->monitor_pdev;
 
 	 /* Return if RX_ABORT not set */
 	if (ppdu_info->rx_status.phyrx_abort == 0)
@@ -1240,8 +1242,17 @@ dp_rx_handle_ppdu_undecoded_metadata(struct dp_soc *soc, struct dp_pdev *pdev,
 				ppdu_info, cdp_rx_ppdu);
 
 		if (!qdf_nbuf_put_tail(ppdu_nbuf,
-				       sizeof(struct cdp_rx_indication_ppdu)))
+				       sizeof(struct cdp_rx_indication_ppdu))) {
 			return;
+		}
+
+		mon_pdev->rx_mon_stats.rx_undecoded_count++;
+		abort_reason = cdp_rx_ppdu->phyrx_abort_reason;
+		if (abort_reason < CDP_PHYRX_ERR_MAX) {
+			mon_pdev->rx_mon_stats.rx_undecoded_error[abort_reason] += 1;
+		} else {
+			mon_pdev->rx_mon_stats.rx_undecoded_error[CDP_PHYRX_ERR_OTHER] += 1;
+		}
 
 		dp_wdi_event_handler(WDI_EVENT_RX_PPDU_DESC_UNDECODED_METADATA,
 				     soc, ppdu_nbuf, HTT_INVALID_PEER,
