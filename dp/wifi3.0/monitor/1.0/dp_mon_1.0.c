@@ -58,6 +58,8 @@ void
 dp_mon_populate_ppdu_info_1_0(struct hal_rx_ppdu_info *hal_ppdu_info,
 			      struct cdp_rx_indication_ppdu *ppdu)
 {
+	ppdu->u.preamble = hal_ppdu_info->rx_status.preamble_type;
+	ppdu->u.bw = hal_ppdu_info->rx_status.bw;
 	ppdu->punc_bw = 0;
 }
 

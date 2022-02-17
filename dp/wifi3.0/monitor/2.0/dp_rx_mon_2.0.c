@@ -238,9 +238,12 @@ void dp_rx_mon_stats_update_2_0(struct dp_mon_peer *mon_peer,
 				struct cdp_rx_stats_ppdu_user *ppdu_user)
 {
 	uint8_t mcs, preamble, ppdu_type;
+	uint32_t num_msdu;
 
 	preamble = ppdu->u.preamble;
 	ppdu_type = ppdu->u.ppdu_type;
+	num_msdu = ppdu_user->num_msdu;
+
 	if (ppdu_type == HAL_RX_TYPE_SU)
 		mcs = ppdu->u.mcs;
 	else
@@ -248,31 +251,37 @@ void dp_rx_mon_stats_update_2_0(struct dp_mon_peer *mon_peer,
 
 	DP_STATS_INC(mon_peer, rx.mpdu_retry_cnt, ppdu_user->mpdu_retries);
 	DP_STATS_INCC(mon_peer,
+		      rx.pkt_type[preamble].mcs_count[MAX_MCS - 1], num_msdu,
+		      ((mcs >= MAX_MCS_11BE) && (preamble == DOT11_BE)));
+	DP_STATS_INCC(mon_peer,
+		      rx.pkt_type[preamble].mcs_count[mcs], num_msdu,
+		      ((mcs < MAX_MCS_11BE) && (preamble == DOT11_BE)));
+	DP_STATS_INCC(mon_peer,
 		      rx.su_be_ppdu_cnt.mcs_count[MAX_MCS - 1], 1,
-		      ((mcs >= (MAX_MCS - 1)) && (preamble == DOT11_BE) &&
+		      ((mcs >= (MAX_MCS_11BE)) && (preamble == DOT11_BE) &&
 		      (ppdu_type == HAL_RX_TYPE_SU)));
 	DP_STATS_INCC(mon_peer,
 		      rx.su_be_ppdu_cnt.mcs_count[mcs], 1,
-		      ((mcs < (MAX_MCS - 1)) && (preamble == DOT11_BE) &&
+		      ((mcs < (MAX_MCS_11BE)) && (preamble == DOT11_BE) &&
 		      (ppdu_type == HAL_RX_TYPE_SU)));
 	DP_STATS_INCC(mon_peer,
 		      rx.mu_be_ppdu_cnt[TXRX_TYPE_MU_OFDMA].mcs_count[MAX_MCS - 1],
-		      1, ((mcs >= (MAX_MCS - 1)) &&
+		      1, ((mcs >= (MAX_MCS_11BE)) &&
 		      (preamble == DOT11_BE) &&
 		      (ppdu_type == HAL_RX_TYPE_MU_OFDMA)));
 	DP_STATS_INCC(mon_peer,
 		      rx.mu_be_ppdu_cnt[TXRX_TYPE_MU_OFDMA].mcs_count[mcs],
-		      1, ((mcs < (MAX_MCS - 1)) &&
+		      1, ((mcs < (MAX_MCS_11BE)) &&
 		      (preamble == DOT11_BE) &&
 		      (ppdu_type == HAL_RX_TYPE_MU_OFDMA)));
 	DP_STATS_INCC(mon_peer,
 		      rx.mu_be_ppdu_cnt[TXRX_TYPE_MU_MIMO].mcs_count[MAX_MCS - 1],
-		      1, ((mcs >= (MAX_MCS - 1)) &&
+		      1, ((mcs >= (MAX_MCS_11BE)) &&
 		      (preamble == DOT11_BE) &&
 		      (ppdu_type == HAL_RX_TYPE_MU_MIMO)));
 	DP_STATS_INCC(mon_peer,
 		      rx.mu_be_ppdu_cnt[TXRX_TYPE_MU_MIMO].mcs_count[mcs],
-		      1, ((mcs < (MAX_MCS - 1)) &&
+		      1, ((mcs < (MAX_MCS_11BE)) &&
 		      (preamble == DOT11_BE) &&
 		      (ppdu_type == HAL_RX_TYPE_MU_MIMO)));
 }
@@ -281,6 +290,17 @@ void
 dp_rx_mon_populate_ppdu_info_2_0(struct hal_rx_ppdu_info *hal_ppdu_info,
 				 struct cdp_rx_indication_ppdu *ppdu)
 {
+	/* Align bw value as per host data structures */
+	if (hal_ppdu_info->rx_status.bw == HAL_FULL_RX_BW_320)
+		ppdu->u.bw = CMN_BW_320MHZ;
+	else
+		ppdu->u.bw = hal_ppdu_info->rx_status.bw;
+	/* Align preamble value as per host data structures */
+	if (hal_ppdu_info->rx_status.preamble_type == HAL_RX_PKT_TYPE_11BE)
+		ppdu->u.preamble = DOT11_BE;
+	else
+		ppdu->u.preamble = hal_ppdu_info->rx_status.preamble_type;
+
 	ppdu->punc_bw = hal_ppdu_info->rx_status.punctured_bw;
 }
 #else

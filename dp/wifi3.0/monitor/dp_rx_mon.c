@@ -430,7 +430,7 @@ dp_rx_populate_cdp_indication_ppdu_user(struct dp_pdev *pdev,
 			rx_stats_peruser->other_msdu_count;
 
 		rx_stats_peruser->preamble_type =
-			rx_user_status->preamble_type;
+				cdp_rx_ppdu->u.preamble;
 		rx_stats_peruser->mpdu_cnt_fcs_ok =
 			rx_user_status->mpdu_cnt_fcs_ok;
 		rx_stats_peruser->mpdu_cnt_fcs_err =
@@ -532,7 +532,6 @@ dp_rx_populate_cdp_indication_ppdu(struct dp_pdev *pdev,
 	cdp_rx_ppdu->tcp_msdu_count = ppdu_info->rx_status.tcp_msdu_count;
 	cdp_rx_ppdu->udp_msdu_count = ppdu_info->rx_status.udp_msdu_count;
 	cdp_rx_ppdu->other_msdu_count = ppdu_info->rx_status.other_msdu_count;
-	cdp_rx_ppdu->u.preamble = ppdu_info->rx_status.preamble_type;
 	/* num mpdu is consolidated and added together in num user loop */
 	cdp_rx_ppdu->num_mpdu = ppdu_info->com_info.mpdu_cnt_fcs_ok;
 	/* num msdu is consolidated and added together in num user loop */
@@ -568,7 +567,6 @@ dp_rx_populate_cdp_indication_ppdu(struct dp_pdev *pdev,
 	cdp_rx_ppdu->ppdu_id = ppdu_info->com_info.ppdu_id;
 	cdp_rx_ppdu->length = ppdu_info->rx_status.ppdu_len;
 	cdp_rx_ppdu->duration = ppdu_info->rx_status.duration;
-	cdp_rx_ppdu->u.bw = ppdu_info->rx_status.bw;
 	cdp_rx_ppdu->u.nss = ppdu_info->rx_status.nss;
 	cdp_rx_ppdu->u.mcs = ppdu_info->rx_status.mcs;
 	if ((ppdu_info->rx_status.sgi == VHT_SGI_NYSM) &&
@@ -777,7 +775,7 @@ static void dp_rx_stats_update(struct dp_pdev *pdev,
 {
 	struct dp_soc *soc = NULL;
 	uint8_t mcs, preamble, ac = 0, nss, ppdu_type;
-	uint16_t num_msdu;
+	uint32_t num_msdu;
 	uint8_t pkt_bw_offset;
 	struct dp_peer *peer;
 	struct dp_mon_peer *mon_peer;
@@ -912,36 +910,36 @@ static void dp_rx_stats_update(struct dp_pdev *pdev,
 			((mcs < MAX_MCS_11AC) && (preamble == DOT11_AC)));
 		DP_STATS_INCC(mon_peer,
 			rx.pkt_type[preamble].mcs_count[MAX_MCS - 1], num_msdu,
-			((mcs >= (MAX_MCS - 1)) && (preamble == DOT11_AX)));
+			((mcs >= (MAX_MCS_11AX)) && (preamble == DOT11_AX)));
 		DP_STATS_INCC(mon_peer,
 			rx.pkt_type[preamble].mcs_count[mcs], num_msdu,
-			((mcs < (MAX_MCS - 1)) && (preamble == DOT11_AX)));
+			((mcs < (MAX_MCS_11AX)) && (preamble == DOT11_AX)));
 		DP_STATS_INCC(mon_peer,
 			rx.su_ax_ppdu_cnt.mcs_count[MAX_MCS - 1], 1,
-			((mcs >= (MAX_MCS - 1)) && (preamble == DOT11_AX) &&
+			((mcs >= (MAX_MCS_11AX)) && (preamble == DOT11_AX) &&
 			(ppdu_type == HAL_RX_TYPE_SU)));
 		DP_STATS_INCC(mon_peer,
 			rx.su_ax_ppdu_cnt.mcs_count[mcs], 1,
-			((mcs < (MAX_MCS - 1)) && (preamble == DOT11_AX) &&
+			((mcs < (MAX_MCS_11AX)) && (preamble == DOT11_AX) &&
 			(ppdu_type == HAL_RX_TYPE_SU)));
 		DP_STATS_INCC(mon_peer,
 			rx.rx_mu[TXRX_TYPE_MU_OFDMA].ppdu.mcs_count[MAX_MCS - 1],
-			1, ((mcs >= (MAX_MCS - 1)) &&
+			1, ((mcs >= (MAX_MCS_11AX)) &&
 			(preamble == DOT11_AX) &&
 			(ppdu_type == HAL_RX_TYPE_MU_OFDMA)));
 		DP_STATS_INCC(mon_peer,
 			rx.rx_mu[TXRX_TYPE_MU_OFDMA].ppdu.mcs_count[mcs],
-			1, ((mcs < (MAX_MCS - 1)) &&
+			1, ((mcs < (MAX_MCS_11AX)) &&
 			(preamble == DOT11_AX) &&
 			(ppdu_type == HAL_RX_TYPE_MU_OFDMA)));
 		DP_STATS_INCC(mon_peer,
 			rx.rx_mu[TXRX_TYPE_MU_MIMO].ppdu.mcs_count[MAX_MCS - 1],
-			1, ((mcs >= (MAX_MCS - 1)) &&
+			1, ((mcs >= (MAX_MCS_11AX)) &&
 			(preamble == DOT11_AX) &&
 			(ppdu_type == HAL_RX_TYPE_MU_MIMO)));
 		DP_STATS_INCC(mon_peer,
 			rx.rx_mu[TXRX_TYPE_MU_MIMO].ppdu.mcs_count[mcs],
-			1, ((mcs < (MAX_MCS - 1)) &&
+			1, ((mcs < (MAX_MCS_11AX)) &&
 			(preamble == DOT11_AX) &&
 			(ppdu_type == HAL_RX_TYPE_MU_MIMO)));
 
