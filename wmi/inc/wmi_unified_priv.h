@@ -2930,6 +2930,10 @@ QDF_STATUS
 QDF_STATUS
 (*send_set_nss_probe_intvl_cmd)(wmi_unified_t wmi_handle, uint8_t pdev_id,
 				struct wmi_rc_params *param);
+QDF_STATUS
+(*send_sawf_create_cmd)(wmi_unified_t wmi, struct wmi_sawf_params *params);
+QDF_STATUS
+(*send_sawf_disable_cmd)(wmi_unified_t wmi, uint32_t svc_id);
 #endif
 
 #ifdef WLAN_FEATURE_11BE_MLO
