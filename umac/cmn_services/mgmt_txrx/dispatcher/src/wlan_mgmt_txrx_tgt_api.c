@@ -23,6 +23,8 @@
  *  southbound interface.
  */
 
+#include <wmi_unified_param.h>
+
 #include "wlan_mgmt_txrx_tgt_api.h"
 #include "wlan_mgmt_txrx_utils_api.h"
 #include "../../core/src/wlan_mgmt_txrx_main_i.h"
@@ -1206,6 +1208,28 @@ QDF_STATUS tgt_mgmt_txrx_rx_frame_handler(
 				(le16toh(*(uint16_t *)wh->i_seq) >>
 				WLAN_SEQ_SEQ_SHIFT), mgmt_rx_params->rssi,
 				mgmt_rx_params->tsf_delta);
+
+	/* Print a hexdump of packet for host debug */
+	if (mgmt_type == IEEE80211_FC0_TYPE_MGT &&
+	    ((mgmt_rx_params->status & WMI_HOST_RXERR_PN) ||
+	     (mgmt_rx_params->status & WMI_HOST_RXERR_CRC) ||
+	     (mgmt_rx_params->status & WMI_HOST_RXERR_DECRYPT) ||
+	     (mgmt_rx_params->status & WMI_HOST_RXERR_MIC) ||
+	     (mgmt_rx_params->status & WMI_HOST_RXERR_KEY_CACHE_MISS))) {
+		uint64_t curr_pn, prev_pn;
+		uint8_t *pn = NULL;
+
+		pn = mgmt_rx_params->pn_params.curr_pn;
+		curr_pn = qdf_le64_to_cpu(*((uint64_t *)pn));
+
+		pn = mgmt_rx_params->pn_params.prev_pn;
+		prev_pn = qdf_le64_to_cpu(*((uint64_t *)pn));
+
+		mgmt_txrx_debug("Current PN=0x%llx Previous PN=0x%llx. Packet dumped below",
+				curr_pn, prev_pn);
+		qdf_trace_hex_dump(QDF_MODULE_ID_MGMT_TXRX,
+				   QDF_TRACE_LEVEL_DEBUG, data, buflen);
+	}
 
 	if (simulation_frame_update(psoc, buf, mgmt_rx_params))
 		return QDF_STATUS_E_FAILURE;

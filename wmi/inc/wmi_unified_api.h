@@ -1426,6 +1426,17 @@ wmi_unified_get_pn_send_cmd(wmi_unified_t wmi_hdl,
 			    struct peer_request_pn_param *pn_params);
 
 /**
+ * wmi_unified_get_rxpn_send_cmd() - send command to fw get Rx PN for peer
+ * @wmi_handle: wmi handle
+ * @pn_params: PN parameters
+ *
+ * Return: QDF_STATUS_SUCCESS on success and QDF_STATUS_E_FAILURE for failure
+ */
+QDF_STATUS
+wmi_unified_get_rxpn_send_cmd(wmi_unified_t wmi_hdl,
+			      struct peer_request_rxpn_param *pn_params);
+
+/**
  * wmi_unified_p2p_go_set_beacon_ie_cmd() - set beacon IE for p2p go
  * @wmi_handle: wmi handle
  * @vdev_id: vdev id
@@ -2840,6 +2851,17 @@ QDF_STATUS wmi_unified_extract_pn(wmi_unified_t wmi_hdl, void *evt_buf,
 			  struct wmi_host_get_pn_event *param);
 
 /**
+ * wmi_unified_extract_rxpn() - extract Rx PN event data
+ * @wmi_handle: wmi handle
+ * @evt_buf: pointer to event buffer
+ * @param: pointer to get Rx PN event param
+ *
+ * Return: QDF_STATUS_SUCCESS on success and QDF_STATUS_E_FAILURE for failure
+ */
+QDF_STATUS wmi_unified_extract_rxpn(wmi_unified_t wmi_hdl, void *evt_buf,
+				    struct wmi_host_get_rxpn_event *param);
+
+/**
  * wmi_unified_send_periodic_chan_stats_config_cmd() - send periodic chan
  * stats cmd to fw
  * @wmi_handle: wmi handle
@@ -2934,6 +2956,18 @@ QDF_STATUS wmi_unified_mgmt_rx_reo_filter_config_cmd(
 					uint8_t pdev_id,
 					struct mgmt_rx_reo_filter *filter);
 #endif
+
+/**
+ * wmi_extract_frame_pn_params() - extract PN params from event
+ * @wmi_handle: wmi handle
+ * @evt_buf: pointer to event buffer
+ * @pn_params: Pointer to Frame PN params
+ *
+ * Return: QDF_STATUS_SUCCESS on success and QDF_STATUS_E_FAILURE for failure
+ */
+QDF_STATUS
+wmi_extract_frame_pn_params(wmi_unified_t wmi_handle, void *evt_buf,
+			    struct frame_pn_params *pn_params);
 
 /**
  * wmi_extract_vdev_roam_param() - extract vdev roam param from event

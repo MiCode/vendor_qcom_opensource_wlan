@@ -11585,6 +11585,51 @@ static QDF_STATUS send_mgmt_rx_reo_filter_config_cmd_tlv(
 #endif
 
 /**
+ * extract_frame_pn_params_tlv() - extract PN params from event
+ * @wmi_handle: wmi handle
+ * @evt_buf: pointer to event buffer
+ * @pn_params: Pointer to Frame PN params
+ *
+ * Return: QDF_STATUS_SUCCESS for success or error code
+ */
+static QDF_STATUS extract_frame_pn_params_tlv(wmi_unified_t wmi_handle,
+					      void *evt_buf,
+					      struct frame_pn_params *pn_params)
+{
+	WMI_MGMT_RX_EVENTID_param_tlvs *param_tlvs;
+	wmi_frame_pn_params *pn_params_tlv;
+
+	if (!is_service_enabled_tlv(wmi_handle,
+				    WMI_SERVICE_PN_REPLAY_CHECK_SUPPORT))
+		return QDF_STATUS_SUCCESS;
+
+	param_tlvs = evt_buf;
+	if (!param_tlvs) {
+		wmi_err("Got NULL point message from FW");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	if (!pn_params) {
+		wmi_err("PN Params is NULL");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	/* PN Params TLV will be populated only if WMI_RXERR_PN error is
+	 * found by target
+	 */
+	pn_params_tlv = param_tlvs->pn_params;
+	if (!pn_params_tlv)
+		return QDF_STATUS_SUCCESS;
+
+	qdf_mem_copy(pn_params->curr_pn, pn_params_tlv->cur_pn,
+		     sizeof(pn_params->curr_pn));
+	qdf_mem_copy(pn_params->prev_pn, pn_params_tlv->prev_pn,
+		     sizeof(pn_params->prev_pn));
+
+	return QDF_STATUS_SUCCESS;
+}
+
+/**
  * extract_vdev_roam_param_tlv() - extract vdev roam param from event
  * @wmi_handle: wmi handle
  * @param evt_buf: pointer to event buffer
@@ -13234,6 +13279,78 @@ extract_get_pn_data_tlv(wmi_unified_t wmi_handle, void *evt_buf,
 	param->key_type = event->key_type;
 	qdf_mem_copy(param->pn, event->pn, sizeof(event->pn));
 	WMI_MAC_ADDR_TO_CHAR_ARRAY(&event->peer_macaddr, param->mac_addr);
+
+	return QDF_STATUS_SUCCESS;
+}
+
+/**
+ * send_pdev_get_rxpn_cmd_tlv() - send get Rx PN request params to fw
+ * @wmi_handle: wmi handle
+ * @params: Rx PN request params for peer
+ *
+ * Return: QDF_STATUS - success or error status
+ */
+static QDF_STATUS
+send_pdev_get_rxpn_cmd_tlv(wmi_unified_t wmi_handle,
+			   struct peer_request_rxpn_param *params)
+{
+	wmi_peer_rx_pn_request_cmd_fixed_param *cmd;
+	wmi_buf_t buf;
+	uint8_t *buf_ptr;
+	uint32_t len = sizeof(wmi_peer_rx_pn_request_cmd_fixed_param);
+
+	if (!is_service_enabled_tlv(wmi_handle,
+				    WMI_SERVICE_PN_REPLAY_CHECK_SUPPORT)) {
+		wmi_err("Rx PN Replay Check not supported by target");
+		return QDF_STATUS_E_NOSUPPORT;
+	}
+
+	buf = wmi_buf_alloc(wmi_handle, len);
+	if (!buf) {
+		wmi_err("wmi_buf_alloc failed");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	buf_ptr = (uint8_t *)wmi_buf_data(buf);
+	cmd = (wmi_peer_rx_pn_request_cmd_fixed_param *)buf_ptr;
+
+	WMITLV_SET_HDR(&cmd->tlv_header,
+		       WMITLV_TAG_STRUC_wmi_peer_rx_pn_request_cmd_fixed_param,
+		       WMITLV_GET_STRUCT_TLVLEN(wmi_peer_rx_pn_request_cmd_fixed_param));
+
+	cmd->vdev_id = params->vdev_id;
+	WMI_CHAR_ARRAY_TO_MAC_ADDR(params->peer_macaddr, &cmd->peer_macaddr);
+	cmd->key_ix = params->keyix;
+	if (wmi_unified_cmd_send(wmi_handle, buf, len,
+				 WMI_PEER_RX_PN_REQUEST_CMDID)) {
+		wmi_err("Failed to send WMI command");
+		wmi_buf_free(buf);
+		return QDF_STATUS_E_FAILURE;
+	}
+	return QDF_STATUS_SUCCESS;
+}
+
+/**
+ * extract_get_rxpn_data_tlv() - extract Rx PN resp
+ * @wmi_handle: wmi handle
+ * @params: Rx PN response params for peer
+ *
+ * Return: QDF_STATUS - success or error status
+ */
+static QDF_STATUS
+extract_get_rxpn_data_tlv(wmi_unified_t wmi_handle, void *evt_buf,
+			  struct wmi_host_get_rxpn_event *params)
+{
+	WMI_PEER_RX_PN_RESPONSE_EVENTID_param_tlvs *param_buf;
+	wmi_peer_rx_pn_response_event_fixed_param *event;
+
+	param_buf = evt_buf;
+	event = param_buf->fixed_param;
+
+	params->vdev_id = event->vdev_id;
+	params->keyix = event->key_idx;
+	qdf_mem_copy(params->pn, event->pn, sizeof(event->pn));
+	WMI_MAC_ADDR_TO_CHAR_ARRAY(&event->peer_macaddr, params->mac_addr);
 
 	return QDF_STATUS_SUCCESS;
 }
@@ -17411,6 +17528,7 @@ struct wmi_ops tlv_ops =  {
 	.extract_ready_event_params = extract_ready_event_params_tlv,
 	.extract_dbglog_data_len = extract_dbglog_data_len_tlv,
 	.extract_mgmt_rx_params = extract_mgmt_rx_params_tlv,
+	.extract_frame_pn_params = extract_frame_pn_params_tlv,
 	.extract_vdev_roam_param = extract_vdev_roam_param_tlv,
 	.extract_vdev_scan_ev_param = extract_vdev_scan_ev_param_tlv,
 #ifdef FEATURE_WLAN_SCAN_PNO
@@ -17469,6 +17587,8 @@ struct wmi_ops tlv_ops =  {
 #endif
 	.extract_get_pn_data = extract_get_pn_data_tlv,
 	.send_pdev_get_pn_cmd = send_pdev_get_pn_cmd_tlv,
+	.extract_get_rxpn_data = extract_get_rxpn_data_tlv,
+	.send_pdev_get_rxpn_cmd = send_pdev_get_rxpn_cmd_tlv,
 	.send_wlan_profile_enable_cmd = send_wlan_profile_enable_cmd_tlv,
 #ifdef WLAN_FEATURE_DISA
 	.send_encrypt_decrypt_send_cmd = send_encrypt_decrypt_send_cmd_tlv,
@@ -18108,6 +18228,8 @@ event_ids[wmi_roam_scan_chan_list_id] =
 	event_ids[wmi_resmgr_chan_time_quota_changed_eventid] =
 			WMI_RESMGR_CHAN_TIME_QUOTA_CHANGED_EVENTID;
 #endif
+	event_ids[wmi_peer_rx_pn_response_event_id] =
+		WMI_PEER_RX_PN_RESPONSE_EVENTID;
 }
 
 #ifdef WLAN_FEATURE_LINK_LAYER_STATS
@@ -18571,6 +18693,8 @@ static void populate_tlv_service(uint32_t *wmi_service)
 	wmi_service[wmi_service_radar_found_chan_freq_eq_center_freq] =
 		WMI_IS_RADAR_FOUND_CHAN_FREQ_IS_CENTER_FREQ;
 #endif
+	wmi_service[wmi_service_pn_replay_check_support] =
+			WMI_SERVICE_PN_REPLAY_CHECK_SUPPORT;
 }
 
 /**

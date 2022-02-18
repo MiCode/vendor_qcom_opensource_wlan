@@ -3871,6 +3871,18 @@ struct peer_request_pn_param {
 };
 
 /**
+ * struct peer_request_rxpn_param - Rx PN request params
+ * @vdev_id: vdev id
+ * @peer_macaddr: Peer mac address
+ * @keyix: key index
+ */
+struct peer_request_rxpn_param {
+	uint32_t vdev_id;
+	uint8_t peer_macaddr[QDF_MAC_ADDR_SIZE];
+	uint16_t keyix;
+};
+
+/**
  * struct rtt_meas_req_params - RTT measurement request params
  * @req_id: Request id
  * @vdev_id: vdev id
@@ -4927,6 +4939,7 @@ typedef enum {
 #ifdef WLAN_FEATURE_MCC_QUOTA
 	wmi_resmgr_chan_time_quota_changed_eventid,
 #endif
+	wmi_peer_rx_pn_response_event_id,
 	wmi_events_max,
 } wmi_conv_event_id;
 
@@ -5565,6 +5578,7 @@ typedef enum {
 #ifdef WLAN_FEATURE_11BE
 	wmi_service_radar_found_chan_freq_eq_center_freq,
 #endif
+	wmi_service_pn_replay_check_support,
 	wmi_services_max,
 } wmi_conv_service_ids;
 #define WMI_SERVICE_UNAVAILABLE 0xFFFF
@@ -7436,6 +7450,7 @@ enum wmi_host_fatal_condition_subtype_packet_log_config {
 #endif /* OL_ATH_SMART_LOGGING */
 
 #define GET_PN_MAX_LEN 16
+#define GET_RX_PN_MAX_LEN 8
 
 /**
  * struct wmi_host_get_pn_event - PN event params
@@ -7449,6 +7464,20 @@ struct wmi_host_get_pn_event {
 	uint8_t mac_addr[QDF_MAC_ADDR_SIZE];
 	uint32_t key_type;
 	uint8_t pn[GET_PN_MAX_LEN];
+};
+
+/**
+ * struct wmi_host_get_rxpn_event - Rx PN event params
+ * @vdev_id: vdev id
+ * @peer_macaddr: Peer mac address
+ * @keyix: key index
+ * @pn: pn value
+ */
+struct wmi_host_get_rxpn_event {
+	uint32_t vdev_id;
+	uint8_t mac_addr[QDF_MAC_ADDR_SIZE];
+	uint16_t keyix;
+	uint8_t pn[GET_RX_PN_MAX_LEN];
 };
 
 /**

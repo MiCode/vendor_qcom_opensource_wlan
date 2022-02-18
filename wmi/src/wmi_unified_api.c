@@ -1513,6 +1513,18 @@ QDF_STATUS wmi_unified_get_pn_send_cmd(wmi_unified_t wmi_hdl,
 	return QDF_STATUS_E_FAILURE;
 }
 
+QDF_STATUS wmi_unified_get_rxpn_send_cmd(
+		wmi_unified_t wmi_hdl,
+		struct peer_request_rxpn_param *pn_params)
+{
+	if (wmi_hdl->ops->send_pdev_get_rxpn_cmd)
+		return wmi_hdl->ops->send_pdev_get_rxpn_cmd(wmi_hdl,
+							    pn_params);
+
+	return QDF_STATUS_E_FAILURE;
+}
+qdf_export_symbol(wmi_unified_get_rxpn_send_cmd);
+
 /**
  *  wmi_unified_mgmt_cmd_send() - WMI mgmt cmd function
  *  @param wmi_handle      : handle to WMI.
@@ -1992,6 +2004,17 @@ QDF_STATUS wmi_unified_extract_pn(wmi_unified_t wmi_hdl, void *evt_buf,
 	return QDF_STATUS_E_FAILURE;
 }
 
+QDF_STATUS wmi_unified_extract_rxpn(wmi_unified_t wmi_hdl, void *evt_buf,
+				    struct wmi_host_get_rxpn_event *param)
+{
+	if (wmi_hdl->ops->extract_get_rxpn_data)
+		return wmi_hdl->ops->extract_get_rxpn_data(wmi_hdl,
+							   evt_buf, param);
+	return QDF_STATUS_E_FAILURE;
+}
+
+qdf_export_symbol(wmi_unified_extract_rxpn);
+
 #ifdef WLAN_FEATURE_DISA
 QDF_STATUS
 wmi_extract_encrypt_decrypt_resp_params(void *wmi_hdl, void *evt_buf,
@@ -2056,6 +2079,18 @@ QDF_STATUS wmi_unified_mgmt_rx_reo_filter_config_cmd(
 	return QDF_STATUS_E_FAILURE;
 }
 #endif
+
+QDF_STATUS
+wmi_extract_frame_pn_params(wmi_unified_t wmi_handle, void *evt_buf,
+			    struct frame_pn_params *pn_params)
+{
+	if (wmi_handle->ops->extract_frame_pn_params)
+		return wmi_handle->ops->extract_frame_pn_params(wmi_handle,
+								evt_buf,
+								pn_params);
+
+	return QDF_STATUS_E_FAILURE;
+}
 
 QDF_STATUS
 wmi_extract_vdev_roam_param(wmi_unified_t wmi_handle, void *evt_buf,

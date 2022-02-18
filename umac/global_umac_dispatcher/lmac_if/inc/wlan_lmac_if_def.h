@@ -2258,6 +2258,10 @@ struct wlan_lmac_if_rx_ops {
  */
 extern QDF_STATUS (*wlan_lmac_if_umac_tx_ops_register)
 				(struct wlan_lmac_if_tx_ops *tx_ops);
+
+/* Function pointer to call legacy crypto rxpn registration in OL */
+extern QDF_STATUS (*wlan_lmac_if_umac_crypto_rxpn_ops_register)
+				(struct wlan_lmac_if_rx_ops *rx_ops);
 #ifdef WLAN_FEATURE_SON
 /**
  * wlan_lmac_if_son_mod_register_rx_ops() - SON Module lmac_if rx_ops
@@ -2270,4 +2274,5 @@ extern QDF_STATUS (*wlan_lmac_if_umac_tx_ops_register)
  */
 void wlan_lmac_if_son_mod_register_rx_ops(struct wlan_lmac_if_rx_ops *rx_ops);
 #endif
+
 #endif /* _WLAN_LMAC_IF_DEF_H_ */

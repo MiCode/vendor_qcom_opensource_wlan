@@ -91,6 +91,11 @@ QDF_STATUS (*wlan_lmac_if_umac_tx_ops_register)
 				(struct wlan_lmac_if_tx_ops *tx_ops);
 qdf_export_symbol(wlan_lmac_if_umac_tx_ops_register);
 
+/* Function pointer to call legacy crypto rxpn registration in OL */
+QDF_STATUS (*wlan_lmac_if_umac_crypto_rxpn_ops_register)
+				(struct wlan_lmac_if_rx_ops *rx_ops);
+qdf_export_symbol(wlan_lmac_if_umac_crypto_rxpn_ops_register);
+
 static void
 tgt_vdev_mgr_rx_ops_register(struct wlan_lmac_if_rx_ops *rx_ops)
 {
@@ -297,6 +302,8 @@ static void
 wlan_lmac_if_crypto_rx_ops_register(struct wlan_lmac_if_rx_ops *rx_ops)
 {
 	wlan_crypto_register_crypto_rx_ops(&rx_ops->crypto_rx_ops);
+	if (wlan_lmac_if_umac_crypto_rxpn_ops_register)
+		wlan_lmac_if_umac_crypto_rxpn_ops_register(rx_ops);
 }
 
 #ifdef WIFI_POS_CONVERGED
@@ -970,3 +977,21 @@ QDF_STATUS wlan_lmac_if_set_umac_txops_registration_cb(QDF_STATUS (*handler)
 }
 qdf_export_symbol(wlan_lmac_if_set_umac_txops_registration_cb);
 
+/**
+ * wlan_lmac_if_set_umac_crypto_rxpn_ops_registration_cb() - crypto rxpn
+ * registration callback assignment
+ * @dev_type: Dev type can be either Direct attach or Offload
+ * @handler: handler to be called for LMAC crypto rxpn ops registration
+ *
+ * API to assign appropriate crypto rxpn registration callback handler
+ * based on the device type
+ *
+ * Return: QDF_STATUS_SUCCESS - in case of success
+ */
+QDF_STATUS wlan_lmac_if_set_umac_crypto_rxpn_ops_registration_cb(
+		QDF_STATUS (*handler)(struct wlan_lmac_if_rx_ops *))
+{
+	wlan_lmac_if_umac_crypto_rxpn_ops_register = handler;
+	return QDF_STATUS_SUCCESS;
+}
+qdf_export_symbol(wlan_lmac_if_set_umac_crypto_rxpn_ops_registration_cb);

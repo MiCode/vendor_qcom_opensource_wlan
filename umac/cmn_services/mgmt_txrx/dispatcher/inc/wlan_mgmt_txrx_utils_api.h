@@ -768,9 +768,21 @@ enum mgmt_frame_type {
 };
 
 #define WLAN_MGMT_TXRX_HOST_MAX_ANTENNA          4
+#define WLAN_MGMT_TXRX_HOST_MAX_PN_LEN           8
 #define WLAN_INVALID_PER_CHAIN_RSSI             0xFF
 #define WLAN_INVALID_PER_CHAIN_SNR              0x80
 #define WLAN_NOISE_FLOOR_DBM_DEFAULT            -96
+
+/**
+ * struct frame_pn_params - host PN params
+ * @curr_pn: current running PN of rx frames
+ * @prev_pn: previous PN of rx frames
+ */
+struct frame_pn_params {
+	uint8_t curr_pn[WLAN_MGMT_TXRX_HOST_MAX_PN_LEN];
+	uint8_t prev_pn[WLAN_MGMT_TXRX_HOST_MAX_PN_LEN];
+};
+
 /**
  * struct mgmt_rx_event_params - host mgmt header params
  * @chan_freq: channel frequency on which this frame is received
@@ -794,6 +806,7 @@ enum mgmt_frame_type {
  * @rx_params: pointer to other rx params
  *             (win specific, will be removed in phase 4)
  * @reo_params: Pointer to MGMT Rx REO params
+ * @pn_params: Frame PN params
  */
 struct mgmt_rx_event_params {
 	uint32_t    chan_freq;
@@ -813,6 +826,7 @@ struct mgmt_rx_event_params {
 #ifdef WLAN_MGMT_RX_REO_SUPPORT
 	struct mgmt_rx_reo_params *reo_params;
 #endif
+	struct frame_pn_params pn_params;
 };
 
 #ifdef WLAN_MGMT_RX_REO_SUPPORT

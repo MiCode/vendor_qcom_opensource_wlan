@@ -455,6 +455,7 @@ struct wlan_lmac_if_crypto_tx_ops {
  * @decap:  function pointer to decap rx frame in hw
  * @enmic: function pointer to enmic tx frame
  * @demic: function pointer to demic rx frame
+ * @get_rxpn: function pointer to get current Rx pn value of peer
  */
 
 struct wlan_lmac_if_crypto_rx_ops {
@@ -472,6 +473,8 @@ struct wlan_lmac_if_crypto_rx_ops {
 					uint8_t tid, uint8_t keyid);
 	QDF_STATUS(*set_peer_wep_keys)(struct wlan_objmgr_vdev *vdev,
 					struct wlan_objmgr_peer *peer);
+	QDF_STATUS (*get_rxpn)(struct wlan_objmgr_vdev *vdev,
+			       uint8_t *macaddr, uint16_t keyix);
 };
 
 #define WLAN_CRYPTO_RX_OPS_ENCAP(crypto_rx_ops) \
@@ -484,5 +487,7 @@ struct wlan_lmac_if_crypto_rx_ops {
 				(crypto_rx_ops->crypto_demic)
 #define WLAN_CRYPTO_RX_OPS_SET_PEER_WEP_KEYS(crypto_rx_ops) \
 				(crypto_rx_ops->set_peer_wep_keys)
+#define WLAN_CRYPTO_RX_OPS_GET_RXPN(crypto_rx_ops) \
+				((crypto_rx_ops)->get_rxpn)
 
 #endif /* end of _WLAN_CRYPTO_GLOBAL_DEF_H_ */
