@@ -2961,6 +2961,10 @@ QDF_STATUS
 (*peer_ppe_ds_param_send)(wmi_unified_t wmi_handle,
 			  struct peer_ppe_ds_param *param);
 #endif /* WLAN_SUPPORT_PPEDS */
+
+QDF_STATUS
+(*send_vdev_pn_mgmt_rxfilter_cmd)(wmi_unified_t wmi_handle,
+				  struct vdev_pn_mgmt_rxfilter_params *params);
 };
 
 /* Forward declartion for psoc*/

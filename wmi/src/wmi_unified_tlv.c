@@ -17344,6 +17344,53 @@ static QDF_STATUS extract_quiet_offload_event_tlv(
 }
 #endif
 
+/**
+ * send_vdev_pn_mgmt_rxfilter_cmd_tlv() - Send PN mgmt RxFilter command to FW
+ * @wmi_handle: wmi handle
+ * @params: RxFilter params
+ *
+ * Return: QDF_STATUS_SUCCESS for success or error code
+ */
+static QDF_STATUS
+send_vdev_pn_mgmt_rxfilter_cmd_tlv(wmi_unified_t wmi_handle,
+				   struct vdev_pn_mgmt_rxfilter_params *params)
+{
+	wmi_vdev_pn_mgmt_rx_filter_cmd_fixed_param *cmd;
+	wmi_buf_t buf;
+	uint32_t len = sizeof(wmi_vdev_pn_mgmt_rx_filter_cmd_fixed_param);
+
+	if (!is_service_enabled_tlv(wmi_handle,
+				    WMI_SERVICE_PN_REPLAY_CHECK_SUPPORT)) {
+		wmi_err("Rx PN Replay Check not supported by target");
+		return QDF_STATUS_E_NOSUPPORT;
+	}
+
+	buf = wmi_buf_alloc(wmi_handle, len);
+	if (!buf) {
+		wmi_err("wmi buf alloc failed");
+		return QDF_STATUS_E_NOMEM;
+	}
+
+	cmd = (wmi_vdev_pn_mgmt_rx_filter_cmd_fixed_param *)wmi_buf_data(buf);
+	WMITLV_SET_HDR(
+		&cmd->tlv_header,
+		WMITLV_TAG_STRUC_wmi_vdev_pn_mgmt_rx_filter_cmd_fixed_param,
+		WMITLV_GET_STRUCT_TLVLEN
+			       (wmi_vdev_pn_mgmt_rx_filter_cmd_fixed_param));
+
+	cmd->vdev_id = params->vdev_id;
+	cmd->pn_rx_filter = params->pn_rxfilter;
+
+	if (wmi_unified_cmd_send(wmi_handle, buf, len,
+				 WMI_VDEV_PN_MGMT_RX_FILTER_CMDID)) {
+		wmi_err("Failed to send WMI command");
+		wmi_buf_free(buf);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	return QDF_STATUS_SUCCESS;
+}
+
 struct wmi_ops tlv_ops =  {
 	.send_vdev_create_cmd = send_vdev_create_cmd_tlv,
 	.send_vdev_delete_cmd = send_vdev_delete_cmd_tlv,
@@ -17778,6 +17825,8 @@ struct wmi_ops tlv_ops =  {
 #ifdef WLAN_SUPPORT_PPEDS
 	.peer_ppe_ds_param_send = peer_ppe_ds_param_send_tlv,
 #endif /* WLAN_SUPPORT_PPEDS */
+
+	.send_vdev_pn_mgmt_rxfilter_cmd = send_vdev_pn_mgmt_rxfilter_cmd_tlv,
 };
 
 /**

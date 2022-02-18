@@ -3780,3 +3780,20 @@ wmi_unified_peer_ppe_ds_param_send(wmi_unified_t wmi_handle,
 	return QDF_STATUS_E_FAILURE;
 }
 #endif /* WLAN_SUPPORT_PPEDS */
+
+/**
+ * wmi_unified_pn_mgmt_rxfilter_send_cmd() - Send PN mgmt RxFilter command to FW
+ * @wmi_handle: WMI handle
+ * @params: RxFilter params
+ *
+ * Return: QDF_STATUS_SUCCESS for success or error code
+ */
+QDF_STATUS wmi_unified_pn_mgmt_rxfilter_send_cmd(
+		struct wmi_unified *wmi_handle,
+		struct vdev_pn_mgmt_rxfilter_params *params)
+{
+	if (wmi_handle->ops->send_vdev_pn_mgmt_rxfilter_cmd)
+		return wmi_handle->ops->send_vdev_pn_mgmt_rxfilter_cmd(
+					wmi_handle, params);
+	return QDF_STATUS_E_FAILURE;
+}

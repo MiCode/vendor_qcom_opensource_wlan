@@ -4707,4 +4707,15 @@ QDF_STATUS
 wmi_unified_peer_ppe_ds_param_send(wmi_unified_t wmi_handle,
 				   struct peer_ppe_ds_param *param);
 #endif /* WLAN_SUPPORT_PPEDS */
+
+/**
+ * wmi_unified_pn_mgmt_rxfilter_send_cmd() - Send PN mgmt RxFilter command to FW
+ * @wmi_handle: WMI handle
+ * @params: RxFilter params
+ *
+ * Return: QDF_STATUS_SUCCESS for success or error code
+ */
+QDF_STATUS wmi_unified_pn_mgmt_rxfilter_send_cmd(
+		struct wmi_unified *wmi_handle,
+		struct vdev_pn_mgmt_rxfilter_params *params);
 #endif /* _WMI_UNIFIED_API_H_ */

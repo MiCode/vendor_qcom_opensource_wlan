@@ -8588,4 +8588,14 @@ struct wmi_host_inst_rssi_stats_resp {
 	uint32_t vdev_id;
 };
 #endif
+
+/**
+ * struct vdev_pn_mgmt_rxfilter_params - Send PN mgmt RxFilter command params
+ * @vdev_id: vdev id
+ * @pn_rxfilter: Rx Filter
+ */
+struct vdev_pn_mgmt_rxfilter_params {
+	uint8_t vdev_id;
+	uint32_t pn_rxfilter;
+};
 #endif /* _WMI_UNIFIED_PARAM_H_ */
