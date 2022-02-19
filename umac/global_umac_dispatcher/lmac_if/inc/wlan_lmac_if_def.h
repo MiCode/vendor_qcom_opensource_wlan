@@ -1306,8 +1306,6 @@ struct wlan_lmac_if_son_tx_ops {
  * config_get: route son config from cfg80211
  * config_ext_set_get: route extended configs from cfg80211
  */
-struct wiphy;
-struct wireless_dev;
 struct wlan_lmac_if_son_rx_ops {
 	int (*deliver_event)(struct wlan_objmgr_vdev *vdev,
 			     struct wlan_objmgr_peer *peer,
@@ -1318,14 +1316,12 @@ struct wlan_lmac_if_son_rx_ops {
 				  int subtype, u_int8_t *frame,
 				  u_int16_t frame_len,
 				  void *meta_data);
-	int (*config_set)(struct wiphy *wiphy,
-			  struct wireless_dev *wdev,
+	int (*config_set)(struct wlan_objmgr_vdev *vdev,
 			  void *params);
-	int (*config_get)(struct wiphy *wiphy,
-			  struct wireless_dev *wdev,
+	int (*config_get)(struct wlan_objmgr_vdev *vdev,
 			  void *params);
-	int (*config_ext_set_get)(struct net_device *dev,
-				  void *req,
+	int (*config_ext_set_get)(struct wlan_objmgr_vdev *vdev,
+				  void *params,
 				  void *wri);
 };
 
