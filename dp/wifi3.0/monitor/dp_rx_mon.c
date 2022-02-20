@@ -1074,6 +1074,7 @@ dp_rx_handle_ppdu_stats(struct dp_soc *soc, struct dp_pdev *pdev,
 #endif/* QCA_ENHANCED_STATS_SUPPORT */
 
 #ifdef QCA_UNDECODED_METADATA_SUPPORT
+#define RX_PHYERR_MASK_GET64(_val1, _val2) (((uint64_t)(_val2) << 32) | (_val1))
 /**
  * dp_rx_populate_cdp_indication_ppdu_undecoded_metadata() - Populate cdp
  * rx indication structure
@@ -1216,6 +1217,24 @@ dp_rx_populate_cdp_indication_ppdu_undecoded_metadata(struct dp_pdev *pdev,
 	dp_rx_populate_cdp_indication_ppdu_user(pdev, ppdu_info, cdp_rx_ppdu);
 }
 
+/**
+ * dp_rx_is_valid_undecoded_frame() - Check unencoded frame received valid
+ * or not against configured error mask
+ * @err_mask: configured err mask
+ * @err_code: Received error reason code for phy abort
+ *
+ * Return: true / false
+ */
+static inline bool
+dp_rx_is_valid_undecoded_frame(uint64_t err_mask, uint8_t err_code)
+{
+	if (err_code < CDP_PHYRX_ERR_MAX &&
+	    (err_mask & (1L << err_code)))
+		return true;
+
+	return false;
+}
+
 void
 dp_rx_handle_ppdu_undecoded_metadata(struct dp_soc *soc, struct dp_pdev *pdev,
 				     struct hal_rx_ppdu_info *ppdu_info)
@@ -1224,9 +1243,17 @@ dp_rx_handle_ppdu_undecoded_metadata(struct dp_soc *soc, struct dp_pdev *pdev,
 	struct cdp_rx_indication_ppdu *cdp_rx_ppdu;
 	uint8_t abort_reason = 0;
 	struct dp_mon_pdev *mon_pdev = pdev->monitor_pdev;
+	uint64_t mask64;
 
 	 /* Return if RX_ABORT not set */
 	if (ppdu_info->rx_status.phyrx_abort == 0)
+		return;
+
+	mask64 = RX_PHYERR_MASK_GET64(mon_pdev->phyrx_error_mask,
+				      mon_pdev->phyrx_error_mask_cont);
+	abort_reason = ppdu_info->rx_status.phyrx_abort_reason;
+
+	if (!dp_rx_is_valid_undecoded_frame(mask64, abort_reason))
 		return;
 
 	ppdu_nbuf = qdf_nbuf_alloc(soc->osdev,
@@ -1247,12 +1274,7 @@ dp_rx_handle_ppdu_undecoded_metadata(struct dp_soc *soc, struct dp_pdev *pdev,
 		}
 
 		mon_pdev->rx_mon_stats.rx_undecoded_count++;
-		abort_reason = cdp_rx_ppdu->phyrx_abort_reason;
-		if (abort_reason < CDP_PHYRX_ERR_MAX) {
-			mon_pdev->rx_mon_stats.rx_undecoded_error[abort_reason] += 1;
-		} else {
-			mon_pdev->rx_mon_stats.rx_undecoded_error[CDP_PHYRX_ERR_OTHER] += 1;
-		}
+		mon_pdev->rx_mon_stats.rx_undecoded_error[abort_reason] += 1;
 
 		dp_wdi_event_handler(WDI_EVENT_RX_PPDU_DESC_UNDECODED_METADATA,
 				     soc, ppdu_nbuf, HTT_INVALID_PEER,

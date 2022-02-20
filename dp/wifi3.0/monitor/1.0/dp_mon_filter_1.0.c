@@ -253,6 +253,8 @@ void dp_mon_filter_reset_undecoded_metadata_capture_1_0(struct dp_pdev *pdev)
 
 	filter.tlv_filter.phy_err_mask = 0;
 	filter.tlv_filter.phy_err_mask_cont = 0;
+	mon_pdev->phyrx_error_mask = 0;
+	mon_pdev->phyrx_error_mask_cont = 0;
 
 	filter.tlv_filter.phy_err_filter_valid = 1;
 
