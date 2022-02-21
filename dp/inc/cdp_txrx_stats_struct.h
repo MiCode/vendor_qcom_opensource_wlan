@@ -46,12 +46,14 @@
 /* 1 additional MCS is for invalid values */
 #ifdef WLAN_FEATURE_11BE
 #define MAX_MCS (16 + 1)
+#define MAX_MCS_11BE 16
 #else
 #define MAX_MCS (14 + 1)
 #endif
 #define MAX_MCS_11A 8
 #define MAX_MCS_11B 7
 #define MAX_MCS_11AC 12
+#define MAX_MCS_11AX 14
 /* 1 additional GI is for invalid values */
 #define MAX_GI (4 + 1)
 #define SS_COUNT 8

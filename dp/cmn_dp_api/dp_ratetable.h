@@ -23,22 +23,6 @@
 #define CMN_DP_ASSERT(__bool)
 
 /*
- *Band Width Types
- */
-enum CMN_BW_TYPES {
-	CMN_BW_20MHZ,
-	CMN_BW_40MHZ,
-	CMN_BW_80MHZ,
-	CMN_BW_160MHZ,
-	CMN_BW_80_80MHZ,
-#ifdef WLAN_FEATURE_11BE
-	CMN_BW_320MHZ,
-#endif
-	CMN_BW_CNT,
-	CMN_BW_IDLE = 0xFF, /*default BW state */
-};
-
-/*
  * Modes Types
  */
 enum CMN_MODE_TYPES {

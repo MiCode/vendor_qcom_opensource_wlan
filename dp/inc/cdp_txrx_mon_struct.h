@@ -95,11 +95,20 @@ enum {
 	CDP_RX_TYPE_MU_OFDMA_MIMO,
 };
 
-enum {
-	CDP_FULL_RX_BW_20 = 0,
-	CDP_FULL_RX_BW_40,
-	CDP_FULL_RX_BW_80,
-	CDP_FULL_RX_BW_160,
+/*
+ *Band Width Types
+ */
+enum CMN_BW_TYPES {
+	CMN_BW_20MHZ,
+	CMN_BW_40MHZ,
+	CMN_BW_80MHZ,
+	CMN_BW_160MHZ,
+	CMN_BW_80_80MHZ,
+#ifdef WLAN_FEATURE_11BE
+	CMN_BW_320MHZ,
+#endif
+	CMN_BW_CNT,
+	CMN_BW_IDLE = 0xFF, /*default BW state */
 };
 
 struct cdp_mon_status {
