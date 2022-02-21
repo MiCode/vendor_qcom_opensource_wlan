@@ -2855,6 +2855,12 @@ void dp_tx_nawds_handler(struct dp_soc *soc, struct dp_vdev *vdev,
 	uint16_t peer_id = DP_INVALID_PEER;
 	struct dp_txrx_peer *txrx_peer;
 
+	/* This check avoids pkt forwarding which is entered
+	 * in the ast table but still doesn't have valid peerid.
+	 */
+	if (sa_peer_id == HTT_INVALID_PEER)
+		return;
+
 	qdf_spin_lock_bh(&vdev->peer_list_lock);
 	TAILQ_FOREACH(peer, &vdev->peer_list, peer_list_elem) {
 		txrx_peer = dp_get_txrx_peer(peer);
@@ -3352,9 +3358,7 @@ qdf_nbuf_t dp_tx_send(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
 		if (DP_FRAME_IS_MULTICAST((eh)->ether_dhost)) {
 			uint16_t sa_peer_id = DP_INVALID_PEER;
 
-			if (!soc->ast_offload_support &&
-			    qdf_nbuf_get_tx_ftype(nbuf) ==
-							CB_FTYPE_INTRABSS_FWD) {
+			if (!soc->ast_offload_support) {
 				struct dp_ast_entry *ast_entry = NULL;
 
 				qdf_spin_lock_bh(&soc->ast_lock);
@@ -3370,7 +3374,6 @@ qdf_nbuf_t dp_tx_send(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
 			dp_tx_nawds_handler(soc, vdev, &msdu_info, nbuf,
 					    sa_peer_id);
 		}
-
 		peer_id = DP_INVALID_PEER;
 		DP_STATS_INC_PKT(vdev, tx_i.nawds_mcast,
 				 1, qdf_nbuf_len(nbuf));

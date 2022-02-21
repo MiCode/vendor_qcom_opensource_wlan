@@ -870,9 +870,6 @@ bool dp_rx_intrabss_mcbc_fwd(struct dp_soc *soc, struct dp_txrx_peer *ta_peer,
 
 	len = QDF_NBUF_CB_RX_PKT_LEN(nbuf);
 
-	qdf_nbuf_set_tx_fctx_type(nbuf_copy, &ta_peer->peer_id,
-				  CB_FTYPE_INTRABSS_FWD);
-
 	dp_classify_critical_pkts(soc, ta_peer->vdev, nbuf_copy);
 
 	if (soc->arch_ops.dp_rx_intrabss_handle_nawds(soc, ta_peer, nbuf_copy,
