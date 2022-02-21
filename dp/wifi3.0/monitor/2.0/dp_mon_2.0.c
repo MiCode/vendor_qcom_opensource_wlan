@@ -273,12 +273,12 @@ dp_mon_desc_pool_init(struct dp_mon_desc_pool *mon_desc_pool,
 	mon_desc_pool->buf_size = DP_MON_DATA_BUFFER_SIZE;
 	/* link SW descs into a freelist */
 	mon_desc_pool->freelist = &mon_desc_pool->array[0];
-	mon_desc_pool->pool_size = pool_size;
+	mon_desc_pool->pool_size = pool_size - 1;
 	qdf_mem_zero(mon_desc_pool->freelist,
 		     mon_desc_pool->pool_size *
 		     sizeof(union dp_mon_desc_list_elem_t));
 
-	for (desc_id = 0; desc_id <= mon_desc_pool->pool_size; desc_id++) {
+	for (desc_id = 0; desc_id < mon_desc_pool->pool_size; desc_id++) {
 		if (desc_id == mon_desc_pool->pool_size - 1)
 			mon_desc_pool->array[desc_id].next = NULL;
 		else
@@ -312,7 +312,7 @@ QDF_STATUS dp_mon_desc_pool_alloc(uint32_t pool_size,
 				  struct dp_mon_desc_pool *mon_desc_pool)
 {
 	mon_desc_pool->pool_size = pool_size - 1;
-	mon_desc_pool->array = qdf_mem_malloc((pool_size - 1) *
+	mon_desc_pool->array = qdf_mem_malloc((mon_desc_pool->pool_size) *
 				     sizeof(union dp_mon_desc_list_elem_t));
 
 	return QDF_STATUS_SUCCESS;
@@ -583,9 +583,9 @@ QDF_STATUS dp_mon_soc_detach_2_0(struct dp_soc *soc)
 		return QDF_STATUS_E_FAILURE;
 	}
 
-	dp_tx_mon_buf_desc_pool_free(soc);
 	dp_rx_mon_buf_desc_pool_free(soc);
 	dp_srng_free(soc, &soc->rxdma_mon_buf_ring[0]);
+	dp_tx_mon_buf_desc_pool_free(soc);
 	dp_srng_free(soc, &mon_soc_be->tx_mon_buf_ring);
 
 	return QDF_STATUS_SUCCESS;
@@ -597,14 +597,13 @@ static void dp_mon_soc_deinit_2_0(struct dp_soc *soc)
 	struct dp_mon_soc_be *mon_soc_be =
 		dp_get_be_mon_soc_from_dp_mon_soc(mon_soc);
 
-	dp_tx_mon_buffers_free(soc);
 	dp_rx_mon_buffers_free(soc);
+	dp_tx_mon_buffers_free(soc);
 
-	dp_tx_mon_buf_desc_pool_deinit(soc);
 	dp_rx_mon_buf_desc_pool_deinit(soc);
+	dp_tx_mon_buf_desc_pool_deinit(soc);
 
 	dp_srng_deinit(soc, &soc->rxdma_mon_buf_ring[0], RXDMA_MONITOR_BUF, 0);
-
 	dp_srng_deinit(soc, &mon_soc_be->tx_mon_buf_ring, TX_MONITOR_BUF, 0);
 }
 
