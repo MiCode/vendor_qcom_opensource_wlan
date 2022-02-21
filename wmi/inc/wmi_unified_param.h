@@ -5540,6 +5540,9 @@ typedef enum {
 #endif
 	wmi_service_pdev_rate_config_support,
 	wmi_service_multi_peer_group_cmd_support,
+#ifdef WLAN_FEATURE_11BE
+	wmi_service_radar_found_chan_freq_eq_center_freq,
+#endif
 	wmi_services_max,
 } wmi_conv_service_ids;
 #define WMI_SERVICE_UNAVAILABLE 0xFFFF

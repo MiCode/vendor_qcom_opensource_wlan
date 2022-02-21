@@ -18470,6 +18470,10 @@ static void populate_tlv_service(uint32_t *wmi_service)
 			WMI_SERVICE_PDEV_RATE_CONFIG_SUPPORT;
 	wmi_service[wmi_service_multi_peer_group_cmd_support] =
 			WMI_SERVICE_MULTIPLE_PEER_GROUP_CMD_SUPPORT;
+#ifdef WLAN_FEATURE_11BE
+	wmi_service[wmi_service_radar_found_chan_freq_eq_center_freq] =
+		WMI_IS_RADAR_FOUND_CHAN_FREQ_IS_CENTER_FREQ;
+#endif
 }
 
 /**
