@@ -1769,9 +1769,6 @@ dp_enable_enhanced_stats(struct cdp_soc_t *soc, uint8_t pdev_id)
 	mon_pdev->enhanced_stats_en = 1;
 	pdev->enhanced_stats_en = true;
 
-	if (wlan_cfg_get_txmon_hw_support(pdev->soc->wlan_cfg_ctx))
-		return QDF_STATUS_SUCCESS;
-
 	dp_mon_filter_setup_enhanced_stats(pdev);
 	status = dp_mon_filter_update(pdev);
 	if (status != QDF_STATUS_SUCCESS) {
@@ -1830,9 +1827,6 @@ dp_disable_enhanced_stats(struct cdp_soc_t *soc, uint8_t pdev_id)
 
 	mon_pdev->enhanced_stats_en = 0;
 	pdev->enhanced_stats_en = false;
-
-	if (wlan_cfg_get_txmon_hw_support(pdev->soc->wlan_cfg_ctx))
-		return QDF_STATUS_SUCCESS;
 
 	dp_mon_tx_disable_enhanced_stats(pdev);
 
@@ -4575,9 +4569,6 @@ static bool dp_txrx_ppdu_stats_handler(struct dp_soc *soc,
 	mon_pdev = pdev->monitor_pdev;
 	if (!mon_pdev)
 		return true;
-
-	if (wlan_cfg_get_txmon_hw_support(soc->wlan_cfg_ctx))
-		return free_buf;
 
 	if (!dp_tx_ppdu_stats_feat_enable_check(pdev))
 		return free_buf;
