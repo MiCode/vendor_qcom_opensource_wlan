@@ -2632,11 +2632,13 @@ struct ext_wow_params {
  * struct stats_ext_params - ext stats request
  * @vdev_id: vdev id
  * @request_data_len: request data length
+ * @vdev_id_bitmap: mlo connected vdev id bitmap
  * @request_data: request data
  */
 struct stats_ext_params {
 	uint32_t vdev_id;
 	uint32_t request_data_len;
+	uint32_t vdev_id_bitmap;
 	uint8_t request_data[];
 };
 

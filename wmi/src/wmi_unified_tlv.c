@@ -6661,6 +6661,7 @@ static QDF_STATUS send_stats_ext_req_cmd_tlv(wmi_unified_t wmi_handle,
 	size_t len;
 	uint8_t *buf_ptr;
 	uint16_t max_wmi_msg_size = wmi_get_max_msg_len(wmi_handle);
+	uint32_t *vdev_bitmap;
 
 	if (preq->request_data_len > (max_wmi_msg_size - WMI_TLV_HDR_SIZE -
 				      sizeof(*cmd))) {
@@ -6669,7 +6670,8 @@ static QDF_STATUS send_stats_ext_req_cmd_tlv(wmi_unified_t wmi_handle,
 		return QDF_STATUS_E_FAILURE;
 	}
 
-	len = sizeof(*cmd) + WMI_TLV_HDR_SIZE + preq->request_data_len;
+	len = sizeof(*cmd) + WMI_TLV_HDR_SIZE + preq->request_data_len +
+	      WMI_TLV_HDR_SIZE + sizeof(uint32_t);
 
 	buf = wmi_buf_alloc(wmi_handle, len);
 	if (!buf)
@@ -6693,6 +6695,19 @@ static QDF_STATUS send_stats_ext_req_cmd_tlv(wmi_unified_t wmi_handle,
 
 	buf_ptr += WMI_TLV_HDR_SIZE;
 	qdf_mem_copy(buf_ptr, preq->request_data, cmd->data_len);
+
+	buf_ptr += cmd->data_len;
+	WMITLV_SET_HDR(buf_ptr, WMITLV_TAG_ARRAY_UINT32, sizeof(uint32_t));
+
+	buf_ptr += WMI_TLV_HDR_SIZE;
+
+	vdev_bitmap = (A_UINT32 *)buf_ptr;
+
+	vdev_bitmap[0] = preq->vdev_id_bitmap;
+
+	wmi_debug("Sending MLO vdev_id_bitmap:%x", vdev_bitmap[0]);
+
+	buf_ptr += sizeof(uint32_t);
 
 	wmi_mtrace(WMI_REQUEST_STATS_EXT_CMDID, cmd->vdev_id, 0);
 	ret = wmi_unified_cmd_send(wmi_handle, buf, len,
