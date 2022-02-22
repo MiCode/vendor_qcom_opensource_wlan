@@ -5748,6 +5748,7 @@ struct wmi_host_fw_abi_ver {
  * @afc_timer_check_disable: Disables AFC Timer related checks in FW
  * @afc_req_id_check_disable: Disables AFC Request ID check in FW
  * @carrier_profile_config: Configuration for per-carrier profile
+ * @reo_qdesc_shared_addr_table_enabled: Reo shared qref enhancement enabled
  */
 typedef struct {
 	uint32_t num_vdevs;
@@ -5869,6 +5870,7 @@ typedef struct {
 	bool afc_req_id_check_disable;
 	uint32_t carrier_profile_config;
 	bool sawf;
+	bool reo_qdesc_shared_addr_table_enabled;
 } target_resource_config;
 
 /**

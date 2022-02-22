@@ -3925,6 +3925,9 @@ void dp_peer_rx_init(struct dp_pdev *pdev, struct dp_peer *peer)
 	peer->hw_buffer_size = 0;
 	peer->kill_256_sessions = 0;
 
+	if (hal_reo_shared_qaddr_is_enable(pdev->soc->hal_soc))
+		hal_reo_shared_qaddr_cache_clear(pdev->soc->hal_soc);
+
 	/* Setup default (non-qos) rx tid queue */
 	dp_rx_tid_setup_wifi3(peer, DP_NON_QOS_TID, 1, 0);
 

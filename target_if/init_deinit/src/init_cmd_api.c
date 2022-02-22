@@ -488,6 +488,8 @@ void init_deinit_prepare_send_init_cmd(
 
 	target_if_ext_res_cfg_enable(psoc, tgt_hdl, NULL);
 
+	target_if_set_reo_shared_qref_feature(psoc, info);
+
 	wmi_unified_init_cmd_send(wmi_handle, &init_param);
 
 	/* Set Max scans allowed */
