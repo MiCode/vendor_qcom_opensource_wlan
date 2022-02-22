@@ -59,13 +59,15 @@ QDF_STATUS ipa_config_mem_alloc(void)
 
 void ipa_config_mem_free(void)
 {
-	if (!g_ipa_config) {
-		ipa_err("IPA config already freed");
-		return;
-	}
+	if (!g_instances_added) {
+		if (!g_ipa_config) {
+			ipa_err("IPA config already freed");
+			return;
+		}
 
-	qdf_mem_free(g_ipa_config);
-	g_ipa_config = NULL;
+		qdf_mem_free(g_ipa_config);
+		g_ipa_config = NULL;
+	}
 }
 
 bool ipa_is_hw_support(void)
