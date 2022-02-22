@@ -1875,6 +1875,46 @@ static void reg_dis_chan_state_and_flags(enum channel_state *state,
 }
 
 /**
+ * reg_init_super_chan_entry() - Initialize the super channel list entry
+ * for an input channel index by disabling the state and chan flags.
+ * @pdev_priv_obj: Pointer to pdev_priv_obj
+ *
+ * Return: void
+ */
+static void reg_init_super_chan_entry(
+		struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj,
+		uint8_t chan_idx)
+{
+	enum supported_6g_pwr_types pwr_type;
+	struct super_chan_info *chan_info;
+
+	chan_info = &pdev_priv_obj->super_chan_list[chan_idx];
+
+	for (pwr_type = REG_AP_LPI; pwr_type <= REG_CLI_SUB_VLP;
+	     pwr_type++)
+		reg_dis_chan_state_and_flags(&chan_info->state_arr[pwr_type],
+					     &chan_info->chan_flags_arr
+					     [pwr_type]);
+}
+
+/**
+ * reg_init_pdev_super_chan_list() - Initialize the super channel list.
+ * @pdev_priv_obj: Pointer to pdev_priv_obj
+ *
+ * Return: void
+ */
+static void reg_init_pdev_super_chan_list(
+		struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj)
+{
+	uint8_t i;
+
+	qdf_mem_zero(&pdev_priv_obj->super_chan_list,
+		     sizeof(struct super_chan_info));
+	for (i = 0; i < NUM_6GHZ_CHANNELS; i++)
+		reg_init_super_chan_entry(pdev_priv_obj, i);
+}
+
+/**
  * reg_is_edge_chan_disable_needed() - Check if the 6G edge channels are
  * disabled
  * @psoc: Pointer to psoc
@@ -2220,10 +2260,10 @@ reg_assign_afc_chan_entry_to_mas_chan(
 static void reg_update_sup_ch_entry_for_mode(
 		struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj,
 		enum supported_6g_pwr_types supp_pwr_mode,
-		uint16_t chn_idx)
+		uint16_t chn_idx,
+		uint8_t *max_eirp_pwr)
 {
 	struct super_chan_info *super_chan_list;
-	uint8_t max_eirp_pwr = 0;
 	struct wlan_objmgr_pdev *pdev = pdev_priv_obj->pdev_ptr;
 	struct regulatory_channel *mas_chan;
 	struct regulatory_channel temp_reg_chan;
@@ -2273,7 +2313,7 @@ static void reg_update_sup_ch_entry_for_mode(
 					 chn_idx, supp_pwr_mode);
 	reg_fill_best_pwr_mode(pdev_priv_obj, super_chan_list, chn_idx,
 			       supp_pwr_mode, temp_reg_chan.tx_power,
-			       &max_eirp_pwr);
+			       max_eirp_pwr);
 	reg_accumulate_pwr_type(supp_pwr_mode, super_chan_list, chn_idx);
 }
 
@@ -2290,11 +2330,12 @@ reg_update_super_chan_entry(struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj,
 			    uint16_t chn_idx)
 {
 	enum supported_6g_pwr_types supp_pwr_mode;
+	uint8_t max_eirp_pwr = 0;
 
 	for (supp_pwr_mode = REG_AP_LPI; supp_pwr_mode <= REG_CLI_SUB_VLP;
 	     supp_pwr_mode++) {
 		reg_update_sup_ch_entry_for_mode(pdev_priv_obj, supp_pwr_mode,
-						 chn_idx);
+						 chn_idx, &max_eirp_pwr);
 	}
 }
 
@@ -2545,6 +2586,7 @@ void reg_propagate_mas_chan_list_to_pdev(struct wlan_objmgr_psoc *psoc,
 	reg_init_pdev_mas_chan_list(
 			pdev_priv_obj,
 			&psoc_priv_obj->mas_chan_params[phy_id]);
+	reg_init_pdev_super_chan_list(pdev_priv_obj);
 	psoc_reg_rules = &psoc_priv_obj->mas_chan_params[phy_id].reg_rules;
 	reg_save_reg_rules_to_pdev(psoc_reg_rules, pdev_priv_obj);
 	reg_modify_chan_list_for_japan(pdev);
