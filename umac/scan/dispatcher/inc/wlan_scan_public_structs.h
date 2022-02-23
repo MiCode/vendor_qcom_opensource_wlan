@@ -419,6 +419,7 @@ struct rnr_mld_info {
  * @short_ssid: short ssid
  * @bss_params: BSS parameters
  * @psd_20mhz: 20MHz power spectral density
+ * @mld_info_valid: valid MLD info
  * @mld_info: MLD information
  */
 struct rnr_bss_info {
@@ -430,6 +431,7 @@ struct rnr_bss_info {
 	uint8_t bss_params;
 	uint8_t psd_20mhz;
 #ifdef WLAN_FEATURE_11BE_MLO
+	bool mld_info_valid;
 	struct rnr_mld_info mld_info;
 #endif
 };
@@ -499,9 +501,11 @@ enum tbtt_information_field {
 
 /**
  * struct reduced_neighbor_report - Reduced Neighbor Report
+ * @count: number of RNR info
  * @bss_info: RNR BSS Information
  */
 struct reduced_neighbor_report {
+	uint8_t count;
 	struct rnr_bss_info bss_info[MAX_RNR_BSS];
 };
 
