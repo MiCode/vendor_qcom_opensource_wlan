@@ -120,7 +120,7 @@ cdp_dump_flow_pool_info(struct cdp_soc_t *soc)
 #define TXCOMP_RING4_NUM WBM2SW_TXCOMP_RING4_NUM
 #endif
 
-#ifdef WLAN_MCAST_MLO
+#ifdef QCA_DP_TX_FW_METADATA_V2
 #define DP_TX_TCL_METADATA_PDEV_ID_SET(_var, _val) \
 		HTT_TX_TCL_METADATA_V2_PDEV_ID_SET(_var, _val)
 #else

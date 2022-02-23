@@ -69,7 +69,7 @@
 
 #define DP_RETRY_COUNT 7
 
-#ifdef WLAN_MCAST_MLO
+#ifdef QCA_DP_TX_FW_METADATA_V2
 #define DP_TX_TCL_METADATA_PDEV_ID_SET(_var, _val)\
 	HTT_TX_TCL_METADATA_V2_PDEV_ID_SET(_var, _val)
 #define DP_TX_TCL_METADATA_VALID_HTT_SET(_var, _val) \
