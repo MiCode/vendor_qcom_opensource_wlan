@@ -744,6 +744,9 @@ QDF_STATUS dp_mon_htt_srng_setup_1_0(struct dp_soc *soc,
 			return status;
 	}
 
+	if (!soc->rxdma_mon_status_ring[mac_id].hal_srng)
+		return QDF_STATUS_SUCCESS;
+
 	status = htt_srng_setup(soc->htt_handle, mac_for_pdev,
 				soc->rxdma_mon_status_ring[mac_id]
 				.hal_srng,

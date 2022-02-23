@@ -554,6 +554,9 @@ QDF_STATUS dp_mon_pdev_htt_srng_setup_2_0(struct dp_soc *soc,
 	struct dp_mon_soc_be *mon_soc_be = dp_get_be_mon_soc_from_dp_mon_soc(mon_soc);
 	QDF_STATUS status;
 
+	if (!soc->rxdma_mon_dst_ring[mac_id].hal_srng)
+		return QDF_STATUS_SUCCESS;
+
 	status = htt_srng_setup(soc->htt_handle, mac_for_pdev,
 				soc->rxdma_mon_dst_ring[mac_id].hal_srng,
 				RXDMA_MONITOR_DST);
@@ -562,6 +565,9 @@ QDF_STATUS dp_mon_pdev_htt_srng_setup_2_0(struct dp_soc *soc,
 		dp_mon_err("Failed to send htt srng setup message for Rxdma dst ring");
 		return status;
 	}
+
+	if (!mon_soc_be->tx_mon_dst_ring[mac_id].hal_srng)
+		return QDF_STATUS_SUCCESS;
 
 	status = htt_srng_setup(soc->htt_handle, mac_for_pdev,
 				mon_soc_be->tx_mon_dst_ring[mac_id].hal_srng,
