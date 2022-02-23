@@ -618,6 +618,7 @@ void dp_rx_peer_unmap_handler(struct dp_soc *soc, uint16_t peer_id,
  * @peer_id - ML peer_id from firmware
  * @peer_mac_addr - mac address of the peer
  * @mlo_ast_flow_info: MLO AST flow info
+ * @mlo_link_info - MLO link info
  *
  * associate the ML peer_id that firmware provided with peer entry
  * and update the ast table in the host with the hw_peer_id.
@@ -627,7 +628,8 @@ void dp_rx_peer_unmap_handler(struct dp_soc *soc, uint16_t peer_id,
 QDF_STATUS
 dp_rx_mlo_peer_map_handler(struct dp_soc *soc, uint16_t peer_id,
 			   uint8_t *peer_mac_addr,
-			   struct dp_mlo_flow_override_info *mlo_flow_info);
+			   struct dp_mlo_flow_override_info *mlo_flow_info,
+			   struct dp_mlo_link_info *mlo_link_info);
 
 /**
  * dp_rx_mlo_peer_unmap_handler() - handle MLO peer unmap event from firmware

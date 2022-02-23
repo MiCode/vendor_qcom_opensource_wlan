@@ -1804,7 +1804,8 @@ struct dp_arch_ops {
 	struct dp_peer *(*mlo_peer_find_hash_find)(struct dp_soc *soc,
 						   uint8_t *peer_mac_addr,
 						   int mac_addr_is_aligned,
-						   enum dp_mod_id mod_id);
+						   enum dp_mod_id mod_id,
+						   uint8_t vdev_id);
 #endif
 	void (*txrx_print_peer_stats)(struct cdp_peer_stats *peer_stats,
 				      enum peer_stats_type stats_type);
@@ -3309,6 +3310,16 @@ struct dp_mlo_flow_override_info {
 	uint8_t chip_id;
 	uint8_t tidmask;
 	uint8_t cache_set_num;
+};
+
+/**
+ * struct dp_mlo_link_info - Link info
+ * @peer_chip_id: Peer Chip ID
+ * @vdev_id: Vdev ID
+ */
+struct dp_mlo_link_info {
+	uint8_t peer_chip_id;
+	uint8_t vdev_id;
 };
 
 #ifdef WLAN_SUPPORT_MSCS

@@ -7387,7 +7387,7 @@ QDF_STATUS dp_peer_mlo_setup(
 	peer->primary_link = setup_info->is_primary_link;
 	mld_peer = dp_peer_find_hash_find(soc,
 					  setup_info->mld_peer_mac,
-					  0, DP_VDEV_ALL, DP_MOD_ID_CDP);
+					  0, vdev_id, DP_MOD_ID_CDP);
 	if (mld_peer) {
 		if (setup_info->is_first_link) {
 			/* assign rx_tid to mld peer */

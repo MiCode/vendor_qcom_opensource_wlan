@@ -520,7 +520,7 @@ struct dp_peer *dp_peer_find_hash_find(struct dp_soc *soc,
 	if (soc->arch_ops.mlo_peer_find_hash_find)
 		return soc->arch_ops.mlo_peer_find_hash_find(soc, peer_mac_addr,
 							     mac_addr_is_aligned,
-							     mod_id);
+							     mod_id, vdev_id);
 	return NULL;
 }
 
@@ -2709,13 +2709,15 @@ static inline uint16_t dp_gen_ml_peer_id(struct dp_soc *soc,
 QDF_STATUS
 dp_rx_mlo_peer_map_handler(struct dp_soc *soc, uint16_t peer_id,
 			   uint8_t *peer_mac_addr,
-			   struct dp_mlo_flow_override_info *mlo_flow_info)
+			   struct dp_mlo_flow_override_info *mlo_flow_info,
+			   struct dp_mlo_link_info *mlo_link_info)
 {
 	struct dp_peer *peer = NULL;
 	uint16_t hw_peer_id = mlo_flow_info[0].ast_idx;
 	uint16_t ast_hash = mlo_flow_info[0].cache_set_num;
-	uint8_t vdev_id = DP_VDEV_ALL;
+	uint8_t vdev_id = 0;
 	uint8_t is_wds = 0;
+	int i;
 	uint16_t ml_peer_id = dp_gen_ml_peer_id(soc, peer_id);
 	enum cdp_txrx_ast_entry_type type = CDP_TXRX_AST_TYPE_STATIC;
 	QDF_STATUS err = QDF_STATUS_SUCCESS;
@@ -2724,6 +2726,16 @@ dp_rx_mlo_peer_map_handler(struct dp_soc *soc, uint16_t peer_id,
 	dp_info("mlo_peer_map_event (soc:%pK): peer_id %d ml_peer_id %d, peer_mac "QDF_MAC_ADDR_FMT,
 		soc, peer_id, ml_peer_id,
 		QDF_MAC_ADDR_REF(peer_mac_addr));
+
+	/* Get corresponding vdev ID for the peer based
+	 * on chip ID obtained from mlo peer_map event
+	 */
+	for (i = 0; i < DP_MAX_MLO_LINKS; i++) {
+		if (mlo_link_info[i].peer_chip_id == dp_mlo_get_chip_id(soc)) {
+			vdev_id = mlo_link_info[i].vdev_id;
+			break;
+		}
+	}
 
 	peer = dp_peer_find_add_id(soc, peer_mac_addr, ml_peer_id,
 				   hw_peer_id, vdev_id);
