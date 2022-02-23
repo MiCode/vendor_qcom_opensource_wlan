@@ -5003,6 +5003,11 @@ QDF_STATUS dp_mon_pdev_init(struct dp_pdev *pdev)
 
 	/* attach monitor function */
 	dp_monitor_tx_ppdu_stats_attach(pdev);
+
+	/* mon pdev extended init */
+	if (mon_ops->mon_pdev_ext_init)
+		mon_ops->mon_pdev_ext_init(pdev);
+
 	mon_pdev->is_dp_mon_pdev_initialized = true;
 
 	return QDF_STATUS_SUCCESS;

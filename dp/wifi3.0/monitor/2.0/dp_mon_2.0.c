@@ -31,6 +31,66 @@
 #include <htt_ppdu_stats.h>
 
 #if !defined(DISABLE_MON_CONFIG)
+
+/**
+ * dp_mon_pdev_ext_init_2_0() - Init pdev ext param
+ *
+ * @pdev: DP pdev handle
+ *
+ * Return:  QDF_STATUS_SUCCESS: Success
+ *          QDF_STATUS_E_FAILURE: failure
+ */
+QDF_STATUS dp_mon_pdev_ext_init_2_0(struct dp_pdev *pdev)
+{
+	struct dp_mon_pdev *mon_pdev = pdev->monitor_pdev;
+	struct dp_mon_pdev_be *mon_pdev_be =
+			dp_get_be_mon_pdev_from_dp_mon_pdev(mon_pdev);
+
+	mon_pdev_be->rx_mon_workqueue =
+		qdf_alloc_unbound_workqueue("rx_mon_work_queue");
+
+	if (!mon_pdev_be->rx_mon_workqueue) {
+		dp_mon_err("failed to create rxmon wq mon_pdev: %pK", mon_pdev);
+		goto fail;
+	}
+	TAILQ_INIT(&mon_pdev_be->rx_mon_queue);
+
+	qdf_create_work(0, &mon_pdev_be->rx_mon_work,
+			dp_rx_mon_process_ppdu, pdev);
+	qdf_spinlock_create(&mon_pdev_be->rx_mon_wq_lock);
+
+	return QDF_STATUS_SUCCESS;
+
+fail:
+	return QDF_STATUS_E_FAILURE;
+}
+
+/**
+ * dp_mon_pdev_ext_deinit_2_0() - denit pdev ext param
+ *
+ * @pdev: DP pdev handle
+ *
+ * Return: QDF_STATUS_SUCCESS
+ */
+QDF_STATUS dp_mon_pdev_ext_deinit_2_0(struct dp_pdev *pdev)
+{
+	struct dp_mon_pdev *mon_pdev = pdev->monitor_pdev;
+	struct dp_mon_pdev_be *mon_pdev_be =
+			dp_get_be_mon_pdev_from_dp_mon_pdev(mon_pdev);
+
+	if (!mon_pdev_be->rx_mon_workqueue)
+		return QDF_STATUS_E_FAILURE;
+
+	qdf_flush_workqueue(0, mon_pdev_be->rx_mon_workqueue);
+	qdf_destroy_workqueue(0, mon_pdev_be->rx_mon_workqueue);
+	qdf_flush_work(&mon_pdev_be->rx_mon_work);
+	qdf_disable_work(&mon_pdev_be->rx_mon_work);
+	mon_pdev_be->rx_mon_workqueue = NULL;
+	qdf_spinlock_destroy(&mon_pdev_be->rx_mon_wq_lock);
+
+	return QDF_STATUS_SUCCESS;
+}
+
 /*
  * dp_mon_add_desc_list_to_free_list() - append unused desc_list back to
  *					freelist.
@@ -1255,6 +1315,8 @@ struct dp_mon_ops monitor_ops_2_0 = {
 	.mon_tx_ppdu_stats_detach = NULL,
 	.mon_peer_tx_capture_filter_check = NULL,
 #endif
+	.mon_pdev_ext_init = dp_mon_pdev_ext_init_2_0,
+	.mon_pdev_ext_deinit = dp_mon_pdev_ext_deinit_2_0,
 };
 
 struct cdp_mon_ops dp_ops_mon_2_0 = {

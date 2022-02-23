@@ -150,6 +150,13 @@ QDF_STATUS dp_rx_process_pktlog_be(struct dp_soc *soc, struct dp_pdev *pdev,
 uint32_t
 dp_rx_mon_process_2_0(struct dp_soc *soc, struct dp_intr *int_ctx,
 		      uint32_t mac_id, uint32_t quota);
+
+/**
+ * dp_rx_mon_process_ppdu () - RxMON Workqueue processing API
+ *
+ * @context: workqueue context
+ */
+void dp_rx_mon_process_ppdu(void *context);
 #else
 static uint32_t
 dp_rx_mon_process_2_0(struct dp_soc *soc, struct dp_intr *int_ctx,
@@ -158,5 +165,8 @@ dp_rx_mon_process_2_0(struct dp_soc *soc, struct dp_intr *int_ctx,
 	return 0;
 }
 
+static inline void dp_rx_mon_process_ppdu(void *context)
+{
+}
 #endif /* DISABLE_MON_CONFIG */
 #endif /* _DP_RX_MON_2_0_H_ */

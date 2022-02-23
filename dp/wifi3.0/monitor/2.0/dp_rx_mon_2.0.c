@@ -29,6 +29,10 @@
 #include <dp_be.h>
 #include <hal_be_api_mon.h>
 
+void dp_rx_mon_process_ppdu(void *context)
+{
+}
+
 static inline uint32_t
 dp_rx_mon_srng_process_2_0(struct dp_soc *soc, struct dp_intr *int_ctx,
 			   uint32_t mac_id, uint32_t quota)

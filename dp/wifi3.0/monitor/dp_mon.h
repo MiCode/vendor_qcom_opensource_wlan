@@ -763,6 +763,8 @@ struct dp_mon_ops {
 	void (*mon_filter_reset_undecoded_metadata_capture)
 	    (struct dp_pdev *pdev);
 #endif
+	QDF_STATUS (*mon_pdev_ext_init)(struct dp_pdev *pdev);
+	QDF_STATUS (*mon_pdev_ext_deinit)(struct dp_pdev *pdev);
 };
 
 struct dp_mon_soc {

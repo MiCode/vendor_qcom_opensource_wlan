@@ -30,6 +30,7 @@
 #define DP_MON_RING_FILL_LEVEL_DEFAULT 2048
 #define DP_MON_DATA_BUFFER_SIZE     2048
 #define DP_MON_DESC_MAGIC 0xdeadabcd
+#define DP_MON_MAX_STATUS_BUF 32
 
 /**
  * struct dp_mon_filter_be - Monitor TLV filter
@@ -101,6 +102,12 @@ struct dp_mon_desc_pool {
  * @filter_be: filters sent to fw
  * @tx_capture: pointer to tx capture function
  * @tx_stats: tx monitor drop stats
+ * @rx_mon_wq_lock: Rx mon workqueue lock
+ * @rx_mon_workqueue: Rx mon workqueue
+ * @rx_mon_work: Rx mon work
+ * @rx_mon_queue: RxMON queue
+ * @rx_mon_queue_depth: RxMON queue depth
+ * @status: reaped status buffer per ppdu
  */
 struct dp_mon_pdev_be {
 	struct dp_mon_pdev mon_pdev;
@@ -109,6 +116,13 @@ struct dp_mon_pdev_be {
 	struct dp_pdev_tx_capture_be tx_capture_be;
 #endif
 	struct dp_tx_monitor_drop_stats tx_stats;
+	qdf_spinlock_t rx_mon_wq_lock;
+	qdf_workqueue_t *rx_mon_workqueue;
+	qdf_work_t rx_mon_work;
+
+	TAILQ_HEAD(, hal_rx_ppdu_info) rx_mon_queue;
+	uint16_t rx_mon_queue_depth;
+	struct dp_mon_desc *status[DP_MON_MAX_STATUS_BUF];
 };
 
 /**
