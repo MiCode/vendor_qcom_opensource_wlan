@@ -168,6 +168,14 @@ wlan_cp_stats_send_infra_cp_req(struct wlan_objmgr_psoc *psoc,
 #endif /* WLAN_SUPPORT_INFRA_CTRL_PATH_STATS */
 
 #if defined(WLAN_SUPPORT_TWT) && defined (WLAN_TWT_CONV_SUPPORTED)
+/**
+ * wlan_cp_stats_twt_get_peer_session_params() - Retrieve peer twt session
+ * parameters
+ * @psoc: psoc object
+ * @params: array of pointer to store peer twt session parameters
+ *
+ * Return: total number of valid TWT sessions
+ */
 int wlan_cp_stats_twt_get_peer_session_params(
 					struct wlan_objmgr_psoc *psoc,
 					struct twt_session_stats_info *params);
