@@ -16583,7 +16583,7 @@ send_vdev_tsf_tstamp_action_cmd_tlv(wmi_unified_t wmi, uint8_t vdev_id)
 		       WMITLV_TAG_STRUC_wmi_vdev_tsf_tstamp_action_cmd_fixed_param,
 		       WMITLV_GET_STRUCT_TLVLEN(wmi_vdev_tsf_tstamp_action_cmd_fixed_param));
 	cmd->vdev_id = vdev_id;
-	cmd->tsf_action = TSF_TSTAMP_READ_VALUE;
+	cmd->tsf_action = TSF_TSTAMP_QTIMER_CAPTURE_REQ;
 	wmi_mtrace(WMI_VDEV_TSF_TSTAMP_ACTION_CMDID, cmd->vdev_id, 0);
 	if (wmi_unified_cmd_send(wmi, buf, len,
 				 WMI_VDEV_TSF_TSTAMP_ACTION_CMDID)) {
@@ -16618,8 +16618,18 @@ extract_vdev_tsf_report_event_tlv(wmi_unified_t wmi_handle, void *evt_buf,
 	}
 
 	evt = param_buf->fixed_param;
-	param->tsf = ((uint64_t)(evt->tsf_high) << 32) | evt->tsf_low;
 	param->vdev_id = evt->vdev_id;
+	param->tsf = ((uint64_t)(evt->tsf_high) << 32) | evt->tsf_low;
+	param->tsf_low = evt->tsf_low;
+	param->tsf_high = evt->tsf_high;
+	param->qtimer_low = evt->qtimer_low;
+	param->qtimer_high = evt->qtimer_high;
+	param->tsf_id = evt->tsf_id;
+	param->tsf_id_valid = evt->tsf_id_valid;
+	param->mac_id = evt->mac_id;
+	param->mac_id_valid = evt->mac_id_valid;
+	param->wlan_global_tsf_low = evt->wlan_global_tsf_low;
+	param->wlan_global_tsf_high = evt->wlan_global_tsf_high;
 
 	return QDF_STATUS_SUCCESS;
 }

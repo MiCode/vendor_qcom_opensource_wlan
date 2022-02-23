@@ -4584,10 +4584,30 @@ struct ftm_time_sync_offset {
  * struct wmi_host_tsf_event_- Get tsf event info
  * @vdev_id: vdev id
  * @tsf: tsf
+ * @tsf_low: low 32bit of tsf
+ * @tsf_high: high 32 bit of tsf
+ * @qtimer_low: low 32 bits of qtimer
+ * @qtimer_high: high 32 bits of qtimer
+ * @tsf_id: TSF ID for the current vdev
+ * @tsf_id_valid: is TSF valid
+ * @mac_id: MAC identifier
+ * @mac_id_valid: is MAC id valid
+ * @wlan_global_tsf_low: low 32 bits of wlan global tsf
+ * @wlan_global_tsf_high: high 32 bits of wlan global tsf
  */
 struct wmi_host_tsf_event {
 	uint32_t vdev_id;
 	uint64_t tsf;
+	uint32_t tsf_low;
+	uint32_t tsf_high;
+	uint32_t qtimer_low;
+	uint32_t qtimer_high;
+	uint32_t tsf_id;
+	uint32_t tsf_id_valid;
+	uint32_t mac_id;
+	uint32_t mac_id_valid;
+	uint32_t wlan_global_tsf_low;
+	uint32_t wlan_global_tsf_high;
 };
 
 #define WMI_EVENT_ID_INVALID 0
