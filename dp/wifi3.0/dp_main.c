@@ -8559,6 +8559,8 @@ void dp_aggregate_vdev_stats(struct dp_vdev *vdev,
 	dp_vdev_iterate_peer(vdev, dp_update_vdev_stats, vdev_stats,
 			     DP_MOD_ID_GENERIC_STATS);
 
+	dp_update_vdev_rate_stats(vdev_stats, &vdev->stats);
+
 #if defined(FEATURE_PERPKT_INFO) && WDI_EVENT_ENABLE
 	dp_wdi_event_handler(WDI_EVENT_UPDATE_DP_STATS, vdev->pdev->soc,
 			     vdev_stats, vdev->vdev_id,

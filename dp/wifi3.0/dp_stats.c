@@ -7725,6 +7725,16 @@ void dp_update_vdev_ingress_stats(struct dp_vdev *tgtobj)
 		tgtobj->stats.tx_i.dropped.headroom_insufficient;
 }
 
+void dp_update_vdev_rate_stats(struct cdp_vdev_stats *tgtobj,
+			       struct cdp_vdev_stats *srcobj)
+{
+	tgtobj->tx.last_tx_rate = srcobj->tx.last_tx_rate;
+	tgtobj->tx.last_tx_rate_mcs = srcobj->tx.last_tx_rate_mcs;
+	tgtobj->tx.mcast_last_tx_rate = srcobj->tx.mcast_last_tx_rate;
+	tgtobj->tx.mcast_last_tx_rate_mcs = srcobj->tx.mcast_last_tx_rate_mcs;
+	tgtobj->rx.last_rx_rate = srcobj->rx.last_rx_rate;
+}
+
 void dp_update_pdev_ingress_stats(struct dp_pdev *tgtobj,
 				  struct dp_vdev *srcobj)
 {

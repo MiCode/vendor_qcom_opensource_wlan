@@ -1315,6 +1315,16 @@ void dp_update_pdev_stats(struct dp_pdev *tgtobj,
 void dp_update_vdev_ingress_stats(struct dp_vdev *tgtobj);
 
 /**
+ * dp_update_vdev_rate_stats() - Update the vdev rate stats
+ * @tgtobj: tgt buffer for vdev stats
+ * @srcobj: srcobj vdev stats
+ *
+ * Return: None
+ */
+void dp_update_vdev_rate_stats(struct cdp_vdev_stats *tgtobj,
+			       struct cdp_vdev_stats *srcobj);
+
+/**
  * dp_update_pdev_ingress_stats(): Update the pdev ingress stats
  * @tgtobj: pdev handle
  * @srcobj: vdev stats structure
