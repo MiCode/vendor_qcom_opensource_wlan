@@ -1965,6 +1965,31 @@ cm_update_scan_db_on_connect_success(struct cnx_mgr *cm_ctx,
 			    resp->freq, rssi, resp->cm_id);
 }
 
+#ifdef WLAN_FEATURE_11BE_MLO
+#ifdef WLAN_FEATURE_11BE_MLO_ADV_FEATURE
+static inline void
+cm_clear_vdev_mlo_cap(struct wlan_objmgr_vdev *vdev)
+{
+	wlan_vdev_mlme_feat_ext2_cap_clear(vdev, WLAN_VDEV_FEXT2_MLO);
+}
+#else /*WLAN_FEATURE_11BE_MLO_ADV_FEATURE*/
+static inline void
+cm_clear_vdev_mlo_cap(struct wlan_objmgr_vdev *vdev)
+{
+	/* If the connect req fails on assoc link, reset
+	 * the MLO cap flags. The flags will be updated based
+	 * on next connect req
+	 */
+	if (!wlan_vdev_mlme_is_mlo_link_vdev(vdev))
+		ucfg_mlo_mld_clear_mlo_cap(vdev);
+}
+#endif /*WLAN_FEATURE_11BE_MLO_ADV_FEATURE*/
+#else /*WLAN_FEATURE_11BE_MLO*/
+static inline void
+cm_clear_vdev_mlo_cap(struct wlan_objmgr_vdev *vdev)
+{ }
+#endif /*WLAN_FEATURE_11BE_MLO*/
+
 QDF_STATUS cm_notify_connect_complete(struct cnx_mgr *cm_ctx,
 				      struct wlan_cm_connect_resp *resp)
 {
@@ -1976,8 +2001,7 @@ QDF_STATUS cm_notify_connect_complete(struct cnx_mgr *cm_ctx,
 	cm_inform_blm_connect_complete(cm_ctx->vdev, resp);
 
 	if (QDF_IS_STATUS_ERROR(resp->connect_status))
-		wlan_vdev_mlme_feat_ext2_cap_clear(cm_ctx->vdev,
-						   WLAN_VDEV_FEXT2_MLO);
+		cm_clear_vdev_mlo_cap(cm_ctx->vdev);
 
 	return QDF_STATUS_SUCCESS;
 }
