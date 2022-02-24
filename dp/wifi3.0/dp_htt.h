@@ -673,7 +673,6 @@ struct htt_rx_ring_tlv_filter {
 		 data_mpdu_log:1,
 		 enable:1;
 #endif
-	uint8_t rx_mon_global_en;
 };
 
 /**
