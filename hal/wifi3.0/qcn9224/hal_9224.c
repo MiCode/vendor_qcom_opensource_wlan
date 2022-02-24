@@ -859,7 +859,7 @@ static inline void hal_rx_dump_mpdu_start_tlv_9224(void *mpdustart,
 	struct rx_mpdu_info *mpdu_info =
 		(struct rx_mpdu_info *)&mpdu_start->rx_mpdu_info_details;
 #endif
-	QDF_TRACE(dbg_level, QDF_MODULE_ID_HAL,
+	QDF_TRACE(QDF_MODULE_ID_HAL, dbg_level,
 		  "rx_mpdu_start tlv (1/5) - "
 		  "rx_reo_queue_desc_addr_31_0 :%x"
 		  "rx_reo_queue_desc_addr_39_32 :%x"
@@ -900,7 +900,7 @@ static inline void hal_rx_dump_mpdu_start_tlv_9224(void *mpdustart,
 		  mpdu_info->tid,
 		  mpdu_info->reserved_7a);
 
-	QDF_TRACE(dbg_level, QDF_MODULE_ID_HAL,
+	QDF_TRACE(QDF_MODULE_ID_HAL, dbg_level,
 		  "rx_mpdu_start tlv (2/5) - "
 		  "ast_index:%x "
 		  "sw_peer_id:%x "
@@ -927,7 +927,7 @@ static inline void hal_rx_dump_mpdu_start_tlv_9224(void *mpdustart,
 		  mpdu_info->mpdu_ht_control_valid,
 		  mpdu_info->frame_encryption_info_valid);
 
-	QDF_TRACE(dbg_level, QDF_MODULE_ID_HAL,
+	QDF_TRACE(QDF_MODULE_ID_HAL, dbg_level,
 		  "rx_mpdu_start tlv (3/5) - "
 		  "mpdu_fragment_number:%x "
 		  "more_fragment_flag:%x "
@@ -946,14 +946,14 @@ static inline void hal_rx_dump_mpdu_start_tlv_9224(void *mpdustart,
 		  mpdu_info->mpdu_retry,
 		  mpdu_info->mpdu_sequence_number);
 
-	QDF_TRACE(dbg_level, QDF_MODULE_ID_HAL,
+	QDF_TRACE(QDF_MODULE_ID_HAL, dbg_level,
 		  "rx_mpdu_start tlv (4/5) - "
 		  "mpdu_frame_control_field:%x "
 		  "mpdu_duration_field:%x ",
 		  mpdu_info->mpdu_frame_control_field,
 		  mpdu_info->mpdu_duration_field);
 
-	QDF_TRACE(dbg_level, QDF_MODULE_ID_HAL,
+	QDF_TRACE(QDF_MODULE_ID_HAL, dbg_level,
 		  "rx_mpdu_start tlv (5/5) - "
 		  "mac_addr_ad1_31_0:%x "
 		  "mac_addr_ad1_47_32:%x "
