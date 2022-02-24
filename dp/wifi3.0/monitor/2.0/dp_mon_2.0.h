@@ -122,6 +122,7 @@ struct dp_mon_pdev_be {
  * @tx_mon_ring_fill_level: tx mon ring refill level
  * @tx_low_thresh_intrs: number of tx mon low threshold interrupts received
  * @rx_low_thresh_intrs: number of rx mon low threshold interrupts received
+ * @is_dp_mon_soc_initialized: flag to indicate soc is initialized
  */
 struct dp_mon_soc_be {
 	struct dp_mon_soc mon_soc;
@@ -138,6 +139,8 @@ struct dp_mon_soc_be {
 	uint16_t tx_mon_ring_fill_level;
 	uint32_t tx_low_thresh_intrs;
 	uint32_t rx_low_thresh_intrs;
+
+	bool is_dp_mon_soc_initialized;
 };
 #endif
 

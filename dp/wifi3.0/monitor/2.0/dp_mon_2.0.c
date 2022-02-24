@@ -597,6 +597,9 @@ static void dp_mon_soc_deinit_2_0(struct dp_soc *soc)
 	struct dp_mon_soc_be *mon_soc_be =
 		dp_get_be_mon_soc_from_dp_mon_soc(mon_soc);
 
+	if (!mon_soc_be->is_dp_mon_soc_initialized)
+		return;
+
 	dp_rx_mon_buffers_free(soc);
 	dp_tx_mon_buffers_free(soc);
 
@@ -605,6 +608,8 @@ static void dp_mon_soc_deinit_2_0(struct dp_soc *soc)
 
 	dp_srng_deinit(soc, &soc->rxdma_mon_buf_ring[0], RXDMA_MONITOR_BUF, 0);
 	dp_srng_deinit(soc, &mon_soc_be->tx_mon_buf_ring, TX_MONITOR_BUF, 0);
+
+	mon_soc_be->is_dp_mon_soc_initialized = false;
 }
 
 static
@@ -664,6 +669,10 @@ fail:
 static
 QDF_STATUS dp_mon_soc_init_2_0(struct dp_soc *soc)
 {
+	struct dp_mon_soc *mon_soc = soc->monitor_soc;
+	struct dp_mon_soc_be *mon_soc_be =
+		dp_get_be_mon_soc_from_dp_mon_soc(mon_soc);
+
 	if (soc->rxdma_mon_buf_ring[0].hal_srng) {
 		dp_mon_info("%pK: mon soc init is done", soc);
 		return QDF_STATUS_SUCCESS;
@@ -678,6 +687,8 @@ QDF_STATUS dp_mon_soc_init_2_0(struct dp_soc *soc)
 		dp_mon_err("%pK: " RNG_ERR "tx_mon_buf_ring", soc);
 		goto fail;
 	}
+
+	mon_soc_be->is_dp_mon_soc_initialized = true;
 	return QDF_STATUS_SUCCESS;
 fail:
 	dp_mon_soc_deinit_2_0(soc);
