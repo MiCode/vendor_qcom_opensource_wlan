@@ -107,10 +107,9 @@ void dp_mon_filter_show_filter(struct dp_mon_pdev *mon_pdev,
 #ifdef QCA_UNDECODED_METADATA_SUPPORT
 static inline void
 dp_mon_set_fp_phy_err_filter(struct htt_rx_ring_tlv_filter *tlv_filter,
-			     struct dp_mon_filter *mon_filter,
-			     int32_t current_mode)
+			     struct dp_mon_filter *mon_filter)
 {
-	if (current_mode == DP_MON_FILTER_UNDECODED_METADATA_CAPTURE_MODE) {
+	if (mon_filter->tlv_filter.phy_err_filter_valid) {
 		tlv_filter->fp_phy_err =
 			mon_filter->tlv_filter.fp_phy_err;
 		tlv_filter->fp_phy_err_buf_src =
@@ -128,8 +127,7 @@ dp_mon_set_fp_phy_err_filter(struct htt_rx_ring_tlv_filter *tlv_filter,
 #else
 static inline void
 dp_mon_set_fp_phy_err_filter(struct htt_rx_ring_tlv_filter *tlv_filter,
-			     struct dp_mon_filter *mon_filter,
-			     int32_t current_mode)
+			     struct dp_mon_filter *mon_filter)
 {
 }
 #endif
@@ -259,8 +257,7 @@ void dp_mon_filter_h2t_setup(struct dp_soc *soc, struct dp_pdev *pdev,
 		dst_filter |= src_filter;
 		DP_MON_FILTER_SET(tlv_filter, FILTER_MD_CTRL, dst_filter);
 
-		dp_mon_set_fp_phy_err_filter(tlv_filter, mon_filter,
-					     current_mode);
+		dp_mon_set_fp_phy_err_filter(tlv_filter, mon_filter);
 	}
 
 	dp_mon_filter_show_filter(mon_pdev, 0, filter);

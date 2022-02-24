@@ -200,10 +200,16 @@ void dp_mon_filter_setup_undecoded_metadata_capture_1_0(struct dp_pdev *pdev)
 	}
 
 	/* Enabled the filter */
-	filter.valid = true;
-
 	mon_pdev = pdev->monitor_pdev;
-	dp_mon_filter_set_status_cmn(mon_pdev, &filter);
+	if (mon_pdev->monitor_configured ||
+	    mon_pdev->scan_spcl_vap_configured) {
+		filter = mon_pdev->filter[DP_MON_FILTER_MONITOR_MODE][srng_type];
+	} else if (mon_pdev->neighbour_peers_added) {
+		filter = mon_pdev->filter[DP_MON_FILTER_SMART_MONITOR_MODE][srng_type];
+	} else {
+		dp_mon_filter_set_status_cmn(mon_pdev, &filter);
+		filter.valid = true;
+	}
 
 	/* Setup the filter to subscribe to FP PHY status tlv */
 	filter.tlv_filter.fp_phy_err = 1;
@@ -238,9 +244,9 @@ void dp_mon_filter_reset_undecoded_metadata_capture_1_0(struct dp_pdev *pdev)
 	}
 	mon_pdev = pdev->monitor_pdev;
 
-	/* Enabled filter to reset to default values */
-	filter.valid = true;
-	/* Reset the filter and phy error mask */
+	filter = mon_pdev->filter[mode][srng_type];
+
+	/* Reset the phy error and phy error mask */
 	filter.tlv_filter.fp_phy_err = 0;
 	filter.tlv_filter.fp_phy_err_buf_src = NO_BUFFER_RING;
 	filter.tlv_filter.fp_phy_err_buf_dest = RXDMA_RELEASING_RING;

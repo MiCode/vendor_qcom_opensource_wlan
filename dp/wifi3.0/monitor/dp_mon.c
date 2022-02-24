@@ -147,7 +147,6 @@ dp_reset_undecoded_metadata_capture(struct dp_pdev *pdev)
 			QDF_TRACE(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_ERROR,
 				  FL("Undecoded capture filter reset failed"));
 		}
-		mon_pdev->monitor_configured = false;
 	}
 	mon_pdev->undecoded_metadata_capture = 0;
 	return status;
