@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  *
  * Permission to use, copy, modify, and/or distribute this software for
@@ -1240,15 +1240,6 @@ int utils_get_dfsdomain(struct wlan_objmgr_pdev *pdev)
 	wlan_reg_get_dfs_region(pdev, &dfsdomain);
 
 	return dfsdomain;
-}
-
-uint16_t utils_dfs_get_cur_rd(struct wlan_objmgr_pdev *pdev)
-{
-	struct cur_regdmn_info cur_regdmn;
-
-	wlan_reg_get_curr_regdomain(pdev, &cur_regdmn);
-
-	return cur_regdmn.regdmn_pair_id;
 }
 
 #if defined(WLAN_DFS_PARTIAL_OFFLOAD) && defined(HOST_DFS_SPOOF_TEST)

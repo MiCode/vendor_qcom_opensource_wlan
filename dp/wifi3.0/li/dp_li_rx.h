@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -201,4 +202,31 @@ void dp_rx_prefetch_hw_sw_nbuf_desc(struct dp_soc *soc,
 {
 }
 #endif
+
+static inline
+QDF_STATUS dp_peer_rx_reorder_queue_setup_li(struct dp_soc *soc,
+					     struct dp_peer *peer,
+					     int tid,
+					     uint32_t ba_window_size)
+{
+	struct dp_rx_tid *rx_tid = &peer->rx_tid[tid];
+
+	if (!rx_tid->hw_qdesc_paddr)
+		return QDF_STATUS_E_INVAL;
+
+	if (soc->cdp_soc.ol_ops->peer_rx_reorder_queue_setup) {
+		if (soc->cdp_soc.ol_ops->peer_rx_reorder_queue_setup(
+		    soc->ctrl_psoc,
+		    peer->vdev->pdev->pdev_id,
+		    peer->vdev->vdev_id,
+		    peer->mac_addr.raw, rx_tid->hw_qdesc_paddr, tid, tid,
+		    1, ba_window_size)) {
+			dp_peer_err("%pK: Failed to send reo queue setup to FW - tid %d\n",
+				    soc, tid);
+			return QDF_STATUS_E_FAILURE;
+		}
+	}
+
+	return QDF_STATUS_SUCCESS;
+}
 #endif

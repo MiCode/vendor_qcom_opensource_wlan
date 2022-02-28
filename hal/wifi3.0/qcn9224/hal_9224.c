@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021,2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -40,8 +40,10 @@
 #include <wbm_release_ring_tx.h>
 #include <wbm_release_ring_rx.h>
 #include <phyrx_location.h>
+#ifdef QCA_MONITOR_2_0_SUPPORT
 #include <mon_ingress_ring.h>
 #include <mon_destination_ring.h>
+#endif
 
 #include <hal_be_rx.h>
 
@@ -857,6 +859,7 @@ static inline void hal_rx_dump_mpdu_start_tlv_9224(void *mpdustart,
 #endif
 	QDF_TRACE(dbg_level, QDF_MODULE_ID_HAL,
 		  "rx_mpdu_start tlv (1/5) - "
+		  "rx_reo_queue_desc_addr_31_0 :%x"
 		  "rx_reo_queue_desc_addr_39_32 :%x"
 		  "receive_queue_number:%x "
 		  "pre_delim_err_warning:%x "
@@ -875,6 +878,7 @@ static inline void hal_rx_dump_mpdu_start_tlv_9224(void *mpdustart,
 		  "bssid_number:%x "
 		  "tid:%x "
 		  "reserved_7a:%x ",
+		  mpdu_info->rx_reo_queue_desc_addr_31_0,
 		  mpdu_info->rx_reo_queue_desc_addr_39_32,
 		  mpdu_info->receive_queue_number,
 		  mpdu_info->pre_delim_err_warning,
@@ -1623,6 +1627,8 @@ static void hal_reo_setup_9224(struct hal_soc *soc, void *reoparams)
 	 * GLOBAL_LINK_DESC_COUNT_THRESH_IX_0[1,2]
 	 * GLOBAL_LINK_DESC_COUNT_CTRL
 	 */
+
+	hal_reo_shared_qaddr_init((hal_soc_handle_t)soc);
 }
 
 static void hal_hw_txrx_ops_attach_qcn9224(struct hal_soc *hal_soc)
@@ -1828,6 +1834,12 @@ static void hal_hw_txrx_ops_attach_qcn9224(struct hal_soc *hal_soc)
 			hal_rx_priv_info_get_from_tlv_be;
 	hal_soc->ops->hal_rx_pkt_hdr_get = hal_rx_pkt_hdr_get_be;
 	hal_soc->ops->hal_reo_setup = hal_reo_setup_9224;
+#ifdef REO_SHARED_QREF_TABLE_EN
+	hal_soc->ops->hal_reo_shared_qaddr_setup = hal_reo_shared_qaddr_setup_be;
+	hal_soc->ops->hal_reo_shared_qaddr_init = hal_reo_shared_qaddr_init_be;
+	hal_soc->ops->hal_reo_shared_qaddr_detach = hal_reo_shared_qaddr_detach_be;
+	hal_soc->ops->hal_reo_shared_qaddr_write = hal_reo_shared_qaddr_write_be;
+#endif
 };
 
 struct hal_hw_srng_config hw_srng_table_9224[] = {
@@ -2172,6 +2184,7 @@ struct hal_hw_srng_config hw_srng_table_9224[] = {
 		.reg_size = {},
 		.max_size = HAL_RXDMA_MAX_RING_SIZE,
 	},
+#ifdef QCA_MONITOR_2_0_SUPPORT
 	{ /* RXDMA_MONITOR_BUF */
 		.start_ring_id = HAL_SRNG_WMAC1_SW2RXDMA2_BUF,
 		.max_rings = 1,
@@ -2185,6 +2198,9 @@ struct hal_hw_srng_config hw_srng_table_9224[] = {
 		.reg_size = {},
 		.max_size = HAL_RXDMA_MAX_RING_SIZE_BE,
 	},
+#else
+	{},
+#endif
 	{ /* RXDMA_MONITOR_STATUS */
 		.start_ring_id = HAL_SRNG_WMAC1_SW2RXDMA1_STATBUF,
 		.max_rings = 0,
@@ -2198,6 +2214,7 @@ struct hal_hw_srng_config hw_srng_table_9224[] = {
 		.reg_size = {},
 		.max_size = HAL_RXDMA_MAX_RING_SIZE,
 	},
+#ifdef QCA_MONITOR_2_0_SUPPORT
 	{ /* RXDMA_MONITOR_DST */
 		.start_ring_id = HAL_SRNG_WMAC1_RXMON2SW0,
 		.max_rings = 1,
@@ -2211,6 +2228,9 @@ struct hal_hw_srng_config hw_srng_table_9224[] = {
 		.reg_size = {},
 		.max_size = HAL_RXDMA_MAX_RING_SIZE_BE,
 	},
+#else
+	{},
+#endif
 	{ /* RXDMA_MONITOR_DESC */
 		.start_ring_id = HAL_SRNG_WMAC1_SW2RXDMA1_DESC,
 		.max_rings = 0,

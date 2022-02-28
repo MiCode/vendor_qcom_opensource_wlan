@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2021,2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -748,17 +748,6 @@ void dp_mon_filter_reset_rx_pktlog_cbf_1_0(struct dp_pdev *pdev)
 	srng_type = DP_MON_FILTER_SRNG_TYPE_RXDMA_MONITOR_STATUS;
 	mon_pdev->filter[mode][srng_type] = filter;
 }
-
-#ifdef QCA_WIFI_QCN9224
-void dp_mon_filter_setup_pktlog_hybrid_1_0(struct dp_pdev *pdev)
-{
-	dp_mon_filter_err("This mode is only supported for QCN9224");
-}
-
-void dp_mon_filter_reset_pktlog_hybrid_1_0(struct dp_pdev *pdev)
-{
-}
-#endif
 #endif /* WDI_EVENT_ENABLE */
 
 #ifdef WLAN_DP_RESET_MON_BUF_RING_FILTER

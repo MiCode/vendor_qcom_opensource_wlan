@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021,2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -182,7 +182,8 @@ void dp_tx_process_htt_completion_be(struct dp_soc *soc,
 	struct dp_vdev *vdev = NULL;
 	struct hal_tx_completion_status ts = {0};
 	uint32_t *htt_desc = (uint32_t *)status;
-	struct dp_peer *peer;
+	struct dp_txrx_peer *txrx_peer;
+	dp_txrx_ref_handle txrx_ref_handle = NULL;
 	struct cdp_tid_tx_stats *tid_stats = NULL;
 	struct htt_soc *htt_handle;
 	uint8_t vdev_id;
@@ -276,21 +277,24 @@ void dp_tx_process_htt_completion_be(struct dp_soc *soc,
 		if (tx_status < CDP_MAX_TX_HTT_STATUS)
 			tid_stats->htt_status_cnt[tx_status]++;
 
-		peer = dp_peer_get_ref_by_id(soc, ts.peer_id,
-					     DP_MOD_ID_HTT_COMP);
-		if (qdf_likely(peer))
+		txrx_peer = dp_txrx_peer_get_ref_by_id(soc, ts.peer_id,
+						       &txrx_ref_handle,
+						       DP_MOD_ID_HTT_COMP);
+		if (qdf_likely(txrx_peer))
 			dp_tx_update_peer_basic_stats(
-						peer,
+						txrx_peer,
 						qdf_nbuf_len(tx_desc->nbuf),
 						tx_status,
 						pdev->enhanced_stats_en);
 
-		dp_tx_comp_process_tx_status(soc, tx_desc, &ts, peer, ring_id);
-		dp_tx_comp_process_desc(soc, tx_desc, &ts, peer);
+		dp_tx_comp_process_tx_status(soc, tx_desc, &ts, txrx_peer,
+					     ring_id);
+		dp_tx_comp_process_desc(soc, tx_desc, &ts, txrx_peer);
 		dp_tx_desc_release(tx_desc, tx_desc->pool_id);
 
-		if (qdf_likely(peer))
-			dp_peer_unref_delete(peer, DP_MOD_ID_HTT_COMP);
+		if (qdf_likely(txrx_peer))
+			dp_txrx_peer_unref_delete(txrx_ref_handle,
+						  DP_MOD_ID_HTT_COMP);
 
 		break;
 	}
@@ -567,6 +571,7 @@ dp_tx_hw_enqueue_be(struct dp_soc *soc, struct dp_vdev *vdev,
 	coalesce = dp_tx_attempt_coalescing(soc, vdev, tx_desc, tid);
 
 	DP_STATS_INC_PKT(vdev, tx_i.processed, 1, tx_desc->length);
+	DP_STATS_INC(soc, tx.tcl_enq[ring_id], 1);
 	dp_tx_update_stats(soc, tx_desc->nbuf);
 	status = QDF_STATUS_SUCCESS;
 
@@ -799,7 +804,7 @@ QDF_STATUS dp_tx_desc_pool_init_be(struct dp_soc *soc,
 			dp_cc_desc_id_generate(page_desc->ppt_index,
 					       avail_entry_index);
 		tx_desc->pool_id = pool_id;
-
+		dp_tx_desc_set_magic(tx_desc, DP_TX_MAGIC_PATTERN_FREE);
 		tx_desc = tx_desc->next;
 		avail_entry_index = (avail_entry_index + 1) &
 					DP_CC_SPT_PAGE_MAX_ENTRIES_MASK;

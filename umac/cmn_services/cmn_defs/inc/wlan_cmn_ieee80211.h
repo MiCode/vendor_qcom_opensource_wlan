@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2017-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -341,6 +341,9 @@
 #define WLAN_EHT_CHWIDTH_160          3 /* 160MHz Oper Ch width */
 #define WLAN_EHT_CHWIDTH_320          4 /* 320MHz Oper Ch width */
 #endif
+
+/* Max length of 802.11 subelement */
+#define WLAN_MAX_SUBELEM_LEN          255
 
 #define WLAN_RATE_VAL              0x7f
 #define WLAN_BASIC_RATE_MASK       0x80
@@ -1063,6 +1066,56 @@ enum wlan_status_code {
 #define RSN_CAP_MFP_CAPABLE 0x80
 #define RSN_CAP_MFP_REQUIRED 0x40
 
+/* FILS Discovery */
+#define WLAN_ACTION_FILS_DISCOVERY         34
+#define WLAN_FD_FRAMECNTL_CAP              0x0020
+#define WLAN_FD_FRAMECNTL_SHORTSSID        0x0040
+#define WLAN_FD_FRAMECNTL_CH_CENTERFREQ    0x0200
+#define WLAN_FD_FRAMECNTL_LEN_PRES         0x1000
+#define WLAN_FD_FRAMECNTL_SHORTSSID_LEN    0x0003
+
+#define WLAN_FD_SSID_LEN_PRES(_v)          ((_v) & 0x1F)
+#define WLAN_FD_IS_CAP_PRESENT(_v)         ((_v) & WLAN_FD_FRAMECNTL_CAP)
+#define WLAN_FD_IS_LEN_PRESENT(_v)         ((_v) & WLAN_FD_FRAMECNTL_LEN_PRES)
+#define WLAN_FD_IS_FRAMECNTL_CH_CENTERFREQ(_v)\
+					((_v) & WLAN_FD_FRAMECNTL_CH_CENTERFREQ)
+
+#define WLAN_FD_CAP_LEN                    2
+#define WLAN_FD_CAP_ESS_S                  0
+#define WLAN_FD_CAP_PRIVACY_S              1
+#define WLAN_FD_CAP_BSS_CHWIDTH_S          2
+#define WLAN_FD_CAP_NSS_S                  5
+#define WLAN_FD_CAP_PHY_INDEX_S            2
+#define WLAN_FD_CAP_MIN_RATE_S             5
+
+#define WLAN_FD_CHWIDTH_20                 0
+#define WLAN_FD_CHWIDTH_40                 1
+#define WLAN_FD_CHWIDTH_80                 2
+#define WLAN_FD_CHWIDTH_160_80_80          3
+#define WLAN_FD_CHWIDTH_320                4
+
+#define WLAN_FD_CAP_NSS_GTE_5              4
+#define WLAN_FD_CAP_NSS_MODE_1             1
+#define WLAN_FD_CAP_NSS_MODE_2             2
+#define WLAN_FD_CAP_NSS_MODE_3             3
+#define WLAN_FD_CAP_NSS_MODE_4             4
+#define WLAN_FD_CAP_NSS_MODE_5             5
+#define WLAN_FD_CAP_NSS_MODE_6             6
+#define WLAN_FD_CAP_NSS_MODE_7             7
+#define WLAN_FD_CAP_NSS_MODE_8             8
+
+#define WLAN_FD_CAP_ESS_ENABLE             1
+
+#define WLAN_FD_CAP_PHY_INDEX_NON_HT_OFDM  1
+#define WLAN_FD_CAP_PHY_INDEX_HT           2
+#define WLAN_FD_CAP_PHY_INDEX_VHT          3
+#define WLAN_FD_CAP_PHY_INDEX_HE           4
+#ifdef WLAN_FEATURE_11BE
+#define WLAN_FD_CAP_PHY_INDEX_EHT          5
+#endif /* WLAN_FEATURE_11BE */
+
+#define WLAN_FD_CAP_MIN_RATE               0
+
 /**
  * struct element_info - defines length of a memory block and memory block
  * @len: length of memory block
@@ -1535,6 +1588,16 @@ struct wlan_ie_hecaps {
 	} qdf_packed mcs_bw_map[WLAN_HE_MAX_MCS_MAPS];
 } qdf_packed;
 
+/**
+ * struct subelem_header: Subelement header
+ * @subelem_id: Subelement ID
+ * @subelem_len: Subelement length
+ */
+struct subelem_header {
+	uint8_t subelem_id;
+	uint8_t subelem_len;
+} qdf_packed;
+
 #ifdef WLAN_FEATURE_11BE
 #define WLAN_EHT_MACCAP_LEN 2
 #define WLAN_EHT_PHYCAP_LEN 8
@@ -1726,6 +1789,9 @@ struct wlan_ie_multilink {
 /* Definitions related to Multi-Link element Control field applicable across
  * variants.
  */
+
+/* Size in octets of Multi-Link element Control field */
+#define WLAN_ML_CTRL_SIZE                                          2
 
 /* Definitions for subfields in Multi-Link element Control field. Any unused
  * bits are reserved.
@@ -1961,10 +2027,12 @@ enum wlan_ml_bv_cinfo_emlcap_transtimeout {
  *  Multi-Link element Link Info field.
  *  @WLAN_ML_BV_LINFO_SUBELEMID_PERSTAPROFILE: Per-STA Profile
  *  @WLAN_ML_BV_LINFO_SUBELEMID_VENDOR: Vendor specific
+ *  @WLAN_ML_BV_LINFO_SUBELEMID_FRAGMENT: Fragment
  */
 enum wlan_ml_bv_linfo_subelementid {
 	WLAN_ML_BV_LINFO_SUBELEMID_PERSTAPROFILE  = 0,
 	WLAN_ML_BV_LINFO_SUBELEMID_VENDOR = 221,
+	WLAN_ML_BV_LINFO_SUBELEMID_FRAGMENT = 254,
 };
 
 /**
@@ -1984,6 +2052,11 @@ struct wlan_ml_bv_linfo_perstaprof {
  * STA Info (variable size)
  * STA Profile (variable size)
  */
+
+/* Size in octets of STA Control field of Per-STA Profile subelement in Basic
+ * variant Multi-Link element Link Info field.
+ */
+#define WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_SIZE                   2
 
 /* Definitions for subfields in STA Control field of Per-STA Profile subelement
  * in Basic variant Multi-Link element Link Info field. Any unused bits are
@@ -2358,17 +2431,14 @@ struct wlan_ext_cap_ie {
  * mu_bformer_160mhz: MU Beamformer (BW ≤ 160 MHz)
  * mu_bformer_320mhz: MU Beamformer (BW ≤ 320 MHz)
  * reserved3: reserved bits
- * num_eht_mcs_map_20: number of EHT MCS map
  * eht_mcs_map_20: EHT-MCS Map
-  (20 MHz-Only STA)
- * num_eht_mcs_map_le_80: number of EHT MCS map
+ * (20 MHz-Only STA)
  * eht_mcs_map_le_80: EHT-MCS Map
-  (80 MHz-Only STA)
- * num_eht_mcs_map_160: number of EHT MCS map
+ * (less than 80 MHz)
  * eht_mcs_map_160: EHT-MCS Map
-  (160 MHz-Only STA)
+ * (160 MHz)
  * eht_mcs_map_320: EHT-MCS Map
-  (320 MHz-Only STA)
+ * (320 MHz)
  */
 struct wlan_eht_cap_info {
 #ifndef ANI_LITTLE_BIT_ENDIAN
@@ -2420,13 +2490,10 @@ struct wlan_eht_cap_info {
 	uint32_t psr_based_sr:1;
 	uint32_t partial_bw_dl_mu_mimo:1;
 
-	uint32_t eht_mcs_map_320;
-	uint32_t eht_mcs_map_160;
-	uint8_t num_eht_mcs_map_160;
-	uint32_t eht_mcs_map_le_80;
-	uint8_t num_eht_mcs_map_le_80;
-	uint32_t eht_mcs_map_20;
-	uint8_t num_eht_mcs_map_20;
+	uint8_t eht_mcs_map_320[3];
+	uint8_t eht_mcs_map_160[3];
+	uint8_t eht_mcs_map_le_80[3];
+	uint8_t eht_mcs_map_20[4];
 #else
 	uint16_t nsep_pri_access:1;
 	uint16_t eht_om_ctl:1;
@@ -2476,13 +2543,10 @@ struct wlan_eht_cap_info {
 	uint32_t mu_bformer_320mhz:1;
 	uint32_t reserved3:1;
 
-	uint8_t num_eht_mcs_map_20;
-	uint32_t eht_mcs_map_20;
-	uint8_t num_eht_mcs_map_le_80;
-	uint32_t eht_mcs_map_le_80;
-	uint8_t num_eht_mcs_map_160;
-	uint32_t eht_mcs_map_160;
-	uint32_t eht_mcs_map_320;
+	uint8_t eht_mcs_map_20[4];
+	uint8_t eht_mcs_map_le_80[3];
+	uint8_t eht_mcs_map_160[3];
+	uint8_t eht_mcs_map_320[3];
 #endif
 } qdf_packed;
 
@@ -2532,6 +2596,121 @@ struct wlan_mlo_ie_info {
 		} info; /* mld_mac_addr_present = 1 */
 	} mld_mac_addr;
 #endif
+} qdf_packed;
+
+/**
+ * wlan_eht_cap_info_network_endian - struct for eht capabilities information
+ * nsep_pri_access: NSEP priority access support
+ * eht_om_ctl: EHT OM control support
+ * triggered_txop_sharing: Triggered TXOP sharing support
+ * reserved3: reserved bits
+ * reserved2: reserved bits
+ * support_320mhz_6ghz: support 320mhz in 6gz
+ * ru_242tone_wt_20mhz: Support For 242-tone RU In BW Wider Than 20 MHz
+ * ndp_4x_eht_ltf_3dot2_us_gi: NDP With 4 EHT-LTF And 3.2 μs GI
+ * partial_bw_mu_mimo: Partial Bandwidth UL MU-MIMO
+ * su_beamformer: SU Beamformer
+ * su_beamformee: SU Beamformer
+ * bfee_ss_le_80mhz: Beamformee SS (≤ 80 MHz)
+ * bfee_ss_160mhz: Beamformee SS (= 160 MHz)
+ * bfee_ss_320mhz: Beamformee SS (= 320 MHz)
+ * num_sounding_dim_le_80mhz: Number Of Sounding Dimensions (≤ 80 MHz)
+ * num_sounding_dim_160mhz: Number Of Sounding Dimensions (= 160 MHz)
+ * num_sounding_dim_320mhz: Number Of Sounding Dimensions (= 320 MHz)
+ * ng_16_su_feedback: Ng = 16 SU Feedback
+ * ng_16_mu_feedback: Ng = 16 MU Feedback
+ * cb_sz_4_2_su_feedback: Codebook Size SU Feedback
+ * cb_sz_7_5_su_feedback: Codebook Size SU Feedback
+ * trig_su_bforming_feedback: Triggered SU Beamforming Feedback
+ * trig_mu_bforming_partial_bw_feedback: Triggered MU Partial
+   Beamforming Feedback
+ * triggered_cqi_feedback: Triggered SU Beamforming Feedback
+ * partial_bw_dl_mu_mimo: Partial Bandwidth DL MU-MIMO
+ * psr_based_sr: PSR-based SR Support
+ * power_boost_factor: Power Boost Factor Support
+ * eht_mu_ppdu_4x_ltf_0_8_us_gi: EHT MU PPDU With 4 EHT-LTF And 0.8 μs GI
+ * max_nc: Max Nc
+ * non_trig_cqi_feedback: Non-Triggered CQI Feedback
+ * tx_1024_4096_qam_lt_242_tone_ru: Tx 1024-QAM And 4096-QAM < 242-tone
+   RU Support
+ * rx_1024_4096_qam_lt_242_tone_ru: Rx 1024-QAM And 4096-QAM < 242-tone
+   RU Support
+ * ppet_present: PPE Thresholds Present
+ * common_nominal_pkt_padding: Common Nominal Packet Padding
+ * max_num_eht_ltf: Maximum Number Of Supported EHT-LTFs
+ * mcs_15: Support Of MCS 15
+ * eht_dup_6ghz: Support Of EHT DUP In 6 GHz
+ * op_sta_rx_ndp_wider_bw_20mhz: Support For 20 MHz Operating STA
+   Receiving NDP With Wider Bandwidth
+ * non_ofdma_ul_mu_mimo_le_80mhz: Non-OFDMA UL MU-MIMO (BW ≤ 80 MHz)
+ * non_ofdma_ul_mu_mimo_160mhz: Non-OFDMA UL MU-MIMO (BW ≤ 160 MHz)
+ * non_ofdma_ul_mu_mimo_320mhz: Non-OFDMA UL MU-MIMO (BW ≤ 320 MHz)
+ * mu_bformer_le_80mhz: MU Beamformer (BW ≤ 80 MHz)
+ * mu_bformer_160mhz: MU Beamformer (BW ≤ 160 MHz)
+ * mu_bformer_320mhz: MU Beamformer (BW ≤ 320 MHz)
+ * reserved3: reserved bits
+ * eht_mcs_map_20: EHT-MCS Map
+ * (20 MHz-Only STA)
+ * eht_mcs_map_le_80: EHT-MCS Map
+ * (less than 80 MHz)
+ * eht_mcs_map_160: EHT-MCS Map
+ * (160 MHz)
+ * eht_mcs_map_320: EHT-MCS Map
+ * (320 MHz)
+ */
+struct wlan_eht_cap_info_network_endian {
+	uint16_t nsep_pri_access:1;
+	uint16_t eht_om_ctl:1;
+	uint16_t triggered_txop_sharing:1;
+	uint16_t reserved:13;
+
+	uint32_t reserved2:1;
+	uint32_t support_320mhz_6ghz:1;
+	uint32_t ru_242tone_wt_20mhz:1;
+	uint32_t ndp_4x_eht_ltf_3dot2_us_gi:1;
+	uint32_t partial_bw_mu_mimo:1;
+	uint32_t su_beamformer:1;
+	uint32_t su_beamformee:1;
+	uint32_t bfee_ss_le_80mhz:3;
+	uint32_t bfee_ss_160mhz:3;
+	uint32_t bfee_ss_320mhz:3;
+	uint32_t num_sounding_dim_le_80mhz:3;
+	uint32_t num_sounding_dim_160mhz:3;
+	uint32_t num_sounding_dim_320mhz:3;
+	uint32_t ng_16_su_feedback:1;
+	uint32_t ng_16_mu_feedback:1;
+	uint32_t cb_sz_4_2_su_feedback:1;
+	uint32_t cb_sz_7_5_su_feedback:1;
+	uint32_t trig_su_bforming_feedback:1;
+	uint32_t trig_mu_bforming_partial_bw_feedback:1;
+	uint32_t triggered_cqi_feedback:1;
+
+	uint32_t partial_bw_dl_mu_mimo:1;
+	uint32_t psr_based_sr:1;
+	uint32_t power_boost_factor:1;
+	uint32_t eht_mu_ppdu_4x_ltf_0_8_us_gi:1;
+	uint32_t max_nc:4;
+	uint32_t non_trig_cqi_feedback:1;
+	uint32_t tx_1024_4096_qam_lt_242_tone_ru:1;
+	uint32_t rx_1024_4096_qam_lt_242_tone_ru:1;
+	uint32_t ppet_present:1;
+	uint32_t common_nominal_pkt_padding:2;
+	uint32_t max_num_eht_ltf:5;
+	uint32_t mcs_15:4;
+	uint32_t eht_dup_6ghz:1;
+	uint32_t op_sta_rx_ndp_wider_bw_20mhz:1;
+	uint32_t non_ofdma_ul_mu_mimo_le_80mhz:1;
+	uint32_t non_ofdma_ul_mu_mimo_160mhz:1;
+	uint32_t non_ofdma_ul_mu_mimo_320mhz:1;
+	uint32_t mu_bformer_le_80mhz:1;
+	uint32_t mu_bformer_160mhz:1;
+	uint32_t mu_bformer_320mhz:1;
+	uint32_t reserved3:1;
+
+	uint8_t eht_mcs_map_20[4];
+	uint8_t eht_mcs_map_le_80[3];
+	uint8_t eht_mcs_map_160[3];
+	uint8_t eht_mcs_map_320[3];
 } qdf_packed;
 
 /**
@@ -3070,4 +3249,42 @@ wlan_parse_oce_ap_tx_pwr_ie(uint8_t *mbo_oce_ie, int8_t *ap_tx_pwr_dbm)
 
 	return false;
 }
+
+/**
+ * enum mlme_csa_event_ies_present_flag - IE present flag in CSA event
+ * @MLME_CSA_IE_PRESENT: CSA IE is present
+ * @MLME_XCSA_IE_PRESENT: extend CSA IE is present
+ * @MLME_WBW_IE_PRESENT: wide bandwidth channel switch IE is present
+ * @MLME_CSWRAP_IE_EXTENDED_PRESENT: channel switch wrapper IE is present
+ */
+enum mlme_csa_event_ies_present_flag {
+	MLME_CSA_IE_PRESENT    = 0x00000001,
+	MLME_XCSA_IE_PRESENT   = 0x00000002,
+	MLME_WBW_IE_PRESENT    = 0x00000004,
+	MLME_CSWRAP_IE_EXTENDED_PRESENT = 0x00000008,
+};
+
+/**
+ * struct csa_offload_params - STA CSA offload request parameters
+ * @channel: channel
+ * @switch_mode: switch mode
+ * @sec_chan_offset: secondary channel offset
+ * @new_ch_width: new channel width
+ * @new_ch_freq_seg1: channel center freq 1
+ * @new_ch_freq_seg2: channel center freq 2
+ * @ies_present_flag: BIT MAP of MLME_CSA_EVENT_IES_PRESENT_FLAG
+ * @bssid: BSSID which triggers CSA
+ */
+struct csa_offload_params {
+	uint8_t channel;
+	uint32_t csa_chan_freq;
+	uint8_t switch_mode;
+	uint8_t sec_chan_offset;
+	uint8_t new_ch_width;
+	uint8_t new_op_class;
+	uint8_t new_ch_freq_seg1;
+	uint8_t new_ch_freq_seg2;
+	uint32_t ies_present_flag;
+	struct qdf_mac_addr bssid;
+};
 #endif /* _WLAN_CMN_IEEE80211_DEFS_H_ */

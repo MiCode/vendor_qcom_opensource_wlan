@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  *
  * Permission to use, copy, modify, and/or distribute this software for
@@ -138,27 +139,6 @@ QDF_STATUS ucfg_dfs_set_precac_enable(struct wlan_objmgr_pdev *pdev,
 	return QDF_STATUS_SUCCESS;
 }
 qdf_export_symbol(ucfg_dfs_set_precac_enable);
-
-QDF_STATUS ucfg_dfs_get_legacy_precac_enable(struct wlan_objmgr_pdev *pdev,
-					     bool *buff)
-{
-	struct wlan_dfs *dfs;
-
-	if (!tgt_dfs_is_5ghz_supported_in_pdev(pdev))
-		return QDF_STATUS_SUCCESS;
-
-	dfs = wlan_pdev_get_dfs_obj(pdev);
-	if (!dfs) {
-		dfs_err(dfs, WLAN_DEBUG_DFS_ALWAYS,  "null dfs");
-		return  QDF_STATUS_E_FAILURE;
-	}
-
-	*buff = dfs_is_legacy_precac_enabled(dfs);
-
-	return QDF_STATUS_SUCCESS;
-}
-
-qdf_export_symbol(ucfg_dfs_get_legacy_precac_enable);
 
 QDF_STATUS ucfg_dfs_get_agile_precac_enable(struct wlan_objmgr_pdev *pdev,
 					    bool *buff)

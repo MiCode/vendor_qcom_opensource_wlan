@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2014-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -197,6 +197,11 @@
 #define QDF_MON_STATUS_MPDU_FCS_BMAP_NWORDS 8
 
 /**
+ * @qdf_nbuf_queue_t - Platform independent packet queue abstraction
+ */
+typedef __qdf_nbuf_queue_t qdf_nbuf_queue_t;
+
+/**
  * This is the length for radiotap, combined length
  * (Mandatory part struct ieee80211_radiotap_header + RADIOTAP_HEADER_LEN)
  * cannot be more than available headroom_sz.
@@ -312,6 +317,8 @@
  * @add_rtap_ext2: add radiotap extension2
  * @mpdu_retry_cnt: Rx mpdu retry count
  * @punctured_bw: puntured bw
+ * @rx_user_status: pointer to mon_rx_user_status, when set update
+ * radiotap header will use userinfo from this structure.
  */
 struct mon_rx_status {
 	uint64_t tsft;
@@ -403,6 +410,7 @@ struct mon_rx_status {
 #ifdef WLAN_FEATURE_11BE
 	uint8_t punctured_bw;
 #endif
+	struct mon_rx_user_status *rx_user_status;
 };
 
 /**
@@ -414,6 +422,7 @@ struct mon_rx_status {
  * @ofdma_ru_start_index: OFDMA RU start index
  * @ofdma_ru_width: OFDMA total RU width
  * @ofdma_ru_size: OFDMA RU size index
+ * @is_ampdu: AMPDU flag
  * @mu_ul_user_v0_word0: MU UL user info word 0
  * @mu_ul_user_v0_word1: MU UL user info word 1
  * @ast_index: AST table hash index
@@ -426,9 +435,24 @@ struct mon_rx_status {
  * @data_sequence_control_info_valid: field to indicate validity of seq control
  * @first_data_seq_ctrl: Sequence ctrl field of first data frame
  * @preamble_type: Preamble type in radio header
+ * @duration: 802.11 Duration
  * @ht_flags: HT flags, only present for HT frames.
  * @vht_flags: VHT flags, only present for VHT frames.
+ * @vht_flag_values1-5: Contains corresponding data for flags field
  * @he_flags: HE (11ax) flags, only present in HE frames
+ * @he_flags1: HE flags
+ * @he_flags2: HE flags
+ * @he_RU[4]: HE RU assignment index
+ * @he_data1: HE property of received frame
+ * @he_data2: HE property of received frame
+ * @he_data3: HE property of received frame
+ * @he_data4: HE property of received frame
+ * @he_data5: HE property of received frame
+ * @he_data6: HE property of received frame
+ * @he_per_user_1: HE per user info1
+ * @he_per_user_2: HE per user info2
+ * @he_per_user_position: HE per user position info
+ * @he_per_user_known: HE per user known info
  * @rtap_flags: Bit map of available fields in the radiotap
  * @rs_flags: Flags to indicate AMPDU or AMSDU aggregation
  * @mpdu_cnt_fcs_ok: mpdu count received with fcs ok
@@ -438,6 +462,11 @@ struct mon_rx_status {
  * @mpdu_err_byte_count: mpdu byte count with fcs err
  * @sw_peer_id: software peer id
  * @retry_mpdu: mpdu retry count
+ * @start_seq: starting sequence number
+ * @ba_control: Block ack control
+ * @ba_bitmap: 256 bit block ack bitmap
+ * @tid: QoS traffic tid number
+ * @mpdu_q: user mpdu_queue used for monitor
  */
 struct mon_rx_user_status {
 	uint32_t mcs:4,
@@ -445,7 +474,8 @@ struct mon_rx_user_status {
 		 mu_ul_info_valid:1,
 		 ofdma_ru_start_index:7,
 		 ofdma_ru_width:7,
-		 ofdma_ru_size:8;
+		 ofdma_ru_size:8,
+		 is_ampdu:1;
 	uint32_t mu_ul_user_v0_word0;
 	uint32_t mu_ul_user_v0_word1;
 	uint32_t ast_index;
@@ -458,9 +488,29 @@ struct mon_rx_user_status {
 	uint8_t data_sequence_control_info_valid;
 	uint16_t first_data_seq_ctrl;
 	uint32_t preamble_type;
+	uint16_t duration;
 	uint16_t ht_flags;
 	uint16_t vht_flags;
+	uint8_t  vht_flag_values1;
+	uint8_t  vht_flag_values2;
+	uint8_t  vht_flag_values3[4];
+	uint8_t  vht_flag_values4;
+	uint8_t  vht_flag_values5;
+	uint16_t vht_flag_values6;
 	uint16_t he_flags;
+	uint16_t he_flags1;
+	uint16_t he_flags2;
+	uint8_t he_RU[4];
+	uint16_t he_data1;
+	uint16_t he_data2;
+	uint16_t he_data3;
+	uint16_t he_data4;
+	uint16_t he_data5;
+	uint16_t he_data6;
+	uint16_t he_per_user_1;
+	uint16_t he_per_user_2;
+	uint8_t he_per_user_position;
+	uint8_t he_per_user_known;
 	uint8_t rtap_flags;
 	uint8_t rs_flags;
 	uint32_t mpdu_cnt_fcs_ok;
@@ -470,6 +520,12 @@ struct mon_rx_user_status {
 	uint32_t mpdu_err_byte_count;
 	uint16_t sw_peer_id;
 	uint32_t retry_mpdu;
+	uint16_t start_seq;
+	uint16_t ba_control;
+	uint32_t ba_bitmap[32];
+	uint32_t ba_bitmap_sz;
+	uint16_t aid;
+	qdf_nbuf_queue_t mpdu_q;
 };
 
 /**
@@ -794,11 +850,6 @@ typedef __qdf_nbuf_queue_head_t qdf_nbuf_queue_head_t;
 typedef void (*qdf_dma_map_cb_t)(void *arg, qdf_nbuf_t buf,
 				 qdf_dma_map_t dmap);
 
-/**
- * @qdf_nbuf_queue_t - Platform independent packet queue abstraction
- */
-typedef __qdf_nbuf_queue_t qdf_nbuf_queue_t;
-
 /* BUS/DMA mapping routines */
 
 static inline QDF_STATUS
@@ -1094,9 +1145,56 @@ qdf_nbuf_dma_inv_range(const void *buf_start, const void *buf_end)
 	__qdf_nbuf_dma_inv_range(buf_start, buf_end);
 }
 
+/**
+ * qdf_nbuf_dma_inv_range_no_dsb() - barrierless Invalidate the specified
+ *				     virtual address range
+ * @buf_start: start address
+ * @buf_end: end address
+ *
+ * Return: none
+ */
+static inline void
+qdf_nbuf_dma_inv_range_no_dsb(const void *buf_start, const void *buf_end)
+{
+	__qdf_nbuf_dma_inv_range_no_dsb(buf_start, buf_end);
+}
+
+/**
+ * qdf_nbuf_dma_clean_range_no_dsb() - barrierless clean the specified
+ *				       virtual address range
+ * @buf_start: start address
+ * @buf_end: end address
+ *
+ * Return: none
+ */
+static inline void
+qdf_nbuf_dma_clean_range_no_dsb(const void *buf_start, const void *buf_end)
+{
+	__qdf_nbuf_dma_clean_range_no_dsb(buf_start, buf_end);
+}
+
+static inline void
+qdf_dsb(void)
+{
+	__qdf_dsb();
+}
+
 static inline int qdf_nbuf_get_num_frags(qdf_nbuf_t buf)
 {
 	return __qdf_nbuf_get_num_frags(buf);
+}
+
+/**
+ * qdf_nbuf_dma_clean_range() - Clean the specified virtual address range
+ * @buf_start: start address
+ * @buf_end: end address
+ *
+ * Return: none
+ */
+static inline void
+qdf_nbuf_dma_clean_range(const void *buf_start, const void *buf_end)
+{
+	__qdf_nbuf_dma_clean_range(buf_start, buf_end);
 }
 
 /**
@@ -1663,6 +1761,9 @@ void qdf_net_buf_debug_release_skb(qdf_nbuf_t net_buf);
 
 /* nbuf allocation rouines */
 
+#define qdf_nbuf_alloc_simple(d, s) \
+	__qdf_nbuf_alloc_simple(d, s)
+
 #define qdf_nbuf_alloc(d, s, r, a, p) \
 	qdf_nbuf_alloc_debug(d, s, r, a, p, __func__, __LINE__)
 
@@ -1688,6 +1789,9 @@ qdf_nbuf_t qdf_nbuf_alloc_debug(qdf_device_t osdev, qdf_size_t size,
 
 qdf_nbuf_t qdf_nbuf_alloc_no_recycler_debug(size_t size, int reserve, int align,
 					    const char *func, uint32_t line);
+
+#define qdf_nbuf_free_simple(d) \
+	__qdf_nbuf_free(d)
 
 #define qdf_nbuf_free(d) \
 	qdf_nbuf_free_debug(d, __func__, __LINE__)
@@ -1795,6 +1899,9 @@ qdf_net_buf_debug_update_unmap_node(qdf_nbuf_t net_buf,
 {
 }
 /* Nbuf allocation rouines */
+
+#define qdf_nbuf_alloc_simple(d, s) \
+	__qdf_nbuf_alloc_simple(d, s)
 
 #define qdf_nbuf_alloc(osdev, size, reserve, align, prio) \
 	qdf_nbuf_alloc_fl(osdev, size, reserve, align, prio, \
@@ -3961,6 +4068,18 @@ static inline qdf_size_t qdf_nbuf_get_end_offset(qdf_nbuf_t nbuf)
 	return __qdf_nbuf_get_end_offset(nbuf);
 }
 
+/**
+ * qdf_nbuf_get_truesize() - Return the true size of the nbuf
+ * including the header and variable data area
+ * @nbuf: qdf_nbuf_t
+ *
+ * Return: size of network buffer
+ */
+static inline qdf_size_t qdf_nbuf_get_truesize(qdf_nbuf_t nbuf)
+{
+	return __qdf_nbuf_get_truesize(nbuf);
+}
+
 #ifdef NBUF_FRAG_MEMORY_DEBUG
 
 #define qdf_nbuf_move_frag_page_offset(f, i, o) \
@@ -4008,6 +4127,19 @@ void qdf_nbuf_add_rx_frag_debug(qdf_frag_t buf, qdf_nbuf_t nbuf,
 				int offset, int frag_len,
 				unsigned int truesize, bool take_frag_ref,
 				const char *func, uint32_t line);
+
+#define qdf_nbuf_ref_frag(f) \
+	qdf_nbuf_ref_frag_debug(f, __func__, __LINE__)
+
+/**
+ * qdf_nbuf_ref_frag_debug() - get frag reference
+ * @buf: Frag pointer needs to be taken reference.
+ * @func: Caller function name
+ * @line: Caller function line no.
+ *
+ * Return: none
+ */
+void qdf_nbuf_ref_frag_debug(qdf_frag_t buf, const char *func, uint32_t line);
 
 /**
  * qdf_net_buf_debug_acquire_frag() - Add frag nodes to frag debug tracker
@@ -4092,6 +4224,17 @@ static inline void qdf_nbuf_add_rx_frag(qdf_frag_t buf, qdf_nbuf_t nbuf,
 			       frag_len, truesize, take_frag_ref);
 }
 
+/**
+ * qdf_nbuf_ref_frag() - get frag reference
+ * @buf: Frag pointer needs to be taken reference.
+ *
+ * Return: void
+ */
+static inline void qdf_nbuf_ref_frag(qdf_frag_t buf)
+{
+	__qdf_nbuf_ref_frag(buf);
+}
+
 static inline void qdf_net_buf_debug_acquire_frag(qdf_nbuf_t buf,
 						  const char *func,
 						  uint32_t line)
@@ -4113,6 +4256,41 @@ static inline void qdf_nbuf_frag_count_dec(qdf_nbuf_t buf)
 }
 
 #endif /* NBUF_FRAG_MEMORY_DEBUG */
+
+#define qdf_nbuf_add_frag(dev, f, n, o, f_l, t_sz, f_r, sz) \
+	qdf_nbuf_add_frag_debug(dev, f, n, o, f_l, t_sz,	\
+				f_r, sz, __func__, __LINE__)
+
+/**
+ * qdf_nbuf_add_frag_debug() - Add frag to nbuf
+ * @osdev: Device handle
+ * @buf: Frag pointer needs to be added in nbuf frag
+ * @nbuf: qdf_nbuf_t where frag will be added
+ * @offset: Offset in frag to be added to nbuf_frags
+ * @frag_len: Frag length
+ * @truesize: truesize
+ * @take_frag_ref: Whether to take ref for frag or not
+ *      This bool must be set as per below comdition:
+ *      1. False: If this frag is being added in any nbuf
+ *              for the first time after allocation
+ *      2. True: If frag is already attached part of any
+ *              nbuf
+ * @minsize: Minimum size to allocate
+ * @func: Caller function name
+ * @line: Caller function line no.
+ *
+ * if number of frag exceed maximum frag array. A new nbuf is allocated
+ * with minimum headroom and frag it added to that nbuf.
+ * new nbuf is added as frag_list to the master nbuf.
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+qdf_nbuf_add_frag_debug(qdf_device_t osdev, qdf_frag_t buf,
+			qdf_nbuf_t nbuf, int offset,
+			int frag_len, unsigned int truesize,
+			bool take_frag_ref, unsigned int minsize,
+			const char *func, uint32_t line);
 
 #ifdef MEMORY_DEBUG
 /**

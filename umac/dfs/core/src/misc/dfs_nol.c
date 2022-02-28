@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
  * Copyright (c) 2002-2010, Atheros Communications Inc.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -70,8 +70,7 @@ static void dfs_nol_elem_free_work_cb(void *context)
 			TAILQ_REMOVE(&dfs->dfs_nol_free_list, nol_head,
 				     nolelem_list);
 			WLAN_DFSNOL_UNLOCK(dfs);
-
-			qdf_timer_free(&nol_head->nol_timer);
+			qdf_hrtimer_kill(&nol_head->nol_timer);
 			qdf_mem_free(nol_head);
 		} else {
 			WLAN_DFSNOL_UNLOCK(dfs);
@@ -152,20 +151,24 @@ static void dfs_nol_delete(struct wlan_dfs *dfs,
 
 /**
  * dfs_remove_from_nol() - Remove the freq from NOL list.
+ * @arg: argument of the timer
  *
  * When NOL times out, this function removes the channel from NOL list.
  */
 #ifdef CONFIG_CHAN_FREQ_API
-static os_timer_func(dfs_remove_from_nol)
+
+static enum qdf_hrtimer_restart_status
+dfs_remove_from_nol(qdf_hrtimer_data_t *arg)
 {
 	struct dfs_nolelem *nol_arg;
 	struct wlan_dfs *dfs;
 	uint16_t delfreq;
 	uint16_t delchwidth;
 	uint8_t chan;
+	void *ptr = (void *)arg;
+	qdf_hrtimer_data_t *thr = container_of(ptr, qdf_hrtimer_data_t, u);
 
-	OS_GET_TIMER_ARG(nol_arg, struct dfs_nolelem *);
-
+	nol_arg = container_of(thr, struct dfs_nolelem, nol_timer);
 	dfs = nol_arg->nol_dfs;
 	delfreq = nol_arg->nol_freq;
 	delchwidth = nol_arg->nol_chwidth;
@@ -199,8 +202,7 @@ static os_timer_func(dfs_remove_from_nol)
 	 * of, after VAP start.
 	 */
 	if (dfs_switch_to_postnol_chan_if_nol_expired(dfs))
-		return;
-
+		return QDF_HRTIMER_NORESTART;
 	/* In case of interCAC feature, check if the user configured
 	 * desired channel is RCAC done or not.
 	 * (AP operating on an intermediate channel as desired channel
@@ -214,6 +216,7 @@ static os_timer_func(dfs_remove_from_nol)
 	if (!dfs_restart_rcac_on_nol_expiry(dfs))
 		utils_dfs_agile_sm_deliver_evt(dfs->dfs_pdev_obj,
 					       DFS_AGILE_SM_EV_AGILE_START);
+	return QDF_HRTIMER_NORESTART;
 }
 #endif
 
@@ -371,10 +374,11 @@ void dfs_nol_addchan(struct wlan_dfs *dfs,
 			dfs_debug(dfs, WLAN_DEBUG_DFS_NOL,
 				"Update OS Ticks for NOL %d MHz / %d MHz",
 				 nol->nol_freq, nol->nol_chwidth);
-
-			qdf_timer_sync_cancel(&nol->nol_timer);
-			qdf_timer_start(&nol->nol_timer,
-					dfs_nol_timeout * TIME_IN_MS);
+			qdf_hrtimer_cancel(&nol->nol_timer);
+			qdf_hrtimer_start(&nol->nol_timer,
+					  qdf_time_ms_to_ktime(
+						nol->nol_timeout_ms),
+					  QDF_HRTIMER_MODE_REL);
 			return;
 		}
 		prev = nol;
@@ -400,11 +404,12 @@ void dfs_nol_addchan(struct wlan_dfs *dfs,
 		dfs->dfs_nol = elem;
 	}
 
-	qdf_timer_init(NULL,
-		       &elem->nol_timer, dfs_remove_from_nol,
-		       elem, QDF_TIMER_TYPE_WAKE_APPS);
-
-	qdf_timer_start(&elem->nol_timer, dfs_nol_timeout * TIME_IN_MS);
+	qdf_hrtimer_init(&elem->nol_timer, dfs_remove_from_nol,
+			 QDF_CLOCK_MONOTONIC, QDF_HRTIMER_MODE_REL,
+			 QDF_CONTEXT_HARDWARE);
+	qdf_hrtimer_start(&elem->nol_timer,
+			  qdf_time_ms_to_ktime(dfs_nol_timeout * TIME_IN_MS),
+			  QDF_HRTIMER_MODE_REL);
 
 	/* Update the NOL counter. */
 	dfs->dfs_nol_count++;
@@ -526,8 +531,7 @@ void dfs_nol_timer_cleanup(struct wlan_dfs *dfs)
 					&nol_freq,
 					1,
 					DFS_NOL_RESET);
-
-			qdf_timer_free(&nol->nol_timer);
+			qdf_hrtimer_kill(&nol->nol_timer);
 			qdf_mem_free(nol);
 		} else {
 			WLAN_DFSNOL_UNLOCK(dfs);
@@ -642,7 +646,9 @@ void dfs_remove_spoof_channel_from_nol(struct wlan_dfs *dfs)
 		nol = dfs->dfs_nol;
 		while (nol) {
 			if (nol->nol_freq == freq_list[i]) {
-				OS_SET_TIMER(&nol->nol_timer, 0);
+				qdf_hrtimer_start(&nol->nol_timer,
+						  qdf_time_ms_to_ktime(0),
+						  QDF_HRTIMER_MODE_REL);
 				break;
 			}
 			nol = nol->nol_next;

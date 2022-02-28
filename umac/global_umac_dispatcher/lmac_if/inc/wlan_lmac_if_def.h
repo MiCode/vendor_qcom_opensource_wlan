@@ -90,6 +90,9 @@ struct dbr_module_config;
 #ifdef WLAN_FEATURE_11BE_MLO
 #include "wlan_mlo_mgr_public_structs.h"
 #endif
+#if defined(WLAN_SUPPORT_TWT) && defined(WLAN_TWT_CONV_SUPPORTED)
+#include "wlan_twt_public_structs.h"
+#endif
 
 #ifdef QCA_SUPPORT_CP_STATS
 #include <wlan_cp_stats_public_structs.h>
@@ -188,6 +191,10 @@ struct wlan_lmac_if_cp_stats_rx_ops {
 	QDF_STATUS (*process_big_data_stats_event)(
 					struct wlan_objmgr_psoc *psoc,
 					stats_big_data_stats_event *ev);
+#endif
+#if defined(WLAN_SUPPORT_TWT) && defined(WLAN_TWT_CONV_SUPPORTED)
+	QDF_STATUS (*twt_get_session_param_resp)(struct wlan_objmgr_psoc *psoc,
+					struct twt_session_stats_info *params);
 #endif
 };
 #endif
@@ -498,6 +505,9 @@ struct wlan_lmac_if_mlme_tx_ops {
 					      uint8_t grp_id);
 	QDF_STATUS (*target_if_mlo_ready)(struct wlan_objmgr_pdev **pdev,
 					  uint8_t num_pdevs);
+	QDF_STATUS (*target_if_mlo_teardown_req)(struct wlan_objmgr_pdev **pdev,
+						 uint8_t num_pdevs,
+						 uint32_t grp_id);
 #endif
 #ifdef WLAN_FEATURE_DYNAMIC_MAC_ADDR_UPDATE
 QDF_STATUS (*vdev_send_set_mac_addr)(struct qdf_mac_addr mac_addr,
@@ -1030,6 +1040,8 @@ struct wlan_lmac_if_reg_tx_ops {
 				(struct wlan_objmgr_psoc *psoc, void *arg);
 	QDF_STATUS (*trigger_acs_for_afc)(struct wlan_objmgr_pdev *pdev);
 #endif
+	bool (*is_chip_11be)(struct wlan_objmgr_psoc *psoc,
+			     uint16_t phy_id);
 };
 
 /**
@@ -1304,6 +1316,75 @@ struct wlan_lmac_if_mlo_rx_ops {
 };
 #endif
 
+#if defined(WLAN_SUPPORT_TWT) && defined(WLAN_TWT_CONV_SUPPORTED)
+/**
+ * struct wlan_lmac_if_twt_tx_ops - defines southbound tx callbacks for
+ * TWT (Target Wake Time) component
+ * @enable_req: function pointer to send TWT enable command to FW
+ * @disable_req: function pointer to send TWT disable command to FW
+ * @setup_req: function pointer to send TWT add dialog command to FW
+ * @teardown_req: function pointer to send TWT delete dialog command to FW
+ * @pause_req: function pointer to send TWT pause dialog command to FW
+ * @resume_req: function pointer to send TWT resume dialog command to FW
+ * @nudge_req: function pointer to send TWT nudge dialog command to FW
+ * @register_events: function pointer to register events from FW
+ * @deregister_events: function pointer to deregister events from FW
+ */
+struct wlan_lmac_if_twt_tx_ops {
+	QDF_STATUS (*enable_req)(struct wlan_objmgr_psoc *psoc,
+				 struct twt_enable_param *params);
+	QDF_STATUS (*disable_req)(struct wlan_objmgr_psoc *psoc,
+				 struct twt_disable_param *params);
+	QDF_STATUS (*setup_req)(struct wlan_objmgr_psoc *psoc,
+				 struct twt_add_dialog_param *params);
+	QDF_STATUS (*teardown_req)(struct wlan_objmgr_psoc *psoc,
+				 struct twt_del_dialog_param *params);
+	QDF_STATUS (*pause_req)(struct wlan_objmgr_psoc *psoc,
+				 struct twt_pause_dialog_cmd_param *params);
+	QDF_STATUS (*resume_req)(struct wlan_objmgr_psoc *psoc,
+				 struct twt_resume_dialog_cmd_param *params);
+	QDF_STATUS (*nudge_req)(struct wlan_objmgr_psoc *psoc,
+				 struct twt_nudge_dialog_cmd_param *params);
+	QDF_STATUS (*register_events)(struct wlan_objmgr_psoc *psoc);
+	QDF_STATUS (*deregister_events)(struct wlan_objmgr_psoc *psoc);
+};
+
+/**
+ * struct wlan_lmac_if_twt_rx_ops - defines southbound xx callbacks for
+ * TWT (Target Wake Time) component
+ * @twt_enable_comp_cb: function pointer to process TWT enable event
+ * @twt_disable_comp_cb: function pointer to process TWT disable event
+ * @twt_setup_comp_cb: function pointer to process TWT add dialog event
+ * @twt_teardown_comp_cb: function pointer to process TWT del dialog event
+ * @twt_pause_comp_cb: function pointer to process TWT pause dialog event
+ * @twt_resume_comp_cb: function pointer to process TWT resume dialog
+ * event
+ * @twt_nudge_comp_cb: function pointer to process TWT nudge dialog event
+ * @twt_notify_comp_cb: function pointer to process TWT notify event
+ * @twt_ack_comp_cb: function pointer to process TWT ack event
+ */
+struct wlan_lmac_if_twt_rx_ops {
+	QDF_STATUS (*twt_enable_comp_cb)(struct wlan_objmgr_psoc *psoc,
+			struct twt_enable_complete_event_param *event);
+	QDF_STATUS (*twt_disable_comp_cb)(struct wlan_objmgr_psoc *psoc,
+			struct twt_disable_complete_event_param *event);
+	QDF_STATUS (*twt_setup_comp_cb)(struct wlan_objmgr_psoc *psoc,
+			struct twt_add_dialog_complete_event *event);
+	QDF_STATUS (*twt_teardown_comp_cb)(struct wlan_objmgr_psoc *psoc,
+			struct twt_del_dialog_complete_event_param *event);
+	QDF_STATUS (*twt_pause_comp_cb)(struct wlan_objmgr_psoc *psoc,
+			struct twt_pause_dialog_complete_event_param *event);
+	QDF_STATUS (*twt_resume_comp_cb)(struct wlan_objmgr_psoc *psoc,
+			struct twt_resume_dialog_complete_event_param *event);
+	QDF_STATUS (*twt_nudge_comp_cb)(struct wlan_objmgr_psoc *psoc,
+			struct twt_nudge_dialog_complete_event_param *event);
+	QDF_STATUS (*twt_notify_comp_cb)(struct wlan_objmgr_psoc *psoc,
+			struct twt_notify_event_param *event);
+	QDF_STATUS (*twt_ack_comp_cb)(struct wlan_objmgr_psoc *psoc,
+			struct twt_ack_complete_event_param *params);
+};
+#endif
+
 /**
  * struct wlan_lmac_if_tx_ops - south bound tx function pointers
  * @mgmt_txrx_tx_ops: mgmt txrx tx ops
@@ -1403,6 +1484,10 @@ struct wlan_lmac_if_tx_ops {
 #ifdef IPA_OFFLOAD
 	struct wlan_lmac_if_ipa_tx_ops ipa_ops;
 #endif
+
+#if defined(WLAN_SUPPORT_TWT) && defined(WLAN_TWT_CONV_SUPPORTED)
+	struct wlan_lmac_if_twt_tx_ops twt_tx_ops;
+#endif
 };
 
 /**
@@ -1475,17 +1560,19 @@ struct wlan_lmac_if_reg_rx_ops {
 	QDF_STATUS (*reg_set_chan_144)(struct wlan_objmgr_pdev *pdev,
 			bool enable_ch_144);
 	bool (*reg_get_chan_144)(struct wlan_objmgr_pdev *pdev);
+#ifdef WLAN_REG_PARTIAL_OFFLOAD
 	QDF_STATUS (*reg_program_default_cc)(struct wlan_objmgr_pdev *pdev,
 			uint16_t regdmn);
 	QDF_STATUS (*reg_get_current_regdomain)(struct wlan_objmgr_pdev *pdev,
 			struct cur_regdmn_info *cur_regdmn);
+#endif
 	QDF_STATUS (*reg_enable_dfs_channels)(struct wlan_objmgr_pdev *pdev,
 					      bool dfs_enable);
 	QDF_STATUS (*reg_modify_pdev_chan_range)(struct
 						 wlan_objmgr_pdev *pdev);
 	QDF_STATUS
 	(*reg_update_pdev_wireless_modes)(struct wlan_objmgr_pdev *pdev,
-					  uint32_t wireless_modes);
+					  uint64_t wireless_modes);
 	bool
 	(*reg_is_range_only6g)(qdf_freq_t low_freq, qdf_freq_t high_freq);
 	bool
@@ -1850,18 +1937,6 @@ struct wlan_lmac_if_dfs_rx_ops {
 	QDF_STATUS (*dfs_is_precac_timer_running)(struct wlan_objmgr_pdev *pdev,
 						  bool *is_precac_timer_running
 						  );
-#ifdef CONFIG_CHAN_FREQ_API
-	QDF_STATUS
-	    (*dfs_find_vht80_chan_for_precac_for_freq)(struct wlan_objmgr_pdev
-						       *pdev,
-						       uint32_t chan_mode,
-						       uint16_t ch_freq_seg1,
-						       uint32_t *cfreq1,
-						       uint32_t *cfreq2,
-						       uint32_t *phy_mode,
-						       bool *dfs_set_cfreq2,
-						       bool *set_agile);
-#endif
 	QDF_STATUS (*dfs_agile_precac_start)(struct wlan_objmgr_pdev *pdev);
 	QDF_STATUS (*dfs_set_agile_precac_state)(struct wlan_objmgr_pdev *pdev,
 						 int agile_precac_state);
@@ -1876,9 +1951,6 @@ struct wlan_lmac_if_dfs_rx_ops {
 			int precac_timeout);
 	QDF_STATUS (*dfs_set_precac_enable)(struct wlan_objmgr_pdev *pdev,
 			uint32_t value);
-	QDF_STATUS
-	(*dfs_get_legacy_precac_enable)(struct wlan_objmgr_pdev *pdev,
-					bool *buff);
 	QDF_STATUS (*dfs_get_agile_precac_enable)(struct wlan_objmgr_pdev *pdev,
 						  bool *buff);
 #ifdef WLAN_DFS_PRECAC_AUTO_CHAN_SUPPORT
@@ -1930,8 +2002,10 @@ struct wlan_lmac_if_dfs_rx_ops {
 	QDF_STATUS (*dfs_is_phyerr_filter_offload)(
 			struct wlan_objmgr_psoc *psoc,
 			bool *is_phyerr_filter_offload);
+#if defined(WLAN_DFS_PARTIAL_OFFLOAD) && defined(HOST_DFS_SPOOF_TEST)
 	QDF_STATUS (*dfs_action_on_status)(struct wlan_objmgr_pdev *pdev,
 			u_int32_t *dfs_status_check);
+#endif
 	QDF_STATUS (*dfs_override_status_timeout)(
 			struct wlan_objmgr_pdev *pdev,
 			int status_timeout);
@@ -2022,6 +2096,8 @@ struct wlan_lmac_if_dfs_rx_ops {
  *                                  command
  * @vdev_mgr_set_max_channel_switch_time: Set max channel switch time for the
  * given vdev list.
+ * @vdev_mgr_quiet_offload: handle quiet status for given link mac addr or
+ * mld addr and link id.
  */
 struct wlan_lmac_if_mlme_rx_ops {
 	QDF_STATUS (*vdev_mgr_start_response)(
@@ -2058,6 +2134,11 @@ struct wlan_lmac_if_mlme_rx_ops {
 	void (*vdev_mgr_set_max_channel_switch_time)
 		(struct wlan_objmgr_psoc *psoc,
 		 uint32_t *vdev_ids, uint32_t num_vdevs);
+#ifdef WLAN_FEATURE_11BE_MLO
+	QDF_STATUS (*vdev_mgr_quiet_offload)(
+			struct wlan_objmgr_psoc *psoc,
+			struct vdev_sta_quiet_event *quiet_event);
+#endif
 };
 
 #ifdef WLAN_SUPPORT_GREEN_AP
@@ -2141,6 +2222,9 @@ struct wlan_lmac_if_rx_ops {
 	struct wlan_lmac_if_son_rx_ops son_rx_ops;
 #ifdef WLAN_FEATURE_11BE_MLO
 	struct wlan_lmac_if_mlo_rx_ops mlo_rx_ops;
+#endif
+#if defined(WLAN_SUPPORT_TWT) && defined(WLAN_TWT_CONV_SUPPORTED)
+	struct wlan_lmac_if_twt_rx_ops twt_rx_ops;
 #endif
 };
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2019, 2022 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2019, 2021 The Linux Foundation. All rights reserved.
  * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for

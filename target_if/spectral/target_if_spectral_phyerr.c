@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2011,2017-2021 The Linux Foundation. All rights reserved.
- *
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1123,8 +1123,10 @@ target_if_populate_fft_bins_info(struct target_if_spectral *spectral,
 		}
 		dest_det_info->dest_start_bin_idx = start_bin;
 		dest_det_info->dest_end_bin_idx =
-					dest_det_info->dest_start_bin_idx +
-					num_fft_bins - 1;
+					dest_det_info->dest_start_bin_idx;
+		if (num_fft_bins > 0)
+			dest_det_info->dest_end_bin_idx += (num_fft_bins - 1);
+
 		if (dest_det_info->lb_extrabins_num) {
 			if (is_ch_width_160_or_80p80(ch_width)) {
 				dest_det_info->lb_extrabins_start_idx =

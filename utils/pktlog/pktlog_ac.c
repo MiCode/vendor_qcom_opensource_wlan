@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -57,7 +57,7 @@ wdi_event_subscribe PKTLOG_SW_EVENT_SUBSCRIBER;
 wdi_event_subscribe PKTLOG_LITE_T2H_SUBSCRIBER;
 wdi_event_subscribe PKTLOG_LITE_RX_SUBSCRIBER;
 wdi_event_subscribe PKTLOG_OFFLOAD_SUBSCRIBER;
-#ifdef QCA_WIFI_QCN9224
+#ifdef BE_PKTLOG_SUPPORT
 wdi_event_subscribe PKTLOG_HYBRID_SUBSCRIBER;
 #endif
 

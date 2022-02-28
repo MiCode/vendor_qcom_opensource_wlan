@@ -355,6 +355,18 @@ static const uint32_t pdev_param_tlv[] = {
 					WMI_PDEV_PARAM_SCAN_RADIO_TX_ON_DFS,
 	[wmi_pdev_param_en_probe_all_bw] =
 			WMI_PDEV_PARAM_EN_PROBE_ALL_BW,
+	[wmi_pdev_param_obss_min_duration_check_for_sr] =
+			WMI_PDEV_PARAM_OBSS_MIN_DURATION_CHECK_FOR_SR,
+	[wmi_pdev_param_truncate_sr] = WMI_PDEV_PARAM_TRUNCATE_SR,
+	[wmi_pdev_param_ctrl_frame_obss_pd_threshold] =
+			WMI_PDEV_PARAM_CTRL_FRAME_OBSS_PD_THRESHOLD,
+	[wmi_pdev_param_rate_upper_cap] = WMI_PDEV_PARAM_RATE_UPPER_CAP,
+	[wmi_pdev_param_rate_retry_mcs_drop] =
+		WMI_PDEV_PARAM_SET_RATE_DROP_DOWN_RETRY_THRESH,
+	[wmi_pdev_param_mcs_probe_intvl] =
+		WMI_PDEV_PARAM_MIN_MAX_MCS_PROBE_INTERVAL,
+	[wmi_pdev_param_nss_probe_intvl] =
+		WMI_PDEV_PARAM_MIN_MAX_NSS_PROBE_INTERVAL,
 };
 
 /**
@@ -565,7 +577,7 @@ static const uint32_t pktlog_event_tlv[] =  {
 	[WMI_HOST_PKTLOG_EVENT_TX_DATA_CAPTURE_BIT] = 0,
 	[WMI_HOST_PKTLOG_EVENT_PHY_LOGGING_BIT] = WMI_PKTLOG_EVENT_PHY,
 	[WMI_HOST_PKTLOG_EVENT_CBF_BIT] = WMI_PKTLOG_EVENT_CBF,
-#ifdef QCA_WIFI_QCN9224
+#ifdef BE_PKTLOG_SUPPORT
 	[WMI_HOST_PKTLOG_EVENT_HYBRID_TX_BIT] = WMI_PKTLOG_EVENT_HYBRID_TX,
 #endif
 };
@@ -5221,6 +5233,40 @@ static QDF_STATUS send_nlo_mawc_cmd_tlv(wmi_unified_t wmi_handle,
 }
 
 /**
+ * wmi_dump_pno_scan_freq_list() - dump frequency list associated with pno
+ * scan
+ * @scan_freq_list: frequency list for pno scan
+ *
+ * Return: void
+ */
+static void wmi_dump_pno_scan_freq_list(struct chan_list *scan_freq_list)
+{
+	uint32_t i;
+	uint8_t info[WMI_MAX_CHAN_INFO_LOG];
+	uint32_t len = 0;
+	struct chan_info *chan_info;
+	int ret;
+
+	wmi_debug("[PNO_SCAN] Total freq %d", scan_freq_list->num_chan);
+	for (i = 0; i < scan_freq_list->num_chan; i++) {
+		chan_info = &scan_freq_list->chan[i];
+		ret = qdf_scnprintf(info + len, sizeof(info) - len,
+				    " %d[%d]", chan_info->freq,
+				    chan_info->flags);
+		if (ret <= 0)
+			break;
+		len += ret;
+		if (len >= (sizeof(info) - 20)) {
+			wmi_nofl_debug("Freq[flag]:%s",
+				       info);
+			len = 0;
+		}
+	}
+	if (len)
+		wmi_nofl_debug("Freq[flag]:%s", info);
+}
+
+/**
  * send_pno_start_cmd_tlv() - PNO start request
  * @wmi_handle: wmi handle
  * @pno: PNO request
@@ -5235,6 +5281,7 @@ static QDF_STATUS send_pno_start_cmd_tlv(wmi_unified_t wmi_handle,
 	nlo_configured_parameters *nlo_list;
 	uint32_t *channel_list;
 	int32_t len;
+	qdf_freq_t freq;
 	wmi_buf_t buf;
 	uint8_t *buf_ptr;
 	uint8_t i;
@@ -5254,7 +5301,7 @@ static QDF_STATUS send_pno_start_cmd_tlv(wmi_unified_t wmi_handle,
 		WMI_TLV_HDR_SIZE + WMI_TLV_HDR_SIZE + WMI_TLV_HDR_SIZE +
 		WMI_TLV_HDR_SIZE + WMI_TLV_HDR_SIZE;
 
-	len += sizeof(uint32_t) * pno->networks_list[0].channel_cnt;
+	len += sizeof(uint32_t) * pno->networks_list[0].pno_chan_list.num_chan;
 	len += sizeof(nlo_configured_parameters) *
 	       QDF_MIN(pno->networks_cnt, WMI_NLO_MAX_SSIDS);
 	len += sizeof(nlo_channel_prediction_cfg);
@@ -5341,20 +5388,28 @@ static QDF_STATUS send_pno_start_cmd_tlv(wmi_unified_t wmi_handle,
 	buf_ptr += cmd->no_of_ssids * sizeof(nlo_configured_parameters);
 
 	/* Copy channel info */
-	cmd->num_of_channels = pno->networks_list[0].channel_cnt;
+	cmd->num_of_channels = pno->networks_list[0].pno_chan_list.num_chan;
 	WMITLV_SET_HDR(buf_ptr, WMITLV_TAG_ARRAY_UINT32,
 		       (cmd->num_of_channels * sizeof(uint32_t)));
 	buf_ptr += WMI_TLV_HDR_SIZE;
 
 	channel_list = (uint32_t *) buf_ptr;
 	for (i = 0; i < cmd->num_of_channels; i++) {
-		channel_list[i] = pno->networks_list[0].channels[i];
+		TARGET_SET_FREQ_IN_CHAN_LIST_TLV(channel_list[i],
+			pno->networks_list[0].pno_chan_list.chan[i].freq);
 
-		if (channel_list[i] < WMI_NLO_FREQ_THRESH)
-			channel_list[i] =
-				wlan_chan_to_freq(pno->
-					networks_list[0].channels[i]);
+		if (channel_list[i] < WMI_NLO_FREQ_THRESH) {
+			freq = pno->networks_list[0].pno_chan_list.chan[i].freq;
+			TARGET_SET_FREQ_IN_CHAN_LIST_TLV(channel_list[i],
+						     wlan_chan_to_freq(freq));
+		}
+
+		TARGET_SET_FLAGS_IN_CHAN_LIST_TLV(channel_list[i],
+		     pno->networks_list[0].pno_chan_list.chan[i].flags);
 	}
+
+	wmi_dump_pno_scan_freq_list(&pno->networks_list[0].pno_chan_list);
+
 	buf_ptr += cmd->num_of_channels * sizeof(uint32_t);
 	WMITLV_SET_HDR(buf_ptr, WMITLV_TAG_ARRAY_STRUC,
 			sizeof(nlo_channel_prediction_cfg));
@@ -7872,6 +7927,12 @@ void wmi_copy_resource_config(wmi_resource_config *resource_cfg,
 		WMI_SET_BITS(resource_cfg->flags2, 0, 4,
 			     tgt_res_cfg->re_ul_resp);
 
+	/*
+	 * Enable Service Aware Wifi
+	 */
+	if (tgt_res_cfg->sawf)
+		WMI_RSRC_CFG_FLAGS2_SAWF_CONFIG_ENABLE_SET(resource_cfg->flags2,
+							   tgt_res_cfg->sawf);
 
 	/*
 	 * Enable ast flow override per peer
@@ -16985,6 +17046,53 @@ static QDF_STATUS extract_update_mac_address_event_tlv(
 }
 #endif
 
+#ifdef WLAN_FEATURE_11BE_MLO
+/**
+ * extract_quiet_offload_event_tlv() - extract quiet offload event
+ * @wmi_handle: WMI handle
+ * @evt_buf: event buffer
+ * @mld_mac: mld mac address
+ * @link_mac: link mac address
+ * @link_id: link id
+ * @quiet_status: quiet is started or stopped
+ *
+ * Return: QDF_STATUS
+ */
+static QDF_STATUS extract_quiet_offload_event_tlv(
+				wmi_unified_t wmi_handle, void *evt_buf,
+				struct vdev_sta_quiet_event *quiet_event)
+{
+	WMI_QUIET_HANDLING_EVENTID_param_tlvs *param_buf;
+	wmi_quiet_event_fixed_param *event;
+
+	param_buf = (WMI_QUIET_HANDLING_EVENTID_param_tlvs *)evt_buf;
+
+	event = param_buf->fixed_param;
+
+	if (!(event->mld_mac_address_present && event->linkid_present) &&
+	    !event->link_mac_address_present) {
+		wmi_err("Invalid sta quiet offload event. present bit: mld mac %d link mac %d linkid %d",
+			event->mld_mac_address_present,
+			event->linkid_present,
+			event->link_mac_address_present);
+		return QDF_STATUS_E_INVAL;
+	}
+
+	if (event->mld_mac_address_present)
+		WMI_MAC_ADDR_TO_CHAR_ARRAY(&event->mld_mac_address,
+					   quiet_event->mld_mac.bytes);
+	if (event->link_mac_address_present)
+		WMI_MAC_ADDR_TO_CHAR_ARRAY(&event->link_mac_address,
+					   quiet_event->link_mac.bytes);
+	if (event->linkid_present)
+		quiet_event->link_id = event->linkid;
+	quiet_event->quiet_status = (event->quiet_status ==
+				     WMI_QUIET_EVENT_START);
+
+	return QDF_STATUS_SUCCESS;
+}
+#endif
+
 struct wmi_ops tlv_ops =  {
 	.send_vdev_create_cmd = send_vdev_create_cmd_tlv,
 	.send_vdev_delete_cmd = send_vdev_delete_cmd_tlv,
@@ -17406,6 +17514,11 @@ struct wmi_ops tlv_ops =  {
 	.send_set_mac_address_cmd = send_set_mac_address_cmd_tlv,
 	.extract_update_mac_address_event =
 					extract_update_mac_address_event_tlv,
+#endif
+
+#ifdef WLAN_FEATURE_11BE_MLO
+	.extract_quiet_offload_event =
+				extract_quiet_offload_event_tlv,
 #endif
 };
 
@@ -17848,6 +17961,10 @@ event_ids[wmi_roam_scan_chan_list_id] =
 #ifdef WLAN_FEATURE_DYNAMIC_MAC_ADDR_UPDATE
 	event_ids[wmi_vdev_update_mac_addr_conf_eventid] =
 			WMI_VDEV_UPDATE_MAC_ADDR_CONF_EVENTID;
+#endif
+#ifdef WLAN_FEATURE_11BE_MLO
+	event_ids[wmi_vdev_quiet_offload_eventid] =
+			WMI_QUIET_HANDLING_EVENTID;
 #endif
 }
 
@@ -18294,6 +18411,20 @@ static void populate_tlv_service(uint32_t *wmi_service)
 #endif
 	wmi_service[wmi_service_probe_all_bw_support] =
 			WMI_SERVICE_PROBE_ALL_BW_SUPPORT;
+	wmi_service[wmi_service_pno_scan_conf_per_ch_support] =
+			WMI_SERVICE_PNO_SCAN_CONFIG_PER_CHANNEL;
+#ifdef QCA_UNDECODED_METADATA_SUPPORT
+	wmi_service[wmi_service_fp_phy_err_filter_support] =
+			WMI_SERVICE_FP_PHY_ERR_FILTER_SUPPORT;
+#endif
+#ifdef WLAN_FEATURE_11BE_MLO
+	wmi_service[wmi_service_mlo_sta_nan_ndi_support] =
+			WMI_SERVICE_MLO_STA_NAN_NDI_SUPPORT;
+#endif
+	wmi_service[wmi_service_pdev_rate_config_support] =
+			WMI_SERVICE_PDEV_RATE_CONFIG_SUPPORT;
+	wmi_service[wmi_service_multi_peer_group_cmd_support] =
+			WMI_SERVICE_MULTIPLE_PEER_GROUP_CMD_SUPPORT;
 }
 
 /**

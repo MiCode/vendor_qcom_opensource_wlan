@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -220,14 +221,14 @@ static void dp_rx_desc_nbuf_cleanup(struct dp_soc *soc,
 			dp_info_rl("Unable to unmap nbuf: %pK", nbuf);
 		qdf_nbuf_unmap_nbytes_single(soc->osdev, nbuf,
 					     QDF_DMA_BIDIRECTIONAL, buf_size);
-		qdf_nbuf_free(nbuf);
+		dp_rx_nbuf_free(nbuf);
 		nbuf = next;
 	}
 
 	nbuf = nbuf_free_list;
 	while (nbuf) {
 		next = nbuf->next;
-		qdf_nbuf_free(nbuf);
+		dp_rx_nbuf_free(nbuf);
 		nbuf = next;
 	}
 }
@@ -410,17 +411,10 @@ void dp_rx_desc_nbuf_and_pool_free(struct dp_soc *soc, uint32_t pool_id,
 			nbuf = rx_desc_pool->array[i].rx_desc.nbuf;
 
 			if (!(rx_desc_pool->array[i].rx_desc.unmapped)) {
-				dp_ipa_handle_rx_buf_smmu_mapping(
-							soc, nbuf,
-							rx_desc_pool->buf_size,
-							false);
-				qdf_nbuf_unmap_nbytes_single(
-							soc->osdev, nbuf,
-							QDF_DMA_FROM_DEVICE,
-							rx_desc_pool->buf_size);
+				dp_rx_nbuf_unmap_pool(soc, rx_desc_pool, nbuf);
 				rx_desc_pool->array[i].rx_desc.unmapped = 1;
 			}
-			qdf_nbuf_free(nbuf);
+			dp_rx_nbuf_free(nbuf);
 		}
 	}
 	qdf_mem_free(rx_desc_pool->array);
@@ -440,17 +434,10 @@ void dp_rx_desc_nbuf_free(struct dp_soc *soc,
 			nbuf = rx_desc_pool->array[i].rx_desc.nbuf;
 
 			if (!(rx_desc_pool->array[i].rx_desc.unmapped)) {
-				dp_ipa_handle_rx_buf_smmu_mapping(
-						soc, nbuf,
-						rx_desc_pool->buf_size,
-						false);
-				qdf_nbuf_unmap_nbytes_single(
-							soc->osdev, nbuf,
-							QDF_DMA_FROM_DEVICE,
-							rx_desc_pool->buf_size);
+				dp_rx_nbuf_unmap_pool(soc, rx_desc_pool, nbuf);
 				rx_desc_pool->array[i].rx_desc.unmapped = 1;
 			}
-			qdf_nbuf_free(nbuf);
+			dp_rx_nbuf_free(nbuf);
 		}
 	}
 	qdf_spin_unlock_bh(&rx_desc_pool->lock);

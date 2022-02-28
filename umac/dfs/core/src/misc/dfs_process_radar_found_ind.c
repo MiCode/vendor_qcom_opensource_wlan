@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2017-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -361,34 +361,25 @@ dfs_compute_radar_found_cfreq(struct wlan_dfs *dfs,
 	} else if (!radar_found->segment_id) {
 		*freq_center = curchan->dfs_ch_mhz_freq_seg1;
 	} else {
-	    /* Radar found on secondary segment by the HW when
-	     * preCAC was running. It (dfs_precac_enable) is specific to
-	     * legacy chips.
-	     */
-		if (dfs_is_precac_timer_running(dfs) &&
-			dfs_is_legacy_precac_enabled(dfs)) {
-			*freq_center = dfs->dfs_precac_secondary_freq_mhz;
-		} else {
-		    /* Radar found on secondary segment by the HW, when preCAC
-		     * was not running in legacy chips or preCAC was running
-		     * in Lithium chips.
-		     */
-			*freq_center = curchan->dfs_ch_mhz_freq_seg2;
-			if (WLAN_IS_CHAN_MODE_160(curchan)) {
-				/* If center frequency of entire 160 band
-				 * is less than center frequency of primary
-				 * segment, then the center frequency of
-				 * secondary segment is -40 of center
-				 * frequency of entire 160 segment.
-				 */
-				if (curchan->dfs_ch_mhz_freq_seg2 <
-				    curchan->dfs_ch_mhz_freq_seg1)
-					*freq_center -=
-						DFS_160MHZ_SECOND_SEG_OFFSET;
-				else
-					*freq_center +=
-						DFS_160MHZ_SECOND_SEG_OFFSET;
-			}
+		/* Radar found on secondary segment by the HW, when preCAC
+		 * was not running in legacy chips or preCAC was running
+		 * in Lithium chips.
+		 */
+		*freq_center = curchan->dfs_ch_mhz_freq_seg2;
+		if (WLAN_IS_CHAN_MODE_160(curchan)) {
+			/* If center frequency of entire 160 band
+			 * is less than center frequency of primary
+			 * segment, then the center frequency of
+			 * secondary segment is -40 of center
+			 * frequency of entire 160 segment.
+			 */
+			if (curchan->dfs_ch_mhz_freq_seg2 <
+			    curchan->dfs_ch_mhz_freq_seg1)
+				*freq_center -=
+					DFS_160MHZ_SECOND_SEG_OFFSET;
+			else
+				*freq_center +=
+					DFS_160MHZ_SECOND_SEG_OFFSET;
 		}
 	}
 }
@@ -744,17 +735,8 @@ uint8_t dfs_get_bonding_channels_for_freq(struct wlan_dfs *dfs,
 		center_freq = curchan->dfs_ch_mhz_freq_seg2;
 	else if (!segment_id)
 		center_freq = curchan->dfs_ch_mhz_freq_seg1;
-	else {
-		/* When precac is running "dfs_ch_vhtop_ch_freq_seg2" is
-		 * zero and "dfs_precac_secondary_freq" holds the secondary
-		 * frequency.
-		 */
-		if (dfs_is_legacy_precac_enabled(dfs) &&
-		    dfs_is_precac_timer_running(dfs))
-			center_freq = dfs->dfs_precac_secondary_freq_mhz;
-		else
-			center_freq = curchan->dfs_ch_mhz_freq_seg2;
-	}
+	else
+		center_freq = curchan->dfs_ch_mhz_freq_seg2;
 
 	if (WLAN_IS_CHAN_MODE_20(curchan)) {
 		nchannels = 1;
@@ -1021,17 +1003,12 @@ bool dfs_is_radarsource_agile(struct wlan_dfs *dfs,
 	      dfs_is_precac_timer_running(dfs)) ||
 	     dfs_is_agile_rcac_enabled(dfs)) &&
 	    (radar_found->detector_id == dfs_get_agile_detector_id(dfs));
-	bool is_radar_from_zero_wait_dfs =
-	    (dfs_is_legacy_precac_enabled(dfs) &&
-	     dfs_is_precac_timer_running(dfs) &&
-	     (radar_found->segment_id == SEG_ID_SECONDARY));
 
 	dfs_debug(dfs, WLAN_DEBUG_DFS_AGILE,
-		  "radar on PreCAC segment: ADFS:%d Zero Wait DFS:%d",
-		  is_radar_from_agile_dfs,
-		  is_radar_from_zero_wait_dfs);
+		  "radar on PreCAC segment: ADFS:%d",
+		  is_radar_from_agile_dfs);
 
-	return (is_radar_from_agile_dfs || is_radar_from_zero_wait_dfs);
+	return is_radar_from_agile_dfs;
 }
 #else
 static

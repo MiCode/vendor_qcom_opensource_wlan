@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2013, 2016-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  * Copyright (c) 2002-2010, Atheros Communications Inc.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -447,12 +448,26 @@ static inline void dfs_confirm_radar_check(
 	}
 }
 
-void __dfs_process_radarevent(struct wlan_dfs *dfs,
-		struct dfs_filtertype *ft,
-		struct dfs_event *re,
-		uint64_t this_ts,
-		int *found,
-		int *false_radar_found)
+/*
+ * __dfs_process_radarevent() - Continuation of process a radar event function.
+ * @dfs: Pointer to wlan_dfs structure.
+ * @ft: Pointer to dfs_filtertype structure.
+ * @re: Pointer to dfs_event structure.
+ * @this_ts: Timestamp.
+ *
+ * There is currently no way to specify that a radar event has occurred on
+ * a specific channel, so the current methodology is to mark both the pri
+ * and ext channels as being unavailable.  This should be fixed for 802.11ac
+ * or we'll quickly run out of valid channels to use.
+ *
+ * Return: If a radar event is found, return 1.  Otherwise, return 0.
+ */
+static void __dfs_process_radarevent(struct wlan_dfs *dfs,
+				     struct dfs_filtertype *ft,
+				     struct dfs_event *re,
+				     uint64_t this_ts,
+				     int *found,
+				     int *false_radar_found)
 {
 	int p;
 	uint64_t deltaT = 0;
@@ -1405,50 +1420,41 @@ void dfs_radarfound_action_generic(struct wlan_dfs *dfs, uint8_t seg_id)
 	qdf_mem_free(radar_found);
 }
 
-void dfs_radar_found_action(struct wlan_dfs *dfs,
-			    bool bangradar,
-			    uint8_t seg_id)
+#if defined(WLAN_DFS_PARTIAL_OFFLOAD) && defined(HOST_DFS_SPOOF_TEST)
+static bool dfs_is_spoof_needed(struct wlan_dfs *dfs)
+{
+	return ((utils_get_dfsdomain(dfs->dfs_pdev_obj) == DFS_FCC_DOMAIN) &&
+		(lmac_is_host_dfs_check_support_enabled(dfs->dfs_pdev_obj)) &&
+		(dfs->dfs_spoof_test_done ? dfs->dfs_use_nol : 1));
+}
+#else
+static inline bool dfs_is_spoof_needed(struct wlan_dfs *dfs)
+{
+	return false;
+}
+#endif
+
+/**
+ * dfs_radar_found_action() - Radar found action
+ * @dfs: Pointer to wlan_dfs structure.
+ * @bangradar: true if radar is due to bangradar command.
+ * @seg_id: Segment id.
+ */
+static void dfs_radar_found_action(struct wlan_dfs *dfs,
+				   bool bangradar,
+				   uint8_t seg_id)
 {
 	/* If Host DFS confirmation is supported, save the curchan as
 	 * radar found chan, send radar found indication along with
 	 * average radar parameters to FW and start the host status
 	 * wait timer.
 	 */
-	if (!bangradar &&
-	   (utils_get_dfsdomain(dfs->dfs_pdev_obj) == DFS_FCC_DOMAIN) &&
-	   lmac_is_host_dfs_check_support_enabled(dfs->dfs_pdev_obj) &&
-	   (dfs->dfs_spoof_test_done ? dfs->dfs_use_nol : 1)) {
+	if (!bangradar && dfs_is_spoof_needed(dfs)) {
 		dfs_radarfound_action_fcc(dfs, seg_id);
 	} else {
 		dfs_radarfound_action_generic(dfs, seg_id);
 	}
 }
-
-/**
- * dfs_is_radar_source_legacy_agile() - Check if radar pulse event is received
- * on a Zero CAC agile channel.
- * @dfs: Pointer to wlan_dfs structure.
- *
- * Return: If a radar pulse event is received on a zero cac agile
- * channel return true. Otherwise, return false.
- */
-#if defined(ATH_SUPPORT_ZERO_CAC_DFS)
-static
-bool dfs_is_radar_source_legacy_agile(struct wlan_dfs *dfs)
-{
-	if (dfs_is_legacy_precac_enabled(dfs) &&
-	    dfs_is_precac_timer_running(dfs) &&
-	    dfs->dfs_precac_secondary_freq_mhz)
-		return true;
-	return false;
-}
-#else
-static
-bool dfs_is_radar_source_legacy_agile(struct wlan_dfs *dfs)
-{
-	return false;
-}
-#endif
 
 /**
  * dfs_radar_pulse_event_basic_sanity() - Check if radar pulse event is received
@@ -1468,9 +1474,6 @@ bool dfs_radar_pulse_event_basic_sanity(struct wlan_dfs *dfs,
 			"dfs->dfs_curchan is NULL");
 		return false;
 	}
-
-	if (dfs_is_radar_source_legacy_agile(dfs))
-		return true;
 
 	if (!WLAN_IS_PRIMARY_OR_SECONDARY_CHAN_DFS(chan)) {
 		dfs_debug(dfs, WLAN_DEBUG_DFS1,

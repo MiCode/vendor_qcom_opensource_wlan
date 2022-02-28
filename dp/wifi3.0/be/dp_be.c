@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021,2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -565,6 +565,10 @@ static QDF_STATUS dp_vdev_attach_be(struct dp_soc *soc, struct dp_vdev *vdev)
 {
 	struct dp_soc_be *be_soc = dp_get_be_soc_from_dp_soc(soc);
 	struct dp_vdev_be *be_vdev = dp_get_be_vdev_from_dp_vdev(vdev);
+	struct dp_pdev *pdev = vdev->pdev;
+
+	if (vdev->opmode == wlan_op_mode_monitor)
+		return QDF_STATUS_SUCCESS;
 
 	be_vdev->vdev_id_check_en = DP_TX_VDEV_ID_CHECK_ENABLE;
 
@@ -582,8 +586,12 @@ static QDF_STATUS dp_vdev_attach_be(struct dp_soc *soc, struct dp_vdev *vdev)
 					vdev->vdev_id,
 					DP_AST_AGING_TIMER_DEFAULT_MS);
 
-		hal_tx_vdev_mcast_ctrl_set(soc->hal_soc, vdev->vdev_id,
-					   HAL_TX_MCAST_CTRL_MEC_NOTIFY);
+		if (pdev->isolation)
+			hal_tx_vdev_mcast_ctrl_set(soc->hal_soc, vdev->vdev_id,
+						   HAL_TX_MCAST_CTRL_FW_EXCEPTION);
+		else
+			hal_tx_vdev_mcast_ctrl_set(soc->hal_soc, vdev->vdev_id,
+						   HAL_TX_MCAST_CTRL_MEC_NOTIFY);
 	}
 
 	dp_mlo_init_ptnr_list(vdev);
@@ -595,6 +603,9 @@ static QDF_STATUS dp_vdev_detach_be(struct dp_soc *soc, struct dp_vdev *vdev)
 {
 	struct dp_soc_be *be_soc = dp_get_be_soc_from_dp_soc(soc);
 	struct dp_vdev_be *be_vdev = dp_get_be_vdev_from_dp_vdev(vdev);
+
+	if (vdev->opmode == wlan_op_mode_monitor)
+		return QDF_STATUS_SUCCESS;
 
 	dp_tx_put_bank_profile(be_soc, be_vdev);
 	dp_clr_mlo_ptnr_list(soc, vdev);
@@ -1520,6 +1531,8 @@ void dp_initialize_arch_ops_be(struct dp_arch_ops *arch_ops)
 	arch_ops->mlo_peer_find_hash_remove = dp_mlo_peer_find_hash_remove_be;
 	arch_ops->mlo_peer_find_hash_find = dp_mlo_peer_find_hash_find_be;
 #endif
+	arch_ops->dp_peer_rx_reorder_queue_setup =
+					dp_peer_rx_reorder_queue_setup_be;
 	arch_ops->txrx_print_peer_stats = dp_print_peer_txrx_stats_be;
 	dp_init_near_full_arch_ops_be(arch_ops);
 }

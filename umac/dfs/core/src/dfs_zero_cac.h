@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  * Copyright (c) 2007-2008 Sam Leffler, Errno Consulting
  * All rights reserved.
  *
@@ -194,7 +195,7 @@ dfs_zero_cac_timer_init(struct dfs_soc_priv_obj *dfs_soc_obj)
  * dfs_print_precaclists() - Print precac list.
  * @dfs: Pointer to wlan_dfs structure.
  */
-#if defined(WLAN_DFS_PARTIAL_OFFLOAD) && !defined(MOBILE_DFS_SUPPORT)
+#if !defined(MOBILE_DFS_SUPPORT)
 void dfs_print_precaclists(struct wlan_dfs *dfs);
 #else
 static inline void dfs_print_precaclists(struct wlan_dfs *dfs)
@@ -206,7 +207,7 @@ static inline void dfs_print_precaclists(struct wlan_dfs *dfs)
  * dfs_reset_precac_lists() - Resets the precac lists.
  * @dfs: Pointer to wlan_dfs structure.
  */
-#if defined(WLAN_DFS_PARTIAL_OFFLOAD) && !defined(MOBILE_DFS_SUPPORT)
+#if !defined(MOBILE_DFS_SUPPORT)
 void dfs_reset_precac_lists(struct wlan_dfs *dfs);
 #else
 static inline void dfs_reset_precac_lists(struct wlan_dfs *dfs)
@@ -218,7 +219,7 @@ static inline void dfs_reset_precac_lists(struct wlan_dfs *dfs)
  * dfs_reset_precaclists() - Clears and initializes precac_list.
  * @dfs: Pointer to wlan_dfs structure.
  */
-#if defined(WLAN_DFS_PARTIAL_OFFLOAD) && !defined(MOBILE_DFS_SUPPORT)
+#if !defined(MOBILE_DFS_SUPPORT)
 void dfs_reset_precaclists(struct wlan_dfs *dfs);
 #else
 static inline void dfs_reset_precaclists(struct wlan_dfs *dfs)
@@ -236,7 +237,7 @@ void dfs_deinit_precac_list(struct wlan_dfs *dfs);
  * dfs_zero_cac_detach() - Free zero_cac memory.
  * @dfs: Pointer to wlan_dfs dtructure.
  */
-#if defined(WLAN_DFS_PARTIAL_OFFLOAD) && !defined(MOBILE_DFS_SUPPORT)
+#if !defined(MOBILE_DFS_SUPPORT)
 void dfs_zero_cac_detach(struct wlan_dfs *dfs);
 #else
 static inline void dfs_zero_cac_detach(struct wlan_dfs *dfs)
@@ -250,7 +251,7 @@ static inline void dfs_zero_cac_detach(struct wlan_dfs *dfs)
  */
 void dfs_init_precac_list(struct wlan_dfs *dfs);
 
-#if defined(WLAN_DFS_PARTIAL_OFFLOAD) && !defined(MOBILE_DFS_SUPPORT)
+#if !defined(MOBILE_DFS_SUPPORT)
 /**
  * dfs_start_precac_timer_for_freq() - Start precac timer.
  * @dfs: Pointer to wlan_dfs structure.
@@ -274,7 +275,7 @@ void dfs_start_precac_timer_for_freq(struct wlan_dfs *dfs,
  * dfs_cancel_precac_timer() - Cancel the precac timer.
  * @dfs: Pointer to wlan_dfs structure.
  */
-#if defined(WLAN_DFS_PARTIAL_OFFLOAD) && !defined(MOBILE_DFS_SUPPORT)
+#if !defined(MOBILE_DFS_SUPPORT)
 void dfs_cancel_precac_timer(struct wlan_dfs *dfs);
 #else
 static inline void dfs_cancel_precac_timer(struct wlan_dfs *dfs)
@@ -286,7 +287,7 @@ static inline void dfs_cancel_precac_timer(struct wlan_dfs *dfs)
  * dfs_zero_cac_attach() - Initialize dfs zerocac variables.
  * @dfs: Pointer to DFS structure.
  */
-#if defined(WLAN_DFS_PARTIAL_OFFLOAD) && !defined(MOBILE_DFS_SUPPORT)
+#if !defined(MOBILE_DFS_SUPPORT)
 void dfs_zero_cac_attach(struct wlan_dfs *dfs);
 #else
 static inline void dfs_zero_cac_attach(struct wlan_dfs *dfs)
@@ -298,7 +299,7 @@ static inline void dfs_zero_cac_attach(struct wlan_dfs *dfs)
  * dfs_zero_cac_reset() - Reset Zero cac DFS variables.
  * @dfs: Pointer to wlan_dfs structure.
  */
-#if defined(WLAN_DFS_PARTIAL_OFFLOAD) && !defined(MOBILE_DFS_SUPPORT)
+#if !defined(MOBILE_DFS_SUPPORT)
 void dfs_zero_cac_reset(struct wlan_dfs *dfs);
 #else
 static inline void dfs_zero_cac_reset(struct wlan_dfs *dfs)
@@ -328,7 +329,7 @@ dfs_zero_cac_timer_detach(struct dfs_soc_priv_obj *dfs_soc_obj)
  * * True:  If precac is done on channel.
  * * False: If precac is not done on channel.
  */
-#if defined(WLAN_DFS_PARTIAL_OFFLOAD) && !defined(MOBILE_DFS_SUPPORT)
+#if !defined(MOBILE_DFS_SUPPORT)
 bool dfs_is_precac_done(struct wlan_dfs *dfs, struct dfs_channel *chan);
 #else
 static inline bool dfs_is_precac_done(struct wlan_dfs *dfs,
@@ -389,7 +390,7 @@ uint16_t dfs_get_ieeechan_for_precac_for_freq(struct wlan_dfs *dfs,
  * @dfs: Pointer to wlan_dfs structure.
  * @precac_timeout: Precac timeout value.
  */
-#if defined(WLAN_DFS_PARTIAL_OFFLOAD) && !defined(MOBILE_DFS_SUPPORT)
+#if !defined(MOBILE_DFS_SUPPORT)
 int dfs_override_precac_timeout(struct wlan_dfs *dfs,
 		int precac_timeout);
 #else
@@ -405,7 +406,7 @@ static inline int dfs_override_precac_timeout(struct wlan_dfs *dfs,
  * @dfs: Pointer wlan_dfs structure.
  * @precac_timeout: Get precac timeout value in this variable.
  */
-#if defined(WLAN_DFS_PARTIAL_OFFLOAD) && !defined(MOBILE_DFS_SUPPORT)
+#if !defined(MOBILE_DFS_SUPPORT)
 int dfs_get_override_precac_timeout(struct wlan_dfs *dfs,
 		int *precac_timeout);
 #else
@@ -414,71 +415,6 @@ static inline int dfs_get_override_precac_timeout(struct wlan_dfs *dfs,
 {
 	return 0;
 }
-#endif
-
-/**
- * Zero-CAC-DFS algorithm:-
- * Zero-CAC-DFS algorithm works in stealth mode.
- * 1) When any channel change happens in VHT80 mode the algorithm
- * changes the HW channel mode to VHT80_80/VHT160 mode and adds a
- * new channel in the secondary VHT80 to perform precac and a
- * precac timer is started. However the upper layer/UMAC is unaware
- * of this change.
- * 2) When the precac timer expires without being interrupted by
- * any channel change the secondary VHT80 channel is moved from
- * precac-required-list to precac-done-list.
- * 3) If there is a radar detect at any time in any segment
- * (segment-1 is preimary VHT80 and segment-2 is VHT80)then the
- * channel is searched in both precac-reuired-list and precac-done-list
- * and moved to precac-nol-list.
- * 4) Whenever channel change happens if the new channel is a DFS
- * channel then precac-done-list is searched and if the channel is
- * found in the precac-done-list then the CAC is skipped.
- * 5) The precac expiry timer makes a vedv_restart(channel change
- * with current-upper-layer-channel-mode which is VHT80). In channel
- * change the algorithm tries to pick a new channel from the
- * precac-required list. If none found then channel mode remains same.
- * Which means when all the channels in precac-required-list are
- * exhausted the VHT80_80/VHT160 comes back to VHT80 mode.
- */
-#if defined(WLAN_DFS_PARTIAL_OFFLOAD) && !defined(MOBILE_DFS_SUPPORT)
-/*
- * dfs_find_vht80_chan_for_precac_for_freq() - Find VHT80 channel for precac.
- * @dfs: Pointer to wlan_dfs structure.
- * @chan_mode: Channel mode.
- * @ch_freq_seg1: Segment1 channel freq in mhz.
- * @cfreq1: cfreq1.
- * @cfreq2: cfreq2.
- * @phy_mode: Precac phymode.
- * @dfs_set_cfreq2: Precac cfreq2
- * @set_agile: Agile mode flag.
- */
-#ifdef CONFIG_CHAN_FREQ_API
-void dfs_find_vht80_chan_for_precac_for_freq(struct wlan_dfs *dfs,
-					     uint32_t chan_mode,
-					     uint16_t ch_freq_seg1_mhz,
-					     uint32_t *cfreq1,
-					     uint32_t *cfreq2,
-					     uint32_t *phy_mode,
-					     bool *dfs_set_cfreq2,
-					     bool *set_agile);
-#endif
-
-#else
-
-#ifdef CONFIG_CHAN_FREQ_API
-static inline
-void dfs_find_vht80_chan_for_precac_for_freq(struct wlan_dfs *dfs,
-					     uint32_t chan_mode,
-					     uint16_t ch_freq_seg1_mhz,
-					     uint32_t *cfreq1,
-					     uint32_t *cfreq2,
-					     uint32_t *phy_mode,
-					     bool *dfs_set_cfreq2,
-					     bool *set_agile)
-{
-}
-#endif
 #endif
 
 #if defined(QCA_SUPPORT_AGILE_DFS)
@@ -632,29 +568,13 @@ static inline void dfs_agile_soc_obj_init(struct wlan_dfs *dfs,
  * @dfs: Pointer to wlan_dfs structure.
  * @value: input value for dfs_legacy_precac_ucfg flag.
  */
-#if defined(WLAN_DFS_PARTIAL_OFFLOAD) && !defined(MOBILE_DFS_SUPPORT)
+#if !defined(MOBILE_DFS_SUPPORT)
 void dfs_set_precac_enable(struct wlan_dfs *dfs,
 		uint32_t value);
 #else
 static inline void dfs_set_precac_enable(struct wlan_dfs *dfs,
 		uint32_t value)
 {
-}
-#endif
-
-/**
- * dfs_is_legacy_precac_enabled() - Check if legacy preCAC is enabled for the
- * DFS onject.
- * @dfs: Pointer to the wlan_dfs object.
- *
- * Return: True if legacy preCAC is enabled, else false.
- */
-#if defined(WLAN_DFS_PARTIAL_OFFLOAD) && !defined(MOBILE_DFS_SUPPORT)
-bool dfs_is_legacy_precac_enabled(struct wlan_dfs *dfs);
-#else
-static inline bool dfs_is_legacy_precac_enabled(struct wlan_dfs *dfs)
-{
-	return 0;
 }
 #endif
 
@@ -797,7 +717,7 @@ void dfs_zero_cac_reset(struct wlan_dfs *dfs);
  *
  * Return: None (void).
  */
-#if defined(WLAN_DFS_PARTIAL_OFFLOAD) && !defined(MOBILE_DFS_SUPPORT)
+#if !defined(MOBILE_DFS_SUPPORT)
 void dfs_reinit_precac_lists(struct wlan_dfs *src_dfs,
 			     struct wlan_dfs *dest_dfs,
 			     uint16_t low_5g_freq,
@@ -841,7 +761,7 @@ dfs_is_precac_done_on_ht20_40_80_160_165_chan_for_freq(struct wlan_dfs *dfs,
 bool dfs_is_precac_done_on_ht8080_chan(struct wlan_dfs *dfs,
 				       struct dfs_channel *chan);
 
-#if defined(WLAN_DFS_PARTIAL_OFFLOAD) && !defined(MOBILE_DFS_SUPPORT)
+#if !defined(MOBILE_DFS_SUPPORT)
 #ifdef CONFIG_CHAN_FREQ_API
 /**
  * dfs_find_curchwidth_and_center_chan_for_freq() - Find the channel width
@@ -943,7 +863,7 @@ static inline void dfs_unmark_precac_nol_for_freq(struct wlan_dfs *dfs,
  * dfs_is_precac_timer_running() - Check whether precac timer is running.
  * @dfs: Pointer to wlan_dfs structure.
  */
-#if defined(WLAN_DFS_PARTIAL_OFFLOAD) && !defined(MOBILE_DFS_SUPPORT)
+#if !defined(MOBILE_DFS_SUPPORT)
 bool dfs_is_precac_timer_running(struct wlan_dfs *dfs);
 #else
 static inline bool dfs_is_precac_timer_running(struct wlan_dfs *dfs)

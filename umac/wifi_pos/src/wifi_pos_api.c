@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2017-2020 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -438,6 +438,35 @@ QDF_STATUS wifi_pos_register_measurement_request_notification(
 	return QDF_STATUS_SUCCESS;
 }
 #endif /* WLAN_RTT_MEASUREMENT_NOTIFICATION */
+
+QDF_STATUS wifi_pos_register_get_max_fw_phymode_for_channels(
+		struct wlan_objmgr_psoc *psoc,
+		QDF_STATUS (*handler)(struct wlan_objmgr_pdev *pdev,
+				      struct wifi_pos_channel_power *chan_list,
+				      uint16_t wifi_pos_num_chans))
+{
+	struct wifi_pos_psoc_priv_obj *wifi_pos_psoc;
+
+	if (!psoc) {
+		wifi_pos_err("psoc is null");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	if (!handler) {
+		wifi_pos_err("Null callback");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	wifi_pos_psoc = wifi_pos_get_psoc_priv_obj(psoc);
+	if (!wifi_pos_psoc) {
+		wifi_pos_err("wifi_pos priv obj is null");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	wifi_pos_psoc->wifi_pos_get_max_fw_phymode_for_channels = handler;
+
+	return QDF_STATUS_SUCCESS;
+}
 #endif /* CNSS_GENL */
 
 QDF_STATUS wifi_pos_register_send_action(

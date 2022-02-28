@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2017-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  *
  * Permission to use, copy, modify, and/or distribute this software for
@@ -98,11 +99,13 @@ QDF_STATUS ucfg_reg_get_regd_rules(struct wlan_objmgr_pdev *pdev,
 	return reg_get_regd_rules(pdev, reg_rules);
 }
 
+#ifdef WLAN_REG_PARTIAL_OFFLOAD
 QDF_STATUS ucfg_reg_program_default_cc(struct wlan_objmgr_pdev *pdev,
 				       uint16_t regdmn)
 {
 	return reg_program_default_cc(pdev, regdmn);
 }
+#endif
 
 QDF_STATUS ucfg_reg_program_cc(struct wlan_objmgr_pdev *pdev,
 			       struct cc_regdmn_s *rd)
@@ -255,6 +258,23 @@ QDF_STATUS ucfg_reg_unregister_afc_req_rx_callback(struct wlan_objmgr_pdev *pdev
 						   afc_req_rx_evt_handler cbf)
 {
 	return reg_unregister_afc_req_rx_callback(pdev, cbf);
+}
+
+QDF_STATUS
+ucfg_reg_register_afc_power_event_callback(struct wlan_objmgr_pdev *pdev,
+					   afc_power_tx_evt_handler cbf,
+					   void *arg)
+{
+	return reg_register_afc_power_event_callback(pdev, cbf, arg);
+}
+
+qdf_export_symbol(ucfg_reg_register_afc_power_event_callback);
+
+QDF_STATUS
+ucfg_reg_unregister_afc_power_event_callback(struct wlan_objmgr_pdev *pdev,
+					     afc_power_tx_evt_handler cbf)
+{
+	return reg_unregister_afc_power_event_callback(pdev, cbf);
 }
 
 QDF_STATUS ucfg_reg_get_partial_afc_req_info(

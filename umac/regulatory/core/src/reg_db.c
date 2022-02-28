@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2017-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  *
  * Permission to use, copy, modify, and/or distribute this software for
@@ -2056,13 +2056,6 @@ QDF_STATUS reg_get_num_reg_dmn_pairs(int *num_reg_dmn)
 	return QDF_STATUS_SUCCESS;
 }
 
-QDF_STATUS reg_get_default_country(uint16_t *default_country)
-{
-	*default_country = CTRY_UNITED_STATES;
-
-	return QDF_STATUS_SUCCESS;
-}
-
 bool reg_etsi13_regdmn(uint8_t reg_dmn)
 {
 	return reg_dmn == ETSI13;
@@ -2076,6 +2069,14 @@ bool reg_fcc_regdmn(uint8_t reg_dmn)
 		(reg_dmn == FCC16));
 }
 
+#ifdef WLAN_REG_PARTIAL_OFFLOAD
+QDF_STATUS reg_get_default_country(uint16_t *default_country)
+{
+	*default_country = CTRY_UNITED_STATES;
+
+	return QDF_STATUS_SUCCESS;
+}
+
 bool reg_en302_502_regdmn(uint16_t regdmn)
 {
 	return ((regdmn == ETSI11_WORLD) ||
@@ -2083,3 +2084,4 @@ bool reg_en302_502_regdmn(uint16_t regdmn)
 		(regdmn == ETSI14_WORLD) ||
 		(regdmn == ETSI15_WORLD));
 }
+#endif

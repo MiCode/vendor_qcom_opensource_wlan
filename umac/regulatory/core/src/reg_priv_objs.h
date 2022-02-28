@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2017-2021 The Linux Foundation. All rights reserved.
- *
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -29,6 +29,7 @@
 #ifdef CONFIG_AFC_SUPPORT
 #include "reg_services_common.h"
 #endif
+#include <wlan_objmgr_psoc_obj.h>
 
 #define reg_alert(params...) \
 	QDF_TRACE_FATAL(QDF_MODULE_ID_REGULATORY, params)
@@ -178,6 +179,7 @@ struct wlan_regulatory_psoc_priv_obj {
 #ifdef FEATURE_WLAN_CH_AVOID_EXT
 	bool ch_avoid_ext_ind;
 	struct ch_avoid_ind_type avoid_freq_ext_list;
+	bool coex_unsafe_chan_nb_user_prefer;
 #endif
 };
 
@@ -192,6 +194,8 @@ struct wlan_regulatory_psoc_priv_obj {
  * @mas_chan_list_6g_ap: master channel list for 6G AP, includes all power types
  * @mas_chan_list_6g_client: master channel list for 6G client, includes
  *	all power types
+ * @super_chan_list: 6G super channel list that includes the information of
+ * all 6G power modes for every 6G channel
  * @band_capability: bitmap of bands enabled, using enum reg_wifi_band as the
  *	bit position value
  * @reg_6g_superid: 6Ghz super domain id
@@ -207,6 +211,8 @@ struct wlan_regulatory_psoc_priv_obj {
  * @avoid_chan_ext_list: the extended avoid frequency list.
  * @afc_cb_lock: The spinlock to synchronize afc callbacks
  * @afc_cb_obj: The object containing the callback function and opaque argument
+ * @afc_pow_evt_cb_obj: The object containing the callback function and opaque
+ * argument for the AFC power event
  * @afc_request_id: The last AFC request id received from FW/halphy
  * @is_6g_afc_power_event_received: indicates if the AFC power event is
  * received
@@ -230,6 +236,7 @@ struct wlan_regulatory_pdev_priv_obj {
 	bool is_6g_channel_list_populated;
 	struct regulatory_channel mas_chan_list_6g_ap[REG_CURRENT_MAX_AP_TYPE][NUM_6GHZ_CHANNELS];
 	struct regulatory_channel mas_chan_list_6g_client[REG_CURRENT_MAX_AP_TYPE][REG_MAX_CLIENT_TYPE][NUM_6GHZ_CHANNELS];
+	struct super_chan_info super_chan_list[NUM_6GHZ_CHANNELS];
 #endif
 #ifdef DISABLE_CHANNEL_LIST
 	struct regulatory_channel cache_disable_chan_list[NUM_CHANNELS];
@@ -282,6 +289,7 @@ struct wlan_regulatory_pdev_priv_obj {
 #ifdef CONFIG_AFC_SUPPORT
 	qdf_spinlock_t afc_cb_lock;
 	struct afc_cb_handler afc_cb_obj;
+	struct afc_pow_evt_cb_handler afc_pow_evt_cb_obj;
 	uint64_t afc_request_id;
 	bool is_6g_afc_power_event_received;
 	bool is_6g_afc_expiry_event_received;

@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2017-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -133,12 +134,12 @@ uint8_t dp_rx_get_pkt_dir(struct dp_soc *soc, uint8_t *rx_desc_info)
 }
 
 void dp_rx_defrag_waitlist_flush(struct dp_soc *soc);
-void dp_rx_reorder_flush_frag(struct dp_peer *peer,
-			 unsigned int tid);
-void dp_rx_defrag_waitlist_remove(struct dp_peer *peer, unsigned tid);
-void dp_rx_defrag_cleanup(struct dp_peer *peer, unsigned tid);
+void dp_rx_reorder_flush_frag(struct dp_txrx_peer *txrx_peer,
+			      unsigned int tid);
+void dp_rx_defrag_waitlist_remove(struct dp_txrx_peer *peer, unsigned int tid);
+void dp_rx_defrag_cleanup(struct dp_txrx_peer *peer, unsigned int tid);
 
 QDF_STATUS dp_rx_defrag_add_last_frag(struct dp_soc *soc,
-				      struct dp_peer *peer, uint16_t tid,
-		uint16_t rxseq, qdf_nbuf_t nbuf);
+				      struct dp_txrx_peer *peer, uint16_t tid,
+				      uint16_t rxseq, qdf_nbuf_t nbuf);
 #endif /* _DP_RX_DEFRAG_H */

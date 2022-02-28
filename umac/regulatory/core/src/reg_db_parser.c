@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2017-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  *
  * Permission to use, copy, modify, and/or distribute this software for
@@ -32,6 +33,51 @@
 #include "reg_priv_objs.h"
 #include "reg_utils.h"
 
+#ifdef CONFIG_REG_CLIENT
+/**
+ * reg_update_alpha2_from_domain() - Get country alpha2 code from reg domain
+ * @reg_info: pointer to hold alpha2 code
+ *
+ * This function is used to populate alpha2 of @reg_info with:
+ *	(a) "00" (REG_WORLD_ALPHA2) for WORLD domain and
+ *	(b) alpha2 of first country matching with non WORLD domain.
+ *
+ * Return: None
+ */
+static void
+reg_update_alpha2_from_domain(struct cur_regulatory_info *reg_info)
+{
+	uint16_t i;
+	int num_countries;
+
+	if (reg_is_world_ctry_code(reg_info->reg_dmn_pair)) {
+		qdf_mem_copy(reg_info->alpha2, REG_WORLD_ALPHA2,
+			     sizeof(reg_info->alpha2));
+		return;
+	}
+
+	reg_get_num_countries(&num_countries);
+
+	for (i = 0; i < (uint16_t)num_countries; i++)
+		if (g_all_countries[i].reg_dmn_pair_id ==
+		    reg_info->reg_dmn_pair)
+			break;
+
+	if (i == (uint16_t)num_countries)
+		return;
+
+	qdf_mem_copy(reg_info->alpha2, g_all_countries[i].alpha2,
+		     sizeof(g_all_countries[i].alpha2));
+	reg_info->ctry_code = g_all_countries[i].country_code;
+}
+#else
+static inline void
+reg_update_alpha2_from_domain(struct cur_regulatory_info *reg_info)
+{
+}
+#endif
+
+#ifdef WLAN_REG_PARTIAL_OFFLOAD
 QDF_STATUS reg_is_country_code_valid(uint8_t *alpha2)
 {
 	uint16_t i;
@@ -272,50 +318,6 @@ static inline QDF_STATUS reg_get_reginfo_from_country_code_and_regdmn_pair(
 	return QDF_STATUS_SUCCESS;
 }
 
-#ifdef CONFIG_REG_CLIENT
-/**
- * reg_update_alpha2_from_domain() - Get country alpha2 code from reg domain
- * @reg_info: pointer to hold alpha2 code
- *
- * This function is used to populate alpha2 of @reg_info with:
- *	(a) "00" (REG_WORLD_ALPHA2) for WORLD domain and
- *	(b) alpha2 of first country matching with non WORLD domain.
- *
- * Return: None
- */
-static void
-reg_update_alpha2_from_domain(struct cur_regulatory_info *reg_info)
-{
-	uint16_t i;
-	int num_countries;
-
-	if (reg_is_world_ctry_code(reg_info->reg_dmn_pair)) {
-		qdf_mem_copy(reg_info->alpha2, REG_WORLD_ALPHA2,
-			     sizeof(reg_info->alpha2));
-		return;
-	}
-
-	reg_get_num_countries(&num_countries);
-
-	for (i = 0; i < (uint16_t)num_countries; i++)
-		if (g_all_countries[i].reg_dmn_pair_id ==
-		    reg_info->reg_dmn_pair)
-			break;
-
-	if (i == (uint16_t)num_countries)
-		return;
-
-	qdf_mem_copy(reg_info->alpha2, g_all_countries[i].alpha2,
-		     sizeof(g_all_countries[i].alpha2));
-	reg_info->ctry_code = g_all_countries[i].country_code;
-}
-#else
-static inline void
-reg_update_alpha2_from_domain(struct cur_regulatory_info *reg_info)
-{
-}
-#endif
-
 static inline QDF_STATUS reg_get_reginfo_from_regdmn_pair(
 		struct cur_regulatory_info *reg_info,
 		uint16_t regdmn_pair)
@@ -398,3 +400,4 @@ QDF_STATUS reg_get_cur_reginfo(struct cur_regulatory_info *reg_info,
 
 	return QDF_STATUS_SUCCESS;
 }
+#endif /* WLAN_REG_PARTIAL_OFFLOAD */

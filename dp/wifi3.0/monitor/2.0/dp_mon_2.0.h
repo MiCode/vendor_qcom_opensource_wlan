@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021,2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -25,6 +25,7 @@
 #include <dp_mon_filter.h>
 #include <dp_htt.h>
 #include <dp_mon.h>
+#include <dp_tx_mon_2.0.h>
 
 #define DP_MON_RING_FILL_LEVEL_DEFAULT 2048
 #define DP_MON_DATA_BUFFER_SIZE     2048
@@ -134,10 +135,13 @@ struct dp_mon_soc_be {
 /**
  * dp_mon_desc_pool_init() - Monitor descriptor pool init
  * @mon_desc_pool: mon desc pool
+ * @pool_size
  *
  * Return: non-zero for failure, zero for success
  */
-QDF_STATUS dp_mon_desc_pool_init(struct dp_mon_desc_pool *mon_desc_pool);
+QDF_STATUS
+dp_mon_desc_pool_init(struct dp_mon_desc_pool *mon_desc_pool,
+		      uint32_t pool_size);
 
 /*
  * dp_mon_desc_pool_deinit()- monitor descriptor pool deinit
@@ -202,12 +206,10 @@ QDF_STATUS dp_mon_buffers_replenish(struct dp_soc *dp_soc,
 
 /**
  * dp_mon_filter_show_filter_be() - Show the set filters
- * @pdev: DP pdev handle
  * @mode: The filter modes
  * @tlv_filter: tlv filter
  */
-void dp_mon_filter_show_filter_be(struct dp_mon_pdev_be *mon_pdev,
-				  enum dp_mon_filter_mode mode,
+void dp_mon_filter_show_filter_be(enum dp_mon_filter_mode mode,
 				  struct dp_mon_filter_be *filter);
 
 /**

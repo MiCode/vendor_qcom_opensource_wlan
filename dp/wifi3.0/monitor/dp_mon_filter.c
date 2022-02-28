@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2020-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021,2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -25,7 +25,7 @@
 
 /**
  * dp_mon_filter_mode_type_to_str
- *  Monitor Filter mode to string
+ * Monitor Filter mode to string
  */
 int8_t *dp_mon_filter_mode_type_to_str[DP_MON_FILTER_MAX_MODE] = {
 #ifdef QCA_ENHANCED_STATS_SUPPORT
@@ -45,7 +45,7 @@ int8_t *dp_mon_filter_mode_type_to_str[DP_MON_FILTER_MAX_MODE] = {
 	"DP MON FILTER PKT LOG FULL MODE",
 	"DP MON FILTER PKT LOG LITE MODE",
 	"DP MON FILTER PKT LOG CBF MODE",
-#ifdef QCA_WIFI_QCN9224
+#ifdef BE_PKTLOG_SUPPORT
 	"DP MON FILTER PKT LOG HYBRID MODE",
 #endif
 #endif /* WDI_EVENT_ENABLE */
@@ -467,7 +467,7 @@ void dp_mon_filter_reset_rx_pktlog_cbf(struct dp_pdev *pdev)
 		mon_ops->mon_filter_reset_rx_pkt_log_cbf(pdev);
 }
 
-#ifdef QCA_WIFI_QCN9224
+#ifdef BE_PKTLOG_SUPPORT
 void dp_mon_filter_setup_pktlog_hybrid(struct dp_pdev *pdev)
 {
 	struct dp_mon_ops *mon_ops = NULL;
@@ -498,8 +498,10 @@ QDF_STATUS dp_mon_filter_update(struct dp_pdev *pdev)
 		return QDF_STATUS_E_FAILURE;
 	}
 
+#ifdef QCA_TXMON_HW_SUPPORT
 	if (mon_ops && mon_ops->tx_mon_filter_update)
 		mon_ops->tx_mon_filter_update(pdev);
+#endif
 
 	if (mon_ops && mon_ops->rx_mon_filter_update)
 		mon_ops->rx_mon_filter_update(pdev);

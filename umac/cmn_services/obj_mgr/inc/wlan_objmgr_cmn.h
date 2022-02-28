@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -386,6 +386,7 @@ typedef enum {
 	WLAN_MBSS_ID          = 91,
 	WLAN_MGMT_RX_REO_ID   = 92,
 	WLAN_MGMT_RX_REO_SIM_ID   = 93,
+	WLAN_TWT_ID           = 94,
 	WLAN_REF_ID_MAX,
 } wlan_objmgr_ref_dbgid;
 

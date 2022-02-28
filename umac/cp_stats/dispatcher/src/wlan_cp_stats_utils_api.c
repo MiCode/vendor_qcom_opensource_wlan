@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2018 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -24,6 +25,7 @@
  */
 #include "../../core/src/wlan_cp_stats_defs.h"
 #include "../../core/src/wlan_cp_stats_obj_mgr_handler.h"
+#include "../../core/src/wlan_cp_stats_comp_handler.h"
 #include <wlan_cp_stats_utils_api.h>
 #include <wlan_cp_stats_ucfg_api.h>
 
@@ -349,3 +351,29 @@ wlan_cp_stats_comp_obj_cfg(enum wlan_objmgr_obj_type obj_type,
 
 	return status;
 }
+
+void wlan_cp_stats_vdev_ucast_rx_pnerr(struct wlan_objmgr_vdev *vdev)
+{
+	struct vdev_cp_stats *vdev_cs = wlan_cp_stats_get_vdev_stats_obj(vdev);
+
+	if (vdev_cs && vdev_cs->ucast_rx_pnerr_stats_inc)
+		vdev_cs->ucast_rx_pnerr_stats_inc(vdev, 1);
+}
+
+void wlan_cp_stats_peer_rx_pnerr(struct wlan_objmgr_peer *peer)
+{
+	struct peer_cp_stats *peer_cs = wlan_cp_stats_get_peer_stats_obj(peer);
+
+	if (peer_cs && peer_cs->rx_pnerr_stats_inc)
+		peer_cs->rx_pnerr_stats_inc(peer, 1);
+}
+
+#if defined(WLAN_SUPPORT_TWT) && defined(WLAN_TWT_CONV_SUPPORTED)
+QDF_STATUS
+tgt_cp_stats_twt_get_session_evt_handler(
+				struct wlan_objmgr_psoc *psoc,
+				struct twt_session_stats_info *twt_params)
+{
+	return wlan_cp_stats_twt_get_session_evt_handler(psoc, twt_params);
+}
+#endif

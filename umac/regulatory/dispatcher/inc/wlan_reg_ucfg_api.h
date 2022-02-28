@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2017-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  *
  * Permission to use, copy, modify, and/or distribute this software for
@@ -188,8 +189,17 @@ QDF_STATUS ucfg_reg_unregister_event_handler(uint8_t vdev_id, reg_event_cb cb,
 		void *arg);
 QDF_STATUS ucfg_reg_init_handler(uint8_t pdev_id);
 
+#ifdef WLAN_REG_PARTIAL_OFFLOAD
+/**
+ * ucfg_reg_program_default_cc() - Program default country code
+ * @pdev: Pdev pointer
+ * @regdmn: Regdomain value
+ *
+ * Return: QDF_STATUS
+ */
 QDF_STATUS ucfg_reg_program_default_cc(struct wlan_objmgr_pdev *pdev,
 				       uint16_t regdmn);
+#endif
 
 /**
  * ucfg_reg_program_cc() - Program user country code or regdomain
@@ -340,6 +350,31 @@ QDF_STATUS ucfg_reg_get_partial_afc_req_info(
 		struct wlan_objmgr_pdev *pdev,
 		struct wlan_afc_host_partial_request **afc_req,
 		uint64_t req_id);
+
+/**
+ * ucfg_reg_register_afc_power_event_callback() - add AFC power event received
+ * @pdev: Pointer to pdev
+ * @cbf: Pointer to callback function
+ * @arg: Pointer to opaque argument
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+ucfg_reg_register_afc_power_event_callback(struct wlan_objmgr_pdev *pdev,
+					   afc_power_tx_evt_handler cbf,
+					   void *arg);
+
+/**
+ * ucfg_reg_unregister_afc_power_event_callback() - remove AFC power event
+ * received callback
+ * @pdev: Pointer to pdev
+ * @cbf: Pointer to callback function
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+ucfg_reg_unregister_afc_power_event_callback(struct wlan_objmgr_pdev *pdev,
+					     afc_power_tx_evt_handler cbf);
 #endif
 
 /**

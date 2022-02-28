@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -757,6 +757,15 @@ cdp_get_scan_spcl_vap_stats(ol_txrx_soc_handle soc,
 }
 #endif
 
+/**
+ * cdp_get_peer_delay_stats() - Call to get per peer delay stats
+ * @soc: soc handle
+ * @vdev_id: id of dp_vdev handle
+ * @peer_mac: peer mac address
+ * @delay_stats: user allocated buffer for peer delay stats
+ *
+ * return: status Success/Failure
+ */
 static inline QDF_STATUS
 cdp_get_peer_delay_stats(ol_txrx_soc_handle soc,
 			 uint8_t vdev_id,
@@ -779,6 +788,16 @@ cdp_get_peer_delay_stats(ol_txrx_soc_handle soc,
 								   delay_stats);
 }
 
+/**
+ * cdp_get_peer_jitter_stats() - Call to get per peer jitter stats
+ * @soc: soc handle
+ * @pdev_id: id of dp_pdev handle
+ * @vdev_id: id of dp_vdev handle
+ * @peer_mac: peer mac address
+ * @tid_stats: user allocated buffer for tid_stats
+ *
+ * return: status Success/Failure
+ */
 static inline QDF_STATUS
 cdp_get_peer_jitter_stats(ol_txrx_soc_handle soc,
 			  uint8_t pdev_id,
@@ -802,4 +821,87 @@ cdp_get_peer_jitter_stats(ol_txrx_soc_handle soc,
 								    peer_mac,
 								    tid_stats);
 }
+
+/**
+ * cdp_mon_pdev_get_rx_stats() - Call to get monitor pdev rx stats
+ * @soc: soc handle
+ * @pdev_id: id of dp_pdev handle
+ * @stats: user allocated buffer for dp pdev mon stats
+ *
+ * return: status Success/Failure
+ */
+static inline QDF_STATUS
+cdp_mon_pdev_get_rx_stats(ol_txrx_soc_handle soc, uint8_t pdev_id,
+			  struct cdp_pdev_mon_stats *stats)
+{
+	if (!soc || !soc->ops) {
+		dp_cdp_debug("Invalid Instance");
+		QDF_BUG(0);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	if (!soc->ops->mon_ops ||
+	    !soc->ops->mon_ops->get_mon_pdev_rx_stats)
+		return QDF_STATUS_E_FAILURE;
+
+	return soc->ops->mon_ops->get_mon_pdev_rx_stats(soc, pdev_id, stats);
+}
+
+#ifdef WLAN_TX_PKT_CAPTURE_ENH
+/**
+ * cdp_get_peer_tx_capture_stats() - Call to get peer tx capture stats
+ * @soc: soc handle
+ * @vdev_id: id of dp_vdev handle
+ * @peer_mac: peer mac address
+ * @stats: pointer to peer tx capture stats
+ *
+ * return: status Success/Failure
+ */
+static inline QDF_STATUS
+cdp_get_peer_tx_capture_stats(ol_txrx_soc_handle soc,
+			      uint8_t vdev_id,
+			      uint8_t *peer_mac,
+			      struct cdp_peer_tx_capture_stats *stats)
+{
+	if (!soc || !soc->ops) {
+		dp_cdp_debug("Invalid Instance");
+		QDF_BUG(0);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	if (!soc->ops->host_stats_ops ||
+	    !soc->ops->host_stats_ops->get_peer_tx_capture_stats)
+		return QDF_STATUS_E_FAILURE;
+
+	return soc->ops->host_stats_ops->get_peer_tx_capture_stats(soc, vdev_id,
+								   peer_mac,
+								   stats);
+}
+
+/**
+ * cdp_get_pdev_tx_capture_stats() - Call to get pdev tx capture stats
+ * @soc: soc handle
+ * @pdev_id: id of dp_pdev handle
+ * @stats: pointer to pdev tx capture stats
+ *
+ * return: status Success/Failure
+ */
+static inline QDF_STATUS
+cdp_get_pdev_tx_capture_stats(ol_txrx_soc_handle soc, uint8_t pdev_id,
+			      struct cdp_pdev_tx_capture_stats *stats)
+{
+	if (!soc || !soc->ops) {
+		dp_cdp_debug("Invalid Instance");
+		QDF_BUG(0);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	if (!soc->ops->host_stats_ops ||
+	    !soc->ops->host_stats_ops->get_pdev_tx_capture_stats)
+		return QDF_STATUS_E_FAILURE;
+
+	return soc->ops->host_stats_ops->get_pdev_tx_capture_stats(soc, pdev_id,
+								   stats);
+}
+#endif /* WLAN_TX_PKT_CAPTURE_ENH */
 #endif /* _CDP_TXRX_HOST_STATS_H_ */

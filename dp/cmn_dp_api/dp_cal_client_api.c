@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2017-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -177,3 +178,50 @@ void dp_cal_client_update_peer_stats(struct cdp_peer_stats *peer_stats)
 
 qdf_export_symbol(dp_cal_client_update_peer_stats);
 
+void dp_cal_client_update_peer_stats_wifi3(struct cdp_calibr_stats_intf *peer_stats_intf,
+					   struct cdp_calibr_stats *peer_calibr_stats)
+{
+	uint32_t temp_rx_bytes = peer_stats_intf->to_stack.bytes;
+	uint32_t temp_rx_data = peer_stats_intf->to_stack.num;
+	uint32_t temp_tx_bytes = peer_stats_intf->tx_success.bytes;
+	uint32_t temp_tx_data = peer_stats_intf->tx_success.num;
+	uint32_t temp_tx_ucast_pkts = peer_stats_intf->tx_ucast.num;
+
+	peer_calibr_stats->rx.rx_byte_rate = temp_rx_bytes -
+				peer_calibr_stats->rx.rx_bytes_success_last;
+	peer_calibr_stats->rx.rx_data_rate  = temp_rx_data -
+				peer_calibr_stats->rx.rx_data_success_last;
+	peer_calibr_stats->tx.tx_byte_rate = temp_tx_bytes -
+				peer_calibr_stats->tx.tx_bytes_success_last;
+	peer_calibr_stats->tx.tx_data_rate  = temp_tx_data -
+				peer_calibr_stats->tx.tx_data_success_last;
+	peer_calibr_stats->tx.tx_data_ucast_rate = temp_tx_ucast_pkts -
+				peer_calibr_stats->tx.tx_data_ucast_last;
+
+	/* Check tx and rx packets in last one second, and increment
+	 * inactive time for peer
+	 */
+	if (peer_calibr_stats->tx.tx_data_rate || peer_calibr_stats->rx.rx_data_rate)
+		peer_calibr_stats->tx.inactive_time = 0;
+	else
+		peer_calibr_stats->tx.inactive_time++;
+
+	peer_calibr_stats->rx.rx_bytes_success_last = temp_rx_bytes;
+	peer_calibr_stats->rx.rx_data_success_last = temp_rx_data;
+	peer_calibr_stats->tx.tx_bytes_success_last = temp_tx_bytes;
+	peer_calibr_stats->tx.tx_data_success_last = temp_tx_data;
+	peer_calibr_stats->tx.tx_data_ucast_last = temp_tx_ucast_pkts;
+
+	if (peer_calibr_stats->tx.tx_data_ucast_rate) {
+		if (peer_calibr_stats->tx.tx_data_ucast_rate >
+				peer_calibr_stats->tx.tx_data_rate)
+			peer_calibr_stats->tx.last_per =
+				((peer_calibr_stats->tx.tx_data_ucast_rate -
+					peer_calibr_stats->tx.tx_data_rate) * 100) /
+				peer_calibr_stats->tx.tx_data_ucast_rate;
+		else
+			peer_calibr_stats->tx.last_per = 0;
+	}
+}
+
+qdf_export_symbol(dp_cal_client_update_peer_stats_wifi3);

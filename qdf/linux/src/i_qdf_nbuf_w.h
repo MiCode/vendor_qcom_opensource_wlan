@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2014-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -161,6 +161,40 @@ __qdf_nbuf_dma_inv_range(const void *buf_start, const void *buf_end)
 {
 	dmac_inv_range(buf_start, buf_end);
 }
+
+static inline void
+__qdf_nbuf_dma_inv_range_no_dsb(const void *buf_start, const void *buf_end)
+{
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 89)
+	dmac_inv_range_no_dsb(buf_start, buf_end);
+#else
+	dmac_inv_range(buf_start, buf_end);
+#endif
+}
+
+static inline void
+__qdf_nbuf_dma_clean_range_no_dsb(const void *buf_start, const void *buf_end)
+{
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 89)
+	dmac_clean_range_no_dsb(buf_start, buf_end);
+#else
+	dmac_clean_range(buf_start, buf_end);
+#endif
+}
+
+static inline void
+__qdf_dsb(void)
+{
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 89)
+	dsb(st);
+#endif
+}
+
+static inline void
+__qdf_nbuf_dma_clean_range(const void *buf_start, const void *buf_end)
+{
+	dmac_clean_range(buf_start, buf_end);
+}
 #elif defined(__LINUX_MIPS32_ARCH__) || defined(__LINUX_MIPS64_ARCH__)
 static inline void
 __qdf_nbuf_dma_inv_range(const void *buf_start, const void *buf_end)
@@ -168,9 +202,55 @@ __qdf_nbuf_dma_inv_range(const void *buf_start, const void *buf_end)
 	dma_cache_inv((unsigned long)buf_start,
 		      (unsigned long)(buf_end - buf_start));
 }
+
+static inline void
+__qdf_nbuf_dma_inv_range_no_dsb(const void *buf_start, const void *buf_end)
+{
+	dma_cache_inv((unsigned long)buf_start,
+		      (unsigned long)(buf_end - buf_start));
+}
+
+static inline void
+__qdf_nbuf_dma_clean_range_no_dsb(const void *buf_start, const void *buf_end)
+{
+	dmac_cache_wback((unsigned long)buf_start,
+			 (unsigned long)(buf_end - buf_start));
+}
+
+static inline void
+__qdf_dsb(void)
+{
+}
+
+static inline void
+__qdf_nbuf_dma_clean_range(const void *buf_start, const void *buf_end)
+{
+	dma_cache_wback((unsigned long)buf_start,
+			(unsigned long)(buf_end - buf_start));
+}
 #else
 static inline void
 __qdf_nbuf_dma_inv_range(const void *buf_start, const void *buf_end)
+{
+}
+
+static inline void
+__qdf_nbuf_dma_inv_range_no_dsb(const void *buf_start, const void *buf_end)
+{
+}
+
+static inline void
+__qdf_nbuf_dma_clean_range_no_dsb(const void *buf_start, const void *buf_end)
+{
+}
+
+static inline void
+__qdf_dsb(void)
+{
+}
+
+static inline void
+__qdf_nbuf_dma_clean_range(const void *buf_start, const void *buf_end)
 {
 }
 #endif

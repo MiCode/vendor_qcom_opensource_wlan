@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2014-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -783,6 +783,8 @@ void __qdf_nbuf_num_frags_init(struct sk_buff *skb)
 __qdf_nbuf_t
 __qdf_nbuf_alloc(__qdf_device_t osdev, size_t size, int reserve, int align,
 		 int prio, const char *func, uint32_t line);
+
+__qdf_nbuf_t __qdf_nbuf_alloc_simple(__qdf_device_t osdev, size_t size);
 
 /**
  * __qdf_nbuf_alloc_no_recycler() - Allocates skb
@@ -1984,6 +1986,38 @@ __qdf_nbuf_copy_expand(struct sk_buff *buf, int headroom, int tailroom)
 }
 
 /**
+ * __qdf_nbuf_has_fraglist() - check buf has fraglist
+ * @buf: Network buf instance
+ *
+ * Return: True, if buf has frag_list else return False
+ */
+static inline bool
+__qdf_nbuf_has_fraglist(struct sk_buff *buf)
+{
+	return skb_has_frag_list(buf);
+}
+
+/**
+ * __qdf_nbuf_get_last_frag_list_nbuf() - Get last frag_list nbuf
+ * @buf: Network buf instance
+ *
+ * Return: Network buf instance
+ */
+static inline struct sk_buff *
+__qdf_nbuf_get_last_frag_list_nbuf(struct sk_buff *buf)
+{
+	struct sk_buff *list;
+
+	if (!__qdf_nbuf_has_fraglist(buf))
+		return NULL;
+
+	for (list = skb_shinfo(buf)->frag_list; list->next; list = list->next)
+		;
+
+	return list;
+}
+
+/**
  * __qdf_nbuf_get_ref_fraglist() - get reference to fragments
  * @buf: Network buf instance
  *
@@ -2277,6 +2311,18 @@ static inline unsigned int __qdf_nbuf_get_end_offset(__qdf_nbuf_t nbuf)
 	return skb_end_offset(nbuf);
 }
 
+/**
+ * __qdf_nbuf_get_truesize() - Return the true size of the nbuf
+ * including the header and variable data area
+ * @skb: sk buff
+ *
+ * Return: size of network buffer
+ */
+static inline unsigned int __qdf_nbuf_get_truesize(struct sk_buff *skb)
+{
+	return skb->truesize;
+}
+
 #ifdef CONFIG_WLAN_SYSFS_MEM_STATS
 /**
  * __qdf_record_nbuf_nbytes() - add or subtract the size of the nbuf
@@ -2527,6 +2573,13 @@ QDF_STATUS __qdf_nbuf_move_frag_page_offset(__qdf_nbuf_t nbuf, uint8_t idx,
 void __qdf_nbuf_add_rx_frag(__qdf_frag_t buf, __qdf_nbuf_t nbuf,
 			    int offset, int frag_len,
 			    unsigned int truesize, bool take_frag_ref);
+
+/**
+ * __qdf_nbuf_ref_frag() - get frag reference
+ *
+ * Return: void
+ */
+void __qdf_nbuf_ref_frag(qdf_frag_t buf);
 
 /**
  * __qdf_nbuf_set_mark() - Set nbuf mark

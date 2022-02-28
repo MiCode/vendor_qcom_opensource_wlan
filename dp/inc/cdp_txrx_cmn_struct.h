@@ -944,8 +944,7 @@ typedef QDF_STATUS(*ol_txrx_get_key_fp)(void *osif_dev, uint8_t *key_buf, uint8_
  */
 typedef QDF_STATUS(*ol_txrx_rsim_rx_decap_fp)(void *osif_dev,
 						qdf_nbuf_t *list_head,
-						qdf_nbuf_t *list_tail,
-						uint8_t *peer_mac);
+						qdf_nbuf_t *list_tail);
 
 /* ol_txrx_rx_fp - external tx free function to read per packet stats and
  *                            free tx buffer externally
@@ -995,6 +994,12 @@ typedef void (*ol_txrx_pktdump_cb)(ol_txrx_soc_handle soc,
 				   qdf_nbuf_t netbuf,
 				   uint8_t status,
 				   uint8_t type);
+
+/**
+ * ol_txrx_get_tsf_time - callback to get tsf time
+ */
+typedef QDF_STATUS(*ol_txrx_get_tsf_time)(void *osif_dev, uint64_t input_time,
+					  uint64_t *tsf_time);
 
 /**
  * ol_txrx_ops - (pointers to) the functions used for tx and rx
@@ -1083,6 +1088,7 @@ struct ol_txrx_ops {
 	ol_txrx_mcast_me_fp          me_convert;
 
 	ol_txrx_get_key_fp  get_key;
+	ol_txrx_get_tsf_time get_tsf_time;
 };
 
 /**
@@ -1178,6 +1184,7 @@ enum cdp_peer_param_type {
  * @CDP_SET_ATF_STATS_ENABLE: set ATF stats flag
  * @CDP_CONFIG_SPECIAL_VAP: Configure Special vap
  * @CDP_RESET_SCAN_SPCL_VAP_STATS_ENABLE: Enable scan spcl vap stats reset
+ * @CDP_ISOLATION: set isolation flag
  */
 enum cdp_pdev_param_type {
 	CDP_CONFIG_DEBUG_SNIFFER,
@@ -1211,6 +1218,7 @@ enum cdp_pdev_param_type {
 	CDP_CONFIG_SPECIAL_VAP,
 	CDP_RESET_SCAN_SPCL_VAP_STATS_ENABLE,
 	CDP_CONFIG_ENHANCED_STATS_ENABLE,
+	CDP_ISOLATION,
 };
 
 /*
@@ -1275,6 +1283,7 @@ enum cdp_pdev_param_type {
  * @cdp_pdev_param_monitor_chan: monitor channel
  * @cdp_pdev_param_atf_stats_enable: ATF stats enable
  * @cdp_pdev_param_config_special_vap: Configure Special vap
+ * @cdp_pdev_param_isolation : set isolation mode
  *
  * @cdp_psoc_param_en_rate_stats: set rate stats enable/disable
  * @cdp_psoc_param_en_nss_cfg: set nss cfg
@@ -1350,6 +1359,7 @@ typedef union cdp_config_param_t {
 	bool cdp_pdev_param_config_special_vap;
 	bool cdp_pdev_param_reset_scan_spcl_vap_stats_enable;
 	bool cdp_pdev_param_enhanced_stats_enable;
+	bool cdp_pdev_param_isolation;
 
 	/* psoc params */
 	bool cdp_psoc_param_en_rate_stats;
@@ -1360,6 +1370,7 @@ typedef union cdp_config_param_t {
 	bool cdp_skip_bar_update;
 	bool cdp_ipa_enabled;
 	bool cdp_psoc_param_vdev_stats_hw_offload;
+	bool cdp_sawf_enabled;
 } cdp_config_param_type;
 
 /**
@@ -1496,6 +1507,7 @@ enum cdp_psoc_param_type {
 	CDP_CFG_PEER_EXT_STATS,
 	CDP_IPA_ENABLE,
 	CDP_SET_VDEV_STATS_HW_OFFLOAD,
+	CDP_SAWF_ENABLE,
 };
 
 #define TXRX_FW_STATS_TXSTATS                     1
@@ -1779,6 +1791,7 @@ struct cdp_delayed_tx_completion_ppdu_user {
  * @is_ampdu: mpdu aggregate or non-aggregate?
  * @success_bytes: bytes successfully transmitted
  * @retry_bytes: bytes retried
+ * @retry_mpdus: mpdus retried
  * @failed_msdus: MSDUs failed transmission
  * @duration: user duration in ppdu
  * @ltf_size: ltf_size
@@ -1836,6 +1849,7 @@ struct cdp_delayed_tx_completion_ppdu_user {
  * @debug_copied: flag to indicate bar frame copied
  * @peer_last_delayed_ba: flag to indicate peer last delayed ba
  * @phy_tx_time_us: Phy TX duration for the User
+ * @mpdu_bytes: accumulated bytes per mpdu for mem limit feature
  */
 struct cdp_tx_completion_ppdu_user {
 	uint32_t completion_status:8,
@@ -1861,6 +1875,7 @@ struct cdp_tx_completion_ppdu_user {
 	uint32_t failed_bytes;
 	uint32_t success_msdus:16,
 		 retry_msdus:16;
+	uint32_t retry_mpdus;
 	uint32_t failed_msdus:16,
 		 duration:16;
 	uint32_t ltf_size:2,
@@ -1937,6 +1952,7 @@ struct cdp_tx_completion_ppdu_user {
 	bool peer_last_delayed_ba;
 
 	uint16_t phy_tx_time_us;
+	uint32_t mpdu_bytes;
 };
 
 /**
@@ -2024,11 +2040,15 @@ struct cdp_tx_indication_mpdu_info {
 
 /**
  * struct cdp_tx_indication_info - Tx capture information
+ * @radiotap_done: Flag to say radiotap already done or not
+ *			0 - radiotap not updated
+ *			1 - radiotap header updated
  * @mpdu_info: Tx MPDU completion information
  * @mpdu_nbuf: reconstructed mpdu packet
  * @ppdu_desc: tx completion ppdu
  */
 struct cdp_tx_indication_info {
+	bool radiotap_done;
 	struct cdp_tx_indication_mpdu_info mpdu_info;
 	qdf_nbuf_t mpdu_nbuf;
 	struct cdp_tx_completion_ppdu *ppdu_desc;
@@ -2091,6 +2111,7 @@ struct cdp_tx_mgmt_comp_info {
  * @tlv_bitmap: tlv_bitmap for the PPDU
  * @sched_cmdid: schedule command id
  * @phy_ppdu_tx_time_us: Phy per PPDU TX duration
+ * @ppdu_bytes: accumulated bytes per ppdu for mem limit feature
  * @user: per-User stats (array of per-user structures)
  */
 struct cdp_tx_completion_ppdu {
@@ -2135,6 +2156,7 @@ struct cdp_tx_completion_ppdu {
 	uint32_t tlv_bitmap;
 	uint16_t sched_cmdid;
 	uint16_t phy_ppdu_tx_time_us;
+	uint32_t ppdu_bytes;
 	struct cdp_tx_completion_ppdu_user user[];
 };
 

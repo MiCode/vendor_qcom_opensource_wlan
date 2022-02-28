@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -32,9 +32,20 @@
 #if defined(QCA_WIFI_KIWI)
 #include "msmhwioreg.h"
 #endif
+
+/* TX MONITOR */
+#ifdef QCA_MONITOR_2_0_SUPPORT
+#include "mon_buffer_addr.h"
+/* FES WINDOW OPEN */
+#include "tx_fes_setup.h"
+#include "rx_response_required_info.h"
+#endif /* QCA_MONITOR_2_0_SUPPORT */
+
 #include <reo_descriptor_threshold_reached_status.h>
 #include <reo_flush_queue.h>
-
+#ifdef REO_SHARED_QREF_TABLE_EN
+#include "rx_reo_queue_reference.h"
+#endif
 #define HAL_DESC_64_SET_FIELD(_desc, _word, _fld, _value) do { \
 	((uint64_t *)(_desc))[(_word ## _ ## _fld ## _OFFSET) >> 3] &= \
 		~(_word ## _ ## _fld ## _MASK); \

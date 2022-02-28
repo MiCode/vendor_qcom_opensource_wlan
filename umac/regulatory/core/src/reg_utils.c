@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2014-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -205,6 +205,37 @@ static QDF_STATUS reg_set_non_offload_country(struct wlan_objmgr_pdev *pdev,
 	return QDF_STATUS_SUCCESS;
 }
 
+#ifdef WLAN_REG_PARTIAL_OFFLOAD
+/**
+ * reg_restore_def_country_for_po() - API to restore country code to default
+ * value if given country is invalid for Partial Offload
+ * @offload_enabled: Is offload enabled
+ * @country: Country code
+ * @cc_country: Country code array
+ * Return- void
+ */
+static void reg_restore_def_country_for_po(bool offload_enabled,
+					   uint8_t *country,
+					   uint8_t cc_country[]){
+	if (!offload_enabled && !reg_is_world_alpha2(country)) {
+		QDF_STATUS status;
+
+		status = reg_is_country_code_valid(country);
+		if (!QDF_IS_STATUS_SUCCESS(status)) {
+			reg_err("Unable to set country code: %s\n", country);
+			reg_err("Restoring to world domain");
+			qdf_mem_copy(cc_country, REG_WORLD_ALPHA2,
+				     REG_ALPHA2_LEN + 1);
+		}
+	}
+}
+#else
+static void reg_restore_def_country_for_po(bool offload_enabled,
+					   uint8_t *country,
+					   uint8_t cc_country[]){
+}
+#endif
+
 QDF_STATUS reg_set_country(struct wlan_objmgr_pdev *pdev,
 			   uint8_t *country)
 {
@@ -254,18 +285,9 @@ QDF_STATUS reg_set_country(struct wlan_objmgr_pdev *pdev,
 	qdf_mem_copy(cc.country, country, REG_ALPHA2_LEN + 1);
 	cc.pdev_id = pdev_id;
 
-	if (!psoc_reg->offload_enabled && !reg_is_world_alpha2(country)) {
-		QDF_STATUS status;
-
-		status = reg_is_country_code_valid(country);
-		if (!QDF_IS_STATUS_SUCCESS(status)) {
-			reg_err("Unable to set country code: %s\n", country);
-			reg_err("Restoring to world domain");
-			qdf_mem_copy(cc.country, REG_WORLD_ALPHA2,
-				     REG_ALPHA2_LEN + 1);
-		}
-	}
-
+	reg_restore_def_country_for_po(psoc_reg->offload_enabled,
+				       country,
+				       cc.country);
 
 	if (reg_is_world_alpha2(cc.country))
 		psoc_reg->world_country_pending[phy_id] = true;
@@ -372,6 +394,26 @@ reg_get_6g_power_type_for_ctry(struct wlan_objmgr_psoc *psoc,
 	}
 
 	return QDF_STATUS_SUCCESS;
+}
+#endif
+
+#ifdef FEATURE_WLAN_CH_AVOID_EXT
+static inline
+void reg_get_coex_unsafe_chan_nb_user_prefer(
+		struct wlan_regulatory_psoc_priv_obj
+		*psoc_priv_obj,
+		 struct reg_config_vars config_vars)
+{
+	psoc_priv_obj->coex_unsafe_chan_nb_user_prefer =
+		config_vars.coex_unsafe_chan_nb_user_prefer;
+}
+#else
+static inline
+void reg_get_coex_unsafe_chan_nb_user_prefer(
+		struct wlan_regulatory_psoc_priv_obj
+		*psoc_priv_obj,
+		struct reg_config_vars config_vars)
+{
 }
 #endif
 
@@ -793,6 +835,7 @@ QDF_STATUS reg_set_config_vars(struct wlan_objmgr_psoc *psoc,
 		config_vars.enable_5dot9_ghz_chan_in_master_mode;
 	psoc_priv_obj->retain_nol_across_regdmn_update =
 		config_vars.retain_nol_across_regdmn_update;
+	reg_get_coex_unsafe_chan_nb_user_prefer(psoc_priv_obj, config_vars);
 
 	status = wlan_objmgr_psoc_try_get_ref(psoc, WLAN_REGULATORY_SB_ID);
 	if (QDF_IS_STATUS_ERROR(status)) {

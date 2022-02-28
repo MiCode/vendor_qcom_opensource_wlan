@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2020-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021,2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -77,7 +77,7 @@ do { \
 } while (0)
 
 #define DP_MON_FILTER_PRINT(fmt, args ...) \
-	QDF_TRACE(QDF_MODULE_ID_MON_FILTER, QDF_TRACE_LEVEL_DEBUG, \
+	QDF_TRACE(QDF_MODULE_ID_MON_FILTER, QDF_TRACE_LEVEL_ERROR, \
 		  fmt, ## args)
 
 #define dp_mon_filter_err(params...) QDF_TRACE_ERROR(QDF_MODULE_ID_MON_FILTER, params)
@@ -127,7 +127,7 @@ enum dp_mon_filter_mode {
 	DP_MON_FILTER_PKT_LOG_FULL_MODE,
 	DP_MON_FILTER_PKT_LOG_LITE_MODE,
 	DP_MON_FILTER_PKT_LOG_CBF_MODE,
-#ifdef QCA_WIFI_QCN9224
+#ifdef BE_PKTLOG_SUPPORT
 	DP_MON_FILTER_PKT_LOG_HYBRID_MODE,
 #endif
 #endif /* WDI_EVENT_ENABLE */
@@ -277,7 +277,7 @@ void dp_mon_filter_setup_rx_pkt_log_cbf(struct dp_pdev *pdev);
  */
 void dp_mon_filter_reset_rx_pktlog_cbf(struct dp_pdev *pdev);
 
-#ifdef QCA_WIFI_QCN9224
+#ifdef BE_PKTLOG_SUPPORT
 /**
  * dp_mon_filter_setup_pktlog_hybrid() - Setup the pktlog hybrid mode filter
  * in the radio object.

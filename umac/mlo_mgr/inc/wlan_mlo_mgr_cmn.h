@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -24,6 +24,7 @@
 #include <qdf_types.h>
 #include <qdf_trace.h>
 #include "wlan_mlo_mgr_public_structs.h"
+#include <wlan_mlo_mgr_main.h>
 
 #define mlo_alert(format, args...) \
 		QDF_TRACE_FATAL(QDF_MODULE_ID_MLO, format, ## args)
@@ -237,6 +238,21 @@ qdf_nbuf_t mlo_mlme_get_link_assoc_req(struct wlan_objmgr_peer *peer,
  */
 void mlo_mlme_peer_deauth(struct wlan_objmgr_peer *peer);
 
+#ifdef UMAC_MLO_AUTH_DEFER
+/**
+ * mlo_mlme_peer_process_auth() - Process deferred auth request
+ * @auth_params: deferred auth params
+ *
+ * Return: void
+ */
+void mlo_mlme_peer_process_auth(struct mlpeer_auth_params *auth_param);
+#else
+static inline void
+mlo_mlme_peer_process_auth(struct mlpeer_auth_params *auth_param)
+{
+}
+#endif
+
 /**
  * mlo_get_link_vdev_ix() - Get index of link VDEV in MLD
  * @ml_dev: ML device context
@@ -260,6 +276,16 @@ uint8_t mlo_get_link_vdev_ix(struct wlan_mlo_dev_context *mldev,
 void mlo_get_ml_vdev_list(struct wlan_objmgr_vdev *vdev,
 			  uint16_t *vdev_count,
 			  struct wlan_objmgr_vdev **wlan_vdev_list);
+
+/**
+ * mlo_mlme_handle_sta_csa_param() - process saved mlo sta csa param
+ * @vdev: vdev pointer
+ * @csa_param: saved csa_param
+ *
+ * Return: None
+ */
+void mlo_mlme_handle_sta_csa_param(struct wlan_objmgr_vdev *vdev,
+				   struct csa_offload_params *csa_param);
 
 #define INVALID_HW_LINK_ID 0xFFFF
 #ifdef WLAN_MLO_MULTI_CHIP
@@ -332,5 +358,61 @@ mlo_process_link_set_active_resp(struct wlan_objmgr_psoc *psoc,
  * Return: QDF_STATUS
  */
 QDF_STATUS mlo_ser_set_link_req(struct mlo_link_set_active_req *req);
+
+/*
+ * API to have operation on ml vdevs
+ */
+typedef void (*mlo_vdev_ops_handler)(struct wlan_objmgr_vdev *vdev,
+				     void *arg);
+
+/*
+ * mlo_iterate_ml_vdev_list: Iterate on ML vdevs of MLD
+ *
+ * @vdev: vdev object
+ * @handler: the handler will be called for each object in ML list
+ * @arg: argument to be passed to handler
+ * @lock: Need to acquire lock or not
+ *
+ * Return: none
+ */
+static inline
+void mlo_iterate_ml_vdev_list(struct wlan_objmgr_vdev *vdev,
+			      mlo_vdev_ops_handler handler,
+			      void *arg, bool lock)
+{
+	struct wlan_mlo_dev_context *mlo_dev_ctx = NULL;
+	uint8_t i = 0;
+	QDF_STATUS status;
+
+	if (!vdev)
+		return;
+
+	mlo_dev_ctx = vdev->mlo_dev_ctx;
+	if (!mlo_dev_ctx || !(wlan_vdev_mlme_is_mlo_vdev(vdev)))
+		return;
+
+	if (lock)
+		mlo_dev_lock_acquire(mlo_dev_ctx);
+
+	for (i =  0; i < WLAN_UMAC_MLO_MAX_VDEVS; i++) {
+		if (!mlo_dev_ctx->wlan_vdev_list[i])
+			continue;
+
+		status = wlan_objmgr_vdev_try_get_ref(
+					mlo_dev_ctx->wlan_vdev_list[i],
+					WLAN_MLO_MGR_ID);
+		if (QDF_IS_STATUS_ERROR(status))
+			continue;
+
+		if (handler)
+			handler(mlo_dev_ctx->wlan_vdev_list[i], arg);
+
+		mlo_release_vdev_ref(mlo_dev_ctx->wlan_vdev_list[i]);
+	}
+
+	if (lock)
+		mlo_dev_lock_release(mlo_dev_ctx);
+}
+
 #endif
 #endif

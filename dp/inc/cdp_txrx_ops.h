@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2017-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -895,6 +895,11 @@ struct cdp_mon_ops {
 		(*config_full_mon_mode)(struct cdp_soc_t *soc, uint8_t val);
 	QDF_STATUS (*soc_config_full_mon_mode)(struct cdp_pdev *cdp_pdev,
 					       uint8_t val);
+
+	/* Get monitor mode pdev stats */
+	QDF_STATUS
+		(*get_mon_pdev_rx_stats)(struct cdp_soc_t *soc, uint8_t pdev_id,
+					 struct cdp_pdev_mon_stats *stats);
 };
 
 struct cdp_host_stats_ops {
@@ -1048,6 +1053,17 @@ struct cdp_host_stats_ops {
 
 	void (*txrx_reset_vdev_stats_id)(struct cdp_soc_t *soc,
 					 uint8_t vdev_stats_id);
+
+#ifdef WLAN_TX_PKT_CAPTURE_ENH
+	QDF_STATUS
+	(*get_peer_tx_capture_stats)(struct cdp_soc_t *soc, uint8_t vdev_id,
+				     uint8_t *peer_mac,
+				     struct cdp_peer_tx_capture_stats *stats);
+
+	QDF_STATUS
+	(*get_pdev_tx_capture_stats)(struct cdp_soc_t *soc, uint8_t pdev_id,
+				     struct cdp_pdev_tx_capture_stats *stats);
+#endif /* WLAN_TX_PKT_CAPTURE_ENH */
 };
 
 struct cdp_wds_ops {
@@ -1144,6 +1160,12 @@ struct ol_if_ops {
 				   uint8_t *wds_macaddr,
 				   uint8_t type,
 				   uint8_t delete_in_fw);
+#ifdef WLAN_FEATURE_MULTI_AST_DEL
+	void (*peer_del_multi_wds_entry)(
+			struct cdp_ctrl_objmgr_psoc *soc,
+			uint8_t vdev_id,
+			struct peer_del_multi_wds_entries *wds_list);
+#endif
 	QDF_STATUS
 	(*lro_hash_config)(struct cdp_ctrl_objmgr_psoc *psoc, uint8_t pdev_id,
 			   struct cdp_lro_hash_config *rx_offld_hash);

@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2017-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  *
  * Permission to use, copy, modify, and/or distribute this software for
@@ -409,6 +410,20 @@ static QDF_STATUS target_send_dfs_offload_enable_cmd(
 	return status;
 }
 
+#if defined(WLAN_DFS_PARTIAL_OFFLOAD) && defined(HOST_DFS_SPOOF_TEST)
+static void target_if_register_dfs_tx_ops_send_avg(
+		struct wlan_lmac_if_dfs_tx_ops *dfs_tx_ops)
+{
+	dfs_tx_ops->dfs_send_avg_radar_params_to_fw =
+		&target_if_dfs_send_avg_params_to_fw;
+}
+#else
+static inline void target_if_register_dfs_tx_ops_send_avg(
+		struct wlan_lmac_if_dfs_tx_ops *dfs_tx_ops)
+{
+}
+#endif
+
 QDF_STATUS target_if_register_dfs_tx_ops(struct wlan_lmac_if_tx_ops *tx_ops)
 {
 	struct wlan_lmac_if_dfs_tx_ops *dfs_tx_ops;
@@ -435,8 +450,9 @@ QDF_STATUS target_if_register_dfs_tx_ops(struct wlan_lmac_if_tx_ops *tx_ops)
 				&target_if_dfs_set_phyerr_filter_offload;
 
 	dfs_tx_ops->dfs_get_caps = &target_if_dfs_get_caps;
-	dfs_tx_ops->dfs_send_avg_radar_params_to_fw =
-		&target_if_dfs_send_avg_params_to_fw;
+
+	target_if_register_dfs_tx_ops_send_avg(dfs_tx_ops);
+
 	dfs_tx_ops->dfs_is_tgt_offload = &target_if_dfs_offload;
 	dfs_tx_ops->dfs_is_tgt_radar_found_chan_freq_eq_center_freq =
 		&target_if_dfs_is_radar_found_chan_freq_eq_center_freq;

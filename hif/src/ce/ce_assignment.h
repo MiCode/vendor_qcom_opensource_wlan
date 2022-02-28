@@ -1357,7 +1357,7 @@ static struct CE_attr host_ce_config_wlan_qca6490[] = {
 	/* target->host WMI */
 	{ /* CE2 */ CE_ATTR_FLAGS, 0, 0,  3520, 64, NULL,},
 	/* host->target WMI */
-	{ /* CE3 */ CE_ATTR_FLAGS, 0, 32, 2048, 0, NULL,},
+	{ /* CE3 */ CE_ATTR_FLAGS, 0, 32, 3520, 0, NULL,},
 	/* host->target HTT */
 	{ /* CE4 */ CE4_COMP_HTT_HTC, 0,
 		CE_HTT_H2T_MSG_SRC_NENTRIES_QCA6490, 256, 0, NULL,},
@@ -1386,7 +1386,7 @@ static struct CE_pipe_config target_ce_config_wlan_qca6490[] = {
 	/* target->host WMI  + HTC control */
 	{ /* CE2 */ 2, PIPEDIR_IN,  32, 3520, CE_ATTR_FLAGS, 0,},
 	/* host->target WMI */
-	{ /* CE3 */ 3, PIPEDIR_OUT, 32, 2048, CE_ATTR_FLAGS, 0,},
+	{ /* CE3 */ 3, PIPEDIR_OUT, 32, 3520, CE_ATTR_FLAGS, 0,},
 	/* host->target HTT */
 	{ /* CE4 */ 4, PIPEDIR_OUT, 256, 256,
 		(CE_ATTR_FLAGS | CE_ATTR_DISABLE_INTR), 0,},
@@ -1413,9 +1413,9 @@ static struct CE_attr host_ce_config_wlan_qca6750[] = {
 	/* target->host HTT + HTC control */
 	{ /* CE1 */ CE_ATTR_FLAGS, 0, 0,  2048, 512, NULL,},
 	/* target->host WMI */
-	{ /* CE2 */ CE_ATTR_FLAGS | CE_ATTR_HI_TASKLET, 0, 0,  2048, 32, NULL,},
+	{ /* CE2 */ CE_ATTR_FLAGS | CE_ATTR_HI_TASKLET, 0, 0,  3520, 32, NULL,},
 	/* host->target WMI */
-	{ /* CE3 */ CE_ATTR_FLAGS, 0, 32, 2048, 0, NULL,},
+	{ /* CE3 */ CE_ATTR_FLAGS, 0, 32, 3520, 0, NULL,},
 	/* host->target HTT */
 	{ /* CE4 */ (CE_ATTR_FLAGS | CE_ATTR_DISABLE_INTR), 0,
 		CE_HTT_H2T_MSG_SRC_NENTRIES, 256, 0, NULL,},
@@ -1443,9 +1443,9 @@ static struct CE_pipe_config target_ce_config_wlan_qca6750[] = {
 	/* target->host HTT */
 	{ /* CE1 */ 1, PIPEDIR_IN,  32, 2048, CE_ATTR_FLAGS, 0,},
 	/* target->host WMI  + HTC control */
-	{ /* CE2 */ 2, PIPEDIR_IN,  32, 2048, CE_ATTR_FLAGS, 0,},
+	{ /* CE2 */ 2, PIPEDIR_IN,  32, 3520, CE_ATTR_FLAGS, 0,},
 	/* host->target WMI */
-	{ /* CE3 */ 3, PIPEDIR_OUT, 32, 2048, CE_ATTR_FLAGS, 0,},
+	{ /* CE3 */ 3, PIPEDIR_OUT, 32, 3520, CE_ATTR_FLAGS, 0,},
 	/* host->target HTT */
 	{ /* CE4 */ 4, PIPEDIR_OUT, 256, 256,
 		(CE_ATTR_FLAGS | CE_ATTR_DISABLE_INTR), 0,},
@@ -1475,7 +1475,7 @@ static struct CE_attr host_ce_config_wlan_kiwi[] = {
 	/* target->host WMI */
 	{ /* CE2 */ CE_ATTR_FLAGS, 0, 0,  3520, 64, NULL,},
 	/* host->target WMI */
-	{ /* CE3 */ CE_ATTR_FLAGS, 0, 32, 2048, 0, NULL,},
+	{ /* CE3 */ CE_ATTR_FLAGS, 0, 32, 3520, 0, NULL,},
 	/* host->target HTT */
 	{ /* CE4 */ (CE_ATTR_FLAGS | CE_ATTR_DISABLE_INTR), 0,
 		256, 256, 0, NULL,},
@@ -1508,7 +1508,7 @@ static struct CE_pipe_config target_ce_config_wlan_kiwi[] = {
 	/* target->host WMI  + HTC control */
 	{ /* CE2 */ 2, PIPEDIR_IN,  32, 3520, CE_ATTR_FLAGS, 0,},
 	/* host->target WMI */
-	{ /* CE3 */ 3, PIPEDIR_OUT, 32, 2048, CE_ATTR_FLAGS, 0,},
+	{ /* CE3 */ 3, PIPEDIR_OUT, 32, 3520, CE_ATTR_FLAGS, 0,},
 	/* host->target HTT */
 	{ /* CE4 */ 4, PIPEDIR_OUT, 256, 256,
 		(CE_ATTR_FLAGS | CE_ATTR_DISABLE_INTR), 0,},
@@ -1558,23 +1558,23 @@ static struct CE_attr host_ce_config_wlan_qcn9224[] = {
 		PKTLOG_DST_ENTRIES, NULL,},
 #endif
 	/* Target autonomous HIF_memcpy */
-	{/*CE6*/ CE_ATTR_FLAGS, 0, 0, 0, 0, NULL,},
+	{/*CE6*/ (CE_ATTR_FLAGS | CE_ATTR_DISABLE_INTR), 0, 0, 0, 0, NULL,},
 	/* host->target WMI (mac1) */
 	{/*CE7*/ CE_ATTR_FLAGS, 0, 32, 2048, 0, NULL,},
 	/* Reserved for target (Generic HiF memcpy */
-	{/*CE8*/ CE_ATTR_FLAGS, 0, 0, 0, 0, NULL,},
+	{/*CE8*/ (CE_ATTR_FLAGS | CE_ATTR_DISABLE_INTR), 0, 0, 0, 0, NULL,},
 	/* CE 9, 10, 11 belong to CoreBsp & MHI driver */
-	{/*CE9*/ CE_ATTR_FLAGS, 0, 0, 0, 0, NULL,},
-	{/*CE10*/ CE_ATTR_FLAGS, 0, 0, 0, 0, NULL,},
-	{/*CE11*/ CE_ATTR_FLAGS, 0, 0, 0, 0, NULL,},
+	{/*CE9*/ (CE_ATTR_FLAGS | CE_ATTR_DISABLE_INTR), 0, 0, 0, 0, NULL,},
+	{/*CE10*/ (CE_ATTR_FLAGS | CE_ATTR_DISABLE_INTR), 0, 0, 0, 0, NULL,},
+	{/*CE11*/ (CE_ATTR_FLAGS | CE_ATTR_DISABLE_INTR), 0, 0, 0, 0, NULL,},
 	/* Target CV prefetch */
-	{/*CE12*/ CE_ATTR_FLAGS, 0, 0, 0, 0, NULL,},
+	{/*CE12*/ (CE_ATTR_FLAGS | CE_ATTR_DISABLE_INTR), 0, 0, 0, 0, NULL,},
 	/* Target CV prefetch */
-	{/*CE13*/ CE_ATTR_FLAGS, 0, 0, 0, 0, NULL,},
+	{/*CE13*/ (CE_ATTR_FLAGS | CE_ATTR_DISABLE_INTR), 0, 0, 0, 0, NULL,},
 	/* target->host WMI logging, Direc-DMA */
-	{/*CE14*/ CE_ATTR_FLAGS, 0, 0, 0, 0, NULL,},
+	{/*CE14*/ (CE_ATTR_FLAGS), 0, 0, 0, 0, NULL,},
 	/* Reserved for customer use */
-	{/*CE15*/ CE_ATTR_FLAGS, 0, 0, 0, 0, NULL,},
+	{/*CE15*/ (CE_ATTR_FLAGS | CE_ATTR_DISABLE_INTR), 0, 0, 0, 0, NULL,},
 };
 
 static struct CE_pipe_config target_ce_config_wlan_qcn9224[] = {

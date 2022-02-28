@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021,2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -29,6 +29,7 @@
 #ifdef FEATURE_WDS
 #include "dp_txrx_wds.h"
 #endif
+#include "dp_li.h"
 
 extern uint8_t sec_type_map[MAX_CDP_SEC_TYPE];
 
@@ -93,7 +94,8 @@ void dp_tx_process_htt_completion_li(struct dp_soc *soc,
 	struct dp_vdev *vdev = NULL;
 	struct hal_tx_completion_status ts = {0};
 	uint32_t *htt_desc = (uint32_t *)status;
-	struct dp_peer *peer;
+	struct dp_txrx_peer *txrx_peer;
+	dp_txrx_ref_handle txrx_ref_handle = NULL;
 	struct cdp_tid_tx_stats *tid_stats = NULL;
 	struct htt_soc *htt_handle;
 	uint8_t vdev_id;
@@ -187,21 +189,24 @@ void dp_tx_process_htt_completion_li(struct dp_soc *soc,
 		if (tx_status < CDP_MAX_TX_HTT_STATUS)
 			tid_stats->htt_status_cnt[tx_status]++;
 
-		peer = dp_peer_get_ref_by_id(soc, ts.peer_id,
-					     DP_MOD_ID_HTT_COMP);
-		if (qdf_likely(peer)) {
-			DP_STATS_INC_PKT(peer, tx.comp_pkt, 1,
-					 qdf_nbuf_len(tx_desc->nbuf));
-			DP_STATS_INCC(peer, tx.tx_failed, 1,
-				      tx_status != HTT_TX_FW2WBM_TX_STATUS_OK);
+		txrx_peer = dp_txrx_peer_get_ref_by_id(soc, ts.peer_id,
+						       &txrx_ref_handle,
+						       DP_MOD_ID_HTT_COMP);
+		if (qdf_likely(txrx_peer)) {
+			DP_PEER_STATS_FLAT_INC_PKT(txrx_peer, comp_pkt, 1,
+						   qdf_nbuf_len(tx_desc->nbuf));
+			if (tx_status != HTT_TX_FW2WBM_TX_STATUS_OK)
+				DP_PEER_STATS_FLAT_INC(txrx_peer, tx_failed, 1);
 		}
 
-		dp_tx_comp_process_tx_status(soc, tx_desc, &ts, peer, ring_id);
-		dp_tx_comp_process_desc(soc, tx_desc, &ts, peer);
+		dp_tx_comp_process_tx_status(soc, tx_desc, &ts, txrx_peer,
+					     ring_id);
+		dp_tx_comp_process_desc(soc, tx_desc, &ts, txrx_peer);
 		dp_tx_desc_release(tx_desc, tx_desc->pool_id);
 
-		if (qdf_likely(peer))
-			dp_peer_unref_delete(peer, DP_MOD_ID_HTT_COMP);
+		if (qdf_likely(txrx_peer))
+			dp_txrx_peer_unref_delete(txrx_ref_handle,
+						  DP_MOD_ID_HTT_COMP);
 
 		break;
 	}
@@ -406,6 +411,8 @@ dp_tx_hw_enqueue_li(struct dp_soc *soc, struct dp_vdev *vdev,
 		dp_tx_pkt_tracepoints_enabled() ||
 		qdf_unlikely(soc->rdkstats_enabled))
 		tx_desc->timestamp = qdf_ktime_to_ms(qdf_ktime_real_get());
+	else
+		dp_tx_desc_set_timestamp(tx_desc);
 
 	dp_verbose_debug("length:%d , type = %d, dma_addr %llx, offset %d desc id %u",
 			 tx_desc->length,
@@ -450,6 +457,8 @@ dp_tx_hw_enqueue_li(struct dp_soc *soc, struct dp_vdev *vdev,
 
 ring_access_fail:
 	dp_tx_ring_access_end_wrapper(soc, hal_ring_hdl, coalesce);
+	dp_pkt_add_timestamp(vdev, QDF_PKT_TX_DRIVER_EXIT,
+			     qdf_get_log_timestamp(), tx_desc->nbuf);
 
 	return status;
 }
@@ -476,6 +485,7 @@ QDF_STATUS dp_tx_desc_pool_init_li(struct dp_soc *soc,
 
 		tx_desc->id = id;
 		tx_desc->pool_id = pool_id;
+		dp_tx_desc_set_magic(tx_desc, DP_TX_MAGIC_PATTERN_FREE);
 		tx_desc = tx_desc->next;
 		count++;
 	}

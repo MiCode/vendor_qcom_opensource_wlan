@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1542,6 +1542,17 @@ uint16_t hal_rx_get_rx_sequence_be(uint8_t *buf)
 }
 
 #ifdef RECEIVE_OFFLOAD
+#ifdef QCA_WIFI_KIWI_V2
+static inline
+uint16_t hal_rx_get_fisa_cumulative_l4_checksum_be(uint8_t *buf)
+{
+	/*
+	 * cumulative l4 checksum is not supported in V2 and
+	 * cumulative_l4_checksum field is not present
+	 */
+	return 0;
+}
+#else
 /**
  * hal_rx_get_fisa_cumulative_l4_checksum_be() - Retrieve cumulative
  *                                                 checksum
@@ -1556,6 +1567,7 @@ uint16_t hal_rx_get_fisa_cumulative_l4_checksum_be(uint8_t *buf)
 
 	return HAL_RX_TLV_GET_FISA_CUMULATIVE_L4_CHECKSUM(rx_pkt_tlvs);
 }
+#endif
 
 /**
  * hal_rx_get_fisa_cumulative_ip_length_be() - Retrieve cumulative

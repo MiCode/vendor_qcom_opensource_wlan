@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -32,6 +32,12 @@
 	RXPCU_PPDU_END_INFO_9_RX_PPDU_DURATION_MASK
 #define UNIFIED_RXPCU_PPDU_END_INFO_8_RX_PPDU_DURATION_LSB \
 	RXPCU_PPDU_END_INFO_9_RX_PPDU_DURATION_LSB
+#define UNIFIED_RXPCU_PPDU_END_INFO_11_PHYRX_ABORT_REQUEST_INFO_DETAILS_PHYRX_ABORT_REASON_OFFSET \
+	RXPCU_PPDU_END_INFO_11_PHYRX_ABORT_REQUEST_INFO_DETAILS_PHYRX_ABORT_REASON_OFFSET
+#define UNIFIED_RXPCU_PPDU_END_INFO_11_PHYRX_ABORT_REQUEST_INFO_DETAILS_PHYRX_ABORT_REASON_MASK \
+	RXPCU_PPDU_END_INFO_11_PHYRX_ABORT_REQUEST_INFO_DETAILS_PHYRX_ABORT_REASON_MASK
+#define UNIFIED_RXPCU_PPDU_END_INFO_11_PHYRX_ABORT_REQUEST_INFO_DETAILS_PHYRX_ABORT_REASON_LSB \
+	RXPCU_PPDU_END_INFO_11_PHYRX_ABORT_REQUEST_INFO_DETAILS_PHYRX_ABORT_REASON_LSB
 #define UNIFIED_PHYRX_HT_SIG_0_HT_SIG_INFO_PHYRX_HT_SIG_INFO_DETAILS_OFFSET \
 	PHYRX_HT_SIG_0_PHYRX_HT_SIG_INFO_DETAILS_MCS_OFFSET
 #define UNIFIED_PHYRX_L_SIG_B_0_L_SIG_B_INFO_PHYRX_L_SIG_B_INFO_DETAILS_OFFSET \
@@ -1686,7 +1692,7 @@ struct hal_hw_srng_config hw_srng_table_8074v2[] = {
 	},
 	{ /* WBM2SW_RELEASE */
 		.start_ring_id = HAL_SRNG_WBM2SW0_RELEASE,
-		.max_rings = 4,
+		.max_rings = 5,
 		.entry_size = sizeof(struct wbm_release_ring) >> 2,
 		.lmac_ring = FALSE,
 		.ring_dir = HAL_SRNG_DST_RING,

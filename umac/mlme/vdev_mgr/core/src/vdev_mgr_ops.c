@@ -235,13 +235,13 @@ vdev_mgr_set_cur_chan_punc_pattern(struct wlan_channel *des_chan,
 #endif
 
 #ifdef WLAN_FEATURE_11BE_MLO
-#ifdef WLAN_MLO_MCAST
+#ifdef WLAN_MCAST_MLO
 static inline void
 vdev_mgr_start_param_update_mlo_mcast(struct wlan_objmgr_vdev *vdev,
 				      struct vdev_start_params *param)
 {
 	if (wlan_vdev_mlme_is_mlo_mcast_vdev(vdev))
-		param->mlo_flags.mlo_macst_vdev = 1;
+		param->mlo_flags.mlo_mcast_vdev = 1;
 }
 #else
 #define vdev_mgr_start_param_update_mlo_mcast(vdev, param)
@@ -347,7 +347,7 @@ static QDF_STATUS vdev_mgr_start_param_update(
 {
 	struct wlan_channel *des_chan;
 	uint32_t dfs_reg;
-	bool set_agile = false, dfs_set_cfreq2 = false, is_stadfs_en = false;
+	bool is_stadfs_en = false;
 	struct wlan_objmgr_vdev *vdev;
 	struct wlan_objmgr_pdev *pdev;
 	enum QDF_OPMODE op_mode;
@@ -458,19 +458,6 @@ static QDF_STATUS vdev_mgr_start_param_update(
 	}
 	wlan_vdev_mlme_get_ssid(vdev, param->ssid.ssid, &param->ssid.length);
 
-	if (des_chan->ch_phymode == WLAN_PHYMODE_11AC_VHT80 ||
-	    des_chan->ch_phymode == WLAN_PHYMODE_11AXA_HE80) {
-		tgt_dfs_find_vht80_precac_chan_freq(pdev,
-						    des_chan->ch_phymode,
-						    des_chan->ch_freq_seg1,
-						    &param->channel.cfreq1,
-						    &param->channel.cfreq2,
-						    &param->channel.phy_mode,
-						    &dfs_set_cfreq2,
-						    &set_agile);
-		param->channel.dfs_set_cfreq2 = dfs_set_cfreq2;
-		param->channel.set_agile = set_agile;
-	}
 	wlan_objmgr_pdev_release_ref(pdev, WLAN_MLME_SB_ID);
 	return QDF_STATUS_SUCCESS;
 }

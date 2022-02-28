@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -146,8 +146,8 @@ static const uint8_t tx_ring_mask_msi[WLAN_CFG_INT_NUM_CONTEXTS] = {
 
 #ifdef TX_MULTI_TCL
 static const uint8_t multi_tx_ring_mask_msi[WLAN_CFG_INT_NUM_CONTEXTS] = {
-	[0] = WLAN_CFG_TX_RING_MASK_0, [7] = WLAN_CFG_TX_RING_MASK_2,
-	[8] = WLAN_CFG_TX_RING_MASK_4};
+	[0] = WLAN_CFG_TX_RING_MASK_0, [4] = WLAN_CFG_TX_RING_MASK_2,
+	[5] = WLAN_CFG_TX_RING_MASK_4};
 
 #ifdef IPA_OFFLOAD
 static inline const
@@ -195,7 +195,7 @@ static const uint8_t rx_ring_mask_msi[WLAN_CFG_INT_NUM_CONTEXTS] = {
 #else
 static const uint8_t rx_ring_mask_msi[WLAN_CFG_INT_NUM_CONTEXTS] = {
 	[1] = WLAN_CFG_RX_RING_MASK_0, [2] = WLAN_CFG_RX_RING_MASK_1,
-	[3] = WLAN_CFG_RX_RING_MASK_2, [4] = WLAN_CFG_RX_RING_MASK_3};
+	[3] = WLAN_CFG_RX_RING_MASK_2 | WLAN_CFG_RX_RING_MASK_3};
 #endif
 #endif /* CONFIG_BERYLLIUM */
 
@@ -204,8 +204,8 @@ static const  uint8_t rxdma2host_ring_mask_msi[WLAN_CFG_INT_NUM_CONTEXTS] = {
 	[13] = WLAN_CFG_RXDMA2HOST_RING_MASK_0};
 #else
 static const  uint8_t rxdma2host_ring_mask_msi[WLAN_CFG_INT_NUM_CONTEXTS] = {
-	[5] = WLAN_CFG_RXDMA2HOST_RING_MASK_0,
-	[6] = WLAN_CFG_RXDMA2HOST_RING_MASK_1};
+	[6] = WLAN_CFG_RXDMA2HOST_RING_MASK_0 |
+	      WLAN_CFG_RXDMA2HOST_RING_MASK_1};
 #endif /* CONFIG_BERYLLIUM */
 
 #ifdef CONFIG_BERYLLIUM
@@ -1949,6 +1949,20 @@ wlan_soc_vdev_hw_stats_cfg_attach(struct cdp_ctrl_objmgr_psoc *psoc,
 }
 #endif
 
+#ifdef WLAN_TX_PKT_CAPTURE_ENH
+static void wlan_soc_tx_capt_cfg_attach(struct cdp_ctrl_objmgr_psoc *psoc,
+				struct wlan_cfg_dp_soc_ctxt *wlan_cfg_ctx)
+{
+	wlan_cfg_ctx->tx_capt_max_mem_allowed =
+		cfg_get(psoc, CFG_DP_TX_CAPT_MAX_MEM_MB) * 1024 * 1024;
+}
+#else
+static void wlan_soc_tx_capt_cfg_attach(struct cdp_ctrl_objmgr_psoc *psoc,
+				struct wlan_cfg_dp_soc_ctxt *wlan_cfg_ctx)
+{
+}
+#endif
+
 /**
  * wlan_cfg_soc_attach() - Allocate and prepare SoC configuration
  * @psoc - Object manager psoc
@@ -1971,6 +1985,7 @@ wlan_cfg_soc_attach(struct cdp_ctrl_objmgr_psoc *psoc)
 	wlan_cfg_ctx->per_pdev_tx_ring = cfg_get(psoc, CFG_DP_PDEV_TX_RING);
 	wlan_cfg_ctx->num_reo_dest_rings = cfg_get(psoc, CFG_DP_REO_DEST_RINGS);
 	wlan_cfg_ctx->num_tcl_data_rings = cfg_get(psoc, CFG_DP_TCL_DATA_RINGS);
+	wlan_cfg_ctx->num_tx_comp_rings = cfg_get(psoc, CFG_DP_TX_COMP_RINGS);
 	wlan_cfg_ctx->num_nss_reo_dest_rings =
 				cfg_get(psoc, CFG_DP_NSS_REO_DEST_RINGS);
 	wlan_cfg_ctx->num_nss_tcl_data_rings =
@@ -2147,6 +2162,7 @@ wlan_cfg_soc_attach(struct cdp_ctrl_objmgr_psoc *psoc)
 	wlan_cfg_ctx->num_rxdma_dst_rings_per_pdev = NUM_RXDMA_RINGS_PER_PDEV;
 	wlan_cfg_ctx->num_rxdma_status_rings_per_pdev =
 					NUM_RXDMA_RINGS_PER_PDEV;
+	wlan_soc_tx_capt_cfg_attach(psoc, wlan_cfg_ctx);
 
 	return wlan_cfg_ctx;
 }
@@ -2524,6 +2540,11 @@ int wlan_cfg_num_nss_tcl_data_rings(struct wlan_cfg_dp_soc_ctxt *cfg)
 }
 #endif
 #endif
+
+int wlan_cfg_num_tx_comp_rings(struct wlan_cfg_dp_soc_ctxt *cfg)
+{
+	return cfg->num_tx_comp_rings;
+}
 
 int wlan_cfg_tx_ring_size(struct wlan_cfg_dp_soc_ctxt *cfg)
 {
@@ -3318,6 +3339,27 @@ wlan_cfg_set_vdev_stats_hw_offload_config(struct wlan_cfg_dp_soc_ctxt *cfg,
 {}
 #endif
 
+#ifdef CONFIG_SAWF
+bool wlan_cfg_get_sawf_config(struct wlan_cfg_dp_soc_ctxt *cfg)
+{
+	return cfg->sawf_enabled;
+}
+
+void wlan_cfg_set_sawf_config(struct wlan_cfg_dp_soc_ctxt *cfg, bool val)
+{
+	cfg->sawf_enabled = val;
+}
+#else
+bool wlan_cfg_get_sawf_config(struct wlan_cfg_dp_soc_ctxt *cfg)
+{
+	return false;
+}
+
+void wlan_cfg_set_sawf_config(struct wlan_cfg_dp_soc_ctxt *cfg, bool val)
+{
+}
+#endif
+
 #ifdef CONFIG_BERYLLIUM
 int wlan_cfg_get_host2txmon_ring_mask(struct wlan_cfg_dp_soc_ctxt *cfg,
 				      int context)
@@ -3357,3 +3399,5 @@ bool wlan_cfg_get_txmon_hw_support(struct wlan_cfg_dp_soc_ctxt *cfg)
 {
 	return cfg->txmon_hw_support;
 }
+
+qdf_export_symbol(wlan_cfg_get_txmon_hw_support);

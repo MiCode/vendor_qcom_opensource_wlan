@@ -2424,6 +2424,7 @@ QDF_STATUS wmi_unified_vdev_set_qdepth_thresh_cmd_send(
 		wmi_unified_t wmi_handle,
 		struct set_qdepth_thresh_params *param);
 
+#ifdef WLAN_REG_PARTIAL_OFFLOAD
 /**
  *  wmi_unified_pdev_set_regdomain_params_cmd_send() - WMI set regdomain
  *  function
@@ -2435,6 +2436,7 @@ QDF_STATUS wmi_unified_vdev_set_qdepth_thresh_cmd_send(
 QDF_STATUS wmi_unified_pdev_set_regdomain_cmd_send(
 			wmi_unified_t wmi_handle,
 			struct pdev_set_regdomain_params *param);
+#endif
 
 /**
  *  wmi_unified_set_beacon_filter_cmd_send() - WMI set beacon filter function
@@ -4643,5 +4645,19 @@ QDF_STATUS wmi_unified_send_set_mac_addr(struct wmi_unified *wmi_handle,
 QDF_STATUS wmi_extract_update_mac_address_event(wmi_unified_t wmi_handle,
 						void *evt_buf, uint8_t *vdev_id,
 						uint8_t *status);
+#endif
+
+#ifdef WLAN_FEATURE_11BE_MLO
+/**
+ * wmi_extract_quiet_offload_event() - Extra mlo sta quiet IE offload event
+ * @wmi_handle: WMI handle
+ * @evt_buf: event buffer
+ * @quiet_event: pointer to struct vdev_sta_quiet_event
+ *
+ * Return: QDF_STATUS_SUCCESS for success or error code
+ */
+QDF_STATUS wmi_extract_quiet_offload_event(
+				struct wmi_unified *wmi_handle, void *evt_buf,
+				struct vdev_sta_quiet_event *quiet_event);
 #endif
 #endif /* _WMI_UNIFIED_API_H_ */

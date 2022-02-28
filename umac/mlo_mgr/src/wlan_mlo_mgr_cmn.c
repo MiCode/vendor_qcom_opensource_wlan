@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -244,6 +244,19 @@ void mlo_mlme_peer_deauth(struct wlan_objmgr_peer *peer)
 
 	mlo_ctx->mlme_ops->mlo_mlme_ext_deauth(peer);
 }
+
+#ifdef UMAC_MLO_AUTH_DEFER
+void mlo_mlme_peer_process_auth(struct mlpeer_auth_params *auth_param)
+{
+	struct mlo_mgr_context *mlo_ctx = wlan_objmgr_get_mlo_ctx();
+
+	if (!mlo_ctx || !mlo_ctx->mlme_ops ||
+	    !mlo_ctx->mlme_ops->mlo_mlme_ext_peer_process_auth)
+		return;
+
+	mlo_ctx->mlme_ops->mlo_mlme_ext_peer_process_auth(auth_param);
+}
+#endif
 
 uint8_t mlo_get_link_vdev_ix(struct wlan_mlo_dev_context *ml_dev,
 			     struct wlan_objmgr_vdev *vdev)
@@ -571,4 +584,16 @@ out:
 	wlan_objmgr_vdev_release_ref(vdev, WLAN_MLO_MGR_ID);
 
 	return status;
+}
+
+void mlo_mlme_handle_sta_csa_param(struct wlan_objmgr_vdev *vdev,
+				   struct csa_offload_params *csa_param)
+{
+	struct mlo_mgr_context *mlo_ctx = wlan_objmgr_get_mlo_ctx();
+
+	if (!mlo_ctx || !mlo_ctx->mlme_ops ||
+	    !mlo_ctx->mlme_ops->mlo_mlme_ext_handle_sta_csa_param)
+		return;
+
+	mlo_ctx->mlme_ops->mlo_mlme_ext_handle_sta_csa_param(vdev, csa_param);
 }

@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2017-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -30,6 +30,7 @@
 #include <wlan_objmgr_vdev_obj.h>
 #include <wlan_objmgr_peer_obj.h>
 #include <wlan_utility.h>
+#include <wlan_cp_stats_utils_api.h>
 
 #include "wlan_crypto_global_def.h"
 #include "wlan_crypto_global_api.h"
@@ -1345,6 +1346,7 @@ QDF_STATUS wlan_crypto_getkey(struct wlan_objmgr_vdev *vdev,
 				(uint8_t *)(&key->keyrsc[0]),
 				sizeof(req_key->keyrsc));
 		req_key->keylen = key->keylen;
+		req_key->keyix = key->keyix;
 		req_key->flags = key->flags;
 		cipher_table = (struct wlan_crypto_cipher *)key->cipher_table;
 
@@ -2394,12 +2396,15 @@ bool wlan_crypto_is_mmie_valid(struct wlan_objmgr_vdev *vdev,
 	if (qdf_mem_cmp(ipn, key->keyrsc, 6) <= 0) {
 		uint8_t *su = (uint8_t *)key->keyrsc;
 		uint8_t *end = ipn + 6;
+		struct wlan_objmgr_peer *peer = wlan_vdev_get_selfpeer(vdev);
 
 		crypto_err("replay error :");
 		while (ipn < end) {
 			crypto_err("expected pn = %x received pn = %x",
 				   *ipn++, *su++);
 		}
+		wlan_cp_stats_vdev_ucast_rx_pnerr(vdev);
+		wlan_cp_stats_peer_rx_pnerr(peer);
 		return false;
 	}
 

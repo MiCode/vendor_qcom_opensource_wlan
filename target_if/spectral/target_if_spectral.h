@@ -1074,7 +1074,7 @@ struct per_session_det_map {
 	uint8_t num_dest_det_info;
 	enum spectral_msg_buf_type buf_type;
 	bool send_to_upper_layers;
-	bool det_map_valid;
+	bool det_map_valid[SPECTRAL_SCAN_MODE_MAX];
 };
 
 /**

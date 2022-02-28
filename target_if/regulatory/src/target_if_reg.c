@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2017-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  *
  * Permission to use, copy, modify, and/or distribute this software for
@@ -1029,6 +1030,55 @@ tgt_if_regulatory_is_upper_6g_edge_ch_disabled(struct wlan_objmgr_psoc *psoc)
 }
 #endif
 
+/**
+ * tgt_if_reg_is_chip_11be_cap() - Finds out if the hardware is capable
+ * of 11BE. The capability bit is read from mac_phy_cap populated by the
+ * FW per pdev.
+ * @psoc: Pointer to psoc
+ * @phy_id: phy_id
+ *
+ * Return: True if chip is 11BE capable, false otherwise.
+ */
+#ifdef WLAN_FEATURE_11BE
+static bool tgt_if_reg_is_chip_11be_cap(struct wlan_objmgr_psoc *psoc,
+					uint16_t phy_id)
+{
+	struct wlan_psoc_host_mac_phy_caps *mac_phy_cap_arr, *mac_phy_cap;
+	struct target_psoc_info *tgt_hdl;
+	uint8_t pdev_id;
+	struct wlan_lmac_if_reg_tx_ops *reg_tx_ops;
+
+	reg_tx_ops = target_if_regulatory_get_tx_ops(psoc);
+
+	if (!reg_tx_ops) {
+		target_if_err("reg_tx_ops is NULL");
+		return false;
+	}
+
+	if (reg_tx_ops->get_pdev_id_from_phy_id)
+		reg_tx_ops->get_pdev_id_from_phy_id(psoc, phy_id, &pdev_id);
+	else
+		pdev_id = phy_id;
+
+	tgt_hdl = wlan_psoc_get_tgt_if_handle(psoc);
+	if (tgt_hdl) {
+		mac_phy_cap_arr = target_psoc_get_mac_phy_cap(tgt_hdl);
+		if (!mac_phy_cap_arr)
+			return false;
+		mac_phy_cap = &mac_phy_cap_arr[pdev_id];
+		if (mac_phy_cap && mac_phy_cap->supports_11be)
+			return true;
+	}
+	return false;
+}
+#else
+static bool tgt_if_reg_is_chip_11be_cap(struct wlan_objmgr_psoc *psoc,
+					uint16_t phy_id)
+{
+	return false;
+}
+#endif
+
 QDF_STATUS target_if_register_regulatory_tx_ops(
 		struct wlan_lmac_if_tx_ops *tx_ops)
 {
@@ -1085,6 +1135,8 @@ QDF_STATUS target_if_register_regulatory_tx_ops(
 	reg_ops->set_tpc_power = tgt_if_regulatory_set_tpc_power;
 
 	tgt_if_register_afc_callback(reg_ops);
+
+	reg_ops->is_chip_11be = tgt_if_reg_is_chip_11be_cap;
 
 	return QDF_STATUS_SUCCESS;
 }

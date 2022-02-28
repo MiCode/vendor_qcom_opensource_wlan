@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2014-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -203,4 +204,15 @@ qdf_nbuf_deinit_replenish_timer(void)
 static inline void
 __qdf_nbuf_dma_inv_range(const void *buf_start, const void *buf_end) {}
 
+static inline void
+__qdf_nbuf_dma_inv_range_no_dsb(const void *buf_start, const void *buf_end) {}
+
+static inline void
+__qdf_nbuf_dma_clean_range_no_dsb(const void *buf_start, const void *buf_end) {}
+
+static inline void
+__qdf_dsb(void) {}
+
+static inline void
+__qdf_nbuf_dma_clean_range(const void *buf_start, const void *buf_end) {}
 #endif /*_I_QDF_NBUF_M_H */

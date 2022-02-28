@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021,2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -247,11 +247,12 @@ void dp_tx_compute_delay(struct dp_vdev *vdev, struct dp_tx_desc_s *tx_desc,
 void dp_tx_comp_process_tx_status(struct dp_soc *soc,
 				  struct dp_tx_desc_s *tx_desc,
 				  struct hal_tx_completion_status *ts,
-				  struct dp_peer *peer, uint8_t ring_id);
+				  struct dp_txrx_peer *txrx_peer,
+				  uint8_t ring_id);
 void dp_tx_comp_process_desc(struct dp_soc *soc,
 			     struct dp_tx_desc_s *desc,
 			     struct hal_tx_completion_status *ts,
-			     struct dp_peer *peer);
+			     struct dp_txrx_peer *txrx_peer);
 void dp_tx_reinject_handler(struct dp_soc *soc,
 			    struct dp_vdev *vdev,
 			    struct dp_tx_desc_s *tx_desc,
@@ -261,8 +262,9 @@ void dp_tx_inspect_handler(struct dp_soc *soc,
 			   struct dp_vdev *vdev,
 			   struct dp_tx_desc_s *tx_desc,
 			   uint8_t *status);
-void dp_tx_update_peer_basic_stats(struct dp_peer *peer, uint32_t length,
-				   uint8_t tx_status, bool update);
+void dp_tx_update_peer_basic_stats(struct dp_txrx_peer *txrx_peer,
+				   uint32_t length, uint8_t tx_status,
+				   bool update);
 
 #ifndef QCA_HOST_MODE_WIFI_DISABLED
 /**
@@ -715,7 +717,7 @@ static inline void dp_tx_vdev_update_search_flags(struct dp_vdev *vdev)
 QDF_STATUS
 dp_get_completion_indication_for_stack(struct dp_soc *soc,
 				       struct dp_pdev *pdev,
-				       struct dp_peer *peer,
+				       struct dp_txrx_peer *peer,
 				       struct hal_tx_completion_status *ts,
 				       qdf_nbuf_t netbuf,
 				       uint64_t time_latency);
@@ -727,7 +729,7 @@ void dp_send_completion_to_stack(struct dp_soc *soc,  struct dp_pdev *pdev,
 static inline
 QDF_STATUS dp_get_completion_indication_for_stack(struct dp_soc *soc,
 				       struct dp_pdev *pdev,
-				       struct dp_peer *peer,
+				       struct dp_txrx_peer *peer,
 				       struct hal_tx_completion_status *ts,
 				       qdf_nbuf_t netbuf,
 				       uint64_t time_latency)
@@ -942,4 +944,40 @@ bool dp_tx_pkt_tracepoints_enabled(void)
 		qdf_trace_dp_tx_comp_udp_pkt_enabled() ||
 		qdf_trace_dp_tx_comp_pkt_enabled());
 }
+
+#ifdef DP_TX_TRACKING
+/**
+ * dp_tx_desc_set_timestamp() - set timestamp in tx descriptor
+ * @tx_desc - tx descriptor
+ *
+ * Return: None
+ */
+static inline
+void dp_tx_desc_set_timestamp(struct dp_tx_desc_s *tx_desc)
+{
+	tx_desc->timestamp = qdf_system_ticks();
+}
+
+/**
+ * dp_tx_desc_check_corruption() - Verify magic pattern in tx descriptor
+ * @tx_desc: tx descriptor
+ *
+ * Check for corruption in tx descriptor, if magic pattern is not matching
+ * trigger self recovery
+ *
+ * Return: none
+ */
+void dp_tx_desc_check_corruption(struct dp_tx_desc_s *tx_desc);
+#else
+static inline
+void dp_tx_desc_set_timestamp(struct dp_tx_desc_s *tx_desc)
+{
+}
+
+static inline
+void dp_tx_desc_check_corruption(struct dp_tx_desc_s *tx_desc)
+{
+}
+#endif
+
 #endif

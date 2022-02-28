@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2014-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -595,6 +595,37 @@ skb_alloc:
 	return skb;
 }
 #else
+
+struct sk_buff *__qdf_nbuf_alloc_simple(qdf_device_t osdev, size_t size)
+{
+	struct sk_buff *skb;
+	int flags = GFP_KERNEL;
+
+	if (in_interrupt() || irqs_disabled() || in_atomic()) {
+		flags = GFP_ATOMIC;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0)
+		/*
+		 * Observed that kcompactd burns out CPU to make order-3 page.
+		 *__netdev_alloc_skb has 4k page fallback option just in case of
+		 * failing high order page allocation so we don't need to be
+		 * hard. Make kcompactd rest in piece.
+		 */
+		flags = flags & ~__GFP_KSWAPD_RECLAIM;
+#endif
+	}
+
+	skb = __netdev_alloc_skb(NULL, size, flags);
+
+	if (skb)
+		qdf_nbuf_count_inc(skb);
+	else
+		return NULL;
+
+	return skb;
+}
+
+qdf_export_symbol(__qdf_nbuf_alloc_simple);
+
 struct sk_buff *__qdf_nbuf_alloc(qdf_device_t osdev, size_t size, int reserve,
 				 int align, int prio, const char *func,
 				 uint32_t line)
@@ -4470,6 +4501,7 @@ static unsigned int qdf_nbuf_update_radiotap_vht_flags(
 					uint32_t rtap_len)
 {
 	uint16_t vht_flags = 0;
+	struct mon_rx_user_status *rx_user_status = rx_status->rx_user_status;
 
 	rtap_len = qdf_align(rtap_len, 2);
 
@@ -4492,36 +4524,70 @@ static unsigned int qdf_nbuf_update_radiotap_vht_flags(
 		(rx_status->beamformed ?
 		 IEEE80211_RADIOTAP_VHT_FLAG_BEAMFORMED : 0);
 	rtap_len += 1;
-	switch (rx_status->vht_flag_values2) {
-	case IEEE80211_RADIOTAP_VHT_BW_20:
-		rtap_buf[rtap_len] = RADIOTAP_VHT_BW_20;
-		break;
-	case IEEE80211_RADIOTAP_VHT_BW_40:
-		rtap_buf[rtap_len] = RADIOTAP_VHT_BW_40;
-		break;
-	case IEEE80211_RADIOTAP_VHT_BW_80:
-		rtap_buf[rtap_len] = RADIOTAP_VHT_BW_80;
-		break;
-	case IEEE80211_RADIOTAP_VHT_BW_160:
-		rtap_buf[rtap_len] = RADIOTAP_VHT_BW_160;
-		break;
+
+	if (!rx_user_status) {
+		switch (rx_status->vht_flag_values2) {
+		case IEEE80211_RADIOTAP_VHT_BW_20:
+			rtap_buf[rtap_len] = RADIOTAP_VHT_BW_20;
+			break;
+		case IEEE80211_RADIOTAP_VHT_BW_40:
+			rtap_buf[rtap_len] = RADIOTAP_VHT_BW_40;
+			break;
+		case IEEE80211_RADIOTAP_VHT_BW_80:
+			rtap_buf[rtap_len] = RADIOTAP_VHT_BW_80;
+			break;
+		case IEEE80211_RADIOTAP_VHT_BW_160:
+			rtap_buf[rtap_len] = RADIOTAP_VHT_BW_160;
+			break;
+		}
+		rtap_len += 1;
+		rtap_buf[rtap_len] = (rx_status->vht_flag_values3[0]);
+		rtap_len += 1;
+		rtap_buf[rtap_len] = (rx_status->vht_flag_values3[1]);
+		rtap_len += 1;
+		rtap_buf[rtap_len] = (rx_status->vht_flag_values3[2]);
+		rtap_len += 1;
+		rtap_buf[rtap_len] = (rx_status->vht_flag_values3[3]);
+		rtap_len += 1;
+		rtap_buf[rtap_len] = (rx_status->vht_flag_values4);
+		rtap_len += 1;
+		rtap_buf[rtap_len] = (rx_status->vht_flag_values5);
+		rtap_len += 1;
+		put_unaligned_le16(rx_status->vht_flag_values6,
+				   &rtap_buf[rtap_len]);
+		rtap_len += 2;
+	} else {
+		switch (rx_user_status->vht_flag_values2) {
+		case IEEE80211_RADIOTAP_VHT_BW_20:
+			rtap_buf[rtap_len] = RADIOTAP_VHT_BW_20;
+			break;
+		case IEEE80211_RADIOTAP_VHT_BW_40:
+			rtap_buf[rtap_len] = RADIOTAP_VHT_BW_40;
+			break;
+		case IEEE80211_RADIOTAP_VHT_BW_80:
+			rtap_buf[rtap_len] = RADIOTAP_VHT_BW_80;
+			break;
+		case IEEE80211_RADIOTAP_VHT_BW_160:
+			rtap_buf[rtap_len] = RADIOTAP_VHT_BW_160;
+			break;
+		}
+		rtap_len += 1;
+		rtap_buf[rtap_len] = (rx_user_status->vht_flag_values3[0]);
+		rtap_len += 1;
+		rtap_buf[rtap_len] = (rx_user_status->vht_flag_values3[1]);
+		rtap_len += 1;
+		rtap_buf[rtap_len] = (rx_user_status->vht_flag_values3[2]);
+		rtap_len += 1;
+		rtap_buf[rtap_len] = (rx_user_status->vht_flag_values3[3]);
+		rtap_len += 1;
+		rtap_buf[rtap_len] = (rx_user_status->vht_flag_values4);
+		rtap_len += 1;
+		rtap_buf[rtap_len] = (rx_user_status->vht_flag_values5);
+		rtap_len += 1;
+		put_unaligned_le16(rx_user_status->vht_flag_values6,
+				   &rtap_buf[rtap_len]);
+		rtap_len += 2;
 	}
-	rtap_len += 1;
-	rtap_buf[rtap_len] = (rx_status->vht_flag_values3[0]);
-	rtap_len += 1;
-	rtap_buf[rtap_len] = (rx_status->vht_flag_values3[1]);
-	rtap_len += 1;
-	rtap_buf[rtap_len] = (rx_status->vht_flag_values3[2]);
-	rtap_len += 1;
-	rtap_buf[rtap_len] = (rx_status->vht_flag_values3[3]);
-	rtap_len += 1;
-	rtap_buf[rtap_len] = (rx_status->vht_flag_values4);
-	rtap_len += 1;
-	rtap_buf[rtap_len] = (rx_status->vht_flag_values5);
-	rtap_len += 1;
-	put_unaligned_le16(rx_status->vht_flag_values6,
-			   &rtap_buf[rtap_len]);
-	rtap_len += 2;
 
 	return rtap_len;
 }
@@ -4544,30 +4610,64 @@ qdf_nbuf_update_radiotap_he_flags(struct mon_rx_status *rx_status,
 	 * IEEE80211_RADIOTAP_HE u16, u16, u16, u16, u16, u16
 	 * Enable all "known" HE radiotap flags for now
 	 */
+	struct mon_rx_user_status *rx_user_status = rx_status->rx_user_status;
+
 	rtap_len = qdf_align(rtap_len, 2);
 
-	put_unaligned_le16(rx_status->he_data1, &rtap_buf[rtap_len]);
-	rtap_len += 2;
+	if (!rx_user_status) {
+		put_unaligned_le16(rx_status->he_data1, &rtap_buf[rtap_len]);
+		rtap_len += 2;
 
-	put_unaligned_le16(rx_status->he_data2, &rtap_buf[rtap_len]);
-	rtap_len += 2;
+		put_unaligned_le16(rx_status->he_data2, &rtap_buf[rtap_len]);
+		rtap_len += 2;
 
-	put_unaligned_le16(rx_status->he_data3, &rtap_buf[rtap_len]);
-	rtap_len += 2;
+		put_unaligned_le16(rx_status->he_data3, &rtap_buf[rtap_len]);
+		rtap_len += 2;
 
-	put_unaligned_le16(rx_status->he_data4, &rtap_buf[rtap_len]);
-	rtap_len += 2;
+		put_unaligned_le16(rx_status->he_data4, &rtap_buf[rtap_len]);
+		rtap_len += 2;
 
-	put_unaligned_le16(rx_status->he_data5, &rtap_buf[rtap_len]);
-	rtap_len += 2;
+		put_unaligned_le16(rx_status->he_data5, &rtap_buf[rtap_len]);
+		rtap_len += 2;
 
-	put_unaligned_le16(rx_status->he_data6, &rtap_buf[rtap_len]);
-	rtap_len += 2;
-	qdf_rl_debug("he data %x %x %x %x %x %x",
-		     rx_status->he_data1,
-		     rx_status->he_data2, rx_status->he_data3,
-		     rx_status->he_data4, rx_status->he_data5,
-		     rx_status->he_data6);
+		put_unaligned_le16(rx_status->he_data6, &rtap_buf[rtap_len]);
+		rtap_len += 2;
+		qdf_rl_debug("he data %x %x %x %x %x %x",
+			     rx_status->he_data1,
+			     rx_status->he_data2, rx_status->he_data3,
+			     rx_status->he_data4, rx_status->he_data5,
+			     rx_status->he_data6);
+	} else {
+		put_unaligned_le16(rx_user_status->he_data1,
+				   &rtap_buf[rtap_len]);
+		rtap_len += 2;
+
+		put_unaligned_le16(rx_user_status->he_data2,
+				   &rtap_buf[rtap_len]);
+		rtap_len += 2;
+
+		put_unaligned_le16(rx_user_status->he_data3,
+				   &rtap_buf[rtap_len]);
+		rtap_len += 2;
+
+		put_unaligned_le16(rx_user_status->he_data4,
+				   &rtap_buf[rtap_len]);
+		rtap_len += 2;
+
+		put_unaligned_le16(rx_user_status->he_data5,
+				   &rtap_buf[rtap_len]);
+		rtap_len += 2;
+
+		put_unaligned_le16(rx_user_status->he_data6,
+				   &rtap_buf[rtap_len]);
+		rtap_len += 2;
+		qdf_rl_debug("he data %x %x %x %x %x %x",
+			     rx_user_status->he_data1,
+			     rx_user_status->he_data2, rx_user_status->he_data3,
+			     rx_user_status->he_data4, rx_user_status->he_data5,
+			     rx_user_status->he_data6);
+	}
+
 	return rtap_len;
 }
 
@@ -4586,34 +4686,64 @@ static unsigned int
 qdf_nbuf_update_radiotap_he_mu_flags(struct mon_rx_status *rx_status,
 				     int8_t *rtap_buf, uint32_t rtap_len)
 {
+	struct mon_rx_user_status *rx_user_status = rx_status->rx_user_status;
+
 	rtap_len = qdf_align(rtap_len, 2);
 
 	/*
 	 * IEEE80211_RADIOTAP_HE_MU u16, u16, u8[4]
 	 * Enable all "known" he-mu radiotap flags for now
 	 */
-	put_unaligned_le16(rx_status->he_flags1, &rtap_buf[rtap_len]);
-	rtap_len += 2;
 
-	put_unaligned_le16(rx_status->he_flags2, &rtap_buf[rtap_len]);
-	rtap_len += 2;
+	if (!rx_user_status) {
+		put_unaligned_le16(rx_status->he_flags1, &rtap_buf[rtap_len]);
+		rtap_len += 2;
 
-	rtap_buf[rtap_len] = rx_status->he_RU[0];
-	rtap_len += 1;
+		put_unaligned_le16(rx_status->he_flags2, &rtap_buf[rtap_len]);
+		rtap_len += 2;
 
-	rtap_buf[rtap_len] = rx_status->he_RU[1];
-	rtap_len += 1;
+		rtap_buf[rtap_len] = rx_status->he_RU[0];
+		rtap_len += 1;
 
-	rtap_buf[rtap_len] = rx_status->he_RU[2];
-	rtap_len += 1;
+		rtap_buf[rtap_len] = rx_status->he_RU[1];
+		rtap_len += 1;
 
-	rtap_buf[rtap_len] = rx_status->he_RU[3];
-	rtap_len += 1;
-	qdf_debug("he_flags %x %x he-RU %x %x %x %x",
-		  rx_status->he_flags1,
-		  rx_status->he_flags2, rx_status->he_RU[0],
-		  rx_status->he_RU[1], rx_status->he_RU[2],
-		  rx_status->he_RU[3]);
+		rtap_buf[rtap_len] = rx_status->he_RU[2];
+		rtap_len += 1;
+
+		rtap_buf[rtap_len] = rx_status->he_RU[3];
+		rtap_len += 1;
+		qdf_debug("he_flags %x %x he-RU %x %x %x %x",
+			  rx_status->he_flags1,
+			  rx_status->he_flags2, rx_status->he_RU[0],
+			  rx_status->he_RU[1], rx_status->he_RU[2],
+			  rx_status->he_RU[3]);
+	} else {
+		put_unaligned_le16(rx_user_status->he_flags1,
+				   &rtap_buf[rtap_len]);
+		rtap_len += 2;
+
+		put_unaligned_le16(rx_user_status->he_flags2,
+				   &rtap_buf[rtap_len]);
+		rtap_len += 2;
+
+		rtap_buf[rtap_len] = rx_user_status->he_RU[0];
+		rtap_len += 1;
+
+		rtap_buf[rtap_len] = rx_user_status->he_RU[1];
+		rtap_len += 1;
+
+		rtap_buf[rtap_len] = rx_user_status->he_RU[2];
+		rtap_len += 1;
+
+		rtap_buf[rtap_len] = rx_user_status->he_RU[3];
+		rtap_len += 1;
+		qdf_debug("he_flags %x %x he-RU %x %x %x %x",
+			  rx_user_status->he_flags1,
+			  rx_user_status->he_flags2, rx_user_status->he_RU[0],
+			  rx_user_status->he_RU[1], rx_user_status->he_RU[2],
+			  rx_user_status->he_RU[3]);
+	}
 
 	return rtap_len;
 }
@@ -4632,27 +4762,54 @@ static unsigned int
 qdf_nbuf_update_radiotap_he_mu_other_flags(struct mon_rx_status *rx_status,
 				     int8_t *rtap_buf, uint32_t rtap_len)
 {
+	struct mon_rx_user_status *rx_user_status = rx_status->rx_user_status;
+
 	rtap_len = qdf_align(rtap_len, 2);
 
 	/*
 	 * IEEE80211_RADIOTAP_HE-MU-OTHER u16, u16, u8, u8
 	 * Enable all "known" he-mu-other radiotap flags for now
 	 */
-	put_unaligned_le16(rx_status->he_per_user_1, &rtap_buf[rtap_len]);
-	rtap_len += 2;
+	if (!rx_user_status) {
+		put_unaligned_le16(rx_status->he_per_user_1,
+				   &rtap_buf[rtap_len]);
+		rtap_len += 2;
 
-	put_unaligned_le16(rx_status->he_per_user_2, &rtap_buf[rtap_len]);
-	rtap_len += 2;
+		put_unaligned_le16(rx_status->he_per_user_2,
+				   &rtap_buf[rtap_len]);
+		rtap_len += 2;
 
-	rtap_buf[rtap_len] = rx_status->he_per_user_position;
-	rtap_len += 1;
+		rtap_buf[rtap_len] = rx_status->he_per_user_position;
+		rtap_len += 1;
 
-	rtap_buf[rtap_len] = rx_status->he_per_user_known;
-	rtap_len += 1;
-	qdf_debug("he_per_user %x %x pos %x knwn %x",
-		  rx_status->he_per_user_1,
-		  rx_status->he_per_user_2, rx_status->he_per_user_position,
-		  rx_status->he_per_user_known);
+		rtap_buf[rtap_len] = rx_status->he_per_user_known;
+		rtap_len += 1;
+		qdf_debug("he_per_user %x %x pos %x knwn %x",
+			  rx_status->he_per_user_1,
+			  rx_status->he_per_user_2,
+			  rx_status->he_per_user_position,
+			  rx_status->he_per_user_known);
+	} else {
+		put_unaligned_le16(rx_user_status->he_per_user_1,
+				   &rtap_buf[rtap_len]);
+		rtap_len += 2;
+
+		put_unaligned_le16(rx_user_status->he_per_user_2,
+				   &rtap_buf[rtap_len]);
+		rtap_len += 2;
+
+		rtap_buf[rtap_len] = rx_user_status->he_per_user_position;
+		rtap_len += 1;
+
+		rtap_buf[rtap_len] = rx_user_status->he_per_user_known;
+		rtap_len += 1;
+		qdf_debug("he_per_user %x %x pos %x knwn %x",
+			  rx_user_status->he_per_user_1,
+			  rx_user_status->he_per_user_2,
+			  rx_user_status->he_per_user_position,
+			  rx_user_status->he_per_user_known);
+	}
+
 	return rtap_len;
 }
 
@@ -4723,6 +4880,9 @@ unsigned int qdf_nbuf_update_radiotap(struct mon_rx_status *rx_status,
 	struct qdf_radiotap_vendor_ns_ath *radiotap_vendor_ns_ath;
 	struct qdf_radiotap_ext2 *rtap_ext2;
 	uint32_t *rtap_ext = NULL;
+	struct mon_rx_user_status *rx_user_status = rx_status->rx_user_status;
+
+	/* per user info */
 
 	/* Adding Extended Header space */
 	if (rx_status->add_rtap_ext) {
@@ -4937,10 +5097,23 @@ unsigned int qdf_nbuf_update_radiotap(struct mon_rx_status *rx_status,
 		rtap_ext2 = (struct qdf_radiotap_ext2 *)(rtap_buf + rtap_len);
 		rtap_ext2->ppdu_id = rx_status->ppdu_id;
 		rtap_ext2->prev_ppdu_id = rx_status->prev_ppdu_id;
-		rtap_ext2->tid = rx_status->tid;
-		rtap_ext2->start_seq = rx_status->start_seq;
-		qdf_mem_copy(rtap_ext2->ba_bitmap,
-			     rx_status->ba_bitmap, 8 * (sizeof(uint32_t)));
+		if (!rx_user_status) {
+			rtap_ext2->tid = rx_status->tid;
+			rtap_ext2->start_seq = rx_status->start_seq;
+			qdf_mem_copy(rtap_ext2->ba_bitmap,
+				     rx_status->ba_bitmap,
+				     8 * (sizeof(uint32_t)));
+		} else {
+			uint8_t ba_bitmap_sz = rx_user_status->ba_bitmap_sz;
+
+			/* set default bitmap sz if not set */
+			ba_bitmap_sz = ba_bitmap_sz ? ba_bitmap_sz : 8;
+			rtap_ext2->tid = rx_user_status->tid;
+			rtap_ext2->start_seq = rx_user_status->start_seq;
+			qdf_mem_copy(rtap_ext2->ba_bitmap,
+				     rx_user_status->ba_bitmap,
+				     ba_bitmap_sz * (sizeof(uint32_t)));
+		}
 
 		rtap_len += sizeof(*rtap_ext2);
 	}
@@ -5150,6 +5323,24 @@ void __qdf_nbuf_add_rx_frag(__qdf_frag_t buf, __qdf_nbuf_t nbuf,
 
 qdf_export_symbol(__qdf_nbuf_add_rx_frag);
 
+void __qdf_nbuf_ref_frag(__qdf_frag_t buf)
+{
+	struct page *page;
+	skb_frag_t frag = {0};
+
+	page = virt_to_head_page(buf);
+	__skb_frag_set_page(&frag, page);
+
+	/*
+	 * since __skb_frag_ref() just use page to increase ref
+	 * we just decode page alone
+	 */
+	qdf_frag_count_inc(QDF_NBUF_FRAG_DEBUG_COUNT_ONE);
+	__skb_frag_ref(&frag);
+}
+
+qdf_export_symbol(__qdf_nbuf_ref_frag);
+
 #ifdef NBUF_FRAG_MEMORY_DEBUG
 
 QDF_STATUS qdf_nbuf_move_frag_page_offset_debug(qdf_nbuf_t nbuf, uint8_t idx,
@@ -5208,6 +5399,25 @@ void qdf_nbuf_add_rx_frag_debug(qdf_frag_t buf, qdf_nbuf_t nbuf,
 }
 
 qdf_export_symbol(qdf_nbuf_add_rx_frag_debug);
+
+/**
+ * qdf_nbuf_ref_frag_debug() - get frag reference
+ * @buf: Frag pointer needs to be taken reference.
+ *
+ * return: void
+ */
+void qdf_nbuf_ref_frag_debug(qdf_frag_t buf, const char *func, uint32_t line)
+{
+	__qdf_nbuf_ref_frag(buf);
+
+	if (qdf_likely(is_initial_mem_debug_disabled))
+		return;
+
+	/* Update frag refcount in frag debug tracking table */
+	qdf_frag_debug_refcount_inc(buf, func, line);
+}
+
+qdf_export_symbol(qdf_nbuf_ref_frag_debug);
 
 void qdf_net_buf_debug_acquire_frag(qdf_nbuf_t buf, const char *func,
 				    uint32_t line)
@@ -5314,6 +5524,112 @@ void qdf_net_buf_debug_release_frag(qdf_nbuf_t buf, const char *func,
 
 qdf_export_symbol(qdf_net_buf_debug_release_frag);
 #endif /* NBUF_FRAG_MEMORY_DEBUG */
+
+/**
+ * qdf_get_nbuf_valid_frag() - Get nbuf to store frag
+ * @nbuf: qdf_nbuf_t master nbuf
+ *
+ * Return: qdf_nbuf_t
+ */
+static inline qdf_nbuf_t qdf_get_nbuf_valid_frag(qdf_nbuf_t nbuf)
+{
+	qdf_nbuf_t last_nbuf;
+	uint32_t num_frags;
+
+	if (qdf_unlikely(!nbuf))
+		return NULL;
+
+	num_frags = qdf_nbuf_get_nr_frags(nbuf);
+
+	/* Check nbuf has enough memory to store frag memory */
+	if (num_frags <= QDF_NBUF_MAX_FRAGS)
+		return nbuf;
+
+	if (num_frags > QDF_NBUF_MAX_FRAGS && !__qdf_nbuf_has_fraglist(nbuf))
+		return NULL;
+
+	last_nbuf = __qdf_nbuf_get_last_frag_list_nbuf(nbuf);
+	if (qdf_unlikely(!last_nbuf))
+		return NULL;
+
+	num_frags = qdf_nbuf_get_nr_frags(last_nbuf);
+	if (num_frags < QDF_NBUF_MAX_FRAGS)
+		return last_nbuf;
+
+	return NULL;
+}
+
+/**
+ * qdf_nbuf_add_frag_debug() - Add frag to nbuf
+ * @osdev: Device handle
+ * @buf: Frag pointer needs to be added in nbuf frag
+ * @nbuf: qdf_nbuf_t where frag will be added
+ * @offset: Offset in frag to be added to nbuf_frags
+ * @frag_len: Frag length
+ * @truesize: truesize
+ * @take_frag_ref: Whether to take ref for frag or not
+ *      This bool must be set as per below comdition:
+ *      1. False: If this frag is being added in any nbuf
+ *              for the first time after allocation
+ *      2. True: If frag is already attached part of any
+ *              nbuf
+ * @minsize: Minimum size to allocate
+ * @func: Caller function name
+ * @line: Caller function line no.
+ *
+ * if number of frag exceed maximum frag array. A new nbuf is allocated
+ * with minimum headroom and frag it added to that nbuf.
+ * new nbuf is added as frag_list to the master nbuf.
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+qdf_nbuf_add_frag_debug(qdf_device_t osdev, qdf_frag_t buf,
+			qdf_nbuf_t nbuf, int offset,
+			int frag_len, unsigned int truesize,
+			bool take_frag_ref, unsigned int minsize,
+			const char *func, uint32_t line)
+{
+	qdf_nbuf_t cur_nbuf;
+	qdf_nbuf_t this_nbuf;
+
+	cur_nbuf = nbuf;
+	this_nbuf = nbuf;
+
+	if (qdf_unlikely(!frag_len || !buf)) {
+		qdf_nofl_err("%s : %d frag[ buf[%pK] len[%d]] not valid\n",
+			     func, line,
+			     buf, frag_len);
+		return QDF_STATUS_E_INVAL;
+	}
+
+	this_nbuf = qdf_get_nbuf_valid_frag(this_nbuf);
+
+	if (this_nbuf) {
+		cur_nbuf = this_nbuf;
+	} else {
+		/* allocate a dummy mpdu buffer of 64 bytes headroom */
+		this_nbuf = qdf_nbuf_alloc(osdev, minsize, minsize, 4, false);
+		if (qdf_unlikely(!this_nbuf)) {
+			qdf_nofl_err("%s : %d no memory to allocate\n",
+				     func, line);
+			return QDF_STATUS_E_NOMEM;
+		}
+	}
+
+	qdf_nbuf_add_rx_frag(buf, this_nbuf, offset, frag_len, truesize,
+			     take_frag_ref);
+
+	if (this_nbuf != cur_nbuf) {
+		/* add new skb to frag list */
+		qdf_nbuf_append_ext_list(nbuf, this_nbuf,
+					 qdf_nbuf_len(this_nbuf));
+	}
+
+	return QDF_STATUS_SUCCESS;
+}
+
+qdf_export_symbol(qdf_nbuf_add_frag_debug);
 
 #ifdef MEMORY_DEBUG
 void qdf_nbuf_acquire_track_lock(uint32_t index,

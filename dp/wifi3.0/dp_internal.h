@@ -157,6 +157,16 @@ struct htt_dbgfs_cfg {
 QDF_STATUS dp_mon_soc_attach(struct dp_soc *soc);
 QDF_STATUS dp_mon_soc_detach(struct dp_soc *soc);
 
+/*
+ * dp_rx_err_match_dhost() - function to check whether dest-mac is correct
+ * @eh: Ethernet header of incoming packet
+ * @vdev: dp_vdev object of the VAP on which this data packet is received
+ *
+ * Return: 1 if the destination mac is correct,
+ *         0 if this frame is not correctly destined to this VAP/MLD
+ */
+int dp_rx_err_match_dhost(qdf_ether_header_t *eh, struct dp_vdev *vdev);
+
 #ifdef MONITOR_MODULARIZED_ENABLE
 static inline bool dp_monitor_modularized_enable(void)
 {
@@ -216,6 +226,38 @@ static inline QDF_STATUS dp_monitor_peer_attach(struct dp_soc *soc,
 
 static inline QDF_STATUS dp_monitor_peer_detach(struct dp_soc *soc,
 						struct dp_peer *peer)
+{
+	return QDF_STATUS_E_FAILURE;
+}
+
+static inline struct cdp_peer_rate_stats_ctx*
+dp_monitor_peer_get_rdkstats_ctx(struct dp_soc *soc, struct dp_peer *peer)
+{
+	return NULL;
+}
+
+static inline
+void dp_monitor_peer_reset_stats(struct dp_soc *soc, struct dp_peer *peer)
+{
+}
+
+static inline
+void dp_monitor_peer_get_stats(struct dp_soc *soc, struct dp_peer *peer,
+			       void *arg, enum cdp_stat_update_type type)
+{
+}
+
+static inline
+void dp_monitor_invalid_peer_update_pdev_stats(struct dp_soc *soc,
+					       struct dp_pdev *pdev)
+{
+}
+
+static inline
+QDF_STATUS dp_monitor_peer_get_stats_param(struct dp_soc *soc,
+					   struct dp_peer *peer,
+					   enum cdp_peer_stats_type type,
+					   cdp_peer_stats_param_t *buf)
 {
 	return QDF_STATUS_E_FAILURE;
 }
@@ -312,7 +354,7 @@ static inline
 QDF_STATUS dp_monitor_tx_add_to_comp_queue(struct dp_soc *soc,
 					   struct dp_tx_desc_s *desc,
 					   struct hal_tx_completion_status *ts,
-					   struct dp_peer *peer)
+					   uint16_t peer_id)
 {
 	return QDF_STATUS_E_FAILURE;
 }
@@ -349,6 +391,14 @@ static inline void dp_monitor_print_pdev_rx_mon_stats(struct dp_pdev *pdev)
 
 static inline QDF_STATUS dp_monitor_config_enh_tx_capture(struct dp_pdev *pdev,
 							  uint32_t val)
+{
+	return QDF_STATUS_E_INVAL;
+}
+
+static inline QDF_STATUS dp_monitor_tx_peer_filter(struct dp_pdev *pdev,
+						   struct dp_peer *peer,
+						   uint8_t is_tx_pkt_cap_enable,
+						   uint8_t *peer_mac)
 {
 	return QDF_STATUS_E_INVAL;
 }
@@ -614,6 +664,20 @@ void dp_monitor_pdev_reset_scan_spcl_vap_stats_enable(struct dp_pdev *pdev,
 						      bool val)
 {
 }
+
+static inline QDF_STATUS
+dp_monitor_peer_tx_capture_get_stats(struct dp_soc *soc, struct dp_peer *peer,
+				     struct cdp_peer_tx_capture_stats *stats)
+{
+	return QDF_STATUS_E_FAILURE;
+}
+
+static inline QDF_STATUS
+dp_monitor_pdev_tx_capture_get_stats(struct dp_soc *soc, struct dp_pdev *pdev,
+				     struct cdp_pdev_tx_capture_stats *stats)
+{
+	return QDF_STATUS_E_FAILURE;
+}
 #endif
 
 /**
@@ -711,6 +775,12 @@ void DP_PRINT_STATS(const char *fmt, ...);
 		_handle->stats._field += _delta; \
 }
 
+#define DP_PEER_STATS_FLAT_INC(_handle, _field, _delta) \
+{ \
+	if (likely(_handle)) \
+		_handle->_field += _delta; \
+}
+
 #define DP_STATS_INCC(_handle, _field, _delta, _cond) \
 { \
 	if (_cond && likely(_handle)) \
@@ -723,6 +793,12 @@ void DP_PRINT_STATS(const char *fmt, ...);
 		_handle->stats._field -= _delta; \
 }
 
+#define DP_PEER_STATS_FLAT_DEC(_handle, _field, _delta) \
+{ \
+	if (likely(_handle)) \
+		_handle->_field -= _delta; \
+}
+
 #define DP_STATS_UPD(_handle, _field, _delta) \
 { \
 	if (likely(_handle)) \
@@ -733,6 +809,12 @@ void DP_PRINT_STATS(const char *fmt, ...);
 { \
 	DP_STATS_INC(_handle, _field.num, _count); \
 	DP_STATS_INC(_handle, _field.bytes, _bytes) \
+}
+
+#define DP_PEER_STATS_FLAT_INC_PKT(_handle, _field, _count, _bytes) \
+{ \
+	DP_PEER_STATS_FLAT_INC(_handle, _field.num, _count); \
+	DP_PEER_STATS_FLAT_INC(_handle, _field.bytes, _bytes) \
 }
 
 #define DP_STATS_INCC_PKT(_handle, _field, _count, _bytes, _cond) \
@@ -759,13 +841,55 @@ void DP_PRINT_STATS(const char *fmt, ...);
 
 #else
 #define DP_STATS_INC(_handle, _field, _delta)
+#define DP_PEER_STATS_FLAT_INC(_handle, _field, _delta)
 #define DP_STATS_INCC(_handle, _field, _delta, _cond)
 #define DP_STATS_DEC(_handle, _field, _delta)
+#define DP_PEER_STATS_FLAT_DEC(_handle, _field, _delta)
 #define DP_STATS_UPD(_handle, _field, _delta)
 #define DP_STATS_INC_PKT(_handle, _field, _count, _bytes)
+#define DP_PEER_STATS_FLAT_INC_PKT(_handle, _field, _count, _bytes)
 #define DP_STATS_INCC_PKT(_handle, _field, _count, _bytes, _cond)
 #define DP_STATS_AGGR(_handle_a, _handle_b, _field)
 #define DP_STATS_AGGR_PKT(_handle_a, _handle_b, _field)
+#endif
+
+#define DP_PEER_PER_PKT_STATS_INC(_handle, _field, _delta) \
+{ \
+	DP_STATS_INC(_handle, per_pkt_stats._field, _delta); \
+}
+
+#define DP_PEER_PER_PKT_STATS_INCC(_handle, _field, _delta, _cond) \
+{ \
+	DP_STATS_INCC(_handle, per_pkt_stats._field, _delta, _cond); \
+}
+
+#define DP_PEER_PER_PKT_STATS_INC_PKT(_handle, _field, _count, _bytes) \
+{ \
+	DP_PEER_PER_PKT_STATS_INC(_handle, _field.num, _count); \
+	DP_PEER_PER_PKT_STATS_INC(_handle, _field.bytes, _bytes) \
+}
+
+#define DP_PEER_PER_PKT_STATS_INCC_PKT(_handle, _field, _count, _bytes, _cond) \
+{ \
+	DP_PEER_PER_PKT_STATS_INCC(_handle, _field.num, _count, _cond); \
+	DP_PEER_PER_PKT_STATS_INCC(_handle, _field.bytes, _bytes, _cond) \
+}
+
+#ifndef QCA_ENHANCED_STATS_SUPPORT
+#define DP_PEER_EXTD_STATS_INC(_handle, _field, _delta) \
+{ \
+	DP_STATS_INC(_handle, extd_stats._field, _delta); \
+}
+
+#define DP_PEER_EXTD_STATS_INCC(_handle, _field, _delta, _cond) \
+{ \
+	DP_STATS_INCC(_handle, extd_stats._field, _delta, _cond); \
+}
+
+#define DP_PEER_EXTD_STATS_UPD(_handle, _field, _delta) \
+{ \
+	DP_STATS_UPD(_handle, extd_stats._field, _delta); \
+}
 #endif
 
 #if defined(QCA_VDEV_STATS_HW_OFFLOAD_SUPPORT) && \
@@ -773,62 +897,62 @@ void DP_PRINT_STATS(const char *fmt, ...);
 #define DP_PEER_TO_STACK_INCC_PKT(_handle, _count, _bytes, _cond) \
 { \
 	if (!(_handle->hw_txrx_stats_en) || _cond) \
-		DP_STATS_INC_PKT(_handle, rx.to_stack, _count, _bytes); \
+		DP_PEER_STATS_FLAT_INC_PKT(_handle, to_stack, _count, _bytes); \
 }
 
 #define DP_PEER_TO_STACK_DECC(_handle, _count, _cond) \
 { \
 	if (!(_handle->hw_txrx_stats_en) || _cond) \
-		DP_STATS_DEC(_handle, rx.to_stack.num, _count); \
+		DP_PEER_STATS_FLAT_DEC(_handle, to_stack.num, _count); \
 }
 
 #define DP_PEER_MC_INCC_PKT(_handle, _count, _bytes, _cond) \
 { \
 	if (!(_handle->hw_txrx_stats_en) || _cond) \
-		DP_STATS_INC_PKT(_handle, rx.multicast, _count, _bytes); \
+		DP_PEER_PER_PKT_STATS_INC_PKT(_handle, rx.multicast, _count, _bytes); \
 }
 
 #define DP_PEER_BC_INCC_PKT(_handle, _count, _bytes, _cond) \
 { \
 	if (!(_handle->hw_txrx_stats_en) || _cond) \
-		DP_STATS_INC_PKT(_handle, rx.bcast, _count, _bytes); \
+		DP_PEER_PER_PKT_STATS_INC_PKT(_handle, rx.bcast, _count, _bytes); \
 }
 #elif defined(QCA_VDEV_STATS_HW_OFFLOAD_SUPPORT)
 #define DP_PEER_TO_STACK_INCC_PKT(_handle, _count, _bytes, _cond) \
 { \
 	if (!(_handle->hw_txrx_stats_en)) \
-		DP_STATS_INC_PKT(_handle, rx.to_stack, _count, _bytes); \
+		DP_PEER_STATS_FLAT_INC_PKT(_handle, to_stack, _count, _bytes); \
 }
 
 #define DP_PEER_TO_STACK_DECC(_handle, _count, _cond) \
 { \
 	if (!(_handle->hw_txrx_stats_en)) \
-		DP_STATS_DEC(_handle, rx.to_stack.num, _count); \
+		DP_PEER_STATS_FLAT_DEC(_handle, to_stack.num, _count); \
 }
 
 #define DP_PEER_MC_INCC_PKT(_handle, _count, _bytes, _cond) \
 { \
 	if (!(_handle->hw_txrx_stats_en)) \
-		DP_STATS_INC_PKT(_handle, rx.multicast, _count, _bytes); \
+		DP_PEER_PER_PKT_STATS_INC_PKT(_handle, rx.multicast, _count, _bytes); \
 }
 
 #define DP_PEER_BC_INCC_PKT(_handle, _count, _bytes, _cond) \
 { \
 	if (!(_handle->hw_txrx_stats_en)) \
-		DP_STATS_INC_PKT(_handle, rx.bcast, _count, _bytes); \
+		DP_PEER_PER_PKT_STATS_INC_PKT(_handle, rx.bcast, _count, _bytes); \
 }
 #else
 #define DP_PEER_TO_STACK_INCC_PKT(_handle, _count, _bytes, _cond) \
-	DP_STATS_INC_PKT(_handle, rx.to_stack, _count, _bytes);
+	DP_PEER_STATS_FLAT_INC_PKT(_handle, to_stack, _count, _bytes);
 
 #define DP_PEER_TO_STACK_DECC(_handle, _count, _cond) \
-	DP_STATS_DEC(_handle, rx.to_stack.num, _count);
+	DP_PEER_STATS_FLAT_DEC(_handle, to_stack.num, _count);
 
 #define DP_PEER_MC_INCC_PKT(_handle, _count, _bytes, _cond) \
-	DP_STATS_INC_PKT(_handle, rx.multicast, _count, _bytes);
+	DP_PEER_PER_PKT_STATS_INC_PKT(_handle, rx.multicast, _count, _bytes);
 
 #define DP_PEER_BC_INCC_PKT(_handle, _count, _bytes, _cond) \
-	DP_STATS_INC_PKT(_handle, rx.bcast, _count, _bytes);
+	DP_PEER_PER_PKT_STATS_INC_PKT(_handle, rx.bcast, _count, _bytes);
 #endif
 
 #ifdef ENABLE_DP_HIST_STATS
@@ -950,29 +1074,27 @@ static inline int dp_log2_ceil(unsigned int value)
 #ifdef QCA_SUPPORT_PEER_ISOLATION
 #define dp_get_peer_isolation(_peer) ((_peer)->isolation)
 
-static inline void dp_set_peer_isolation(struct dp_peer *peer, bool val)
+static inline void dp_set_peer_isolation(struct dp_txrx_peer *txrx_peer,
+					 bool val)
 {
-	peer->isolation = val;
-	QDF_TRACE(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_INFO,
-		  "peer:"QDF_MAC_ADDR_FMT" isolation:%d",
-		  QDF_MAC_ADDR_REF(peer->mac_addr.raw), peer->isolation);
+	txrx_peer->isolation = val;
 }
 
 #else
 #define dp_get_peer_isolation(_peer) (0)
 
-static inline void dp_set_peer_isolation(struct dp_peer *peer, bool val)
+static inline void dp_set_peer_isolation(struct dp_txrx_peer *peer, bool val)
 {
 }
 #endif /* QCA_SUPPORT_PEER_ISOLATION */
 
 #ifdef QCA_SUPPORT_WDS_EXTENDED
-static inline void dp_wds_ext_peer_init(struct dp_peer *peer)
+static inline void dp_wds_ext_peer_init(struct dp_txrx_peer *txrx_peer)
 {
-	peer->wds_ext.init = 0;
+	txrx_peer->wds_ext.init = 0;
 }
 #else
-static inline void dp_wds_ext_peer_init(struct dp_peer *peer)
+static inline void dp_wds_ext_peer_init(struct dp_txrx_peer *txrx_peer)
 {
 }
 #endif /* QCA_SUPPORT_WDS_EXTENDED */
@@ -1128,6 +1250,28 @@ void dp_txrx_clear_tso_stats(struct dp_soc *soc)
 }
 #endif /* FEATURE_TSO_STATS */
 
+/* dp_txrx_get_peer_per_pkt_stats_param() - Get peer per pkt stats param
+ * @peer: DP peer handle
+ * @type: Requested stats type
+ * @ buf: Buffer to hold the value
+ *
+ * Return: status success/failure
+ */
+QDF_STATUS dp_txrx_get_peer_per_pkt_stats_param(struct dp_peer *peer,
+						enum cdp_peer_stats_type type,
+						cdp_peer_stats_param_t *buf);
+
+/* dp_txrx_get_peer_extd_stats_param() - Get peer extd stats param
+ * @peer: DP peer handle
+ * @type: Requested stats type
+ * @ buf: Buffer to hold the value
+ *
+ * Return: status success/failure
+ */
+QDF_STATUS dp_txrx_get_peer_extd_stats_param(struct dp_peer *peer,
+					     enum cdp_peer_stats_type type,
+					     cdp_peer_stats_param_t *buf);
+
 #define DP_HTT_T2H_HP_PIPE 5
 /**
  * dp_update_pdev_stats(): Update the pdev stats
@@ -1176,6 +1320,16 @@ void dp_update_pdev_ingress_stats(struct dp_pdev *tgtobj,
 void dp_update_vdev_stats(struct dp_soc *soc,
 			  struct dp_peer *srcobj,
 			  void *arg);
+
+/**
+ * dp_update_vdev_stats_on_peer_unmap() - Update the vdev stats on peer unmap
+ * @vdev: DP_VDEV handle
+ * @peer: DP_PEER handle
+ *
+ * Return: None
+ */
+void dp_update_vdev_stats_on_peer_unmap(struct dp_vdev *vdev,
+					struct dp_peer *peer);
 
 #define DP_UPDATE_STATS(_tgtobj, _srcobj)	\
 	do {				\
@@ -1280,6 +1434,291 @@ void dp_update_vdev_stats(struct dp_soc *soc,
 		DP_STATS_AGGR(_tgtobj, _srcobj, rx.peer_unauth_rx_pkt_drop); \
 		DP_STATS_AGGR(_tgtobj, _srcobj, rx.policy_check_drop); \
 	}  while (0)
+
+#ifdef VDEV_PEER_PROTOCOL_COUNT
+#define DP_UPDATE_PROTOCOL_COUNT_STATS(_tgtobj, _srcobj) \
+{ \
+	uint8_t j; \
+	for (j = 0; j < CDP_TRACE_MAX; j++) { \
+		_tgtobj->tx.protocol_trace_cnt[j].egress_cnt += \
+			_srcobj->tx.protocol_trace_cnt[j].egress_cnt; \
+		_tgtobj->tx.protocol_trace_cnt[j].ingress_cnt += \
+			_srcobj->tx.protocol_trace_cnt[j].ingress_cnt; \
+		_tgtobj->rx.protocol_trace_cnt[j].egress_cnt += \
+			_srcobj->rx.protocol_trace_cnt[j].egress_cnt; \
+		_tgtobj->rx.protocol_trace_cnt[j].ingress_cnt += \
+			_srcobj->rx.protocol_trace_cnt[j].ingress_cnt; \
+	} \
+}
+#else
+#define DP_UPDATE_PROTOCOL_COUNT_STATS(_tgtobj, _srcobj)
+#endif
+
+#ifdef WLAN_FEATURE_11BE
+#define DP_UPDATE_11BE_STATS(_tgtobj, _srcobj) \
+	do { \
+		uint8_t i, mu_type; \
+		for (i = 0; i < MAX_MCS; i++) { \
+			_tgtobj->tx.su_be_ppdu_cnt.mcs_count[i] += \
+				_srcobj->tx.su_be_ppdu_cnt.mcs_count[i]; \
+			_tgtobj->rx.su_be_ppdu_cnt.mcs_count[i] += \
+				_srcobj->rx.su_be_ppdu_cnt.mcs_count[i]; \
+		} \
+		for (mu_type = 0; mu_type < TXRX_TYPE_MU_MAX; mu_type++) { \
+			for (i = 0; i < MAX_MCS; i++) { \
+				_tgtobj->tx.mu_be_ppdu_cnt[mu_type].mcs_count[i] += \
+					_srcobj->tx.mu_be_ppdu_cnt[mu_type].mcs_count[i]; \
+				_tgtobj->rx.mu_be_ppdu_cnt[mu_type].mcs_count[i] += \
+					_srcobj->rx.mu_be_ppdu_cnt[mu_type].mcs_count[i]; \
+			} \
+		} \
+	} while (0)
+#else
+#define DP_UPDATE_11BE_STATS(_tgtobj, _srcobj)
+#endif
+
+#define DP_UPDATE_PER_PKT_STATS(_tgtobj, _srcobj) \
+	do { \
+		uint8_t i; \
+		_tgtobj->tx.ucast.num += _srcobj->tx.ucast.num; \
+		_tgtobj->tx.ucast.bytes += _srcobj->tx.ucast.bytes; \
+		_tgtobj->tx.mcast.num += _srcobj->tx.mcast.num; \
+		_tgtobj->tx.mcast.bytes += _srcobj->tx.mcast.bytes; \
+		_tgtobj->tx.bcast.num += _srcobj->tx.bcast.num; \
+		_tgtobj->tx.bcast.bytes += _srcobj->tx.bcast.bytes; \
+		_tgtobj->tx.nawds_mcast.num += _srcobj->tx.nawds_mcast.num; \
+		_tgtobj->tx.nawds_mcast.bytes += \
+					_srcobj->tx.nawds_mcast.bytes; \
+		_tgtobj->tx.tx_success.num += _srcobj->tx.tx_success.num; \
+		_tgtobj->tx.tx_success.bytes += _srcobj->tx.tx_success.bytes; \
+		_tgtobj->tx.nawds_mcast_drop += _srcobj->tx.nawds_mcast_drop; \
+		_tgtobj->tx.ofdma += _srcobj->tx.ofdma; \
+		_tgtobj->tx.non_amsdu_cnt += _srcobj->tx.non_amsdu_cnt; \
+		_tgtobj->tx.amsdu_cnt += _srcobj->tx.amsdu_cnt; \
+		_tgtobj->tx.dropped.fw_rem.num += \
+					_srcobj->tx.dropped.fw_rem.num; \
+		_tgtobj->tx.dropped.fw_rem.bytes += \
+					_srcobj->tx.dropped.fw_rem.bytes; \
+		_tgtobj->tx.dropped.fw_rem_notx += \
+					_srcobj->tx.dropped.fw_rem_notx; \
+		_tgtobj->tx.dropped.fw_rem_tx += \
+					_srcobj->tx.dropped.fw_rem_tx; \
+		_tgtobj->tx.dropped.age_out += _srcobj->tx.dropped.age_out; \
+		_tgtobj->tx.dropped.fw_reason1 += \
+					_srcobj->tx.dropped.fw_reason1; \
+		_tgtobj->tx.dropped.fw_reason2 += \
+					_srcobj->tx.dropped.fw_reason2; \
+		_tgtobj->tx.dropped.fw_reason3 += \
+					_srcobj->tx.dropped.fw_reason3; \
+		_tgtobj->tx.failed_retry_count += \
+					_srcobj->tx.failed_retry_count; \
+		_tgtobj->tx.retry_count += _srcobj->tx.retry_count; \
+		_tgtobj->tx.multiple_retry_count += \
+					_srcobj->tx.multiple_retry_count; \
+		_tgtobj->tx.tx_success_twt.num += \
+					_srcobj->tx.tx_success_twt.num; \
+		_tgtobj->tx.tx_success_twt.bytes += \
+					_srcobj->tx.tx_success_twt.bytes; \
+		_tgtobj->tx.last_tx_ts = _srcobj->tx.last_tx_ts; \
+		for (i = 0; i < QDF_PROTO_SUBTYPE_MAX; i++) { \
+			_tgtobj->tx.no_ack_count[i] += \
+					_srcobj->tx.no_ack_count[i];\
+		} \
+		\
+		_tgtobj->rx.multicast.num += _srcobj->rx.multicast.num; \
+		_tgtobj->rx.multicast.bytes += _srcobj->rx.multicast.bytes; \
+		_tgtobj->rx.bcast.num += _srcobj->rx.bcast.num; \
+		_tgtobj->rx.bcast.bytes += _srcobj->rx.bcast.bytes; \
+		if (_tgtobj->rx.to_stack.num >= _tgtobj->rx.multicast.num) \
+			_tgtobj->rx.unicast.num = \
+				_tgtobj->rx.to_stack.num - _tgtobj->rx.multicast.num; \
+		if (_tgtobj->rx.to_stack.bytes >= _tgtobj->rx.multicast.bytes) \
+			_tgtobj->rx.unicast.bytes = \
+				_tgtobj->rx.to_stack.bytes - _tgtobj->rx.multicast.bytes; \
+		_tgtobj->rx.raw.num += _srcobj->rx.raw.num; \
+		_tgtobj->rx.raw.bytes += _srcobj->rx.raw.bytes; \
+		_tgtobj->rx.nawds_mcast_drop += _srcobj->rx.nawds_mcast_drop; \
+		_tgtobj->rx.mec_drop.num += _srcobj->rx.mec_drop.num; \
+		_tgtobj->rx.mec_drop.bytes += _srcobj->rx.mec_drop.bytes; \
+		_tgtobj->rx.intra_bss.pkts.num += \
+					_srcobj->rx.intra_bss.pkts.num; \
+		_tgtobj->rx.intra_bss.pkts.bytes += \
+					_srcobj->rx.intra_bss.pkts.bytes; \
+		_tgtobj->rx.intra_bss.fail.num += \
+					_srcobj->rx.intra_bss.fail.num; \
+		_tgtobj->rx.intra_bss.fail.bytes += \
+					_srcobj->rx.intra_bss.fail.bytes; \
+		_tgtobj->rx.intra_bss.mdns_no_fwd += \
+					_srcobj->rx.intra_bss.mdns_no_fwd; \
+		_tgtobj->rx.err.mic_err += _srcobj->rx.err.mic_err; \
+		_tgtobj->rx.err.decrypt_err += _srcobj->rx.err.decrypt_err; \
+		_tgtobj->rx.err.fcserr += _srcobj->rx.err.fcserr; \
+		_tgtobj->rx.err.pn_err += _srcobj->rx.err.pn_err; \
+		_tgtobj->rx.err.oor_err += _srcobj->rx.err.oor_err; \
+		_tgtobj->rx.err.jump_2k_err += _srcobj->rx.err.jump_2k_err; \
+		_tgtobj->rx.err.rxdma_wifi_parse_err += \
+					_srcobj->rx.err.rxdma_wifi_parse_err; \
+		_tgtobj->rx.non_amsdu_cnt += _srcobj->rx.non_amsdu_cnt; \
+		_tgtobj->rx.amsdu_cnt += _srcobj->rx.amsdu_cnt; \
+		_tgtobj->rx.rx_retries += _srcobj->rx.rx_retries; \
+		_tgtobj->rx.multipass_rx_pkt_drop += \
+					_srcobj->rx.multipass_rx_pkt_drop; \
+		_tgtobj->rx.peer_unauth_rx_pkt_drop += \
+					_srcobj->rx.peer_unauth_rx_pkt_drop; \
+		_tgtobj->rx.policy_check_drop += \
+					_srcobj->rx.policy_check_drop; \
+		_tgtobj->rx.to_stack_twt.num += _srcobj->rx.to_stack_twt.num; \
+		_tgtobj->rx.to_stack_twt.bytes += \
+					_srcobj->rx.to_stack_twt.bytes; \
+		_tgtobj->rx.last_rx_ts = _srcobj->rx.last_rx_ts; \
+		for (i = 0; i < CDP_MAX_RX_RINGS; i++) { \
+			_tgtobj->rx.rcvd_reo[i].num += \
+					 _srcobj->rx.rcvd_reo[i].num; \
+			_tgtobj->rx.rcvd_reo[i].bytes += \
+					_srcobj->rx.rcvd_reo[i].bytes; \
+		} \
+		DP_UPDATE_PROTOCOL_COUNT_STATS(_tgtobj, _srcobj); \
+	} while (0)
+
+#define DP_UPDATE_EXTD_STATS(_tgtobj, _srcobj) \
+	do { \
+		uint8_t i, pream_type, mu_type; \
+		_tgtobj->tx.stbc += _srcobj->tx.stbc; \
+		_tgtobj->tx.ldpc += _srcobj->tx.ldpc; \
+		_tgtobj->tx.retries += _srcobj->tx.retries; \
+		_tgtobj->tx.ampdu_cnt += _srcobj->tx.ampdu_cnt; \
+		_tgtobj->tx.non_ampdu_cnt += _srcobj->tx.non_ampdu_cnt; \
+		_tgtobj->tx.num_ppdu_cookie_valid += \
+					_srcobj->tx.num_ppdu_cookie_valid; \
+		_tgtobj->tx.tx_ppdus += _srcobj->tx.tx_ppdus; \
+		_tgtobj->tx.tx_mpdus_success += _srcobj->tx.tx_mpdus_success; \
+		_tgtobj->tx.tx_mpdus_tried += _srcobj->tx.tx_mpdus_tried; \
+		_tgtobj->tx.tx_rate = _srcobj->tx.tx_rate; \
+		_tgtobj->tx.last_tx_rate = _srcobj->tx.last_tx_rate; \
+		_tgtobj->tx.last_tx_rate_mcs = _srcobj->tx.last_tx_rate_mcs; \
+		_tgtobj->tx.mcast_last_tx_rate = \
+					_srcobj->tx.mcast_last_tx_rate; \
+		_tgtobj->tx.mcast_last_tx_rate_mcs = \
+					_srcobj->tx.mcast_last_tx_rate_mcs; \
+		_tgtobj->tx.rnd_avg_tx_rate = _srcobj->tx.rnd_avg_tx_rate; \
+		_tgtobj->tx.avg_tx_rate = _srcobj->tx.avg_tx_rate; \
+		_tgtobj->tx.tx_ratecode = _srcobj->tx.tx_ratecode; \
+		_tgtobj->tx.pream_punct_cnt += _srcobj->tx.pream_punct_cnt; \
+		_tgtobj->tx.ru_start = _srcobj->tx.ru_start; \
+		_tgtobj->tx.ru_tones = _srcobj->tx.ru_tones; \
+		_tgtobj->tx.last_ack_rssi = _srcobj->tx.last_ack_rssi; \
+		_tgtobj->tx.nss_info = _srcobj->tx.nss_info; \
+		_tgtobj->tx.mcs_info = _srcobj->tx.mcs_info; \
+		_tgtobj->tx.bw_info = _srcobj->tx.bw_info; \
+		_tgtobj->tx.gi_info = _srcobj->tx.gi_info; \
+		_tgtobj->tx.preamble_info = _srcobj->tx.preamble_info; \
+		_tgtobj->tx.retries_mpdu += _srcobj->tx.retries_mpdu; \
+		_tgtobj->tx.mpdu_success_with_retries += \
+					_srcobj->tx.mpdu_success_with_retries; \
+		for (pream_type = 0; pream_type < DOT11_MAX; pream_type++) { \
+			for (i = 0; i < MAX_MCS; i++) \
+				_tgtobj->tx.pkt_type[pream_type].mcs_count[i] += \
+				_srcobj->tx.pkt_type[pream_type].mcs_count[i]; \
+		} \
+		for (i = 0; i < WME_AC_MAX; i++) { \
+			_tgtobj->tx.wme_ac_type[i] += _srcobj->tx.wme_ac_type[i]; \
+			_tgtobj->tx.excess_retries_per_ac[i] += \
+					_srcobj->tx.excess_retries_per_ac[i]; \
+		} \
+		for (i = 0; i < MAX_GI; i++) { \
+			_tgtobj->tx.sgi_count[i] += _srcobj->tx.sgi_count[i]; \
+		} \
+		for (i = 0; i < SS_COUNT; i++) { \
+			_tgtobj->tx.nss[i] += _srcobj->tx.nss[i]; \
+		} \
+		for (i = 0; i < MAX_BW; i++) { \
+			_tgtobj->tx.bw[i] += _srcobj->tx.bw[i]; \
+		} \
+		for (i = 0; i < MAX_RU_LOCATIONS; i++) { \
+			_tgtobj->tx.ru_loc[i].num_msdu += \
+					_srcobj->tx.ru_loc[i].num_msdu; \
+			_tgtobj->tx.ru_loc[i].num_mpdu += \
+					_srcobj->tx.ru_loc[i].num_mpdu; \
+			_tgtobj->tx.ru_loc[i].mpdu_tried += \
+					_srcobj->tx.ru_loc[i].mpdu_tried; \
+		} \
+		for (i = 0; i < MAX_TRANSMIT_TYPES; i++) { \
+			_tgtobj->tx.transmit_type[i].num_msdu += \
+					_srcobj->tx.transmit_type[i].num_msdu; \
+			_tgtobj->tx.transmit_type[i].num_mpdu += \
+					_srcobj->tx.transmit_type[i].num_mpdu; \
+			_tgtobj->tx.transmit_type[i].mpdu_tried += \
+					_srcobj->tx.transmit_type[i].mpdu_tried; \
+		} \
+		for (i = 0; i < MAX_MU_GROUP_ID; i++) { \
+			_tgtobj->tx.mu_group_id[i] += _srcobj->tx.mu_group_id[i]; \
+		} \
+		\
+		_tgtobj->rx.mpdu_cnt_fcs_ok += _srcobj->rx.mpdu_cnt_fcs_ok; \
+		_tgtobj->rx.mpdu_cnt_fcs_err += _srcobj->rx.mpdu_cnt_fcs_err; \
+		_tgtobj->rx.non_ampdu_cnt += _srcobj->rx.non_ampdu_cnt; \
+		_tgtobj->rx.ampdu_cnt += _srcobj->rx.ampdu_cnt; \
+		_tgtobj->rx.rx_mpdus += _srcobj->rx.rx_mpdus; \
+		_tgtobj->rx.rx_ppdus += _srcobj->rx.rx_ppdus; \
+		_tgtobj->rx.rx_rate = _srcobj->rx.rx_rate; \
+		_tgtobj->rx.last_rx_rate = _srcobj->rx.last_rx_rate; \
+		_tgtobj->rx.rnd_avg_rx_rate = _srcobj->rx.rnd_avg_rx_rate; \
+		_tgtobj->rx.avg_rx_rate = _srcobj->rx.avg_rx_rate; \
+		_tgtobj->rx.rx_ratecode = _srcobj->rx.rx_ratecode; \
+		_tgtobj->rx.avg_snr = _srcobj->rx.avg_snr; \
+		_tgtobj->rx.rx_snr_measured_time = \
+					_srcobj->rx.rx_snr_measured_time; \
+		_tgtobj->rx.snr = _srcobj->rx.snr; \
+		_tgtobj->rx.last_snr = _srcobj->rx.last_snr; \
+		_tgtobj->rx.nss_info = _srcobj->rx.nss_info; \
+		_tgtobj->rx.mcs_info = _srcobj->rx.mcs_info; \
+		_tgtobj->rx.bw_info = _srcobj->rx.bw_info; \
+		_tgtobj->rx.gi_info = _srcobj->rx.gi_info; \
+		_tgtobj->rx.preamble_info = _srcobj->rx.preamble_info; \
+		_tgtobj->rx.mpdu_retry_cnt += _srcobj->rx.mpdu_retry_cnt; \
+		for (pream_type = 0; pream_type < DOT11_MAX; pream_type++) { \
+			for (i = 0; i < MAX_MCS; i++) { \
+				_tgtobj->rx.pkt_type[pream_type].mcs_count[i] += \
+					_srcobj->rx.pkt_type[pream_type].mcs_count[i]; \
+			} \
+		} \
+		for (i = 0; i < WME_AC_MAX; i++) { \
+			_tgtobj->rx.wme_ac_type[i] += _srcobj->rx.wme_ac_type[i]; \
+		} \
+		for (i = 0; i < MAX_MCS; i++) { \
+			_tgtobj->rx.su_ax_ppdu_cnt.mcs_count[i] += \
+					_srcobj->rx.su_ax_ppdu_cnt.mcs_count[i]; \
+			_tgtobj->rx.rx_mpdu_cnt[i] += _srcobj->rx.rx_mpdu_cnt[i]; \
+		} \
+		for (mu_type = 0 ; mu_type < TXRX_TYPE_MU_MAX; mu_type++) { \
+			_tgtobj->rx.rx_mu[mu_type].mpdu_cnt_fcs_ok += \
+				_srcobj->rx.rx_mu[mu_type].mpdu_cnt_fcs_ok; \
+			_tgtobj->rx.rx_mu[mu_type].mpdu_cnt_fcs_err += \
+				_srcobj->rx.rx_mu[mu_type].mpdu_cnt_fcs_err; \
+			for (i = 0; i < SS_COUNT; i++) \
+				_tgtobj->rx.rx_mu[mu_type].ppdu_nss[i] += \
+					_srcobj->rx.rx_mu[mu_type].ppdu_nss[i]; \
+			for (i = 0; i < MAX_MCS; i++) \
+				_tgtobj->rx.rx_mu[mu_type].ppdu.mcs_count[i] += \
+					_srcobj->rx.rx_mu[mu_type].ppdu.mcs_count[i]; \
+		} \
+		for (i = 0; i < MAX_RECEPTION_TYPES; i++) { \
+			_tgtobj->rx.reception_type[i] += \
+					_srcobj->rx.reception_type[i]; \
+			_tgtobj->rx.ppdu_cnt[i] += _srcobj->rx.ppdu_cnt[i]; \
+		} \
+		for (i = 0; i < MAX_GI; i++) { \
+			_tgtobj->rx.sgi_count[i] += _srcobj->rx.sgi_count[i]; \
+		} \
+		for (i = 0; i < SS_COUNT; i++) { \
+			_tgtobj->rx.nss[i] += _srcobj->rx.nss[i]; \
+			_tgtobj->rx.ppdu_nss[i] += _srcobj->rx.ppdu_nss[i]; \
+		} \
+		for (i = 0; i < MAX_BW; i++) { \
+			_tgtobj->rx.bw[i] += _srcobj->rx.bw[i]; \
+		} \
+		DP_UPDATE_11BE_STATS(_tgtobj, _srcobj); \
+	} while (0)
 
 /**
  * dp_peer_find_attach() - Allocates memory for peer objects
@@ -1667,10 +2106,12 @@ void dp_print_tx_rates(struct dp_vdev *vdev);
 /**
  * dp_print_peer_stats():print peer stats
  * @peer: DP_PEER handle
+ * @peer_stats: buffer holding peer stats
  *
  * return void
  */
-void dp_print_peer_stats(struct dp_peer *peer);
+void dp_print_peer_stats(struct dp_peer *peer,
+			 struct cdp_peer_stats *peer_stats);
 
 /**
  * dp_print_pdev_tx_stats(): Print Pdev level TX stats
@@ -2010,7 +2451,7 @@ dp_hif_update_pipe_callback(struct dp_soc *dp_soc, void *cb_context,
  * dp_vdev_peer_stats_update_protocol_cnt() - update per-peer protocol counters
  * @vdev: VDEV DP object
  * @nbuf: data packet
- * @peer: Peer DP object
+ * @peer: DP TXRX Peer object
  * @is_egress: whether egress or ingress
  * @is_rx: whether rx or tx
  *
@@ -2019,7 +2460,7 @@ dp_hif_update_pipe_callback(struct dp_soc *dp_soc, void *cb_context,
  */
 void dp_vdev_peer_stats_update_protocol_cnt(struct dp_vdev *vdev,
 					    qdf_nbuf_t nbuf,
-					    struct dp_peer *peer,
+					    struct dp_txrx_peer *txrx_peer,
 					    bool is_egress,
 					    bool is_rx);
 
@@ -2045,7 +2486,7 @@ void dp_vdev_peer_stats_update_protocol_cnt_tx(struct dp_vdev *vdev_hdl,
 					       qdf_nbuf_t nbuf);
 
 #else
-#define dp_vdev_peer_stats_update_protocol_cnt(vdev, nbuf, peer, \
+#define dp_vdev_peer_stats_update_protocol_cnt(vdev, nbuf, txrx_peer, \
 					       is_egress, is_rx)
 
 static inline
@@ -2911,21 +3352,71 @@ void dp_peer_flush_frags(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
  */
 void dp_soc_reset_mon_intr_mask(struct dp_soc *soc);
 
-#ifdef QCA_PEER_EXT_STATS
-/*
- * dp_accumulate_delay_tid_stats(): Accumulate the tid stats to the
- *                                  hist stats.
- * @soc: DP SoC handle
- * @stats: cdp_delay_tid stats
- * @dst_hstats: Destination histogram to copy tid stats
- * @tid: TID value
+/**
+ * dp_txrx_get_soc_stats() - will return cdp_soc_stats
+ * @soc_hdl: soc handle
+ * @soc_stats: buffer to hold the values
  *
- * Return: void
+ * Return: QDF_STATUS_SUCCESS: Success
+ *         QDF_STATUS_E_FAILURE: Error
  */
-void dp_accumulate_delay_tid_stats(struct dp_soc *soc,
-				   struct cdp_delay_tid_stats stats[]
-				   [CDP_MAX_TXRX_CTX],
-				   struct cdp_hist_stats *dst_hstats,
-				   uint8_t tid, uint32_t mode);
-#endif /* QCA_PEER_EXT_STATS */
+QDF_STATUS dp_txrx_get_soc_stats(struct cdp_soc_t *soc_hdl,
+				 struct cdp_soc_stats *soc_stats);
+
+/**
+ * dp_txrx_get_peer_delay_stats() - to get peer delay stats per TIDs
+ * @soc: soc handle
+ * @vdev_id: id of vdev handle
+ * @peer_mac: mac of DP_PEER handle
+ * @delay_stats: pointer to delay stats array
+ *
+ * Return: QDF_STATUS_SUCCESS: Success
+ *         QDF_STATUS_E_FAILURE: Error
+ */
+QDF_STATUS
+dp_txrx_get_peer_delay_stats(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
+			     uint8_t *peer_mac,
+			     struct cdp_delay_tid_stats *delay_stats);
+
+/**
+ * dp_txrx_get_peer_jitter_stats() - to get peer jitter stats per TIDs
+ * @soc: soc handle
+ * @pdev_id: id of pdev handle
+ * @vdev_id: id of vdev handle
+ * @peer_mac: mac of DP_PEER handle
+ * @tid_stats: pointer to jitter stats array
+ *
+ * Return: QDF_STATUS_SUCCESS: Success
+ *         QDF_STATUS_E_FAILURE: Error
+ */
+QDF_STATUS
+dp_txrx_get_peer_jitter_stats(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
+			      uint8_t vdev_id, uint8_t *peer_mac,
+			      struct cdp_peer_tid_stats *tid_stats);
+
+/* dp_peer_get_tx_capture_stats - to get peer Tx Capture stats
+ * @soc_hdl: soc handle
+ * @vdev_id: id of vdev handle
+ * @peer_mac: mac of DP_PEER handle
+ * @stats: pointer to peer tx capture stats
+ *
+ * Return: QDF_STATUS_SUCCESS: Success
+ *         QDF_STATUS_E_FAILURE: Error
+ */
+QDF_STATUS
+dp_peer_get_tx_capture_stats(struct cdp_soc_t *soc_hdl,
+			     uint8_t vdev_id, uint8_t *peer_mac,
+			     struct cdp_peer_tx_capture_stats *stats);
+
+/* dp_pdev_get_tx_capture_stats - to get pdev Tx Capture stats
+ * @soc_hdl: soc handle
+ * @pdev_id: id of pdev handle
+ * @stats: pointer to pdev tx capture stats
+ *
+ * Return: QDF_STATUS_SUCCESS: Success
+ *         QDF_STATUS_E_FAILURE: Error
+ */
+QDF_STATUS
+dp_pdev_get_tx_capture_stats(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
+			     struct cdp_pdev_tx_capture_stats *stats);
 #endif /* #ifndef _DP_INTERNAL_H_ */

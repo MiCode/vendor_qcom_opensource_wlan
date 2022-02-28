@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2013-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -43,7 +44,7 @@
 #endif
 
 #define HIF_IC_CE0_IRQ_OFFSET 4
-#define HIF_IC_MAX_IRQ 52
+#define HIF_IC_MAX_IRQ 53
 
 static uint16_t ic_irqnum[HIF_IC_MAX_IRQ];
 /* integrated chip irq names */
@@ -96,6 +97,7 @@ const char *ic_irqname[HIF_IC_MAX_IRQ] = {
 "host2tcl-input-ring3",
 "host2tcl-input-ring2",
 "host2tcl-input-ring1",
+"wbm2host-tx-completions-ring4",
 "wbm2host-tx-completions-ring3",
 "wbm2host-tx-completions-ring2",
 "wbm2host-tx-completions-ring1",
@@ -539,6 +541,7 @@ void hif_ahb_disable_bus(struct hif_softc *scn)
 			pfrm_devm_release_mem_region(&pdev->dev, scn->mem_pa,
 						     mem_pa_size);
 			sc->mem = NULL;
+			pld_set_bar_addr(&pdev->dev, NULL);
 		}
 	}
 	scn->mem = NULL;
@@ -623,6 +626,7 @@ QDF_STATUS hif_ahb_enable_bus(struct hif_softc *ol_sc,
 		}
 
 		sc->mem = mem;
+		pld_set_bar_addr(dev, mem);
 		ol_sc->mem = mem;
 		ol_sc->mem_pa = memres->start;
 	}

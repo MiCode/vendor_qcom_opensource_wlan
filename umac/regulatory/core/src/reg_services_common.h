@@ -158,6 +158,12 @@ extern const struct chan_map channel_map_global[];
 #define ALL_SCHANS_PUNC 0xFFFF /* all subchannels punctured */
 #endif
 
+#define CHAN_FREQ_5660 5660
+#define CHAN_FREQ_5720 5720
+
+#define PRIM_SEG_IEEE_CENTER_240MHZ_5G_CHAN 146
+#define PRIM_SEG_FREQ_CENTER_240MHZ_5G_CHAN 5730
+
 #ifdef CONFIG_AFC_SUPPORT
 /**
  * struct afc_cb_handler - defines structure for afc request received  event
@@ -167,6 +173,17 @@ extern const struct chan_map channel_map_global[];
  */
 struct afc_cb_handler {
 	afc_req_rx_evt_handler func;
+	void *arg;
+};
+
+/**
+ * struct afc_pow_evt_cb_handler - defines structure for afc power received
+ * event  handler call back function and argument
+ * @func: handler function pointer
+ * @arg: argument to handler function
+ */
+struct afc_pow_evt_cb_handler {
+	afc_power_tx_evt_handler func;
 	void *arg;
 };
 
@@ -201,25 +218,29 @@ QDF_STATUS reg_read_default_country(struct wlan_objmgr_psoc *psoc,
 /**
  * reg_get_ctry_idx_max_bw_from_country_code() - Get the max 5G bandwidth
  * from country code
- * @cc : Country Code
- * @max_bw_5g : Max 5G bandwidth supported by the country
+ * @pdev: Pointer to pdev
+ * @cc: Country Code
+ * @max_bw_5g: Max 5G bandwidth supported by the country
  *
- * Return : QDF_STATUS
+ * Return: QDF_STATUS
  */
 
-QDF_STATUS reg_get_max_5g_bw_from_country_code(uint16_t cc,
+QDF_STATUS reg_get_max_5g_bw_from_country_code(struct wlan_objmgr_pdev *pdev,
+					       uint16_t cc,
 					       uint16_t *max_bw_5g);
 
 /**
  * reg_get_max_5g_bw_from_regdomain() - Get the max 5G bandwidth
  * supported by the regdomain
- * @orig_regdmn : Regdomain pair value
- * @max_bw_5g : Max 5G bandwidth supported by the country
+ * @pdev: Pointer to pdev
+ * @orig_regdmn: Regdomain pair value
+ * @max_bw_5g: Max 5G bandwidth supported by the country
  *
- * Return : QDF_STATUS
+ * Return: QDF_STATUS
  */
 
-QDF_STATUS reg_get_max_5g_bw_from_regdomain(uint16_t regdmn,
+QDF_STATUS reg_get_max_5g_bw_from_regdomain(struct wlan_objmgr_pdev *pdev,
+					    uint16_t regdmn,
 					    uint16_t *max_bw_5g);
 
 /**
@@ -278,16 +299,6 @@ uint8_t reg_freq_to_chan(struct wlan_objmgr_pdev *pdev, qdf_freq_t freq);
  */
 uint16_t reg_legacy_chan_to_freq(struct wlan_objmgr_pdev *pdev,
 				 uint8_t chan_num);
-
-/**
- * reg_program_default_cc() - Program default country code
- * @pdev: Pdev pointer
- * @regdmn: Regdomain value
- *
- * Return: QDF_STATUS
- */
-QDF_STATUS reg_program_default_cc(struct wlan_objmgr_pdev *pdev,
-				  uint16_t regdmn);
 
 /**
  * reg_get_current_cc() - Get current country code
@@ -736,6 +747,17 @@ qdf_freq_t reg_max_5ghz_chan_freq(void);
  */
 QDF_STATUS reg_enable_dfs_channels(struct wlan_objmgr_pdev *pdev, bool enable);
 
+#ifdef WLAN_REG_PARTIAL_OFFLOAD
+/**
+ * reg_program_default_cc() - Program default country code
+ * @pdev: Pdev pointer
+ * @regdmn: Regdomain value
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS reg_program_default_cc(struct wlan_objmgr_pdev *pdev,
+				  uint16_t regdmn);
+
 /**
  * reg_is_regdmn_en302502_applicable() - Find if ETSI EN302_502 radar pattern
  * is applicable in current regulatory domain.
@@ -744,6 +766,7 @@ QDF_STATUS reg_enable_dfs_channels(struct wlan_objmgr_pdev *pdev, bool enable);
  * Return: True if en302_502 is applicable, else false.
  */
 bool reg_is_regdmn_en302502_applicable(struct wlan_objmgr_pdev *pdev);
+#endif
 
 /**
  * reg_modify_pdev_chan_range() - Compute current channel list
@@ -763,7 +786,7 @@ QDF_STATUS reg_modify_pdev_chan_range(struct wlan_objmgr_pdev *pdev);
  * Return : QDF_STATUS
  */
 QDF_STATUS reg_update_pdev_wireless_modes(struct wlan_objmgr_pdev *pdev,
-					  uint32_t wireless_modes);
+					  uint64_t wireless_modes);
 
 /**
  * reg_get_phybitmap() - Get phybitmap from regulatory pdev_priv_obj
@@ -854,14 +877,14 @@ enum channel_state reg_get_channel_state_from_secondary_list_for_freq(
  * 5G bonded channel using the channel frequency
  * @pdev: Pointer to pdev
  * @freq: channel center frequency.
- * @bw: channel band width
+ * @ch_params: channel parameters
  *
  * Return: channel state
  */
 enum channel_state
 reg_get_5g_bonded_channel_state_for_freq(struct wlan_objmgr_pdev *pdev,
 					 qdf_freq_t freq,
-					 enum phy_ch_width bw);
+					 struct ch_params *ch_params);
 
 /**
  * reg_get_2g_bonded_channel_state_for_freq() - Get channel state for 2G
@@ -920,6 +943,30 @@ reg_fill_channel_list(struct wlan_objmgr_pdev *pdev,
 		      enum phy_ch_width ch_width,
 		      qdf_freq_t band_center_320,
 		      struct reg_channel_list *chan_list);
+
+/**
+ * reg_is_punc_bitmap_valid() - is puncture bitmap valid or not
+ * @bw: Input channel width.
+ * @puncture_bitmap Input puncture bitmap.
+ *
+ * Return: true if given puncture bitmap is valid
+ */
+bool reg_is_punc_bitmap_valid(enum phy_ch_width bw, uint16_t puncture_bitmap);
+
+/**
+ * reg_set_create_punc_bitmap() - set is_create_punc_bitmap of ch_params
+ * @ch_params: ch_params to set
+ * @is_create_punc_bitmap: is create punc bitmap
+ *
+ * Return: NULL
+ */
+void reg_set_create_punc_bitmap(struct ch_params *ch_params,
+				bool is_create_punc_bitmap);
+#else
+static inline void reg_set_create_punc_bitmap(struct ch_params *ch_params,
+					      bool is_create_punc_bitmap)
+{
+}
 #endif
 /**
  * reg_get_channel_reg_power_for_freq() - Get the txpower for the given channel
@@ -1301,6 +1348,41 @@ QDF_STATUS reg_register_afc_req_rx_callback(struct wlan_objmgr_pdev *pdev,
  */
 QDF_STATUS reg_unregister_afc_req_rx_callback(struct wlan_objmgr_pdev *pdev,
 					      afc_req_rx_evt_handler cbf);
+
+/**
+ * reg_register_afc_power_event_callback() - add AFC power event received
+ * @pdev: Pointer to pdev
+ * @cbf: Pointer to callback function
+ * @arg: Pointer to opaque argument
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+reg_register_afc_power_event_callback(struct wlan_objmgr_pdev *pdev,
+				      afc_power_tx_evt_handler cbf,
+				      void *arg);
+/**
+ * reg_unregister_afc_power_event_callback() - remove AFC power event received
+ * callback
+ * @pdev: Pointer to pdev
+ * @cbf: Pointer to callback function
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+reg_unregister_afc_power_event_callback(struct wlan_objmgr_pdev *pdev,
+					afc_power_tx_evt_handler cbf);
+
+/**
+ * reg_send_afc_power_event() - Send AFC power event to registered
+ * recipient
+ * @pdev: Pointer to pdev
+ * @power_info: Pointer to afc power info
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS reg_send_afc_power_event(struct wlan_objmgr_pdev *pdev,
+				    struct reg_fw_afc_power_event *power_info);
 #endif
 
 /**
@@ -1718,6 +1800,32 @@ bool reg_is_lower_6g_edge_ch_supp(struct wlan_objmgr_psoc *psoc);
  * Return: true if edge channels are supported, else false
  */
 bool reg_is_upper_6g_edge_ch_disabled(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * reg_convert_enum_to_6g_idx() - Convert a channel enum between
+ * MIN_6GHZ_CHANNEL and MAX_6GHZ_CHANNEL, to an index between 0 and
+ * NUM_6GHZ_CHANNELS
+ * @ch_idx: Channel index
+ *
+ * Return: enum channel_enum
+ */
+uint16_t reg_convert_enum_to_6g_idx(enum channel_enum ch_idx);
+
+/**
+ * reg_get_superchan_entry() - Get the address of the super channel list
+ * entry for a given input channel index.
+ *
+ * @pdev: pdev ptr
+ * @chan_enum: Channel enum
+ * @p_sup_chan_entry: Pointer to address of *p_sup_chan_entry
+ *
+ * Return: QDF_STATUS_SUCCESS if super channel entry is available for the input
+ * chan_enum else QDF_STATUS_E_FAILURE
+ */
+QDF_STATUS
+reg_get_superchan_entry(struct wlan_objmgr_pdev *pdev,
+			enum channel_enum chan_enum,
+			const struct super_chan_info **p_sup_chan_entry);
 #endif
 
 #ifdef FEATURE_WLAN_CH_AVOID_EXT
@@ -1732,12 +1840,27 @@ bool reg_is_upper_6g_edge_ch_disabled(struct wlan_objmgr_psoc *psoc);
 QDF_STATUS
 reg_process_ch_avoid_ext_event(struct wlan_objmgr_psoc *psoc,
 			       struct ch_avoid_ind_type *ch_avoid_event);
+/**
+ * reg_check_coex_unsafe_nb_user_prefer() - get coex unsafe nb
+ * user prefer ini
+ * @psoc: pointer to psoc
+ *
+ * Return: bool
+ */
+
+bool reg_check_coex_unsafe_nb_user_prefer(struct wlan_objmgr_psoc *psoc);
 #else
 static inline QDF_STATUS
 reg_process_ch_avoid_ext_event(struct wlan_objmgr_psoc *psoc,
 			       struct ch_avoid_ind_type *ch_avoid_event)
 {
 	return QDF_STATUS_SUCCESS;
+}
+
+static inline
+bool reg_check_coex_unsafe_nb_user_prefer(struct wlan_objmgr_psoc *psoc)
+{
+	return false;
 }
 #endif
 
@@ -1816,4 +1939,50 @@ void reg_dmn_set_afc_req_id(struct wlan_afc_host_partial_request *afc_req,
 QDF_STATUS reg_is_chwidth_supported(struct wlan_objmgr_pdev *pdev,
 				    enum phy_ch_width ch_width,
 				    bool *is_supported);
+
+/**
+ * reg_is_state_allowed() - Check the state of the regulatory channel if it
+ * is invalid or disabled.
+ * @chan_state: Channel state.
+ *
+ * Return bool: true if the channel is not an invalid channel or disabled
+ * channel.
+ */
+bool reg_is_state_allowed(enum channel_state chan_state);
+
+/**
+ * reg_is_freq_enabled() - Checks if the given frequency is enabled on the given
+ * power mode or not. If the frequency is not a 6G frequency then the input
+ * power mode is ignored and only current channel list is searched.
+ *
+ * @pdev: pdev pointer.
+ * @freq: input frequency.
+ * @in_6g_pwr_mode: Power mode on which the freq is enabled or not is to be
+ * checked.
+ *
+ * Return: True if the frequency is present in the given power mode channel
+ * list.
+ */
+bool reg_is_freq_enabled(struct wlan_objmgr_pdev *pdev,
+			 qdf_freq_t freq,
+			 enum supported_6g_pwr_types in_6g_pwr_mode);
+
+/**
+ * reg_is_freq_idx_enabled() - Checks if the given frequency index is enabled on
+ * the given power mode or not. If the frequency index is not a 6G frequency
+ * then the input power mode is ignored and only current channel list is
+ * searched.
+ *
+ * @pdev: pdev pointer.
+ * @freq_idx: input frequency index.
+ * @in_6g_pwr_mode: Power mode on which the frequency index is enabled or not
+ * is to be checked.
+ *
+ * Return: True if the frequency index is present in the given power mode
+ * channel list.
+ */
+bool reg_is_freq_idx_enabled(struct wlan_objmgr_pdev *pdev,
+			     enum channel_enum freq_idx,
+			     enum supported_6g_pwr_types in_6g_pwr_mode);
+
 #endif

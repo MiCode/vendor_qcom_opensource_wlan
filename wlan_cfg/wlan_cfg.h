@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2022 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2013-2021 The Linux Foundation. All rights reserved.
  * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
@@ -132,6 +132,7 @@ struct wlan_srng_cfg {
  *			allocation request for this device
  * @per_pdev_tx_ring: 0: TCL ring is not mapped per radio
  *		       1: Each TCL ring is mapped to one radio/pdev
+ * @num_tx_comp_rings: Number of Tx comp rings supported by device
  * @num_tcl_data_rings: Number of TCL Data rings supported by device
  * @per_pdev_rx_ring: 0: REO ring is not mapped per radio
  *		       1: Each REO ring is mapped to one radio/pdev
@@ -257,6 +258,7 @@ struct wlan_cfg_dp_soc_ctxt {
 	int max_clients;
 	int max_alloc_size;
 	int per_pdev_tx_ring;
+	int num_tx_comp_rings;
 	int num_tcl_data_rings;
 	int num_nss_tcl_data_rings;
 	int per_pdev_rx_ring;
@@ -412,6 +414,12 @@ struct wlan_cfg_dp_soc_ctxt {
 	uint8_t num_rxdma_dst_rings_per_pdev;
 	bool txmon_hw_support;
 	uint8_t num_rxdma_status_rings_per_pdev;
+#ifdef WLAN_TX_PKT_CAPTURE_ENH
+	uint32_t tx_capt_max_mem_allowed;
+#endif
+#ifdef CONFIG_SAWF
+	bool sawf_enabled;
+#endif
 };
 
 /**
@@ -913,6 +921,14 @@ uint32_t wlan_cfg_max_alloc_size(struct wlan_cfg_dp_soc_ctxt *wlan_cfg_ctx);
  * Return: per_pdev_tx_ring
  */
 int wlan_cfg_per_pdev_tx_ring(struct wlan_cfg_dp_soc_ctxt *wlan_cfg_ctx);
+
+/*
+ * wlan_cfg_num_tx_comp_rings() - Number of Tx comp rings (HOST mode)
+ * @wlan_cfg_ctx
+ *
+ * Return: num_tx_comp_rings
+ */
+int wlan_cfg_num_tx_comp_rings(struct wlan_cfg_dp_soc_ctxt *wlan_cfg_ctx);
 
 /*
  * wlan_cfg_num_tcl_data_rings() - Number of TCL Data rings (HOST mode)
@@ -2017,6 +2033,25 @@ wlan_cfg_get_vdev_stats_hw_offload_config(struct wlan_cfg_dp_soc_ctxt *cfg);
  */
 int wlan_cfg_get_vdev_stats_hw_offload_timer(struct wlan_cfg_dp_soc_ctxt *cfg);
 
+/**
+ * wlan_cfg_set_sawf_config() - Set SAWF config enable/disable
+ * @cfg: config context
+ * @value: value to be set
+ *
+ * Return: none
+ */
+void
+wlan_cfg_set_sawf_config(struct wlan_cfg_dp_soc_ctxt *cfg, bool value);
+
+/**
+ * wlan_cfg_get_sawf_config() - Get SAWF config enable/disable
+ * @cfg: config context
+ *
+ * Return: true or false
+ */
+bool
+wlan_cfg_get_sawf_config(struct wlan_cfg_dp_soc_ctxt *cfg);
+
 #if defined(WLAN_FEATURE_11BE_MLO) && defined(WLAN_MLO_MULTI_CHIP)
 /**
  * wlan_cfg_mlo_rx_ring_map_get_by_chip_id() - get rx ring map
@@ -2089,4 +2124,19 @@ void wlan_cfg_set_txmon_hw_support(struct wlan_cfg_dp_soc_ctxt *cfg,
  * Return: txmon_hw_support
  */
 bool wlan_cfg_get_txmon_hw_support(struct wlan_cfg_dp_soc_ctxt *cfg);
+
+#ifdef WLAN_TX_PKT_CAPTURE_ENH
+/*
+ * wlan_cfg_get_tx_capt_max_mem - Get max memory allowed for TX capture feature
+ * @wlan_cfg_soc_ctx
+ *
+ * Return: user given size in bytes
+ */
+static inline int
+wlan_cfg_get_tx_capt_max_mem(struct wlan_cfg_dp_soc_ctxt *cfg)
+{
+	return cfg->tx_capt_max_mem_allowed;
+}
+#endif /* WLAN_TX_PKT_CAPTURE_ENH */
+
 #endif /*__WLAN_CFG_H*/
