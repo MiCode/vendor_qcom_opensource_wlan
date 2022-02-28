@@ -3066,11 +3066,12 @@ qdf_export_symbol(qdf_net_buf_debug_acquire_skb);
  */
 void qdf_net_buf_debug_release_skb(qdf_nbuf_t net_buf)
 {
-	qdf_nbuf_t ext_list = qdf_nbuf_get_ext_list(net_buf);
+	qdf_nbuf_t ext_list;
 
 	if (is_initial_mem_debug_disabled)
 		return;
 
+	ext_list = qdf_nbuf_get_ext_list(net_buf);
 	while (ext_list) {
 		/*
 		 * Take care to free if it is Jumbo packet connected using
