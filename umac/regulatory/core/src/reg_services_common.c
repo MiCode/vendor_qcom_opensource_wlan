@@ -8004,6 +8004,53 @@ reg_is_freq_idx_enabled_on_given_pwr_mode(struct wlan_regulatory_pdev_priv_obj
 
 	return !reg_is_supr_entry_mode_disabled(super_chan_ent, in_6g_pwr_mode);
 }
+
+enum supported_6g_pwr_types
+reg_get_best_6g_pwr_type(struct wlan_objmgr_pdev *pdev, qdf_freq_t freq)
+{
+	struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj;
+	enum channel_enum freq_idx;
+	enum channel_enum sixg_freq_idx;
+
+	pdev_priv_obj = reg_get_pdev_obj(pdev);
+	if (!IS_VALID_PDEV_REG_OBJ(pdev_priv_obj)) {
+		reg_err_rl("pdev reg component is NULL");
+		return REG_INVALID_PWR_MODE;
+	}
+
+	freq_idx = reg_get_chan_enum_for_freq(freq);
+
+	if (freq_idx == INVALID_CHANNEL)
+		return REG_INVALID_PWR_MODE;
+
+	sixg_freq_idx = reg_convert_enum_to_6g_idx(freq_idx);
+	if (sixg_freq_idx == INVALID_CHANNEL ||
+	    sixg_freq_idx >= NUM_6GHZ_CHANNELS)
+		return REG_INVALID_PWR_MODE;
+
+	return pdev_priv_obj->super_chan_list[sixg_freq_idx].best_power_mode;
+}
+
+static inline bool reg_is_6g_ap_type_invalid(enum reg_6g_ap_type ap_pwr_type)
+{
+	return ((ap_pwr_type < REG_INDOOR_AP) ||
+		(ap_pwr_type > REG_MAX_SUPP_AP_TYPE));
+}
+
+enum supported_6g_pwr_types
+reg_conv_6g_ap_type_to_supported_6g_pwr_types(enum reg_6g_ap_type ap_pwr_type)
+{
+	static const enum supported_6g_pwr_types reg_enum_conv[] = {
+		[REG_INDOOR_AP] = REG_AP_LPI,
+		[REG_STANDARD_POWER_AP] = REG_AP_SP,
+		[REG_VERY_LOW_POWER_AP] = REG_AP_VLP,
+	};
+
+	if (reg_is_6g_ap_type_invalid(ap_pwr_type))
+		return REG_INVALID_PWR_MODE;
+
+	return reg_enum_conv[ap_pwr_type];
+}
 #else
 static inline bool
 reg_is_freq_idx_enabled_on_given_pwr_mode(struct wlan_regulatory_pdev_priv_obj

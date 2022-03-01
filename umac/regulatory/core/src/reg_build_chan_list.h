@@ -122,6 +122,18 @@ struct regulatory_channel *reg_get_reg_maschan_lst_frm_6g_pwr_mode(
 			struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj,
 			uint16_t chan_idx);
 
+/**
+ * reg_convert_supported_6g_pwr_type_to_ap_pwr_type() - The supported 6G power
+ * type is a combination of AP and client power types. This API return the 6G AP
+ * power type portion of the supported 6G power type.
+ * @in_6g_pwr_type: input 6G supported power type.
+ *
+ * Return: 6G AP power type.
+ */
+enum reg_6g_ap_type
+reg_convert_supported_6g_pwr_type_to_ap_pwr_type(enum supported_6g_pwr_types
+						in_6g_pwr_type);
+
 #ifdef CONFIG_REG_CLIENT
 /**
  * reg_get_power_string() - get power string from power enum type

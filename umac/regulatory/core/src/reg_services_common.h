@@ -2197,4 +2197,24 @@ bool reg_is_freq_idx_enabled(struct wlan_objmgr_pdev *pdev,
 			     enum channel_enum freq_idx,
 			     enum supported_6g_pwr_types in_6g_pwr_mode);
 
+/**
+ * reg_get_best_6g_pwr_type() - Returns the best 6g power type supported for
+ * a given frequency.
+ * @pdev: pdev pointer
+ * @freq: input frequency.
+ *
+ * Return: supported_6g_pwr_types enum.
+ */
+enum supported_6g_pwr_types
+reg_get_best_6g_pwr_type(struct wlan_objmgr_pdev *pdev, qdf_freq_t freq);
+
+/**
+ * reg_conv_6g_ap_type_to_supported_6g_pwr_types() - Converts the 6G AP power
+ * type to 6g supported power type enum.
+ * @ap_pwr_type: input 6G AP power type.
+ *
+ * Return: supported_6g_pwr_types enum.
+ */
+enum supported_6g_pwr_types
+reg_conv_6g_ap_type_to_supported_6g_pwr_types(enum reg_6g_ap_type ap_pwr_type);
 #endif

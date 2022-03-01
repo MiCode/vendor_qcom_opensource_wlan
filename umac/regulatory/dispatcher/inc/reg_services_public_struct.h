@@ -990,6 +990,7 @@ struct ap_cli_pwr_mode_info {
  * @REG_CLI_SUB_LPI: LPI subordinate client mode
  * @REG_CLI_SUB_SP: SP subordinate client mode
  * @REG_CLI_SUB_VLP: VLP subordinate client mode
+ * @REG_INVALID_PWR_MODE: Invalid power mode
  */
 enum supported_6g_pwr_types {
 	REG_BEST_PWR_MODE    = -1,
@@ -1003,6 +1004,7 @@ enum supported_6g_pwr_types {
 	REG_CLI_SUB_LPI      = 7,
 	REG_CLI_SUB_SP       = 8,
 	REG_CLI_SUB_VLP      = 9,
+	REG_INVALID_PWR_MODE = 10,
 };
 
 #define MAX_PWR_TYPES 10
