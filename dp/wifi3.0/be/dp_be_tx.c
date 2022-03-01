@@ -500,6 +500,37 @@ void dp_tx_mlo_mcast_handler_be(struct dp_soc *soc,
 }
 #endif
 
+#ifdef CONFIG_SAWF
+void dp_sawf_config_be(struct dp_soc *soc, uint32_t *hal_tx_desc_cached,
+		       uint16_t *fw_metadata, qdf_nbuf_t nbuf)
+{
+	uint8_t q_id = 0;
+
+	if (wlan_cfg_get_sawf_config(soc->wlan_cfg_ctx))
+		return;
+
+	dp_sawf_tcl_cmd(fw_metadata, nbuf);
+	q_id = dp_sawf_queue_id_get(nbuf);
+
+	if (q_id == DP_SAWF_DEFAULT_Q_INVALID)
+		return;
+
+	hal_tx_desc_set_hlos_tid(hal_tx_desc_cached, (q_id & 0x0e) >> 1);
+	hal_tx_desc_set_flow_override_enable(hal_tx_desc_cached, 1);
+	hal_tx_desc_set_flow_override(hal_tx_desc_cached, q_id & 0x1);
+	hal_tx_desc_set_who_classify_info_sel(hal_tx_desc_cached,
+					      (q_id & 0x30) >> 4);
+}
+
+#else
+
+static inline
+void dp_sawf_config_be(struct dp_soc *soc, uint32_t *hal_tx_desc_cached,
+		       uint16_t *fw_metadata, qdf_nbuf_t nbuf)
+{
+}
+#endif
+
 QDF_STATUS
 dp_tx_hw_enqueue_be(struct dp_soc *soc, struct dp_vdev *vdev,
 		    struct dp_tx_desc_s *tx_desc, uint16_t fw_metadata,
@@ -539,6 +570,11 @@ dp_tx_hw_enqueue_be(struct dp_soc *soc, struct dp_vdev *vdev,
 	}
 
 	hal_tx_desc_cached = (void *)cached_desc;
+
+	if (dp_sawf_tag_valid_get(tx_desc->nbuf)) {
+		dp_sawf_config_be(soc, hal_tx_desc_cached,
+				  &fw_metadata, tx_desc->nbuf);
+	}
 
 	hal_tx_desc_set_buf_addr_be(soc->hal_soc, hal_tx_desc_cached,
 				    tx_desc->dma_addr, bm_id, tx_desc->id,

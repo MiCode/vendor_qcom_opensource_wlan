@@ -243,6 +243,7 @@ enum dp_mod_id {
 	DP_MOD_ID_MISC,
 	DP_MOD_ID_MSCS,
 	DP_MOD_ID_TX,
+	DP_MOD_ID_SAWF,
 	DP_MOD_ID_MAX,
 };
 

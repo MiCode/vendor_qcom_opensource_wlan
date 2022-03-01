@@ -327,6 +327,52 @@ void dp_tx_clear_consumed_hw_descs(struct dp_soc *soc,
 }
 #endif /* CLEAR_SW2TCL_CONSUMED_DESC */
 
+#ifdef CONFIG_SAWF
+/**
+ * dp_sawf_config_li - Configure sawf specific fields in tcl
+ *
+ * @soc: DP soc handle
+ * @hhal_tx_desc_cached: tx descriptor
+ * @vdev_id: vdev id
+ * @nbuf: skb buffer
+ *
+ * Return: void
+ */
+static inline
+void dp_sawf_config_li(struct dp_soc *soc, uint32_t *hal_tx_desc_cached,
+		       uint16_t *fw_metadata, uint16_t vdev_id,
+		       qdf_nbuf_t nbuf)
+{
+	uint8_t q_id = 0;
+	uint32_t search_index;
+
+	if (wlan_cfg_get_sawf_config(soc->wlan_cfg_ctx))
+		return;
+
+	dp_sawf_tcl_cmd(fw_metadata, nbuf);
+	q_id = dp_sawf_queue_id_get(nbuf);
+
+	if (q_id == DP_SAWF_DEFAULT_Q_INVALID)
+		return;
+
+	search_index = dp_sawf_get_search_index(soc, nbuf, vdev_id,
+						q_id);
+	hal_tx_desc_set_hlos_tid(hal_tx_desc_cached, (q_id & 0x7));
+	hal_tx_desc_set_search_type_li(soc->hal_soc, hal_tx_desc_cached, 2);
+	hal_tx_desc_set_search_index_li(soc->hal_soc, hal_tx_desc_cached,
+					search_index);
+}
+
+#else
+
+static inline
+void dp_sawf_config_li(struct dp_soc *soc, uint32_t *hal_tx_desc_cached,
+		       uint16_t *fw_metadata, uint16_t vdev_id,
+		       qdf_nbuf_t nbuf)
+{
+}
+#endif
+
 QDF_STATUS
 dp_tx_hw_enqueue_li(struct dp_soc *soc, struct dp_vdev *vdev,
 		    struct dp_tx_desc_s *tx_desc, uint16_t fw_metadata,
@@ -380,6 +426,11 @@ dp_tx_hw_enqueue_li(struct dp_soc *soc, struct dp_vdev *vdev,
 				     sec_type_map[sec_type]);
 	hal_tx_desc_set_cache_set_num(soc->hal_soc, hal_tx_desc_cached,
 				      (vdev->bss_ast_hash & 0xF));
+
+	if (dp_sawf_tag_valid_get(tx_desc->nbuf)) {
+		dp_sawf_config_li(soc, hal_tx_desc_cached, &fw_metadata,
+				  vdev->vdev_id, tx_desc->nbuf);
+	}
 
 	hal_tx_desc_set_fw_metadata(hal_tx_desc_cached, fw_metadata);
 	hal_tx_desc_set_buf_length(hal_tx_desc_cached, tx_desc->length);

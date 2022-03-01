@@ -2413,6 +2413,27 @@ static void dp_sawf_def_queues_update_map_report_conf(struct htt_soc *soc,
 {}
 #endif
 
+#ifdef CONFIG_SAWF
+/*
+ * dp_sawf_msduq_map() - Msdu queue creation information received
+ * from target
+ * @soc: soc handle.
+ * @msg_word: Pointer to htt msg word.
+ * @htt_t2h_msg: HTT message nbuf
+ *
+ * @return: void
+ */
+static void dp_sawf_msduq_map(struct htt_soc *soc, uint32_t *msg_word,
+			      qdf_nbuf_t htt_t2h_msg)
+{
+	dp_htt_sawf_msduq_map(soc, msg_word, htt_t2h_msg);
+}
+#else
+static void dp_sawf_msduq_map(struct htt_soc *soc, uint32_t *msg_word,
+			      qdf_nbuf_t htt_t2h_msg)
+{}
+#endif
+
 /*
  * time_allow_print() - time allow print
  * @htt_ring_tt:	ringi_id array of timestamps
@@ -3403,6 +3424,12 @@ static void dp_htt_t2h_msg_handler(void *context, HTC_PACKET *pkt)
 							  htt_t2h_msg);
 		break;
 	}
+	case HTT_T2H_SAWF_MSDUQ_INFO_IND:
+	{
+		dp_sawf_msduq_map(soc, msg_word, htt_t2h_msg);
+		break;
+	}
+
 	default:
 		break;
 	};

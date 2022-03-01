@@ -28,6 +28,9 @@
 #include "dp_internal.h"
 #include "hal_tx.h"
 #include <qdf_tracepoint.h>
+#ifdef CONFIG_SAWF
+#include "dp_sawf.h"
+#endif
 
 #define DP_INVALID_VDEV_ID 0xFF
 
@@ -978,6 +981,13 @@ void dp_tx_desc_set_timestamp(struct dp_tx_desc_s *tx_desc)
 static inline
 void dp_tx_desc_check_corruption(struct dp_tx_desc_s *tx_desc)
 {
+}
+#endif
+
+#ifndef CONFIG_SAWF
+static inline bool dp_sawf_tag_valid_get(qdf_nbuf_t nbuf)
+{
+	return false;
 }
 #endif
 
