@@ -377,8 +377,8 @@ hal_txmon_parse_tx_fes_setup(void *tx_tlv,
 static inline uint8_t
 hal_txmon_get_num_users(void *tx_tlv)
 {
-	uint8_t num_users = HAL_TX_DESC_GET(tx_tlv,
-					    TX_FES_SETUP, NUMBER_OF_USERS);
+	uint8_t num_users = HAL_TX_DESC_GET_64(tx_tlv,
+					       TX_FES_SETUP, NUMBER_OF_USERS);
 
 	return num_users;
 }
@@ -395,9 +395,9 @@ static inline void
 hal_txmon_parse_tx_fes_setup(void *tx_tlv,
 			     struct hal_tx_ppdu_info *tx_ppdu_info)
 {
-	tx_ppdu_info->num_users = HAL_TX_DESC_GET(tx_tlv,
-						  TX_FES_SETUP,
-						  NUMBER_OF_USERS);
+	tx_ppdu_info->num_users = HAL_TX_DESC_GET_64(tx_tlv,
+						     TX_FES_SETUP,
+						     NUMBER_OF_USERS);
 }
 #endif
 
@@ -433,9 +433,9 @@ hal_txmon_status_get_num_users_generic_be(void *tx_tlv_hdr, uint8_t *num_users)
 	}
 	case WIFIRX_RESPONSE_REQUIRED_INFO_E:
 	{
-		*num_users = HAL_TX_DESC_GET(tx_tlv,
-					     RX_RESPONSE_REQUIRED_INFO,
-					     RESPONSE_STA_COUNT);
+		*num_users = HAL_TX_DESC_GET_64(tx_tlv,
+						RX_RESPONSE_REQUIRED_INFO,
+						RESPONSE_STA_COUNT);
 		tlv_status = HAL_MON_RX_RESPONSE_REQUIRED_INFO;
 		break;
 	}
@@ -448,25 +448,30 @@ hal_txmon_status_get_num_users_generic_be(void *tx_tlv_hdr, uint8_t *num_users)
  * hal_txmon_free_status_buffer() - api to free status buffer
  * @pdev_handle: DP_PDEV handle
  * @status_frag: qdf_frag_t buffer
+ * @end_offset: end offset within buffer that has valid data
  *
- * Return void
+ * Return status
  */
-static inline void
-hal_txmon_status_free_buffer_generic_be(qdf_frag_t status_frag)
+static inline QDF_STATUS
+hal_txmon_status_free_buffer_generic_be(qdf_frag_t status_frag,
+					uint32_t end_offset)
 {
 	uint32_t tlv_tag, tlv_len;
 	uint32_t tlv_status = HAL_MON_TX_STATUS_PPDU_NOT_DONE;
 	uint8_t *tx_tlv;
 	uint8_t *tx_tlv_start;
 	qdf_frag_t frag_buf = NULL;
+	QDF_STATUS status = QDF_STATUS_E_ABORTED;
 
 	tx_tlv = (uint8_t *)status_frag;
 	tx_tlv_start = tx_tlv;
 	/* parse tlv and populate tx_ppdu_info */
 	do {
-		/* TODO: check config_length is full monitor mode */
-		tlv_tag = HAL_RX_GET_USER_TLV32_TYPE(tx_tlv);
-		tlv_len = HAL_RX_GET_USER_TLV32_LEN(tx_tlv);
+		tlv_tag = HAL_RX_GET_USER_TLV64_TYPE(tx_tlv);
+		tlv_len = HAL_RX_GET_USER_TLV64_LEN(tx_tlv);
+
+		if (((tx_tlv - tx_tlv_start) + tlv_len) > end_offset)
+			return QDF_STATUS_E_ABORTED;
 
 		if (tlv_tag == WIFIMON_BUFFER_ADDR_E) {
 			frag_buf = hal_txmon_get_buffer_addr_generic_be(tx_tlv,
@@ -476,11 +481,21 @@ hal_txmon_status_free_buffer_generic_be(qdf_frag_t status_frag)
 
 			frag_buf = NULL;
 		}
+
+		if (WIFITX_FES_STATUS_END_E == tlv_tag ||
+		    WIFIRESPONSE_END_STATUS_E == tlv_tag ||
+		    WIFIDUMMY_E == tlv_tag) {
+			status = QDF_STATUS_SUCCESS;
+			break;
+		}
+
 		/* need api definition for hal_tx_status_get_next_tlv */
 		tx_tlv = hal_tx_status_get_next_tlv(tx_tlv);
-		if ((tx_tlv - tx_tlv_start) >= TX_MON_STATUS_BUF_SIZE)
+		if ((tx_tlv - tx_tlv_start) >= end_offset)
 			break;
 	} while (tlv_status == HAL_MON_TX_STATUS_PPDU_NOT_DONE);
+
+	return status;
 }
 
 /**

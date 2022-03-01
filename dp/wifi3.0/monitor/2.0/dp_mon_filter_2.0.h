@@ -21,6 +21,9 @@
 #include <dp_htt.h>
 
 #define DEFAULT_DMA_LENGTH 7
+#define DMA_LENGTH_64B 1
+#define DMA_LENGTH_128B 2
+#define DMA_LENGTH_256B 4
 
 /**
  * dp_rx_mon_enable_set() - Setup rx monitor feature
