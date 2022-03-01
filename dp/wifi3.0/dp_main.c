@@ -14964,6 +14964,7 @@ static QDF_STATUS dp_pdev_init(struct cdp_soc_t *txrx_soc,
 	TAILQ_INIT(&pdev->vdev_list);
 	qdf_spinlock_create(&pdev->vdev_list_lock);
 	pdev->vdev_count = 0;
+	pdev->is_lro_hash_configured = 0;
 
 	qdf_spinlock_create(&pdev->tx_mutex);
 	pdev->ch_band_lmac_id_mapping[REG_BAND_2G] = DP_MON_INVALID_LMAC_ID;
