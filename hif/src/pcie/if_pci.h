@@ -140,9 +140,6 @@ struct hif_pci_softc {
 	qdf_spinlock_t irq_lock;
 	qdf_work_t reschedule_tasklet_work;
 	uint32_t lcr_val;
-#ifdef FEATURE_RUNTIME_PM
-	struct hif_runtime_pm_ctx rpm_ctx;
-#endif
 	int (*hif_enable_pci)(struct hif_pci_softc *sc, struct pci_dev *pdev,
 			      const struct pci_device_id *id);
 	void (*hif_pci_deinit)(struct hif_pci_softc *sc);

@@ -1080,7 +1080,7 @@ void hif_pci_enable_power_management(struct hif_softc *hif_sc,
 		return;
 	}
 
-	hif_pm_runtime_start(hif_sc);
+	hif_rtpm_start(hif_sc);
 
 	if (!is_packet_log_enabled)
 		hif_enable_power_gating(pci_ctx);
@@ -1111,7 +1111,7 @@ void hif_pci_disable_power_management(struct hif_softc *hif_ctx)
 		return;
 	}
 
-	hif_pm_runtime_stop(hif_ctx);
+	hif_rtpm_stop(hif_ctx);
 }
 
 void hif_pci_display_stats(struct hif_softc *hif_ctx)
@@ -1151,7 +1151,7 @@ QDF_STATUS hif_pci_open(struct hif_softc *hif_ctx, enum qdf_bus_type bus_type)
 	struct hif_pci_softc *sc = HIF_GET_PCI_SOFTC(hif_ctx);
 
 	hif_ctx->bus_type = bus_type;
-	hif_pm_runtime_open(hif_ctx);
+	hif_rtpm_open(hif_ctx);
 
 	qdf_spinlock_create(&sc->irq_lock);
 
@@ -1790,7 +1790,7 @@ timer_free:
  */
 void hif_pci_close(struct hif_softc *hif_sc)
 {
-	hif_pm_runtime_close(hif_sc);
+	hif_rtpm_close(hif_sc);
 	hif_ce_close(hif_sc);
 }
 
@@ -2233,40 +2233,6 @@ void hif_pci_disable_bus(struct hif_softc *scn)
 	}
 	hif_info("X");
 }
-
-#ifdef FEATURE_RUNTIME_PM
-/**
- * hif_pci_get_rpm_ctx() - Map corresponding hif_runtime_pm_ctx
- * @scn: hif context
- *
- * This function will map and return the corresponding
- * hif_runtime_pm_ctx based on pcie interface.
- *
- * Return: struct hif_runtime_pm_ctx pointer
- */
-struct hif_runtime_pm_ctx *hif_pci_get_rpm_ctx(struct hif_softc *scn)
-{
-	struct hif_pci_softc *sc = HIF_GET_PCI_SOFTC(scn);
-
-	return &sc->rpm_ctx;
-}
-
-/**
- * hif_pci_get_dev() - Map corresponding device structure
- * @scn: hif context
- *
- * This function will map and return the corresponding
- * device structure based on pcie interface.
- *
- * Return: struct device pointer
- */
-struct device *hif_pci_get_dev(struct hif_softc *scn)
-{
-	struct hif_pci_softc *sc = HIF_GET_PCI_SOFTC(scn);
-
-	return sc->dev;
-}
-#endif
 
 #define OL_ATH_PCI_PM_CONTROL 0x44
 
@@ -4010,7 +3976,7 @@ int hif_force_wake_request(struct hif_opaque_softc *hif_handle)
 	struct hif_pci_softc *pci_scn = HIF_GET_PCI_SOFTC(scn);
 
 	/* Prevent runtime PM or trigger resume firstly */
-	if (hif_pm_runtime_get_sync(hif_handle, RTPM_ID_HIF_FORCE_WAKE)) {
+	if (hif_rtpm_get(HIF_RTPM_GET_SYNC, HIF_RTPM_ID_FORCE_WAKE)) {
 		hif_err("runtime pm get failed");
 		return -EINVAL;
 	}
@@ -4082,7 +4048,7 @@ int hif_force_wake_release(struct hif_opaque_softc *hif_handle)
 	HIF_STATS_INC(pci_scn, mhi_force_wake_release_success, 1);
 
 	/* Release runtime PM force wake */
-	ret = hif_pm_runtime_put(hif_handle, RTPM_ID_HIF_FORCE_WAKE);
+	ret = hif_rtpm_put(HIF_RTPM_PUT_ASYNC, HIF_RTPM_ID_FORCE_WAKE);
 	if (ret) {
 		hif_err("runtime pm put failure");
 		return ret;

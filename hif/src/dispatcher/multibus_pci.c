@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -57,10 +57,6 @@ QDF_STATUS hif_initialize_pci_ops(struct hif_softc *hif_sc)
 	bus_ops->hif_nointrs = &hif_pci_nointrs;
 	bus_ops->hif_enable_bus = &hif_pci_enable_bus;
 	bus_ops->hif_disable_bus = &hif_pci_disable_bus;
-#ifdef FEATURE_RUNTIME_PM
-	bus_ops->hif_bus_get_rpm_ctx = &hif_pci_get_rpm_ctx;
-	bus_ops->hif_bus_get_dev = &hif_pci_get_dev;
-#endif
 	bus_ops->hif_bus_configure = &hif_pci_bus_configure;
 	bus_ops->hif_get_config_item = &hif_dummy_get_config_item;
 	bus_ops->hif_set_mailbox_swap = &hif_dummy_set_mailbox_swap;

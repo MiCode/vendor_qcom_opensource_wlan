@@ -2933,12 +2933,10 @@ hif_pci_ce_recv_data(struct CE_handle *copyeng, void *ce_context,
 	struct HIF_CE_state *hif_state = pipe_info->HIF_CE_state;
 	struct CE_state *ce_state = (struct CE_state *) copyeng;
 	struct hif_softc *scn = HIF_GET_SOFTC(hif_state);
-	struct hif_opaque_softc *hif_ctx = GET_HIF_OPAQUE_HDL(scn);
-	struct hif_msg_callbacks *msg_callbacks =
-		 &pipe_info->pipe_callbacks;
+	struct hif_msg_callbacks *msg_callbacks = &pipe_info->pipe_callbacks;
 
 	do {
-		hif_pm_runtime_mark_last_busy(hif_ctx);
+		hif_rtpm_mark_last_busy(HIF_RTPM_ID_CE);
 		qdf_nbuf_unmap_single(scn->qdf_dev,
 				      (qdf_nbuf_t) transfer_context,
 				      QDF_DMA_FROM_DEVICE);

@@ -1148,89 +1148,6 @@ typedef enum {
 hif_pm_wake_irq_type hif_pm_get_wake_irq_type(struct hif_opaque_softc *hif_ctx);
 
 /**
- * enum wlan_rtpm_dbgid - runtime pm put/get debug id
- * @RTPM_ID_RESVERD:       Reserved
- * @RTPM_ID_WMI:           WMI sending msg, expect put happen at
- *                         tx completion from CE level directly.
- * @RTPM_ID_HTC:           pkt sending by HTT_DATA_MSG_SVC, expect
- *                         put from fw response or just in
- *                         htc_issue_packets
- * @RTPM_ID_QOS_NOTIFY:    pm qos notifer
- * @RTPM_ID_DP_TX_DESC_ALLOC_FREE:      tx desc alloc/free
- * @RTPM_ID_CE_SEND_FAST:  operation in ce_send_fast, not include
- *                         the pkt put happens outside this function
- * @RTPM_ID_SUSPEND_RESUME:     suspend/resume in hdd
- * @RTPM_ID_DW_TX_HW_ENQUEUE:   operation in functin dp_tx_hw_enqueue
- * @RTPM_ID_HAL_REO_CMD:        HAL_REO_CMD operation
- * @RTPM_ID_DP_PRINT_RING_STATS:  operation in dp_print_ring_stats
- * @RTPM_ID_PM_STOP:        operation in hif_pm_runtime_stop
- * @RTPM_ID_CONN_DISCONNECT:operation when issue disconnect
- * @RTPM_ID_SOC_REMOVE: operation in soc remove
- * @RTPM_ID_DRIVER_UNLOAD: operation in driver unload
- * @RTPM_ID_CE_INTR_HANDLER: operation from ce interrupt handler
- * @RTPM_ID_WAKE_INTR_HANDLER: operation from wake interrupt handler
- * @RTPM_ID_SOC_IDLE_SHUTDOWN: operation in soc idle shutdown
- * @RTPM_ID_HIF_FORCE_WAKE: operation in hif force wake
- */
-/* New value added to the enum must also be reflected in function
- *  rtpm_string_from_dbgid()
- */
-typedef enum {
-	RTPM_ID_RESVERD   = 0,
-	RTPM_ID_WMI,
-	RTPM_ID_HTC,
-	RTPM_ID_QOS_NOTIFY,
-	RTPM_ID_DP_TX_DESC_ALLOC_FREE,
-	RTPM_ID_CE_SEND_FAST,
-	RTPM_ID_SUSPEND_RESUME,
-	RTPM_ID_DW_TX_HW_ENQUEUE,
-	RTPM_ID_HAL_REO_CMD,
-	RTPM_ID_DP_PRINT_RING_STATS,
-	RTPM_ID_PM_STOP,
-	RTPM_ID_CONN_DISCONNECT,
-	RTPM_ID_SOC_REMOVE,
-	RTPM_ID_DRIVER_UNLOAD,
-	RTPM_ID_CE_INTR_HANDLER,
-	RTPM_ID_WAKE_INTR_HANDLER,
-	RTPM_ID_SOC_IDLE_SHUTDOWN,
-	RTPM_ID_HIF_FORCE_WAKE,
-
-	RTPM_ID_MAX,
-} wlan_rtpm_dbgid;
-
-/**
- * rtpm_string_from_dbgid() - Convert dbgid to respective string
- * @id -  debug id
- *
- * Debug support function to convert  dbgid to string.
- * Please note to add new string in the array at index equal to
- * its enum value in wlan_rtpm_dbgid.
- */
-static inline char *rtpm_string_from_dbgid(wlan_rtpm_dbgid id)
-{
-	static const char *strings[] = { "RTPM_ID_RESVERD",
-					"RTPM_ID_WMI",
-					"RTPM_ID_HTC",
-					"RTPM_ID_QOS_NOTIFY",
-					"RTPM_ID_DP_TX_DESC_ALLOC_FREE",
-					"RTPM_ID_CE_SEND_FAST",
-					"RTPM_ID_SUSPEND_RESUME",
-					"RTPM_ID_DW_TX_HW_ENQUEUE",
-					"RTPM_ID_HAL_REO_CMD",
-					"RTPM_ID_DP_PRINT_RING_STATS",
-					"RTPM_ID_PM_STOP",
-					"RTPM_ID_CONN_DISCONNECT",
-					"RTPM_ID_SOC_REMOVE",
-					"RTPM_ID_DRIVER_UNLOAD",
-					"RTPM_ID_CE_INTR_HANDLER",
-					"RTPM_ID_WAKE_INTR_HANDLER",
-					"RTPM_ID_SOC_IDLE_SHUTDOWN",
-					"RTPM_ID_MAX"};
-
-	return (char *)strings[id];
-}
-
-/**
  * enum hif_ep_vote_type - hif ep vote type
  * HIF_EP_VOTE_DP_ACCESS: vote type is specific DP
  * HIF_EP_VOTE_NONDP_ACCESS: ep vote for over all access
@@ -1253,191 +1170,401 @@ enum hif_ep_vote_access {
 };
 
 /**
- * enum hif_pm_link_state - hif link state
- * HIF_PM_LINK_STATE_DOWN: hif link state is down
- * HIF_PM_LINK_STATE_UP: hif link state is up
+ * enum hif_rpm_id - modules registered with runtime pm module
+ * @HIF_RTPM_ID_RESERVED: Reserved ID
+ * @HIF_RTPM_ID_HAL_REO_CMD: HAL REO commands
+ * @HIF_RTPM_ID_WMI: WMI commands Tx
+ * @HIF_RTPM_ID_HTT: HTT commands Tx
+ * @HIF_RTPM_ID_DP_TX: Datapath Tx path
+ * @HIF_RTPM_ID_DP_RING_STATS: Datapath ring stats
+ * @HIF_RTPM_ID_CE_SEND_FAST: CE Tx buffer posting
+ * @HIF_RTPM_ID_FORCE_WAKE: Force wake request
+ * @HIF_RTPM_ID_PREVENT_LINKDOWN: Prevent linkdown by not allowing runtime PM
+ * @HIF_RTPM_ID_PREVENT_ALLOW_LOCK: Generic ID for runtime PM lock contexts
+ * @HIF_RTPM_ID_MAX: Max id
  */
-enum hif_pm_link_state {
-	HIF_PM_LINK_STATE_DOWN,
-	HIF_PM_LINK_STATE_UP
+enum  hif_rtpm_client_id {
+	HIF_RTPM_ID_RESERVED,
+	HIF_RTPM_ID_HAL_REO_CMD,
+	HIF_RTPM_ID_WMI,
+	HIF_RTPM_ID_HTT,
+	HIF_RTPM_ID_DP,
+	HIF_RTPM_ID_DP_RING_STATS,
+	HIF_RTPM_ID_CE,
+	HIF_RTPM_ID_FORCE_WAKE,
+	HIF_RTPM_ID_PM_QOS_NOTIFY,
+	HIF_RTPM_ID_WIPHY_SUSPEND,
+	HIF_RTPM_ID_MAX
 };
 
 /**
- * enum hif_pm_htc_stats - hif runtime PM stats for HTC layer
- * HIF_PM_HTC_STATS_GET_HTT_RESPONSE: PM stats for RTPM GET for HTT packets
-				      with response
- * HIF_PM_HTC_STATS_GET_HTT_NO_RESPONSE: PM stats for RTPM GET for HTT packets
-					 with no response
- * HIF_PM_HTC_STATS_PUT_HTT_RESPONSE: PM stats for RTPM PUT for HTT packets
-				      with response
- * HIF_PM_HTC_STATS_PUT_HTT_NO_RESPONSE: PM stats for RTPM PUT for HTT packets
-					 with no response
- * HIF_PM_HTC_STATS_PUT_HTT_ERROR: PM stats for RTPM PUT for failed HTT packets
- * HIF_PM_HTC_STATS_PUT_HTC_CLEANUP: PM stats for RTPM PUT during HTC cleanup
- * HIF_PM_HTC_STATS_GET_HTC_KICK_QUEUES: PM stats for RTPM GET done during
- *                                       htc_kick_queues()
- * HIF_PM_HTC_STATS_PUT_HTC_KICK_QUEUES: PM stats for RTPM PUT done during
- *                                       htc_kick_queues()
- * HIF_PM_HTC_STATS_GET_HTT_FETCH_PKTS: PM stats for RTPM GET while fetching
- *                                      HTT packets from endpoint TX queue
- * HIF_PM_HTC_STATS_PUT_HTT_FETCH_PKTS: PM stats for RTPM PUT while fetching
- *                                      HTT packets from endpoint TX queue
+ * enum hif_rpm_type - Get and Put calls types
+ * HIF_RTPM_GET_ASYNC: Increment usage count and when system is suspended
+ *		      schedule resume process, return depends on pm state.
+ * HIF_RTPM_GET_FORCE: Increment usage count and when system is suspended
+ *		      shedule resume process, returns success irrespective of
+ *		      pm_state.
+ * HIF_RTPM_GET_SYNC: Increment usage count and when system is suspended,
+ *		     wait till process is resumed.
+ * HIF_RTPM_GET_NORESUME: Only increments usage count.
+ * HIF_RTPM_PUT_ASYNC: Decrements usage count and puts system in idle state.
+ * HIF_RTPM_PUT_SYNC_SUSPEND: Decrements usage count and puts system in
+ *			     suspended state.
+ * HIF_RTPM_PUT_NOIDLE: Decrements usage count.
  */
-enum hif_pm_htc_stats {
-	HIF_PM_HTC_STATS_GET_HTT_RESPONSE,
-	HIF_PM_HTC_STATS_GET_HTT_NO_RESPONSE,
-	HIF_PM_HTC_STATS_PUT_HTT_RESPONSE,
-	HIF_PM_HTC_STATS_PUT_HTT_NO_RESPONSE,
-	HIF_PM_HTC_STATS_PUT_HTT_ERROR,
-	HIF_PM_HTC_STATS_PUT_HTC_CLEANUP,
-	HIF_PM_HTC_STATS_GET_HTC_KICK_QUEUES,
-	HIF_PM_HTC_STATS_PUT_HTC_KICK_QUEUES,
-	HIF_PM_HTC_STATS_GET_HTT_FETCH_PKTS,
-	HIF_PM_HTC_STATS_PUT_HTT_FETCH_PKTS,
+enum rpm_type {
+	HIF_RTPM_GET_ASYNC,
+	HIF_RTPM_GET_FORCE,
+	HIF_RTPM_GET_SYNC,
+	HIF_RTPM_GET_NORESUME,
+	HIF_RTPM_PUT_ASYNC,
+	HIF_RTPM_PUT_SYNC_SUSPEND,
+	HIF_RTPM_PUT_NOIDLE,
+};
+
+/**
+ * struct hif_pm_runtime_lock - data structure for preventing runtime suspend
+ * @list - global list of runtime locks
+ * @active - true if this lock is preventing suspend
+ * @name - character string for tracking this lock
+ */
+struct hif_pm_runtime_lock {
+	struct list_head list;
+	bool active;
+	const char *name;
 };
 
 #ifdef FEATURE_RUNTIME_PM
-struct hif_pm_runtime_lock;
-
-void hif_fastpath_resume(struct hif_opaque_softc *hif_ctx);
-int hif_pm_runtime_get_sync(struct hif_opaque_softc *hif_ctx,
-			    wlan_rtpm_dbgid rtpm_dbgid);
-int hif_pm_runtime_put_sync_suspend(struct hif_opaque_softc *hif_ctx,
-				    wlan_rtpm_dbgid rtpm_dbgid);
-int hif_pm_runtime_request_resume(struct hif_opaque_softc *hif_ctx,
-				  wlan_rtpm_dbgid rtpm_dbgid);
-int hif_pm_runtime_get(struct hif_opaque_softc *hif_ctx,
-		       wlan_rtpm_dbgid rtpm_dbgid,
-		       bool is_critical_ctx);
-void hif_pm_runtime_get_noresume(struct hif_opaque_softc *hif_ctx,
-				 wlan_rtpm_dbgid rtpm_dbgid);
-int hif_pm_runtime_put(struct hif_opaque_softc *hif_ctx,
-		       wlan_rtpm_dbgid rtpm_dbgid);
-int hif_pm_runtime_put_noidle(struct hif_opaque_softc *hif_ctx,
-			      wlan_rtpm_dbgid rtpm_dbgid);
-void hif_pm_runtime_mark_last_busy(struct hif_opaque_softc *hif_ctx);
-int hif_runtime_lock_init(qdf_runtime_lock_t *lock, const char *name);
-void hif_runtime_lock_deinit(struct hif_opaque_softc *hif_ctx,
-			struct hif_pm_runtime_lock *lock);
-int hif_pm_runtime_prevent_suspend(struct hif_opaque_softc *ol_sc,
-		struct hif_pm_runtime_lock *lock);
-int hif_pm_runtime_allow_suspend(struct hif_opaque_softc *ol_sc,
-		struct hif_pm_runtime_lock *lock);
-bool hif_pm_runtime_is_suspended(struct hif_opaque_softc *hif_ctx);
-void hif_pm_runtime_suspend_lock(struct hif_opaque_softc *hif_ctx);
-void hif_pm_runtime_suspend_unlock(struct hif_opaque_softc *hif_ctx);
-int hif_pm_runtime_get_monitor_wake_intr(struct hif_opaque_softc *hif_ctx);
-void hif_pm_runtime_set_monitor_wake_intr(struct hif_opaque_softc *hif_ctx,
-					  int val);
-void hif_pm_runtime_check_and_request_resume(struct hif_opaque_softc *hif_ctx);
-void hif_pm_runtime_mark_dp_rx_busy(struct hif_opaque_softc *hif_ctx);
-int hif_pm_runtime_is_dp_rx_busy(struct hif_opaque_softc *hif_ctx);
-qdf_time_t hif_pm_runtime_get_dp_rx_busy_mark(struct hif_opaque_softc *hif_ctx);
-int hif_pm_runtime_sync_resume(struct hif_opaque_softc *hif_ctx,
-			       wlan_rtpm_dbgid rtpm_dbgid);
-void hif_pm_runtime_update_stats(struct hif_opaque_softc *hif_ctx,
-				 wlan_rtpm_dbgid rtpm_dbgid,
-				 enum hif_pm_htc_stats stats);
+/**
+ * hif_rtpm_register() - Register a module with runtime PM.
+ * @id: ID of the module which needs to be registered
+ * @hif_rpm_cbk: callback to be called when get was called in suspended state.
+ * @prevent_multiple_get: not allow simultaneous get calls or put calls
+ *
+ * Return: success status if successfully registered
+ */
+QDF_STATUS hif_rtpm_register(uint32_t id, void (*hif_rpm_cbk)(void));
 
 /**
- * hif_pm_set_link_state() - set link state during RTPM
- * @hif_sc: HIF Context
+ * hif_rtpm_deregister() - Deregister the module
+ * @id: ID of the module which needs to be de-registered
+ */
+QDF_STATUS hif_rtpm_deregister(uint32_t id);
+
+/**
+ * hif_runtime_lock_init() - API to initialize Runtime PM context
+ * @lock: QDF lock context
+ * @name: Context name
+ *
+ * This API initializes the Runtime PM context of the caller and
+ * return the pointer.
  *
  * Return: None
  */
-void hif_pm_set_link_state(struct hif_opaque_softc *hif_handle, uint8_t val);
+int hif_runtime_lock_init(qdf_runtime_lock_t *lock, const char *name);
 
 /**
- * hif_is_link_state_up() - Is link state up
- * @hif_sc: HIF Context
+ * hif_runtime_lock_deinit() - This API frees the runtime pm context
+ * @data: Runtime PM context
  *
- * Return: 1 link is up, 0 link is down
+ * Return: void
  */
-uint8_t hif_pm_get_link_state(struct hif_opaque_softc *hif_handle);
+void hif_runtime_lock_deinit(struct hif_pm_runtime_lock *data);
+
+/**
+ * hif_rtpm_get() - Increment usage_count on the device to avoid suspend.
+ * @type: get call types from hif_rpm_type
+ * @id: ID of the module calling get()
+ *
+ * A get operation will prevent a runtime suspend until a
+ * corresponding put is done.  This api should be used when accessing bus.
+ *
+ * CONTRARY TO THE REGULAR RUNTIME PM, WHEN THE BUS IS SUSPENDED,
+ * THIS API WILL ONLY REQUEST THE RESUME AND NOT DO A GET!!!
+ *
+ * return: success if a get has been issued, else error code.
+ */
+QDF_STATUS hif_rtpm_get(uint8_t type, uint32_t id);
+
+/**
+ * hif_pm_runtime_put() - do a put operation on the device
+ * @type: put call types from hif_rpm_type
+ * @id: ID of the module calling put()
+ *
+ * A put operation will allow a runtime suspend after a corresponding
+ * get was done.  This api should be used when finished accessing bus.
+ *
+ * This api will return a failure if runtime pm is stopped
+ * This api will return failure if it would decrement the usage count below 0.
+ *
+ * return: QDF_STATUS_SUCCESS if the put is performed
+ */
+QDF_STATUS hif_rtpm_put(uint8_t type, uint32_t id);
+
+/**
+ * hif_pm_runtime_prevent_suspend() - Prevent Runtime suspend
+ * @data: runtime PM lock
+ *
+ * This function will prevent runtime suspend, by incrementing
+ * device's usage count.
+ *
+ * Return: status
+ */
+int hif_pm_runtime_prevent_suspend(struct hif_pm_runtime_lock *data);
+
+/**
+ * hif_pm_runtime_allow_suspend() - Allow Runtime suspend
+ * @data: runtime PM lock
+ *
+ * This function will allow runtime suspend, by decrementing
+ * device's usage count.
+ *
+ * Return: status
+ */
+int hif_pm_runtime_allow_suspend(struct hif_pm_runtime_lock *data);
+
+/**
+ * hif_rtpm_request_resume() - Request resume if bus is suspended
+ *
+ * Return: None
+ */
+void hif_rtpm_request_resume(void);
+
+/**
+ * hif_rtpm_sync_resume() - Invoke synchronous runtime resume.
+ *
+ * This function will invoke synchronous runtime resume.
+ *
+ * Return: status
+ */
+QDF_STATUS hif_rtpm_sync_resume(void);
+
+/**
+ * hif_rtpm_check_and_request_resume() - check if bus is suspended and
+ *                                       request resume.
+ *
+ * Return: void
+ */
+void hif_rtpm_check_and_request_resume(void);
+
+/**
+ * hif_rtpm_set_client_job() - Set job for the client.
+ * @client_id: Client id for which job needs to be set
+ *
+ * If get failed due to system being in suspended state, set the client job so
+ * when system resumes the client's job is called.
+ *
+ * Return: None
+ */
+void hif_rtpm_set_client_job(uint32_t client_id);
+
+/**
+ * hif_rtpm_mark_last_busy() - Mark last busy to delay retry to suspend
+ * @id: ID marking last busy
+ *
+ * Return: None
+ */
+void hif_rtpm_mark_last_busy(uint32_t id);
+
+/**
+ * hif_rtpm_get_monitor_wake_intr() - API to get monitor_wake_intr
+ *
+ * monitor_wake_intr variable can be used to indicate if driver expects wake
+ * MSI for runtime PM
+ *
+ * Return: monitor_wake_intr variable
+ */
+int hif_rtpm_get_monitor_wake_intr(void);
+
+/**
+ * hif_rtpm_set_monitor_wake_intr() - API to set monitor_wake_intr
+ * @val: value to set
+ *
+ * monitor_wake_intr variable can be used to indicate if driver expects wake
+ * MSI for runtime PM
+ *
+ * Return: void
+ */
+void hif_rtpm_set_monitor_wake_intr(int val);
+
+/**
+ * hif_pre_runtime_suspend() - book keeping before beginning runtime suspend.
+ * @hif_ctx: HIF context
+ *
+ * Makes sure that the pci link will be taken down by the suspend opperation.
+ * If the hif layer is configured to leave the bus on, runtime suspend will
+ * not save any power.
+ *
+ * Set the runtime suspend state to SUSPENDING.
+ *
+ * return -EINVAL if the bus won't go down.  otherwise return 0
+ */
+int hif_pre_runtime_suspend(struct hif_opaque_softc *hif_ctx);
+
+/**
+ * hif_pre_runtime_resume() - bookkeeping before beginning runtime resume
+ *
+ * update the runtime pm state to RESUMING.
+ * Return: void
+ */
+void hif_pre_runtime_resume(void);
+
+/**
+ * hif_process_runtime_suspend_success() - bookkeeping of suspend success
+ *
+ * Record the success.
+ * update the runtime_pm state to SUSPENDED
+ * Return: void
+ */
+void hif_process_runtime_suspend_success(void);
+
+/**
+ * hif_process_runtime_suspend_failure() - bookkeeping of suspend failure
+ *
+ * Record the failure.
+ * mark last busy to delay a retry.
+ * update the runtime_pm state back to ON
+ *
+ * Return: void
+ */
+void hif_process_runtime_suspend_failure(void);
+
+/**
+ * hif_process_runtime_suspend_failure() - bookkeeping of resuming link up
+ *
+ * update the runtime_pm state to RESUMING_LINKUP
+ * Return: void
+ */
+void hif_process_runtime_resume_linkup(void);
+
+/**
+ * hif_process_runtime_resume_success() - bookkeeping after a runtime resume
+ *
+ * record the success.
+ * update the runtime_pm state to SUSPENDED
+ * Return: void
+ */
+void hif_process_runtime_resume_success(void);
+
+/**
+ * hif_rtpm_print_prevent_list() - list the clients preventing suspend.
+ *
+ * Return: None
+ */
+void hif_rtpm_print_prevent_list(void);
+
+/**
+ * hif_rtpm_suspend_lock() - spin_lock on marking runtime suspend
+ *
+ * Return: void
+ */
+void hif_rtpm_suspend_lock(void);
+
+/**
+ * hif_rtpm_suspend_unlock() - spin_unlock on marking runtime suspend
+ *
+ * Return: void
+ */
+void hif_rtpm_suspend_unlock(void);
+
+/**
+ * hif_runtime_suspend() - do the bus suspend part of a runtime suspend
+ * @hif_ctx: HIF context
+ *
+ * Return: 0 for success and non-zero error code for failure
+ */
+int hif_runtime_suspend(struct hif_opaque_softc *hif_ctx);
+
+/**
+ * hif_runtime_resume() - do the bus resume part of a runtime resume
+ * @hif_ctx: HIF context
+ *
+ * Return: 0 for success and non-zero error code for failure
+ */
+int hif_runtime_resume(struct hif_opaque_softc *hif_ctx);
+
+/**
+ * hif_fastpath_resume() - resume fastpath for runtimepm
+ * @hif_ctx: HIF context
+ *
+ * ensure that the fastpath write index register is up to date
+ * since runtime pm may cause ce_send_fast to skip the register
+ * write.
+ *
+ * fastpath only applicable to legacy copy engine
+ */
+void hif_fastpath_resume(struct hif_opaque_softc *hif_ctx);
 #else
-struct hif_pm_runtime_lock {
-	const char *name;
-};
-static inline void hif_fastpath_resume(struct hif_opaque_softc *hif_ctx) {}
-static inline int
-hif_pm_runtime_get_sync(struct hif_opaque_softc *hif_ctx,
-			wlan_rtpm_dbgid rtpm_dbgid)
-{ return 0; }
-static inline int
-hif_pm_runtime_put_sync_suspend(struct hif_opaque_softc *hif_ctx,
-				wlan_rtpm_dbgid rtpm_dbgid)
-{ return 0; }
-static inline int
-hif_pm_runtime_request_resume(struct hif_opaque_softc *hif_ctx,
-			      wlan_rtpm_dbgid rtpm_dbgid)
-{ return 0; }
-static inline void
-hif_pm_runtime_get_noresume(struct hif_opaque_softc *hif_ctx,
-			    wlan_rtpm_dbgid rtpm_dbgid)
-{}
-
-static inline int
-hif_pm_runtime_get(struct hif_opaque_softc *hif_ctx, wlan_rtpm_dbgid rtpm_dbgid,
-		   bool is_critical_ctx)
-{ return 0; }
-static inline int
-hif_pm_runtime_put(struct hif_opaque_softc *hif_ctx, wlan_rtpm_dbgid rtpm_dbgid)
-{ return 0; }
-static inline int
-hif_pm_runtime_put_noidle(struct hif_opaque_softc *hif_ctx,
-			  wlan_rtpm_dbgid rtpm_dbgid)
-{ return 0; }
-static inline void
-hif_pm_runtime_mark_last_busy(struct hif_opaque_softc *hif_ctx) {};
-static inline int hif_runtime_lock_init(qdf_runtime_lock_t *lock,
-					const char *name)
-{ return 0; }
-static inline void
-hif_runtime_lock_deinit(struct hif_opaque_softc *hif_ctx,
-			struct hif_pm_runtime_lock *lock) {}
-
-static inline int hif_pm_runtime_prevent_suspend(struct hif_opaque_softc *ol_sc,
-		struct hif_pm_runtime_lock *lock)
-{ return 0; }
-static inline int hif_pm_runtime_allow_suspend(struct hif_opaque_softc *ol_sc,
-		struct hif_pm_runtime_lock *lock)
-{ return 0; }
-static inline bool hif_pm_runtime_is_suspended(struct hif_opaque_softc *hif_ctx)
-{ return false; }
-static inline void
-hif_pm_runtime_suspend_lock(struct hif_opaque_softc *hif_ctx)
-{ return; }
-static inline void
-hif_pm_runtime_suspend_unlock(struct hif_opaque_softc *hif_ctx)
-{ return; }
-static inline int
-hif_pm_runtime_get_monitor_wake_intr(struct hif_opaque_softc *hif_ctx)
-{ return 0; }
-static inline void
-hif_pm_runtime_set_monitor_wake_intr(struct hif_opaque_softc *hif_ctx, int val)
-{ return; }
-static inline void
-hif_pm_runtime_check_and_request_resume(struct hif_opaque_softc *hif_ctx)
-{ return; }
-static inline void
-hif_pm_runtime_mark_dp_rx_busy(struct hif_opaque_softc *hif_ctx) {};
-static inline int
-hif_pm_runtime_is_dp_rx_busy(struct hif_opaque_softc *hif_ctx)
-{ return 0; }
-static inline qdf_time_t
-hif_pm_runtime_get_dp_rx_busy_mark(struct hif_opaque_softc *hif_ctx)
-{ return 0; }
-static inline int hif_pm_runtime_sync_resume(struct hif_opaque_softc *hif_ctx,
-					     wlan_rtpm_dbgid rtpm_dbgid)
-{ return 0; }
 static inline
-void hif_pm_set_link_state(struct hif_opaque_softc *hif_handle, uint8_t val)
+QDF_STATUS hif_rtpm_register(uint32_t id, void (*hif_rpm_cbk)(void))
+{ return QDF_STATUS_SUCCESS; }
+
+static inline
+QDF_STATUS hif_rtpm_deregister(uint32_t id)
+{ return QDF_STATUS_SUCCESS; }
+
+static inline
+int hif_runtime_lock_init(qdf_runtime_lock_t *lock, const char *name)
+{ return 0; }
+
+static inline
+void hif_runtime_lock_deinit(struct hif_pm_runtime_lock *data)
 {}
 
 static inline
-void hif_pm_runtime_update_stats(struct hif_opaque_softc *hif_ctx,
-				 wlan_rtpm_dbgid rtpm_dbgid,
-				 enum hif_pm_htc_stats stats)
+int hif_rtpm_get(uint8_t type, uint32_t id)
+{ return QDF_STATUS_SUCCESS; }
+
+static inline
+QDF_STATUS hif_rtpm_put(uint8_t type, uint32_t id)
+{ return QDF_STATUS_SUCCESS; }
+
+static inline
+int hif_pm_runtime_allow_suspend(struct hif_pm_runtime_lock *data)
+{ return 0; }
+
+static inline
+int hif_pm_runtime_prevent_suspend(struct hif_pm_runtime_lock *data)
+{ return 0; }
+
+static inline
+QDF_STATUS hif_rtpm_sync_resume(void)
+{ return QDF_STATUS_SUCCESS; }
+
+static inline
+void hif_rtpm_request_resume(void)
+{}
+
+static inline
+void hif_rtpm_check_and_request_resume(void)
+{}
+
+static inline
+void hif_rtpm_set_client_job(uint32_t client_id)
+{}
+
+static inline
+void hif_rtpm_print_prevent_list(void)
+{}
+
+static inline
+void hif_rtpm_suspend_unlock(void)
+{}
+
+static inline
+void hif_rtpm_suspend_lock(void)
+{}
+
+static inline
+int hif_rtpm_get_monitor_wake_intr(void)
+{ return 0; }
+
+static inline
+void hif_rtpm_set_monitor_wake_intr(int val)
+{}
+
+static inline
+void hif_rtpm_mark_last_busy(uint32_t id)
 {}
 #endif
 
@@ -1445,8 +1572,9 @@ void hif_enable_power_management(struct hif_opaque_softc *hif_ctx,
 				 bool is_packet_log_enabled);
 void hif_disable_power_management(struct hif_opaque_softc *hif_ctx);
 
-void hif_vote_link_down(struct hif_opaque_softc *hif_ctx);
 void hif_vote_link_up(struct hif_opaque_softc *hif_ctx);
+void hif_vote_link_down(struct hif_opaque_softc *hif_ctx);
+
 bool hif_can_suspend_link(struct hif_opaque_softc *hif_ctx);
 
 #ifdef IPA_OFFLOAD
@@ -1582,21 +1710,6 @@ int hif_apps_enable_irqs_except_wake_irq(struct hif_opaque_softc *hif_ctx);
  * Return: errno
  */
 int hif_apps_disable_irqs_except_wake_irq(struct hif_opaque_softc *hif_ctx);
-
-#ifdef FEATURE_RUNTIME_PM
-void hif_print_runtime_pm_prevent_list(struct hif_opaque_softc *hif_ctx);
-int hif_pre_runtime_suspend(struct hif_opaque_softc *hif_ctx);
-void hif_pre_runtime_resume(struct hif_opaque_softc *hif_ctx);
-int hif_runtime_suspend(struct hif_opaque_softc *hif_ctx);
-int hif_runtime_resume(struct hif_opaque_softc *hif_ctx);
-void hif_process_runtime_suspend_success(struct hif_opaque_softc *hif_ctx);
-void hif_process_runtime_suspend_failure(struct hif_opaque_softc *hif_ctx);
-void hif_process_runtime_resume_success(struct hif_opaque_softc *hif_ctx);
-#else
-static inline void
-hif_print_runtime_pm_prevent_list(struct hif_opaque_softc *hif_ctx)
-{}
-#endif
 
 int hif_get_irq_num(struct hif_opaque_softc *scn, int *irq, uint32_t size);
 int hif_dump_registers(struct hif_opaque_softc *scn);
