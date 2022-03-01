@@ -619,6 +619,12 @@ QDF_STATUS ipa_uc_ol_deinit(struct wlan_objmgr_pdev *pdev)
 		goto out;
 	}
 
+	if (!(ipa_obj->handle_initialized)) {
+		ipa_debug("IPA is already deinit for hdl:%d", ipa_obj->hdl);
+		status = QDF_STATUS_SUCCESS;
+		goto out;
+	}
+
 	status = wlan_ipa_uc_ol_deinit(ipa_obj);
 	ipa_obj_cleanup(ipa_obj);
 	if (!g_instances_added)
