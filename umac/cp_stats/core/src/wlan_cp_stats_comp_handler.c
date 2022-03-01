@@ -32,6 +32,8 @@
 #include <wlan_cp_stats_ucfg_api.h>
 #include <wlan_cp_stats_utils_api.h>
 #include <wmi_unified_twt_param.h>
+#include <wlan_twt_public_structs.h>
+
 
 static QDF_STATUS
 wlan_cp_stats_psoc_comp_obj_config
@@ -265,7 +267,7 @@ wlan_cp_stats_twt_get_session_evt_handler(
 	if (twt_params->event_type == HOST_TWT_SESSION_UPDATE ||
 	    twt_params->event_type == HOST_TWT_SESSION_TEARDOWN) {
 		/* Update for a existing session, find by dialog_id */
-		for (i = 0; i < TWT_PEER_MAX_SESSIONS; i++) {
+		for (i = 0; i < WLAN_MAX_TWT_SESSIONS_PER_PEER; i++) {
 			if (peer_cp_stats_priv->twt_param[i].dialog_id !=
 			    twt_params->dialog_id)
 				continue;
@@ -275,7 +277,7 @@ wlan_cp_stats_twt_get_session_evt_handler(
 		}
 	} else if (twt_params->event_type == HOST_TWT_SESSION_SETUP) {
 		/* New session, fill in any existing invalid session */
-		for (i = 0; i < TWT_PEER_MAX_SESSIONS; i++) {
+		for (i = 0; i < WLAN_MAX_TWT_SESSIONS_PER_PEER; i++) {
 			event_type =
 				peer_cp_stats_priv->twt_param[i].event_type;
 			if (event_type != HOST_TWT_SESSION_SETUP &&
