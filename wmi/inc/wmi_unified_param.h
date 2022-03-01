@@ -2950,6 +2950,7 @@ struct smart_ant_enable_tx_feedback_params {
  * @vdev_id: VDEV id
  * @count: count
  * @period: period
+ * @fft_recap: FFT recapture enable/disable
  * @spectral_pri: Spectral priority
  * @fft_size: FFT size
  * @gc_enable: GC enable
@@ -2976,6 +2977,7 @@ struct vdev_spectral_configure_params {
 	uint8_t vdev_id;
 	uint16_t count;
 	uint16_t period;
+	uint16_t fft_recap;
 	uint16_t spectral_pri;
 	uint16_t fft_size;
 	uint16_t gc_enable;

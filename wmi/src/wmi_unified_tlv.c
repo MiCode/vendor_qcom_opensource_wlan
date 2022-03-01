@@ -7179,6 +7179,7 @@ static QDF_STATUS send_vdev_spectral_configure_cmd_tlv(wmi_unified_t wmi_handle,
 	cmd->spectral_scan_center_freq1 = param->center_freq1;
 	cmd->spectral_scan_center_freq2 = param->center_freq2;
 	cmd->spectral_scan_chan_width = param->chan_width;
+	cmd->recapture_sample_on_gain_change = param->fft_recap;
 	/* Not used, fill with zeros */
 	cmd->spectral_scan_chan_freq = 0;
 
@@ -7196,6 +7197,7 @@ static QDF_STATUS send_vdev_spectral_configure_cmd_tlv(wmi_unified_t wmi_handle,
 		 param->vdev_id, param->count);
 	wmi_debug("spectral_scan_period: %u spectral_scan_priority: %u",
 		 param->period, param->spectral_pri);
+	wmi_debug("spectral_fft_recapture_cap: %u", param->fft_recap);
 	wmi_debug("spectral_scan_fft_size: %u spectral_scan_gc_ena: %u",
 		 param->fft_size, param->gc_enable);
 	wmi_debug("spectral_scan_restart_ena: %u", param->restart_enable);

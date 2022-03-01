@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2011,2017-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  *
  * Permission to use, copy, modify, and/or distribute this software for
@@ -89,6 +90,7 @@
 #define SPECTRAL_SCAN_DBM_ADJ_DEFAULT          (1)
 #define SPECTRAL_SCAN_CHN_MASK_DEFAULT         (1)
 #define SPECTRAL_SCAN_FREQUENCY_DEFAULT        (0)
+#define SPECTRAL_FFT_RECAPTURE_DEFAULT         (0)
 #endif				/* SPECTRAL_USE_EMU_DEFAULTS */
 
 /* The below two definitions apply only to pre-11ac chipsets */

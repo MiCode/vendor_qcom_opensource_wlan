@@ -518,6 +518,7 @@ target_if_send_vdev_spectral_configure_cmd(struct target_if_spectral *spectral,
 
 	sparam.count = param->ss_count;
 	sparam.period = param->ss_period;
+	sparam.fft_recap = param->ss_recapture;
 	sparam.spectral_pri = param->ss_spectral_pri;
 	sparam.fft_size = param->ss_fft_size;
 	sparam.gc_enable = param->ss_gc_ena;
@@ -883,6 +884,8 @@ target_if_spectral_info_init_defaults(struct target_if_spectral *spectral,
 		info->osps_cache.osc_params.ss_period =
 			SPECTRAL_SCAN_PERIOD_GEN_II_DEFAULT;
 
+	info->osps_cache.osc_params.ss_recapture =
+				SPECTRAL_FFT_RECAPTURE_DEFAULT;
 	info->osps_cache.osc_params.ss_spectral_pri =
 	    SPECTRAL_SCAN_PRIORITY_DEFAULT;
 
@@ -1011,10 +1014,11 @@ target_if_log_read_spectral_params(
 	const char *function_name,
 	struct spectral_config *pparam)
 {
-	spectral_debug("%s: TARGET_IF_SPECTRAL_INFO_PARAMS. Returning following params:\nss_count = %u\nss_period = %u\nss_spectral_pri = %u\nss_fft_size = %u\nss_gc_ena = %u\nss_restart_ena = %u\nss_noise_floor_ref = %d\nss_init_delay = %u\nss_nb_tone_thr = %u\nss_str_bin_thr = %u\nss_wb_rpt_mode = %u\nss_rssi_rpt_mode = %u\nss_rssi_thr = %d\nss_pwr_format = %u\nss_rpt_mode = %u\nss_bin_scale = %u\nss_dbm_adj = %u\nss_chn_mask = %u\nss_frequency1=%u\nss_frequency2=%u\n",
+	spectral_debug("%s: TARGET_IF_SPECTRAL_INFO_PARAMS. Returning following params:\nss_count = %u\nss_period = %u\nss_recapture = %u\nss_spectral_pri = %u\nss_fft_size = %u\nss_gc_ena = %u\nss_restart_ena = %u\nss_noise_floor_ref = %d\nss_init_delay = %u\nss_nb_tone_thr = %u\nss_str_bin_thr = %u\nss_wb_rpt_mode = %u\nss_rssi_rpt_mode = %u\nss_rssi_thr = %d\nss_pwr_format = %u\nss_rpt_mode = %u\nss_bin_scale = %u\nss_dbm_adj = %u\nss_chn_mask = %u\nss_frequency1=%u\nss_frequency2=%u\n",
 		       function_name,
 		       pparam->ss_count,
 		       pparam->ss_period,
+		       pparam->ss_recapture,
 		       pparam->ss_spectral_pri,
 		       pparam->ss_fft_size,
 		       pparam->ss_gc_ena,
@@ -1088,10 +1092,11 @@ target_if_log_read_spectral_params_catch_validate(
 	const char *function_name,
 	struct spectral_config *pparam)
 {
-	spectral_debug("%s: TARGET_IF_SPECTRAL_INFO_PARAMS on initial cache validation\nReturning following params:\nss_count = %u\nss_period = %u\nss_spectral_pri = %u\nss_fft_size = %u\nss_gc_ena = %u\nss_restart_ena = %u\nss_noise_floor_ref = %d\nss_init_delay = %u\nss_nb_tone_thr = %u\nss_str_bin_thr = %u\nss_wb_rpt_mode = %u\nss_rssi_rpt_mode = %u\nss_rssi_thr = %d\nss_pwr_format = %u\nss_rpt_mode = %u\nss_bin_scale = %u\nss_dbm_adj = %u\nss_chn_mask = %u",
+	spectral_debug("%s: TARGET_IF_SPECTRAL_INFO_PARAMS on initial cache validation\nReturning following params:\nss_count = %u\nss_period = %u\nss_recapture = %u\nss_spectral_pri = %u\nss_fft_size = %u\nss_gc_ena = %u\nss_restart_ena = %u\nss_noise_floor_ref = %d\nss_init_delay = %u\nss_nb_tone_thr = %u\nss_str_bin_thr = %u\nss_wb_rpt_mode = %u\nss_rssi_rpt_mode = %u\nss_rssi_thr = %d\nss_pwr_format = %u\nss_rpt_mode = %u\nss_bin_scale = %u\nss_dbm_adj = %u\nss_chn_mask = %u",
 		       function_name,
 		       pparam->ss_count,
 		       pparam->ss_period,
+		       pparam->ss_recapture,
 		       pparam->ss_spectral_pri,
 		       pparam->ss_fft_size,
 		       pparam->ss_gc_ena,
@@ -1334,10 +1339,11 @@ target_if_log_write_spectral_params(
 	const char *function_name,
 	int ret)
 {
-	spectral_debug("%s: TARGET_IF_SPECTRAL_INFO_PARAMS. Params:\nss_count = %u\nss_period = %u\nss_spectral_pri = %u\nss_fft_size = %u\nss_gc_ena = %u\nss_restart_ena = %u\nss_noise_floor_ref = %d\nss_init_delay = %u\nss_nb_tone_thr = %u\nss_str_bin_thr = %u\nss_wb_rpt_mode = %u\nss_rssi_rpt_mode = %u\nss_rssi_thr = %d\nss_pwr_format = %u\nss_rpt_mode = %u\nss_bin_scale = %u\nss_dbm_adj = %u\nss_chn_mask = %u\nss_frequency1=%u\nss_frequency2=%u\nstatus = %d",
+	spectral_debug("%s: TARGET_IF_SPECTRAL_INFO_PARAMS. Params:\nss_count = %u\nss_period = %u\nss_recapture = %u\nss_spectral_pri = %u\nss_fft_size = %u\nss_gc_ena = %u\nss_restart_ena = %u\nss_noise_floor_ref = %d\nss_init_delay = %u\nss_nb_tone_thr = %u\nss_str_bin_thr = %u\nss_wb_rpt_mode = %u\nss_rssi_rpt_mode = %u\nss_rssi_thr = %d\nss_pwr_format = %u\nss_rpt_mode = %u\nss_bin_scale = %u\nss_dbm_adj = %u\nss_chn_mask = %u\nss_frequency1=%u\nss_frequency2=%u\nstatus = %d",
 		       function_name,
 		       param->ss_count,
 		       param->ss_period,
+		       param->ss_recapture,
 		       param->ss_spectral_pri,
 		       param->ss_fft_size,
 		       param->ss_gc_ena,
@@ -1765,6 +1771,17 @@ target_if_sops_stop_spectral_scan(void *arg, enum spectral_scan_mode smode)
 		sparams = &spectral->params[smode];
 		sparams->ss_frequency.cfreq1 = 0;
 		sparams->ss_frequency.cfreq2 = 0;
+
+		p_sops->configure_spectral(spectral, sparams, smode);
+	}
+
+	if (ret == 0 && smode == SPECTRAL_SCAN_MODE_NORMAL) {
+		struct target_if_spectral_ops *p_sops;
+		struct spectral_config *sparams;
+
+		p_sops = GET_TARGET_IF_SPECTRAL_OPS(spectral);
+		sparams = &spectral->params[smode];
+		sparams->ss_recapture = false;
 
 		p_sops->configure_spectral(spectral, sparams, smode);
 	}
@@ -4414,6 +4431,12 @@ _target_if_set_spectral_config(struct target_if_spectral *spectral,
 		break;
 	case SPECTRAL_PARAM_SCAN_PERIOD:
 		sparams->ss_period = param->value;
+		if ((sparams->ss_period >=
+		     SPECTRAL_RECAPTURE_SCAN_PERIOD_THRESHOLD) &&
+		    (smode == SPECTRAL_SCAN_MODE_NORMAL))
+			sparams->ss_recapture = true;
+		else
+			sparams->ss_recapture = false;
 		break;
 	case SPECTRAL_PARAM_SCAN_COUNT:
 		sparams->ss_count = param->value;
