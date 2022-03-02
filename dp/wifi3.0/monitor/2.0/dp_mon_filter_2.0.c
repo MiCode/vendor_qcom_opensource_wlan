@@ -1321,6 +1321,10 @@ static void dp_rx_mon_filter_show_filter(struct dp_mon_filter_be *filter)
 			    rx_tlv_filter->ctrl_dma_length);
 	DP_MON_FILTER_PRINT("data_dma_length: %d",
 			    rx_tlv_filter->data_dma_length);
+	DP_MON_FILTER_PRINT("rx_mpdu_start_wmask: 0x%x",
+			    rx_tlv_filter->rx_mpdu_start_wmask);
+	DP_MON_FILTER_PRINT("rx_msdu_end_wmask: 0x%x",
+			    rx_tlv_filter->rx_msdu_end_wmask);
 }
 
 static void dp_tx_mon_filter_show_filter(struct dp_mon_filter_be *filter)
@@ -1980,6 +1984,22 @@ dp_rx_mon_filter_h2t_setup(struct dp_soc *soc, struct dp_pdev *pdev,
 		    !tlv_filter->data_mpdu_log)
 			tlv_filter->data_mpdu_log =
 				src_tlv_filter->data_mpdu_log;
+
+		/*
+		 * set mpdu start wmask
+		 */
+		if (src_tlv_filter->rx_mpdu_start_wmask &&
+		    !tlv_filter->rx_mpdu_start_wmask)
+			tlv_filter->rx_mpdu_start_wmask =
+				src_tlv_filter->rx_mpdu_start_wmask;
+
+		/*
+		 * set msdu end wmask
+		 */
+		if (src_tlv_filter->rx_msdu_end_wmask &&
+		    !tlv_filter->rx_msdu_end_wmask)
+			tlv_filter->rx_msdu_end_wmask =
+				src_tlv_filter->rx_msdu_end_wmask;
 
 		dp_mon_filter_show_filter_be(current_mode, mon_filter);
 	}
