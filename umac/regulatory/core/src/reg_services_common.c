@@ -1481,32 +1481,19 @@ void reg_set_dfs_region(struct wlan_objmgr_pdev *pdev,
 	reg_init_channel_map(dfs_reg);
 }
 
-uint8_t reg_freq_to_chan(struct wlan_objmgr_pdev *pdev,
-			 qdf_freq_t freq)
+static uint8_t
+reg_freq_to_chan_for_chlist(struct regulatory_channel *chan_list,
+			    qdf_freq_t freq,
+			    enum channel_enum num_chans)
 {
 	uint32_t count;
-	struct regulatory_channel *chan_list;
-	struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj;
 
-	if (freq == 0) {
-		reg_err_rl("Invalid freq %d", freq);
-		return 0;
-	}
-
-	pdev_priv_obj = reg_get_pdev_obj(pdev);
-
-	if (!IS_VALID_PDEV_REG_OBJ(pdev_priv_obj)) {
-		reg_err("reg pdev priv obj is NULL");
-		return 0;
-	}
-
-	chan_list = pdev_priv_obj->mas_chan_list;
-	for (count = 0; count < NUM_CHANNELS; count++) {
+	for (count = 0; count < num_chans; count++) {
 		if (chan_list[count].center_freq >= freq)
 			break;
 	}
 
-	if (count == NUM_CHANNELS)
+	if (count == num_chans)
 		goto end;
 
 	if (chan_list[count].center_freq == freq)
@@ -1527,6 +1514,53 @@ uint8_t reg_freq_to_chan(struct wlan_objmgr_pdev *pdev,
 end:
 	reg_err_rl("invalid frequency %d", freq);
 	return 0;
+}
+
+uint8_t reg_freq_to_chan(struct wlan_objmgr_pdev *pdev,
+			 qdf_freq_t freq)
+{
+	struct regulatory_channel *chan_list;
+	struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj;
+	uint8_t chan;
+	enum supported_6g_pwr_types input_6g_pwr_mode = REG_AP_LPI;
+
+	if (freq == 0) {
+		reg_err_rl("Invalid freq %d", freq);
+		return 0;
+	}
+
+	pdev_priv_obj = reg_get_pdev_obj(pdev);
+
+	if (!IS_VALID_PDEV_REG_OBJ(pdev_priv_obj)) {
+		reg_err("reg pdev priv obj is NULL");
+		return 0;
+	}
+
+	chan_list = pdev_priv_obj->mas_chan_list;
+	chan = reg_freq_to_chan_for_chlist(chan_list, freq, NUM_CHANNELS);
+
+	if (chan)
+		return chan;
+
+	if (!REG_IS_6GHZ_FREQ(freq))
+		return chan;
+
+	input_6g_pwr_mode = REG_AP_LPI;
+
+	while (input_6g_pwr_mode < REG_INVALID_PWR_MODE) {
+		chan_list = reg_get_reg_maschan_lst_frm_6g_pwr_mode(
+							input_6g_pwr_mode,
+							pdev_priv_obj, 0);
+		if (!chan_list)
+			return 0;
+
+		chan = reg_freq_to_chan_for_chlist(chan_list, freq,
+						   NUM_6GHZ_CHANNELS);
+		if (chan)
+			break;
+	}
+
+	return chan;
 }
 
 static uint16_t
