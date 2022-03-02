@@ -4793,6 +4793,49 @@ void dp_tx_prefetch_next_nbuf_data(struct dp_tx_desc_s *next)
 #endif
 
 /**
+ * dp_tx_mcast_reinject_handler() - Tx reinjected multicast packets handler
+ * @soc: core txrx main context
+ * @desc: software descriptor
+ *
+ * Return: true when packet is reinjected
+ */
+#if defined(WLAN_FEATURE_11BE_MLO) && defined(WLAN_MLO_MULTI_CHIP) && \
+	defined(WLAN_MCAST_MLO)
+static inline bool
+dp_tx_mcast_reinject_handler(struct dp_soc *soc, struct dp_tx_desc_s *desc)
+{
+	struct dp_vdev *vdev = NULL;
+
+	if (desc->tx_status == HAL_TX_TQM_RR_MULTICAST_DROP) {
+		if (!soc->arch_ops.dp_tx_mcast_handler)
+			return false;
+
+		vdev = dp_vdev_get_ref_by_id(soc, desc->vdev_id,
+					     DP_MOD_ID_TX_COMP);
+
+		if (qdf_unlikely(!vdev)) {
+			dp_tx_comp_info_rl("Unable to get vdev ref  %d",
+					   desc->id);
+			return false;
+		}
+		DP_STATS_INC_PKT(vdev, tx_i.reinject_pkts, 1,
+				 qdf_nbuf_len(desc->nbuf));
+		soc->arch_ops.dp_tx_mcast_handler(soc, vdev, desc->nbuf);
+		dp_tx_desc_release(desc, desc->pool_id);
+		return true;
+	}
+
+	return false;
+}
+#else
+static inline bool
+dp_tx_mcast_reinject_handler(struct dp_soc *soc, struct dp_tx_desc_s *desc)
+{
+	return false;
+}
+#endif
+
+/**
  * dp_tx_comp_process_desc_list() - Tx complete software descriptor handler
  * @soc: core txrx main context
  * @comp_head: software descriptor head pointer
@@ -4832,6 +4875,10 @@ dp_tx_comp_process_desc_list(struct dp_soc *soc,
 							   DP_MOD_ID_TX_COMP);
 		}
 
+		if (dp_tx_mcast_reinject_handler(soc, desc)) {
+			desc = next;
+			continue;
+		}
 		if (qdf_likely(desc->flags & DP_TX_DESC_FLAG_SIMPLE)) {
 			struct dp_pdev *pdev = desc->pdev;
 
@@ -4855,6 +4902,7 @@ dp_tx_comp_process_desc_list(struct dp_soc *soc,
 			desc = next;
 			continue;
 		}
+
 		hal_tx_comp_get_status(&desc->comp, &ts, soc->hal_soc);
 
 		dp_tx_comp_process_tx_status(soc, desc, &ts, txrx_peer,

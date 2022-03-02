@@ -6428,12 +6428,30 @@ static inline void dp_vdev_register_rx_eapol(struct dp_vdev *vdev,
 #endif
 
 #ifdef WLAN_FEATURE_11BE_MLO
+#if defined(WLAN_MLO_MULTI_CHIP) && defined(WLAN_MCAST_MLO)
+static inline void dp_vdev_save_mld_info(struct dp_vdev *vdev,
+					 struct cdp_vdev_info *vdev_info)
+{
+	if (qdf_is_macaddr_zero((struct qdf_mac_addr *)vdev_info->mld_mac_addr))
+		vdev->mlo_vdev = false;
+	else
+		vdev->mlo_vdev = true;
+}
+#else
+static inline void dp_vdev_save_mld_info(struct dp_vdev *vdev,
+					 struct cdp_vdev_info *vdev_info)
+{
+}
+#endif
 static inline void dp_vdev_save_mld_addr(struct dp_vdev *vdev,
 					 struct cdp_vdev_info *vdev_info)
 {
 	if (vdev_info->mld_mac_addr)
 		qdf_mem_copy(&vdev->mld_mac_addr.raw[0],
 			     vdev_info->mld_mac_addr, QDF_MAC_ADDR_SIZE);
+
+	dp_vdev_save_mld_info(vdev, vdev_info);
+
 }
 #else
 static inline void dp_vdev_save_mld_addr(struct dp_vdev *vdev,

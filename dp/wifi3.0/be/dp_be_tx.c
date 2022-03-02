@@ -416,6 +416,21 @@ dp_tx_set_min_rates_for_critical_frames(struct dp_soc *soc,
 
 #if defined(WLAN_FEATURE_11BE_MLO) && defined(WLAN_MLO_MULTI_CHIP) && \
 	defined(WLAN_MCAST_MLO)
+void dp_tx_mcast_mlo_reinject_routing_set(struct dp_soc *soc, void *arg)
+{
+	hal_soc_handle_t hal_soc = soc->hal_soc;
+	uint8_t *cmd = (uint8_t *)arg;
+
+	if (*cmd)
+		hal_tx_mcast_mlo_reinject_routing_set(
+					hal_soc,
+					HAL_TX_MCAST_MLO_REINJECT_TQM_NOTIFY);
+	else
+		hal_tx_mcast_mlo_reinject_routing_set(
+					hal_soc,
+					HAL_TX_MCAST_MLO_REINJECT_FW_NOTIFY);
+}
+
 void
 dp_tx_mlo_mcast_pkt_send(struct dp_vdev_be *be_vdev,
 			 struct dp_vdev *ptnr_vdev,

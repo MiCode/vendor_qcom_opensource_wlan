@@ -237,7 +237,7 @@ dp_rx_replensih_soc_get(struct dp_soc *soc, uint8_t reo_ring_num)
  */
 bool dp_rx_mlo_igmp_handler(struct dp_soc *soc,
 			    struct dp_vdev *vdev,
-			    struct dp_peer *peer,
+			    struct dp_txrx_peer *peer,
 			    qdf_nbuf_t nbuf);
 
 /**

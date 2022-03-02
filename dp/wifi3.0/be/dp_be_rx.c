@@ -1109,9 +1109,11 @@ bool dp_rx_mlo_igmp_handler(struct dp_soc *soc,
 	struct dp_vdev_be *be_vdev = dp_get_be_vdev_from_dp_vdev(vdev);
 	struct dp_soc_be *be_soc = dp_get_be_soc_from_dp_soc(soc);
 
-	if (!(qdf_nbuf_is_ipv4_igmp_pkt(buf) ||
-	      qdf_nbuf_is_ipv6_igmp_pkt(buf)))
+	if (!(qdf_nbuf_is_ipv4_igmp_pkt(nbuf) ||
+	      qdf_nbuf_is_ipv6_igmp_pkt(nbuf)))
 		return false;
+
+	qdf_nbuf_set_next(nbuf, NULL);
 
 	if (vdev->mcast_enhancement_en || be_vdev->mcast_primary)
 		goto send_pkt;
@@ -1143,7 +1145,7 @@ send_pkt:
 #else
 bool dp_rx_mlo_igmp_handler(struct dp_soc *soc,
 			    struct dp_vdev *vdev,
-			    struct dp_peer *peer,
+			    struct dp_txrx_peer *peer,
 			    qdf_nbuf_t nbuf)
 {
 	return false;

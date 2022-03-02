@@ -2996,6 +2996,9 @@ struct dp_vdev {
 #ifdef WLAN_FEATURE_11BE_MLO
 	/* MLO MAC address corresponding to vdev */
 	union dp_align_mac_addr mld_mac_addr;
+#if defined(WLAN_MLO_MULTI_CHIP) && defined(WLAN_MCAST_MLO)
+	bool mlo_vdev;
+#endif
 #endif
 
 	/* node in the pdev's list of vdevs */

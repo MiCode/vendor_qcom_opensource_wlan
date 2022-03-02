@@ -419,6 +419,52 @@ static QDF_STATUS dp_soc_detach_be(struct dp_soc *soc)
 }
 
 #ifdef WLAN_MLO_MULTI_CHIP
+#ifdef WLAN_MCAST_MLO
+static inline void
+dp_mlo_mcast_init(struct dp_soc *soc, struct dp_vdev *vdev)
+{
+	struct dp_vdev_be *be_vdev = dp_get_be_vdev_from_dp_vdev(vdev);
+
+	be_vdev->mcast_primary = false;
+	be_vdev->seq_num = 0;
+	if (vdev->mlo_vdev)
+		hal_tx_vdev_mcast_ctrl_set(vdev->pdev->soc->hal_soc,
+					   vdev->vdev_id,
+					   HAL_TX_MCAST_CTRL_DROP);
+}
+
+static inline void
+dp_mlo_mcast_deinit(struct dp_soc *soc, struct dp_vdev *vdev)
+{
+	struct dp_vdev_be *be_vdev = dp_get_be_vdev_from_dp_vdev(vdev);
+	struct dp_soc_be *be_soc = dp_get_be_soc_from_dp_soc(
+						be_vdev->vdev.pdev->soc);
+
+	be_vdev->seq_num = 0;
+	if (vdev->mlo_vdev) {
+		hal_tx_vdev_mcast_ctrl_set(vdev->pdev->soc->hal_soc,
+					   vdev->vdev_id,
+					   HAL_TX_MCAST_CTRL_FW_EXCEPTION);
+		vdev->mlo_vdev = false;
+	}
+	if (be_vdev->mcast_primary) {
+		be_vdev->mcast_primary = false;
+		dp_mcast_mlo_iter_ptnr_soc(be_soc,
+					   dp_tx_mcast_mlo_reinject_routing_set,
+					   (void *)&be_vdev->mcast_primary);
+	}
+}
+#else
+static inline void
+dp_mlo_mcast_init(struct dp_soc *soc, struct dp_vdev *vdev)
+{
+}
+
+static inline void
+dp_mlo_mcast_deinit(struct dp_soc *soc, struct dp_vdev *vdev)
+{
+}
+#endif
 static void dp_mlo_init_ptnr_list(struct dp_vdev *vdev)
 {
 	struct dp_vdev_be *be_vdev = dp_get_be_vdev_from_dp_vdev(vdev);
@@ -428,6 +474,16 @@ static void dp_mlo_init_ptnr_list(struct dp_vdev *vdev)
 		    CDP_INVALID_VDEV_ID);
 }
 #else
+static inline void
+dp_mlo_mcast_init(struct dp_soc *soc, struct dp_vdev *vdev)
+{
+}
+
+static inline void
+dp_mlo_mcast_deinit(struct dp_soc *soc, struct dp_vdev *vdev)
+{
+}
+
 static void dp_mlo_init_ptnr_list(struct dp_vdev *vdev)
 {
 }
@@ -594,6 +650,9 @@ static QDF_STATUS dp_vdev_attach_be(struct dp_soc *soc, struct dp_vdev *vdev)
 						   HAL_TX_MCAST_CTRL_MEC_NOTIFY);
 	}
 
+	if (vdev->opmode == wlan_op_mode_ap)
+		dp_mlo_mcast_init(soc, vdev);
+
 	dp_mlo_init_ptnr_list(vdev);
 
 	return QDF_STATUS_SUCCESS;
@@ -606,6 +665,9 @@ static QDF_STATUS dp_vdev_detach_be(struct dp_soc *soc, struct dp_vdev *vdev)
 
 	if (vdev->opmode == wlan_op_mode_monitor)
 		return QDF_STATUS_SUCCESS;
+
+	if (vdev->opmode == wlan_op_mode_ap)
+		dp_mlo_mcast_deinit(soc, vdev);
 
 	dp_tx_put_bank_profile(be_soc, be_vdev);
 	dp_clr_mlo_ptnr_list(soc, vdev);
@@ -1403,7 +1465,22 @@ static void dp_txrx_set_mlo_mcast_primary_vdev_param_be(
 					struct dp_vdev_be *be_vdev,
 					cdp_config_param_type val)
 {
+	struct dp_soc_be *be_soc = dp_get_be_soc_from_dp_soc(
+						be_vdev->vdev.pdev->soc);
+	hal_soc_handle_t hal_soc = be_vdev->vdev.pdev->soc->hal_soc;
+	uint8_t vdev_id = be_vdev->vdev.vdev_id;
+
 	be_vdev->mcast_primary = val.cdp_vdev_param_mcast_vdev;
+
+	if (be_vdev->mcast_primary) {
+		hal_tx_vdev_mcast_ctrl_set(hal_soc, vdev_id,
+					   HAL_TX_MCAST_CTRL_NO_SPECIAL);
+		hal_tx_vdev_mcast_ctrl_set(hal_soc, vdev_id + 128,
+					   HAL_TX_MCAST_CTRL_FW_EXCEPTION);
+		dp_mcast_mlo_iter_ptnr_soc(be_soc,
+					   dp_tx_mcast_mlo_reinject_routing_set,
+					   (void *)&be_vdev->mcast_primary);
+	}
 }
 #else
 static void dp_txrx_set_mlo_mcast_primary_vdev_param_be(
