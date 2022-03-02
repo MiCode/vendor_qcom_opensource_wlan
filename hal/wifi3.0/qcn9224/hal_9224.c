@@ -1711,6 +1711,16 @@ uint32_t hal_tx_get_num_ppe_vp_tbl_entries_9224(hal_soc_handle_t hal_soc_hdl)
 	return HAL_PPE_VP_ENTRIES_MAX;
 }
 
+/**
+ * hal_rx_tlv_msdu_done_copy_get_9224() - Get msdu done copy bit from rx_tlv
+ *
+ * Returns: msdu done copy bit
+ */
+static inline uint32_t hal_rx_tlv_msdu_done_copy_get_9224(uint8_t *buf)
+{
+	return HAL_RX_TLV_MSDU_DONE_COPY_GET(buf);
+}
+
 static void hal_hw_txrx_ops_attach_qcn9224(struct hal_soc *hal_soc)
 {
 	/* init and setup */
@@ -1900,7 +1910,8 @@ static void hal_hw_txrx_ops_attach_qcn9224(struct hal_soc *hal_soc)
 #endif
 	hal_soc->ops->hal_rx_tlv_phy_ppdu_id_get =
 					hal_rx_attn_phy_ppdu_id_get_be;
-	hal_soc->ops->hal_rx_tlv_msdu_done_get = hal_rx_tlv_msdu_done_get_be;
+	hal_soc->ops->hal_rx_tlv_msdu_done_get =
+					hal_rx_tlv_msdu_done_copy_get_9224;
 	hal_soc->ops->hal_rx_tlv_msdu_len_get =
 					hal_rx_msdu_start_msdu_len_get_be;
 	hal_soc->ops->hal_rx_get_frame_ctrl_field =
