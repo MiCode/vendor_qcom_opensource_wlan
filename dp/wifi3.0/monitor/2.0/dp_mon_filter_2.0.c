@@ -1315,6 +1315,12 @@ static void dp_rx_mon_filter_show_filter(struct dp_mon_filter_be *filter)
 			    rx_tlv_filter->md_mgmt_filter);
 	DP_MON_FILTER_PRINT("md_ctrl_filter: 0x%x",
 			    rx_tlv_filter->md_ctrl_filter);
+	DP_MON_FILTER_PRINT("mgmt_dma_length: %d",
+			    rx_tlv_filter->mgmt_dma_length);
+	DP_MON_FILTER_PRINT("ctrl_dma_length: %d",
+			    rx_tlv_filter->ctrl_dma_length);
+	DP_MON_FILTER_PRINT("data_dma_length: %d",
+			    rx_tlv_filter->data_dma_length);
 }
 
 static void dp_tx_mon_filter_show_filter(struct dp_mon_filter_be *filter)
@@ -1800,6 +1806,7 @@ dp_rx_mon_filter_h2t_setup(struct dp_soc *soc, struct dp_pdev *pdev,
 {
 	int32_t current_mode = 0;
 	struct htt_rx_ring_tlv_filter *tlv_filter = &filter->tlv_filter;
+	struct htt_rx_ring_tlv_filter *src_tlv_filter;
 	struct dp_mon_pdev *mon_pdev = pdev->monitor_pdev;
 	struct dp_mon_pdev_be *mon_pdev_be =
 		dp_get_be_mon_pdev_from_dp_mon_pdev(mon_pdev);
@@ -1813,6 +1820,7 @@ dp_rx_mon_filter_h2t_setup(struct dp_soc *soc, struct dp_pdev *pdev,
 	     current_mode++) {
 		mon_filter =
 			&mon_pdev_be->filter_be[current_mode][srng_type];
+		src_tlv_filter = &mon_filter->rx_tlv_filter.tlv_filter;
 
 		/*
 		 * Check if the correct mode is enabled or not.
@@ -1924,6 +1932,55 @@ dp_rx_mon_filter_h2t_setup(struct dp_soc *soc, struct dp_pdev *pdev,
 		dst_filter = DP_MON_FILTER_GET(tlv_filter, FILTER_MD_CTRL);
 		dst_filter |= src_filter;
 		DP_MON_FILTER_SET(tlv_filter, FILTER_MD_CTRL, dst_filter);
+
+		/*
+		 * set the dma length for type mgmt
+		 */
+		if (src_tlv_filter->mgmt_dma_length &&
+		    !tlv_filter->mgmt_dma_length)
+			tlv_filter->mgmt_dma_length =
+				src_tlv_filter->mgmt_dma_length;
+
+		/*
+		 * set the dma length for type ctrl
+		 */
+		if (src_tlv_filter->ctrl_dma_length &&
+		    !tlv_filter->ctrl_dma_length)
+			tlv_filter->ctrl_dma_length =
+				src_tlv_filter->ctrl_dma_length;
+
+		/*
+		 * set the dma length for type data
+		 */
+		if (src_tlv_filter->data_dma_length &&
+		    !tlv_filter->data_dma_length)
+			tlv_filter->data_dma_length =
+				src_tlv_filter->data_dma_length;
+
+		/*
+		 * set mpdu logging for type mgmt
+		 */
+		if (src_tlv_filter->mgmt_mpdu_log &&
+		    !tlv_filter->mgmt_mpdu_log)
+			tlv_filter->mgmt_mpdu_log =
+				src_tlv_filter->mgmt_mpdu_log;
+
+		/*
+		 * set mpdu logging for type ctrl
+		 */
+		if (src_tlv_filter->ctrl_mpdu_log &&
+		    !tlv_filter->ctrl_mpdu_log)
+			tlv_filter->ctrl_mpdu_log =
+				src_tlv_filter->ctrl_mpdu_log;
+
+		/*
+		 * set mpdu logging for type data
+		 */
+		if (src_tlv_filter->data_mpdu_log &&
+		    !tlv_filter->data_mpdu_log)
+			tlv_filter->data_mpdu_log =
+				src_tlv_filter->data_mpdu_log;
+
 		dp_mon_filter_show_filter_be(current_mode, mon_filter);
 	}
 }
