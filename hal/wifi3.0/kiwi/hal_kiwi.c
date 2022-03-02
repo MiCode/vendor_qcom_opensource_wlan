@@ -33,7 +33,6 @@
 #include "rx_flow_search_entry.h"
 #include "hal_rx_flow_info.h"
 #include "hal_be_api.h"
-#include "hal_be_api_mon.h"
 #include "reo_destination_ring_with_pn.h"
 
 #include <hal_be_rx.h>
@@ -124,6 +123,7 @@ struct tcl_data_cmd gtcl_data_symbol __attribute__((used));
 
 #include <hal_generic_api.h>
 #include <hal_be_generic_api.h>
+#include "hal_be_api_mon.h"
 
 #define LINK_DESC_SIZE (NUM_OF_DWORDS_RX_MSDU_LINK << 2)
 

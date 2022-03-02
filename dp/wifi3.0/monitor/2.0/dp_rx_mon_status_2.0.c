@@ -43,7 +43,7 @@ dp_rx_process_pktlog_be(struct dp_soc *soc, struct dp_pdev *pdev,
 	qdf_nbuf_t nbuf = NULL;
 	enum WDI_EVENT pktlog_mode = WDI_NO_VAL;
 
-	if (mon_pdev->dp_peer_based_pktlog &&
+	if (!mon_pdev->dp_peer_based_pktlog &&
 	    (mon_pdev->rx_pktlog_mode == DP_RX_PKTLOG_DISABLED)) {
 		return QDF_STATUS_E_INVAL;
 	}
