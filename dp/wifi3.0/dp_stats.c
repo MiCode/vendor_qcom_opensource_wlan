@@ -7558,7 +7558,9 @@ void dp_update_pdev_stats(struct dp_pdev *tgtobj,
 {
 	uint8_t i;
 	uint8_t pream_type;
+	struct cdp_pdev_stats *pdev_stats = NULL;
 
+	pdev_stats = &tgtobj->stats;
 	for (pream_type = 0; pream_type < DOT11_MAX; pream_type++) {
 		for (i = 0; i < MAX_MCS; i++) {
 			tgtobj->stats.tx.pkt_type[pream_type].
@@ -7598,9 +7600,20 @@ void dp_update_pdev_stats(struct dp_pdev *tgtobj,
 			srcobj->rx.sgi_count[i];
 	}
 
-	for (i = 0; i < MAX_RECEPTION_TYPES; i++)
+	for (i = 0; i < MAX_RECEPTION_TYPES; i++) {
 		tgtobj->stats.rx.reception_type[i] +=
 			srcobj->rx.reception_type[i];
+		tgtobj->stats.rx.ppdu_cnt[i] += srcobj->rx.ppdu_cnt[i];
+	}
+
+	for (i = 0; i < MAX_TRANSMIT_TYPES; i++) {
+		tgtobj->stats.tx.transmit_type[i].num_msdu +=
+				srcobj->tx.transmit_type[i].num_msdu;
+		tgtobj->stats.tx.transmit_type[i].num_mpdu +=
+				srcobj->tx.transmit_type[i].num_mpdu;
+		tgtobj->stats.tx.transmit_type[i].mpdu_tried +=
+				srcobj->tx.transmit_type[i].mpdu_tried;
+	}
 
 	tgtobj->stats.tx.comp_pkt.bytes += srcobj->tx.comp_pkt.bytes;
 	tgtobj->stats.tx.comp_pkt.num += srcobj->tx.comp_pkt.num;
@@ -7719,6 +7732,8 @@ void dp_update_pdev_stats(struct dp_pdev *tgtobj,
 		srcobj->rx.peer_unauth_rx_pkt_drop;
 	tgtobj->stats.rx.policy_check_drop +=
 		srcobj->rx.policy_check_drop;
+
+	DP_UPDATE_11BE_STATS(pdev_stats, srcobj);
 }
 
 void dp_update_vdev_ingress_stats(struct dp_vdev *tgtobj)
