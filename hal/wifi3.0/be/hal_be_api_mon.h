@@ -1414,7 +1414,6 @@ hal_rx_parse_eht_sig_hdr(struct hal_soc *hal_soc, uint8_t *tlv,
 	return HAL_TLV_STATUS_PPDU_NOT_DONE;
 }
 
-#ifdef WLAN_RX_MON_PARSE_CMN_USER_INFO
 static inline uint32_t
 hal_rx_parse_cmn_usr_info(struct hal_soc *hal_soc, uint8_t *tlv,
 			  struct hal_rx_ppdu_info *ppdu_info)
@@ -1436,14 +1435,6 @@ hal_rx_parse_cmn_usr_info(struct hal_soc *hal_soc, uint8_t *tlv,
 
 	return HAL_TLV_STATUS_PPDU_NOT_DONE;
 }
-#else
-static inline uint32_t
-hal_rx_parse_cmn_usr_info(struct hal_soc *hal_soc, uint8_t *tlv,
-			  struct hal_rx_ppdu_info *ppdu_info)
-{
-	return HAL_TLV_STATUS_PPDU_NOT_DONE;
-}
-#endif
 
 static inline enum ieee80211_eht_ru_size
 hal_rx_mon_hal_ru_size_to_ieee80211_ru_size(struct hal_soc *hal_soc,
