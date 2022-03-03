@@ -957,10 +957,11 @@ dfs_populate_40mhz_available_channel_for_freq(struct wlan_dfs *dfs,
 static uint8_t
 dfs_populate_available_channel_for_freq(struct wlan_dfs *dfs,
 					struct chan_bonding_bitmap *bitmap,
-					uint8_t chan_width,
+					uint16_t chan_width,
 					uint16_t *freq_list)
 {
 	switch (chan_width) {
+	case DFS_CH_WIDTH_320MHZ:
 	case DFS_CH_WIDTH_160MHZ:
 	case DFS_CH_WIDTH_80P80MHZ:
 	case DFS_CH_WIDTH_80MHZ:
@@ -1088,6 +1089,63 @@ static inline void dfs_assign_6g_channels(struct  chan_bonding_bitmap *ch_map)
 #endif
 
 /**
+ * dfs_find_num_sub_channels_for_chwidth_320_160() - Find the max number
+ * of sub channels for the given channel width (320/160)
+ * @chan_width: Channel width
+ *
+ * Return - Number of sub-channels
+ */
+static uint8_t
+dfs_find_num_sub_channels_for_chwidth_320_160(uint16_t chan_width)
+{
+	if (chan_width == DFS_CH_WIDTH_160MHZ)
+		return DFS_MAX_NUM_160_SUBCHAN;
+	else if (chan_width == DFS_CH_WIDTH_320MHZ)
+		return DFS_MAX_NUM_240_SUBCHAN;
+
+	return 0;
+}
+
+/**
+ * dfs_find_next_chan_start_freq_for_320_160() - Find the next 160/320 channel's
+ * start freq based on the available channel list. Validate the
+ * continuity of the sub channels of 160/320M BW, if they are contiguous
+ * declare channel to be found. Return the start_freq of the channel band found.
+ * @chan_count: Total number of available channels.
+ * @freq_list: Available list of frequency
+ * @chan_width: Target channel width
+ * @chan_found: Bool to indicate if channel is found
+ *
+ * Return: Next chan's start freq
+ */
+
+static qdf_freq_t
+dfs_find_next_chan_start_freq_for_320_160(uint8_t chan_count,
+					  uint16_t *freq_list,
+					  uint16_t chan_width, bool *chan_found)
+{
+	uint8_t i;
+	uint8_t count = 0;
+	qdf_freq_t next_chan_start_freq = 0;
+	uint8_t num_sub_chans =
+		dfs_find_num_sub_channels_for_chwidth_320_160(chan_width);
+
+	for (i = 1; i < chan_count; i++) {
+		if ((freq_list[i] - freq_list[i - 1]) ==
+		    DFS_NEXT_5GHZ_CHANNEL_FREQ_OFFSET)
+			count++;
+		else
+			count = 0;
+		if (count == num_sub_chans - 1) {
+			*chan_found = true;
+			next_chan_start_freq = freq_list[i - count];
+			break;
+		}
+	}
+	return next_chan_start_freq;
+}
+
+/**
  * dfs_find_ch_with_fallback_for_freq()- find random channel
  * @dfs: Pointer to DFS structure.
  * @chan_wd: channel width
@@ -1102,7 +1160,7 @@ static inline void dfs_assign_6g_channels(struct  chan_bonding_bitmap *ch_map)
  */
 #ifdef CONFIG_CHAN_FREQ_API
 static uint16_t dfs_find_ch_with_fallback_for_freq(struct wlan_dfs *dfs,
-						   uint8_t *chan_wd,
+						   uint16_t *chan_wd,
 						   qdf_freq_t *center_freq_seg1,
 						   uint16_t *freq_lst,
 						   uint32_t num_chan)
@@ -1110,9 +1168,9 @@ static uint16_t dfs_find_ch_with_fallback_for_freq(struct wlan_dfs *dfs,
 	bool flag = false;
 	uint32_t rand_byte = 0;
 	struct  chan_bonding_bitmap ch_map = { { {0} } };
-	uint8_t count = 0, i, index = 0, final_cnt = 0;
+	uint8_t i, index = 0, final_cnt = 0;
 	uint16_t target_channel = 0;
-	uint16_t primary_seg_start_ch = 0, sec_seg_ch = 0, new_160_start_ch = 0;
+	uint16_t primary_seg_start_ch = 0, sec_seg_ch = 0, new_start_ch;
 	uint16_t final_lst[NUM_CHANNELS] = {0};
 
 	/* initialize ch_map for all 80 MHz bands: we have 6 80MHz bands */
@@ -1136,9 +1194,10 @@ static uint16_t dfs_find_ch_with_fallback_for_freq(struct wlan_dfs *dfs,
 	final_cnt = dfs_populate_available_channel_for_freq(dfs, &ch_map,
 							    *chan_wd, final_lst);
 
-	/* If no valid ch bonding found, fallback */
+	/* If no valid 80mhz bonded chan found, fallback */
 	if (final_cnt == 0) {
-		if ((*chan_wd == DFS_CH_WIDTH_160MHZ) ||
+		if ((*chan_wd == DFS_CH_WIDTH_320MHZ) ||
+		    (*chan_wd == DFS_CH_WIDTH_160MHZ) ||
 		    (*chan_wd == DFS_CH_WIDTH_80P80MHZ) ||
 		    (*chan_wd == DFS_CH_WIDTH_80MHZ)) {
 			dfs_info(dfs, WLAN_DEBUG_DFS_RANDOM_CHAN,
@@ -1155,47 +1214,64 @@ static uint16_t dfs_find_ch_with_fallback_for_freq(struct wlan_dfs *dfs,
 	/* ch count should be > 8 to switch new channel in 160Mhz band */
 	if (((*chan_wd == DFS_CH_WIDTH_160MHZ) ||
 	     (*chan_wd == DFS_CH_WIDTH_80P80MHZ)) &&
-	     (final_cnt < DFS_MAX_20M_SUB_CH)) {
+	     (final_cnt < DFS_MAX_NUM_160_SUBCHAN)) {
 		dfs_info(dfs, WLAN_DEBUG_DFS_RANDOM_CHAN,
 			 "from [%d] to 80Mhz", *chan_wd);
 		*chan_wd = DFS_CH_WIDTH_80MHZ;
 		return 0;
 	}
 
-	if (*chan_wd == DFS_CH_WIDTH_160MHZ) {
+	/* ch count should be 12 to switch new 320 channel band (240MHZ) */
+	if (*chan_wd == DFS_CH_WIDTH_320MHZ) {
+		if (final_cnt < DFS_MAX_NUM_240_SUBCHAN) {
+			dfs_info(dfs, WLAN_DEBUG_DFS_RANDOM_CHAN,
+				 "from [%d] to 160Mhz", *chan_wd);
+			*chan_wd = DFS_CH_WIDTH_160MHZ;
+			return 0;
+		}
+	}
+
+	if (*chan_wd == DFS_CH_WIDTH_320MHZ ||
+	    *chan_wd == DFS_CH_WIDTH_160MHZ) {
 		/*
 		 * Only 2 blocks for 160Mhz bandwidth i.e 36-64 & 100-128
 		 * and all the channels in these blocks are continuous
 		 * and separated by 4Mhz.
+		 * Only 1 block of 240 channel is
+		 * available from 100 - 140 comprising of 12 sub 20 channels.
+		 * These are continuous and separated by 20MHZ in
+		 * frequency spectrum.
 		 */
-		for (i = 1; ((i < final_cnt)); i++) {
-			if ((final_lst[i] - final_lst[i - 1]) ==
-			     DFS_NEXT_5GHZ_CHANNEL_FREQ_OFFSET)
-				count++;
-			else
-				count = 0;
-			if (count == DFS_MAX_20M_SUB_CH - 1) {
-				flag = true;
-				new_160_start_ch = final_lst[i - count];
-				break;
-			}
-		}
+		new_start_ch =
+		    dfs_find_next_chan_start_freq_for_320_160(final_cnt,
+							      final_lst,
+							      *chan_wd,
+							      &flag);
 	} else if (*chan_wd == DFS_CH_WIDTH_80P80MHZ) {
 		flag = true;
 	}
 
-	if ((flag == false) && (*chan_wd > DFS_CH_WIDTH_80MHZ)) {
-		dfs_info(dfs, WLAN_DEBUG_DFS_RANDOM_CHAN,
-			 "from [%d] to 80Mhz", *chan_wd);
-		*chan_wd = DFS_CH_WIDTH_80MHZ;
-		return 0;
+	if (!flag) {
+		if (*chan_wd == DFS_CH_WIDTH_320MHZ) {
+			dfs_info(dfs, WLAN_DEBUG_DFS_RANDOM_CHAN,
+				 "from [%d] to 160Mhz", *chan_wd);
+			*chan_wd = DFS_CH_WIDTH_160MHZ;
+			return 0;
+		} else if (*chan_wd == DFS_CH_WIDTH_160MHZ) {
+			dfs_info(dfs, WLAN_DEBUG_DFS_RANDOM_CHAN,
+				 "from [%d] to 80Mhz", *chan_wd);
+			*chan_wd = DFS_CH_WIDTH_80MHZ;
+			return 0;
+		}
 	}
 
-	if (*chan_wd == DFS_CH_WIDTH_160MHZ) {
+	if (*chan_wd == DFS_CH_WIDTH_320MHZ ||
+	    *chan_wd == DFS_CH_WIDTH_160MHZ) {
 		get_random_bytes((uint8_t *)&rand_byte, 1);
 		rand_byte = (rand_byte + qdf_mc_timer_get_system_ticks())
-			% DFS_MAX_20M_SUB_CH;
-		target_channel = new_160_start_ch + (rand_byte *
+			% dfs_find_num_sub_channels_for_chwidth_320_160
+			(*chan_wd);
+		target_channel = new_start_ch + (rand_byte *
 				DFS_80_NUM_SUB_CHANNEL_FREQ);
 	} else if (*chan_wd == DFS_CH_WIDTH_80P80MHZ) {
 		get_random_bytes((uint8_t *)&rand_byte, 1);
@@ -1221,7 +1297,7 @@ static uint16_t dfs_find_ch_with_fallback_for_freq(struct wlan_dfs *dfs,
 			}
 		}
 
-		if (!sec_seg_ch && (final_cnt == DFS_MAX_20M_SUB_CH))
+		if (!sec_seg_ch && (final_cnt == DFS_MAX_NUM_160_SUBCHAN))
 			*chan_wd = DFS_CH_WIDTH_160MHZ;
 		else if (!sec_seg_ch)
 			*chan_wd = DFS_CH_WIDTH_80MHZ;
@@ -1478,7 +1554,7 @@ uint16_t dfs_prepare_random_channel_for_freq(struct wlan_dfs *dfs,
 	uint16_t flag_no_weather = 0;
 	uint16_t *leakage_adjusted_lst;
 	uint16_t final_lst[NUM_CHANNELS] = {0};
-	uint8_t *chan_wd = (uint8_t *)&chan_params->ch_width;
+	uint16_t *chan_wd = (uint16_t *)&chan_params->ch_width;
 	bool flag_no_spur_leakage_adj_chans = false;
 
 	if (!chan_list || !chan_cnt) {
@@ -1488,7 +1564,7 @@ uint16_t dfs_prepare_random_channel_for_freq(struct wlan_dfs *dfs,
 		return 0;
 	}
 
-	if (*chan_wd < DFS_CH_WIDTH_20MHZ || *chan_wd > DFS_CH_WIDTH_80P80MHZ) {
+	if (*chan_wd < DFS_CH_WIDTH_20MHZ || *chan_wd > DFS_CH_WIDTH_320MHZ) {
 		dfs_info(dfs, WLAN_DEBUG_DFS_RANDOM_CHAN,
 			 "Invalid chan_wd %d", *chan_wd);
 		return 0;

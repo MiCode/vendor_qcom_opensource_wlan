@@ -232,14 +232,9 @@ target_if_dfs_is_radar_found_chan_freq_eq_center_freq(
 		target_if_err("null wmi_handle");
 		return false;
 	}
-
-	/*
-	 * Uncomment the following service as soon as it is ready.
-	 *
-	 * return wmi_service_enabled(wmi_handle,
-	 * wmi_is_radar_found_chan_freq_eq_center_freq);
-	 */
-	return false;
+	return wmi_service_enabled
+		(wmi_handle,
+		 wmi_service_radar_found_chan_freq_eq_center_freq);
 }
 #else
 static bool
