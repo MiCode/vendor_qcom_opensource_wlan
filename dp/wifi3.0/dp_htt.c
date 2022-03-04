@@ -2578,6 +2578,24 @@ dp_queue_mon_ring_stats(struct dp_pdev *pdev,
 }
 #endif
 
+#ifndef WLAN_DP_DISABLE_TCL_CMD_CRED_SRNG
+static inline QDF_STATUS
+dp_get_tcl_cmd_cred_ring_state_from_hal(struct dp_pdev *pdev,
+					struct dp_srng_ring_state *ring_state)
+{
+	return dp_get_srng_ring_state_from_hal(pdev->soc, pdev,
+					       &pdev->soc->tcl_cmd_credit_ring,
+					       TCL_CMD_CREDIT, ring_state);
+}
+#else
+static inline QDF_STATUS
+dp_get_tcl_cmd_cred_ring_state_from_hal(struct dp_pdev *pdev,
+					struct dp_srng_ring_state *ring_state)
+{
+	return QDF_STATUS_SUCCESS;
+}
+#endif
+
 /**
  * dp_queue_srng_ring_stats(): Print pdev hal level ring stats
  * @pdev: DP_pdev handle
@@ -2646,12 +2664,8 @@ static void dp_queue_ring_stats(struct dp_pdev *pdev)
 	if (status == QDF_STATUS_SUCCESS)
 		qdf_assert_always(++j < DP_MAX_SRNGS);
 
-	status = dp_get_srng_ring_state_from_hal
-				(pdev->soc, pdev,
-				 &pdev->soc->tcl_cmd_credit_ring,
-				 TCL_CMD_CREDIT,
-				 &soc_srngs_state->ring_state[j]);
-
+	status = dp_get_tcl_cmd_cred_ring_state_from_hal
+				(pdev, &soc_srngs_state->ring_state[j]);
 	if (status == QDF_STATUS_SUCCESS)
 		qdf_assert_always(++j < DP_MAX_SRNGS);
 
