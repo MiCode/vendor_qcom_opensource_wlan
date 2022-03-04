@@ -52,6 +52,35 @@ void dp_rx_mon_add_ppdu_info_to_wq(struct dp_mon_pdev_be *mon_pdev_be,
 	}
 }
 
+/**
+ * dp_rx_mon_handle_flush_n_trucated_ppdu () - Handle flush and truncated ppdu
+ *
+ * @soc: DP soc handle
+ * @pdev: pdev handle
+ * @mon_desc: mon sw desc
+ */
+static inline void
+dp_rx_mon_handle_flush_n_trucated_ppdu(struct dp_soc *soc,
+				       struct dp_pdev *pdev,
+				       struct dp_mon_desc *mon_desc)
+{
+	union dp_mon_desc_list_elem_t *desc_list = NULL;
+	union dp_mon_desc_list_elem_t *tail = NULL;
+	struct dp_mon_soc *mon_soc = soc->monitor_soc;
+	struct dp_mon_soc_be *mon_soc_be =
+			dp_get_be_mon_soc_from_dp_mon_soc(mon_soc);
+	struct dp_mon_desc_pool *rx_mon_desc_pool = &mon_soc_be->rx_desc_mon;
+	uint16_t work_done;
+
+	qdf_frag_free(mon_desc->buf_addr);
+	dp_mon_add_to_free_desc_list(&desc_list, &tail, mon_desc);
+	work_done = 1;
+	dp_mon_buffers_replenish(soc, &soc->rxdma_mon_buf_ring[0],
+				 rx_mon_desc_pool,
+				 work_done,
+				 &desc_list, &tail);
+}
+
 void dp_rx_mon_process_tlv_status(struct dp_pdev *pdev,
 				  struct hal_rx_ppdu_info *ppdu_info,
 				  void *status_frag,
@@ -337,6 +366,16 @@ dp_rx_mon_srng_process_2_0(struct dp_soc *soc, struct dp_intr *int_ctx,
 		hal_be_get_mon_dest_status(soc->hal_soc,
 					   rx_mon_dst_ring_desc,
 					   &hal_mon_rx_desc);
+		/* If it's empty descriptor, skip processing
+		 * and process next hW desc
+		 */
+		if (hal_mon_rx_desc.empty_descriptor == 1) {
+			dp_mon_debug("empty descriptor found mon_pdev: %pK",
+				     mon_pdev);
+			rx_mon_dst_ring_desc =
+				hal_srng_dst_get_next(hal_soc, mon_dst_srng);
+			continue;
+		}
 		mon_desc = (struct dp_mon_desc *)(uintptr_t)(hal_mon_rx_desc.buf_addr);
 		qdf_assert_always(mon_desc);
 
@@ -348,6 +387,20 @@ dp_rx_mon_srng_process_2_0(struct dp_soc *soc, struct dp_intr *int_ctx,
 		}
 		mon_desc->end_offset = hal_mon_rx_desc.end_offset;
 
+		/* Flush and truncated status buffers content
+		 * need to discarded
+		 */
+		if (hal_mon_rx_desc.end_reason == HAL_MON_FLUSH_DETECTED ||
+		    hal_mon_rx_desc.end_reason == HAL_MON_PPDU_TRUNCATED) {
+			dp_mon_debug("end_resaon: %d mon_pdev: %pK",
+				     hal_mon_rx_desc.end_reason, mon_pdev);
+			dp_rx_mon_handle_flush_n_trucated_ppdu(soc,
+							       pdev,
+							       mon_desc);
+			rx_mon_dst_ring_desc = hal_srng_dst_get_next(hal_soc,
+							mon_dst_srng);
+			continue;
+		}
 		if (desc_idx >= DP_MON_MAX_STATUS_BUF)
 			qdf_assert_always(0);
 

@@ -288,6 +288,37 @@ typedef struct rx_mpdu_start hal_rx_mon_mpdu_start_t;
 typedef struct rx_msdu_end hal_rx_mon_msdu_end_t;
 #endif
 
+/*
+ * struct mon_destination_drop - monitor drop descriptor
+ *
+ * @ppdu_drop_cnt: PPDU drop count
+ * @mpdu_drop_cnt: MPDU drop count
+ * @tlv_drop_cnt: TLV drop count
+ * @end_of_ppdu_seen: end of ppdu seen
+ * @reserved_0a: rsvd
+ * @reserved_1a: rsvd
+ * @ppdu_id: PPDU ID
+ * @reserved_3a: rsvd
+ * @initiator: initiator ppdu
+ * @empty_descriptor: empty descriptor
+ * @ring_id: ring id
+ * @looping_count: looping count
+ */
+struct mon_destination_drop {
+	uint32_t ppdu_drop_cnt                     : 10,
+		 mpdu_drop_cnt                     : 10,
+		 tlv_drop_cnt                      : 10,
+		 end_of_ppdu_seen                  :  1,
+		 reserved_0a                       :  1;
+	uint32_t reserved_1a                       : 32;
+	uint32_t ppdu_id                           : 32;
+	uint32_t reserved_3a                       : 18,
+		 initiator                         :  1,
+		 empty_descriptor                  :  1,
+		 ring_id                           :  8,
+		 looping_count                     :  4;
+};
+
 #define HAL_MON_BUFFER_ADDR_31_0_GET(buff_addr_info)	\
 	(_HAL_MS((*_OFFSET_TO_WORD_PTR(buff_addr_info,	\
 		HAL_BUFFER_ADDR_INFO_BUFFER_ADDR_31_0_OFFSET)),	\
@@ -420,17 +451,25 @@ hal_be_get_mon_dest_status(hal_soc_handle_t hal_soc,
 {
 	struct mon_destination_ring *desc = hw_desc;
 
-	status->buf_addr = HAL_RX_GET(desc, MON_DESTINATION_RING_STAT,
-				      BUF_VIRT_ADDR_31_0) |
-				      (((uint64_t)HAL_RX_GET(desc,
-				      MON_DESTINATION_RING_STAT,
-				      BUF_VIRT_ADDR_63_32)) << 32);
-
-	status->ppdu_id = desc->ppdu_id;
-	status->end_offset = desc->end_offset;
-	status->end_reason = desc->end_reason;
-	status->initiator = desc->initiator;
 	status->empty_descriptor = desc->empty_descriptor;
+	if (status->empty_descriptor) {
+		struct mon_destination_drop *drop_desc = hw_desc;
+
+		status->buf_addr = 0;
+		status->ppdu_drop_count = drop_desc->ppdu_drop_cnt;
+		status->mpdu_drop_count = drop_desc->mpdu_drop_cnt;
+		status->tlv_drop_count = drop_desc->tlv_drop_cnt;
+		status->end_of_ppdu_dropped = drop_desc->end_of_ppdu_seen;
+	} else {
+		status->buf_addr = HAL_RX_GET(desc, MON_DESTINATION_RING_STAT,BUF_VIRT_ADDR_31_0) |
+						(((uint64_t)HAL_RX_GET(desc,
+								       MON_DESTINATION_RING_STAT,
+								       BUF_VIRT_ADDR_63_32)) << 32);
+		status->end_reason = desc->end_reason;
+		status->end_offset = desc->end_offset;
+	}
+	status->ppdu_id = desc->ppdu_id;
+	status->initiator = desc->initiator;
 	status->looping_count = desc->looping_count;
 }
 #endif
