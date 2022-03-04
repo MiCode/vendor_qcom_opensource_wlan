@@ -37,7 +37,7 @@
 #include "dp_ratetable.h"
 #endif
 #include <qdf_module.h>
-#ifdef CONFIG_SAWF_DEF_QUEUEUS
+#ifdef CONFIG_SAWF_DEF_QUEUES
 #include <dp_sawf_htt.h>
 #endif
 
@@ -2422,7 +2422,7 @@ static void dp_vdev_txrx_hw_stats_handler(struct htt_soc *soc,
 {}
 #endif
 
-#ifdef CONFIG_SAWF_DEF_QEUEUES
+#ifdef CONFIG_SAWF_DEF_QUEUES
 static void dp_sawf_def_queues_update_map_report_conf(struct htt_soc *soc,
 						      uint32_t *msg_word,
 						      qdf_nbuf_t htt_t2h_msg)
