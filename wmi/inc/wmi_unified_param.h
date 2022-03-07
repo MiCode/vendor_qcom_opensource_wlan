@@ -1145,6 +1145,7 @@ struct peer_assoc_ml_partner_links {
  * @peer_eht_mcs_count: Peer EHT MCS TX/RX MAP count
  * @peer_eht_rx_mcs_set: Peer EHT RX MCS MAP
  * @peer_eht_tx_mcs_set: Peer EHT TX MCS MAP
+ * @peer_eht_ppet: Peer EHT PPET info
  * @peer_ppet: Peer HE PPET info
  * @peer_bss_max_idle_option: Peer BSS Max Idle option update
  * @akm: AKM info
@@ -1224,6 +1225,7 @@ struct peer_assoc_params {
 	uint32_t peer_eht_rx_mcs_set[WMI_HOST_MAX_EHT_RATE_SET];
 	uint32_t peer_eht_tx_mcs_set[WMI_HOST_MAX_EHT_RATE_SET];
 	uint16_t puncture_pattern;
+	struct wmi_host_ppe_threshold peer_eht_ppet;
 #endif
 	struct wmi_host_ppe_threshold peer_ppet;
 	u_int8_t peer_bsscolor_rept_info;
@@ -4582,10 +4584,30 @@ struct ftm_time_sync_offset {
  * struct wmi_host_tsf_event_- Get tsf event info
  * @vdev_id: vdev id
  * @tsf: tsf
+ * @tsf_low: low 32bit of tsf
+ * @tsf_high: high 32 bit of tsf
+ * @qtimer_low: low 32 bits of qtimer
+ * @qtimer_high: high 32 bits of qtimer
+ * @tsf_id: TSF ID for the current vdev
+ * @tsf_id_valid: is TSF valid
+ * @mac_id: MAC identifier
+ * @mac_id_valid: is MAC id valid
+ * @wlan_global_tsf_low: low 32 bits of wlan global tsf
+ * @wlan_global_tsf_high: high 32 bits of wlan global tsf
  */
 struct wmi_host_tsf_event {
 	uint32_t vdev_id;
 	uint64_t tsf;
+	uint32_t tsf_low;
+	uint32_t tsf_high;
+	uint32_t qtimer_low;
+	uint32_t qtimer_high;
+	uint32_t tsf_id;
+	uint32_t tsf_id_valid;
+	uint32_t mac_id;
+	uint32_t mac_id_valid;
+	uint32_t wlan_global_tsf_low;
+	uint32_t wlan_global_tsf_high;
 };
 
 #define WMI_EVENT_ID_INVALID 0

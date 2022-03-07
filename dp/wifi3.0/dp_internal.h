@@ -41,6 +41,8 @@
 /* Macro For NYSM value received in VHT TLV */
 #define VHT_SGI_NYSM 3
 
+#define INVALID_WBM_RING_NUM 0xFF
+
 /* struct htt_dbgfs_cfg - structure to maintain required htt data
  * @msg_word: htt msg sent to upper layer
  * @m: qdf debugfs file pointer
@@ -555,7 +557,7 @@ static inline bool dp_monitor_is_vdev_timer_running(struct dp_soc *soc)
 }
 
 static inline
-void dp_monitor_pdev_set_mon_vdev(struct dp_pdev *pdev)
+void dp_monitor_pdev_set_mon_vdev(struct dp_vdev *vdev)
 {
 }
 
@@ -655,7 +657,7 @@ dp_monitor_get_rx_status(struct dp_pdev *pdev)
 }
 
 static inline
-void dp_monitor_pdev_config_scan_spcl_vap(struct dp_pdev *pdev)
+void dp_monitor_pdev_config_scan_spcl_vap(struct dp_pdev *pdev, bool val)
 {
 }
 
@@ -677,6 +679,23 @@ dp_monitor_pdev_tx_capture_get_stats(struct dp_soc *soc, struct dp_pdev *pdev,
 				     struct cdp_pdev_tx_capture_stats *stats)
 {
 	return QDF_STATUS_E_FAILURE;
+}
+
+#ifdef DP_POWER_SAVE
+static inline
+void dp_monitor_pktlog_reap_pending_frames(struct dp_pdev *pdev)
+{
+}
+
+static inline
+void dp_monitor_pktlog_start_reap_timer(struct dp_pdev *pdev)
+{
+}
+#endif
+
+static inline bool dp_monitor_is_configured(struct dp_pdev *pdev)
+{
+	return false;
 }
 #endif
 
@@ -1296,6 +1315,16 @@ void dp_update_pdev_stats(struct dp_pdev *tgtobj,
 void dp_update_vdev_ingress_stats(struct dp_vdev *tgtobj);
 
 /**
+ * dp_update_vdev_rate_stats() - Update the vdev rate stats
+ * @tgtobj: tgt buffer for vdev stats
+ * @srcobj: srcobj vdev stats
+ *
+ * Return: None
+ */
+void dp_update_vdev_rate_stats(struct cdp_vdev_stats *tgtobj,
+			       struct cdp_vdev_stats *srcobj);
+
+/**
  * dp_update_pdev_ingress_stats(): Update the pdev ingress stats
  * @tgtobj: pdev handle
  * @srcobj: vdev stats structure
@@ -1392,6 +1421,13 @@ void dp_update_vdev_stats_on_peer_unmap(struct dp_vdev *vdev,
 		DP_STATS_AGGR(_tgtobj, _srcobj, tx.dropped.fw_reason1); \
 		DP_STATS_AGGR(_tgtobj, _srcobj, tx.dropped.fw_reason2); \
 		DP_STATS_AGGR(_tgtobj, _srcobj, tx.dropped.fw_reason3); \
+		DP_STATS_AGGR(_tgtobj, _srcobj, tx.dropped.fw_rem_queue_disable); \
+		DP_STATS_AGGR(_tgtobj, _srcobj, tx.dropped.fw_rem_no_match); \
+		DP_STATS_AGGR(_tgtobj, _srcobj, tx.dropped.drop_threshold); \
+		DP_STATS_AGGR(_tgtobj, _srcobj, tx.dropped.drop_link_desc_na); \
+		DP_STATS_AGGR(_tgtobj, _srcobj, tx.dropped.invalid_drop); \
+		DP_STATS_AGGR(_tgtobj, _srcobj, tx.dropped.mcast_vdev_drop); \
+		DP_STATS_AGGR(_tgtobj, _srcobj, tx.dropped.invalid_rr); \
 		DP_STATS_AGGR(_tgtobj, _srcobj, tx.dropped.age_out); \
 								\
 		DP_STATS_AGGR(_tgtobj, _srcobj, rx.err.mic_err); \
@@ -1510,6 +1546,20 @@ void dp_update_vdev_stats_on_peer_unmap(struct dp_vdev *vdev,
 					_srcobj->tx.dropped.fw_reason2; \
 		_tgtobj->tx.dropped.fw_reason3 += \
 					_srcobj->tx.dropped.fw_reason3; \
+		_tgtobj->tx.dropped.fw_rem_queue_disable += \
+					_srcobj->tx.dropped.fw_rem_queue_disable; \
+		_tgtobj->tx.dropped.fw_rem_no_match += \
+					_srcobj->tx.dropped.fw_rem_no_match; \
+		_tgtobj->tx.dropped.drop_threshold += \
+					_srcobj->tx.dropped.drop_threshold; \
+		_tgtobj->tx.dropped.drop_link_desc_na += \
+					_srcobj->tx.dropped.drop_link_desc_na; \
+		_tgtobj->tx.dropped.invalid_drop += \
+					_srcobj->tx.dropped.invalid_drop; \
+		_tgtobj->tx.dropped.mcast_vdev_drop += \
+					_srcobj->tx.dropped.mcast_vdev_drop; \
+		_tgtobj->tx.dropped.invalid_rr += \
+					_srcobj->tx.dropped.invalid_rr; \
 		_tgtobj->tx.failed_retry_count += \
 					_srcobj->tx.failed_retry_count; \
 		_tgtobj->tx.retry_count += _srcobj->tx.retry_count; \
@@ -2918,15 +2968,17 @@ QDF_STATUS dp_rx_tid_update_wifi3(struct dp_peer *peer, int tid, uint32_t
 uint16_t dp_get_peer_mac_list(ol_txrx_soc_handle soc, uint8_t vdev_id,
 			      u_int8_t newmac[][QDF_MAC_ADDR_SIZE],
 			      u_int16_t mac_cnt, bool limit);
+
 /*
- * dp_is_hw_dbs_enable() - Procedure to check if DBS is supported
- * @soc:		DP SoC context
- * @max_mac_rings:	No of MAC rings
+ * dp_update_num_mac_rings_for_dbs() - Update No of MAC rings based on
+ *				       DBS check
+ * @soc: DP SoC context
+ * @max_mac_rings: Pointer to variable for No of MAC rings
  *
  * Return: None
  */
-void dp_is_hw_dbs_enable(struct dp_soc *soc,
-				int *max_mac_rings);
+void dp_update_num_mac_rings_for_dbs(struct dp_soc *soc,
+				     int *max_mac_rings);
 
 
 #if defined(WLAN_SUPPORT_RX_FISA)

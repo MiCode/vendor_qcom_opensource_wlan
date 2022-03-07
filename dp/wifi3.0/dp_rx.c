@@ -804,6 +804,35 @@ void dp_rx_da_learn(struct dp_soc *soc, uint8_t *rx_tlv_hdr,
 }
 #endif
 
+#ifdef QCA_SUPPORT_TX_MIN_RATES_FOR_SPECIAL_FRAMES
+/*
+ * dp_classify_critical_pkts() - API for marking critical packets
+ * @soc: dp_soc context
+ * @vdev: vdev on which packet is to be sent
+ * @nbuf: nbuf that has to be classified
+ *
+ * The function parses the packet, identifies whether its a critical frame and
+ * marks QDF_NBUF_CB_TX_EXTRA_IS_CRITICAL bit in qdf_nbuf_cb for the nbuf.
+ * Code for marking which frames are CRITICAL is accessed via callback.
+ * EAPOL, ARP, DHCP, DHCPv6, ICMPv6 NS/NA are the typical critical frames.
+ *
+ * Return: None
+ */
+static
+void dp_classify_critical_pkts(struct dp_soc *soc, struct dp_vdev *vdev,
+			       qdf_nbuf_t nbuf)
+{
+	if (vdev->tx_classify_critical_pkt_cb)
+		vdev->tx_classify_critical_pkt_cb(vdev->osif_vdev, nbuf);
+}
+#else
+static inline
+void dp_classify_critical_pkts(struct dp_soc *soc, struct dp_vdev *vdev,
+			       qdf_nbuf_t nbuf)
+{
+}
+#endif
+
 /*
  * dp_rx_intrabss_mcbc_fwd() - Does intrabss forward for mcast packets
  *
@@ -840,8 +869,16 @@ bool dp_rx_intrabss_mcbc_fwd(struct dp_soc *soc, struct dp_txrx_peer *ta_peer,
 		return false;
 
 	len = QDF_NBUF_CB_RX_PKT_LEN(nbuf);
+
 	qdf_nbuf_set_tx_fctx_type(nbuf_copy, &ta_peer->peer_id,
 				  CB_FTYPE_INTRABSS_FWD);
+
+	dp_classify_critical_pkts(soc, ta_peer->vdev, nbuf_copy);
+
+	if (soc->arch_ops.dp_rx_intrabss_handle_nawds(soc, ta_peer, nbuf_copy,
+						      tid_stats))
+		return false;
+
 	if (dp_tx_send((struct cdp_soc_t *)soc,
 		       ta_peer->vdev->vdev_id, nbuf_copy)) {
 		DP_PEER_PER_PKT_STATS_INC_PKT(ta_peer, rx.intra_bss.fail, 1,
@@ -898,6 +935,8 @@ bool dp_rx_intrabss_ucast_fwd(struct dp_soc *soc, struct dp_txrx_peer *ta_peer,
 			return false;
 		}
 	}
+
+	dp_classify_critical_pkts(soc, ta_peer->vdev, nbuf);
 
 	if (!dp_tx_send((struct cdp_soc_t *)soc,
 			tx_vdev_id, nbuf)) {
@@ -1692,6 +1731,13 @@ void dp_rx_flush_rx_cached(struct dp_peer *peer, bool drop)
 	ol_txrx_rx_fp data_rx = NULL;
 	int num_buff_elem;
 	QDF_STATUS status;
+
+	/*
+	 * Flush dp cached frames only for mld peers and legacy peers, as
+	 * link peers don't store cached frames
+	 */
+	if (IS_MLO_DP_LINK_PEER(peer))
+		return;
 
 	if (!peer->txrx_peer) {
 		if (!peer->sta_self_peer) {

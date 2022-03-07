@@ -49,6 +49,9 @@ int8_t *dp_mon_filter_mode_type_to_str[DP_MON_FILTER_MAX_MODE] = {
 	"DP MON FILTER PKT LOG HYBRID MODE",
 #endif
 #endif /* WDI_EVENT_ENABLE */
+#ifdef QCA_UNDECODED_METADATA_SUPPORT
+	"DP MON FILTER RX UNDECODED METADATA CAPTURE MODE",
+#endif
 };
 
 void dp_mon_filter_show_filter(struct dp_mon_pdev *mon_pdev,
@@ -89,8 +92,45 @@ void dp_mon_filter_show_filter(struct dp_mon_pdev *mon_pdev,
 	DP_MON_FILTER_PRINT("md_data_filter: 0x%x", tlv_filter->md_data_filter);
 	DP_MON_FILTER_PRINT("md_mgmt_filter: 0x%x", tlv_filter->md_mgmt_filter);
 	DP_MON_FILTER_PRINT("md_ctrl_filter: 0x%x", tlv_filter->md_ctrl_filter);
+#ifdef QCA_UNDECODED_METADATA_SUPPORT
+	DP_MON_FILTER_PRINT("fp_phy_err: %d", tlv_filter->fp_phy_err);
+	DP_MON_FILTER_PRINT("fp_phy_err_buf_src: %d",
+			    tlv_filter->fp_phy_err_buf_src);
+	DP_MON_FILTER_PRINT("fp_phy_err_buf_dest: %d",
+			    tlv_filter->fp_phy_err_buf_dest);
+	DP_MON_FILTER_PRINT("phy_err_mask: 0x%x", tlv_filter->phy_err_mask);
+	DP_MON_FILTER_PRINT("phy_err_mask_cont: 0x%x",
+			    tlv_filter->phy_err_mask_cont);
+#endif
 }
 
+#ifdef QCA_UNDECODED_METADATA_SUPPORT
+static inline void
+dp_mon_set_fp_phy_err_filter(struct htt_rx_ring_tlv_filter *tlv_filter,
+			     struct dp_mon_filter *mon_filter)
+{
+	if (mon_filter->tlv_filter.phy_err_filter_valid) {
+		tlv_filter->fp_phy_err =
+			mon_filter->tlv_filter.fp_phy_err;
+		tlv_filter->fp_phy_err_buf_src =
+			mon_filter->tlv_filter.fp_phy_err_buf_src;
+		tlv_filter->fp_phy_err_buf_dest =
+			mon_filter->tlv_filter.fp_phy_err_buf_dest;
+		tlv_filter->phy_err_mask =
+			mon_filter->tlv_filter.phy_err_mask;
+		tlv_filter->phy_err_mask_cont =
+			mon_filter->tlv_filter.phy_err_mask_cont;
+		tlv_filter->phy_err_filter_valid =
+			mon_filter->tlv_filter.phy_err_filter_valid;
+	}
+}
+#else
+static inline void
+dp_mon_set_fp_phy_err_filter(struct htt_rx_ring_tlv_filter *tlv_filter,
+			     struct dp_mon_filter *mon_filter)
+{
+}
+#endif
 /**
  * dp_mon_filter_h2t_setup() - Setup the filter for the Target setup
  * @soc: DP soc handle
@@ -216,6 +256,8 @@ void dp_mon_filter_h2t_setup(struct dp_soc *soc, struct dp_pdev *pdev,
 		dst_filter = DP_MON_FILTER_GET(tlv_filter, FILTER_MD_CTRL);
 		dst_filter |= src_filter;
 		DP_MON_FILTER_SET(tlv_filter, FILTER_MD_CTRL, dst_filter);
+
+		dp_mon_set_fp_phy_err_filter(tlv_filter, mon_filter);
 	}
 
 	dp_mon_filter_show_filter(mon_pdev, 0, filter);
@@ -235,7 +277,7 @@ dp_mon_ht2_rx_ring_cfg(struct dp_soc *soc,
 	 * Overwrite the max_mac_rings for the status rings.
 	 */
 	if (srng_type == DP_MON_FILTER_SRNG_TYPE_RXDMA_MONITOR_STATUS)
-		dp_is_hw_dbs_enable(soc, &max_mac_rings);
+		dp_update_num_mac_rings_for_dbs(soc, &max_mac_rings);
 
 	dp_mon_filter_info("%pK: srng type %d Max_mac_rings %d ",
 			   soc, srng_type, max_mac_rings);
@@ -329,6 +371,26 @@ void dp_mon_filter_reset_enhanced_stats(struct dp_pdev *pdev)
 		mon_ops->mon_filter_reset_enhanced_stats(pdev);
 }
 #endif /* QCA_ENHANCED_STATS_SUPPORT */
+
+#ifdef QCA_UNDECODED_METADATA_SUPPORT
+void dp_mon_filter_setup_undecoded_metadata_mode(struct dp_pdev *pdev)
+{
+	struct dp_mon_ops *mon_ops = NULL;
+
+	mon_ops = dp_mon_ops_get(pdev->soc);
+	if (mon_ops && mon_ops->mon_filter_setup_undecoded_metadata_capture)
+		mon_ops->mon_filter_setup_undecoded_metadata_capture(pdev);
+}
+
+void dp_mon_filter_reset_undecoded_metadata_mode(struct dp_pdev *pdev)
+{
+	struct dp_mon_ops *mon_ops = NULL;
+
+	mon_ops = dp_mon_ops_get(pdev->soc);
+	if (mon_ops && mon_ops->mon_filter_reset_undecoded_metadata_capture)
+		mon_ops->mon_filter_reset_undecoded_metadata_capture(pdev);
+}
+#endif /* QCA_UNDECODED_METADATA_SUPPORT */
 
 #ifdef QCA_MCOPY_SUPPORT
 void dp_mon_filter_setup_mcopy_mode(struct dp_pdev *pdev)
@@ -498,10 +560,8 @@ QDF_STATUS dp_mon_filter_update(struct dp_pdev *pdev)
 		return QDF_STATUS_E_FAILURE;
 	}
 
-#ifdef QCA_TXMON_HW_SUPPORT
 	if (mon_ops && mon_ops->tx_mon_filter_update)
 		mon_ops->tx_mon_filter_update(pdev);
-#endif
 
 	if (mon_ops && mon_ops->rx_mon_filter_update)
 		mon_ops->rx_mon_filter_update(pdev);

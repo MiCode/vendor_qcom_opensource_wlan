@@ -421,6 +421,7 @@ struct wlan_mlo_peer_context {
  * @link_id: link index
  * @chan_freq: Operating channel frequency
  * @nawds_config: peer's NAWDS configurarion
+ * @vdev_id: VDEV ID
  */
 struct mlo_link_info {
 	struct qdf_mac_addr link_addr;
@@ -429,6 +430,7 @@ struct mlo_link_info {
 #ifdef UMAC_SUPPORT_MLNAWDS
 	struct mlnawds_config nawds_config;
 #endif
+	uint8_t vdev_id;
 };
 
 /*

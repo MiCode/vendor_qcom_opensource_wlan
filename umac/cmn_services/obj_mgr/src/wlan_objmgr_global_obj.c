@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -640,6 +640,7 @@ QDF_STATUS wlan_objmgr_register_peer_create_handler(
 	return QDF_STATUS_SUCCESS;
 }
 
+qdf_export_symbol(wlan_objmgr_register_peer_create_handler);
 
 QDF_STATUS wlan_objmgr_unregister_peer_create_handler(
 		enum wlan_umac_comp_id id,
@@ -667,6 +668,8 @@ QDF_STATUS wlan_objmgr_unregister_peer_create_handler(
 	return QDF_STATUS_SUCCESS;
 }
 
+qdf_export_symbol(wlan_objmgr_unregister_peer_create_handler);
+
 QDF_STATUS wlan_objmgr_register_peer_destroy_handler(
 		enum wlan_umac_comp_id id,
 		wlan_objmgr_peer_destroy_handler handler,
@@ -693,6 +696,8 @@ QDF_STATUS wlan_objmgr_register_peer_destroy_handler(
 	return QDF_STATUS_SUCCESS;
 }
 
+qdf_export_symbol(wlan_objmgr_register_peer_destroy_handler);
+
 QDF_STATUS wlan_objmgr_unregister_peer_destroy_handler(
 		enum wlan_umac_comp_id id,
 		wlan_objmgr_peer_destroy_handler handler,
@@ -718,6 +723,8 @@ QDF_STATUS wlan_objmgr_unregister_peer_destroy_handler(
 	qdf_spin_unlock_bh(&g_umac_glb_obj->global_lock);
 	return QDF_STATUS_SUCCESS;
 }
+
+qdf_export_symbol(wlan_objmgr_unregister_peer_destroy_handler);
 
 QDF_STATUS wlan_objmgr_register_peer_status_handler(
 		enum wlan_umac_comp_id id,

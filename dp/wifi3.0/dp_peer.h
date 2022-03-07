@@ -945,6 +945,37 @@ void dp_peer_jitter_stats_ctx_clr(struct dp_txrx_peer *txrx_peer)
 }
 #endif
 
+#ifndef CONFIG_SAWF_DEF_QUEUES
+static inline QDF_STATUS dp_peer_sawf_ctx_alloc(struct dp_soc *soc,
+						struct dp_peer *peer)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static inline QDF_STATUS dp_peer_sawf_ctx_free(struct dp_soc *soc,
+					       struct dp_peer *peer)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+#endif
+
+#ifndef CONFIG_SAWF
+static inline
+QDF_STATUS dp_peer_sawf_stats_ctx_alloc(struct dp_soc *soc,
+					struct dp_txrx_peer *txrx_peer)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static inline
+QDF_STATUS dp_peer_sawf_stats_ctx_free(struct dp_soc *soc,
+				       struct dp_txrx_peer *txrx_peer)
+{
+	return QDF_STATUS_SUCCESS;
+}
+#endif
+
 struct dp_peer *dp_vdev_bss_peer_ref_n_get(struct dp_soc *soc,
 					   struct dp_vdev *vdev,
 					   enum dp_mod_id mod_id);
@@ -1367,6 +1398,56 @@ void dp_release_link_peers_ref(
 }
 
 /**
+ * dp_get_link_peer_id_by_lmac_id() - Get link peer id using peer id and lmac id
+ * @soc: Datapath soc handle
+ * @peer_id: peer id
+ * @lmac_id: lmac id to find the link peer on given lmac
+ *
+ * Return: peer_id of link peer if found
+ *         else return HTT_INVALID_PEER
+ */
+static inline
+uint16_t dp_get_link_peer_id_by_lmac_id(struct dp_soc *soc, uint16_t peer_id,
+					uint8_t lmac_id)
+{
+	uint8_t i;
+	struct dp_peer *peer;
+	struct dp_peer *link_peer;
+	struct dp_soc *link_peer_soc;
+	struct dp_mld_link_peers link_peers_info;
+	uint16_t link_peer_id = HTT_INVALID_PEER;
+
+	peer = dp_peer_get_ref_by_id(soc, peer_id, DP_MOD_ID_CDP);
+
+	if (!peer)
+		return HTT_INVALID_PEER;
+
+	if (IS_MLO_DP_MLD_PEER(peer)) {
+		/* get link peers with reference */
+		dp_get_link_peers_ref_from_mld_peer(soc, peer, &link_peers_info,
+						    DP_MOD_ID_CDP);
+
+		for (i = 0; i < link_peers_info.num_links; i++) {
+			link_peer = link_peers_info.link_peers[i];
+			link_peer_soc = link_peer->vdev->pdev->soc;
+			if ((link_peer_soc == soc) &&
+			    (link_peer->vdev->pdev->lmac_id == lmac_id)) {
+				link_peer_id = link_peer->peer_id;
+				break;
+			}
+		}
+		/* release link peers reference */
+		dp_release_link_peers_ref(&link_peers_info, DP_MOD_ID_CDP);
+	} else {
+		link_peer_id = peer_id;
+	}
+
+	dp_peer_unref_delete(peer, DP_MOD_ID_CDP);
+
+	return link_peer_id;
+}
+
+/**
  * dp_peer_get_tgt_peer_hash_find() - get MLD dp_peer handle
 				   for processing
  * @soc: soc handle
@@ -1752,6 +1833,12 @@ dp_tgt_txrx_peer_get_ref_by_id(struct dp_soc *soc,
 	return dp_txrx_peer_get_ref_by_id(soc, peer_id, handle, mod_id);
 }
 
+static inline
+uint16_t dp_get_link_peer_id_by_lmac_id(struct dp_soc *soc, uint16_t peer_id,
+					uint8_t lmac_id)
+{
+	return peer_id;
+}
 #endif /* WLAN_FEATURE_11BE_MLO */
 
 #if defined(WLAN_FEATURE_11BE_MLO) && defined(WLAN_MLO_MULTI_CHIP)

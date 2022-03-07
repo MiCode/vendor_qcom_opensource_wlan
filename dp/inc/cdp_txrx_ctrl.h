@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1347,7 +1348,7 @@ void cdp_txrx_peer_flush_frags(ol_txrx_soc_handle soc, uint8_t vdev_id,
 							 peer_mac);
 }
 
-#ifdef WLAN_FEATURE_TSF_UPLINK_DELAY
+#if defined(WLAN_FEATURE_TSF_UPLINK_DELAY) || defined(CONFIG_SAWF)
 /**
  * cdp_set_delta_tsf() - wrapper function to set delta_tsf
  * @soc: SOC TXRX handle
@@ -1371,7 +1372,8 @@ static inline void cdp_set_delta_tsf(ol_txrx_soc_handle soc, uint8_t vdev_id,
 
 	soc->ops->ctrl_ops->txrx_set_delta_tsf(soc, vdev_id, delta_tsf);
 }
-
+#endif
+#ifdef WLAN_FEATURE_TSF_UPLINK_DELAY
 /**
  * cdp_set_tsf_ul_delay_report() - Enable or disable reporting uplink delay
  * @soc: SOC TXRX handle
@@ -1427,5 +1429,54 @@ static inline QDF_STATUS cdp_get_uplink_delay(ol_txrx_soc_handle soc,
 	return soc->ops->ctrl_ops->txrx_get_uplink_delay(soc, vdev_id, val);
 }
 #endif /* WLAN_FEATURE_TSF_UPLINK_DELAY */
+
+#ifdef QCA_UNDECODED_METADATA_SUPPORT
+/**
+ * cdp_txrx_set_pdev_phyrx_error_mask() - set phyrx error mask
+ * @soc: opaque soc handle
+ * @pdev_id: id of data path pdev handle
+ * @mask1: mask to configure 0 to 31 phy error
+ * @mask2: mask to configure 32 to 63 phy error
+ *
+ * Return: status: 0 - Success, non-zero: Failure
+ */
+static inline
+QDF_STATUS cdp_txrx_set_pdev_phyrx_error_mask(ol_txrx_soc_handle soc,
+					      uint8_t pdev_id, uint32_t mask,
+					      uint32_t mask_cont)
+{
+	if (!soc || !soc->ops) {
+		dp_cdp_debug("Invalid Instance:");
+		QDF_BUG(0);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	if (!soc->ops->ctrl_ops ||
+	    !soc->ops->ctrl_ops->txrx_set_pdev_phyrx_error_mask)
+		return QDF_STATUS_E_FAILURE;
+
+	return soc->ops->ctrl_ops->txrx_set_pdev_phyrx_error_mask
+			(soc, pdev_id, mask, mask_cont);
+}
+
+static inline
+QDF_STATUS cdp_txrx_get_pdev_phyrx_error_mask(ol_txrx_soc_handle soc,
+					      uint8_t pdev_id, uint32_t *mask,
+					      uint32_t *mask_cont)
+{
+	if (!soc || !soc->ops) {
+		dp_cdp_debug("Invalid Instance:");
+		QDF_BUG(0);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	if (!soc->ops->ctrl_ops ||
+	    !soc->ops->ctrl_ops->txrx_get_pdev_phyrx_error_mask)
+		return QDF_STATUS_E_FAILURE;
+
+	return soc->ops->ctrl_ops->txrx_get_pdev_phyrx_error_mask
+			(soc, pdev_id, mask, mask_cont);
+}
+#endif
 
 #endif /* _CDP_TXRX_CTRL_H_ */

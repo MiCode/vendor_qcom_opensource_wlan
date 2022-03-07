@@ -115,11 +115,7 @@
 #define CDP_DATA_TID_MAX 8
 #define CDP_DATA_NON_QOS_TID 16
 
-#ifdef WLAN_FEATURE_11BE
-#define CDP_NUM_SA_BW 5
-#else
 #define CDP_NUM_SA_BW 4
-#endif
 #define CDP_PERCENT_MACRO 100
 #define CDP_NUM_KB_IN_MB 1000
 /*
@@ -305,6 +301,7 @@ enum cdp_host_txrx_stats {
 	TXRX_SOC_FSE_STATS = 13,
 	TXRX_HAL_REG_WRITE_STATS = 14,
 	TXRX_SOC_REO_HW_DESC_DUMP = 15,
+	TXRX_SOC_WBM_IDLE_HPTP_DUMP = 16,
 	TXRX_HOST_STATS_MAX,
 };
 
@@ -644,7 +641,8 @@ struct cdp_tx_exception_metadata {
 	uint8_t tid;
 	uint16_t tx_encap_type;
 	enum cdp_sec_type sec_type;
-	uint8_t is_tx_sniffer;
+	uint8_t is_tx_sniffer :1,
+		is_intrabss_fwd :1;
 	uint16_t ppdu_cookie;
 #ifdef QCA_SUPPORT_WDS_EXTENDED
 	uint8_t is_wds_extended;
@@ -864,6 +862,14 @@ typedef qdf_nbuf_t (*ol_txrx_tx_exc_fp)(struct cdp_soc_t *soc, uint8_t vdev_id,
  */
 typedef void (*ol_txrx_completion_fp)(qdf_nbuf_t skb,
 				      void *osif_dev, uint16_t flag);
+
+/**
+ * ol_txrx_classify_critical_pkt_fp - classification cb for critical frames
+ * @osif_dev: the virtual device's OS shim object
+ * @skb: skb data
+ */
+typedef void (*ol_txrx_classify_critical_pkt_fp)(void *osif_dev,
+						 qdf_nbuf_t skb);
 /**
  * ol_txrx_tx_flow_control_fp - tx flow control notification
  * function from txrx to OS shim
@@ -1065,6 +1071,7 @@ struct ol_txrx_ops {
 		ol_txrx_tx_exc_fp     tx_exception;
 		ol_txrx_tx_free_ext_fp tx_free_ext;
 		ol_txrx_completion_fp tx_comp;
+		ol_txrx_classify_critical_pkt_fp tx_classify_critical_pkt_cb;
 	} tx;
 
 	/* rx function pointers - specified by OS shim, stored by txrx */
@@ -1185,6 +1192,7 @@ enum cdp_peer_param_type {
  * @CDP_CONFIG_SPECIAL_VAP: Configure Special vap
  * @CDP_RESET_SCAN_SPCL_VAP_STATS_ENABLE: Enable scan spcl vap stats reset
  * @CDP_ISOLATION: set isolation flag
+ * @CDP_CONFIG_UNDECODED_METADATA_CAPTURE_ENABLE: Undecoded metadata capture
  */
 enum cdp_pdev_param_type {
 	CDP_CONFIG_DEBUG_SNIFFER,
@@ -1219,6 +1227,7 @@ enum cdp_pdev_param_type {
 	CDP_RESET_SCAN_SPCL_VAP_STATS_ENABLE,
 	CDP_CONFIG_ENHANCED_STATS_ENABLE,
 	CDP_ISOLATION,
+	CDP_CONFIG_UNDECODED_METADATA_CAPTURE_ENABLE,
 };
 
 /*
@@ -1289,6 +1298,7 @@ enum cdp_pdev_param_type {
  * @cdp_psoc_param_en_nss_cfg: set nss cfg
  * @cdp_ipa_enabled : set ipa mode
  * @cdp_psoc_param_vdev_stats_hw_offload: Configure HW vdev stats offload
+ * @cdp_pdev_param_undecoded_metadata_enable: Undecoded metadata capture enable
  */
 typedef union cdp_config_param_t {
 	/* peer params */
@@ -1370,6 +1380,7 @@ typedef union cdp_config_param_t {
 	bool cdp_skip_bar_update;
 	bool cdp_ipa_enabled;
 	bool cdp_psoc_param_vdev_stats_hw_offload;
+	bool cdp_pdev_param_undecoded_metadata_enable;
 	bool cdp_sawf_enabled;
 } cdp_config_param_type;
 
@@ -1498,7 +1509,7 @@ enum cdp_vdev_param_type {
  * @CDP_SET_PREFERRED_HW_MODE: set preferred hw mode
  * @CDP_CFG_PEER_EXT_STATS: Peer extended stats mode.
  * @CDP_IPA_ENABLE : set IPA enable mode.
- * @CDP_SET_VDEV_STATS_HW_OFFLOAD: HW Vdev stats enable/disable
+ * @CDP_CFG_VDEV_STATS_HW_OFFLOAD: HW Vdev stats config
  */
 enum cdp_psoc_param_type {
 	CDP_ENABLE_RATE_STATS,
@@ -1506,7 +1517,7 @@ enum cdp_psoc_param_type {
 	CDP_SET_PREFERRED_HW_MODE,
 	CDP_CFG_PEER_EXT_STATS,
 	CDP_IPA_ENABLE,
-	CDP_SET_VDEV_STATS_HW_OFFLOAD,
+	CDP_CFG_VDEV_STATS_HW_OFFLOAD,
 	CDP_SAWF_ENABLE,
 };
 
@@ -2364,6 +2375,37 @@ struct cdp_rx_stats_ppdu_user {
  * @nf: noise floor
  * @per_chain_rssi: rssi per antenna
  * @punc_bw: puncered bw
+ * @phyrx_abort: rx aborted undecoded frame indication
+ * @phyrx_abort_reason: abort reason defined in phyrx_abort_request_info
+ * @l_sig_length: L SIG A length
+ * @l_sig_a_parity: L SIG A parity
+ * @l_sig_a_pkt_type: L SIG A info pkt type
+ * @l_sig_a_implicit_sounding: L SIG A info captured implicit sounding
+ * @ht_length: num of bytes in PSDU
+ * @ht_smoothing: Indicate ht_smoothing
+ * @ht_not_sounding: Indicate ht not sounding
+ * @ht_aggregation: Indicate ht aggregation
+ * @ht_stbc: Indicate ht stbc
+ * @ht_crc: Indicate ht crc
+ * @vht_crc: Indicate vht crc
+ * @vht_no_txop_ps: Indicate TXOP power save mode
+ * @bss_color_id: Indicate BSS color ID
+ * @beam_change: Indicates whether spatial mapping is changed
+ * @dl_ul_flag: Differentiates between DL and UL transmission
+ * @transmit_mcs: Indicates the data MCS
+ * @ldpc_extra_sym: LDPC extra symbol
+ * @special_reuse: Spatial reuse
+ * @ltf_sym: Indictaes HE NSTS
+ * @txbf: Indicates whether beamforming is applied
+ * @pe_disambiguity: packet extension disambiguity
+ * @pre_fec_pad: packet extension a factor
+ * @dopplar: Doppler support
+ * @txop_duration: Indicates the remaining time in the current TXOP
+ * @sig_b_mcs: MCS of HE-SIG-B
+ * @sig_b_dcm: DCM of HE-SIG-B
+ * @sig_b_sym: Number of symbols of HE-SIG-B
+ * @sig_b_comp: Compression mode of HE-SIG-B
+ * @he_crc: CRC for HE-SIG contents
  */
 struct cdp_rx_indication_ppdu {
 	uint32_t ppdu_id;
@@ -2425,6 +2467,40 @@ struct cdp_rx_indication_ppdu {
 	struct cdp_rx_ppdu_cfr_info cfr_info;
 #endif
 	uint8_t punc_bw;
+#ifdef QCA_UNDECODED_METADATA_SUPPORT
+	bool phyrx_abort;
+	uint8_t phyrx_abort_reason;
+	uint32_t l_sig_length:12,
+		 l_sig_a_parity:1,
+		 l_sig_a_pkt_type:4,
+		 l_sig_a_implicit_sounding:1,
+		 vht_crc:8,
+		 group_id:6;
+	uint32_t ht_length:16,
+		 ht_smoothing:1,
+		 ht_not_sounding:1,
+		 ht_aggregation:1,
+		 ht_stbc:2,
+		 ht_crc:8,
+		 vht_no_txop_ps:1;
+	uint32_t bss_color_id:6,
+		 beam_change:1,
+		 dl_ul_flag:1,
+		 transmit_mcs:4,
+		 ldpc_extra_sym:1,
+		 special_reuse:4,
+		 ltf_sym:3,
+		 txbf:1,
+		 pe_disambiguity:1,
+		 pre_fec_pad:4,
+		 dopplar:1;
+	uint32_t txop_duration:7,
+		 sig_b_mcs:3,
+		 sig_b_dcm:1,
+		 sig_b_sym:4,
+		 sig_b_comp:1,
+		 he_crc:4;
+#endif
 };
 
 /**

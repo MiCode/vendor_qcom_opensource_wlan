@@ -155,6 +155,477 @@ const uint8_t *wlan_get_ext_ie_ptr_from_ext_id(const uint8_t *oui,
 					       uint16_t ie_len);
 
 /**
+ * wlan_get_elem_fragseq_requirements() - Get requirements related to generation
+ * of element fragment sequence.
+ *
+ * @elemid: Element ID
+ * @payloadlen: Length of element payload to be fragmented. Irrespective of
+ * whether inline fragmentation in wlan_create_elem_fragseq() is to be used or
+ * not, this length should not include the length of the element ID and element
+ * length, and if the element ID is WLAN_ELEMID_EXTN_ELEM, it should not include
+ * the length of the element ID extension.
+ * @is_frag_required: Pointer to location where the function should update
+ * whether fragmentation is required or not for the given element ID and payload
+ * length. The caller should ignore this if the function returns failure.
+ * @required_fragbuff_size: Pointer to location where the function should update
+ * the required minimum size of the buffer where the fragment sequence created
+ * would be written, starting from the beginning of the buffer (irrespective of
+ * whether inline fragmentation in wlan_create_elem_fragseq() is to be used or
+ * not). This is the total size of the element fragment sequence, inclusive of
+ * the header and payload of the leading element and the headers and payloads of
+ * all subsequent fragments applicable to that element. If the element ID is
+ * WLAN_ELEMID_EXTN_ELEM, this also includes the length of the element ID
+ * extension. The caller should ignore this if the function returns a value of
+ * false for is_frag_required, or if the function returns failure.
+ *
+ * Get information on requirements related to generation of element fragment
+ * sequence. Currently this includes an indication of whether fragmentation is
+ * required or not for the given element ID and payload length, and if
+ * fragmentation is applicable, the minimum required size of the buffer where
+ * the fragment sequence created would be written (irrespective of whether
+ * inline fragmentation in wlan_create_elem_fragseq() is to be used or not).
+ *
+ * Return: QDF_STATUS_SUCCESS in the case of success, QDF_STATUS value giving
+ * the reason for error in the case of failure
+ */
+QDF_STATUS
+wlan_get_elem_fragseq_requirements(uint8_t elemid,
+				   qdf_size_t payloadlen,
+				   bool *is_frag_required,
+				   qdf_size_t *required_fragbuff_size);
+
+/**
+ * wlan_create_elem_fragseq() - Create sequence of element fragments
+ *
+ * @inline_frag: Whether to use inline fragmentation, wherein the fragmentation
+ * is carried out inline within the source buffer and no memmoves/memcopy would
+ * be required for the lead element.
+ * @elemid: Element ID
+ * @elemidext: Element ID extension. This is applicable only if elemid is
+ * WLAN_ELEMID_EXTN_ELEM, otherwise it is ignored.
+ * @payloadbuff: Buffer containing the element payload to be fragmented. If
+ * inline fragmentation is selected, the corresponding element fragment sequence
+ * will be generated inline into this buffer, and prior to the payload the
+ * buffer should have two bytes reserved in the beginning for the element ID and
+ * element length fields to be written, and a third byte reserved after them for
+ * the element ID extension to be written (if the element ID is
+ * WLAN_ELEMID_EXTN_ELEM).
+ * @payloadbuff_maxsize: Maximum size of payloadbuff
+ * @payloadlen: Length of element payload to be fragmented. Irrespective of
+ * whether inline fragmentation is to be used or not, this should not include
+ * the length of the element ID and element length, and if the element ID is
+ * WLAN_ELEMID_EXTN_ELEM, it should not include the length of the element ID
+ * extension.
+ * @fragbuff: The buffer into which the element fragment sequence should be
+ * generated. This is inapplicable and ignored if inline fragmentation is used.
+ * @fragbuff_maxsize: The maximum size of fragbuff. This is inapplicable and
+ * ignored if inline fragmentation is used.
+ * @fragseqlen: Pointer to location where the length of the fragment sequence
+ * created should be written. This is the total length of the element fragment
+ * sequence, inclusive of the header and payload of the leading element and the
+ * headers and payloads of all subsequent fragments applicable to that element.
+ * If the element ID is WLAN_ELEMID_EXTN_ELEM, this also includes the length of
+ * the element ID extension. The caller should ignore this if the function
+ * returns failure.
+ *
+ * Create a sequence of element fragments. In case fragmentation is not required
+ * for the given element ID and payload length, the function returns an error.
+ * This function is intended to be used by callers which do not have the ability
+ * (or for maintainability purposes do not desire the complexity) to inject new
+ * fragments on the fly where required, when populating the fields in the
+ * element (which would completely eliminate memory moves/copies). An inline
+ * mode is available to carry out the fragmentation within the source buffer in
+ * order to reduce buffer requirements and to eliminate memory copies/moves for
+ * the lead element. In the inline mode, the source buffer should have bytes
+ * reserved in the beginning for the element ID, element length, and if
+ * applicable, the element ID extension. In the inline mode the buffer content
+ * (if any) after the fragments is moved as well.
+ *
+ * Return: QDF_STATUS_SUCCESS in the case of success, QDF_STATUS value giving
+ * the reason for error in the case of failure
+ */
+QDF_STATUS wlan_create_elem_fragseq(bool inline_frag,
+				    uint8_t elemid,
+				    uint8_t elemidext,
+				    uint8_t *payloadbuff,
+				    qdf_size_t payloadbuff_maxsize,
+				    qdf_size_t payloadlen,
+				    uint8_t *fragbuff,
+				    qdf_size_t fragbuff_maxsize,
+				    qdf_size_t *fragseqlen);
+
+/**
+ * wlan_get_subelem_fragseq_requirements() - Get requirements related to
+ * generation of subelement fragment sequence.
+ *
+ * @subelemid: Subelement ID
+ * @payloadlen: Length of subelement payload to be fragmented. Irrespective of
+ * whether inline fragmentation in wlan_create_subelem_fragseq() is to be used
+ * or not, this length should not include the length of the subelement ID and
+ * subelement length.
+ * @is_frag_required: Pointer to location where the function should update
+ * whether fragmentation is required or not for the given payload length. The
+ * caller should ignore this if the function returns failure.
+ * @required_fragbuff_size: Pointer to location where the function should update
+ * the required minimum size of the buffer where the fragment sequence created
+ * would be written, starting from the beginning of the buffer (irrespective of
+ * whether inline fragmentation in wlan_create_subelem_fragseq() is to be used
+ * or not). This is the total size of the subelement fragment sequence,
+ * inclusive of the header and payload of the leading subelement and the headers
+ * and payloads of all subsequent fragments applicable to that subelement. The
+ * caller should ignore this if the function returns a value of false for
+ * is_frag_required, or if the function returns failure.
+ *
+ * Get information on requirements related to generation of subelement fragment
+ * sequence. Currently this includes an indication of whether fragmentation is
+ * required or not for the given payload length, and if fragmentation is
+ * applicable, the minimum required size of the buffer where the fragment
+ * sequence created would be written (irrespective of whether inline
+ * fragmentation in wlan_create_subelem_fragseq() is to be used or not). Note
+ * that the subelement ID does not currently play a role in determining the
+ * requirements, but is added as an argument in case it is required in the
+ * future.
+ *
+ * Return: QDF_STATUS_SUCCESS in the case of success, QDF_STATUS value giving
+ * the reason for error in the case of failure
+ */
+QDF_STATUS
+wlan_get_subelem_fragseq_requirements(uint8_t subelemid,
+				      qdf_size_t payloadlen,
+				      bool *is_frag_required,
+				      qdf_size_t *required_fragbuff_size);
+
+/**
+ * wlan_create_subelem_fragseq() - Create sequence of subelement fragments
+ *
+ * @inline_frag: Whether to use inline fragmentation, wherein the fragmentation
+ * is carried out inline within the source buffer and no memmoves/memcopy would
+ * be required for the lead subelement.
+ * @subelemid: Subelement ID
+ * @subelemid: Fragment ID to be used for the subelement (this can potentially
+ * vary across protocol areas)
+ * @payloadbuff: Buffer containing the subelement payload to be fragmented. If
+ * inline fragmentation is selected, the corresponding subelement fragment
+ * sequence will be generated inline into this buffer, and prior to the payload
+ * the buffer should have two bytes reserved in the beginning for the subelement
+ * ID and subelement length fields to be written.
+ * @payloadbuff_maxsize: Maximum size of payloadbuff
+ * @payloadlen: Length of subelement payload to be fragmented. Irrespective of
+ * whether inline fragmentation is to be used or not, this should not include
+ * the length of the subelement ID and subelement length.
+ * @fragbuff: The buffer into which the subelement fragment sequence should be
+ * generated. This is inapplicable and ignored if inline fragmentation is used.
+ * @fragbuff_maxsize: The maximum size of fragbuff. This is inapplicable and
+ * ignored if inline fragmentation is used.
+ * @fragseqlen: Pointer to location where the length of the fragment sequence
+ * created should be written. This is the total length of the subelement
+ * fragment sequence, inclusive of the header and payload of the leading
+ * subelement and the headers and payloads of all subsequent fragments
+ * applicable to that subelement. The caller should ignore this if the function
+ * returns failure.
+ *
+ * Create a sequence of subelement fragments. In case fragmentation is not
+ * required for the given payload length, the function returns an error. This
+ * function is intended to be used by callers which do not have the ability (or
+ * for maintainability purposes do not desire the complexity) to inject new
+ * fragments on the fly where required, when populating the fields in the
+ * subelement (which would completely eliminate memory moves/copies). An inline
+ * mode is available to carry out the fragmentation within the source buffer in
+ * order to reduce buffer requirements and to eliminate memory copies/moves for
+ * the lead subelement. In the inline mode, the source buffer should have bytes
+ * reserved in the beginning for the subelement ID and the subelement length. In
+ * the inline mode the buffer content (if any) after the fragments is moved as
+ * well.
+ *
+ * Return: QDF_STATUS_SUCCESS in the case of success, QDF_STATUS value giving
+ * the reason for error in the case of failure
+ */
+QDF_STATUS wlan_create_subelem_fragseq(bool inline_frag,
+				       uint8_t subelemid,
+				       uint8_t subelemfragid,
+				       uint8_t *payloadbuff,
+				       qdf_size_t payloadbuff_maxsize,
+				       qdf_size_t payloadlen,
+				       uint8_t *fragbuff,
+				       qdf_size_t fragbuff_maxsize,
+				       qdf_size_t *fragseqlen);
+
+/**
+ * wlan_get_elem_fragseq_info() - Get information about element fragment
+ * sequence
+ *
+ * @elembuff: Buffer containing a series of elements to be checked for whether a
+ * contiguous subset of these elements (starting with the first element in the
+ * buffer) form an element fragment sequence. The buffer should start with the
+ * Element ID of the first element. The buffer should not contain any material
+ * other than elements.
+ * @elembuff_maxsize: Maximum size of elembuff
+ * @is_fragseq: Pointer to location of a flag indicating whether this is an
+ * element fragment sequence or not. The flag will be set to true if elembuff
+ * contains an element fragment sequence starting with the element present in
+ * the beginning of the buffer, or the flag will be set to false if the buffer
+ * contains a single non-fragmented element in the beginning. Please note
+ * standards related limitation given in function description below.
+ * @fragseq_totallen: Pointer to location of total length of element fragment
+ * sequence. If is_fragseq is true, then this is set to the total length of the
+ * element fragment sequence, inclusive of the header and payload of the leading
+ * element and the headers and payloads of all subsequent fragments applicable
+ * to that element. If is_fragseq is false, the caller should ignore this.
+ * Please note standards related limitation given in function description below.
+ * @fragseq_payloadlen: Pointer to location of length of payload of element
+ * fragment sequence. If is_fragseq is true, then this length is set to the
+ * total size of the element fragment sequence payload, which does not include
+ * the sizes of the headers of the lead element and subsequent fragments, and
+ * which (if the lead element's element ID is WLAN_ELEMID_EXTN_ELEM) does not
+ * include the size of the lead element's element ID extension. If is_fragseq is
+ * false, the caller should ignore this. Please note standards related
+ * limitation given in function description below.
+ *
+ * Get the following information for a first element present in the beginning of
+ * a given buffer, and a series of elements after it in the given buffer: a)
+ * Whether a contiguous subset of these elements starting with the first element
+ * form an element fragment sequence. b) If they form an element fragment
+ * sequence, then the total length of this sequence inclusive of headers and
+ * payloads of all the elements in the sequence. c) If they form an element
+ * fragment sequence, then the total size of the payloads of all the elements in
+ * the sequence (not including the element ID extension of the lead element, if
+ * applicable). While determining this information, the function may return
+ * errors, including for protocol parsing issues. These protocol parsing issues
+ * include one in which the first element has a length lesser than 255, but the
+ * very next element after it is a fragment element (which is not allowed by the
+ * standard).  Separately, please note a limitation arising from the standard
+ * wherein if the caller passes a truncated maximum buffer size such that the
+ * buffer ends prematurely just at the end of a potential lead element with
+ * length 255 or just at the end of a non-lead fragment element with length 255,
+ * the function will have to conclude that the last successfully parsed element
+ * is the final one in the non-fragment or fragment sequence, and return results
+ * accordingly. If another fragment actually exists beyond the given buffer,
+ * this function cannot detect the condition since there is no provision in the
+ * standard to indicate a total fragment sequence size in one place in the
+ * beginning or anywhere else. Hence the caller should take care to provide the
+ * complete buffer with the max size set accordingly.
+ *
+ * Return: QDF_STATUS_SUCCESS in the case of success, QDF_STATUS value giving
+ * the reason for error in the case of failure
+ */
+QDF_STATUS wlan_get_elem_fragseq_info(uint8_t *elembuff,
+				      qdf_size_t elembuff_maxsize,
+				      bool *is_fragseq,
+				      qdf_size_t *fragseq_totallen,
+				      qdf_size_t *fragseq_payloadlen);
+
+/**
+ * wlan_defrag_elem_fragseq() - Defragment sequence of element fragments
+ *
+ * @inline_defrag: Whether to use inline defragmentation, wherein the
+ * defragmentation is carried out inline within the source buffer and no
+ * memmoves/memcopy would be required for the lead element.
+ * @fragbuff: Source buffer containing the element fragment sequence starting
+ * with the Element ID of the lead element. The buffer should not contain any
+ * material other than elements. If inline defragmentation is enabled, the
+ * corresponding defragmented payload will be generated inline into this buffer
+ * and the defragmented payload will start after the location of the lead
+ * element's element ID, element length, and (if the lead element's element ID
+ * is WLAN_ELEMID_EXTN_ELEM), the element ID extension. This defragmented
+ * payload will not contain the headers of any of the other fragments in the
+ * fragment sequence.
+ * @fragbuff_maxsize: Maximum size of fragbuff. This should be greater than or
+ * equal to the total size of the element fragment sequence, inclusive of the
+ * header and payload of the leading element and the headers and payloads of all
+ * subsequent fragments applicable to that element.
+ * @defragbuff: The destination buffer into which the defragmented payload
+ * should be copied. This is inapplicable and ignored if inline_defrag is true.
+ * The defragmented payload will be copied to the start of the destination
+ * buffer without including the headers of the lead element and the subsequent
+ * fragment elements, and (if the lead element's element ID is
+ * WLAN_ELEMID_EXTN_ELEM), without including the element ID extension.
+ * @defragbuff_maxsize: Maximum size of defragbuff. This is inapplicable and
+ * ignored if inline_defrag is true. The size should be large enough to contain
+ * the entire defragmented payload, otherwise an error will be returned.
+ * @defragpayload_len: Pointer to the location where the length of the
+ * defragmented payload should be updated. Irrespective of whether inline_defrag
+ * is true or false, this will not include the sizes of the headers of the lead
+ * element and subsequent fragments, and (if the lead element's element ID is
+ * WLAN_ELEMID_EXTN_ELEM), it will not include the size of the lead element's
+ * element ID extension. Please note standards related limitation given in
+ * function description below.
+ *
+ * Defragment a sequence of element fragments. If the source buffer does not
+ * contain an element fragment sequence (in the beginning), an error is
+ * returned. An inline mode is available to carry out the defragmentation within
+ * the source buffer in order to reduce buffer requirements and to eliminate
+ * memory copies/moves for the lead element. In the inline mode, the buffer
+ * content (if any) after the fragments is moved as well. The contents of the
+ * defragmented payload are intended for end consumption by control path
+ * protocol processing code within the driver in a manner uniform with other
+ * protocol data in byte buffers, and not for onward forwarding to other
+ * subsystems or for intrusive specialized processing different from other
+ * protocol data. Hence zero copy methods such as network buffer fragment
+ * processing, etc. are not used in this use case.  Additionally, this API is
+ * intended for use cases where the nature of the payload is complex and it is
+ * infeasible for the caller to skip the (un-defragmented) fragment boundaries
+ * on its own in a scalable and maintainable manner. Separately, please note a
+ * limitation arising from the standard wherein if the caller passes a truncated
+ * maximum buffer size such that the buffer ends prematurely just at the end of
+ * a fragment element with length 255, the function will have to conclude that
+ * the last successfully parsed fragment element is the final one in the
+ * fragment sequence, and return results accordingly. If another fragment
+ * actually exists beyond the given buffer, this function cannot detect the
+ * condition since there is no provision in the standard to indicate a total
+ * fragment sequence size in one place in the beginning or anywhere else. Hence
+ * the caller should take care to provide the complete buffer with the max size
+ * set accordingly.
+ *
+ * Return: QDF_STATUS_SUCCESS in the case of success, QDF_STATUS value giving
+ * the reason for error in the case of failure
+ */
+QDF_STATUS wlan_defrag_elem_fragseq(bool inline_defrag,
+				    uint8_t *fragbuff,
+				    qdf_size_t fragbuff_maxsize,
+				    uint8_t *defragbuff,
+				    qdf_size_t defragbuff_maxsize,
+				    qdf_size_t *defragpayload_len);
+
+/**
+ * wlan_get_subelem_fragseq_info() - Get information about subelement fragment
+ * sequence
+ *
+ * @subelemid: Fragment ID applicable for the subelement (this can potentially
+ * vary across protocol areas)
+ * @subelembuff: Buffer containing a series of subelements to be checked for
+ * whether a contiguous subset of these subelements (starting with the first
+ * subelement in the buffer) form a subelement fragment sequence. The containing
+ * element is required to have already been defragmented (if applicable). The
+ * buffer should start with the subelement ID of the first subelement. The
+ * buffer should not contain any material apart from subelements.
+ * @subelembuff_maxsize: Maximum size of subelembuff
+ * @is_fragseq: Pointer to location of a flag indicating whether this is a
+ * subelement fragment sequence or not. The flag will be set to true if the
+ * buffer contains a subelement fragment sequence starting with the subelement
+ * present in the beginning of the buffer, or the flag will be set to false if
+ * the buffer contains a single non-fragmented subelement in the beginning.
+ * Please note standards related limitation given in function description below.
+ * @fragseq_totallen: Pointer to location of total length of subelement fragment
+ * sequence. If is_fragseq is true, then this is set to the total length of the
+ * subelement fragment sequence, inclusive of the header and payload of the
+ * leading subelement and the headers and payloads of all subsequent fragments
+ * applicable to that subelement. If is_fragseq is false, the caller should
+ * ignore this. Please note standards related limitation given in function
+ * description below.
+ * @fragseq_payloadlen: Pointer to location of length of payload of subelement
+ * fragment sequence. If is_fragseq is true, then this length is set to the
+ * total size of the subelement fragment sequence payload, which does not
+ * include the sizes of the headers of the lead subelement and subsequent
+ * fragments. If is_fragseq is false, the caller should ignore this. Please note
+ * standards related limitation given in function description below.
+ *
+ * Get the following information for a first subelement present in the beginning
+ * of a given buffer, and a series of subelements after it in the given buffer:
+ * a) Whether a contiguous subset of these subelements starting with the first
+ * subelement form a subelement fragment sequence. b) If they form a subelement
+ * fragment sequence, then the total length of this sequence inclusive of
+ * headers and payloads of all the subelements in the sequence. c) If they form
+ * a subelement fragment sequence, then the total size of the payloads of all
+ * the subelements in the sequence.  While determining this information, the
+ * function may return errors, including for protocol parsing issues. These
+ * protocol parsing issues include one in which the first subelement has a
+ * length lesser than 255, but the very next subelement after it is a fragment
+ * subelement (which is not allowed by the standard so far). Separately, please
+ * note a limitation arising from the standard wherein if the caller passes a
+ * truncated maximum buffer size such that the buffer ends prematurely just at
+ * the end of a potential lead subelement with length 255 or just at the end of
+ * a non-lead fragment subelement with length 255, the function will have to
+ * conclude that the last successfully parsed subelement is the final one in the
+ * non-fragment or fragment sequence, and return results accordingly. If another
+ * fragment actually exists beyond the given buffer, this function cannot detect
+ * the condition since there is no provision in the standard to indicate a total
+ * fragment sequence size in one place in the beginning or anywhere else. Hence
+ * the caller should take care to provide the complete buffer with the max size
+ * set accordingly.
+ *
+ * Return: QDF_STATUS_SUCCESS in the case of success, QDF_STATUS value giving
+ * the reason for error in the case of failure
+ */
+QDF_STATUS wlan_get_subelem_fragseq_info(uint8_t subelemfragid,
+					 uint8_t *subelembuff,
+					 qdf_size_t subelembuff_maxsize,
+					 bool *is_fragseq,
+					 qdf_size_t *fragseq_totallen,
+					 qdf_size_t *fragseq_payloadlen);
+
+/**
+ * wlan_defrag_subelem_fragseq() - Defragment sequence of subelement fragments
+ *
+ * @inline_defrag: Whether to use inline defragmentation, wherein the
+ * defragmentation is carried out inline within the source buffer and no
+ * memmoves/memcopy would be required for the lead subelement.
+ * @subelemid: Fragment ID applicable for the subelement (this can potentially
+ * vary across protocol areas)
+ * @fragbuff: Source buffer containing the subelement fragment sequence starting
+ * with the subelement ID of the lead subelement. The containing element is
+ * required to have already been defragmented (if applicable). If inline
+ * defragmentation is enabled, the corresponding defragmented payload will be
+ * generated inline into this buffer and the defragmented payload will start
+ * after the location of the lead subelement's subelement ID and subelement
+ * length. This defragmented payload will not contain the headers of any of the
+ * other fragments in the fragment sequence.
+ * @fragbuff_maxsize: Maximum size of fragbuff. This should be greater than or
+ * equal to the total size of the subelement fragment sequence, inclusive of the
+ * header and payload of the leading subelement and the headers and payloads of
+ * all subsequent fragments applicable to that subelement.
+ * @defragbuff: The destination buffer into which the defragmented payload
+ * should be copied. This is inapplicable and ignored if inline_defrag is true.
+ * The defragmented payload will be copied to the start of the destination
+ * buffer without including the headers of the lead subelement and the
+ * subsequent fragment subelements.
+ * @defragbuff_maxsize: Maximum size of defragbuff. This is inapplicable and
+ * ignored if inline_defrag is true. The size should be large enough to contain
+ * the entire defragmented payload, otherwise an error will be returned.
+ * @defragpayload_len: Pointer to the location where the length of the
+ * defragmented payload should be updated. Irrespective of whether inline_defrag
+ * is true or false, this will not include the sizes of the headers of the lead
+ * subelement and subsequent fragments. Please note standards related limitation
+ * given in function description below.
+ *
+ * Defragment a sequence of subelement fragments. If the source buffer does not
+ * contain a subelement fragment sequence (in the beginning), the function
+ * returns an error. The containing element is required to have already been
+ * defragmented. An inline mode is available to carry out the defragmentation
+ * within the source buffer in order to reduce buffer requirements and to
+ * eliminate memory copies/moves for the lead subelement. In the inline mode,
+ * the buffer content (if any) after the fragments is moved as well. The
+ * contents of the defragmented payload are intended for end consumption by
+ * control path protocol processing code within the driver in a manner uniform
+ * with other protocol data in byte buffers, and not for onward forwarding to
+ * other subsystems or for intrusive specialized processing different from other
+ * protocol data. Hence zero copy methods such as network buffer fragment
+ * processing, etc. are not used in this use case.  Additionally, this API is
+ * intended for use cases where the nature of the payload is complex and it is
+ * infeasible for the caller to skip the (un-defragmented) fragment boundaries
+ * on its own in a scalable and maintainable manner.  Separately, please note a
+ * limitation arising from the standard wherein if the caller passes a truncated
+ * maximum buffer size such that the buffer ends prematurely just at the end of
+ * a fragment subelement with length 255, the function will have to conclude
+ * that the last successfully parsed fragment subelement is the final one in the
+ * fragment sequence, and return results accordingly. If another fragment
+ * actually exists beyond the given buffer, this function cannot detect the
+ * condition since there is no provision in the standard to indicate a total
+ * fragment sequence size in one place in the beginning or anywhere else. Hence
+ * the caller should take care to provide the complete buffer with the max size
+ * set accordingly.
+ *
+ * Return: QDF_STATUS_SUCCESS in the case of success, QDF_STATUS value giving
+ * the reason for error in the case of failure
+ */
+QDF_STATUS wlan_defrag_subelem_fragseq(bool inline_defrag,
+				       uint8_t subelemfragid,
+				       uint8_t *fragbuff,
+				       qdf_size_t fragbuff_maxsize,
+				       uint8_t *defragbuff,
+				       qdf_size_t defragbuff_maxsize,
+				       qdf_size_t *defragpayload_len);
+
+/**
  * wlan_is_emulation_platform() - check if platform is emulation based
  * @phy_version - psoc nif phy_version
  *

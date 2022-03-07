@@ -44,6 +44,7 @@
 #include <mon_ingress_ring.h>
 #include <mon_destination_ring.h>
 #endif
+#include "rx_reo_queue_1k.h"
 
 #include <hal_be_rx.h>
 
@@ -690,6 +691,7 @@ typedef struct rx_msdu_end_compact_qca9224 hal_rx_msdu_end_t;
 #include <hal_be_generic_api.h>
 
 #define LINK_DESC_SIZE (NUM_OF_DWORDS_RX_MSDU_LINK << 2)
+#define HAL_PPE_VP_ENTRIES_MAX 32
 /**
  * hal_get_link_desc_size_9224(): API to get the link desc size
  *
@@ -857,7 +859,7 @@ static inline void hal_rx_dump_mpdu_start_tlv_9224(void *mpdustart,
 	struct rx_mpdu_info *mpdu_info =
 		(struct rx_mpdu_info *)&mpdu_start->rx_mpdu_info_details;
 #endif
-	QDF_TRACE(dbg_level, QDF_MODULE_ID_HAL,
+	QDF_TRACE(QDF_MODULE_ID_HAL, dbg_level,
 		  "rx_mpdu_start tlv (1/5) - "
 		  "rx_reo_queue_desc_addr_31_0 :%x"
 		  "rx_reo_queue_desc_addr_39_32 :%x"
@@ -898,7 +900,7 @@ static inline void hal_rx_dump_mpdu_start_tlv_9224(void *mpdustart,
 		  mpdu_info->tid,
 		  mpdu_info->reserved_7a);
 
-	QDF_TRACE(dbg_level, QDF_MODULE_ID_HAL,
+	QDF_TRACE(QDF_MODULE_ID_HAL, dbg_level,
 		  "rx_mpdu_start tlv (2/5) - "
 		  "ast_index:%x "
 		  "sw_peer_id:%x "
@@ -925,7 +927,7 @@ static inline void hal_rx_dump_mpdu_start_tlv_9224(void *mpdustart,
 		  mpdu_info->mpdu_ht_control_valid,
 		  mpdu_info->frame_encryption_info_valid);
 
-	QDF_TRACE(dbg_level, QDF_MODULE_ID_HAL,
+	QDF_TRACE(QDF_MODULE_ID_HAL, dbg_level,
 		  "rx_mpdu_start tlv (3/5) - "
 		  "mpdu_fragment_number:%x "
 		  "more_fragment_flag:%x "
@@ -944,14 +946,14 @@ static inline void hal_rx_dump_mpdu_start_tlv_9224(void *mpdustart,
 		  mpdu_info->mpdu_retry,
 		  mpdu_info->mpdu_sequence_number);
 
-	QDF_TRACE(dbg_level, QDF_MODULE_ID_HAL,
+	QDF_TRACE(QDF_MODULE_ID_HAL, dbg_level,
 		  "rx_mpdu_start tlv (4/5) - "
 		  "mpdu_frame_control_field:%x "
 		  "mpdu_duration_field:%x ",
 		  mpdu_info->mpdu_frame_control_field,
 		  mpdu_info->mpdu_duration_field);
 
-	QDF_TRACE(dbg_level, QDF_MODULE_ID_HAL,
+	QDF_TRACE(QDF_MODULE_ID_HAL, dbg_level,
 		  "rx_mpdu_start tlv (5/5) - "
 		  "mac_addr_ad1_31_0:%x "
 		  "mac_addr_ad1_47_32:%x "
@@ -1477,6 +1479,28 @@ static inline void hal_rx_dump_pkt_hdr_tlv_9224(struct rx_pkt_tlvs *pkt_tlvs,
 			     sizeof(pkt_hdr_tlv->rx_pkt_hdr));
 }
 
+/*
+ * hal_tx_dump_ppe_vp_entry_9224()
+ * @hal_soc_hdl: HAL SoC handle
+ *
+ * Return: void
+ */
+static inline
+void hal_tx_dump_ppe_vp_entry_9224(hal_soc_handle_t hal_soc_hdl)
+{
+	struct hal_soc *soc = (struct hal_soc *)hal_soc_hdl;
+	uint32_t reg_addr, reg_val = 0, i;
+
+	for (i = 0; i < HAL_PPE_VP_ENTRIES_MAX; i++) {
+		reg_addr =
+			HWIO_TCL_R0_PPE_VP_CONFIG_TABLE_n_ADDR(
+				MAC_TCL_REG_REG_BASE,
+				i);
+		reg_val = HAL_REG_READ(soc, reg_addr);
+		hal_verbose_debug("%d: 0x%x\n", i, reg_val);
+	}
+}
+
 /**
  * hal_rx_dump_pkt_tlvs_9224(): API to print RX Pkt TLVS QCN9224
  * @hal_soc_hdl: hal_soc handle
@@ -1631,6 +1655,62 @@ static void hal_reo_setup_9224(struct hal_soc *soc, void *reoparams)
 	hal_reo_shared_qaddr_init((hal_soc_handle_t)soc);
 }
 
+/**
+ * hal_qcn9224_get_reo_qdesc_size()- Get the reo queue descriptor size
+ *			  from the give Block-Ack window size
+ * Return: reo queue descriptor size
+ */
+static uint32_t hal_qcn9224_get_reo_qdesc_size(uint32_t ba_window_size, int tid)
+{
+	/* Hardcode the ba_window_size to HAL_RX_MAX_BA_WINDOW for
+	 * NON_QOS_TID until HW issues are resolved.
+	 */
+#define HAL_RX_MAX_BA_WINDOW_BE 1024
+	if (tid != HAL_NON_QOS_TID)
+		ba_window_size = HAL_RX_MAX_BA_WINDOW_BE;
+
+	/* Return descriptor size corresponding to window size of 2 since
+	 * we set ba_window_size to 2 while setting up REO descriptors as
+	 * a WAR to get 2k jump exception aggregates are received without
+	 * a BA session.
+	 */
+	if (ba_window_size <= 1) {
+		if (tid != HAL_NON_QOS_TID)
+			return sizeof(struct rx_reo_queue) +
+				sizeof(struct rx_reo_queue_ext);
+		else
+			return sizeof(struct rx_reo_queue);
+	}
+
+	if (ba_window_size <= 105)
+		return sizeof(struct rx_reo_queue) +
+			sizeof(struct rx_reo_queue_ext);
+
+	if (ba_window_size <= 210)
+		return sizeof(struct rx_reo_queue) +
+			(2 * sizeof(struct rx_reo_queue_ext));
+
+	if (ba_window_size <= 256)
+		return sizeof(struct rx_reo_queue) +
+			(3 * sizeof(struct rx_reo_queue_ext));
+
+	return sizeof(struct rx_reo_queue) +
+		(10 * sizeof(struct rx_reo_queue_ext)) +
+		sizeof(struct rx_reo_queue_1k);
+}
+
+/*
+ * hal_tx_dump_ppe_vp_entry_9224()
+ * @hal_soc_hdl: HAL SoC handle
+ *
+ * Return: Number of PPE VP entries
+ */
+static
+uint32_t hal_tx_get_num_ppe_vp_tbl_entries_9224(hal_soc_handle_t hal_soc_hdl)
+{
+	return HAL_PPE_VP_ENTRIES_MAX;
+}
+
 static void hal_hw_txrx_ops_attach_qcn9224(struct hal_soc *hal_soc)
 {
 	/* init and setup */
@@ -1644,9 +1724,23 @@ static void hal_hw_txrx_ops_attach_qcn9224(struct hal_soc *hal_soc)
 	hal_soc->ops->hal_tx_set_dscp_tid_map = hal_tx_set_dscp_tid_map_9224;
 	hal_soc->ops->hal_tx_update_dscp_tid = hal_tx_update_dscp_tid_9224;
 	hal_soc->ops->hal_tx_comp_get_status =
-					hal_tx_comp_get_status_generic_be;
+			hal_tx_comp_get_status_generic_be;
 	hal_soc->ops->hal_tx_init_cmd_credit_ring =
-					hal_tx_init_cmd_credit_ring_9224;
+			hal_tx_init_cmd_credit_ring_9224;
+	hal_soc->ops->hal_tx_set_ppe_cmn_cfg =
+			hal_tx_set_ppe_cmn_config_9224;
+	hal_soc->ops->hal_tx_set_ppe_vp_entry =
+			hal_tx_set_ppe_vp_entry_9224;
+	hal_soc->ops->hal_tx_set_ppe_pri2tid =
+			hal_tx_set_ppe_pri2tid_map_9224;
+	hal_soc->ops->hal_tx_update_ppe_pri2tid =
+			hal_tx_update_ppe_pri2tid_9224;
+	hal_soc->ops->hal_tx_dump_ppe_vp_entry =
+			hal_tx_dump_ppe_vp_entry_9224;
+	hal_soc->ops->hal_tx_get_num_ppe_vp_tbl_entries =
+			hal_tx_get_num_ppe_vp_tbl_entries_9224;
+	hal_soc->ops->hal_tx_enable_pri2tid_map =
+			hal_tx_enable_pri2tid_map_9224;
 
 	/* rx */
 	hal_soc->ops->hal_rx_msdu_start_nss_get = hal_rx_tlv_nss_get_be;
@@ -1840,6 +1934,17 @@ static void hal_hw_txrx_ops_attach_qcn9224(struct hal_soc *hal_soc)
 	hal_soc->ops->hal_reo_shared_qaddr_detach = hal_reo_shared_qaddr_detach_be;
 	hal_soc->ops->hal_reo_shared_qaddr_write = hal_reo_shared_qaddr_write_be;
 #endif
+	/* Overwrite the default BE ops */
+	hal_soc->ops->hal_get_reo_qdesc_size = hal_qcn9224_get_reo_qdesc_size;
+	/* TX MONITOR */
+#ifdef QCA_MONITOR_2_0_SUPPORT
+	hal_soc->ops->hal_txmon_status_parse_tlv =
+				hal_txmon_status_parse_tlv_generic_be;
+	hal_soc->ops->hal_txmon_status_get_num_users =
+				hal_txmon_status_get_num_users_generic_be;
+	hal_soc->ops->hal_txmon_status_free_buffer =
+				hal_txmon_status_free_buffer_generic_be;
+#endif /* QCA_MONITOR_2_0_SUPPORT */
 };
 
 struct hal_hw_srng_config hw_srng_table_9224[] = {
@@ -2326,10 +2431,11 @@ struct hal_hw_srng_config hw_srng_table_9224[] = {
 		HWIO_WBM_R0_PPE_RELEASE_RING_BASE_MSB_RING_SIZE_BMSK >>
 		HWIO_WBM_R0_PPE_RELEASE_RING_BASE_MSB_RING_SIZE_SHFT,
 	},
+#ifdef QCA_MONITOR_2_0_SUPPORT
 	{ /* TX_MONITOR_BUF */
 		.start_ring_id = HAL_SRNG_SW2TXMON_BUF0,
 		.max_rings = 1,
-		.entry_size = sizeof(struct wbm_buffer_ring) >> 2,
+		.entry_size = sizeof(struct mon_ingress_ring) >> 2,
 		.lmac_ring = TRUE,
 		.ring_dir = HAL_SRNG_SRC_RING,
 		/* reg_start is not set because LMAC rings are not accessed
@@ -2342,7 +2448,7 @@ struct hal_hw_srng_config hw_srng_table_9224[] = {
 	{ /* TX_MONITOR_DST */
 		.start_ring_id = HAL_SRNG_WMAC1_TXMON2SW0,
 		.max_rings = 1,
-		.entry_size = sizeof(struct sw_monitor_ring) >> 2,
+		.entry_size = sizeof(struct mon_destination_ring) >> 2,
 		.lmac_ring = TRUE,
 		.ring_dir = HAL_SRNG_DST_RING,
 		/* reg_start is not set because LMAC rings are not accessed
@@ -2352,6 +2458,10 @@ struct hal_hw_srng_config hw_srng_table_9224[] = {
 		.reg_size = {},
 		.max_size = HAL_RXDMA_MAX_RING_SIZE_BE,
 	},
+#else
+	{},
+	{},
+#endif
 	{ /* SW2RXDMA */
 		.start_ring_id = HAL_SRNG_SW2RXDMA_BUF0,
 		.max_rings = 3,

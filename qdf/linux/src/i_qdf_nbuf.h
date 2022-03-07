@@ -70,6 +70,7 @@ typedef struct sk_buff_head __qdf_nbuf_queue_head_t;
 #define QDF_NBUF_CB_PACKET_TYPE_DHCP   4
 #define QDF_NBUF_CB_PACKET_TYPE_ICMP   5
 #define QDF_NBUF_CB_PACKET_TYPE_ICMPv6 6
+#define QDF_NBUF_CB_PACKET_TYPE_DHCPV6 7
 
 #define RADIOTAP_BASE_HEADER_LEN sizeof(struct ieee80211_radiotap_header)
 
@@ -79,6 +80,9 @@ typedef struct sk_buff_head __qdf_nbuf_queue_head_t;
 #endif
 
 #define IEEE80211_RADIOTAP_HE_MU_OTHER 25
+
+#define IEEE80211_RADIOTAP_EXT1_USIG	1
+#define IEEE80211_RADIOTAP_EXT1_EHT	2
 
 /* mark the first packet after wow wakeup */
 #define QDF_MARK_FIRST_WAKEUP_PACKET   0x80000000
@@ -204,7 +208,7 @@ typedef union {
  * @tx.flags.bits.flag_chfrag_cont: middle or part of MSDU in an AMSDU
  * @tx.flags.bits.flag_chfrag_end: last MSDU in an AMSDU
  * @tx.flags.bits.flag_ext_header: extended flags
- * @tx.flags.bits.reserved: reserved
+ * @tx.flags.bits.is_critical: flag indicating a critical frame
  * @tx.trace: combined structure for DP and protocol trace
  * @tx.trace.packet_stat: {NBUF_TX_PKT_[(HDD)|(TXRX_ENQUEUE)|(TXRX_DEQUEUE)|
  *                       +          (TXRX)|(HTT)|(HTC)|(HIF)|(CE)|(FREE)]
@@ -343,7 +347,7 @@ struct qdf_nbuf_cb {
 						flag_chfrag_cont:1,
 						flag_chfrag_end:1,
 						flag_ext_header:1,
-						reserved:1;
+						is_critical:1;
 				} bits;
 				uint8_t u8;
 			} flags;
@@ -503,6 +507,9 @@ QDF_COMPILE_TIME_ASSERT(qdf_nbuf_cb_size,
 		((skb)->cb))->u.tx.flags.bits.flag_ext_header)
 #define QDF_NBUF_CB_TX_EXTRA_FRAG_WORDSTR_FLAGS(skb) \
 	(((struct qdf_nbuf_cb *)((skb)->cb))->u.tx.flags.u8)
+
+#define QDF_NBUF_CB_TX_EXTRA_IS_CRITICAL(skb) \
+	(((struct qdf_nbuf_cb *)((skb)->cb))->u.tx.flags.bits.is_critical)
 /* End of Tx Flags Accessor Macros */
 
 /* Tx trace accessor macros */

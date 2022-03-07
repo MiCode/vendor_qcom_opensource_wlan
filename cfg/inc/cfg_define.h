@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2018-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -90,6 +91,57 @@ enum cfg_fallback_behavior {
 #else
 #define PLATFORM_VALUE(non_ap_value, ap_value) non_ap_value
 #endif
+
+#ifdef WLAN_USE_CONFIG_PARAMS
+/* Section Parsing - section names to be parsed */
+#define CFG_256M_SECTION "256M"
+#define CFG_512M_SECTION "512M"
+#define CFG_512M_E_SECTION "512M-E"
+#define CFG_512M_P_SECTION "512M-P"
+
+#define CFG_2G_SECTION "2G"
+#define CFG_5G_SECTION "5G"
+#define CFG_5G_LOW_SECTION "5GL"
+#define CFG_5G_HIGH_SECTION "5GH"
+#define CFG_6G_SECTION "6G"
+
+#define CFG_256M_2G_SECTION "2G-256M"
+#define CFG_256M_5G_SECTION "5G-256M"
+#define CFG_256M_5G_LOW_SECTION "5GL-256M"
+#define CFG_256M_5G_HIGH_SECTION "5GH-256M"
+#define CFG_256M_6G_SECTION "6G-256M"
+
+#define CFG_512ME_2G_SECTION "2G-512M-E"
+#define CFG_512ME_5G_SECTION "5G-512M-E"
+#define CFG_512ME_5G_LOW_SECTION "5GL-512M-E"
+#define CFG_512ME_5G_HIGH_SECTION "5GH-512M-E"
+#define CFG_512ME_6G_SECTION "6G-512M-E"
+
+#define CFG_512MP_2G_SECTION "2G-512M-P"
+#define CFG_512MP_5G_LOW_SECTION "5GL-512M-P"
+#define CFG_512MP_5G_HIGH_SECTION "5GH-512M-P"
+#define CFG_512MP_5G_SECTION "5G-512M-P"
+#define CFG_512MP_6G_SECTION "6G-512M-P"
+
+#define CFG_1G_2G_SECTION "1G-2G"
+#define CFG_1G_5G_SECTION "1G-5G"
+#define CFG_1G_5G_LOW_SECTION "1G-5GL"
+#define CFG_1G_5G_HIGH_SECTION "1G-5GH"
+#define CFG_1G_6G_SECTION "1G-6G"
+
+#define CFG_SBS_NSS_RING_SECTION "SBS-NSS-RING"
+#define CFG_DBS_NSS_RING_SECTION "DBS-NSS-RING"
+
+#define CFG_DP_TX_DESC_512P_SECTION "512M_REDUCED_DESC"
+#define CFG_DP_TX_DESC_1G_SECTION "1G-TX-DESC"
+#define CFG_DP_MON_512M_SECTION "DP_MON_512M_RING"
+#define CFG_NSS_3DEV_RING_SECTION "DP_NSS_3DEV_RING_SIZE"
+#define CFG_DP_4RADIO_REO_SECTION "DP_NSS_4RADIO_REO_MAP"
+
+#define CFG_512M_OR_4CHAIN_SECTION "512M_OR_DP_MON_4CHAIN"
+#define CFG_DP_MON_2CHAIN_SECTION "DP_MON_2CHAIN"
+
+#endif /* WLAN_USE_CONFIG_PARAMS */
 
 #endif /* __CFG_DEFINE_H */
 

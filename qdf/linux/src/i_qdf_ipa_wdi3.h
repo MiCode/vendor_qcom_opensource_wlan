@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -36,6 +37,26 @@
 typedef enum ipa_wdi_version __qdf_ipa_wdi_version_t;
 
 /**
+ * __qdf_ipa_wdi_hdl_t - IPA WDI hdl
+ */
+typedef ipa_wdi_hdl_t __qdf_ipa_wdi_hdl_t;
+
+/**
+ * __qdf_ipa_wdi_capabilities_out_params_t - IPA WDI capabilities output params
+ */
+typedef struct ipa_wdi_capabilities_out_params \
+		__qdf_ipa_wdi_capabilities_out_params_t;
+
+#define __QDF_IPA_WDI_CAPABILITIES_OUT_PARAMS_NUM_INSTANCES(out_params)	\
+	(((struct ipa_wdi_capabilities_out_params *)(out_params))->num_of_instances)
+
+static inline
+int __qdf_ipa_wdi_get_capabilities(__qdf_ipa_wdi_capabilities_out_params_t *out)
+{
+	return ipa_wdi_get_capabilities(out);
+}
+
+/**
  * __qdf_ipa_wdi_init_in_params_t - wdi init input parameters
  */
 typedef struct ipa_wdi_init_in_params __qdf_ipa_wdi_init_in_params_t;
@@ -48,6 +69,8 @@ typedef struct ipa_wdi_init_in_params __qdf_ipa_wdi_init_in_params_t;
 	(((struct ipa_wdi_init_in_params *)(in_params))->priv)
 #define __QDF_IPA_WDI_INIT_IN_PARAMS_WDI_NOTIFY(in_params)	\
 	(((struct ipa_wdi_init_in_params *)(in_params))->wdi_notify)
+#define __QDF_IPA_WDI_INIT_IN_PARAMS_INSTANCE_ID(in_params)	\
+	(((struct ipa_wdi_init_in_params *)(in_params))->inst_id)
 
 /**
  * __qdf_ipa_wdi_init_out_params_t - wdi init output parameters
@@ -58,6 +81,9 @@ typedef struct ipa_wdi_init_out_params __qdf_ipa_wdi_init_out_params_t;
 	(((struct ipa_wdi_init_out_params *)(out_params))->is_uC_ready)
 #define __QDF_IPA_WDI_INIT_OUT_PARAMS_IS_SMMU_ENABLED(out_params)	\
 	(((struct ipa_wdi_init_out_params *)(out_params))->is_smmu_enabled)
+#define __QDF_IPA_WDI_INIT_OUT_PARAMS_HANDLE(out_params)	\
+	(((struct ipa_wdi_init_out_params *)(out_params))->hdl)
+
 #if (defined(IPA_WDI3_GSI)) || (defined(IPA_WDI2_GSI))
 #define QDF_IPA_WDI_INIT_OUT_PARAMS_IS_OVER_GSI(out_params)	\
 	(((struct ipa_wdi_init_out_params *)(out_params))->is_over_gsi)
@@ -98,6 +124,8 @@ typedef struct ipa_wdi_reg_intf_in_params  __qdf_ipa_wdi_reg_intf_in_params_t;
 	(((struct ipa_wdi_reg_intf_in_params *)(in))->meta_data)
 #define __QDF_IPA_WDI_REG_INTF_IN_PARAMS_META_DATA_MASK(in)	\
 	(((struct ipa_wdi_reg_intf_in_params *)(in))->meta_data_mask)
+#define __QDF_IPA_WDI_REG_INTF_IN_PARAMS_HANDLE(in)	\
+	(((struct ipa_wdi_reg_intf_in_params *)(in))->hdl)
 #ifdef IPA_WDI3_TX_TWO_PIPES
 #define __QDF_IPA_WDI_REG_INTF_IN_PARAMS_IS_TX1_USED(in)	\
 	(((struct ipa_wdi_reg_intf_in_params *)(in))->is_tx1_used)
@@ -224,6 +252,8 @@ typedef struct ipa_wdi_conn_in_params  __qdf_ipa_wdi_conn_in_params_t;
 	(((struct ipa_wdi_conn_in_params *)(pipe_in))->u_rx.rx)
 #define __QDF_IPA_WDI_CONN_IN_PARAMS_RX_SMMU(pipe_in)	\
 	(((struct ipa_wdi_conn_in_params *)(pipe_in))->u_rx.rx_smmu)
+#define __QDF_IPA_WDI_CONN_IN_PARAMS_HANDLE(pipe_in)	\
+	(((struct ipa_wdi_conn_in_params *)(pipe_in))->hdl)
 
 /**
  * __qdf_ipa_wdi_conn_out_params_t - information provided
@@ -268,18 +298,19 @@ typedef struct ipa_wdi_perf_profile  __qdf_ipa_wdi_perf_profile_t;
 static inline int __qdf_ipa_wdi_init(struct ipa_wdi_init_in_params *in,
 		 struct ipa_wdi_init_out_params *out)
 {
-	return ipa_wdi_init(in, out);
+	return ipa_wdi_init_per_inst(in, out);
 }
 
 /**
  * __qdf_ipa_wdi_cleanup - Client should call this function to
  * clean up WDI IPA offload data path
+ * @hdl: IPA handle
  *
  * @Return 0 on success, negative on failure
  */
-static inline int __qdf_ipa_wdi_cleanup(void)
+static inline int __qdf_ipa_wdi_cleanup(__qdf_ipa_wdi_hdl_t hdl)
 {
-	return ipa_wdi_cleanup();
+	return ipa_wdi_cleanup_per_inst(hdl);
 }
 
 /**
@@ -294,24 +325,25 @@ static inline int __qdf_ipa_wdi_cleanup(void)
 static inline int __qdf_ipa_wdi_reg_intf(
 	struct ipa_wdi_reg_intf_in_params *in)
 {
-	return ipa_wdi_reg_intf(in);
+	return ipa_wdi_reg_intf_per_inst(in);
 }
 
 /**
  * __qdf_ipa_wdi_dereg_intf - Client Driver should call this
  * function to deregister before unload and after disconnect
+ * @hdl: IPA handle
  *
  * @Return 0 on success, negative on failure
  */
-static inline int __qdf_ipa_wdi_dereg_intf(const char *netdev_name)
+static inline int __qdf_ipa_wdi_dereg_intf(const char *netdev_name,
+					   __qdf_ipa_wdi_hdl_t hdl)
 {
-	return ipa_wdi_dereg_intf(netdev_name);
+	return ipa_wdi_dereg_intf_per_inst(netdev_name, hdl);
 }
 
 /**
  * __qdf_ipa_wdi_conn_pipes - Client should call this
  * function to connect pipes
- *
  * @in:	[in] input parameters from client
  * @out: [out] output params to client
  *
@@ -323,90 +355,95 @@ static inline int __qdf_ipa_wdi_dereg_intf(const char *netdev_name)
 static inline int __qdf_ipa_wdi_conn_pipes(struct ipa_wdi_conn_in_params *in,
 			struct ipa_wdi_conn_out_params *out)
 {
-	return ipa_wdi_conn_pipes(in, out);
+	return ipa_wdi_conn_pipes_per_inst(in, out);
 }
 
 /**
  * __qdf_ipa_wdi_disconn_pipes() - Client should call this
  *		function to disconnect pipes
+ * @hdl: IPA handle
  *
  * Note: Should not be called from atomic context
  *
  * Returns: 0 on success, negative on failure
  */
-static inline int __qdf_ipa_wdi_disconn_pipes(void)
+static inline int __qdf_ipa_wdi_disconn_pipes(__qdf_ipa_wdi_hdl_t hdl)
 {
-	return ipa_wdi_disconn_pipes();
+	return ipa_wdi_disconn_pipes_per_inst(hdl);
 }
 
 /**
  * __qdf_ipa_wdi_enable_pipes() - Client should call this
  *		function to enable IPA offload data path
+ * @hdl: IPA handle
  *
  * Note: Should not be called from atomic context
  *
  * Returns: 0 on success, negative on failure
  */
-static inline int __qdf_ipa_wdi_enable_pipes(void)
+static inline int __qdf_ipa_wdi_enable_pipes(__qdf_ipa_wdi_hdl_t hdl)
 {
-	return ipa_wdi_enable_pipes();
+	return ipa_wdi_enable_pipes_per_inst(hdl);
 }
 
 /**
  * __qdf_ipa_wdi_disable_pipes() - Client should call this
  *		function to disable IPA offload data path
+ * @hdl: IPA handle
  *
  * Note: Should not be called from atomic context
  *
  * Returns: 0 on success, negative on failure
  */
-static inline int __qdf_ipa_wdi_disable_pipes(void)
+static inline int __qdf_ipa_wdi_disable_pipes(__qdf_ipa_wdi_hdl_t hdl)
 {
-	return ipa_wdi_disable_pipes();
+	return ipa_wdi_disable_pipes_per_inst(hdl);
 }
 
 /**
  * __qdf_ipa_wdi_set_perf_profile() - Client should call this function to
  *		set IPA clock bandwidth based on data rates
- *
+ * @hdl: IPA handle
  * @profile: [in] BandWidth profile to use
  *
  * Returns: 0 on success, negative on failure
  */
-static inline int __qdf_ipa_wdi_set_perf_profile(
-			struct ipa_wdi_perf_profile *profile)
+static inline int __qdf_ipa_wdi_set_perf_profile(__qdf_ipa_wdi_hdl_t hdl,
+						 struct ipa_wdi_perf_profile *profile)
 {
-	return ipa_wdi_set_perf_profile(profile);
+	return ipa_wdi_set_perf_profile_per_inst(hdl, profile);
 }
 
 /**
  * __qdf_ipa_wdi_create_smmu_mapping() - Client should call this function to
  *		create smmu mapping
- *
+ * @hdl: IPA handle
  * @num_buffers: [in] number of buffers
  * @info: [in] wdi buffer info
  *
  * Returns: 0 on success, negative on failure
  */
-static inline int __qdf_ipa_wdi_create_smmu_mapping(u32 num_buffers,
-		struct ipa_wdi_buffer_info *info)
+static inline int __qdf_ipa_wdi_create_smmu_mapping(__qdf_ipa_wdi_hdl_t hdl,
+						    u32 num_buffers,
+						    struct ipa_wdi_buffer_info *info)
 {
-	return ipa_wdi_create_smmu_mapping(num_buffers, info);
+	return ipa_wdi_create_smmu_mapping_per_inst(hdl, num_buffers, info);
 }
 
 /**
  * __qdf_ipa_wdi_release_smmu_mapping() - Client should call this function to
  *		release smmu mapping
- *
+ * @hdl: IPA handle
  * @num_buffers: [in] number of buffers
  * @info: [in] wdi buffer info
  *
  * Returns: 0 on success, negative on failure
  */
-static inline int __qdf_ipa_wdi_release_smmu_mapping(u32 num_buffers,
-		struct ipa_wdi_buffer_info *info)
+static inline int __qdf_ipa_wdi_release_smmu_mapping(__qdf_ipa_wdi_hdl_t hdl,
+						     u32 num_buffers,
+						     struct ipa_wdi_buffer_info *info)
 {
-	return ipa_wdi_release_smmu_mapping(num_buffers, info);
+	return ipa_wdi_release_smmu_mapping_per_inst(hdl, num_buffers, info);
 }
 
 #ifdef WDI3_STATS_UPDATE
@@ -465,6 +502,8 @@ typedef struct ipa_wdi3_reg_intf_in_params  __qdf_ipa_wdi_reg_intf_in_params_t;
 	(((struct ipa_wdi3_reg_intf_in_params *)(in))->meta_data)
 #define __QDF_IPA_WDI_REG_INTF_IN_PARAMS_META_DATA_MASK(in)	\
 	(((struct ipa_wdi3_reg_intf_in_params *)(in))->meta_data_mask)
+#define __QDF_IPA_WDI_REG_INTF_IN_PARAMS_HANDLE(in)	\
+	(((struct ipa_wdi3_reg_intf_in_params *)(in))->hdl)
 
 /**
  * __qdf_ipa_wdi_setup_info_t - WDI3 TX/Rx configuration
@@ -578,7 +617,6 @@ static inline int __qdf_ipa_wdi_dereg_intf(const char *netdev_name)
 /**
  * __qdf_ipa_wdi_conn_pipes - Client should call this
  * function to connect pipes
- *
  * @in:	[in] input parameters from client
  * @out: [out] output params to client
  *
@@ -601,41 +639,42 @@ static inline int __qdf_ipa_wdi_conn_pipes(struct ipa_wdi3_conn_in_params *in,
  *
  * Returns: 0 on success, negative on failure
  */
-static inline int __qdf_ipa_wdi_disconn_pipes(void)
+static inline int __qdf_ipa_wdi_disconn_pipes(__qdf_ipa_wdi_hdl_t hdl)
 {
-	return ipa_wdi3_disconn_pipes();
+	return ipa_wdi3_disconn_pipes_per_inst(hdl);
 }
 
 /**
  * __qdf_ipa_wdi_enable_pipes() - Client should call this
  *		function to enable IPA offload data path
+ * @hdl: IPA handle
  *
  * Note: Should not be called from atomic context
  *
  * Returns: 0 on success, negative on failure
  */
-static inline int __qdf_ipa_wdi_enable_pipes(void)
+static inline int __qdf_ipa_wdi_enable_pipes(__qdf_ipa_wdi_hdl_t hdl)
 {
-	return ipa_wdi3_enable_pipes();
+	return ipa_wdi3_enable_pipes_per_inst(hdl);
 }
 
 /**
  * __qdf_ipa_wdi_disable_pipes() - Client should call this
  *		function to disable IPA offload data path
+ * @hdl: IPA handle
  *
  * Note: Should not be called from atomic context
  *
  * Returns: 0 on success, negative on failure
  */
-static inline int __qdf_ipa_wdi_disable_pipes(void)
+static inline int __qdf_ipa_wdi_disable_pipes(__qdf_ipa_wdi_hdl_t hdl)
 {
-	return ipa_wdi3_disable_pipes();
+	return ipa_wdi3_disable_pipes_per_inst(hdl);
 }
 
 /**
  * __qdf_ipa_wdi_set_perf_profile() - Client should call this function to
  *		set IPA clock bandwidth based on data rates
- *
  * @profile: [in] BandWidth profile to use
  *
  * Returns: 0 on success, negative on failure

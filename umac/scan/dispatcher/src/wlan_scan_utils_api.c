@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2017-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -329,7 +329,8 @@ util_scan_get_chan_from_he_6g_params(struct wlan_objmgr_pdev *pdev,
 						he_6g_params->primary_channel,
 						band_mask);
 	if (scan_obj->drop_bcn_on_invalid_freq &&
-	    wlan_reg_is_disable_for_freq(pdev, *chan_freq)) {
+	    wlan_reg_is_disable_for_pwrmode(pdev, *chan_freq,
+					    REG_CURRENT_PWR_MODE)) {
 		scm_debug_rl(QDF_MAC_ADDR_FMT": Drop as invalid channel %d freq %d in HE 6Ghz params",
 			     QDF_MAC_ADDR_REF(scan_params->bssid.bytes),
 			     he_6g_params->primary_channel, *chan_freq);
@@ -781,6 +782,8 @@ util_scan_update_rnr_mld(struct rnr_bss_info *rnr,
 		mld_info_present = true;
 		break;
 	};
+
+	rnr->mld_info_valid = mld_info_present;
 }
 #else
 static void
@@ -879,7 +882,7 @@ util_scan_parse_rnr_ie(struct scan_cache_entry *scan_entry,
 		       struct ie_header *ie)
 {
 	uint32_t rnr_ie_len;
-	uint16_t tbtt_count, tbtt_length, i, fieldtype;
+	uint16_t tbtt_count, tbtt_length, i, fieldtype, idx = 0;
 	uint8_t *data;
 	struct neighbor_ap_info_field *neighbor_ap_info;
 
@@ -903,14 +906,16 @@ util_scan_parse_rnr_ie(struct scan_cache_entry *scan_entry,
 
 		for (i = 0; i < (tbtt_count + 1) &&
 		     data < ((uint8_t *)ie + rnr_ie_len + 2); i++) {
-			if (i < MAX_RNR_BSS)
+			if (i < MAX_RNR_BSS || idx < MAX_RNR_BSS)
 				util_scan_update_rnr(
-					&scan_entry->rnr.bss_info[i],
+					&scan_entry->rnr.bss_info[idx++],
 					neighbor_ap_info,
 					data);
 			data += tbtt_length;
 		}
 	}
+
+	scan_entry->rnr.count = idx;
 
 	return QDF_STATUS_SUCCESS;
 }
@@ -1281,7 +1286,9 @@ util_scan_populate_bcn_ie_list(struct wlan_objmgr_pdev *pdev,
 								band_mask);
 			/* Drop if invalid freq */
 			if (scan_obj->drop_bcn_on_invalid_freq &&
-			    wlan_reg_is_disable_for_freq(pdev, *chan_freq)) {
+			    wlan_reg_is_disable_for_pwrmode(
+						pdev, *chan_freq,
+						REG_CURRENT_PWR_MODE)) {
 				scm_debug_rl(QDF_MAC_ADDR_FMT": Drop as invalid channel %d freq %d in HT_INFO IE",
 					     QDF_MAC_ADDR_REF(scan_params->bssid.bytes),
 					     chan_idx, *chan_freq);
@@ -1859,14 +1866,28 @@ static void util_get_partner_link_info(struct scan_cache_entry *scan_entry)
 	uint8_t perstaprof_len = 0;
 	struct partner_link_info *link_info = NULL;
 	uint8_t eid = 0;
+	uint8_t link_idx = 0;
+	uint8_t rnr_idx = 0;
+	struct rnr_bss_info *rnr = NULL;
 
 	/* Update partner info  from RNR IE */
-	qdf_mem_copy(&scan_entry->ml_info.link_info[0].link_addr,
-		     &scan_entry->rnr.bss_info[0].bssid, 6);
+	while ((rnr_idx < MAX_RNR_BSS) && (rnr_idx < scan_entry->rnr.count)) {
+		if (link_idx >= (MLD_MAX_LINKS - 1))
+			break;
+		rnr = &scan_entry->rnr.bss_info[rnr_idx];
+		if (rnr->mld_info_valid && !rnr->mld_info.mld_id) {
+			link_info = &scan_entry->ml_info.link_info[link_idx];
+			qdf_mem_copy(&link_info->link_addr,
+				     &rnr->bssid, QDF_MAC_ADDR_SIZE);
 
-	scan_entry->ml_info.link_info[0].link_id =
-				scan_entry->rnr.bss_info[0].mld_info.link_id;
+			link_info->link_id = rnr->mld_info.link_id;
 
+			link_idx++;
+		}
+		rnr_idx++;
+	}
+
+	scan_entry->ml_info.num_links = link_idx;
 	if (!offset)
 		return;
 
@@ -1935,7 +1956,7 @@ static void util_scan_update_ml_info(struct scan_cache_entry *scan_entry)
 	}
 
 	/* TODO: Decode it from ML IE */
-	scan_entry->ml_info.num_links = 2;
+	scan_entry->ml_info.num_links = 0;
 
 	/**
 	 * Copy Link ID & MAC address of the scan cache entry as first entry

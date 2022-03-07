@@ -236,6 +236,7 @@ dp_mon_buffers_replenish(struct dp_soc *dp_soc,
 		(*desc_list)->mon_desc.unmapped = 0;
 		(*desc_list)->mon_desc.buf_addr = mon_desc.buf_addr;
 		(*desc_list)->mon_desc.paddr = mon_desc.paddr;
+		(*desc_list)->mon_desc.magic = DP_MON_DESC_MAGIC;
 
 		hal_mon_buff_addr_info_set(dp_soc->hal_soc,
 					   mon_ring_entry,
@@ -272,12 +273,12 @@ dp_mon_desc_pool_init(struct dp_mon_desc_pool *mon_desc_pool,
 	mon_desc_pool->buf_size = DP_MON_DATA_BUFFER_SIZE;
 	/* link SW descs into a freelist */
 	mon_desc_pool->freelist = &mon_desc_pool->array[0];
-	mon_desc_pool->pool_size = pool_size;
+	mon_desc_pool->pool_size = pool_size - 1;
 	qdf_mem_zero(mon_desc_pool->freelist,
 		     mon_desc_pool->pool_size *
 		     sizeof(union dp_mon_desc_list_elem_t));
 
-	for (desc_id = 0; desc_id <= mon_desc_pool->pool_size; desc_id++) {
+	for (desc_id = 0; desc_id < mon_desc_pool->pool_size; desc_id++) {
 		if (desc_id == mon_desc_pool->pool_size - 1)
 			mon_desc_pool->array[desc_id].next = NULL;
 		else
@@ -311,7 +312,7 @@ QDF_STATUS dp_mon_desc_pool_alloc(uint32_t pool_size,
 				  struct dp_mon_desc_pool *mon_desc_pool)
 {
 	mon_desc_pool->pool_size = pool_size - 1;
-	mon_desc_pool->array = qdf_mem_malloc((pool_size - 1) *
+	mon_desc_pool->array = qdf_mem_malloc((mon_desc_pool->pool_size) *
 				     sizeof(union dp_mon_desc_list_elem_t));
 
 	return QDF_STATUS_SUCCESS;
@@ -381,6 +382,31 @@ QDF_STATUS dp_vdev_set_monitor_mode_rings_2_0(struct dp_pdev *pdev,
 	return QDF_STATUS_SUCCESS;
 }
 
+#ifdef QCA_ENHANCED_STATS_SUPPORT
+/**
+ * dp_mon_tx_enable_enhanced_stats_2_0() - Send HTT cmd to FW to enable stats
+ * @pdev: Datapath pdev handle
+ *
+ * Return: none
+ */
+static void dp_mon_tx_enable_enhanced_stats_2_0(struct dp_pdev *pdev)
+{
+	dp_h2t_cfg_stats_msg_send(pdev, DP_PPDU_STATS_CFG_ENH_STATS,
+				  pdev->pdev_id);
+}
+
+/**
+ * dp_mon_tx_disable_enhanced_stats_2_0() - Send HTT cmd to FW to disable stats
+ * @pdev: Datapath pdev handle
+ *
+ * Return: none
+ */
+static void dp_mon_tx_disable_enhanced_stats_2_0(struct dp_pdev *pdev)
+{
+	dp_h2t_cfg_stats_msg_send(pdev, 0, pdev->pdev_id);
+}
+#endif
+
 #if defined(QCA_ENHANCED_STATS_SUPPORT) && defined(WLAN_FEATURE_11BE)
 void
 dp_mon_tx_stats_update_2_0(struct dp_mon_peer *mon_peer,
@@ -395,37 +421,37 @@ dp_mon_tx_stats_update_2_0(struct dp_mon_peer *mon_peer,
 	DP_STATS_INCC(mon_peer,
 		      tx.pkt_type[preamble].mcs_count[MAX_MCS - 1],
 		      ppdu->num_msdu,
-		      ((mcs >= (MAX_MCS - 1)) && (preamble == DOT11_BE)));
+		      ((mcs >= MAX_MCS_11BE) && (preamble == DOT11_BE)));
 	DP_STATS_INCC(mon_peer,
 		      tx.pkt_type[preamble].mcs_count[mcs],
 		      ppdu->num_msdu,
-		      ((mcs < (MAX_MCS - 1)) && (preamble == DOT11_BE)));
+		      ((mcs < MAX_MCS_11BE) && (preamble == DOT11_BE)));
 	DP_STATS_INCC(mon_peer,
 		      tx.su_be_ppdu_cnt.mcs_count[MAX_MCS - 1], 1,
-		      ((mcs >= (MAX_MCS - 1)) && (preamble == DOT11_BE) &&
+		      ((mcs >= MAX_MCS_11BE) && (preamble == DOT11_BE) &&
 		      (ppdu->ppdu_type == HTT_PPDU_STATS_PPDU_TYPE_SU)));
 	DP_STATS_INCC(mon_peer,
 		      tx.su_be_ppdu_cnt.mcs_count[mcs], 1,
-		      ((mcs < (MAX_MCS - 1)) && (preamble == DOT11_BE) &&
+		      ((mcs < MAX_MCS_11BE) && (preamble == DOT11_BE) &&
 		      (ppdu->ppdu_type == HTT_PPDU_STATS_PPDU_TYPE_SU)));
 	DP_STATS_INCC(mon_peer,
 		      tx.mu_be_ppdu_cnt[TXRX_TYPE_MU_OFDMA].mcs_count[MAX_MCS - 1],
-		      1, ((mcs >= (MAX_MCS - 1)) &&
+		      1, ((mcs >= MAX_MCS_11BE) &&
 		      (preamble == DOT11_BE) &&
 		      (ppdu->ppdu_type == HTT_PPDU_STATS_PPDU_TYPE_MU_OFDMA)));
 	DP_STATS_INCC(mon_peer,
 		      tx.mu_be_ppdu_cnt[TXRX_TYPE_MU_OFDMA].mcs_count[mcs],
-		      1, ((mcs < (MAX_MCS - 1)) &&
+		      1, ((mcs < MAX_MCS_11BE) &&
 		      (preamble == DOT11_BE) &&
 		      (ppdu->ppdu_type == HTT_PPDU_STATS_PPDU_TYPE_MU_OFDMA)));
 	DP_STATS_INCC(mon_peer,
 		      tx.mu_be_ppdu_cnt[TXRX_TYPE_MU_MIMO].mcs_count[MAX_MCS - 1],
-		      1, ((mcs >= (MAX_MCS - 1)) &&
+		      1, ((mcs >= MAX_MCS_11BE) &&
 		      (preamble == DOT11_BE) &&
 		      (ppdu->ppdu_type == HTT_PPDU_STATS_PPDU_TYPE_MU_MIMO)));
 	DP_STATS_INCC(mon_peer,
 		      tx.mu_be_ppdu_cnt[TXRX_TYPE_MU_MIMO].mcs_count[mcs],
-		      1, ((mcs < (MAX_MCS - 1)) &&
+		      1, ((mcs < MAX_MCS_11BE) &&
 		      (preamble == DOT11_BE) &&
 		      (ppdu->ppdu_type == HTT_PPDU_STATS_PPDU_TYPE_MU_MIMO)));
 }
@@ -447,14 +473,54 @@ dp_set_bpr_enable_2_0(struct dp_pdev *pdev, int val)
 }
 #endif /* QCA_SUPPORT_BPR */
 
+#if defined(WDI_EVENT_ENABLE) &&\
+	(defined(QCA_ENHANCED_STATS_SUPPORT) || !defined(REMOVE_PKT_LOG))
+/**
+ * dp_ppdu_desc_notify_2_0 - Notify upper layer for PPDU indication via WDI
+ *
+ * @pdev: Datapath pdev handle
+ * @nbuf: Buffer to be shipped
+ *
+ * Return: void
+ */
+static void dp_ppdu_desc_notify_2_0(struct dp_pdev *pdev, qdf_nbuf_t nbuf)
+{
+	struct cdp_tx_completion_ppdu *ppdu_desc = NULL;
+
+	ppdu_desc = (struct cdp_tx_completion_ppdu *)qdf_nbuf_data(nbuf);
+
+	if (ppdu_desc->num_mpdu != 0 && ppdu_desc->num_users != 0 &&
+	    ppdu_desc->frame_ctrl & HTT_FRAMECTRL_DATATYPE) {
+		dp_wdi_event_handler(WDI_EVENT_TX_PPDU_DESC,
+				     pdev->soc,
+				     nbuf, HTT_INVALID_PEER,
+				     WDI_NO_VAL,
+				     pdev->pdev_id);
+	} else {
+		qdf_nbuf_free(nbuf);
+	}
+}
+
+/**
+ * dp_ppdu_stats_feat_enable_check_2_0 - Check if feature(s) is enabled to
+ *				consume ppdu stats from FW
+ *
+ * @pdev: Datapath pdev handle
+ *
+ * Return: true if enabled, else return false
+ */
+static bool dp_ppdu_stats_feat_enable_check_2_0(struct dp_pdev *pdev)
+{
+	return pdev->monitor_pdev->enhanced_stats_en;
+}
+#endif
+
 static
 QDF_STATUS dp_mon_soc_htt_srng_setup_2_0(struct dp_soc *soc)
 {
-	QDF_STATUS status;
-#ifdef QCA_TXMON_HW_SUPPORT
 	struct dp_mon_soc *mon_soc = soc->monitor_soc;
 	struct dp_mon_soc_be *mon_soc_be = dp_get_be_mon_soc_from_dp_mon_soc(mon_soc);
-#endif
+	QDF_STATUS status;
 
 	hal_set_low_threshold(soc->rxdma_mon_buf_ring[0].hal_srng, 0);
 	status = htt_srng_setup(soc->htt_handle, 0,
@@ -466,17 +532,14 @@ QDF_STATUS dp_mon_soc_htt_srng_setup_2_0(struct dp_soc *soc)
 		return status;
 	}
 
-#ifdef QCA_TXMON_HW_SUPPORT
 	hal_set_low_threshold(mon_soc_be->tx_mon_buf_ring.hal_srng, 0);
 	status = htt_srng_setup(soc->htt_handle, 0,
 				mon_soc_be->tx_mon_buf_ring.hal_srng,
 				TX_MONITOR_BUF);
-
 	if (status != QDF_STATUS_SUCCESS) {
 		dp_err("Failed to send htt srng setup message for Tx mon buf ring");
 		return status;
 	}
-#endif
 
 	return status;
 }
@@ -487,10 +550,8 @@ QDF_STATUS dp_mon_pdev_htt_srng_setup_2_0(struct dp_soc *soc,
 					  int mac_id,
 					  int mac_for_pdev)
 {
-#ifdef QCA_TXMON_HW_SUPPORT
 	struct dp_mon_soc *mon_soc = soc->monitor_soc;
 	struct dp_mon_soc_be *mon_soc_be = dp_get_be_mon_soc_from_dp_mon_soc(mon_soc);
-#endif
 	QDF_STATUS status;
 
 	status = htt_srng_setup(soc->htt_handle, mac_for_pdev,
@@ -502,7 +563,6 @@ QDF_STATUS dp_mon_pdev_htt_srng_setup_2_0(struct dp_soc *soc,
 		return status;
 	}
 
-#ifdef QCA_TXMON_HW_SUPPORT
 	status = htt_srng_setup(soc->htt_handle, mac_for_pdev,
 				mon_soc_be->tx_mon_dst_ring[mac_id].hal_srng,
 				TX_MONITOR_DST);
@@ -511,7 +571,6 @@ QDF_STATUS dp_mon_pdev_htt_srng_setup_2_0(struct dp_soc *soc,
 		dp_mon_err("Failed to send htt srng message for Tx mon dst ring");
 		return status;
 	}
-#endif
 
 	return status;
 }
@@ -591,9 +650,9 @@ QDF_STATUS dp_mon_soc_detach_2_0(struct dp_soc *soc)
 		return QDF_STATUS_E_FAILURE;
 	}
 
-	dp_tx_mon_buf_desc_pool_free(soc);
 	dp_rx_mon_buf_desc_pool_free(soc);
 	dp_srng_free(soc, &soc->rxdma_mon_buf_ring[0]);
+	dp_tx_mon_buf_desc_pool_free(soc);
 	dp_srng_free(soc, &mon_soc_be->tx_mon_buf_ring);
 
 	return QDF_STATUS_SUCCESS;
@@ -605,15 +664,19 @@ static void dp_mon_soc_deinit_2_0(struct dp_soc *soc)
 	struct dp_mon_soc_be *mon_soc_be =
 		dp_get_be_mon_soc_from_dp_mon_soc(mon_soc);
 
-	dp_tx_mon_buffers_free(soc);
-	dp_rx_mon_buffers_free(soc);
+	if (!mon_soc_be->is_dp_mon_soc_initialized)
+		return;
 
-	dp_tx_mon_buf_desc_pool_deinit(soc);
+	dp_rx_mon_buffers_free(soc);
+	dp_tx_mon_buffers_free(soc);
+
 	dp_rx_mon_buf_desc_pool_deinit(soc);
+	dp_tx_mon_buf_desc_pool_deinit(soc);
 
 	dp_srng_deinit(soc, &soc->rxdma_mon_buf_ring[0], RXDMA_MONITOR_BUF, 0);
-
 	dp_srng_deinit(soc, &mon_soc_be->tx_mon_buf_ring, TX_MONITOR_BUF, 0);
+
+	mon_soc_be->is_dp_mon_soc_initialized = false;
 }
 
 static
@@ -673,6 +736,10 @@ fail:
 static
 QDF_STATUS dp_mon_soc_init_2_0(struct dp_soc *soc)
 {
+	struct dp_mon_soc *mon_soc = soc->monitor_soc;
+	struct dp_mon_soc_be *mon_soc_be =
+		dp_get_be_mon_soc_from_dp_mon_soc(mon_soc);
+
 	if (soc->rxdma_mon_buf_ring[0].hal_srng) {
 		dp_mon_info("%pK: mon soc init is done", soc);
 		return QDF_STATUS_SUCCESS;
@@ -687,6 +754,8 @@ QDF_STATUS dp_mon_soc_init_2_0(struct dp_soc *soc)
 		dp_mon_err("%pK: " RNG_ERR "tx_mon_buf_ring", soc);
 		goto fail;
 	}
+
+	mon_soc_be->is_dp_mon_soc_initialized = true;
 	return QDF_STATUS_SUCCESS;
 fail:
 	dp_mon_soc_deinit_2_0(soc);
@@ -868,31 +937,6 @@ QDF_STATUS dp_mon_pdev_alloc_2_0(struct dp_pdev *pdev)
 	return QDF_STATUS_SUCCESS;
 }
 
-void dp_tx_ppdu_stats_attach_2_0(struct dp_pdev *pdev)
-{
-}
-
-void dp_tx_ppdu_stats_detach_2_0(struct dp_pdev *pdev)
-{
-}
-
-void dp_print_pdev_tx_capture_stats_2_0(struct dp_pdev *pdev)
-{
-}
-
-QDF_STATUS dp_config_enh_tx_capture_2_0(struct dp_pdev *pdev, uint8_t val)
-{
-	return QDF_STATUS_SUCCESS;
-}
-
-QDF_STATUS dp_peer_set_tx_capture_enabled_2_0(struct dp_pdev *pdev_handle,
-					      struct dp_peer *peer_handle,
-					      uint8_t is_tx_pkt_cap_enable,
-					      uint8_t *peer_mac)
-{
-	return QDF_STATUS_SUCCESS;
-}
-
 #else
 static inline
 QDF_STATUS dp_mon_htt_srng_setup_2_0(struct dp_soc *soc,
@@ -966,17 +1010,6 @@ QDF_STATUS dp_vdev_set_monitor_mode_rings_2_0(struct dp_pdev *pdev,
 {
 	return QDF_STATUS_SUCCESS;
 }
-
-static inline
-void dp_mon_pdev_free_2_0(struct dp_pdev *pdev)
-{
-}
-
-static inline
-QDF_STATUS dp_mon_pdev_alloc_2_0(struct dp_pdev *pdev)
-{
-	return QDF_STATUS_SUCCESS;
-}
 #endif
 
 static void dp_mon_register_intr_ops_2_0(struct dp_soc *soc)
@@ -985,10 +1018,8 @@ static void dp_mon_register_intr_ops_2_0(struct dp_soc *soc)
 
 	mon_soc->mon_ops->rx_mon_refill_buf_ring =
 			NULL,
-#ifdef QCA_TXMON_HW_SUPPORT
 	mon_soc->mon_ops->tx_mon_refill_buf_ring =
-			dp_tx_mon_refill_buf_ring_2_0,
-#endif
+			NULL,
 	mon_soc->mon_rx_process = dp_rx_mon_process_2_0;
 }
 
@@ -1045,6 +1076,10 @@ dp_mon_register_feature_ops_2_0(struct dp_soc *soc)
 #if defined(WDI_EVENT_ENABLE) &&\
 	(defined(QCA_ENHANCED_STATS_SUPPORT) || !defined(REMOVE_PKT_LOG))
 	mon_ops->mon_ppdu_stats_ind_handler = dp_ppdu_stats_ind_handler;
+	mon_ops->mon_ppdu_desc_deliver = dp_ppdu_desc_deliver;
+	mon_ops->mon_ppdu_desc_notify = dp_ppdu_desc_notify_2_0;
+	mon_ops->mon_ppdu_stats_feat_enable_check =
+				dp_ppdu_stats_feat_enable_check_2_0;
 #endif
 #ifdef WLAN_RX_PKT_CAPTURE_ENH
 	mon_ops->mon_config_enh_rx_capture = NULL;
@@ -1073,6 +1108,10 @@ dp_mon_register_feature_ops_2_0(struct dp_soc *soc)
 				dp_mon_filter_setup_enhanced_stats_2_0;
 	mon_ops->mon_filter_reset_enhanced_stats =
 				dp_mon_filter_reset_enhanced_stats_2_0;
+	mon_ops->mon_tx_enable_enhanced_stats =
+				dp_mon_tx_enable_enhanced_stats_2_0;
+	mon_ops->mon_tx_disable_enhanced_stats =
+				dp_mon_tx_disable_enhanced_stats_2_0;
 	mon_ops->mon_tx_stats_update = dp_mon_tx_stats_update_2_0;
 #endif
 #if defined(ATH_SUPPORT_NAC_RSSI) || defined(ATH_SUPPORT_NAC)
@@ -1106,6 +1145,7 @@ dp_mon_register_feature_ops_2_0(struct dp_soc *soc)
 	mon_ops->mon_pktlogmod_exit = dp_pktlogmod_exit;
 #endif
 	mon_ops->rx_packet_length_set = dp_rx_mon_packet_length_set;
+	mon_ops->rx_mon_enable = dp_rx_mon_enable_set;
 	mon_ops->rx_wmask_subscribe = dp_rx_mon_word_mask_subscribe;
 	mon_ops->rx_enable_mpdu_logging = dp_rx_mon_enable_mpdu_logging;
 	mon_ops->mon_neighbour_peers_detach = dp_neighbour_peers_detach;
@@ -1118,6 +1158,14 @@ dp_mon_register_feature_ops_2_0(struct dp_soc *soc)
 	mon_ops->mon_rx_populate_ppdu_usr_info =
 			dp_rx_mon_populate_ppdu_usr_info_2_0;
 	mon_ops->mon_rx_populate_ppdu_info = dp_rx_mon_populate_ppdu_info_2_0;
+#endif
+#ifdef QCA_UNDECODED_METADATA_SUPPORT
+	mon_ops->mon_config_undecoded_metadata_capture =
+		dp_mon_config_undecoded_metadata_capture;
+	mon_ops->mon_filter_setup_undecoded_metadata_capture =
+		dp_mon_filter_setup_undecoded_metadata_capture_2_0;
+	mon_ops->mon_filter_reset_undecoded_metadata_capture =
+		dp_mon_filter_reset_undecoded_metadata_capture_2_0;
 #endif
 }
 

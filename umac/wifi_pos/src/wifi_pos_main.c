@@ -460,8 +460,9 @@ static void wifi_update_channel_bw_info(struct wlan_objmgr_psoc *psoc,
 		return;
 	}
 
-	wlan_reg_set_channel_params_for_freq(pdev, freq,
-					     sec_ch_2g, &ch_params);
+	wlan_reg_set_channel_params_for_pwrmode(pdev, freq, sec_ch_2g,
+						&ch_params,
+						REG_CURRENT_PWR_MODE);
 	chan->band_center_freq1 = ch_params.mhz_freq_seg0;
 
 	if (wifi_pos_psoc->wifi_pos_get_fw_phy_mode_for_freq) {

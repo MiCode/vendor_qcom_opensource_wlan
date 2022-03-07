@@ -40,6 +40,8 @@
 #include <wlan_cp_stats_public_structs.h>
 #ifdef WLAN_FEATURE_MIB_STATS
 #include <wlan_cp_stats_mc_defs.h>
+#else
+#include <wlan_cp_stats_ic_defs.h>
 #endif
 
 /* noise floor */

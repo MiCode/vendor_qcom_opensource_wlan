@@ -893,9 +893,10 @@ target_if_spectral_unify_cfreq_format(struct target_if_spectral *spectral,
 			enum channel_state state;
 
 			/* Get the 80MHz channel containing the pri20 freq */
-			state = wlan_reg_get_5g_bonded_channel_and_state_for_freq
+			state =
+			    wlan_reg_get_5g_bonded_channel_and_state_for_pwrmode
 				(spectral->pdev_obj, pri20_freq, CH_WIDTH_80MHZ,
-				 &bonded_chan_ptr);
+				 &bonded_chan_ptr, REG_CURRENT_PWR_MODE);
 
 			if (state == CHANNEL_STATE_DISABLE ||
 			    state == CHANNEL_STATE_INVALID) {
@@ -2222,7 +2223,16 @@ target_if_spectral_copy_fft_bins(struct target_if_spectral *spectral,
 	for (dword_idx = 0; dword_idx < num_dwords; dword_idx++) {
 		dword = *dword_ptr++; /* Read a DWORD */
 		for (idx = 0; idx < num_bins_per_dword; idx++) {
-			fft_bin_val = (uint16_t)QDF_GET_BITS(
+			/**
+			 * If we use QDF_GET_BITS, when hw_fft_bin_width_bits is
+			 * 32, on certain platforms, we could end up doing a
+			 * 32-bit left shift operation on 32-bit constant
+			 * integer '1'. As per C standard, result of shifting an
+			 * operand by a count greater than or equal to width
+			 * (in bits) of the operand is undefined.
+			 * If we use QDF_GET_BITS_64, we can avoid that.
+			 */
+			fft_bin_val = (uint16_t)QDF_GET_BITS64(
 					dword,
 					idx * hw_fft_bin_width_bits,
 					hw_fft_bin_width_bits);

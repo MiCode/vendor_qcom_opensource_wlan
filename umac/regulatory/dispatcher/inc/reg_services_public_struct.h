@@ -1473,6 +1473,8 @@ enum restart_beaconing_on_ch_avoid_rule {
  * @retain_nol_across_regdmn_update: Retain the NOL list across the regdomain.
  * @coex_unsafe_chan_nb_user_prefer: Honor coex unsafe chan cmd from firmware or
  * userspace
+ * @coex_unsafe_chan_reg_disable: To disable reg channels for received coex
+ * unsafe channels list
  */
 struct reg_config_vars {
 	uint32_t enable_11d_support;
@@ -1489,6 +1491,7 @@ struct reg_config_vars {
 	bool retain_nol_across_regdmn_update;
 #ifdef FEATURE_WLAN_CH_AVOID_EXT
 	bool coex_unsafe_chan_nb_user_prefer;
+	bool coex_unsafe_chan_reg_disable;
 #endif
 };
 

@@ -74,7 +74,7 @@ dp_tx_mon_srng_process_2_0(struct dp_soc *soc, struct dp_intr *int_ctx,
 	}
 
 	while (qdf_likely((tx_mon_dst_ring_desc =
-		(void *)hal_srng_dst_get_next(hal_soc, mon_dst_srng))
+		(void *)hal_srng_dst_peek(hal_soc, mon_dst_srng))
 				&& quota--)) {
 		struct hal_mon_desc hal_mon_tx_desc;
 		struct dp_mon_desc *mon_desc;
@@ -82,6 +82,7 @@ dp_tx_mon_srng_process_2_0(struct dp_soc *soc, struct dp_intr *int_ctx,
 		hal_be_get_mon_dest_status(soc->hal_soc,
 					   tx_mon_dst_ring_desc,
 					   &hal_mon_tx_desc);
+
 		mon_desc = (struct dp_mon_desc *)(uintptr_t)(hal_mon_tx_desc.buf_addr);
 		qdf_assert_always(mon_desc);
 
@@ -92,23 +93,32 @@ dp_tx_mon_srng_process_2_0(struct dp_soc *soc, struct dp_intr *int_ctx,
 			mon_desc->unmapped = 1;
 		}
 
+		if (mon_desc->magic != DP_MON_DESC_MAGIC) {
+			dp_mon_err("Invalid monitor descriptor");
+			qdf_assert_always(mon_desc);
+		}
+
 		status = dp_tx_mon_process_status_tlv(soc, pdev,
 						      &hal_mon_tx_desc,
 						      mon_desc->paddr);
 		if (status != QDF_STATUS_SUCCESS) {
 			hal_txmon_status_free_buffer(pdev->soc->hal_soc,
 						     mon_desc->buf_addr);
-			qdf_frag_free(mon_desc->buf_addr);
 		}
 
+		qdf_frag_free(mon_desc->buf_addr);
 		dp_mon_add_to_free_desc_list(&desc_list, &tail, mon_desc);
+
 		work_done++;
+		hal_srng_dst_get_next(hal_soc, mon_dst_srng);
 	}
 	dp_srng_access_end(int_ctx, soc, mon_dst_srng);
 
 	if (desc_list)
-		dp_mon_add_desc_list_to_free_list(soc, &desc_list,
-						  &tail, tx_mon_desc_pool);
+		dp_mon_buffers_replenish(soc, &mon_soc_be->tx_mon_buf_ring,
+					 tx_mon_desc_pool,
+					 work_done,
+					 &desc_list, &tail);
 
 	qdf_spin_unlock_bh(&mon_pdev->mon_lock);
 	dp_mon_info("mac_id: %d, work_done:%d", mac_id, work_done);
@@ -215,3 +225,512 @@ dp_tx_mon_buffers_alloc(struct dp_soc *soc, uint32_t size)
 					size,
 					&desc_list, &tail);
 }
+
+#ifdef WLAN_TX_PKT_CAPTURE_ENH_BE
+/*
+ * dp_tx_mon_free_usr_mpduq() - API to free user mpduq
+ * @tx_ppdu_info - pointer to tx_ppdu_info
+ * @usr_idx - user index
+ *
+ * Return: void
+ */
+void dp_tx_mon_free_usr_mpduq(struct dp_tx_ppdu_info *tx_ppdu_info,
+			      uint8_t usr_idx)
+{
+	qdf_nbuf_queue_t *mpdu_q;
+
+	if (qdf_unlikely(!tx_ppdu_info))
+		return;
+
+	mpdu_q = &TXMON_PPDU_USR(tx_ppdu_info, usr_idx, mpdu_q);
+	qdf_nbuf_queue_remove(mpdu_q);
+}
+
+/*
+ * dp_tx_mon_free_ppdu_info() - API to free dp_tx_ppdu_info
+ * @tx_ppdu_info - pointer to tx_ppdu_info
+ *
+ * Return: void
+ */
+void dp_tx_mon_free_ppdu_info(struct dp_tx_ppdu_info *tx_ppdu_info)
+{
+	uint32_t user = 0;
+
+	for (; user < TXMON_PPDU_HAL(tx_ppdu_info, num_users); user++) {
+		qdf_nbuf_queue_t *mpdu_q;
+
+		mpdu_q = &TXMON_PPDU_USR(tx_ppdu_info, user, mpdu_q);
+		qdf_nbuf_queue_remove(mpdu_q);
+	}
+
+	TXMON_PPDU_HAL(tx_ppdu_info, is_used) = 0;
+	qdf_mem_free(tx_ppdu_info);
+}
+
+/*
+ * dp_tx_mon_get_ppdu_info() - API to allocate dp_tx_ppdu_info
+ * @pdev - pdev handle
+ * @type - type of ppdu_info data or protection
+ * @num_user - number user in a ppdu_info
+ * @ppdu_id - ppdu_id number
+ *
+ * Return: pointer to dp_tx_ppdu_info
+ */
+struct dp_tx_ppdu_info *dp_tx_mon_get_ppdu_info(struct dp_pdev *pdev,
+						enum tx_ppdu_info_type type,
+						uint8_t num_user,
+						uint32_t ppdu_id)
+{
+	struct dp_mon_pdev *mon_pdev = pdev->monitor_pdev;
+	struct dp_mon_pdev_be *mon_pdev_be =
+			dp_get_be_mon_pdev_from_dp_mon_pdev(mon_pdev);
+	struct dp_pdev_tx_capture_be *tx_cap_be =
+			&mon_pdev_be->tx_capture_be;
+	struct dp_tx_ppdu_info *tx_ppdu_info;
+	size_t sz_ppdu_info = 0;
+	uint8_t i;
+
+	if (type == TX_PROT_PPDU_INFO) {
+		tx_ppdu_info = tx_cap_be->tx_prot_ppdu_info;
+		if (tx_ppdu_info &&
+		    TXMON_PPDU_HAL(tx_ppdu_info, is_used) != 1) {
+			return tx_ppdu_info;
+		} else if (tx_ppdu_info) {
+			dp_tx_mon_free_ppdu_info(tx_ppdu_info);
+			tx_ppdu_info = NULL;
+		}
+
+		/* for protection frame num_user is always 1 */
+		num_user = 1;
+	} else {
+		tx_ppdu_info = tx_cap_be->tx_data_ppdu_info;
+		if (tx_ppdu_info &&
+		    TXMON_PPDU_HAL(tx_ppdu_info, is_used) != 1 &&
+		    num_user == TXMON_PPDU_HAL(tx_ppdu_info, num_users)) {
+			/* number of user matched */
+			return tx_ppdu_info;
+		} else if (tx_ppdu_info) {
+			dp_tx_mon_free_ppdu_info(tx_ppdu_info);
+			tx_ppdu_info = NULL;
+		}
+	}
+
+	/* allocate new tx_ppdu_info */
+	sz_ppdu_info = (sizeof(struct dp_tx_ppdu_info) +
+			(sizeof(struct mon_rx_user_status) * num_user));
+
+	tx_ppdu_info = (struct dp_tx_ppdu_info *)qdf_mem_malloc(sz_ppdu_info);
+	if (!tx_ppdu_info) {
+		dp_mon_err("allocation of tx_ppdu_info type[%d] failed!!!",
+			   type);
+		return NULL;
+	}
+
+	TXMON_PPDU_HAL(tx_ppdu_info, is_used) = 0;
+	TXMON_PPDU_HAL(tx_ppdu_info, num_users) = num_user;
+	TXMON_PPDU_HAL(tx_ppdu_info, ppdu_id) = ppdu_id;
+
+	for (i = 0; i < num_user; i++) {
+		qdf_nbuf_queue_t *mpdu_q;
+
+		mpdu_q = &TXMON_PPDU_USR(tx_ppdu_info, i, mpdu_q);
+		if (qdf_unlikely(qdf_nbuf_queue_len(mpdu_q)))
+			qdf_nbuf_queue_free(mpdu_q);
+
+		qdf_nbuf_queue_init(mpdu_q);
+	}
+
+	/* assign tx_ppdu_info to monitor pdev for reference */
+	if (type == TX_PROT_PPDU_INFO) {
+		tx_cap_be->tx_prot_ppdu_info = tx_ppdu_info;
+		TXMON_PPDU_HAL(tx_ppdu_info, is_data) = 0;
+	} else {
+		tx_cap_be->tx_data_ppdu_info = tx_ppdu_info;
+		TXMON_PPDU_HAL(tx_ppdu_info, is_data) = 1;
+	}
+
+	return tx_ppdu_info;
+}
+
+/*
+ * dp_print_pdev_tx_capture_stats_2_0: print tx capture stats
+ * @pdev: DP PDEV handle
+ *
+ * return: void
+ */
+void dp_print_pdev_tx_capture_stats_2_0(struct dp_pdev *pdev)
+{
+	/* TX monitor stats needed for beryllium */
+}
+
+/*
+ * dp_config_enh_tx_capture_be()- API to enable/disable enhanced tx capture
+ * @pdev_handle: DP_PDEV handle
+ * @val: user provided value
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+dp_config_enh_tx_capture_2_0(struct dp_pdev *pdev, uint8_t val)
+{
+	struct dp_mon_pdev *mon_pdev = pdev->monitor_pdev;
+	struct dp_mon_pdev_be *mon_pdev_be =
+			dp_get_be_mon_pdev_from_dp_mon_pdev(mon_pdev);
+	struct dp_pdev_tx_capture_be *tx_cap_be =
+			&mon_pdev_be->tx_capture_be;
+
+	switch (val) {
+	case TX_MON_BE_DISABLE:
+	{
+		/* TODO: send HTT msg to configure TLV based on mode */
+		tx_cap_be->mode = TX_MON_BE_DISABLE;
+		break;
+	}
+	case TX_MON_BE_FULL_CAPTURE:
+	{
+		/* TODO: send HTT msg to configure TLV based on mode */
+		tx_cap_be->mode = TX_MON_BE_FULL_CAPTURE;
+		break;
+	}
+	case TX_MON_BE_PEER_FILTER:
+	{
+		/* TODO: send HTT msg to configure TLV based on mode */
+		tx_cap_be->mode = TX_MON_BE_PEER_FILTER;
+		break;
+	}
+	default:
+	{
+		/* TODO: do we need to set to disable ? */
+		return QDF_STATUS_E_INVAL;
+	}
+	}
+
+	return QDF_STATUS_SUCCESS;
+}
+
+/*
+ * dp_peer_set_tx_capture_enabled_2_0() -  add tx monitor peer filter
+ * @pdev: Datapath PDEV handle
+ * @peer: Datapath PEER handle
+ * @is_tx_pkt_cap_enable: flag for tx capture enable/disable
+ * @peer_mac: peer mac address
+ *
+ * Return: status
+ */
+QDF_STATUS dp_peer_set_tx_capture_enabled_2_0(struct dp_pdev *pdev_handle,
+					      struct dp_peer *peer_handle,
+					      uint8_t is_tx_pkt_cap_enable,
+					      uint8_t *peer_mac)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+/**
+ * dp_tx_mon_send_to_stack() - API to send to stack
+ * @pdev: pdev Handle
+ * @mpdu: pointer to mpdu
+ *
+ * Return: void
+ */
+static void
+dp_tx_mon_send_to_stack(struct dp_pdev *pdev, qdf_nbuf_t mpdu)
+{
+	struct cdp_tx_indication_info tx_capture_info;
+
+	qdf_mem_set(&tx_capture_info,
+		    sizeof(struct cdp_tx_indication_info),
+		    0);
+	tx_capture_info.radiotap_done = 1;
+	tx_capture_info.mpdu_nbuf = mpdu;
+	dp_wdi_event_handler(WDI_EVENT_TX_PKT_CAPTURE,
+			     pdev->soc,
+			     &tx_capture_info,
+			     HTT_INVALID_PEER,
+			     WDI_NO_VAL,
+			     pdev->pdev_id);
+}
+
+/**
+ * dp_tx_mon_send_per_usr_mpdu() - API to send per usr mpdu to stack
+ * @pdev: pdev Handle
+ * @ppdu_info: pointer to dp_tx_ppdu_info
+ * @user_id: current user index
+ * @radiota_hdr_ref: pointer to radiotap ref
+ *
+ * Return: void
+ */
+static void
+dp_tx_mon_send_per_usr_mpdu(struct dp_pdev *pdev,
+			    struct dp_tx_ppdu_info *ppdu_info,
+			    uint8_t user_id,
+			    qdf_nbuf_t *radiotap_hdr_ref)
+{
+	uint32_t mpdu_queue_len = 0;
+	qdf_nbuf_queue_t *usr_mpdu_q = NULL;
+	qdf_nbuf_t buf = NULL;
+	qdf_nbuf_t radiotap_copy = NULL;
+
+	usr_mpdu_q = &TXMON_PPDU_USR(ppdu_info, user_id, mpdu_q);
+
+	if (!usr_mpdu_q) {
+		qdf_nbuf_free(*radiotap_hdr_ref);
+		*radiotap_hdr_ref = NULL;
+		/* free radiotap hdr */
+		return;
+	}
+
+	while ((buf = qdf_nbuf_queue_remove(usr_mpdu_q)) != NULL) {
+		mpdu_queue_len = qdf_nbuf_queue_len(usr_mpdu_q);
+		/*
+		 * In an aggregated frame, each mpdu is send individualy to
+		 * stack. caller of the function already allocate
+		 * and update radiotap header information. We copy the
+		 * same radiotap header until we reach the end of mpdu.
+		 * Once we reached end of mpdu we use the buffer allocated
+		 * for radiotap hdr.
+		 */
+		if (mpdu_queue_len) {
+			radiotap_copy = qdf_nbuf_copy_expand(*radiotap_hdr_ref,
+							     0, 0);
+		} else {
+			radiotap_copy = *radiotap_hdr_ref;
+			*radiotap_hdr_ref = NULL;
+		}
+
+		/* add msdu as a fraglist of mpdu */
+		qdf_nbuf_append_ext_list(radiotap_copy,
+					 buf, qdf_nbuf_len(buf));
+		dp_tx_mon_send_to_stack(pdev, radiotap_copy);
+	}
+}
+
+/**
+ * dp_tx_mon_alloc_radiotap_hdr() - API to allocate radiotap header
+ * @pdev: pdev Handle
+ * @nbuf_ref: reference to nbuf
+ *
+ * Return: QDF_STATUS
+ */
+static QDF_STATUS
+dp_tx_mon_alloc_radiotap_hdr(struct dp_pdev *pdev, qdf_nbuf_t *nbuf_ref)
+{
+	*nbuf_ref = qdf_nbuf_alloc(pdev->soc->osdev,
+				   MAX_MONITOR_HEADER,
+				   MAX_MONITOR_HEADER,
+				   4, FALSE);
+	if (*nbuf_ref)
+		return QDF_STATUS_E_NOMEM;
+
+	return QDF_STATUS_SUCCESS;
+}
+
+/**
+ * dp_tx_mon_update_radiotap() - API to update radiotap information
+ * @pdev: pdev Handle
+ * @ppdu_info: pointer to dp_tx_ppdu_info
+ *
+ * Return: void
+ */
+static void
+dp_tx_mon_update_radiotap(struct dp_pdev *pdev,
+			  struct dp_tx_ppdu_info *ppdu_info)
+{
+	uint32_t i = 0;
+	uint32_t num_users = 0;
+	qdf_nbuf_t radiotap_hdr = NULL;
+	QDF_STATUS status = QDF_STATUS_SUCCESS;
+
+	num_users = TXMON_PPDU_HAL(ppdu_info, num_users);
+
+	for (i = 0; i < num_users; i++) {
+		/* allocate radiotap_hdr */
+		status = dp_tx_mon_alloc_radiotap_hdr(pdev, &radiotap_hdr);
+		if (status != QDF_STATUS_SUCCESS) {
+			/* free ppdu_info per user */
+			dp_tx_mon_free_usr_mpduq(ppdu_info, i);
+			continue;
+		}
+
+		/* copy rx_status to rx_status and invoke update radiotap */
+		ppdu_info->hal_txmon.rx_status.rx_user_status =
+					&ppdu_info->hal_txmon.rx_user_status[i];
+		qdf_nbuf_update_radiotap(&ppdu_info->hal_txmon.rx_status,
+					 radiotap_hdr, MAX_MONITOR_HEADER);
+
+		/* radiotap header will be free in below function */
+		dp_tx_mon_send_per_usr_mpdu(pdev, ppdu_info, i, &radiotap_hdr);
+
+		/*
+		 * radiotap_hdr will be free in above function
+		 * if not free here
+		 */
+		if (!!radiotap_hdr)
+			qdf_nbuf_free(radiotap_hdr);
+	}
+}
+
+/**
+ * dp_tx_mon_ppdu_process - Deferred PPDU stats handler
+ * @context: Opaque work context (PDEV)
+ *
+ * Return: none
+ */
+void dp_tx_mon_ppdu_process(void *context)
+{
+	struct dp_pdev *pdev = (struct dp_pdev *)context;
+	struct dp_mon_pdev *mon_pdev;
+	struct dp_mon_pdev_be *mon_pdev_be;
+	struct dp_tx_ppdu_info *defer_ppdu_info = NULL;
+	struct dp_tx_ppdu_info *defer_ppdu_info_next = NULL;
+	struct dp_pdev_tx_capture_be *tx_cap_be;
+
+	/* sanity check */
+	if (qdf_unlikely(!pdev))
+		return;
+
+	mon_pdev = pdev->monitor_pdev;
+
+	if (qdf_unlikely(!mon_pdev))
+		return;
+
+	mon_pdev_be = dp_get_be_mon_pdev_from_dp_mon_pdev(mon_pdev);
+	if (qdf_unlikely(!mon_pdev_be))
+		return;
+
+	tx_cap_be = &mon_pdev_be->tx_capture_be;
+	if (qdf_unlikely(TX_MON_BE_DISABLE == tx_cap_be->mode))
+		return;
+
+	/* take lock here */
+	qdf_spin_lock_bh(&tx_cap_be->tx_mon_list_lock);
+	TAILQ_CONCAT(&tx_cap_be->defer_ppdu_info_list,
+		     &tx_cap_be->tx_ppdu_info_list,
+		     tx_ppdu_info_list_elem);
+	tx_cap_be->defer_ppdu_info_list_depth =
+		tx_cap_be->tx_ppdu_info_list_depth;
+	tx_cap_be->tx_ppdu_info_list_depth = 0;
+	qdf_spin_unlock_bh(&tx_cap_be->tx_mon_list_lock);
+
+	TAILQ_FOREACH_SAFE(defer_ppdu_info,
+			   &tx_cap_be->defer_ppdu_info_list,
+			   tx_ppdu_info_list_elem, defer_ppdu_info_next) {
+		/* remove dp_tx_ppdu_info from the list */
+		TAILQ_REMOVE(&tx_cap_be->defer_ppdu_info_list,
+			     defer_ppdu_info,
+			     tx_ppdu_info_list_elem);
+		tx_cap_be->defer_ppdu_info_list_depth--;
+
+		dp_tx_mon_update_radiotap(pdev, defer_ppdu_info);
+
+		/* free the ppdu_info */
+		dp_tx_mon_free_ppdu_info(defer_ppdu_info);
+		defer_ppdu_info = NULL;
+	}
+}
+
+/**
+ * dp_tx_ppdu_stats_attach_2_0 - Initialize Tx PPDU stats and enhanced capture
+ * @pdev: DP PDEV
+ *
+ * Return: none
+ */
+void dp_tx_ppdu_stats_attach_2_0(struct dp_pdev *pdev)
+{
+	struct dp_mon_pdev *mon_pdev;
+	struct dp_mon_pdev_be *mon_pdev_be;
+	struct dp_pdev_tx_capture_be *tx_cap_be;
+
+	if (qdf_unlikely(!pdev))
+		return;
+
+	mon_pdev = pdev->monitor_pdev;
+
+	if (qdf_unlikely(!mon_pdev))
+		return;
+
+	mon_pdev_be = dp_get_be_mon_pdev_from_dp_mon_pdev(mon_pdev);
+	if (qdf_unlikely(!mon_pdev_be))
+		return;
+
+	tx_cap_be = &mon_pdev_be->tx_capture_be;
+
+	TAILQ_INIT(&tx_cap_be->tx_ppdu_info_list);
+	tx_cap_be->tx_ppdu_info_list_depth = 0;
+
+	qdf_spinlock_create(&tx_cap_be->tx_mon_list_lock);
+	/* Work queue setup for TX MONITOR post handling */
+	qdf_create_work(0, &tx_cap_be->post_ppdu_work,
+			dp_tx_mon_ppdu_process, pdev);
+
+	tx_cap_be->post_ppdu_workqueue =
+			qdf_alloc_unbound_workqueue("tx_mon_ppdu_work_queue");
+}
+
+/**
+ * dp_tx_ppdu_stats_detach_be - Cleanup Tx PPDU stats and enhanced capture
+ * @pdev: DP PDEV
+ *
+ * Return: none
+ */
+void dp_tx_ppdu_stats_detach_2_0(struct dp_pdev *pdev)
+{
+	struct dp_mon_pdev *mon_pdev;
+	struct dp_mon_pdev_be *mon_pdev_be;
+	struct dp_pdev_tx_capture_be *tx_cap_be;
+	struct dp_tx_ppdu_info *tx_ppdu_info = NULL;
+	struct dp_tx_ppdu_info *tx_ppdu_info_next = NULL;
+
+	if (qdf_unlikely(!pdev))
+		return;
+
+	mon_pdev = pdev->monitor_pdev;
+
+	if (qdf_unlikely(!mon_pdev))
+		return;
+
+	mon_pdev_be = dp_get_be_mon_pdev_from_dp_mon_pdev(mon_pdev);
+	if (qdf_unlikely(!mon_pdev_be))
+		return;
+
+	tx_cap_be = &mon_pdev_be->tx_capture_be;
+	/* TODO: disable tx_monitor, to avoid further packet from HW */
+	dp_monitor_config_enh_tx_capture(pdev, TX_MON_BE_DISABLE);
+
+	/* flush workqueue */
+	qdf_flush_workqueue(0, tx_cap_be->post_ppdu_workqueue);
+	qdf_destroy_workqueue(0, tx_cap_be->post_ppdu_workqueue);
+
+	/*
+	 * TODO: iterate both tx_ppdu_info and defer_ppdu_info_list
+	 * free the tx_ppdu_info and decrement depth
+	 */
+	qdf_spin_lock_bh(&tx_cap_be->tx_mon_list_lock);
+	TAILQ_FOREACH_SAFE(tx_ppdu_info,
+			   &tx_cap_be->tx_ppdu_info_list,
+			   tx_ppdu_info_list_elem, tx_ppdu_info_next) {
+		/* remove dp_tx_ppdu_info from the list */
+		TAILQ_REMOVE(&tx_cap_be->tx_ppdu_info_list, tx_ppdu_info,
+			     tx_ppdu_info_list_elem);
+		/* decrement list length */
+		tx_cap_be->tx_ppdu_info_list_depth--;
+		/* free tx_ppdu_info */
+		dp_tx_mon_free_ppdu_info(tx_ppdu_info);
+	}
+	qdf_spin_unlock_bh(&tx_cap_be->tx_mon_list_lock);
+
+	qdf_spin_lock_bh(&tx_cap_be->tx_mon_list_lock);
+	TAILQ_FOREACH_SAFE(tx_ppdu_info, &tx_cap_be->defer_ppdu_info_list,
+			   tx_ppdu_info_list_elem, tx_ppdu_info_next) {
+		/* remove dp_tx_ppdu_info from the list */
+		TAILQ_REMOVE(&tx_cap_be->defer_ppdu_info_list, tx_ppdu_info,
+			     tx_ppdu_info_list_elem);
+		/* decrement list length */
+		tx_cap_be->defer_ppdu_info_list_depth--;
+		/* free tx_ppdu_info */
+		dp_tx_mon_free_ppdu_info(tx_ppdu_info);
+	}
+	qdf_spin_unlock_bh(&tx_cap_be->tx_mon_list_lock);
+
+	qdf_spinlock_destroy(&tx_cap_be->tx_mon_list_lock);
+}
+#endif

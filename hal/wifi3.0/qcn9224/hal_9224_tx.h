@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -16,6 +16,9 @@
  * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
  * PERFORMANCE OF THIS SOFTWARE.
  */
+#ifndef _HAL_9224_TX_H_
+#define _HAL_9224_TX_H_
+
 #include "tcl_data_cmd.h"
 #include "phyrx_rssi_legacy.h"
 #include "hal_internal.h"
@@ -23,6 +26,7 @@
 #include "hal_rx.h"
 #include "hal_tx.h"
 #include "hal_api_mon.h"
+#include <hal_be_tx.h>
 
 #define DSCP_TID_TABLE_SIZE 24
 #define NUM_WORDS_PER_DSCP_TID_TABLE (DSCP_TID_TABLE_SIZE / 4)
@@ -189,3 +193,265 @@ hal_tx_init_cmd_credit_ring_9224(hal_soc_handle_t hal_soc_hdl,
 				 hal_ring_handle_t hal_ring_hdl)
 {
 }
+
+/* TX MONITOR */
+#ifdef QCA_MONITOR_2_0_SUPPORT
+
+#if defined(TX_MONITOR_WORD_MASK)
+typedef struct tx_fes_setup_compact_9224 hal_tx_fes_setup_t;
+struct tx_fes_setup_compact_9224 {
+	/* DWORD - 0 */
+	uint32_t schedule_id;
+	/* DWORD - 1 */
+	uint32_t reserved_1a			: 7,  // [0: 6]
+		transmit_start_reason		: 3,  // [7: 9]
+		reserved_1b			: 13, // [10: 22]
+		number_of_users			: 6,  // [28: 23]
+		MU_type				: 1,  // [29]
+		reserved_1c			: 2;  // [30]
+	/* DWORD - 2 */
+	uint32_t reserved_2a			: 4,  // [0: 3]
+		ndp_frame			: 2,  // [4: 5]
+		txbf				: 1,  // [6]
+		reserved_2b			: 3,  // [7: 9]
+		static_bandwidth		: 3,  // [12: 10]
+		reserved_2c			: 1,  // [13]
+		transmission_contains_MU_RTS	: 1,  // [14]
+		reserved_2d			: 17; // [15: 31]
+	/* DWORD - 3 */
+	uint32_t reserved_3a			: 15, // [0: 14]
+		mu_ndp				: 1,  // [15]
+		reserved_3b			: 11, // [16: 26]
+		ndpa				: 1,  // [27]
+		reserved_3c			: 4;  // [28: 31]
+};
+#endif
+#endif /* QCA_MONITOR_2_0_SUPPORT */
+/**
+ * hal_tx_set_ppe_cmn_config_9224() - Set the PPE common config register
+ * @hal_soc_hdl: HAL SoC handle
+ * @cmn_cfg: Common PPE config
+ *
+ * Based on the PPE2TCL descriptor below errors, if the below register
+ * values are set then the packets are forward to Tx rule handler if 1'0b
+ * or to TCL exit base if 1'1b.
+ *
+ * Return: void
+ */
+static inline
+void hal_tx_set_ppe_cmn_config_9224(hal_soc_handle_t hal_soc_hdl,
+				    union hal_tx_cmn_config_ppe *cmn_cfg)
+{
+	struct hal_soc *soc = (struct hal_soc *)hal_soc_hdl;
+	union hal_tx_cmn_config_ppe *cfg =
+		(union hal_tx_cmn_config_ppe *)cmn_cfg;
+	uint32_t reg_addr, reg_val = 0;
+
+	reg_addr = HWIO_TCL_R0_CMN_CONFIG_PPE_ADDR(MAC_TCL_REG_REG_BASE);
+
+	reg_val = HAL_REG_READ(soc, reg_addr);
+
+	reg_val &= ~HWIO_TCL_R0_CMN_CONFIG_PPE_DROP_PREC_ERR_EXCEPTION_BMSK;
+	reg_val |=
+		(cfg->drop_prec_err &
+		 HWIO_TCL_R0_CMN_CONFIG_PPE_DROP_PREC_ERR_EXCEPTION_BMSK) <<
+		 HWIO_TCL_R0_CMN_CONFIG_PPE_DROP_PREC_ERR_EXCEPTION_SHFT;
+
+	reg_val &= ~HWIO_TCL_R0_CMN_CONFIG_PPE_FAKE_MAC_HDR_EXCEPTION_BMSK;
+	reg_val |=
+		(cfg->fake_mac_hdr &
+		 HWIO_TCL_R0_CMN_CONFIG_PPE_FAKE_MAC_HDR_EXCEPTION_BMSK) <<
+		 HWIO_TCL_R0_CMN_CONFIG_PPE_FAKE_MAC_HDR_EXCEPTION_SHFT;
+
+	reg_val &= ~HWIO_TCL_R0_CMN_CONFIG_PPE_CPU_CODE_VALID_EXCEPTION_BMSK;
+	reg_val |=
+		(cfg->cpu_code_inv &
+		 HWIO_TCL_R0_CMN_CONFIG_PPE_CPU_CODE_VALID_EXCEPTION_BMSK) <<
+		 HWIO_TCL_R0_CMN_CONFIG_PPE_CPU_CODE_VALID_EXCEPTION_SHFT;
+
+	reg_val &= ~HWIO_TCL_R0_CMN_CONFIG_PPE_L3_L4_CSUM_ERR_EXCEPTION_BMSK;
+	reg_val |=
+		(cfg->l3_l4_err &
+		 HWIO_TCL_R0_CMN_CONFIG_PPE_L3_L4_CSUM_ERR_EXCEPTION_BMSK) <<
+		 HWIO_TCL_R0_CMN_CONFIG_PPE_L3_L4_CSUM_ERR_EXCEPTION_SHFT;
+
+	HAL_REG_WRITE(soc, reg_addr, reg_val);
+}
+
+/**
+ * hal_tx_set_ppe_vp_entry_9224() - Set the PPE VP entry
+ * @hal_soc_hdl: HAL SoC handle
+ * @vp_cfg: PPE VP config
+ * @ppe_vp_idx : PPE VP index to the table
+ *
+ * Return: void
+ */
+static inline
+void hal_tx_set_ppe_vp_entry_9224(hal_soc_handle_t hal_soc_hdl,
+				  union hal_tx_ppe_vp_config *cfg,
+				  int ppe_vp_idx)
+{
+	struct hal_soc *soc = (struct hal_soc *)hal_soc_hdl;
+	uint32_t reg_addr, reg_val = 0;
+
+	reg_addr = HWIO_TCL_R0_PPE_VP_CONFIG_TABLE_n_ADDR(MAC_TCL_REG_REG_BASE,
+							  ppe_vp_idx);
+
+	/*
+	 * Drop precedence is enabled by default.
+	 */
+	reg_val = HAL_REG_READ(soc, reg_addr);
+
+	reg_val &= ~HWIO_TCL_R0_PPE_VP_CONFIG_TABLE_n_VP_NUM_BMSK;
+	reg_val |= (cfg->vp_num &
+		    HWIO_TCL_R0_PPE_VP_CONFIG_TABLE_n_VP_NUM_BMSK) <<
+		    HWIO_TCL_R0_PPE_VP_CONFIG_TABLE_n_VP_NUM_SHFT;
+
+	reg_val &= ~HWIO_TCL_R0_PPE_VP_CONFIG_TABLE_n_PMAC_ID_BMSK;
+	reg_val |= (cfg->pmac_id &
+		    HWIO_TCL_R0_PPE_VP_CONFIG_TABLE_n_PMAC_ID_BMSK) <<
+		    HWIO_TCL_R0_PPE_VP_CONFIG_TABLE_n_PMAC_ID_SHFT;
+
+	reg_val &= ~HWIO_TCL_R0_PPE_VP_CONFIG_TABLE_n_BANK_ID_BMSK;
+	reg_val |= (cfg->bank_id &
+		    HWIO_TCL_R0_PPE_VP_CONFIG_TABLE_n_BANK_ID_BMSK) <<
+		    HWIO_TCL_R0_PPE_VP_CONFIG_TABLE_n_BANK_ID_SHFT;
+
+	reg_val &= ~HWIO_TCL_R0_PPE_VP_CONFIG_TABLE_n_VDEV_ID_BMSK;
+	reg_val |= (cfg->vdev_id &
+		    HWIO_TCL_R0_PPE_VP_CONFIG_TABLE_n_VDEV_ID_BMSK) <<
+		    HWIO_TCL_R0_PPE_VP_CONFIG_TABLE_n_VDEV_ID_SHFT;
+
+	reg_val &= ~HWIO_TCL_R0_PPE_VP_CONFIG_TABLE_n_SEARCH_INDEX_REG_NUM_BMSK;
+	reg_val |=
+	    (cfg->search_idx_reg_num &
+	     HWIO_TCL_R0_PPE_VP_CONFIG_TABLE_n_SEARCH_INDEX_REG_NUM_BMSK) <<
+	     HWIO_TCL_R0_PPE_VP_CONFIG_TABLE_n_SEARCH_INDEX_REG_NUM_SHFT;
+
+	reg_val &=
+		~HWIO_TCL_R0_PPE_VP_CONFIG_TABLE_n_USE_PPE_INT_PRI_FOR_TID_BMSK;
+	reg_val |=
+	(cfg->use_ppe_int_pri &
+	HWIO_TCL_R0_PPE_VP_CONFIG_TABLE_n_USE_PPE_INT_PRI_FOR_TID_BMSK) <<
+	HWIO_TCL_R0_PPE_VP_CONFIG_TABLE_n_USE_PPE_INT_PRI_FOR_TID_SHFT;
+
+	reg_val &= ~HWIO_TCL_R0_PPE_VP_CONFIG_TABLE_n_TO_FW_BMSK;
+	reg_val |= (cfg->to_fw &
+		    HWIO_TCL_R0_PPE_VP_CONFIG_TABLE_n_TO_FW_BMSK) <<
+		    HWIO_TCL_R0_PPE_VP_CONFIG_TABLE_n_TO_FW_SHFT;
+
+	reg_val &= ~HWIO_TCL_R0_PPE_VP_CONFIG_TABLE_n_DROP_PREC_ENABLE_BMSK;
+	reg_val |= (cfg->drop_prec_enable &
+		    HWIO_TCL_R0_PPE_VP_CONFIG_TABLE_n_DROP_PREC_ENABLE_BMSK) <<
+		    HWIO_TCL_R0_PPE_VP_CONFIG_TABLE_n_DROP_PREC_ENABLE_SHFT;
+
+	HAL_REG_WRITE(soc, reg_addr, reg_val);
+}
+
+/**
+ * hal_tx_set_ppe_pri2tid_map1_9224()
+ * @hal_soc_hdl: HAL SoC handle
+ * @val : PRI to TID value
+ * @map_no: Map number
+ *
+ * Return: void
+ */
+static inline
+void hal_tx_set_ppe_pri2tid_map_9224(hal_soc_handle_t hal_soc_hdl,
+				     uint32_t val, uint8_t map_no)
+{
+	struct hal_soc *soc = (struct hal_soc *)hal_soc_hdl;
+	uint32_t reg_addr, reg_val = 0;
+
+	if (map_no == 0)
+		reg_addr =
+		HWIO_TCL_R0_PPE_INT_PRI_TID_MAP0_ADDR(MAC_TCL_REG_REG_BASE);
+	else
+		reg_addr =
+		HWIO_TCL_R0_PPE_INT_PRI_TID_MAP1_ADDR(MAC_TCL_REG_REG_BASE);
+
+	reg_val |= val;
+	HAL_REG_WRITE(soc, reg_addr, reg_val);
+}
+
+/**
+ * hal_tx_set_ppe_pri2tid_map1_9224()
+ * @hal_soc_hdl: HAL SoC handle
+ * @val : PRI to TID value
+ * @map_no: Map number
+ *
+ * Return: void
+ */
+static inline
+void hal_tx_enable_pri2tid_map_9224(hal_soc_handle_t hal_soc_hdl,
+				    bool val, uint8_t ppe_vp_idx)
+{
+	struct hal_soc *soc = (struct hal_soc *)hal_soc_hdl;
+	uint32_t reg_addr, reg_val = 0;
+
+	reg_addr = HWIO_TCL_R0_PPE_VP_CONFIG_TABLE_n_ADDR(MAC_TCL_REG_REG_BASE,
+							  ppe_vp_idx);
+
+	/*
+	 * Drop precedence is enabled by default.
+	 */
+	reg_val = HAL_REG_READ(soc, reg_addr);
+
+	reg_val &=
+	  ~HWIO_TCL_R0_PPE_VP_CONFIG_TABLE_n_USE_PPE_INT_PRI_FOR_TID_BMSK;
+
+	reg_val |=
+	(val &
+	 HWIO_TCL_R0_PPE_VP_CONFIG_TABLE_n_USE_PPE_INT_PRI_FOR_TID_BMSK) <<
+	 HWIO_TCL_R0_PPE_VP_CONFIG_TABLE_n_USE_PPE_INT_PRI_FOR_TID_SHFT;
+
+	HAL_REG_WRITE(soc, reg_addr, reg_val);
+}
+
+/**
+ * hal_tx_update_ppe_pri2tid_9224()
+ * @hal_soc_hdl: HAL SoC handle
+ * @pri: INT_PRI
+ * @tid: Wi-Fi TID
+ *
+ * Return: void
+ */
+static inline
+void hal_tx_update_ppe_pri2tid_9224(hal_soc_handle_t hal_soc_hdl,
+				    uint8_t pri, uint8_t tid)
+{
+	struct hal_soc *soc = (struct hal_soc *)hal_soc_hdl;
+	uint32_t reg_addr, reg_val = 0, mask, shift;
+
+	/*
+	 * INT_PRI 0..9 is in MAP0 register and INT_PRI 10..15
+	 * is in MAP1 register.
+	 */
+	switch (pri) {
+	case 0 ... 9:
+	  reg_addr =
+	  HWIO_TCL_R0_PPE_INT_PRI_TID_MAP0_ADDR(MAC_TCL_REG_REG_BASE);
+	  mask =
+	  (HWIO_TCL_R0_PPE_INT_PRI_TID_MAP0_INT_PRI_0_BMSK << (0x3 * pri));
+	  shift = HWIO_TCL_R0_PPE_INT_PRI_TID_MAP0_INT_PRI_0_SHFT + (pri * 0x3);
+		break;
+	case 10 ... 15:
+	   pri = pri - 10;
+	   reg_addr =
+	   HWIO_TCL_R0_PPE_INT_PRI_TID_MAP1_ADDR(MAC_TCL_REG_REG_BASE);
+	   mask =
+	   (HWIO_TCL_R0_PPE_INT_PRI_TID_MAP1_INT_PRI_10_BMSK << (0x3 * pri));
+	   shift =
+	   HWIO_TCL_R0_PPE_INT_PRI_TID_MAP1_INT_PRI_10_SHFT + (pri * 0x3);
+		break;
+	default:
+		return;
+	}
+
+	reg_val = HAL_REG_READ(soc, reg_addr);
+	reg_val &= ~mask;
+	reg_val |= (pri << shift) & mask;
+
+	HAL_REG_WRITE(soc, reg_addr, reg_val);
+}
+#endif /* _HAL_9224_TX_H_ */

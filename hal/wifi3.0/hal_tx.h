@@ -52,6 +52,12 @@
 #define HAL_SET_FLD_OFFSET(desc, block , field, offset) \
 	(*(uint32_t *) ((uint8_t *) desc + HAL_OFFSET(block, field) + (offset)))
 
+#define HAL_SET_FLD_64(desc, block, field) \
+	(*(uint64_t *)((uint8_t *)desc + HAL_OFFSET(block, field)))
+
+#define HAL_SET_FLD_OFFSET_64(desc, block, field, offset) \
+	(*(uint64_t *)((uint8_t *)desc + HAL_OFFSET(block, field) + (offset)))
+
 #define HAL_TX_DESC_SET_TLV_HDR(desc, tag, len) \
 do {                                            \
 	uint32_t temp = 0; \
@@ -79,6 +85,16 @@ do {                                            \
 
 #define HAL_TX_DESC_SUBBLOCK_GET(desc, block, sub, field) \
 	HAL_TX_MS(sub, field, HAL_SET_FLD(desc, block, sub))
+
+#define HAL_TX_DESC_GET_64(desc, block, field) \
+	HAL_TX_MS(block, field, HAL_SET_FLD_64(desc, block, field))
+
+#define HAL_TX_DESC_OFFSET_GET_64(desc, block, field, offset) \
+	HAL_TX_MS(block, field, HAL_SET_FLD_OFFSET_64(desc, block, field,\
+		  offset))
+
+#define HAL_TX_DESC_SUBBLOCK_GET_64(desc, block, sub, field) \
+	HAL_TX_MS(sub, field, HAL_SET_FLD_64(desc, block, sub))
 
 #define HAL_TX_BUF_TYPE_BUFFER 0
 #define HAL_TX_BUF_TYPE_EXT_DESC 1
@@ -213,7 +229,7 @@ struct hal_tx_completion_status {
 	uint8_t transmit_cnt;
 	uint8_t tid;
 	uint16_t peer_id;
-#ifdef WLAN_FEATURE_TSF_UPLINK_DELAY
+#if defined(WLAN_FEATURE_TSF_UPLINK_DELAY) || defined(CONFIG_SAWF)
 	uint32_t buffer_timestamp:19;
 #endif
 };
@@ -290,6 +306,13 @@ enum hal_tx_encap_type {
  *				remove reason is fw_reason3
  * @HAL_TX_TQM_RR_REM_CMD_DISABLE_QUEUE : Remove command where fw indicated that
  *				remove reason is remove disable queue
+ * @HAL_TX_TQM_RR_REM_CMD_TILL_NONMATCHING: Remove command from fw to remove
+ *				all mpdu until 1st non-match
+ * @HAL_TX_TQM_RR_DROP_THRESHOLD: Dropped due to drop threshold criteria
+ * @HAL_TX_TQM_RR_LINK_DESC_UNAVAILABLE: Dropped due to link desc not available
+ * @HAL_TX_TQM_RR_DROP_OR_INVALID_MSDU: Dropped due drop bit set or null flow
+ * @HAL_TX_TQM_RR_MULTICAST_DROP: Dropped due mcast drop set for VDEV
+ *
  */
 enum hal_tx_tqm_release_reason {
 	HAL_TX_TQM_RR_FRAME_ACKED,
@@ -301,6 +324,11 @@ enum hal_tx_tqm_release_reason {
 	HAL_TX_TQM_RR_FW_REASON2,
 	HAL_TX_TQM_RR_FW_REASON3,
 	HAL_TX_TQM_RR_REM_CMD_DISABLE_QUEUE,
+	HAL_TX_TQM_RR_REM_CMD_TILL_NONMATCHING,
+	HAL_TX_TQM_RR_DROP_THRESHOLD,
+	HAL_TX_TQM_RR_LINK_DESC_UNAVAILABLE,
+	HAL_TX_TQM_RR_DROP_OR_INVALID_MSDU,
+	HAL_TX_TQM_RR_MULTICAST_DROP,
 };
 
 /* enum - Table IDs for 2 DSCP-TID mapping Tables that TCL H/W supports

@@ -679,6 +679,7 @@ reg_modify_chan_list_for_japan(struct wlan_objmgr_pdev *pdev)
 {
 }
 #endif
+
 /**
  * reg_modify_chan_list_for_freq_range() - Modify channel list for the given low
  * and high frequency range.
@@ -1700,8 +1701,10 @@ reg_modify_chan_list_for_avoid_chan_ext(struct wlan_regulatory_pdev_priv_obj
 	if (!psoc)
 		return;
 
-	if (reg_check_coex_unsafe_nb_user_prefer(psoc))
+	if (!reg_check_coex_unsafe_chan_reg_disable(psoc)) {
+		reg_debug("Don't disable reg channels for Coex unsafe channels");
 		return;
+	}
 
 	psoc_priv_obj = reg_get_psoc_obj(psoc);
 	if (!psoc_priv_obj)
@@ -1995,19 +1998,10 @@ const struct ap_cli_pwr_mode_info reg_pwr_enum_2_ap_cli_pwrmode[] = {
 							REG_VERY_LOW_POWER_AP},
 };
 
-/**
- * reg_get_reg_maschan_lst_frm_6g_pwr_mode() - Return the mas_chan_list entry
- * for based on the channel index and input power mode
- * @supp_pwr_mode: 6G supported power mode
- * @pdev_priv_obj: Pointer to pdev_priv_obj
- * @chan_idx: Channel index
- *
- * Return: Pointer to struct regulatory_channel
- */
-static struct regulatory_channel *reg_get_reg_maschan_lst_frm_6g_pwr_mode(
-		enum supported_6g_pwr_types supp_pwr_mode,
-		struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj,
-		uint16_t chan_idx)
+struct regulatory_channel *reg_get_reg_maschan_lst_frm_6g_pwr_mode(
+			enum supported_6g_pwr_types supp_pwr_mode,
+			struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj,
+			uint16_t chan_idx)
 {
 	struct regulatory_channel *mas_chan_list = NULL;
 	bool is_ap_chan_lst;
@@ -2372,8 +2366,10 @@ void reg_compute_pdev_current_chan_list(struct wlan_regulatory_pdev_priv_obj
 						    pdev_priv_obj->
 						    cur_chan_list);
 
-	reg_modify_chan_list_for_max_chwidth(pdev_priv_obj->pdev_ptr,
-					     pdev_priv_obj->cur_chan_list);
+	reg_modify_chan_list_for_max_chwidth_for_pwrmode(
+						pdev_priv_obj->pdev_ptr,
+						pdev_priv_obj->cur_chan_list,
+						REG_CURRENT_PWR_MODE);
 
 	reg_modify_chan_list_for_6g_edge_channels(pdev_priv_obj->pdev_ptr,
 						  pdev_priv_obj->
@@ -2545,6 +2541,7 @@ void reg_propagate_mas_chan_list_to_pdev(struct wlan_objmgr_psoc *psoc,
 		psoc_priv_obj->chan_list_recvd[phy_id];
 
 	reg_update_max_phymode_chwidth_for_pdev(pdev);
+	reg_update_channel_ranges(pdev);
 	reg_compute_pdev_current_chan_list(pdev_priv_obj);
 
 	if (reg_tx_ops->fill_umac_legacy_chanlist) {
@@ -2708,7 +2705,6 @@ QDF_STATUS reg_get_pwrmode_chan_list(struct wlan_objmgr_pdev *pdev,
 				     enum supported_6g_pwr_types in_6g_pwr_mode)
 {
 	struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj;
-	struct wlan_objmgr_psoc *psoc;
 
 	if (!pdev) {
 		reg_err_rl("invalid pdev");
@@ -2721,7 +2717,6 @@ QDF_STATUS reg_get_pwrmode_chan_list(struct wlan_objmgr_pdev *pdev,
 	}
 
 	pdev_priv_obj = reg_get_pdev_obj(pdev);
-	psoc = wlan_pdev_get_psoc(pdev);
 
 	/* Get the current channel list */
 	qdf_mem_copy(chan_list, pdev_priv_obj->cur_chan_list,

@@ -196,9 +196,6 @@ static int init_deinit_service_ready_event_handler(ol_scn_t scn_handle,
 		wlan_psoc_nif_fw_ext_cap_set(psoc,
 					     WLAN_SOC_F_MGMT_RX_REO_CAPABLE);
 
-	if (!wmi_service_enabled(wmi_handle, wmi_service_ext_msg))
-		target_if_qwrap_cfg_enable(psoc, tgt_hdl, event);
-
 	target_if_lteu_cfg_enable(psoc, tgt_hdl, event);
 
 	if (wmi_service_enabled(wmi_handle, wmi_service_rx_fse_support))
@@ -493,8 +490,6 @@ static int init_deinit_service_ext_ready_event_handler(ol_scn_t scn_handle,
 	if (legacy_callback)
 		legacy_callback(wmi_service_ready_ext_event_id,
 				scn_handle, event, data_len);
-
-	target_if_qwrap_cfg_enable(psoc, tgt_hdl, event);
 
 	target_if_set_twt_ap_pdev_count(info, tgt_hdl);
 

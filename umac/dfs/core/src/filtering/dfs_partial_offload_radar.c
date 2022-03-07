@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  * Copyright (c) 2011, Atheros Communications Inc.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
@@ -405,8 +406,7 @@ static inline void dfs_assign_fcc_pulse_table(
 		rinfo->numradars = QDF_ARRAY_SIZE(dfs_fcc_radars);
 	}
 
-	if (tx_ops->tgt_is_tgt_type_ar900b(target_type) ||
-			tx_ops->tgt_is_tgt_type_ipq4019(target_type)) {
+	if (tx_ops->tgt_is_tgt_type_ar900b(target_type)) {
 		rinfo->b5pulses = dfs_fcc_bin5pulses_ar900b;
 		rinfo->numb5radars = QDF_ARRAY_SIZE(dfs_fcc_bin5pulses_ar900b);
 	} else if (tx_ops->tgt_is_tgt_type_qca9984(target_type) ||
@@ -520,8 +520,7 @@ dfs_assign_mkk_bin5_radars(struct wlan_dfs_radar_tab_info *rinfo,
 			   uint32_t target_type,
 			   struct wlan_lmac_if_target_tx_ops *tgt_tx_ops)
 {
-	if (tgt_tx_ops->tgt_is_tgt_type_ar900b(target_type) ||
-	    tgt_tx_ops->tgt_is_tgt_type_ipq4019(target_type)) {
+	if (tgt_tx_ops->tgt_is_tgt_type_ar900b(target_type)) {
 		rinfo->b5pulses = dfs_jpn_bin5pulses_ar900b;
 		rinfo->numb5radars = QDF_ARRAY_SIZE(
 				dfs_jpn_bin5pulses_ar900b);
@@ -699,7 +698,6 @@ void dfs_get_po_radars(struct wlan_dfs *dfs)
 	}
 
 	if (tgt_tx_ops->tgt_is_tgt_type_ar900b(target_type) ||
-			tgt_tx_ops->tgt_is_tgt_type_ipq4019(target_type) ||
 			tgt_tx_ops->tgt_is_tgt_type_qca9984(target_type) ||
 			tgt_tx_ops->tgt_is_tgt_type_qca9888(target_type)) {
 		/* Beeliner WAR: lower RSSI threshold to improve detection of

@@ -1244,6 +1244,27 @@ void hal_rx_reo_buf_paddr_get(hal_soc_handle_t hal_soc_hdl,
 }
 
 /**
+ * hal_rx_wbm_rel_buf_paddr_get: Gets the physical address and
+ * cookie from the WBM release ring element
+ *
+ * @ hal_rx_desc_cookie: Opaque cookie pointer used by HAL to get to
+ * the current descriptor
+ * @ buf_info: structure to return the buffer information
+ * Return: void
+ */
+static inline
+void hal_rx_wbm_rel_buf_paddr_get(hal_soc_handle_t hal_soc_hdl,
+				  hal_ring_desc_t rx_desc,
+				  struct hal_buf_info *buf_info)
+{
+	struct hal_soc *hal_soc = (struct hal_soc *)hal_soc_hdl;
+
+	if (hal_soc->ops->hal_rx_wbm_rel_buf_paddr_get)
+		return hal_soc->ops->hal_rx_wbm_rel_buf_paddr_get(rx_desc,
+								  buf_info);
+}
+
+/**
  * hal_rx_buf_cookie_rbm_get: Gets the physical address and
  * cookie from the REO entrance ring element
  *

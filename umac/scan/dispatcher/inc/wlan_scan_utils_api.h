@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2017-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -765,8 +765,7 @@ util_scan_get_ml_partner_info(struct scan_cache_entry *scan_entry,
 		return QDF_STATUS_E_FAILURE;
 
 	partner_info->num_partner_links =
-			qdf_min((uint8_t)WLAN_UMAC_MLO_MAX_VDEVS - 1,
-				scan_entry->ml_info.num_links - 1);
+				scan_entry->ml_info.num_links;
 	/* TODO: Make sure that scan_entry->ml_info->link_info is a sorted
 	 * list */
 	for (i = 0; i < partner_info->num_partner_links; i++) {

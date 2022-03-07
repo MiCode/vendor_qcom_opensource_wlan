@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -28,6 +28,12 @@
 
 static uint32_t hal_get_reo_qdesc_size_li(uint32_t ba_window_size, int tid)
 {
+	/* Hardcode the ba_window_size to HAL_RX_MAX_BA_WINDOW for
+	 * NON_QOS_TID until HW issues are resolved.
+	 */
+	if (tid != HAL_NON_QOS_TID)
+		ba_window_size = HAL_RX_MAX_BA_WINDOW;
+
 	/* Return descriptor size corresponding to window size of 2 since
 	 * we set ba_window_size to 2 while setting up REO descriptors as
 	 * a WAR to get 2k jump exception aggregates are received without
@@ -1070,6 +1076,20 @@ void hal_set_reo_ent_desc_reo_dest_ind_li(uint8_t *desc, uint32_t dst_ind)
 		       REO_DESTINATION_INDICATION, dst_ind);
 }
 
+static inline void
+hal_rx_wbm_rel_buf_paddr_get_li(hal_ring_desc_t rx_desc,
+				struct hal_buf_info *buf_info)
+{
+	struct wbm_release_ring *wbm_rel_ring =
+		 (struct wbm_release_ring *)rx_desc;
+
+	buf_info->paddr =
+	 (HAL_RX_WBM_BUF_ADDR_31_0_GET(wbm_rel_ring) |
+	  ((uint64_t)(HAL_RX_WBM_BUF_ADDR_39_32_GET(wbm_rel_ring)) << 32));
+
+	buf_info->sw_cookie = HAL_RX_WBM_BUF_COOKIE_GET(wbm_rel_ring);
+}
+
 static QDF_STATUS hal_reo_status_update_li(hal_soc_handle_t hal_soc_hdl,
 					   hal_ring_desc_t reo_desc,
 					   void *st_handle,
@@ -1199,6 +1219,8 @@ void hal_hw_txrx_default_ops_attach_li(struct hal_soc *hal_soc)
 	hal_soc->ops->hal_rx_reo_buf_type_get = hal_rx_reo_buf_type_get_li;
 	hal_soc->ops->hal_rx_pkt_hdr_get = hal_rx_pkt_hdr_get_li;
 	hal_soc->ops->hal_rx_wbm_err_src_get = hal_rx_wbm_err_src_get_li;
+	hal_soc->ops->hal_rx_wbm_rel_buf_paddr_get =
+					hal_rx_wbm_rel_buf_paddr_get_li;
 	hal_soc->ops->hal_rx_priv_info_set_in_tlv =
 					hal_rx_priv_info_set_in_tlv_li;
 	hal_soc->ops->hal_rx_priv_info_get_from_tlv =

@@ -463,6 +463,7 @@ wlan_cp_stats_send_infra_cp_req(struct wlan_objmgr_psoc *psoc,
 	}
 	return tx_ops->send_req_infra_cp_stats(psoc, req);
 }
+#endif /* WLAN_SUPPORT_INFRA_CTRL_PATH_STATS */
 
 #if defined(WLAN_SUPPORT_TWT) && defined (WLAN_TWT_CONV_SUPPORTED)
 /**
@@ -732,6 +733,5 @@ wlan_cp_stats_twt_get_peer_session_params(struct wlan_objmgr_psoc *psoc,
 								params);
 	return num_twt_session;
 }
-#endif
-#endif /* WLAN_SUPPORT_INFRA_CTRL_PATH_STATS */
+#endif /* WLAN_SUPPORT_TWT */
 

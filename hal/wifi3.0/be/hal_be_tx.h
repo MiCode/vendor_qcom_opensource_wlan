@@ -27,6 +27,12 @@
 /* MAX_TCL_BANK reserved for FW use */
 #define HAL_TX_NUM_RESERVED_BANKS 1
 
+/*
+ * Number of Priority to TID mapping
+ */
+#define HAL_BE_TX_MAP0_PRI2TID_MAX 10
+#define HAL_BE_TX_MAP1_PRI2TID_MAX 6
+
 enum hal_be_tx_ret_buf_manager {
 	HAL_BE_WBM_SW0_BM_ID = 5,
 	HAL_BE_WBM_SW1_BM_ID = 6,
@@ -62,6 +68,19 @@ enum hal_tx_mcast_ctrl {
 enum hal_tx_vdev_mismatch_notify {
 	HAL_TX_VDEV_MISMATCH_TQM_NOTIFY = 0,
 	HAL_TX_VDEV_MISMATCH_FW_NOTIFY,
+};
+
+/* enum hal_tx_notify_frame_type - TX notify frame type
+ * @NO_TX_NOTIFY: Not a notify frame
+ * @TX_HARD_NOTIFY: Hard notify TX frame
+ * @TX_SOFT_NOTIFY_E: Soft Notify Tx frame
+ * @TX_SEMI_HARD_NOTIFY_E: Semi Hard notify TX frame
+ */
+enum hal_tx_notify_frame_type {
+	NO_TX_NOTIFY = 0,
+	TX_HARD_NOTIFY = 1,
+	TX_SOFT_NOTIFY_E = 2,
+	TX_SEMI_HARD_NOTIFY_E = 3
 };
 
 /*---------------------------------------------------------------------------
@@ -224,6 +243,62 @@ union hal_tx_ppe_pri2tid_map1_config {
  *  TCL Descriptor accessor APIs
  *---------------------------------------------------------------------------
  */
+
+/**
+ * hal_tx_desc_set_tx_notify_frame - Set TX notify_frame field in Tx desc
+ * @desc: Handle to Tx Descriptor
+ * @val: Value to be set
+ *
+ * Return: None
+ */
+static inline void hal_tx_desc_set_tx_notify_frame(void *desc,
+						   uint8_t val)
+{
+	HAL_SET_FLD(desc, TCL_DATA_CMD, TX_NOTIFY_FRAME) |=
+		HAL_TX_SM(TCL_DATA_CMD, TX_NOTIFY_FRAME, val);
+}
+
+/**
+ * hal_tx_desc_set_flow_override_enable - Set flow_override_enable field
+ * @desc: Handle to Tx Descriptor
+ * @val: Value to be set
+ *
+ * Return: None
+ */
+static inline void  hal_tx_desc_set_flow_override_enable(void *desc,
+							 uint8_t val)
+{
+	HAL_SET_FLD(desc, TCL_DATA_CMD, FLOW_OVERRIDE_ENABLE) |=
+		HAL_TX_SM(TCL_DATA_CMD, FLOW_OVERRIDE_ENABLE, val);
+}
+
+/**
+ * hal_tx_desc_set_flow_override - Set flow_override field in TX desc
+ * @desc: Handle to Tx Descriptor
+ * @val: Value to be set
+ *
+ * Return: None
+ */
+static inline void  hal_tx_desc_set_flow_override(void *desc,
+						  uint8_t val)
+{
+	HAL_SET_FLD(desc, TCL_DATA_CMD, FLOW_OVERRIDE) |=
+		HAL_TX_SM(TCL_DATA_CMD, FLOW_OVERRIDE, val);
+}
+
+/**
+ * hal_tx_desc_set_who_classify_info_sel - Set who_classify_info_sel field
+ * @desc: Handle to Tx Descriptor
+ * @val: Value to be set
+ *
+ * Return: None
+ */
+static inline void  hal_tx_desc_set_who_classify_info_sel(void *desc,
+							  uint8_t val)
+{
+	HAL_SET_FLD(desc, TCL_DATA_CMD, WHO_CLASSIFY_INFO_SEL) |=
+		HAL_TX_SM(TCL_DATA_CMD, WHO_CLASSIFY_INFO_SEL, val);
+}
 
 /**
  * hal_tx_desc_set_buf_length - Set Data length in bytes in Tx Descriptor
@@ -866,4 +941,116 @@ hal_tx_vdev_mismatch_routing_set(hal_soc_handle_t hal_soc_hdl,
 {
 }
 #endif
+
+/*
+ * hal_tx_get_num_ppe_vp_tbl_entries() - Get the total number of VP table
+ * @hal_soc: HAL SoC Context
+ *
+ * Return: Total number of entries.
+ */
+static inline
+uint32_t hal_tx_get_num_ppe_vp_tbl_entries(hal_soc_handle_t hal_soc_hdl)
+{
+	struct hal_soc *hal_soc = (struct hal_soc *)hal_soc_hdl;
+
+	return hal_soc->ops->hal_tx_get_num_ppe_vp_tbl_entries(hal_soc_hdl);
+}
+
+/**
+ * hal_tx_set_ppe_cmn_cfg()- Set the PPE common config
+ * @hal_soc: HAL SoC context
+ * @cmn_cfg: HAL PPE VP common config
+ *
+ * Return: void
+ */
+static inline void
+hal_tx_set_ppe_cmn_cfg(hal_soc_handle_t hal_soc_hdl,
+		       union hal_tx_cmn_config_ppe *cmn_cfg)
+{
+	struct hal_soc *hal_soc = (struct hal_soc *)hal_soc_hdl;
+
+	hal_soc->ops->hal_tx_set_ppe_cmn_cfg(hal_soc_hdl, cmn_cfg);
+}
+
+/**
+ * hal_tx_populate_ppe_vp_entry -  Populate ppe VP entry
+ * @hal_soc: HAL SoC context
+ * @vp_cfg: HAL PPE VP config
+ * @ppe_vp_idx: PPE VP index
+ *
+ * Return: void
+ */
+static inline void
+hal_tx_populate_ppe_vp_entry(hal_soc_handle_t hal_soc_hdl,
+			     union hal_tx_ppe_vp_config *vp_cfg,
+			     int ppe_vp_idx)
+{
+	struct hal_soc *hal_soc = (struct hal_soc *)hal_soc_hdl;
+
+	hal_soc->ops->hal_tx_set_ppe_vp_entry(hal_soc_hdl, vp_cfg, ppe_vp_idx);
+}
+
+/**
+ * hal_tx_set_int_pri2id - Set the prit2tid table.
+ * @hal_soc: HAL SoC context
+ * @pri2tid: Reference to SW INT_PRI to TID table
+ *
+ * Return: void
+ */
+static inline void
+hal_tx_set_int_pri2tid(hal_soc_handle_t hal_soc_hdl,
+		       uint32_t val, uint8_t map_no)
+{
+	struct hal_soc *hal_soc = (struct hal_soc *)hal_soc_hdl;
+
+	hal_soc->ops->hal_tx_set_ppe_pri2tid(hal_soc_hdl, val, map_no);
+}
+
+/**
+ * hal_tx_update_int_pri2id - Populate the prit2tid table.
+ * @hal_soc: HAL SoC context
+ * @pri: INT_PRI value
+ * @tid: Wi-Fi TID
+ *
+ * Return: void
+ */
+static inline void
+hal_tx_update_int_pri2tid(hal_soc_handle_t hal_soc_hdl,
+			  uint8_t pri, uint8_t tid)
+{
+	struct hal_soc *hal_soc = (struct hal_soc *)hal_soc_hdl;
+
+	hal_soc->ops->hal_tx_update_ppe_pri2tid(hal_soc_hdl, pri, tid);
+}
+
+/**
+ * hal_tx_dump_ppe_vp_entry - Dump the PPE VP entry
+ * @hal_soc_hdl: HAL SoC context
+ *
+ * Return: void
+ */
+static inline void
+hal_tx_dump_ppe_vp_entry(hal_soc_handle_t hal_soc_hdl)
+{
+	struct hal_soc *hal_soc = (struct hal_soc *)hal_soc_hdl;
+
+	hal_soc->ops->hal_tx_dump_ppe_vp_entry(hal_soc_hdl);
+}
+
+/**
+ * hal_tx_enable_pri2tid_map- Enable the priority to tid mapping
+ * @hal_soc_hdl: HAL SoC context
+ * @val: True/False value
+ *
+ * Return: void
+ */
+static inline void
+hal_tx_enable_pri2tid_map(hal_soc_handle_t hal_soc_hdl, bool val,
+			  uint8_t ppe_vp_idx)
+{
+	struct hal_soc *hal_soc = (struct hal_soc *)hal_soc_hdl;
+
+	hal_soc->ops->hal_tx_enable_pri2tid_map(hal_soc_hdl, val,
+						ppe_vp_idx);
+}
 #endif /* _HAL_BE_TX_H_ */

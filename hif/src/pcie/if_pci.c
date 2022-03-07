@@ -44,6 +44,111 @@
 #include "mp_dev.h"
 #include "hif_debug.h"
 
+#ifdef QCA_SUPPORT_LEGACY_INTERRUPTS
+char *legacy_ic_irqname[] = {
+"ce0",
+"ce1",
+"ce2",
+"ce3",
+"ce4",
+"ce5",
+"ce6",
+"ce7",
+"ce8",
+"ce9",
+"ce10",
+"ce11",
+"ce12",
+"ce13",
+"ce14",
+"ce15",
+"reo2sw8_intr2",
+"reo2sw7_intr2",
+"reo2sw6_intr2",
+"reo2sw5_intr2",
+"reo2sw4_intr2",
+"reo2sw3_intr2",
+"reo2sw2_intr2",
+"reo2sw1_intr2",
+"reo2sw0_intr2",
+"reo2sw8_intr",
+"reo2sw7_intr",
+"reo2sw6_inrr",
+"reo2sw5_intr",
+"reo2sw4_intr",
+"reo2sw3_intr",
+"reo2sw2_intr",
+"reo2sw1_intr",
+"reo2sw0_intr",
+"reo2status_intr2",
+"reo_status",
+"reo2rxdma_out_2",
+"reo2rxdma_out_1",
+"reo_cmd",
+"sw2reo6",
+"sw2reo5",
+"sw2reo1",
+"sw2reo",
+"rxdma2reo_mlo_0_dst_ring1",
+"rxdma2reo_mlo_0_dst_ring0",
+"rxdma2reo_mlo_1_dst_ring1",
+"rxdma2reo_mlo_1_dst_ring0",
+"rxdma2reo_dst_ring1",
+"rxdma2reo_dst_ring0",
+"rxdma2sw_dst_ring1",
+"rxdma2sw_dst_ring0",
+"rxdma2release_dst_ring1",
+"rxdma2release_dst_ring0",
+"sw2rxdma_2_src_ring",
+"sw2rxdma_1_src_ring",
+"sw2rxdma_0",
+"wbm2sw6_release2",
+"wbm2sw5_release2",
+"wbm2sw4_release2",
+"wbm2sw3_release2",
+"wbm2sw2_release2",
+"wbm2sw1_release2",
+"wbm2sw0_release2",
+"wbm2sw6_release",
+"wbm2sw5_release",
+"wbm2sw4_release",
+"wbm2sw3_release",
+"wbm2sw2_release",
+"wbm2sw1_release",
+"wbm2sw0_release",
+"wbm2sw_link",
+"wbm_error_release",
+"sw2txmon_src_ring",
+"sw2rxmon_src_ring",
+"txmon2sw_p1_intr1",
+"txmon2sw_p1_intr0",
+"txmon2sw_p0_dest1",
+"txmon2sw_p0_dest0",
+"rxmon2sw_p1_intr1",
+"rxmon2sw_p1_intr0",
+"rxmon2sw_p0_dest1",
+"rxmon2sw_p0_dest0",
+"sw_release",
+"sw2tcl_credit2",
+"sw2tcl_credit",
+"sw2tcl4",
+"sw2tcl5",
+"sw2tcl3",
+"sw2tcl2",
+"sw2tcl1",
+"sw2wbm1",
+"misc_8",
+"misc_7",
+"misc_6",
+"misc_5",
+"misc_4",
+"misc_3",
+"misc_2",
+"misc_1",
+"misc_0",
+};
+#endif
+
 #if (defined(QCA_WIFI_QCA6390) || defined(QCA_WIFI_QCA6490) || \
 	defined(QCA_WIFI_KIWI))
 #include "hal_api.h"
@@ -1936,8 +2041,7 @@ static int hif_pci_configure_legacy_irq(struct hif_pci_softc *sc)
 	hif_write32_mb(sc, sc->mem + PCIE_LOCAL_BASE_ADDRESS +
 		      PCIE_SOC_WAKE_ADDRESS, PCIE_SOC_WAKE_RESET);
 
-	if ((target_type == TARGET_TYPE_IPQ4019) ||
-			(target_type == TARGET_TYPE_AR900B)  ||
+	if ((target_type == TARGET_TYPE_AR900B)  ||
 			(target_type == TARGET_TYPE_QCA9984) ||
 			(target_type == TARGET_TYPE_AR9888) ||
 			(target_type == TARGET_TYPE_QCA9888) ||
@@ -1953,42 +2057,41 @@ end:
 	return ret;
 }
 
-static int hif_ce_srng_msi_free_irq(struct hif_softc *scn)
+static int hif_ce_srng_free_irq(struct hif_softc *scn)
 {
-	int ret;
-	int ce_id, irq, irq_id;
+	int ret = 0;
+	int ce_id, irq;
 	uint32_t msi_data_start;
 	uint32_t msi_data_count;
 	uint32_t msi_irq_start;
 	struct HIF_CE_state *ce_sc = HIF_GET_CE_STATE(scn);
 	struct CE_attr *host_ce_conf = ce_sc->host_ce_config;
+	struct hif_pci_softc *sc = HIF_GET_PCI_SOFTC(scn);
 
-	ret = pld_get_user_msi_assignment(scn->qdf_dev->dev, "CE",
-					    &msi_data_count, &msi_data_start,
-					    &msi_irq_start);
-	if (ret)
-		return ret;
+	if (!pld_get_enable_intx(scn->qdf_dev->dev)) {
+		ret = pld_get_user_msi_assignment(scn->qdf_dev->dev, "CE",
+						  &msi_data_count,
+						  &msi_data_start,
+						  &msi_irq_start);
+		if (ret)
+			return ret;
+	}
 
 	/* needs to match the ce_id -> irq data mapping
 	 * used in the srng parameter configuration
 	 */
 	for (ce_id = 0; ce_id < scn->ce_count; ce_id++) {
-		unsigned int msi_data;
-
 		if (host_ce_conf[ce_id].flags & CE_ATTR_DISABLE_INTR)
 			continue;
 
 		if (!ce_sc->tasklets[ce_id].inited)
 			continue;
 
-		irq_id = scn->int_assignment->msi_idx[ce_id];
-		msi_data = irq_id + msi_irq_start;
-		irq = pld_get_msi_irq(scn->qdf_dev->dev, msi_data);
+		irq = sc->ce_irq_num[ce_id];
 
 		hif_ce_irq_remove_affinity_hint(irq);
 
-		hif_debug("%s: (ce_id %d, irq_id %d, msi_data %d, irq %d)",
-			  __func__, irq_id, ce_id, msi_data, irq);
+		hif_debug("%s: (ce_id %d, irq %d)", __func__, ce_id, irq);
 
 		pfrm_free_irq(scn->qdf_dev->dev, irq, &ce_sc->tasklets[ce_id]);
 	}
@@ -2044,9 +2147,9 @@ void hif_pci_nointrs(struct hif_softc *scn)
 
 	hif_pci_deconfigure_grp_irq(scn);
 
-	ret = hif_ce_srng_msi_free_irq(scn);
+	ret = hif_ce_srng_free_irq(scn);
 	if (ret != -EINVAL) {
-		/* ce irqs freed in hif_ce_srng_msi_free_irq */
+		/* ce irqs freed in hif_ce_srng_free_irq */
 
 		if (scn->wake_irq)
 			pfrm_free_irq(scn->qdf_dev->dev, scn->wake_irq, scn);
@@ -2770,12 +2873,6 @@ void hif_target_dump_access_log(void)
 #endif
 
 #ifndef HIF_AHB
-int hif_ahb_configure_legacy_irq(struct hif_pci_softc *sc)
-{
-	QDF_BUG(0);
-	return -EINVAL;
-}
-
 int hif_ahb_configure_irq(struct hif_pci_softc *sc)
 {
 	QDF_BUG(0);
@@ -2794,7 +2891,7 @@ static int hif_ce_msi_map_ce_to_irq(struct hif_softc *scn, int ce_id)
 {
 	struct hif_pci_softc *pci_scn = HIF_GET_PCI_SOFTC(scn);
 
-	return pci_scn->ce_msi_irq_num[ce_id];
+	return pci_scn->ce_irq_num[ce_id];
 }
 
 /* hif_srng_msi_irq_disable() - disable the irq for msi
@@ -2829,6 +2926,83 @@ static void hif_ce_legacy_msi_irq_enable(struct hif_softc *hif_sc, int ce_id)
 {
 	enable_irq(hif_ce_msi_map_ce_to_irq(hif_sc, ce_id));
 }
+
+#ifdef QCA_SUPPORT_LEGACY_INTERRUPTS
+/**
+ * hif_ce_configure_legacyirq() - Configure CE interrupts
+ * @scn: hif_softc pointer
+ *
+ * Configure CE legacy interrupts
+ *
+ * Return: int
+ */
+static int hif_ce_configure_legacyirq(struct hif_softc *scn)
+{
+	int ret = 0;
+	int irq, ce_id;
+	struct HIF_CE_state *ce_sc = HIF_GET_CE_STATE(scn);
+	struct CE_attr *host_ce_conf = ce_sc->host_ce_config;
+	struct hif_pci_softc *pci_sc = HIF_GET_PCI_SOFTC(scn);
+	struct pci_dev *pdev = pci_sc->pdev;
+	int pci_slot;
+	qdf_device_t qdf_dev = scn->qdf_dev;
+
+	if (!pld_get_enable_intx(&pdev->dev))
+		return -EINVAL;
+
+	scn->bus_ops.hif_irq_disable = &hif_ce_srng_msi_irq_disable;
+	scn->bus_ops.hif_irq_enable = &hif_ce_srng_msi_irq_enable;
+	scn->bus_ops.hif_map_ce_to_irq = &hif_ce_msi_map_ce_to_irq;
+
+	for (ce_id = 0; ce_id < scn->ce_count; ce_id++) {
+		if (host_ce_conf[ce_id].flags & CE_ATTR_DISABLE_INTR)
+			continue;
+
+		if (host_ce_conf[ce_id].flags & CE_ATTR_INIT_ON_DEMAND)
+			continue;
+
+		ret = pfrm_get_irq(&pdev->dev,
+				   (struct qdf_pfm_hndl *)qdf_dev->cnss_pdev,
+				   legacy_ic_irqname[ce_id], ce_id, &irq);
+		if (ret) {
+			dev_err(&pdev->dev, "get irq failed\n");
+			ret = -EFAULT;
+			goto skip;
+		}
+
+		pci_slot = hif_get_pci_slot(scn);
+		qdf_scnprintf(ce_irqname[pci_slot][ce_id],
+			      DP_IRQ_NAME_LEN, "pci%d_ce_%u", pci_slot, ce_id);
+		pci_sc->ce_irq_num[ce_id] = irq;
+
+		ret = pfrm_request_irq(scn->qdf_dev->dev, irq,
+				       hif_ce_interrupt_handler,
+				       IRQF_SHARED,
+				       ce_irqname[pci_slot][ce_id],
+				       &ce_sc->tasklets[ce_id]);
+		if (ret) {
+			hif_err("error = %d", ret);
+			return -EINVAL;
+		}
+	}
+
+skip:
+	return ret;
+}
+#else
+/**
+ * hif_ce_configure_legacyirq() - Configure CE interrupts
+ * @scn: hif_softc pointer
+ *
+ * Configure CE legacy interrupts
+ *
+ * Return: int
+ */
+static int hif_ce_configure_legacyirq(struct hif_softc *scn)
+{
+	return 0;
+}
+#endif
 
 int hif_ce_msi_configure_irq_by_ceid(struct hif_softc *scn, int ce_id)
 {
@@ -2871,7 +3045,7 @@ int hif_ce_msi_configure_irq_by_ceid(struct hif_softc *scn, int ce_id)
 	if (!ce_sc->tasklets[ce_id].inited)
 		goto skip;
 
-	pci_sc->ce_msi_irq_num[ce_id] = irq;
+	pci_sc->ce_irq_num[ce_id] = irq;
 
 	qdf_scnprintf(ce_irqname[pci_slot][ce_id],
 		      DP_IRQ_NAME_LEN, "pci%u_wlan_ce_%u",
@@ -3091,23 +3265,23 @@ void hif_pci_ce_irq_set_affinity_hint(
 		qdf_cpumask_clear(&pci_sc->ce_irq_cpu_mask[ce_id]);
 		qdf_cpumask_copy(&pci_sc->ce_irq_cpu_mask[ce_id],
 				 &ce_cpu_mask);
-		qdf_dev_modify_irq_status(pci_sc->ce_msi_irq_num[ce_id],
+		qdf_dev_modify_irq_status(pci_sc->ce_irq_num[ce_id],
 					  IRQ_NO_BALANCING, 0);
 		ret = qdf_dev_set_irq_affinity(
-			pci_sc->ce_msi_irq_num[ce_id],
+			pci_sc->ce_irq_num[ce_id],
 			(struct qdf_cpu_mask *)&pci_sc->ce_irq_cpu_mask[ce_id]);
-		qdf_dev_modify_irq_status(pci_sc->ce_msi_irq_num[ce_id],
+		qdf_dev_modify_irq_status(pci_sc->ce_irq_num[ce_id],
 					  0, IRQ_NO_BALANCING);
 		if (ret)
 			hif_err_rl("Set affinity %*pbl fails for CE IRQ %d",
 				   qdf_cpumask_pr_args(
 					&pci_sc->ce_irq_cpu_mask[ce_id]),
-				   pci_sc->ce_msi_irq_num[ce_id]);
+				   pci_sc->ce_irq_num[ce_id]);
 		else
 			hif_debug_rl("Set affinity %*pbl for CE IRQ: %d",
 				     qdf_cpumask_pr_args(
 					&pci_sc->ce_irq_cpu_mask[ce_id]),
-				     pci_sc->ce_msi_irq_num[ce_id]);
+				     pci_sc->ce_irq_num[ce_id]);
 	}
 }
 #endif /* #ifdef HIF_CPU_PERF_AFFINE_MASK */
@@ -3166,13 +3340,97 @@ void hif_pci_config_irq_affinity(struct hif_softc *scn)
 	hif_pci_ce_irq_set_affinity_hint(scn);
 }
 
+#ifdef QCA_SUPPORT_LEGACY_INTERRUPTS
+/**
+ * hif_grp_configure_legacyirq() - Configure DP interrupts
+ * @scn: hif_softc pointer
+ * @hif_ext_group: hif extended group pointer
+ *
+ * Configure DP legacy interrupts
+ *
+ * Return: int
+ */
+static int hif_grp_configure_legacyirq(struct hif_softc *scn,
+				       struct hif_exec_context *hif_ext_group)
+{
+	int ret = 0;
+	int irq = 0;
+	int j;
+	int pci_slot;
+	struct hif_pci_softc *sc = HIF_GET_PCI_SOFTC(scn);
+	struct pci_dev *pdev = sc->pdev;
+	qdf_device_t qdf_dev = scn->qdf_dev;
+
+	for (j = 0; j < hif_ext_group->numirq; j++) {
+		ret = pfrm_get_irq(&pdev->dev,
+				   (struct qdf_pfm_hndl *)qdf_dev->cnss_pdev,
+				   legacy_ic_irqname[hif_ext_group->irq[j]],
+				   hif_ext_group->irq[j], &irq);
+		if (ret) {
+			dev_err(&pdev->dev, "get irq failed\n");
+			return -EFAULT;
+		}
+		hif_ext_group->os_irq[j] = irq;
+	}
+
+	hif_ext_group->irq_enable = &hif_exec_grp_irq_enable;
+	hif_ext_group->irq_disable = &hif_exec_grp_irq_disable;
+	hif_ext_group->irq_name = &hif_pci_get_irq_name;
+	hif_ext_group->work_complete = &hif_dummy_grp_done;
+
+	pci_slot = hif_get_pci_slot(scn);
+	for (j = 0; j < hif_ext_group->numirq; j++) {
+		irq = hif_ext_group->os_irq[j];
+		if (scn->irq_unlazy_disable)
+			qdf_dev_set_irq_status_flags(irq,
+						     QDF_IRQ_DISABLE_UNLAZY);
+
+		hif_debug("request_irq = %d for grp %d",
+			  irq, hif_ext_group->grp_id);
+
+		ret = pfrm_request_irq(scn->qdf_dev->dev, irq,
+				       hif_ext_group_interrupt_handler,
+				       IRQF_SHARED | IRQF_NO_SUSPEND,
+				       legacy_ic_irqname[hif_ext_group->irq[j]],
+				       hif_ext_group);
+		if (ret) {
+			hif_err("request_irq failed ret = %d", ret);
+			return -EFAULT;
+		}
+		hif_ext_group->os_irq[j] = irq;
+	}
+	hif_ext_group->irq_requested = true;
+	return 0;
+}
+#else
+/**
+ * hif_grp_configure_legacyirq() - Configure DP interrupts
+ * @scn: hif_softc pointer
+ * @hif_ext_group: hif extended group pointer
+ *
+ * Configure DP legacy interrupts
+ *
+ * Return: int
+ */
+static int hif_grp_configure_legacyirq(struct hif_softc *scn,
+				       struct hif_exec_context *hif_ext_group)
+{
+	return 0;
+}
+#endif
+
 int hif_pci_configure_grp_irq(struct hif_softc *scn,
 			      struct hif_exec_context *hif_ext_group)
 {
 	int ret = 0;
 	int irq = 0;
 	int j;
+	struct hif_pci_softc *sc = HIF_GET_PCI_SOFTC(scn);
+	struct pci_dev *pdev = sc->pdev;
 	int pci_slot;
+
+	if (pld_get_enable_intx(&pdev->dev))
+		return hif_grp_configure_legacyirq(scn, hif_ext_group);
 
 	hif_ext_group->irq_enable = &hif_exec_grp_irq_enable;
 	hif_ext_group->irq_disable = &hif_exec_grp_irq_disable;
@@ -3286,9 +3544,6 @@ int hif_configure_irq(struct hif_softc *scn)
 	}
 
 	switch (scn->target_info.target_type) {
-	case TARGET_TYPE_IPQ4019:
-		ret = hif_ahb_configure_legacy_irq(sc);
-		break;
 	case TARGET_TYPE_QCA8074:
 	case TARGET_TYPE_QCA8074V2:
 	case TARGET_TYPE_QCA6018:
@@ -3296,12 +3551,15 @@ int hif_configure_irq(struct hif_softc *scn)
 	case TARGET_TYPE_QCA9574:
 		ret = hif_ahb_configure_irq(sc);
 		break;
+	case TARGET_TYPE_QCN9224:
+		ret = hif_ce_configure_legacyirq(scn);
+		break;
 	default:
 		ret = hif_pci_configure_legacy_irq(sc);
 		break;
 	}
 	if (ret < 0) {
-		hif_err("hif_pci_configure_legacy_irq error = %d", ret);
+		hif_err("error = %d", ret);
 		return ret;
 	}
 end:

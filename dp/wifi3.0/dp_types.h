@@ -1728,6 +1728,12 @@ struct dp_arch_ops {
 						void *ring_desc,
 						struct dp_rx_desc **r_rx_desc);
 
+	bool
+	(*dp_rx_intrabss_handle_nawds)(struct dp_soc *soc,
+				       struct dp_txrx_peer *ta_txrx_peer,
+				       qdf_nbuf_t nbuf_copy,
+				       struct cdp_tid_rx_stats *tid_stats);
+
 	struct dp_rx_desc *(*dp_rx_desc_cookie_2_va)(struct dp_soc *soc,
 						     uint32_t cookie);
 	uint32_t (*dp_service_near_full_srngs)(struct dp_soc *soc,
@@ -3002,6 +3008,9 @@ struct dp_vdev {
 
 	ol_txrx_get_tsf_time get_tsf_time;
 
+	/* callback to classify critical packets */
+	ol_txrx_classify_critical_pkt_fp tx_classify_critical_pkt_cb;
+
 	/* deferred vdev deletion state */
 	struct {
 		/* VDEV delete pending */
@@ -3135,12 +3144,13 @@ struct dp_vdev {
 #ifdef WIFI_MONITOR_SUPPORT
 	struct dp_mon_vdev *monitor_vdev;
 #endif
-
+#if defined(WLAN_FEATURE_TSF_UPLINK_DELAY) || defined(CONFIG_SAWF)
+	/* Delta between TQM clock and TSF clock */
+	uint32_t delta_tsf;
+#endif
 #ifdef WLAN_FEATURE_TSF_UPLINK_DELAY
 	/* Indicate if uplink delay report is enabled or not */
 	qdf_atomic_t ul_delay_report;
-	/* Delta between TQM clock and TSF clock */
-	uint32_t delta_tsf;
 	/* accumulative delay for every TX completion */
 	qdf_atomic_t ul_delay_accum;
 	/* accumulative number of packets delay has accumulated */
@@ -3371,6 +3381,12 @@ typedef void *dp_txrx_ref_handle;
  * @fw_reason1: discarded by firmware reason 1
  * @fw_reason2: discarded by firmware reason 2
  * @fw_reason3: discarded by firmware reason  3
+ * @fw_rem_no_match: dropped due to fw no match command
+ * @drop_threshold: dropped due to HW threshold
+ * @drop_link_desc_na: dropped due resource not available in HW
+ * @invalid_drop: Invalid msdu drop
+ * @mcast_vdev_drop: MCAST drop configured for VDEV in HW
+ * @invalid_rr: Invalid TQM release reason
  * @failed_retry_count: packets failed due to retry above 802.11 retry limit
  * @retry_count: packets successfully send after one or more retry
  * @multiple_retry_count: packets successfully sent after more than one retry
@@ -3398,6 +3414,13 @@ struct dp_peer_per_pkt_tx_stats {
 		uint32_t fw_reason1;
 		uint32_t fw_reason2;
 		uint32_t fw_reason3;
+		uint32_t fw_rem_queue_disable;
+		uint32_t fw_rem_no_match;
+		uint32_t drop_threshold;
+		uint32_t drop_link_desc_na;
+		uint32_t invalid_drop;
+		uint32_t mcast_vdev_drop;
+		uint32_t invalid_rr;
 	} dropped;
 	uint32_t failed_retry_count;
 	uint32_t retry_count;
@@ -3759,6 +3782,9 @@ struct dp_txrx_peer {
 	ol_txrx_rx_fp osif_rx;
 #endif
 	struct dp_rx_tid_defrag rx_tid[DP_MAX_TIDS];
+#ifdef CONFIG_SAWF
+	struct dp_peer_sawf_stats *sawf_stats;
+#endif
 };
 
 /* Peer structure for data path state */
@@ -3862,6 +3888,9 @@ struct dp_peer {
 	struct dp_peer_link_info link_peers[DP_MAX_MLO_LINKS];
 	uint8_t num_links;
 	DP_MUTEX_TYPE link_peers_info_lock;
+#endif
+#ifdef CONFIG_SAWF_DEF_QUEUES
+	struct dp_peer_sawf *sawf;
 #endif
 };
 

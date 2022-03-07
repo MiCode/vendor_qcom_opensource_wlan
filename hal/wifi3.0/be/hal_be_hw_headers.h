@@ -31,6 +31,7 @@
 
 #if defined(QCA_WIFI_KIWI)
 #include "msmhwioreg.h"
+#include "phyrx_common_user_info.h"
 #endif
 
 /* TX MONITOR */

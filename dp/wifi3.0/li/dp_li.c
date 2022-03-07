@@ -26,18 +26,42 @@
 #include "dp_li_rx.h"
 #include "dp_peer.h"
 #include <wlan_utility.h>
+#include "dp_ipa.h"
 
 #if defined(WLAN_MAX_PDEVS) && (WLAN_MAX_PDEVS == 1)
 static struct wlan_cfg_tcl_wbm_ring_num_map g_tcl_wbm_map_array[MAX_TCL_DATA_RINGS] = {
 	{.tcl_ring_num = 0, .wbm_ring_num = 0, .wbm_rbm_id = HAL_LI_WBM_SW0_BM_ID, .for_ipa = 0},
-	{1, 4, HAL_LI_WBM_SW4_BM_ID, 1}, /* For IPA */
-	{2, 2, HAL_LI_WBM_SW2_BM_ID, 1} /* For IPA */};
+	/*
+	 * INVALID_WBM_RING_NUM implies re-use of an existing WBM2SW ring
+	 * as indicated by rbm id.
+	 */
+	{1, INVALID_WBM_RING_NUM, HAL_LI_WBM_SW0_BM_ID, 0},
+	{2, 2, HAL_LI_WBM_SW2_BM_ID, 0}
+};
 #else
 static struct wlan_cfg_tcl_wbm_ring_num_map g_tcl_wbm_map_array[MAX_TCL_DATA_RINGS] = {
 	{.tcl_ring_num = 0, .wbm_ring_num = 0, .wbm_rbm_id = HAL_LI_WBM_SW0_BM_ID, .for_ipa = 0},
 	{1, 1, HAL_LI_WBM_SW1_BM_ID, 0},
 	{2, 2, HAL_LI_WBM_SW2_BM_ID, 0}
 };
+#endif
+
+#ifdef IPA_WDI3_TX_TWO_PIPES
+static inline void
+dp_soc_cfg_update_tcl_wbm_map_for_ipa(struct wlan_cfg_dp_soc_ctxt *cfg_ctx)
+{
+	if (!cfg_ctx->ipa_enabled)
+		return;
+
+	cfg_ctx->tcl_wbm_map_array[IPA_TX_ALT_RING_IDX].wbm_ring_num = 4;
+	cfg_ctx->tcl_wbm_map_array[IPA_TX_ALT_RING_IDX].wbm_rbm_id =
+							   HAL_LI_WBM_SW4_BM_ID;
+}
+#else
+static inline void
+dp_soc_cfg_update_tcl_wbm_map_for_ipa(struct wlan_cfg_dp_soc_ctxt *soc_cfg_ctx)
+{
+}
 #endif
 
 static void dp_soc_cfg_attach_li(struct dp_soc *soc)
@@ -47,6 +71,7 @@ static void dp_soc_cfg_attach_li(struct dp_soc *soc)
 	wlan_cfg_set_rx_rel_ring_id(soc_cfg_ctx, WBM2SW_REL_ERR_RING_NUM);
 
 	soc_cfg_ctx->tcl_wbm_map_array = g_tcl_wbm_map_array;
+	dp_soc_cfg_update_tcl_wbm_map_for_ipa(soc_cfg_ctx);
 }
 
 qdf_size_t dp_get_context_size_li(enum dp_context_type context_type)
@@ -502,6 +527,14 @@ static QDF_STATUS dp_txrx_set_vdev_param_li(struct dp_soc *soc,
 	return QDF_STATUS_SUCCESS;
 }
 
+bool
+dp_rx_intrabss_handle_nawds_li(struct dp_soc *soc, struct dp_txrx_peer *ta_peer,
+			       qdf_nbuf_t nbuf_copy,
+			       struct cdp_tid_rx_stats *tid_stats)
+{
+	return false;
+}
+
 void dp_initialize_arch_ops_li(struct dp_arch_ops *arch_ops)
 {
 #ifndef QCA_HOST_MODE_WIFI_DISABLED
@@ -539,6 +572,7 @@ void dp_initialize_arch_ops_li(struct dp_arch_ops *arch_ops)
 	arch_ops->txrx_peer_map_detach = dp_peer_map_detach_li;
 	arch_ops->dp_rx_desc_cookie_2_va =
 			dp_rx_desc_cookie_2_va_li;
+	arch_ops->dp_rx_intrabss_handle_nawds = dp_rx_intrabss_handle_nawds_li;
 	arch_ops->dp_rxdma_ring_sel_cfg = dp_rxdma_ring_sel_cfg_li;
 	arch_ops->dp_rx_peer_metadata_peer_id_get =
 					dp_rx_peer_metadata_peer_id_get_li;

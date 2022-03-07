@@ -108,14 +108,23 @@ void dp_rx_mon_packet_length_set(uint32_t *msg_word,
 {
 	if (!msg_word || !tlv_filter)
 		return;
-#ifdef QCA_MONITOR_2_0_SUPPORT_WAR /* Yet to get FW support */
-	HTT_RX_MONITOR_CFG_CONFIG_LENGTH_MGMT_SET(*msg_word,
-			tlv_filter->mgmt_dma_length);
-	HTT_RX_MONITOR_CFG_CONFIG_LENGTH_CTRL_SET(*msg_word,
-			tlv_filter->ctrl_dma_length);
-	HTT_RX_MONITOR_CFG_CONFIG_LENGTH_DATA_SET(*msg_word,
-			tlv_filter->data_dma_length);
-#endif
+
+	HTT_RX_RING_SELECTION_CFG_CONFIG_LENGTH_MGMT_SET(*msg_word,
+							 tlv_filter->mgmt_dma_length);
+	HTT_RX_RING_SELECTION_CFG_CONFIG_LENGTH_CTRL_SET(*msg_word,
+							 tlv_filter->ctrl_dma_length);
+	HTT_RX_RING_SELECTION_CFG_CONFIG_LENGTH_DATA_SET(*msg_word,
+							 tlv_filter->data_dma_length);
+}
+
+void dp_rx_mon_enable_set(uint32_t *msg_word,
+			  struct htt_rx_ring_tlv_filter *tlv_filter)
+{
+	if (!msg_word || !tlv_filter)
+		return;
+
+	HTT_RX_RING_SELECTION_CFG_RX_MON_GLOBAL_EN_SET(*msg_word,
+						       tlv_filter->enable);
 }
 
 void dp_rx_mon_enable_mpdu_logging(uint32_t *msg_word,
@@ -124,19 +133,20 @@ void dp_rx_mon_enable_mpdu_logging(uint32_t *msg_word,
 	if (!msg_word || !tlv_filter)
 		return;
 
-#ifdef QCA_MONITOR_2_0_SUPPORT_WAR /* Yet to get FW support */
-	if (htt_tlv_filter->mgmt_mpdu_log)
-		HTT_RX_MONITOR_CFG_MPDU_LOGGING_SET(*msg_word, MGMT,
-						    tlv_filter->mgmt_mpdu_log);
+	if (tlv_filter->mgmt_mpdu_log) {
+		HTT_RX_RING_SELECTION_CFG_PKT_TYPE_ENABLE_MSDU_MPDU_LOGGING_SET(*msg_word, 1);
+		HTT_RX_RING_SELECTION_CFG_DMA_MPDU_MGMT_SET(*msg_word, 1);
+	}
 
-	if (htt_tlv_filter->ctrl_mpdu_log)
-		HTT_RX_MONITOR_CFG_MPDU_LOGGING_SET(*msg_word, CTRL,
-						    tlv_filter->ctrl_mpdu_log);
+	if (tlv_filter->ctrl_mpdu_log) {
+		HTT_RX_RING_SELECTION_CFG_PKT_TYPE_ENABLE_MSDU_MPDU_LOGGING_SET(*msg_word, 2);
+		HTT_RX_RING_SELECTION_CFG_DMA_MPDU_CTRL_SET(*msg_word, 1);
+	}
 
-	if (htt_tlv_filter->data_mpdu_log)
-		HTT_RX_MONITOR_CFG_MPDU_LOGGING_SET(*msg_word, DATA,
-						    tlv_filter->data_mpdu_log);
-#endif
+	if (tlv_filter->data_mpdu_log) {
+		HTT_RX_RING_SELECTION_CFG_PKT_TYPE_ENABLE_MSDU_MPDU_LOGGING_SET(*msg_word, 4);
+		HTT_RX_RING_SELECTION_CFG_DMA_MPDU_DATA_SET(*msg_word, 1);
+	}
 }
 
 void
@@ -146,21 +156,19 @@ dp_rx_mon_word_mask_subscribe(uint32_t *msg_word,
 	if (!msg_word || !tlv_filter)
 		return;
 
-#ifdef QCA_MONITOR_2_0_SUPPORT_WAR /* Yet to get FW support */
-	HTT_RX_RING_SELECTION_CFG_RX_MPDU_START_WMASK_SET(*msg_word,
-			tlv_filter->rx_mpdu_start_word_mask);
+	HTT_RX_RING_SELECTION_CFG_RX_MPDU_START_WORD_MASK_SET(*msg_word,
+			tlv_filter->rx_mpdu_start_wmask);
 
-	msg_word++;
-	*msg_word = 0;
-	HTT_RX_RING_SELECTION_CFG_RX_MPDU_END_WMASK_SET(*msg_word,
-			tlv_filter->rx_mpdu_end_word_mask);
-	msg_word++;
-	*msg_word = 0;
-	HTT_RX_RING_SELECTION_CFG_RX_MSDU_END_WMASK_SET(*msg_word,
-			tlv_filter->rx_msdu_end_word_mask);
-	HTT_RX_RING_SELECTION_CFG_RX_PACKET_TLV_OFFSET_SET(*msg_word,
-			tlv_filter->rx_pkt_tlv_offset);
+#ifdef QCA_MONITOR_2_0_SUPPORT_WAR /* Yet to get FW support */
+	HTT_RX_RING_SELECTION_CFG_RX_MPDU_END_WORD_MASK_SET(*msg_word,
+			tlv_filter->rx_mpdu_end_wmask);
 #endif
+	msg_word++;
+	*msg_word = 0;
+	HTT_RX_RING_SELECTION_CFG_RX_MSDU_END_WORD_MASK_SET(*msg_word,
+			tlv_filter->rx_msdu_end_wmask);
+	HTT_RX_RING_SELECTION_CFG_ENABLE_RX_PKT_TLV_OFFSET_SET(*msg_word,
+			tlv_filter->rx_pkt_tlv_offset);
 }
 
 static void
@@ -825,15 +833,16 @@ int htt_h2t_tx_ring_cfg(struct htt_soc *htt_soc, int pdev_id,
 	target_pdev_id =
 	dp_get_target_pdev_id_for_host_pdev_id(soc->dp_soc, pdev_id);
 
-	if (htt_ring_type == HTT_SW_TO_SW_RING ||
-	    htt_ring_type == HTT_SW_TO_HW_RING)
-		HTT_TX_MONITOR_CFG_PDEV_ID_SET(*msg_word,
-					       target_pdev_id);
+	HTT_TX_MONITOR_CFG_PDEV_ID_SET(*msg_word,
+				       target_pdev_id);
 
 	HTT_TX_MONITOR_CFG_RING_ID_SET(*msg_word, htt_ring_id);
 
 	HTT_TX_MONITOR_CFG_STATUS_TLV_SET(*msg_word,
 		!!(srng_params.flags & HAL_SRNG_MSI_SWAP));
+
+	HTT_TX_MONITOR_CFG_TX_MON_GLOBAL_EN_SET(*msg_word,
+						htt_tlv_filter->enable);
 
 	/* word 1 */
 	msg_word++;
@@ -854,11 +863,11 @@ int htt_h2t_tx_ring_cfg(struct htt_soc *htt_soc, int pdev_id,
 					 DATA, 1);
 
 	if (htt_tlv_filter->mgmt_dma_length)
-		HTT_TX_MONITOR_CFG_CONFIG_LENGTH_DATA_SET(*msg_word,
+		HTT_TX_MONITOR_CFG_CONFIG_LENGTH_MGMT_SET(*msg_word,
 							  htt_tlv_filter->mgmt_dma_length);
 
 	if (htt_tlv_filter->ctrl_dma_length)
-		HTT_TX_MONITOR_CFG_CONFIG_LENGTH_DATA_SET(*msg_word,
+		HTT_TX_MONITOR_CFG_CONFIG_LENGTH_CTRL_SET(*msg_word,
 							  htt_tlv_filter->ctrl_dma_length);
 
 	if (htt_tlv_filter->data_dma_length)
@@ -872,10 +881,46 @@ int htt_h2t_tx_ring_cfg(struct htt_soc *htt_soc, int pdev_id,
 		HTT_TX_MONITOR_CFG_PKT_TYPE_ENABLE_FLAGS_SET(*msg_word, 1);
 
 	if (htt_tlv_filter->ctrl_filter)
-		HTT_TX_MONITOR_CFG_PKT_TYPE_ENABLE_FLAGS_SET(*msg_word, 1);
+		HTT_TX_MONITOR_CFG_PKT_TYPE_ENABLE_FLAGS_SET(*msg_word, 2);
 
 	if (htt_tlv_filter->data_filter)
-		HTT_TX_MONITOR_CFG_PKT_TYPE_ENABLE_FLAGS_SET(*msg_word, 1);
+		HTT_TX_MONITOR_CFG_PKT_TYPE_ENABLE_FLAGS_SET(*msg_word, 4);
+
+	if (htt_tlv_filter->mgmt_mpdu_start)
+		HTT_TX_MONITOR_CFG_FILTER_IN_TX_MPDU_START_MGMT_SET(*msg_word, 1);
+
+	if (htt_tlv_filter->ctrl_mpdu_start)
+		HTT_TX_MONITOR_CFG_FILTER_IN_TX_MPDU_START_CTRL_SET(*msg_word, 1);
+
+	if (htt_tlv_filter->data_mpdu_start)
+		HTT_TX_MONITOR_CFG_FILTER_IN_TX_MPDU_START_DATA_SET(*msg_word, 1);
+
+	if (htt_tlv_filter->mgmt_msdu_start)
+		HTT_TX_MONITOR_CFG_FILTER_IN_TX_MSDU_START_MGMT_SET(*msg_word, 1);
+
+	if (htt_tlv_filter->ctrl_msdu_start)
+		HTT_TX_MONITOR_CFG_FILTER_IN_TX_MSDU_START_CTRL_SET(*msg_word, 1);
+
+	if (htt_tlv_filter->data_msdu_start)
+		HTT_TX_MONITOR_CFG_FILTER_IN_TX_MSDU_START_DATA_SET(*msg_word, 1);
+
+	if (htt_tlv_filter->mgmt_mpdu_end)
+		HTT_TX_MONITOR_CFG_FILTER_IN_TX_MPDU_END_MGMT_SET(*msg_word, 1);
+
+	if (htt_tlv_filter->ctrl_mpdu_end)
+		HTT_TX_MONITOR_CFG_FILTER_IN_TX_MPDU_END_CTRL_SET(*msg_word, 1);
+
+	if (htt_tlv_filter->data_mpdu_end)
+		HTT_TX_MONITOR_CFG_FILTER_IN_TX_MPDU_END_DATA_SET(*msg_word, 1);
+
+	if (htt_tlv_filter->mgmt_msdu_end)
+		HTT_TX_MONITOR_CFG_FILTER_IN_TX_MSDU_END_MGMT_SET(*msg_word, 1);
+
+	if (htt_tlv_filter->ctrl_msdu_end)
+		HTT_TX_MONITOR_CFG_FILTER_IN_TX_MSDU_END_CTRL_SET(*msg_word, 1);
+
+	if (htt_tlv_filter->data_msdu_end)
+		HTT_TX_MONITOR_CFG_FILTER_IN_TX_MSDU_END_DATA_SET(*msg_word, 1);
 
 	/* word 3 */
 	msg_word++;
@@ -988,12 +1033,72 @@ fail0:
 #ifdef QCA_ENHANCED_STATS_SUPPORT
 void dp_mon_filter_setup_enhanced_stats_2_0(struct dp_pdev *pdev)
 {
+	struct dp_mon_filter_be filter = {0};
+	enum dp_mon_filter_mode mode = DP_MON_FILTER_ENHACHED_STATS_MODE;
+	enum dp_mon_filter_srng_type srng_type =
+				DP_MON_FILTER_SRNG_TYPE_RXMON_DEST;
+	struct dp_mon_filter *rx_tlv_filter;
+	struct dp_mon_pdev *mon_pdev;
+	struct dp_mon_pdev_be *mon_pdev_be;
+
+	if (!pdev) {
+		dp_mon_filter_err("pdev Context is null");
+		return;
+	}
+
+	mon_pdev = pdev->monitor_pdev;
+	mon_pdev_be =
+		dp_get_be_mon_pdev_from_dp_mon_pdev(mon_pdev);
+
+	rx_tlv_filter = &filter.rx_tlv_filter;
+	dp_mon_filter_set_status_cmn(mon_pdev, rx_tlv_filter);
+	/* Setup the filter */
+	rx_tlv_filter->tlv_filter.ppdu_end_user_stats_ext = 0;
+	rx_tlv_filter->tlv_filter.enable_mo = 0;
+	rx_tlv_filter->tlv_filter.mo_mgmt_filter = 0;
+	rx_tlv_filter->tlv_filter.mo_ctrl_filter = 0;
+	rx_tlv_filter->tlv_filter.mo_data_filter = 0;
+	/* Enabled the filter */
+	rx_tlv_filter->valid = true;
+
+	dp_mon_filter_show_filter(mon_pdev, mode, rx_tlv_filter);
+
+	mon_pdev_be->filter_be[mode][srng_type] = filter;
 }
 
 void dp_mon_filter_reset_enhanced_stats_2_0(struct dp_pdev *pdev)
 {
+	struct dp_mon_filter_be filter = {0};
+	enum dp_mon_filter_mode mode = DP_MON_FILTER_ENHACHED_STATS_MODE;
+	enum dp_mon_filter_srng_type srng_type =
+				DP_MON_FILTER_SRNG_TYPE_RXMON_DEST;
+	struct dp_mon_pdev *mon_pdev;
+	struct dp_mon_pdev_be *mon_pdev_be;
+
+	if (!pdev) {
+		dp_mon_filter_err("pdev Context is null");
+		return;
+	}
+
+	mon_pdev = pdev->monitor_pdev;
+	mon_pdev_be =
+		dp_get_be_mon_pdev_from_dp_mon_pdev(mon_pdev);
+
+	mon_pdev_be->filter_be[mode][srng_type] = filter;
 }
 #endif /* QCA_ENHANCED_STATS_SUPPORT */
+
+#ifdef QCA_UNDECODED_METADATA_SUPPORT
+void
+dp_mon_filter_setup_undecoded_metadata_capture_2_0(struct dp_pdev *pdev)
+{
+}
+
+void
+dp_mon_filter_reset_undecoded_metadata_capture_2_0(struct dp_pdev *pdev)
+{
+}
+#endif
 
 #ifdef QCA_MCOPY_SUPPORT
 void dp_mon_filter_setup_mcopy_mode_2_0(struct dp_pdev *pdev)
@@ -1217,6 +1322,8 @@ static void dp_tx_mon_filter_show_filter(struct dp_mon_filter_be *filter)
 {
 	struct htt_tx_ring_tlv_filter *tlv_filter = &filter->tx_tlv_filter;
 
+	DP_MON_FILTER_PRINT("TX Monitor Filter configuration:");
+	DP_MON_FILTER_PRINT("Enable: %d", tlv_filter->enable);
 	DP_MON_FILTER_PRINT("mgmt_filter: %d", tlv_filter->mgmt_filter);
 	DP_MON_FILTER_PRINT("data_filter: %d", tlv_filter->data_filter);
 	DP_MON_FILTER_PRINT("ctrl_filter: %d", tlv_filter->ctrl_filter);
@@ -1825,21 +1932,6 @@ dp_rx_mon_filter_h2t_setup(struct dp_soc *soc, struct dp_pdev *pdev,
 	}
 }
 
-/**
- * dp_tx_mon_filter_h2t_setup() - Setup the filter for the Target setup
- * @soc: DP soc handle
- * @pdev: DP pdev handle
- * @srng_type: The srng type for which filter wll be set
- * @tlv_filter: tlv filter
- */
-static
-void dp_tx_mon_filter_h2t_setup(struct dp_soc *soc, struct dp_pdev *pdev,
-				struct dp_mon_filter_be *filter)
-{
-	/* currently all available filter configuration enabled  */
-	dp_tx_mon_filter_show_filter(filter);
-}
-
 static QDF_STATUS
 dp_tx_mon_ht2_ring_cfg(struct dp_soc *soc,
 		       struct dp_pdev *pdev,
@@ -1878,10 +1970,40 @@ dp_tx_mon_ht2_ring_cfg(struct dp_soc *soc,
 	return status;
 }
 
+static inline
+void dp_tx_mon_filter_set_all(struct htt_tx_ring_tlv_filter *filter)
+{
+	qdf_mem_set(&filter->dtlvs,
+		    sizeof(struct dp_tx_mon_downstream_tlv_config), 0xFF);
+	qdf_mem_set(&filter->utlvs,
+		    sizeof(struct dp_tx_mon_upstream_tlv_config), 0xFF);
+	qdf_mem_set(&filter->wmask,
+		    sizeof(struct dp_tx_mon_wordmask_config), 0xFF);
+
+	filter->mgmt_filter = 0x1;
+	filter->data_filter = 0x1;
+	filter->ctrl_filter = 0x1;
+
+	filter->mgmt_mpdu_end = 1;
+	filter->mgmt_msdu_end = 1;
+	filter->mgmt_msdu_start = 1;
+	filter->mgmt_mpdu_start = 1;
+	filter->ctrl_mpdu_end = 1;
+	filter->ctrl_msdu_end = 1;
+	filter->ctrl_msdu_start = 1;
+	filter->ctrl_mpdu_start = 1;
+	filter->data_mpdu_end = 1;
+	filter->data_msdu_end = 1;
+	filter->data_msdu_start = 1;
+	filter->data_mpdu_start = 1;
+	filter->mgmt_mpdu_log = 1;
+	filter->ctrl_mpdu_log = 1;
+	filter->data_mpdu_log = 1;
+}
+
 QDF_STATUS dp_tx_mon_filter_update_2_0(struct dp_pdev *pdev)
 {
 	struct dp_soc *soc;
-	struct dp_mon_filter_be filter = {0};
 	struct dp_mon_filter_be *filter_ptr;
 	struct htt_tx_ring_tlv_filter *tx_tlv_filter;
 	enum dp_mon_filter_mode mode = DP_MON_FILTER_MONITOR_MODE;
@@ -1909,18 +2031,20 @@ QDF_STATUS dp_tx_mon_filter_update_2_0(struct dp_pdev *pdev)
 	}
 
 	if (filter_ptr->tx_valid) {
-		qdf_mem_set(&(filter), sizeof(filter), 1);
-		tx_tlv_filter = &filter.tx_tlv_filter;
+		tx_tlv_filter = &filter_ptr->tx_tlv_filter;
+		dp_tx_mon_filter_set_all(tx_tlv_filter);
 		tx_tlv_filter->mgmt_dma_length = DEFAULT_DMA_LENGTH;
 		tx_tlv_filter->ctrl_dma_length = DEFAULT_DMA_LENGTH;
 		tx_tlv_filter->data_dma_length = DEFAULT_DMA_LENGTH;
+		tx_tlv_filter->enable = 1;
 	} else {
-		qdf_mem_zero(&(filter), sizeof(filter));
+		qdf_mem_zero(filter_ptr, sizeof(struct dp_mon_filter_be));
 	}
 
-	dp_tx_mon_filter_h2t_setup(soc, pdev, &filter);
+	dp_mon_filter_show_filter_be(mode,
+				     filter_ptr);
 	dp_tx_mon_ht2_ring_cfg(soc, pdev, srng_type,
-			       &filter.tx_tlv_filter);
+			       &filter_ptr->tx_tlv_filter);
 
 	return QDF_STATUS_SUCCESS;
 }
@@ -1943,6 +2067,11 @@ QDF_STATUS dp_rx_mon_filter_update_2_0(struct dp_pdev *pdev)
 	mode = mon_pdev->current_filter_mode;
 	rx_tlv_filter = &filter.rx_tlv_filter.tlv_filter;
 	dp_rx_mon_filter_h2t_setup(soc, pdev, srng_type, &filter.rx_tlv_filter);
+	if (filter.rx_tlv_filter.valid)
+		rx_tlv_filter->enable = 1;
+	else
+		rx_tlv_filter->enable = 0;
+
 	dp_mon_ht2_rx_ring_cfg(soc, pdev, srng_type,
 			       &filter.rx_tlv_filter.tlv_filter);
 	dp_mon_filter_show_filter_be(mode,

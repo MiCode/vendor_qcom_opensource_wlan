@@ -107,7 +107,17 @@ static QDF_STATUS __dp_ipa_handle_buf_smmu_mapping(struct dp_soc *soc,
 {
 	qdf_mem_info_t mem_map_table = {0};
 	QDF_STATUS ret = QDF_STATUS_SUCCESS;
+	qdf_ipa_wdi_hdl_t hdl;
 
+	/* Need to handle the case when one soc will
+	 * have multiple pdev(radio's), Currently passing
+	 * pdev_id as 0 assuming 1 soc has only 1 radio.
+	 */
+	hdl = wlan_ipa_get_hdl(soc->ctrl_psoc, 0);
+	if (hdl == DP_IPA_HDL_INVALID) {
+		dp_err("IPA handle is invalid");
+		return QDF_STATUS_E_INVAL;
+	}
 	qdf_update_mem_map_table(soc->osdev, &mem_map_table,
 				 qdf_nbuf_get_frag_paddr(nbuf, 0),
 				 size);
@@ -116,9 +126,11 @@ static QDF_STATUS __dp_ipa_handle_buf_smmu_mapping(struct dp_soc *soc,
 		/* Assert if PA is zero */
 		qdf_assert_always(mem_map_table.pa);
 
-		ret = qdf_ipa_wdi_create_smmu_mapping(1, &mem_map_table);
+		ret = qdf_ipa_wdi_create_smmu_mapping(hdl, 1,
+						      &mem_map_table);
 	} else {
-		ret = qdf_ipa_wdi_release_smmu_mapping(1, &mem_map_table);
+		ret = qdf_ipa_wdi_release_smmu_mapping(hdl, 1,
+						       &mem_map_table);
 	}
 	qdf_assert_always(!ret);
 
@@ -1991,18 +2003,24 @@ static void
 dp_ipa_wdi_tx_smmu_params(struct dp_soc *soc,
 			  struct dp_ipa_resources *ipa_res,
 			  qdf_ipa_wdi_pipe_setup_info_smmu_t *tx_smmu,
-			  bool over_gsi)
+			  bool over_gsi,
+			  qdf_ipa_wdi_hdl_t hdl)
 {
 	struct tcl_data_cmd *tcl_desc_ptr;
 	uint8_t *desc_addr;
 	uint32_t desc_size;
 
-	if (over_gsi)
-		QDF_IPA_WDI_SETUP_INFO_SMMU_CLIENT(tx_smmu) =
-			IPA_CLIENT_WLAN2_CONS;
-	else
+	if (over_gsi) {
+		if (hdl == DP_IPA_HDL_FIRST)
+			QDF_IPA_WDI_SETUP_INFO_SMMU_CLIENT(tx_smmu) =
+				IPA_CLIENT_WLAN2_CONS;
+		else if (hdl == DP_IPA_HDL_SECOND)
+			QDF_IPA_WDI_SETUP_INFO_SMMU_CLIENT(tx_smmu) =
+				IPA_CLIENT_WLAN4_CONS;
+	} else {
 		QDF_IPA_WDI_SETUP_INFO_SMMU_CLIENT(tx_smmu) =
 			IPA_CLIENT_WLAN1_CONS;
+	}
 
 	qdf_mem_copy(&QDF_IPA_WDI_SETUP_INFO_SMMU_TRANSFER_RING_BASE(tx_smmu),
 		     &ipa_res->tx_comp_ring.sgtable,
@@ -2054,14 +2072,20 @@ static void
 dp_ipa_wdi_rx_smmu_params(struct dp_soc *soc,
 			  struct dp_ipa_resources *ipa_res,
 			  qdf_ipa_wdi_pipe_setup_info_smmu_t *rx_smmu,
-			  bool over_gsi)
+			  bool over_gsi,
+			  qdf_ipa_wdi_hdl_t hdl)
 {
-	if (over_gsi)
-		QDF_IPA_WDI_SETUP_INFO_SMMU_CLIENT(rx_smmu) =
-					IPA_CLIENT_WLAN2_PROD;
-	else
+	if (over_gsi) {
+		if (hdl == DP_IPA_HDL_FIRST)
+			QDF_IPA_WDI_SETUP_INFO_SMMU_CLIENT(rx_smmu) =
+				IPA_CLIENT_WLAN2_PROD;
+		else if (hdl == DP_IPA_HDL_SECOND)
+			QDF_IPA_WDI_SETUP_INFO_SMMU_CLIENT(rx_smmu) =
+				IPA_CLIENT_WLAN3_PROD;
+	} else {
 		QDF_IPA_WDI_SETUP_INFO_SMMU_CLIENT(rx_smmu) =
 					IPA_CLIENT_WLAN1_PROD;
+	}
 
 	qdf_mem_copy(&QDF_IPA_WDI_SETUP_INFO_SMMU_TRANSFER_RING_BASE(rx_smmu),
 		     &ipa_res->rx_rdy_ring.sgtable,
@@ -2096,7 +2120,8 @@ QDF_STATUS dp_ipa_setup(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
 			uint32_t ipa_desc_size, void *ipa_priv,
 			bool is_rm_enabled, uint32_t *tx_pipe_handle,
 			uint32_t *rx_pipe_handle, bool is_smmu_enabled,
-			qdf_ipa_sys_connect_params_t *sys_in, bool over_gsi)
+			qdf_ipa_sys_connect_params_t *sys_in, bool over_gsi,
+			qdf_ipa_wdi_hdl_t hdl)
 {
 	struct dp_soc *soc = cdp_soc_t_to_dp_soc(soc_hdl);
 	struct dp_pdev *pdev =
@@ -2158,7 +2183,7 @@ QDF_STATUS dp_ipa_setup(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
 	 * Event Ring Doorbell PA: TCL Head Pointer Address
 	 */
 	if (is_smmu_enabled)
-		dp_ipa_wdi_tx_smmu_params(soc, ipa_res, tx_smmu, over_gsi);
+		dp_ipa_wdi_tx_smmu_params(soc, ipa_res, tx_smmu, over_gsi, hdl);
 	else
 		dp_ipa_wdi_tx_params(soc, ipa_res, tx, over_gsi);
 
@@ -2190,12 +2215,13 @@ QDF_STATUS dp_ipa_setup(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
 	 * Event Ring Doorbell PA: FW Head Pointer Address
 	 */
 	if (is_smmu_enabled)
-		dp_ipa_wdi_rx_smmu_params(soc, ipa_res, rx_smmu, over_gsi);
+		dp_ipa_wdi_rx_smmu_params(soc, ipa_res, rx_smmu, over_gsi, hdl);
 	else
 		dp_ipa_wdi_rx_params(soc, ipa_res, rx, over_gsi);
 
 	QDF_IPA_WDI_CONN_IN_PARAMS_NOTIFY(pipe_in) = ipa_w2i_cb;
 	QDF_IPA_WDI_CONN_IN_PARAMS_PRIV(pipe_in) = ipa_priv;
+	QDF_IPA_WDI_CONN_IN_PARAMS_HANDLE(pipe_in) = hdl;
 
 	/* Connect WDI IPA PIPEs */
 	ret = qdf_ipa_wdi_conn_pipes(pipe_in, &pipe_out);
@@ -2235,13 +2261,15 @@ QDF_STATUS dp_ipa_setup(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
  * @cons_client: IPA cons client type
  * @session_id: Session ID
  * @is_ipv6_enabled: Is IPV6 enabled or not
+ * @hdl: IPA handle
  *
  * Return: QDF_STATUS
  */
 QDF_STATUS dp_ipa_setup_iface(char *ifname, uint8_t *mac_addr,
 			      qdf_ipa_client_type_t prod_client,
 			      qdf_ipa_client_type_t cons_client,
-			      uint8_t session_id, bool is_ipv6_enabled)
+			      uint8_t session_id, bool is_ipv6_enabled,
+			      qdf_ipa_wdi_hdl_t hdl)
 {
 	qdf_ipa_wdi_reg_intf_in_params_t in;
 	qdf_ipa_wdi_hdr_info_t hdr_info;
@@ -2271,6 +2299,7 @@ QDF_STATUS dp_ipa_setup_iface(char *ifname, uint8_t *mac_addr,
 	QDF_IPA_WDI_REG_INTF_IN_PARAMS_ALT_DST_PIPE(&in) = cons_client;
 	QDF_IPA_WDI_REG_INTF_IN_PARAMS_IS_META_DATA_VALID(&in) = 1;
 	QDF_IPA_WDI_REG_INTF_IN_PARAMS_META_DATA_MASK(&in) = htonl(0x00FF0000);
+	QDF_IPA_WDI_REG_INTF_IN_PARAMS_HANDLE(&in) = hdl;
 	dp_ipa_setup_iface_session_id(&in, session_id);
 
 	/* IPV6 header */
@@ -2494,13 +2523,15 @@ QDF_STATUS dp_ipa_setup(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
  * @cons_client: IPA cons client type
  * @session_id: Session ID
  * @is_ipv6_enabled: Is IPV6 enabled or not
+ * @hdl: IPA handle
  *
  * Return: QDF_STATUS
  */
 QDF_STATUS dp_ipa_setup_iface(char *ifname, uint8_t *mac_addr,
 			      qdf_ipa_client_type_t prod_client,
 			      qdf_ipa_client_type_t cons_client,
-			      uint8_t session_id, bool is_ipv6_enabled)
+			      uint8_t session_id, bool is_ipv6_enabled,
+			      qdf_ipa_wdi_hdl_t hdl)
 {
 	qdf_ipa_wdi_reg_intf_in_params_t in;
 	qdf_ipa_wdi_hdr_info_t hdr_info;
@@ -2560,18 +2591,20 @@ QDF_STATUS dp_ipa_setup_iface(char *ifname, uint8_t *mac_addr,
  * @pdev_id: dp pdev id
  * @tx_pipe_handle: Tx pipe handle
  * @rx_pipe_handle: Rx pipe handle
+ * @hdl: IPA handle
  *
  * Return: QDF_STATUS
  */
 QDF_STATUS dp_ipa_cleanup(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
-			  uint32_t tx_pipe_handle, uint32_t rx_pipe_handle)
+			  uint32_t tx_pipe_handle, uint32_t rx_pipe_handle,
+			  qdf_ipa_wdi_hdl_t hdl)
 {
 	struct dp_soc *soc = cdp_soc_t_to_dp_soc(soc_hdl);
 	QDF_STATUS status = QDF_STATUS_SUCCESS;
 	struct dp_pdev *pdev;
 	int ret;
 
-	ret = qdf_ipa_wdi_disconn_pipes();
+	ret = qdf_ipa_wdi_disconn_pipes(hdl);
 	if (ret) {
 		dp_err("ipa_wdi_disconn_pipes: IPA pipe cleanup failed: ret=%d",
 		       ret);
@@ -2599,14 +2632,16 @@ exit:
  * dp_ipa_cleanup_iface() - Cleanup IPA header and deregister interface
  * @ifname: Interface name
  * @is_ipv6_enabled: Is IPV6 enabled or not
+ * @hdl: IPA handle
  *
  * Return: QDF_STATUS
  */
-QDF_STATUS dp_ipa_cleanup_iface(char *ifname, bool is_ipv6_enabled)
+QDF_STATUS dp_ipa_cleanup_iface(char *ifname, bool is_ipv6_enabled,
+				qdf_ipa_wdi_hdl_t hdl)
 {
 	int ret;
 
-	ret = qdf_ipa_wdi_dereg_intf(ifname);
+	ret = qdf_ipa_wdi_dereg_intf(ifname, hdl);
 	if (ret) {
 		QDF_TRACE(QDF_MODULE_ID_TXRX, QDF_TRACE_LEVEL_ERROR,
 			  "%s: ipa_wdi_dereg_intf: IPA pipe deregistration failed: ret=%d",
@@ -2627,7 +2662,8 @@ QDF_STATUS dp_ipa_cleanup_iface(char *ifname, bool is_ipv6_enabled)
 #define DP_IPA_RESET_TX_DB_PA(soc, ipa_res)
 #endif
 
-QDF_STATUS dp_ipa_enable_pipes(struct cdp_soc_t *soc_hdl, uint8_t pdev_id)
+QDF_STATUS dp_ipa_enable_pipes(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
+			       qdf_ipa_wdi_hdl_t hdl)
 {
 	struct dp_soc *soc = cdp_soc_t_to_dp_soc(soc_hdl);
 	struct dp_pdev *pdev =
@@ -2646,7 +2682,7 @@ QDF_STATUS dp_ipa_enable_pipes(struct cdp_soc_t *soc_hdl, uint8_t pdev_id)
 	DP_IPA_EP_SET_TX_DB_PA(soc, ipa_res);
 	dp_ipa_handle_rx_buf_pool_smmu_mapping(soc, pdev, true);
 
-	result = qdf_ipa_wdi_enable_pipes();
+	result = qdf_ipa_wdi_enable_pipes(hdl);
 	if (result) {
 		QDF_TRACE(QDF_MODULE_ID_TXRX, QDF_TRACE_LEVEL_ERROR,
 			  "%s: Enable WDI PIPE fail, code %d",
@@ -2665,7 +2701,8 @@ QDF_STATUS dp_ipa_enable_pipes(struct cdp_soc_t *soc_hdl, uint8_t pdev_id)
 	return QDF_STATUS_SUCCESS;
 }
 
-QDF_STATUS dp_ipa_disable_pipes(struct cdp_soc_t *soc_hdl, uint8_t pdev_id)
+QDF_STATUS dp_ipa_disable_pipes(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
+				qdf_ipa_wdi_hdl_t hdl)
 {
 	struct dp_soc *soc = cdp_soc_t_to_dp_soc(soc_hdl);
 	struct dp_pdev *pdev =
@@ -2688,7 +2725,7 @@ QDF_STATUS dp_ipa_disable_pipes(struct cdp_soc_t *soc_hdl, uint8_t pdev_id)
 	 */
 	DP_IPA_RESET_TX_DB_PA(soc, ipa_res);
 
-	result = qdf_ipa_wdi_disable_pipes();
+	result = qdf_ipa_wdi_disable_pipes(hdl);
 	if (result) {
 		QDF_TRACE(QDF_MODULE_ID_TXRX, QDF_TRACE_LEVEL_ERROR,
 			  "%s: Disable WDI PIPE fail, code %d",
@@ -2707,10 +2744,12 @@ QDF_STATUS dp_ipa_disable_pipes(struct cdp_soc_t *soc_hdl, uint8_t pdev_id)
  * dp_ipa_set_perf_level() - Set IPA clock bandwidth based on data rates
  * @client: Client type
  * @max_supported_bw_mbps: Maximum bandwidth needed (in Mbps)
+ * @hdl: IPA handle
  *
  * Return: QDF_STATUS
  */
-QDF_STATUS dp_ipa_set_perf_level(int client, uint32_t max_supported_bw_mbps)
+QDF_STATUS dp_ipa_set_perf_level(int client, uint32_t max_supported_bw_mbps,
+				 qdf_ipa_wdi_hdl_t hdl)
 {
 	qdf_ipa_wdi_perf_profile_t profile;
 	QDF_STATUS result;
@@ -2718,7 +2757,7 @@ QDF_STATUS dp_ipa_set_perf_level(int client, uint32_t max_supported_bw_mbps)
 	profile.client = client;
 	profile.max_supported_bw_mbps = max_supported_bw_mbps;
 
-	result = qdf_ipa_wdi_set_perf_profile(&profile);
+	result = qdf_ipa_wdi_set_perf_profile(hdl, &profile);
 	if (result) {
 		QDF_TRACE(QDF_MODULE_ID_TXRX, QDF_TRACE_LEVEL_ERROR,
 			  "%s: ipa_wdi_set_perf_profile fail, code %d",

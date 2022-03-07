@@ -2757,6 +2757,8 @@ static uint8_t *update_peer_flags_tlv_ehtinfo(
 		     sizeof(param->peer_eht_cap_macinfo));
 	qdf_mem_copy(&cmd->peer_eht_cap_phy, &param->peer_eht_cap_phyinfo,
 		     sizeof(param->peer_eht_cap_phyinfo));
+	qdf_mem_copy(&cmd->peer_eht_ppet, &param->peer_eht_ppet,
+		     sizeof(param->peer_eht_ppet));
 
 	WMITLV_SET_HDR(buf_ptr, WMITLV_TAG_ARRAY_STRUC,
 		       (param->peer_eht_mcs_count * sizeof(wmi_eht_rate_set)));
@@ -12645,6 +12647,11 @@ static void extract_mac_phy_cap_ehtcaps(
 		     &mac_phy_caps->eht_supp_mcs_ext_5G,
 		     sizeof(param->eht_supp_mcs_ext_5G));
 
+	qdf_mem_copy(&param->eht_ppet2G, &mac_phy_caps->eht_ppet2G,
+		     sizeof(param->eht_ppet2G));
+	qdf_mem_copy(&param->eht_ppet5G, &mac_phy_caps->eht_ppet5G,
+		     sizeof(param->eht_ppet5G));
+
 	wmi_debug("EHT mac caps: mac cap_info_2G %x, mac cap_info_5G %x, supp_mcs_2G %x, supp_mcs_5G %x, info_internal %x",
 		  mac_phy_caps->eht_cap_mac_info_2G[0],
 		  mac_phy_caps->eht_cap_mac_info_5G[0],
@@ -12655,23 +12662,37 @@ static void extract_mac_phy_cap_ehtcaps(
 
 	wmi_nofl_debug("2G:");
 	for (i = 0; i < PSOC_HOST_MAX_EHT_PHY_SIZE; i++) {
-		wmi_nofl_debug("index %d value %d",
+		wmi_nofl_debug("index %d value %x",
 			       i, param->eht_cap_phy_info_2G[i]);
 	}
 	wmi_nofl_debug("5G:");
 	for (i = 0; i < PSOC_HOST_MAX_EHT_PHY_SIZE; i++) {
-		wmi_nofl_debug("index %d value %d",
+		wmi_nofl_debug("index %d value %x",
 			       i, param->eht_cap_phy_info_5G[i]);
 	}
 	wmi_nofl_debug("2G MCS ext Map:");
 	for (i = 0; i < PSOC_HOST_EHT_MCS_NSS_MAP_2G_SIZE; i++) {
-		wmi_nofl_debug("index %d value %d",
+		wmi_nofl_debug("index %d value %x",
 			       i, param->eht_supp_mcs_ext_2G[i]);
 	}
 	wmi_nofl_debug("5G MCS ext Map:");
 	for (i = 0; i < PSOC_HOST_EHT_MCS_NSS_MAP_5G_SIZE; i++) {
-		wmi_nofl_debug("index %d value %d",
+		wmi_nofl_debug("index %d value %x",
 			       i, param->eht_supp_mcs_ext_5G[i]);
+	}
+	wmi_nofl_debug("2G PPET: numss_m1 %x ru_bit_mask %x",
+		       param->eht_ppet2G.numss_m1,
+		       param->eht_ppet2G.ru_bit_mask);
+	for (i = 0; i < PSOC_HOST_MAX_NUM_SS; i++) {
+		wmi_nofl_debug("index %d value %x",
+			       i, param->eht_ppet2G.ppet16_ppet8_ru3_ru0[i]);
+	}
+	wmi_nofl_debug("5G PPET: numss_m1 %x ru_bit_mask %x",
+		       param->eht_ppet5G.numss_m1,
+		       param->eht_ppet5G.ru_bit_mask);
+	for (i = 0; i < PSOC_HOST_MAX_NUM_SS; i++) {
+		wmi_nofl_debug("index %d value %x",
+			       i, param->eht_ppet5G.ppet16_ppet8_ru3_ru0[i]);
 	}
 }
 #else
@@ -16562,7 +16583,7 @@ send_vdev_tsf_tstamp_action_cmd_tlv(wmi_unified_t wmi, uint8_t vdev_id)
 		       WMITLV_TAG_STRUC_wmi_vdev_tsf_tstamp_action_cmd_fixed_param,
 		       WMITLV_GET_STRUCT_TLVLEN(wmi_vdev_tsf_tstamp_action_cmd_fixed_param));
 	cmd->vdev_id = vdev_id;
-	cmd->tsf_action = TSF_TSTAMP_READ_VALUE;
+	cmd->tsf_action = TSF_TSTAMP_QTIMER_CAPTURE_REQ;
 	wmi_mtrace(WMI_VDEV_TSF_TSTAMP_ACTION_CMDID, cmd->vdev_id, 0);
 	if (wmi_unified_cmd_send(wmi, buf, len,
 				 WMI_VDEV_TSF_TSTAMP_ACTION_CMDID)) {
@@ -16597,8 +16618,18 @@ extract_vdev_tsf_report_event_tlv(wmi_unified_t wmi_handle, void *evt_buf,
 	}
 
 	evt = param_buf->fixed_param;
-	param->tsf = ((uint64_t)(evt->tsf_high) << 32) | evt->tsf_low;
 	param->vdev_id = evt->vdev_id;
+	param->tsf = ((uint64_t)(evt->tsf_high) << 32) | evt->tsf_low;
+	param->tsf_low = evt->tsf_low;
+	param->tsf_high = evt->tsf_high;
+	param->qtimer_low = evt->qtimer_low;
+	param->qtimer_high = evt->qtimer_high;
+	param->tsf_id = evt->tsf_id;
+	param->tsf_id_valid = evt->tsf_id_valid;
+	param->mac_id = evt->mac_id;
+	param->mac_id_valid = evt->mac_id_valid;
+	param->wlan_global_tsf_low = evt->wlan_global_tsf_low;
+	param->wlan_global_tsf_high = evt->wlan_global_tsf_high;
 
 	return QDF_STATUS_SUCCESS;
 }
@@ -16726,6 +16757,10 @@ static QDF_STATUS send_set_tpc_power_cmd_tlv(wmi_unified_t wmi_handle,
 	tpc_power_info_param->psd_power = param->is_psd_power;
 	tpc_power_info_param->eirp_power = param->eirp_power;
 	tpc_power_info_param->power_type_6ghz = param->power_type_6g;
+	wmi_debug("eirp_power = %d is_psd_power = %d power_type_6ghz = %d",
+		  tpc_power_info_param->eirp_power,
+		  tpc_power_info_param->psd_power,
+		  tpc_power_info_param->power_type_6ghz);
 
 	buf_ptr += sizeof(wmi_vdev_set_tpc_power_fixed_param);
 	WMITLV_SET_HDR(buf_ptr, WMITLV_TAG_ARRAY_STRUC,
@@ -16742,6 +16777,9 @@ static QDF_STATUS send_set_tpc_power_cmd_tlv(wmi_unified_t wmi_handle,
 			param->chan_power_info[idx].chan_cfreq;
 		ch_power_info[idx].tx_power =
 			param->chan_power_info[idx].tx_power;
+		wmi_debug("chan_cfreq = %d tx_power = %d",
+			  ch_power_info[idx].chan_cfreq,
+			  ch_power_info[idx].tx_power);
 		buf_ptr += sizeof(wmi_vdev_ch_power_info);
 	}
 

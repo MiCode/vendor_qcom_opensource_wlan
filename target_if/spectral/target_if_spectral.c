@@ -3955,9 +3955,9 @@ target_if_calculate_center_freq(struct target_if_spectral *spectral,
 		const struct bonded_channel_freq *bonded_chan_ptr = NULL;
 		enum channel_state state;
 
-		state = wlan_reg_get_5g_bonded_channel_and_state_for_freq
+		state = wlan_reg_get_5g_bonded_channel_and_state_for_pwrmode
 			(spectral->pdev_obj, chan_freq, agile_ch_width,
-			 &bonded_chan_ptr);
+			 &bonded_chan_ptr, REG_CURRENT_PWR_MODE);
 		if (state == CHANNEL_STATE_DISABLE ||
 		    state == CHANNEL_STATE_INVALID) {
 			spectral_err("Channel state is disable or invalid");
@@ -4035,10 +4035,12 @@ target_if_validate_center_freq(struct target_if_spectral *spectral,
 			uint32_t calulated_center_freq;
 			enum channel_state st;
 
-			st = wlan_reg_get_5g_bonded_channel_and_state_for_freq
+			st =
+			    wlan_reg_get_5g_bonded_channel_and_state_for_pwrmode
 				(pdev, center_freq + FREQ_OFFSET_10MHZ,
 				 agile_ch_width,
-				 &bonded_chan_ptr);
+				 &bonded_chan_ptr,
+				 REG_CURRENT_PWR_MODE);
 			if (st == CHANNEL_STATE_DISABLE ||
 			    st == CHANNEL_STATE_INVALID) {
 				spectral_err("Channel state disable/invalid");
@@ -4144,8 +4146,9 @@ target_if_is_agile_span_overlap_with_operating_span
 	} else {
 		enum channel_state state;
 
-		state = wlan_reg_get_5g_bonded_channel_and_state_for_freq
-			(pdev, chan_freq, op_ch_width, &bonded_chan_ptr);
+		state = wlan_reg_get_5g_bonded_channel_and_state_for_pwrmode
+			(pdev, chan_freq, op_ch_width, &bonded_chan_ptr,
+			 REG_CURRENT_PWR_MODE);
 		if (state == CHANNEL_STATE_DISABLE ||
 		    state == CHANNEL_STATE_INVALID) {
 			spectral_err("Channel state is disable or invalid");
@@ -4295,8 +4298,12 @@ target_if_spectral_is_valid_80p80_freq(struct wlan_objmgr_pdev *pdev,
 	ch_params.center_freq_seg1 = wlan_reg_freq_to_chan(pdev, cfreq2);
 	ch_params.mhz_freq_seg1 = cfreq2;
 	ch_params.ch_width = CH_WIDTH_80P80MHZ;
-	wlan_reg_set_channel_params_for_freq(pdev, cfreq1 - FREQ_OFFSET_10MHZ,
-					     0, &ch_params);
+	wlan_reg_set_channel_params_for_pwrmode(
+					pdev,
+					cfreq1 - FREQ_OFFSET_10MHZ,
+					0,
+					&ch_params,
+					REG_CURRENT_PWR_MODE);
 
 	if (ch_params.ch_width != CH_WIDTH_80P80MHZ)
 		return false;
@@ -4305,18 +4312,20 @@ target_if_spectral_is_valid_80p80_freq(struct wlan_objmgr_pdev *pdev,
 	    ch_params.mhz_freq_seg1 != cfreq2)
 		return false;
 
-	chan_state1 = wlan_reg_get_5g_bonded_channel_state_for_freq(
+	chan_state1 = wlan_reg_get_5g_bonded_channel_state_for_pwrmode(
 				pdev,
 				ch_params.mhz_freq_seg0 - FREQ_OFFSET_10MHZ,
-				CH_WIDTH_80MHZ);
+				CH_WIDTH_80MHZ,
+				REG_CURRENT_PWR_MODE);
 	if ((chan_state1 == CHANNEL_STATE_DISABLE) ||
 	    (chan_state1 == CHANNEL_STATE_INVALID))
 		return false;
 
-	chan_state2 = wlan_reg_get_5g_bonded_channel_state_for_freq(
+	chan_state2 = wlan_reg_get_5g_bonded_channel_state_for_pwrmode(
 				pdev,
 				ch_params.mhz_freq_seg1 - FREQ_OFFSET_10MHZ,
-				CH_WIDTH_80MHZ);
+				CH_WIDTH_80MHZ,
+				REG_CURRENT_PWR_MODE);
 	if ((chan_state2 == CHANNEL_STATE_DISABLE) ||
 	    (chan_state2 == CHANNEL_STATE_INVALID))
 		return false;
@@ -5969,7 +5978,7 @@ target_if_start_spectral_scan(struct wlan_objmgr_pdev *pdev,
 		spectral->params_valid[smode] = true;
 	}
 
-	qdf_spin_lock(&spectral->spectral_lock);
+	qdf_spin_lock_bh(&spectral->spectral_lock);
 	if (smode == SPECTRAL_SCAN_MODE_AGILE) {
 		QDF_STATUS status;
 		bool is_overlapping;
@@ -5985,7 +5994,7 @@ target_if_start_spectral_scan(struct wlan_objmgr_pdev *pdev,
 			(spectral, ch_width, spectral->params
 			 [SPECTRAL_SCAN_MODE_AGILE].ss_frequency.cfreq2 > 0);
 		if (QDF_IS_STATUS_ERROR(status)) {
-			qdf_spin_unlock(&spectral->spectral_lock);
+			qdf_spin_unlock_bh(&spectral->spectral_lock);
 			spectral_err("Failed to populate channel width");
 			return QDF_STATUS_E_FAILURE;
 		}
@@ -5994,13 +6003,13 @@ target_if_start_spectral_scan(struct wlan_objmgr_pdev *pdev,
 
 		if (!spectral->params[smode].ss_frequency.cfreq1) {
 			*err = SPECTRAL_SCAN_ERR_PARAM_NOT_INITIALIZED;
-			qdf_spin_unlock(&spectral->spectral_lock);
+			qdf_spin_unlock_bh(&spectral->spectral_lock);
 			spectral_err("Agile Spectral cfreq1 is 0");
 			return QDF_STATUS_E_FAILURE;
 		} else if (agile_ch_width == CH_WIDTH_80P80MHZ &&
 			   !spectral->params[smode].ss_frequency.cfreq2) {
 			*err = SPECTRAL_SCAN_ERR_PARAM_NOT_INITIALIZED;
-			qdf_spin_unlock(&spectral->spectral_lock);
+			qdf_spin_unlock_bh(&spectral->spectral_lock);
 			spectral_err("Agile Spectral cfreq2 is 0");
 			return QDF_STATUS_E_FAILURE;
 		}
@@ -6010,13 +6019,13 @@ target_if_start_spectral_scan(struct wlan_objmgr_pdev *pdev,
 				 &spectral->params[smode].ss_frequency,
 				 &is_overlapping);
 		if (QDF_IS_STATUS_ERROR(status)) {
-			qdf_spin_unlock(&spectral->spectral_lock);
+			qdf_spin_unlock_bh(&spectral->spectral_lock);
 			return QDF_STATUS_E_FAILURE;
 		}
 
 		if (is_overlapping) {
 			*err = SPECTRAL_SCAN_ERR_PARAM_INVALID_VALUE;
-			qdf_spin_unlock(&spectral->spectral_lock);
+			qdf_spin_unlock_bh(&spectral->spectral_lock);
 			return QDF_STATUS_E_FAILURE;
 		}
 	}
@@ -6024,7 +6033,7 @@ target_if_start_spectral_scan(struct wlan_objmgr_pdev *pdev,
 	/* Populate detectot list first */
 	ret = target_if_spectral_detector_list_init(spectral);
 	if (QDF_IS_STATUS_ERROR(ret)) {
-		qdf_spin_unlock(&spectral->spectral_lock);
+		qdf_spin_unlock_bh(&spectral->spectral_lock);
 		spectral_err("Failed to initialize detector list");
 		return ret;
 	}
@@ -6034,7 +6043,7 @@ target_if_start_spectral_scan(struct wlan_objmgr_pdev *pdev,
 			spectral->params[SPECTRAL_SCAN_MODE_AGILE].
 			ss_frequency.cfreq2 > 0);
 	if (QDF_IS_STATUS_ERROR(ret)) {
-		qdf_spin_unlock(&spectral->spectral_lock);
+		qdf_spin_unlock_bh(&spectral->spectral_lock);
 		spectral_err("Failed to get channel widths");
 		return ret;
 	}
@@ -6043,7 +6052,7 @@ target_if_start_spectral_scan(struct wlan_objmgr_pdev *pdev,
 				spectral->pdev_obj,
 				&is_session_info_expected);
 	if (QDF_IS_STATUS_ERROR(ret)) {
-		qdf_spin_unlock(&spectral->spectral_lock);
+		qdf_spin_unlock_bh(&spectral->spectral_lock);
 		spectral_err("Failed to check if session info is expected");
 		return ret;
 	}
@@ -6053,7 +6062,7 @@ target_if_start_spectral_scan(struct wlan_objmgr_pdev *pdev,
 		ret = target_if_spectral_populate_session_report_info(spectral,
 								      smode);
 		if (QDF_IS_STATUS_ERROR(ret)) {
-			qdf_spin_unlock(&spectral->spectral_lock);
+			qdf_spin_unlock_bh(&spectral->spectral_lock);
 			spectral_err("Failed to populate per-session report info");
 			return QDF_STATUS_E_FAILURE;
 		}
@@ -6061,7 +6070,7 @@ target_if_start_spectral_scan(struct wlan_objmgr_pdev *pdev,
 		ret = target_if_spectral_populate_session_det_host_info(
 					spectral, smode);
 		if (QDF_IS_STATUS_ERROR(ret)) {
-			qdf_spin_unlock(&spectral->spectral_lock);
+			qdf_spin_unlock_bh(&spectral->spectral_lock);
 			spectral_err("Failed to populate per-session detector info");
 			return QDF_STATUS_E_FAILURE;
 		}
@@ -6072,7 +6081,7 @@ target_if_start_spectral_scan(struct wlan_objmgr_pdev *pdev,
 					      err);
 
 	spectral->sscan_width_configured[smode] = false;
-	qdf_spin_unlock(&spectral->spectral_lock);
+	qdf_spin_unlock_bh(&spectral->spectral_lock);
 
 	return QDF_STATUS_SUCCESS;
 }
@@ -6116,7 +6125,7 @@ target_if_stop_spectral_scan(struct wlan_objmgr_pdev *pdev,
 	}
 	p_sops = GET_TARGET_IF_SPECTRAL_OPS(spectral);
 
-	qdf_spin_lock(&spectral->spectral_lock);
+	qdf_spin_lock_bh(&spectral->spectral_lock);
 	p_sops->stop_spectral_scan(spectral, smode);
 	if (spectral->classify_scan) {
 		/* TODO : Check if this logic is necessary */
@@ -6141,7 +6150,7 @@ target_if_stop_spectral_scan(struct wlan_objmgr_pdev *pdev,
 	spectral->report_info[smode].valid = false;
 	qdf_spin_unlock_bh(&spectral->session_report_info_lock);
 
-	qdf_spin_unlock(&spectral->spectral_lock);
+	qdf_spin_unlock_bh(&spectral->spectral_lock);
 
 	return QDF_STATUS_SUCCESS;
 }

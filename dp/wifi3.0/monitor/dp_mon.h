@@ -344,6 +344,23 @@ dp_config_debug_sniffer(struct dp_pdev *pdev, int val) {
 #endif /* QCA_MCOPY_SUPPORT || QCA_TX_CAPTURE_SUPPORT */
 
 /*
+ * dp_config_debug_sniffer()- API to enable/disable debug sniffer
+ * @pdev: DP_PDEV handle
+ * @val: user provided value
+ *
+ * Return: 0 for success. nonzero for failure.
+ */
+#ifdef QCA_UNDECODED_METADATA_SUPPORT
+QDF_STATUS
+dp_mon_config_undecoded_metadata_capture(struct dp_pdev *pdev, int val);
+#else
+static inline QDF_STATUS
+dp_mon_config_undecoded_metadata_capture(struct dp_pdev *pdev, int val) {
+	return QDF_STATUS_E_INVAL;
+}
+#endif /* QCA_UNDECODED_METADATA_SUPPORT */
+
+/*
  * dp_htt_ppdu_stats_attach() - attach resources for HTT PPDU stats processing
  * @pdev: Datapath PDEV handle
  *
@@ -493,6 +510,18 @@ dp_vdev_set_monitor_mode_rings(struct dp_pdev *pdev,
 bool dp_ppdu_stats_ind_handler(struct htt_soc *soc,
 			       uint32_t *msg_word,
 			       qdf_nbuf_t htt_t2h_msg);
+
+#if !defined(WLAN_TX_PKT_CAPTURE_ENH) || defined(QCA_MONITOR_2_0_SUPPORT)
+/**
+ * dp_ppdu_desc_deliver(): Function to deliver Tx PPDU status descriptor
+ * to upper layer
+ * @pdev: DP pdev handle
+ * @ppdu_info: per PPDU TLV descriptor
+ *
+ * return: void
+ */
+void dp_ppdu_desc_deliver(struct dp_pdev *pdev, struct ppdu_info *ppdu_info);
+#endif
 #endif
 
 struct dp_mon_ops {
@@ -578,6 +607,10 @@ struct dp_mon_ops {
 	bool (*mon_ppdu_stats_ind_handler)(struct htt_soc *soc,
 					   uint32_t *msg_word,
 					   qdf_nbuf_t htt_t2h_msg);
+	void (*mon_ppdu_desc_deliver)(struct dp_pdev *pdev,
+				      struct ppdu_info *ppdu_info);
+	void (*mon_ppdu_desc_notify)(struct dp_pdev *pdev, qdf_nbuf_t nbuf);
+	bool (*mon_ppdu_stats_feat_enable_check)(struct dp_pdev *pdev);
 #endif
 	QDF_STATUS (*mon_htt_ppdu_stats_attach)(struct dp_pdev *pdev);
 	void (*mon_htt_ppdu_stats_detach)(struct dp_pdev *pdev);
@@ -648,6 +681,8 @@ struct dp_mon_ops {
 	void (*mon_filter_reset_enhanced_stats)(struct dp_pdev *pdev);
 	void (*mon_tx_stats_update)(struct dp_mon_peer *mon_peer,
 				    struct cdp_tx_completion_ppdu_user *ppdu);
+	void (*mon_tx_enable_enhanced_stats)(struct dp_pdev *pdev);
+	void (*mon_tx_disable_enhanced_stats)(struct dp_pdev *pdev);
 #endif
 #ifdef QCA_MCOPY_SUPPORT
 	void (*mon_filter_setup_mcopy_mode)(struct dp_pdev *pdev);
@@ -697,6 +732,8 @@ struct dp_mon_ops {
 	void (*tx_mon_desc_pool_deinit)(struct dp_pdev *pdev);
 	QDF_STATUS (*tx_mon_desc_pool_alloc)(struct dp_pdev *pdev);
 	void (*tx_mon_desc_pool_free)(struct dp_pdev *pdev);
+	void (*rx_mon_enable)(uint32_t *msg_word,
+			      struct htt_rx_ring_tlv_filter *tlv_filter);
 	void (*rx_packet_length_set)(uint32_t *msg_word,
 				     struct htt_rx_ring_tlv_filter *tlv_filter);
 	void (*rx_wmask_subscribe)(uint32_t *msg_word,
@@ -718,7 +755,14 @@ struct dp_mon_ops {
 #endif
 	QDF_STATUS (*rx_mon_refill_buf_ring)(struct dp_intr *int_ctx);
 	QDF_STATUS (*tx_mon_refill_buf_ring)(struct dp_intr *int_ctx);
-
+#ifdef QCA_UNDECODED_METADATA_SUPPORT
+	QDF_STATUS (*mon_config_undecoded_metadata_capture)
+	    (struct dp_pdev *pdev, int val);
+	void (*mon_filter_setup_undecoded_metadata_capture)
+	    (struct dp_pdev *pdev);
+	void (*mon_filter_reset_undecoded_metadata_capture)
+	    (struct dp_pdev *pdev);
+#endif
 };
 
 struct dp_mon_soc {
@@ -974,6 +1018,11 @@ struct  dp_mon_pdev {
 	bool is_dp_mon_pdev_initialized;
 	/* indicates if spcl vap is configured */
 	bool scan_spcl_vap_configured;
+	bool undecoded_metadata_capture;
+#ifdef QCA_UNDECODED_METADATA_SUPPORT
+	uint32_t phyrx_error_mask;
+	uint32_t phyrx_error_mask_cont;
+#endif
 #ifdef QCA_SUPPORT_SCAN_SPCL_VAP_STATS
 	/* enable spcl vap stats reset on ch change */
 	bool reset_scan_spcl_vap_stats_enable;
@@ -1979,6 +2028,104 @@ static inline void dp_monitor_flush_rings(struct dp_soc *soc)
 
 	return monitor_ops->mon_flush_rings(soc);
 }
+
+/*
+ * dp_monitor_config_undecoded_metadata_capture() - Monitor config
+ * undecoded metatdata capture
+ * @pdev: point to pdev
+ * @val: val
+ *
+ * Return: return QDF_STATUS
+ */
+#ifdef QCA_UNDECODED_METADATA_SUPPORT
+static inline
+QDF_STATUS dp_monitor_config_undecoded_metadata_capture(struct dp_pdev *pdev,
+							int val)
+{
+	struct dp_mon_ops *monitor_ops;
+	struct dp_mon_soc *mon_soc = pdev->soc->monitor_soc;
+
+	if (!mon_soc)
+		return QDF_STATUS_E_FAILURE;
+
+	monitor_ops = mon_soc->mon_ops;
+	if (!monitor_ops ||
+	    !monitor_ops->mon_config_undecoded_metadata_capture) {
+		dp_mon_debug("callback not registered");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	return monitor_ops->mon_config_undecoded_metadata_capture(pdev, val);
+}
+
+static inline QDF_STATUS
+dp_monitor_config_undecoded_metadata_phyrx_error_mask(struct dp_pdev *pdev,
+						      int mask, int mask_cont)
+{
+	struct dp_mon_ops *monitor_ops;
+	struct dp_mon_pdev *mon_pdev = pdev->monitor_pdev;
+	struct dp_mon_soc *mon_soc = pdev->soc->monitor_soc;
+
+	if (!mon_soc)
+		return QDF_STATUS_E_FAILURE;
+
+	if (!mon_pdev)
+		return QDF_STATUS_E_FAILURE;
+
+	monitor_ops = mon_soc->mon_ops;
+	if (!monitor_ops ||
+	    !monitor_ops->mon_config_undecoded_metadata_capture) {
+		dp_mon_debug("callback not registered");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	if (!mon_pdev->undecoded_metadata_capture) {
+		qdf_info("mask:0x%x mask_cont:0x%x", mask, mask_cont);
+		return QDF_STATUS_SUCCESS;
+	}
+
+	mon_pdev->phyrx_error_mask = mask;
+	mon_pdev->phyrx_error_mask_cont = mask_cont;
+
+	return monitor_ops->mon_config_undecoded_metadata_capture(pdev, 1);
+}
+
+static inline QDF_STATUS
+dp_monitor_get_undecoded_metadata_phyrx_error_mask(struct dp_pdev *pdev,
+						   int *mask, int *mask_cont)
+{
+	struct dp_mon_pdev *mon_pdev = pdev->monitor_pdev;
+
+	if (!mon_pdev)
+		return QDF_STATUS_E_FAILURE;
+
+	*mask = mon_pdev->phyrx_error_mask;
+	*mask_cont = mon_pdev->phyrx_error_mask_cont;
+
+	return QDF_STATUS_SUCCESS;
+}
+#else
+static inline
+QDF_STATUS dp_monitor_config_undecoded_metadata_capture(struct dp_pdev *pdev,
+							int val)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static inline QDF_STATUS
+dp_monitor_config_undecoded_metadata_phyrx_error_mask(struct dp_pdev *pdev,
+						      int mask1, int mask2)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static inline QDF_STATUS
+dp_monitor_get_undecoded_metadata_phyrx_error_mask(struct dp_pdev *pdev,
+						   int *mask, int *mask_cont)
+{
+	return QDF_STATUS_SUCCESS;
+}
+#endif /* QCA_UNDECODED_METADATA_SUPPORT */
 
 /*
  * dp_monitor_htt_srng_setup() - Setup htt srng
@@ -3539,6 +3686,27 @@ dp_mon_rx_packet_length_set(struct dp_soc *soc, uint32_t *msg_word,
 	}
 
 	monitor_ops->rx_packet_length_set(msg_word, tlv_filter);
+}
+
+static inline void
+dp_rx_mon_enable(struct dp_soc *soc, uint32_t *msg_word,
+		 struct htt_rx_ring_tlv_filter *tlv_filter)
+{
+	struct dp_mon_soc *mon_soc = soc->monitor_soc;
+	struct dp_mon_ops *monitor_ops;
+
+	if (!mon_soc) {
+		dp_mon_debug("mon soc is NULL");
+		return;
+	}
+
+	monitor_ops = mon_soc->mon_ops;
+	if (!monitor_ops || !monitor_ops->rx_mon_enable) {
+		dp_mon_debug("callback not registered");
+		return;
+	}
+
+	monitor_ops->rx_mon_enable(msg_word, tlv_filter);
 }
 
 #ifdef QCA_ENHANCED_STATS_SUPPORT

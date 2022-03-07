@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -334,6 +335,28 @@ dp_rx_handle_ppdu_stats(struct dp_soc *soc, struct dp_pdev *pdev,
 {
 }
 #endif /* QCA_ENHANCED_STATS_SUPPORT */
+
+#ifdef QCA_UNDECODED_METADATA_SUPPORT
+/**
+ * dp_rx_handle_ppdu_undecoded_metadata() - Allocate and deliver ppdu info
+ * undecoded metadata to cdp layer
+ * @soc: core txrx main context
+ * @pdev: pdev strcuture
+ * @ppdu_info: structure for rx ppdu ring
+ *
+ * Return: none
+ */
+void
+dp_rx_handle_ppdu_undecoded_metadata(struct dp_soc *soc, struct dp_pdev *pdev,
+				     struct hal_rx_ppdu_info *ppdu_info);
+
+#else
+static inline void
+dp_rx_handle_ppdu_undecoded_metadata(struct dp_soc *soc, struct dp_pdev *pdev,
+				     struct hal_rx_ppdu_info *ppdu_info)
+{
+}
+#endif /* QCA_UNDECODED_METADATA_SUPPORT */
 
 #ifdef QCA_MCOPY_SUPPORT
 /**

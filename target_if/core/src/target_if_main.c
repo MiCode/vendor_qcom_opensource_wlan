@@ -410,9 +410,6 @@ static void target_if_target_tx_ops_register(
 	target_tx_ops->tgt_is_tgt_type_ar900b =
 		target_is_tgt_type_ar900b;
 
-	target_tx_ops->tgt_is_tgt_type_ipq4019 =
-		target_is_tgt_type_ipq4019;
-
 	target_tx_ops->tgt_is_tgt_type_qca9984 =
 		target_is_tgt_type_qca9984;
 
@@ -751,11 +748,6 @@ QDF_STATUS target_if_free_psoc_tgt_info(struct wlan_objmgr_psoc *psoc)
 bool target_is_tgt_type_ar900b(uint32_t target_type)
 {
 	return target_type == TARGET_TYPE_AR900B;
-}
-
-bool target_is_tgt_type_ipq4019(uint32_t target_type)
-{
-	return target_type == TARGET_TYPE_IPQ4019;
 }
 
 bool target_is_tgt_type_qca9984(uint32_t target_type)

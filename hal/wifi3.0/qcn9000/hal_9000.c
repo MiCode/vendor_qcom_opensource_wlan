@@ -179,6 +179,9 @@ hal_rx_sw_mon_desc_info_get_9000(hal_ring_desc_t rxdma_dst_ring_desc,
 	desc_info->rxdma_push_reason = HAL_RX_GET(sw_mon_ring,
 						  SW_MONITOR_RING_6,
 						  RXDMA_PUSH_REASON);
+	desc_info->rxdma_error_code = HAL_RX_GET(sw_mon_ring,
+						 SW_MONITOR_RING_6,
+						 RXDMA_ERROR_CODE);
 	desc_info->ppdu_id = HAL_RX_GET(sw_mon_ring,
 					SW_MONITOR_RING_7,
 					PHY_PPDU_ID);

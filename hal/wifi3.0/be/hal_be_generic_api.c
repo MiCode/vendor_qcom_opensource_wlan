@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -165,6 +165,12 @@ void hal_set_link_desc_addr_be(void *desc, uint32_t cookie,
 
 static uint32_t hal_get_reo_qdesc_size_be(uint32_t ba_window_size, int tid)
 {
+	/* Hardcode the ba_window_size to HAL_RX_MAX_BA_WINDOW for
+	 * NON_QOS_TID until HW issues are resolved.
+	 */
+	if (tid != HAL_NON_QOS_TID)
+		ba_window_size = HAL_RX_MAX_BA_WINDOW;
+
 	/* Return descriptor size corresponding to window size of 2 since
 	 * we set ba_window_size to 2 while setting up REO descriptors as
 	 * a WAR to get 2k jump exception aggregates are received without
@@ -195,7 +201,7 @@ void *hal_rx_msdu_ext_desc_info_get_ptr_be(void *msdu_details_ptr)
 	return HAL_RX_MSDU_EXT_DESC_INFO_GET(msdu_details_ptr);
 }
 
-#ifdef QCA_WIFI_KIWI
+#if defined(QCA_WIFI_KIWI) && !defined(QCA_WIFI_KIWI_V2)
 static inline uint32_t
 hal_wbm2sw_release_source_get(void *hal_desc, enum hal_be_wbm_release_dir dir)
 {
@@ -980,7 +986,7 @@ qdf_export_symbol(hal_reo_ix_remap_value_get_be);
 
 uint8_t hal_reo_ring_remap_value_get_be(uint8_t rx_ring_id)
 {
-	if (rx_ring_id > HAL_MAX_REO2SW_RINGS)
+	if (rx_ring_id >= HAL_MAX_REO2SW_RINGS)
 		return REO_REMAP_RELEASE;
 
 	return reo_dest_ring_remap[rx_ring_id];
@@ -991,6 +997,20 @@ qdf_export_symbol(hal_reo_ring_remap_value_get_be);
 uint8_t hal_get_idle_link_bm_id_be(uint8_t chip_id)
 {
 	return (WBM_IDLE_DESC_LIST + chip_id);
+}
+
+static inline void
+hal_rx_wbm_rel_buf_paddr_get_be(hal_ring_desc_t rx_desc,
+				struct hal_buf_info *buf_info)
+{
+	struct wbm_release_ring *wbm_rel_ring =
+		 (struct wbm_release_ring *)rx_desc;
+
+	buf_info->paddr =
+	 (HAL_RX_WBM_BUF_ADDR_31_0_GET(wbm_rel_ring) |
+	  ((uint64_t)(HAL_RX_WBM_BUF_ADDR_39_32_GET(wbm_rel_ring)) << 32));
+
+	buf_info->sw_cookie = HAL_RX_WBM_BUF_COOKIE_GET(wbm_rel_ring);
 }
 
 /**
@@ -1036,6 +1056,8 @@ void hal_hw_txrx_default_ops_attach_be(struct hal_soc *hal_soc)
 	hal_soc->ops->hal_rx_err_status_get = hal_rx_err_status_get_be;
 	hal_soc->ops->hal_rx_reo_buf_type_get = hal_rx_reo_buf_type_get_be;
 	hal_soc->ops->hal_rx_wbm_err_src_get = hal_rx_wbm_err_src_get_be;
+	hal_soc->ops->hal_rx_wbm_rel_buf_paddr_get =
+					hal_rx_wbm_rel_buf_paddr_get_be;
 
 	hal_soc->ops->hal_reo_send_cmd = hal_reo_send_cmd_be;
 	hal_soc->ops->hal_reo_qdesc_setup = hal_reo_qdesc_setup_be;

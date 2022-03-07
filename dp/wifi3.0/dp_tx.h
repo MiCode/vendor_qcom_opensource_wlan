@@ -897,7 +897,7 @@ dp_tx_hw_desc_update_evt(uint8_t *hal_tx_desc_cached,
 }
 #endif
 
-#ifdef WLAN_FEATURE_TSF_UPLINK_DELAY
+#if defined(WLAN_FEATURE_TSF_UPLINK_DELAY) || defined(CONFIG_SAWF)
 /**
  * dp_set_delta_tsf() - Set delta_tsf to dp_soc structure
  * @soc_hdl: cdp soc pointer
@@ -908,7 +908,8 @@ dp_tx_hw_desc_update_evt(uint8_t *hal_tx_desc_cached,
  */
 void dp_set_delta_tsf(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
 		      uint32_t delta_tsf);
-
+#endif
+#ifdef WLAN_FEATURE_TSF_UPLINK_DELAY
 /**
  * dp_set_tsf_report_ul_delay() - Enable or disable reporting uplink delay
  * @soc_hdl: cdp soc pointer

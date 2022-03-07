@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -803,13 +804,6 @@ hal_reo_cmd_update_rx_queue_be(hal_ring_handle_t hal_ring_hdl,
 		p->ba_window_size++;
 	HAL_DESC_64_SET_FIELD(reo_desc, REO_UPDATE_RX_REO_QUEUE,
 			      BA_WINDOW_SIZE, p->ba_window_size - 1);
-
-	if (p->pn_size == 24)
-		p->pn_size = PN_SIZE_24;
-	else if (p->pn_size == 48)
-		p->pn_size = PN_SIZE_48;
-	else if (p->pn_size == 128)
-		p->pn_size = PN_SIZE_128;
 
 	HAL_DESC_64_SET_FIELD(reo_desc, REO_UPDATE_RX_REO_QUEUE,
 			      PN_SIZE, p->pn_size);

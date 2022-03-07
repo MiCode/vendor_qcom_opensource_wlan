@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
- *
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -108,6 +108,7 @@ static void wlan_iot_sim_register_rx_ops(struct wlan_lmac_if_rx_ops *rx_ops)
 }
 #endif
 
+#if defined(QCA_SUPPORT_SON) || defined(WLAN_FEATURE_SON)
 /* Function pointer for son rx_ops registration function */
 void (*wlan_lmac_if_son_rx_ops)(struct wlan_lmac_if_rx_ops *rx_ops);
 
@@ -128,6 +129,16 @@ static void wlan_son_register_rx_ops(struct wlan_lmac_if_rx_ops *rx_ops)
 	else
 		qdf_info("\n***** SON MODULE NOT LOADED *****\n");
 }
+
+void wlan_lmac_if_son_mod_register_rx_ops(struct wlan_lmac_if_rx_ops *rx_ops)
+{
+	wlan_son_register_rx_ops(rx_ops);
+}
+#else
+static void wlan_son_register_rx_ops(struct wlan_lmac_if_rx_ops *rx_ops)
+{
+}
+#endif
 
 /**
  * wlan_global_lmac_if_rx_ops_register() - Global lmac_if

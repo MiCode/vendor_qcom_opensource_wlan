@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2014-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -906,6 +907,8 @@ void qdf_lock_stats_cookie_create(struct lock_stats *stats,
 	stats->cookie->u.cookie.line = line;
 }
 
+qdf_export_symbol(qdf_lock_stats_cookie_create);
+
 void qdf_lock_stats_cookie_destroy(struct lock_stats *stats)
 {
 	struct qdf_lock_cookie *cookie = stats->cookie;
@@ -927,4 +930,6 @@ void qdf_lock_stats_cookie_destroy(struct lock_stats *stats)
 
 	qdf_put_lock_cookie(cookie);
 }
+
+qdf_export_symbol(qdf_lock_stats_cookie_destroy);
 #endif

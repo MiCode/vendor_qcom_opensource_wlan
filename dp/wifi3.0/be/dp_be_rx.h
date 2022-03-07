@@ -56,6 +56,20 @@ bool dp_rx_intrabss_fwd_be(struct dp_soc *soc,
 			   struct hal_rx_msdu_metadata msdu_metadata);
 #endif
 
+/*
+ * dp_rx_intrabss_handle_nawds_be() - Forward mcbc intrabss pkts in nawds case
+ * @soc: core txrx main context
+ * @ta_txrx_peer: source txrx_peer entry
+ * @nbuf_copy: nbuf that has to be intrabss forwarded
+ * @tid_stats: tid_stats structure
+ *
+ * Return: true if it is forwarded else false
+ */
+bool
+dp_rx_intrabss_handle_nawds_be(struct dp_soc *soc, struct dp_txrx_peer *ta_peer,
+			       qdf_nbuf_t nbuf_copy,
+			       struct cdp_tid_rx_stats *tid_stats);
+
 uint32_t dp_rx_process_be(struct dp_intr *int_ctx,
 			  hal_ring_handle_t hal_ring_hdl, uint8_t reo_ring_num,
 			  uint32_t quota);

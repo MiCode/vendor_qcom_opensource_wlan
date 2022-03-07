@@ -21,6 +21,7 @@
 #include "hal_hw_headers.h"
 #include "dp_types.h"
 #include "dp_rx.h"
+#include "dp_tx.h"
 #include "dp_be_rx.h"
 #include "dp_peer.h"
 #include "hal_rx.h"
@@ -28,6 +29,7 @@
 #include "hal_api.h"
 #include "hal_be_api.h"
 #include "qdf_nbuf.h"
+#include "hal_be_rx_tlv.h"
 #ifdef MESH_MODE_SUPPORT
 #include "if_meta_hdr.h"
 #endif
@@ -83,7 +85,7 @@ static inline void dp_wds_ext_peer_learn_be(struct dp_soc *soc,
 				&ta_txrx_peer->wds_ext.init))
 		return;
 
-	if (hal_rx_get_mpdu_mac_ad4_valid(soc->hal_soc, rx_tlv_hdr)) {
+	if (hal_rx_get_mpdu_mac_ad4_valid_be(rx_tlv_hdr)) {
 		qdf_atomic_test_and_set_bit(WDS_EXT_PEER_INIT_BIT,
 					    &ta_txrx_peer->wds_ext.init);
 
@@ -569,7 +571,8 @@ done:
 		DP_RX_TID_SAVE(nbuf, tid);
 		if (qdf_unlikely(rx_pdev->delay_stats_flag) ||
 		    qdf_unlikely(wlan_cfg_is_peer_ext_stats_enabled(
-				 soc->wlan_cfg_ctx)))
+				 soc->wlan_cfg_ctx)) ||
+		    dp_rx_pkt_tracepoints_enabled())
 			qdf_nbuf_set_timestamp(nbuf);
 
 		enh_flag = rx_pdev->enhanced_stats_en;
@@ -582,8 +585,7 @@ done:
 		 * to be written
 		 */
 		if (qdf_unlikely(!qdf_nbuf_is_rx_chfrag_cont(nbuf) &&
-				 !hal_rx_attn_msdu_done_get(hal_soc,
-							    rx_tlv_hdr))) {
+				 !hal_rx_tlv_msdu_done_get_be(rx_tlv_hdr))) {
 			dp_err("MSDU DONE failure");
 			DP_STATS_INC(soc, rx.err.msdu_done_fail, 1);
 			hal_rx_dump_pkt_tlvs(hal_soc, rx_tlv_hdr,
@@ -621,7 +623,8 @@ done:
 		 * This is the most likely case, we receive 802.3 pkts
 		 * decapsulated by HW, here we need to set the pkt length.
 		 */
-		hal_rx_msdu_metadata_get(hal_soc, rx_tlv_hdr, &msdu_metadata);
+		hal_rx_msdu_packet_metadata_get_generic_be(rx_tlv_hdr,
+							   &msdu_metadata);
 		if (qdf_unlikely(qdf_nbuf_is_frag(nbuf))) {
 			bool is_mcbc, is_sa_vld, is_da_vld;
 
@@ -696,9 +699,8 @@ done:
 
 		if (qdf_unlikely(txrx_peer && (txrx_peer->nawds_enabled) &&
 				 (qdf_nbuf_is_da_mcbc(nbuf)) &&
-				 (hal_rx_get_mpdu_mac_ad4_valid(soc->hal_soc,
-								rx_tlv_hdr) ==
-				  false))) {
+				 (hal_rx_get_mpdu_mac_ad4_valid_be(rx_tlv_hdr)
+				  == false))) {
 			tid_stats->fail_cnt[NAWDS_MCAST_DROP]++;
 			DP_PEER_PER_PKT_STATS_INC(txrx_peer,
 						  rx.nawds_mcast_drop, 1);
@@ -1371,6 +1373,48 @@ rel_da_peer:
 }
 #endif /* WLAN_MLO_MULTI_CHIP */
 #endif /* INTRA_BSS_FWD_OFFLOAD */
+
+/*
+ * dp_rx_intrabss_handle_nawds_be() - Forward mcbc intrabss pkts in nawds case
+ * @soc: core txrx main context
+ * @ta_txrx_peer: source txrx_peer entry
+ * @nbuf_copy: nbuf that has to be intrabss forwarded
+ * @tid_stats: tid_stats structure
+ *
+ * Return: true if it is forwarded else false
+ */
+bool
+dp_rx_intrabss_handle_nawds_be(struct dp_soc *soc,
+			       struct dp_txrx_peer *ta_txrx_peer,
+			       qdf_nbuf_t nbuf_copy,
+			       struct cdp_tid_rx_stats *tid_stats)
+{
+	if (qdf_unlikely(ta_txrx_peer->vdev->nawds_enabled)) {
+		struct cdp_tx_exception_metadata tx_exc_metadata = {0};
+		uint16_t len = QDF_NBUF_CB_RX_PKT_LEN(nbuf_copy);
+
+		tx_exc_metadata.peer_id = ta_txrx_peer->peer_id;
+		tx_exc_metadata.is_intrabss_fwd = 1;
+		tx_exc_metadata.tid = HTT_TX_EXT_TID_INVALID;
+		if (dp_tx_send_exception((struct cdp_soc_t *)soc,
+					 ta_txrx_peer->vdev->vdev_id,
+					 nbuf_copy,
+					 &tx_exc_metadata)) {
+			DP_PEER_PER_PKT_STATS_INC_PKT(ta_txrx_peer,
+						      rx.intra_bss.fail, 1,
+						      len);
+			tid_stats->fail_cnt[INTRABSS_DROP]++;
+			qdf_nbuf_free(nbuf_copy);
+		} else {
+			DP_PEER_PER_PKT_STATS_INC_PKT(ta_txrx_peer,
+						      rx.intra_bss.pkts, 1,
+						      len);
+			tid_stats->intrabss_cnt++;
+		}
+		return true;
+	}
+	return false;
+}
 
 /*
  * dp_rx_intrabss_fwd_be() - API for intrabss fwd. For EAPOL

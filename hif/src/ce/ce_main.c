@@ -1329,7 +1329,6 @@ static void hif_select_service_to_pipe_map(struct hif_softc *scn,
 			break;
 		case TARGET_TYPE_AR900B:
 		case TARGET_TYPE_QCA9984:
-		case TARGET_TYPE_IPQ4019:
 		case TARGET_TYPE_QCA9888:
 		case TARGET_TYPE_AR9888:
 		case TARGET_TYPE_AR9888V2:
@@ -3922,7 +3921,6 @@ void hif_ce_prepare_config(struct hif_softc *scn)
 		break;
 	case TARGET_TYPE_AR900B:
 	case TARGET_TYPE_QCA9984:
-	case TARGET_TYPE_IPQ4019:
 	case TARGET_TYPE_QCA9888:
 		if (hif_is_attribute_set(scn, HIF_LOWDESC_CE_NO_PKTLOG_CFG)) {
 			hif_state->host_ce_config =

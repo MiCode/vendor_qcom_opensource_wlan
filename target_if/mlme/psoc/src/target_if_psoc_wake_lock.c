@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2013-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -216,8 +217,11 @@ void target_if_vdev_start_link_handler(struct wlan_objmgr_vdev *vdev,
 	ch_freq = curr_channel->ch_freq;
 	ch_width = curr_channel->ch_width;
 	is_dfs = wlan_reg_is_dfs_for_freq(pdev, ch_freq);
-	ch_state = wlan_reg_get_5g_bonded_channel_state_for_freq(pdev, ch_freq,
-								 ch_width);
+
+	ch_state =
+	    wlan_reg_get_5g_bonded_channel_state_for_pwrmode(
+						pdev, ch_freq, ch_width,
+						REG_CURRENT_PWR_MODE);
 	rx_ops = target_if_vdev_mgr_get_rx_ops(psoc);
 	if (!rx_ops || !rx_ops->psoc_get_wakelock_info) {
 		mlme_err("psoc_id:%d No Rx Ops",
@@ -234,8 +238,10 @@ void target_if_vdev_start_link_handler(struct wlan_objmgr_vdev *vdev,
 			prev_ch_is_dfs = wlan_reg_is_dfs_for_freq(pdev,
 								  prev_ch_freq);
 			prev_ch_state =
-				wlan_reg_get_5g_bonded_channel_state_for_freq(pdev,
-						prev_ch_freq, prev_ch_width);
+			wlan_reg_get_5g_bonded_channel_state_for_pwrmode(
+						pdev,
+						prev_ch_freq, prev_ch_width,
+						REG_CURRENT_PWR_MODE);
 			/*
 			 * In restart case, if SAP is on non DFS channel and
 			 * previously it was on DFS channel then vote for link
@@ -294,8 +300,11 @@ void target_if_vdev_stop_link_handler(struct wlan_objmgr_vdev *vdev)
 	psoc_wakelock = rx_ops->psoc_get_wakelock_info(psoc);
 	if (wlan_vdev_mlme_get_opmode(vdev) == QDF_SAP_MODE)
 		if (is_dfs ||
-		    (wlan_reg_get_5g_bonded_channel_state_for_freq(pdev,
-			ch_freq, ch_width) == CHANNEL_STATE_DFS))
+		    (wlan_reg_get_5g_bonded_channel_state_for_pwrmode(
+				pdev,
+				ch_freq,
+				ch_width,
+				REG_CURRENT_PWR_MODE) == CHANNEL_STATE_DFS))
 			target_if_vote_for_link_down(psoc, psoc_wakelock);
 }
 

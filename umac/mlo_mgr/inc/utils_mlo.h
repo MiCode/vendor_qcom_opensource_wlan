@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -196,8 +196,11 @@ util_get_bvmlie_primary_linkid(uint8_t *mlieseq, qdf_size_t mlieseqlen,
 
 /**
  * util_get_bvmlie_persta_partner_info() - Get per-STA partner link information
- * @mlie: Starting address of the Multi-Link element
- * @mlielen: Total length of the Multi-Link element
+ *
+ * @mlieseq: Starting address of the Multi-Link element or Multi-Link element
+ * fragment sequence
+ * @mlieseqlen: Total length of the Multi-Link element or Multi-Link element
+ * fragment sequence
  * @partner_info: Pointer to the location where the partner link information
  * should be updated. This should be ignored by the caller if the function
  * returns error. Note that success will be returned and the number of links in
@@ -207,18 +210,14 @@ util_get_bvmlie_primary_linkid(uint8_t *mlieseq, qdf_size_t mlieseqlen,
  *
  * Get partner link information in the per-STA profiles present in a Basic
  * variant Multi-Link element. The partner link information is returned only for
- * those per-STA profiles which have a MAC address in the STA Info field. Also
- * note that the current implementation does not have Multi-Link element
- * fragmentation support - this will be added in an upcoming change after shared
- * helper utilities for the same are available. Similarly, the current
- * implementation does not have support for per-STA profile fragmentation - this
- * may be added once it is introduced in the IEEE802.11be standard.
+ * those per-STA profiles which have a MAC address in the STA Info field.
  *
  * Return: QDF_STATUS_SUCCESS in the case of success, QDF_STATUS value giving
  * the reason for error in the case of failure
  */
 QDF_STATUS
-util_get_bvmlie_persta_partner_info(uint8_t *mlie, qdf_size_t mlielen,
+util_get_bvmlie_persta_partner_info(uint8_t *mlieseq,
+				    qdf_size_t mlieseqlen,
 				    struct mlo_partner_info *partner_info);
 #else
 static inline QDF_STATUS
@@ -271,7 +270,8 @@ util_get_bvmlie_primary_linkid(uint8_t *mlieseq, qdf_size_t mlieseqlen,
 }
 
 static inline QDF_STATUS
-util_get_bvmlie_persta_partner_info(uint8_t *mlie, qdf_size_t mlielen,
+util_get_bvmlie_persta_partner_info(uint8_t *mlieseq,
+				    qdf_size_t mlieseqlen,
 				    struct mlo_partner_info *partner_info)
 {
 	return QDF_STATUS_E_NOSUPPORT;

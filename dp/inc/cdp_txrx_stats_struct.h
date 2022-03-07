@@ -46,12 +46,14 @@
 /* 1 additional MCS is for invalid values */
 #ifdef WLAN_FEATURE_11BE
 #define MAX_MCS (16 + 1)
+#define MAX_MCS_11BE 16
 #else
 #define MAX_MCS (14 + 1)
 #endif
 #define MAX_MCS_11A 8
 #define MAX_MCS_11B 7
 #define MAX_MCS_11AC 12
+#define MAX_MCS_11AX 14
 /* 1 additional GI is for invalid values */
 #define MAX_GI (4 + 1)
 #define SS_COUNT 8
@@ -701,6 +703,9 @@ enum WDI_EVENT {
 #ifdef WLAN_FEATURE_11BE_MLO
 	WDI_EVENT_MLO_TSTMP,
 #endif
+#ifdef QCA_UNDECODED_METADATA_SUPPORT
+	WDI_EVENT_RX_PPDU_DESC_UNDECODED_METADATA,
+#endif
 	/* End of new event items */
 	WDI_EVENT_LAST
 };
@@ -1297,6 +1302,13 @@ struct protocol_trace_count {
  * @fw_reason1: discarded by firmware reason 1
  * @fw_reason2: discarded by firmware reason 2
  * @fw_reason3: discarded by firmware reason 3
+ * @fw_rem_queue_disable: dropped due to queue disable
+ * @fw_rem_no_match: dropped due to fw no match command
+ * @drop_threshold: dropped due to HW threshold
+ * @drop_link_desc_na: dropped due resource not available in HW
+ * @invalid_drop: Invalid msdu drop
+ * @mcast_vdev_drop: MCAST drop configured for VDEV in HW
+ * @invalid_rr: Invalid TQM release reason
  * @mcs_count: MCS Count
  * @an_tx_cnt: ald tx count
  * @an_tx_rates_used: ald rx rate used
@@ -1406,6 +1418,13 @@ struct cdp_tx_stats {
 		uint32_t fw_reason1;
 		uint32_t fw_reason2;
 		uint32_t fw_reason3;
+		uint32_t fw_rem_queue_disable;
+		uint32_t fw_rem_no_match;
+		uint32_t drop_threshold;
+		uint32_t drop_link_desc_na;
+		uint32_t invalid_drop;
+		uint32_t mcast_vdev_drop;
+		uint32_t invalid_rr;
 	} dropped;
 
 

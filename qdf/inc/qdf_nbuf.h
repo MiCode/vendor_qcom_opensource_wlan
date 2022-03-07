@@ -212,6 +212,8 @@ typedef __qdf_nbuf_queue_t qdf_nbuf_queue_t;
 #define RADIOTAP_HE_FLAGS_LEN (12 + 1)
 #define RADIOTAP_HE_MU_FLAGS_LEN (8 + 1)
 #define RADIOTAP_HE_MU_OTHER_FLAGS_LEN (18 + 1)
+#define RADIOTAP_U_SIG_FLAGS_LEN (12 + 3)
+#define RADIOTAP_EHT_FLAGS_LEN (32 + 3)
 #define RADIOTAP_FIXED_HEADER_LEN 17
 #define RADIOTAP_HT_FLAGS_LEN 3
 #define RADIOTAP_AMPDU_STATUS_LEN (8 + 3)
@@ -234,7 +236,9 @@ typedef __qdf_nbuf_queue_t qdf_nbuf_queue_t;
 				RADIOTAP_HE_MU_OTHER_FLAGS_LEN + \
 				RADIOTAP_VENDOR_NS_LEN + \
 				RADIOTAP_HEADER_EXT_LEN + \
-				RADIOTAP_HEADER_EXT2_LEN)
+				RADIOTAP_HEADER_EXT2_LEN + \
+				RADIOTAP_U_SIG_FLAGS_LEN + \
+				RADIOTAP_EHT_FLAGS_LEN)
 
 /**
  * struct mon_rx_status - This will have monitor mode rx_status extracted from
@@ -252,12 +256,15 @@ typedef __qdf_nbuf_queue_t qdf_nbuf_queue_t;
  * @he_flags: HE (11ax) flags, only present in HE frames
  * @he_mu_flags: HE-MU (11ax) flags, only present in HE frames
  * @he_mu_other_flags: HE-MU-OTHER (11ax) flags, only present in HE frames
+ * @usig_flags: USIG flags, only present in 802.11BE and subsequent protocol
+ * @eht_flags: EHT (11be) flags, only present in EHT frames
  * @he_sig_A1_known: HE (11ax) sig A1 known field
  * @he_sig_A2_known: HE (11ax) sig A2 known field
  * @he_sig_b_common: HE (11ax) sig B common field
  * @he_sig_b_common_known: HE (11ax) sig B common known field
  * @l_sig_a_info: L_SIG_A value coming in Rx descriptor
  * @l_sig_b_info: L_SIG_B value coming in Rx descriptor
+ * @num_eht_user_info_valid: Number of valid EHT user info
  * @rate: Rate in terms 500Kbps
  * @rtap_flags: Bit map of available fields in the radiotap
  * @ant_signal_db: Rx packet RSSI
@@ -319,6 +326,27 @@ typedef __qdf_nbuf_queue_t qdf_nbuf_queue_t;
  * @punctured_bw: puntured bw
  * @rx_user_status: pointer to mon_rx_user_status, when set update
  * radiotap header will use userinfo from this structure.
+ * @usig_common: U-SIG property of received frame
+ * @usig_value: U-SIG property of received frame
+ * @usig_mask: U-SIG property of received frame
+ * @eht_known: EHT property of received frame
+ * @eht_data: EHT property of received frame
+ * @eht_user_info: EHT USER property of received frame
+ * @phyrx_abort: phy aborted undecoded frame indication
+ * @phyrx_abort_reason: abort reason in phyrx_abort_request_info
+ * @vht_crc: vht crc
+ * @vht_no_txop_ps: TXOP power save mode
+ * @he_crc: he crc
+ * @l_sig_length: L SIG A length
+ * @l_sig_a_parity: L SIG A parity
+ * @l_sig_a_pkt_type: L SIG A info pkt type
+ * @l_sig_a_implicit_sounding: L SIG A info captured implicit sounding
+ * @ht_length: num of bytes in PSDU
+ * @smoothing: Indicate smoothing
+ * @not_sounding: Indicate sounding
+ * @aggregation: Indicate A-MPDU format
+ * @ht_stbc: Indicate stbc
+ * @ht_crc: ht crc
  */
 struct mon_rx_status {
 	uint64_t tsft;
@@ -333,12 +361,15 @@ struct mon_rx_status {
 	uint16_t he_flags;
 	uint16_t he_mu_flags;
 	uint16_t he_mu_other_flags;
+	uint16_t usig_flags;
+	uint16_t eht_flags;
 	uint16_t he_sig_A1_known;
 	uint16_t he_sig_A2_known;
 	uint16_t he_sig_b_common;
 	uint16_t he_sig_b_common_known;
 	uint32_t l_sig_a_info;
 	uint32_t l_sig_b_info;
+	uint8_t  num_eht_user_info_valid;
 	uint8_t  rate;
 	uint8_t  rtap_flags;
 	uint8_t  ant_signal_db;
@@ -411,6 +442,29 @@ struct mon_rx_status {
 	uint8_t punctured_bw;
 #endif
 	struct mon_rx_user_status *rx_user_status;
+	uint32_t usig_common;
+	uint32_t usig_value;
+	uint32_t usig_mask;
+	uint32_t eht_known;
+	uint32_t eht_data[6];
+	uint32_t eht_user_info[4];
+#ifdef QCA_UNDECODED_METADATA_SUPPORT
+	uint32_t phyrx_abort:1,
+		 phyrx_abort_reason:8,
+		 vht_crc:8,
+		 vht_no_txop_ps:1,
+		 he_crc:4;
+	uint32_t l_sig_length:12,
+		l_sig_a_parity:1,
+		l_sig_a_pkt_type:4,
+		l_sig_a_implicit_sounding:1;
+	uint32_t ht_length:16,
+		smoothing:1,
+		not_sounding:1,
+		aggregation:1,
+		ht_stbc:2,
+		ht_crc:8;
+#endif
 };
 
 /**
@@ -662,6 +716,10 @@ struct qdf_radiotap_ext2 {
 #define QDF_MON_STATUS_HE_CODING_KNOWN 0x0080
 #define QDF_MON_STATUS_HE_LDPC_EXTRA_SYMBOL_KNOWN 0x0100
 #define QDF_MON_STATUS_HE_STBC_KNOWN 0x0200
+#define QDF_MON_STATUS_HE_SPATIAL_REUSE_1_KNOWN 0x0400
+#define QDF_MON_STATUS_HE_SPATIAL_REUSE_2_KNOWN 0x0800
+#define QDF_MON_STATUS_HE_SPATIAL_REUSE_3_KNOWN 0x1000
+#define QDF_MON_STATUS_HE_SPATIAL_REUSE_4_KNOWN 0x2000
 #define QDF_MON_STATUS_HE_DATA_BW_RU_KNOWN 0x4000
 #define QDF_MON_STATUS_HE_DOPPLER_KNOWN 0x8000
 #define QDF_MON_STATUS_HE_BSS_COLOR_KNOWN 0x0004
@@ -674,6 +732,8 @@ struct qdf_radiotap_ext2 {
 #define QDF_MON_STATUS_LTF_SYMBOLS_KNOWN 0x0004
 #define QDF_MON_STATUS_PRE_FEC_PADDING_KNOWN 0x0008
 #define QDF_MON_STATUS_MIDABLE_PERIODICITY_KNOWN 0x0080
+#define QDF_MON_STATUS_RU_ALLOCATION_OFFSET_KNOWN 0x4000
+#define QDF_MON_STATUS_RU_ALLOCATION_SHIFT 8
 
 /* HE radiotap data3 shift values */
 #define QDF_MON_STATUS_BEAM_CHANGE_SHIFT 6
@@ -696,12 +756,21 @@ struct qdf_radiotap_ext2 {
 #define QDF_MON_STATUS_PRE_FEC_PAD_SHIFT 12
 
 /* HE radiotap data6 */
+#define QDF_MON_STATUS_HE_DATA_6_NSS_SHIFT 0
 #define QDF_MON_STATUS_DOPPLER_SHIFT 4
 #define QDF_MON_STATUS_TXOP_SHIFT 8
 
 /* HE radiotap HE-MU flags1 */
+#define QDF_MON_STATUS_SIG_B_MCS_SHIFT 0x0000
 #define QDF_MON_STATUS_SIG_B_MCS_KNOWN 0x0010
+#define QDF_MON_STATUS_SIG_B_DCM_SHIFT 5
 #define QDF_MON_STATUS_SIG_B_DCM_KNOWN 0x0040
+#define QDF_MON_STATUS_CHANNEL_2_CENTER_26_RU_KNOWN 0x0080
+#define QDF_MON_STATUS_CHANNEL_1_RU_KNOWN 0x0100
+#define QDF_MON_STATUS_CHANNEL_2_RU_KNOWN 0x0200
+#define QDF_MON_STATUS_CHANNEL_1_CENTER_26_RU_KNOWN 0x1000
+#define QDF_MON_STATUS_CHANNEL_1_CENTER_26_RU_VALUE 0x2000
+#define QDF_MON_STATUS_CHANNEL_1_CENTER_26_RU_SHIFT 13
 #define QDF_MON_STATUS_SIG_B_SYM_NUM_KNOWN 0x8000
 #define QDF_MON_STATUS_RU_0_KNOWN 0x0100
 #define QDF_MON_STATUS_RU_1_KNOWN 0x0200
@@ -710,13 +779,20 @@ struct qdf_radiotap_ext2 {
 #define QDF_MON_STATUS_DCM_FLAG_1_SHIFT 5
 #define QDF_MON_STATUS_SPATIAL_REUSE_MU_KNOWN 0x0100
 #define QDF_MON_STATUS_SIG_B_COMPRESSION_FLAG_1_KNOWN 0x4000
+#define QDF_MON_STATUS_SIG_B_SYMBOL_USER_KNOWN 0x8000
 
 /* HE radiotap HE-MU flags2 */
+#define QDF_MON_STATUS_SIG_A_BANDWIDTH_KNOWN 0x0004
+#define QDF_MON_STATUS_SIG_A_BANDWIDTH_SHIFT 0
 #define QDF_MON_STATUS_SIG_B_COMPRESSION_FLAG_2_SHIFT 3
 #define QDF_MON_STATUS_BW_KNOWN 0x0004
 #define QDF_MON_STATUS_NUM_SIG_B_SYMBOLS_SHIFT 4
 #define QDF_MON_STATUS_SIG_B_COMPRESSION_FLAG_2_KNOWN 0x0100
 #define QDF_MON_STATUS_NUM_SIG_B_FLAG_2_SHIFT 9
+#define QDF_MON_STATUS_SIG_A_PUNC_BANDWIDTH_KNOWN 0x0400
+#define QDF_MON_STATUS_SIG_A_PUNC_BANDWIDTH_SHIFT 8
+#define QDF_MON_STATUS_CHANNEL_2_CENTER_26_RU_VALUE 0x0800
+#define QDF_MON_STATUS_CHANNEL_2_CENTER_26_RU_SHIFT 11
 #define QDF_MON_STATUS_LTF_FLAG_2_SYMBOLS_SHIFT 12
 #define QDF_MON_STATUS_LTF_KNOWN 0x8000
 
@@ -739,6 +815,145 @@ struct qdf_radiotap_ext2 {
 #define QDF_MON_STATUS_STA_MCS_KNOWN 0x20
 #define QDF_MON_STATUS_STA_DCM_KNOWN 0x40
 #define QDF_MON_STATUS_STA_CODING_KNOWN 0x80
+
+/* U-SIG Common Mask */
+#define QDF_MON_STATUS_USIG_PHY_VERSION_KNOWN		0x00000001
+#define QDF_MON_STATUS_USIG_BW_KNOWN			0x00000002
+#define QDF_MON_STATUS_USIG_UL_DL_KNOWN			0x00000004
+#define QDF_MON_STATUS_USIG_BSS_COLOR_KNOWN		0x00000008
+#define QDF_MON_STATUS_USIG_TXOP_KNOWN			0x00000010
+
+#define QDF_MON_STATUS_USIG_PHY_VERSION_SHIFT		12
+#define QDF_MON_STATUS_USIG_BW_SHIFT			15
+#define QDF_MON_STATUS_USIG_UL_DL_SHIFT			18
+#define QDF_MON_STATUS_USIG_BSS_COLOR_SHIFT		19
+#define QDF_MON_STATUS_USIG_TXOP_SHIFT			25
+
+/* U-SIG MU/TB Value */
+#define QDF_MON_STATUS_USIG_DISREGARD_SHIFT			0
+#define QDF_MON_STATUS_USIG_PPDU_TYPE_N_COMP_MODE_SHIFT		6
+#define QDF_MON_STATUS_USIG_VALIDATE_SHIFT			8
+
+#define QDF_MON_STATUS_USIG_MU_VALIDATE1_SHIFT			5
+#define QDF_MON_STATUS_USIG_MU_PUNCTURE_CH_INFO_SHIFT		9
+#define QDF_MON_STATUS_USIG_MU_VALIDATE2_SHIFT			12
+#define QDF_MON_STATUS_USIG_MU_EHT_SIG_MCS_SHIFT		15
+#define QDF_MON_STATUS_USIG_MU_NUM_EHT_SIG_SYM_SHIFT		17
+
+#define QDF_MON_STATUS_USIG_TB_SPATIAL_REUSE_1_SHIFT		9
+#define QDF_MON_STATUS_USIG_TB_SPATIAL_REUSE_2_SHIFT		13
+#define QDF_MON_STATUS_USIG_TB_DISREGARD1_SHIFT			17
+
+#define QDF_MON_STATUS_USIG_CRC_SHIFT				22
+#define QDF_MON_STATUS_USIG_TAIL_SHIFT				26
+
+/* U-SIG MU/TB Mask */
+#define QDF_MON_STATUS_USIG_DISREGARD_KNOWN			0x00000001
+#define QDF_MON_STATUS_USIG_PPDU_TYPE_N_COMP_MODE_KNOWN		0x00000004
+#define QDF_MON_STATUS_USIG_VALIDATE_KNOWN			0x00000008
+
+#define QDF_MON_STATUS_USIG_MU_VALIDATE1_KNOWN			0x00000002
+#define QDF_MON_STATUS_USIG_MU_PUNCTURE_CH_INFO_KNOWN		0x00000010
+#define QDF_MON_STATUS_USIG_MU_VALIDATE2_KNOWN			0x00000020
+#define QDF_MON_STATUS_USIG_MU_EHT_SIG_MCS_KNOWN		0x00000040
+#define QDF_MON_STATUS_USIG_MU_NUM_EHT_SIG_SYM_KNOWN		0x00000080
+
+#define QDF_MON_STATUS_USIG_TB_SPATIAL_REUSE_1_KNOWN		0x00000010
+#define QDF_MON_STATUS_USIG_TB_SPATIAL_REUSE_2_KNOWN		0x00000020
+#define QDF_MON_STATUS_USIG_TB_DISREGARD1_KNOWN			0x00000040
+
+#define QDF_MON_STATUS_USIG_CRC_KNOWN				0x00000100
+#define QDF_MON_STATUS_USIG_TAIL_KNOWN				0x00000200
+
+/* EHT known Mask */
+#define QDF_MON_STATUS_EHT_CONTENT_CH_INDEX_KNOWN		0x00000001
+#define QDF_MON_STATUS_EHT_SPATIAL_REUSE_KNOWN			0x00000002
+#define QDF_MON_STATUS_EHT_GUARD_INTERVAL_KNOWN			0x00000004
+#define QDF_MON_STATUS_EHT_LTF_KNOWN				0x00000008
+#define QDF_MON_STATUS_EHT_EHT_LTF_KNOWN			0x00000010
+#define QDF_MON_STATUS_EHT_LDPC_EXTRA_SYMBOL_SEG_KNOWN		0x00000020
+#define QDF_MON_STATUS_EHT_PRE_FEC_PADDING_FACTOR_KNOWN		0x00000040
+#define QDF_MON_STATUS_EHT_PE_DISAMBIGUITY_KNOWN		0x00000080
+#define QDF_MON_STATUS_EHT_DISREARD_KNOWN			0x00000100
+#define QDF_MON_STATUS_EHT_CRC1_KNOWN				0x00002000
+#define QDF_MON_STATUS_EHT_TAIL1_KNOWN				0x00004000
+#define QDF_MON_STATUS_EHT_CRC2_KNOWN				0x00008000
+#define QDF_MON_STATUS_EHT_TAIL2_KNOWN				0x00010000
+#define QDF_MON_STATUS_EHT_RU_MRU_SIZE_KNOWN			0x00400000
+#define QDF_MON_STATUS_EHT_RU_MRU_INDEX_KNOWN			0x00800000
+#define QDF_MON_STATUS_EHT_TB_RU_ALLOCATION_KNOWN		0x01000000
+
+#define QDF_MON_STATUS_EHT_NUM_NON_OFDMA_USERS_KNOWN		0x00080000
+#define QDF_MON_STATUS_EHT_USER_ENC_BLOCK_CRC_KNOWN		0x00100000
+#define QDF_MON_STATUS_EHT_USER_ENC_BLOCK_TAIL_KNOWN		0x00200000
+
+#define QDF_MON_STATUS_EHT_NDP_DISREGARD_KNOWN			0x00000200
+#define QDF_MON_STATUS_EHT_NDP_NSS_KNOWN			0x00020000
+#define QDF_MON_STATUS_EHT_NDP_BEAMFORMED_KNOWN			0x00040000
+
+#define QDF_MON_STATUS_EHT_NUM_KNOWN_RU_ALLOCATIONS_SHIFT	10
+
+/* EHT data0 Mask/SHIFT */
+#define QDF_MON_STATUS_EHT_CONTENT_CH_INDEX_SHIFT		0
+#define QDF_MON_STATUS_EHT_SPATIAL_REUSE_SHIFT			3
+#define QDF_MON_STATUS_EHT_GI_SHIFT				7
+#define QDF_MON_STATUS_EHT_LTF_SHIFT				9
+#define QDF_MON_STATUS_EHT_EHT_LTF_SHIFT			11
+#define QDF_MON_STATUS_EHT_LDPC_EXTRA_SYMBOL_SEG_SHIFT		14
+#define QDF_MON_STATUS_EHT_PRE_FEC_PADDING_FACTOR_SHIFT		15
+#define QDF_MON_STATUS_EHT_PE_DISAMBIGUITY_SHIFT		17
+#define QDF_MON_STATUS_EHT_NDP_DISREGARD_SHIFT			18
+#define QDF_MON_STATUS_EHT_DISREGARD_SHIFT			18
+#define QDF_MON_STATUS_EHT_CRC1_SHIFT				22
+#define QDF_MON_STATUS_EHT_TAIL1_SHIFT				26
+
+/* EHT data1 Mask/SHIFT */
+#define QDF_MON_STATUS_EHT_RU_MRU_SIZE_SHIFT			0
+#define QDF_MON_STATUS_EHT_RU_MRU_INDEX_SHIFT			5
+#define QDF_MON_STATUS_EHT_RU_ALLOCATION1_1_SHIFT		13
+#define QDF_MON_STATUS_EHT_RU_ALLOCATION1_2_SHIFT		22
+
+/* EHT data2 Mask/SHIFT */
+#define QDF_MON_STATUS_EHT_RU_ALLOCATION2_1_SHIFT		0
+#define QDF_MON_STATUS_EHT_RU_ALLOCATION2_2_SHIFT		9
+#define QDF_MON_STATUS_EHT_RU_ALLOCATION2_3_SHIFT		18
+
+/* EHT data3 Mask/SHIFT */
+#define QDF_MON_STATUS_EHT_RU_ALLOCATION2_4_SHIFT		0
+#define QDF_MON_STATUS_EHT_RU_ALLOCATION2_5_SHIFT		9
+#define QDF_MON_STATUS_EHT_RU_ALLOCATION2_6_SHIFT		18
+
+/* EHT data4 Mask/SHIFT */
+#define QDF_MON_STATUS_EHT_CRC2_SHIFT				0
+#define QDF_MON_STATUS_EHT_TAIL2_SHIFT				4
+#define QDF_MON_STATUS_EHT_NDP_NSS_SHIFT			12
+#define QDF_MON_STATUS_EHT_NDP_BEAMFORMED_SHIFT			16
+#define QDF_MON_STATUS_EHT_NUM_NON_OFDMA_USERS_SHIFT		17
+#define QDF_MON_STATUS_EHT_USER_ENC_BLOCK_CRC_SHIFT		20
+#define QDF_MON_STATUS_EHT_USER_ENC_BLOCK_TAIL_SHIFT		24
+
+/* EHT data5 Mask/SHIFT */
+#define QDF_MON_STATUS_EHT_TB_RU_PS160_SHIFT			0
+#define QDF_MON_STATUS_EHT_TB_RU_PS80_SHIFT			1
+#define QDF_MON_STATUS_EHT_TB_RU_B7_B1_SHIFT			2
+
+/* EHT user info Mask/SHIFT */
+#define QDF_MON_STATUS_EHT_USER_STA_ID_KNOWN			0x00000001
+#define QDF_MON_STATUS_EHT_USER_MCS_KNOWN			0x00000002
+#define QDF_MON_STATUS_EHT_USER_CODING_KNOWN			0x00000004
+#define QDF_MON_STATUS_EHT_USER_RESERVED_KNOWN			0x00000008
+#define QDF_MON_STATUS_EHT_USER_NSS_KNOWN			0x00000010
+#define QDF_MON_STATUS_EHT_USER_BEAMFORMING_KNOWN		0x00000020
+#define QDF_MON_STATUS_EHT_USER_SPATIAL_CONFIG_KNOWN		0x00000040
+
+#define QDF_MON_STATUS_EHT_USER_DATA_FOR_THIS_USER_SHIFT	7
+#define QDF_MON_STATUS_EHT_USER_STA_ID_SHIFT			8
+#define QDF_MON_STATUS_EHT_USER_CODING_SHIFT			19
+#define QDF_MON_STATUS_EHT_USER_MCS_SHIFT			20
+#define QDF_MON_STATUS_EHT_USER_NSS_SHIFT			24
+#define QDF_MON_STATUS_EHT_USER_RESERVED_SHIFT			28
+#define QDF_MON_STATUS_EHT_USER_BEAMFORMING_SHIFT		29
+#define QDF_MON_STATUS_EHT_USER_SPATIAL_CONFIG_SHIFT		24
 
 /**
  * enum qdf_proto_type - protocol type

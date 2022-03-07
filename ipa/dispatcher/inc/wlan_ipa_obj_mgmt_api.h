@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2018, 2020-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -69,6 +70,15 @@ static inline bool wlan_ipa_config_is_enabled(void)
 	return ipa_config_is_enabled();
 }
 
+/**
+ * wlan_ipa_get_hdl() - Get ipa hdl set by IPA driver
+ * @psoc: void psoc object
+ * @pdev_id: pdev id
+ *
+ * Return: IPA handle
+ */
+qdf_ipa_wdi_hdl_t wlan_ipa_get_hdl(void *soc, uint8_t pdev_id);
+
 #else
 
 static inline QDF_STATUS ipa_init(void)
@@ -95,7 +105,6 @@ static inline bool wlan_ipa_config_is_enabled(void)
 {
 	return false;
 }
-
 #endif /* IPA_OFFLOAD */
 
 #endif /* _WLAN_IPA_OBJ_MGMT_H_ */

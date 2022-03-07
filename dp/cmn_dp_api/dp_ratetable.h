@@ -23,22 +23,6 @@
 #define CMN_DP_ASSERT(__bool)
 
 /*
- *Band Width Types
- */
-enum CMN_BW_TYPES {
-	CMN_BW_20MHZ,
-	CMN_BW_40MHZ,
-	CMN_BW_80MHZ,
-	CMN_BW_160MHZ,
-	CMN_BW_80_80MHZ,
-#ifdef WLAN_FEATURE_11BE
-	CMN_BW_320MHZ,
-#endif
-	CMN_BW_CNT,
-	CMN_BW_IDLE = 0xFF, /*default BW state */
-};
-
-/*
  * Modes Types
  */
 enum CMN_MODE_TYPES {
@@ -162,7 +146,8 @@ static inline int dp_ath_rate_out(uint64_t _i)
 #define HE_LAST_RIX_PLUS_ONE (HE_160_RATE_TABLE_INDEX + NUM_HE_RIX_FOR_160MHZ)
 
 #ifdef WLAN_FEATURE_11BE
-#define NUM_EHT_RIX_PER_BW (NUM_EHT_MCS * NUM_SPATIAL_STREAMS)
+#define NUM_EHT_SPATIAL_STREAM 4
+#define NUM_EHT_RIX_PER_BW (NUM_EHT_MCS * NUM_EHT_SPATIAL_STREAM)
 
 #define EHT_20_RATE_TABLE_INDEX HE_LAST_RIX_PLUS_ONE
 #define EHT_40_RATE_TABLE_INDEX (EHT_20_RATE_TABLE_INDEX + NUM_EHT_RIX_PER_BW)

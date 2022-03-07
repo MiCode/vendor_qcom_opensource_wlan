@@ -516,11 +516,13 @@ struct uc_rm_work_struct {
  * @work: uC OP work
  * @msg: OP message
  * @osdev: poiner to qdf net device, used by osif_psoc_sync_trans_start_wait
+ * @ipa_priv_bp: back pointer to ipa_obj
  */
 struct uc_op_work_struct {
 	qdf_work_t work;
 	struct op_msg_type *msg;
 	qdf_device_t osdev;
+	struct wlan_ipa_priv *ipa_priv_bp;
 };
 
 /**
@@ -734,6 +736,9 @@ struct wlan_ipa_priv {
 	qdf_atomic_t stats_quota;
 	uint8_t curr_bw_level;
 	qdf_atomic_t deinit_in_prog;
+	uint8_t instance_id;
+	bool handle_initialized;
+	qdf_ipa_wdi_hdl_t hdl;
 };
 
 #define WLAN_IPA_WLAN_FRAG_HEADER        sizeof(struct frag_header)

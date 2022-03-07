@@ -102,6 +102,10 @@ dp_rx_peer_metadata_peer_id_get_li(struct dp_soc *soc, uint32_t peer_metadata)
 	return metadata->peer_id;
 }
 
+bool
+dp_rx_intrabss_handle_nawds_li(struct dp_soc *soc, struct dp_txrx_peer *ta_peer,
+			       qdf_nbuf_t nbuf_copy,
+			       struct cdp_tid_rx_stats *tid_stats);
 #ifdef QCA_DP_RX_NBUF_AND_NBUF_DATA_PREFETCH
 static inline
 void dp_rx_prefetch_nbuf_data(qdf_nbuf_t nbuf, qdf_nbuf_t next)

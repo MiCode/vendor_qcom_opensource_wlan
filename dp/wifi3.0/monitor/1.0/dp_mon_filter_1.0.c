@@ -147,6 +147,12 @@ void dp_mon_filter_setup_enhanced_stats_1_0(struct dp_pdev *pdev)
 
 	mon_pdev = pdev->monitor_pdev;
 	dp_mon_filter_set_status_cmn(mon_pdev, &filter);
+
+	filter.tlv_filter.enable_mo = 0;
+	filter.tlv_filter.mo_mgmt_filter = 0;
+	filter.tlv_filter.mo_ctrl_filter = 0;
+	filter.tlv_filter.mo_data_filter = 0;
+
 	dp_mon_filter_show_filter(mon_pdev, mode, &filter);
 	mon_pdev->filter[mode][srng_type] = filter;
 }
@@ -172,6 +178,90 @@ void dp_mon_filter_reset_enhanced_stats_1_0(struct dp_pdev *pdev)
 	mon_pdev->filter[mode][srng_type] = filter;
 }
 #endif /* QCA_ENHANCED_STATS_SUPPORT */
+
+#ifdef QCA_UNDECODED_METADATA_SUPPORT
+/**
+ * mon_filter_setup_undecoded_metadata_capture() - Setup undecoded frame
+ * capture phyrx aborted frame filter setup
+ * @pdev: DP pdev handle
+ */
+void dp_mon_filter_setup_undecoded_metadata_capture_1_0(struct dp_pdev *pdev)
+{
+	struct dp_mon_filter filter = {0};
+	enum dp_mon_filter_mode mode =
+				DP_MON_FILTER_UNDECODED_METADATA_CAPTURE_MODE;
+	enum dp_mon_filter_srng_type srng_type =
+				DP_MON_FILTER_SRNG_TYPE_RXDMA_MONITOR_STATUS;
+	struct dp_mon_pdev *mon_pdev;
+
+	if (!pdev) {
+		dp_mon_filter_err("pdev Context is null");
+		return;
+	}
+
+	/* Enabled the filter */
+	mon_pdev = pdev->monitor_pdev;
+	if (mon_pdev->monitor_configured ||
+	    mon_pdev->scan_spcl_vap_configured) {
+		filter = mon_pdev->filter[DP_MON_FILTER_MONITOR_MODE][srng_type];
+	} else if (mon_pdev->neighbour_peers_added) {
+		filter = mon_pdev->filter[DP_MON_FILTER_SMART_MONITOR_MODE][srng_type];
+	} else {
+		dp_mon_filter_set_status_cmn(mon_pdev, &filter);
+		filter.valid = true;
+	}
+
+	/* Setup the filter to subscribe to FP PHY status tlv */
+	filter.tlv_filter.fp_phy_err = 1;
+	filter.tlv_filter.fp_phy_err_buf_src = SW2RXDMA_BUF_SOURCE_RING;
+	filter.tlv_filter.fp_phy_err_buf_dest = RXDMA2SW_RING;
+	filter.tlv_filter.phy_err_mask = mon_pdev->phyrx_error_mask;
+	filter.tlv_filter.phy_err_mask_cont = mon_pdev->phyrx_error_mask_cont;
+
+	filter.tlv_filter.phy_err_filter_valid = 1;
+
+	dp_mon_filter_show_filter(mon_pdev, mode, &filter);
+	mon_pdev->filter[mode][srng_type] = filter;
+}
+
+/**
+ * mon_filter_reset_undecoded_metadata_capture() - Reset undecoded frame
+ * capture phyrx aborted frame filter
+ * @pdev: DP pdev handle
+ */
+void dp_mon_filter_reset_undecoded_metadata_capture_1_0(struct dp_pdev *pdev)
+{
+	struct dp_mon_filter filter = {0};
+	enum dp_mon_filter_mode mode =
+				DP_MON_FILTER_UNDECODED_METADATA_CAPTURE_MODE;
+	enum dp_mon_filter_srng_type srng_type =
+				DP_MON_FILTER_SRNG_TYPE_RXDMA_MONITOR_STATUS;
+	struct dp_mon_pdev *mon_pdev;
+
+	if (!pdev) {
+		dp_mon_filter_err("pdev Context is null");
+		return;
+	}
+	mon_pdev = pdev->monitor_pdev;
+
+	filter = mon_pdev->filter[mode][srng_type];
+
+	/* Reset the phy error and phy error mask */
+	filter.tlv_filter.fp_phy_err = 0;
+	filter.tlv_filter.fp_phy_err_buf_src = NO_BUFFER_RING;
+	filter.tlv_filter.fp_phy_err_buf_dest = RXDMA_RELEASING_RING;
+
+	filter.tlv_filter.phy_err_mask = 0;
+	filter.tlv_filter.phy_err_mask_cont = 0;
+	mon_pdev->phyrx_error_mask = 0;
+	mon_pdev->phyrx_error_mask_cont = 0;
+
+	filter.tlv_filter.phy_err_filter_valid = 1;
+
+	dp_mon_filter_show_filter(mon_pdev, mode, &filter);
+	mon_pdev->filter[mode][srng_type] = filter;
+}
+#endif /* QCA_UNDECODED_METADATA_SUPPORT */
 
 #ifdef QCA_MCOPY_SUPPORT
 #ifdef QCA_MONITOR_PKT_SUPPORT
@@ -315,6 +405,11 @@ void dp_mon_filter_setup_smart_monitor_1_0(struct dp_pdev *pdev)
 	/* Enabled the filter */
 	filter.valid = true;
 	dp_mon_filter_set_status_cmn(mon_pdev, &filter);
+
+	filter.tlv_filter.enable_mo = 0;
+	filter.tlv_filter.mo_mgmt_filter = 0;
+	filter.tlv_filter.mo_ctrl_filter = 0;
+	filter.tlv_filter.mo_data_filter = 0;
 
 	if (mon_soc->hw_nac_monitor_support) {
 		filter.tlv_filter.enable_md = 1;

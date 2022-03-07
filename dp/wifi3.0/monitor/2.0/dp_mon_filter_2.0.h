@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2021,2022 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -23,13 +23,22 @@
 #define DEFAULT_DMA_LENGTH 7
 
 /**
+ * dp_rx_mon_enable_set() - Setup rx monitor feature
+ * @msg_word: msg word
+ * @htt_tlv_filter: rx ring filter configuration
+ */
+void
+dp_rx_mon_enable_set(uint32_t *msg_word,
+		     struct htt_rx_ring_tlv_filter *tlv_filter);
+
+/**
  * dp_rx_mon_packet_length_set() - Setup rx monitor per packet type length
  * @msg_word: msg word
  * @htt_tlv_filter: rx ring filter configuration
  */
 void
 dp_rx_mon_packet_length_set(uint32_t *msg_word,
-			    struct htt_rx_ring_tlv_filter *tlvi_filter);
+			    struct htt_rx_ring_tlv_filter *tlv_filter);
 
 /**
  * dp_rx_mon_word_mask_subscribe() - Setup rx monitor word mask subscription
@@ -69,6 +78,32 @@ dp_mon_filter_setup_enhanced_stats_2_0(struct dp_pdev *pdev)
 
 static inline void
 dp_mon_filter_reset_enhanced_stats_2_0(struct dp_pdev *pdev)
+{
+}
+#endif
+
+#ifdef QCA_UNDECODED_METADATA_SUPPORT
+/*
+ * dp_mon_filter_setup_undecoded_metadata_capture() - Setup the filter
+ * for undecoded metadata capture
+ * @pdev: DP pdev handle
+ */
+void dp_mon_filter_setup_undecoded_metadata_capture_2_0(struct dp_pdev *pdev);
+
+/*
+ * dp_mon_filter_reset_undecoded_metadata_capture() - Reset the filter
+ * for undecoded metadata capture
+ * @pdev: DP pdev handle
+ */
+void dp_mon_filter_reset_undecoded_metadata_capture_2_0(struct dp_pdev *pdev);
+#else
+static inline void
+dp_mon_filter_setup_undecoded_metadata_capture_2_0(struct dp_pdev *pdev)
+{
+}
+
+static inline void
+dp_mon_filter_reset_undecoded_metadata_capture_2_0(struct dp_pdev *pdev)
 {
 }
 #endif

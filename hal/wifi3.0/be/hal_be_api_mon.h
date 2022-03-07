@@ -52,25 +52,25 @@
 #define HAL_MON_PADDR_LO_SET(buff_addr_info, paddr_lo) \
 		((*(((unsigned int *) buff_addr_info) + \
 		(HAL_MON_BUFFER_ADDR_INFO_0_BUFFER_ADDR_31_0_OFFSET >> 2))) = \
-		(paddr_lo << HAL_MON_BUFFER_ADDR_INFO_0_BUFFER_ADDR_31_0_LSB) & \
+		((paddr_lo) << HAL_MON_BUFFER_ADDR_INFO_0_BUFFER_ADDR_31_0_LSB) & \
 		HAL_MON_BUFFER_ADDR_INFO_0_BUFFER_ADDR_31_0_MASK)
 
 #define HAL_MON_PADDR_HI_SET(buff_addr_info, paddr_hi) \
 		((*(((unsigned int *) buff_addr_info) + \
 		(HAL_MON_BUFFER_ADDR_INFO_1_BUFFER_ADDR_39_32_OFFSET >> 2))) = \
-		(paddr_hi << HAL_MON_BUFFER_ADDR_INFO_1_BUFFER_ADDR_39_32_LSB) & \
+		((paddr_hi) << HAL_MON_BUFFER_ADDR_INFO_1_BUFFER_ADDR_39_32_LSB) & \
 		HAL_MON_BUFFER_ADDR_INFO_1_BUFFER_ADDR_39_32_MASK)
 
-#define HAL_MON_VADDR_LO_SET(buff_addr_info, paddr_lo) \
+#define HAL_MON_VADDR_LO_SET(buff_addr_info, vaddr_lo) \
 		((*(((unsigned int *) buff_addr_info) + \
 		(HAL_MON_MON_INGRESS_RING_BUFFER_VIRT_ADDR_31_0_OFFSET >> 2))) = \
-		(paddr_lo << HAL_MON_MON_INGRESS_RING_BUFFER_VIRT_ADDR_31_0_LSB) & \
+		((vaddr_lo) << HAL_MON_MON_INGRESS_RING_BUFFER_VIRT_ADDR_31_0_LSB) & \
 		HAL_MON_MON_INGRESS_RING_BUFFER_VIRT_ADDR_31_0_MASK)
 
-#define HAL_MON_VADDR_HI_SET(buff_addr_info, paddr_hi) \
+#define HAL_MON_VADDR_HI_SET(buff_addr_info, vaddr_hi) \
 		((*(((unsigned int *) buff_addr_info) + \
 		(HAL_MON_MON_INGRESS_RING_BUFFER_VIRT_ADDR_63_32_OFFSET >> 2))) = \
-		(paddr_hi << HAL_MON_MON_INGRESS_RING_BUFFER_VIRT_ADDR_63_32_LSB) & \
+		((vaddr_hi) << HAL_MON_MON_INGRESS_RING_BUFFER_VIRT_ADDR_63_32_LSB) & \
 		HAL_MON_MON_INGRESS_RING_BUFFER_VIRT_ADDR_63_32_MASK)
 
 enum hal_dest_desc_end_reason {
@@ -190,33 +190,6 @@ void hal_mon_buff_addr_info_set(hal_soc_handle_t hal_soc_hdl,
 	HAL_MON_VADDR_HI_SET(mon_entry, vaddr_hi);
 }
 
-/**
- * hal_mon_buf_get() - Get monitor descriptor
- * @hal_soc_hdl: HAL Soc handle
- * @desc: HAL monitor descriptor
- *
- * Return: none
- */
-static inline
-void hal_mon_buf_get(hal_soc_handle_t hal_soc_hdl,
-		     void *dst_ring_desc,
-		     struct hal_mon_desc *mon_desc)
-{
-	struct mon_destination_ring *hal_dst_ring =
-			(struct mon_destination_ring *)dst_ring_desc;
-
-	mon_desc->buf_addr =
-		((u64)hal_dst_ring->stat_buf_virt_addr_31_0 |
-		 ((u64)hal_dst_ring->stat_buf_virt_addr_63_32 << 32));
-	mon_desc->ppdu_id = hal_dst_ring->ppdu_id;
-	mon_desc->end_offset = hal_dst_ring->end_offset;
-	mon_desc->end_reason = hal_dst_ring->end_reason;
-	mon_desc->initiator = hal_dst_ring->initiator;
-	mon_desc->ring_id = hal_dst_ring->ring_id;
-	mon_desc->empty_descriptor = hal_dst_ring->empty_descriptor;
-	mon_desc->looping_count = hal_dst_ring->looping_count;
-}
-
 /* TX monitor */
 #define TX_MON_STATUS_BUF_SIZE 2048
 
@@ -265,6 +238,94 @@ enum hal_tx_tlv_status {
 	HAL_MON_TX_STATUS_PPDU_NOT_DONE,
 };
 
+enum txmon_coex_tx_status_reason {
+	COEX_FES_TX_START,
+	COEX_FES_TX_END,
+	COEX_FES_END,
+	COEX_RESPONSE_TX_START,
+	COEX_RESPONSE_TX_END,
+	COEX_NO_TX_ONGOING,
+};
+
+enum txmon_transmission_type {
+	TXMON_SU_TRANSMISSION = 0,
+	TXMON_MU_TRANSMISSION,
+	TXMON_MU_SU_TRANSMISSION,
+	TXMON_MU_MIMO_TRANSMISSION = 1,
+	TXMON_MU_OFDMA_TRANMISSION
+};
+
+enum txmon_he_ppdu_subtype {
+	TXMON_HE_SUBTYPE_SU = 0,
+	TXMON_HE_SUBTYPE_TRIG,
+	TXMON_HE_SUBTYPE_MU,
+	TXMON_HE_SUBTYPE_EXT_SU
+};
+
+enum txmon_pkt_type {
+	TXMON_PKT_TYPE_11A = 0,
+	TXMON_PKT_TYPE_11B,
+	TXMON_PKT_TYPE_11N_MM,
+	TXMON_PKT_TYPE_11AC,
+	TXMON_PKT_TYPE_11AX,
+	TXMON_PKT_TYPE_11BA,
+	TXMON_PKT_TYPE_11BE,
+	TXMON_PKT_TYPE_11AZ
+};
+
+#define TXMON_HAL(hal_tx_ppdu_info, field)		\
+			hal_tx_ppdu_info->field
+#define TXMON_HAL_STATUS(hal_tx_ppdu_info, field)	\
+			hal_tx_ppdu_info->rx_status.field
+#define TXMON_HAL_USER(hal_tx_ppdu_info, user_id, field)		\
+			hal_tx_ppdu_info->rx_user_status[user_id].field
+
+#define TXMON_STATUS_INFO(hal_tx_status_info, field)	\
+			hal_tx_status_info->field
+
+struct hal_tx_status_info {
+	uint8_t reception_type;
+	uint8_t transmission_type;
+	uint8_t medium_prot_type;
+
+	uint32_t no_bitmap_avail	:1,
+		explicit_ack		:1,
+		explicit_ack_type	:4,
+		r2r_end_status_follow	:1,
+		response_type		:5,
+		ndp_frame		:2,
+		num_users		:8,
+		reserved		:10;
+
+	uint8_t sw_frame_group_id;
+	uint32_t r2r_to_follow;
+	uint32_t prot_tlv_status;
+
+	void *buffer;
+	uint32_t offset;
+	uint32_t length;
+
+	uint8_t addr1[QDF_MAC_ADDR_SIZE];
+	uint8_t addr2[QDF_MAC_ADDR_SIZE];
+	uint8_t addr3[QDF_MAC_ADDR_SIZE];
+	uint8_t addr4[QDF_MAC_ADDR_SIZE];
+
+};
+
+struct hal_tx_ppdu_info {
+	uint32_t ppdu_id;
+	uint32_t num_users	:8,
+		 is_used	:1,
+		 is_data	:1,
+		 cur_usr_idx	:8,
+		 reserved	:15;
+
+	uint32_t prot_tlv_status;
+
+	struct mon_rx_status rx_status;
+	struct mon_rx_user_status rx_user_status[];
+};
+
 /**
  * hal_tx_status_get_next_tlv() - get next tx status TLV
  * @tx_tlv: pointer to TLV header
@@ -282,7 +343,57 @@ hal_tx_status_get_next_tlv(uint8_t *tx_tlv) {
 					    HAL_RX_TLV32_HDR_SIZE + 3)) & (~3));
 }
 
-/*
+/**
+ * hal_txmon_status_parse_tlv() - process transmit info TLV
+ * @hal_soc: HAL soc handle
+ * @data_ppdu_info: pointer to hal data ppdu info
+ * @prot_ppdu_info: pointer to hal prot ppdu info
+ * @data_status_info: pointer to data status info
+ * @prot_status_info: pointer to prot status info
+ * @tx_tlv_hdr: pointer to TLV header
+ * @status_frag: pointer to status frag
+ *
+ * Return: HAL_TLV_STATUS_PPDU_NOT_DONE
+ */
+static inline uint32_t
+hal_txmon_status_parse_tlv(hal_soc_handle_t hal_soc_hdl,
+			   void *data_ppdu_info,
+			   void *prot_ppdu_info,
+			   void *data_status_info,
+			   void *prot_status_info,
+			   void *tx_tlv_hdr,
+			   qdf_frag_t status_frag)
+{
+	struct hal_soc *hal_soc = (struct hal_soc *)hal_soc_hdl;
+
+	return hal_soc->ops->hal_txmon_status_parse_tlv(data_ppdu_info,
+							prot_ppdu_info,
+							data_status_info,
+							prot_status_info,
+							tx_tlv_hdr,
+							status_frag);
+}
+
+/**
+ * hal_txmon_status_get_num_users() - api to get num users from start of fes
+ * window
+ * @hal_soc: HAL soc handle
+ * @tx_tlv_hdr: pointer to TLV header
+ * @num_users: reference to number of user
+ *
+ * Return: status
+ */
+static inline uint32_t
+hal_txmon_status_get_num_users(hal_soc_handle_t hal_soc_hdl,
+			       void *tx_tlv_hdr, uint8_t *num_users)
+{
+	struct hal_soc *hal_soc = (struct hal_soc *)hal_soc_hdl;
+
+	return hal_soc->ops->hal_txmon_status_get_num_users(tx_tlv_hdr,
+							    num_users);
+}
+
+/**
  * hal_txmon_status_free_buffer() - api to free status buffer
  * @hal_soc: HAL soc handle
  * @status_frag: qdf_frag_t buffer
@@ -295,7 +406,24 @@ hal_txmon_status_free_buffer(hal_soc_handle_t hal_soc_hdl,
 {
 	struct hal_soc *hal_soc = (struct hal_soc *)hal_soc_hdl;
 
-	hal_soc->ops->hal_txmon_status_free_buffer(status_frag);
+	if (hal_soc->ops->hal_txmon_status_free_buffer)
+		hal_soc->ops->hal_txmon_status_free_buffer(status_frag);
+}
+
+/**
+ * hal_tx_status_get_tlv_tag() - api to get tlv tag
+ * @tx_tlv_hdr: pointer to TLV header
+ *
+ * Return tlv_tag
+ */
+static inline uint32_t
+hal_tx_status_get_tlv_tag(void *tx_tlv_hdr)
+{
+	uint32_t tlv_tag = 0;
+
+	tlv_tag = HAL_RX_GET_USER_TLV32_TYPE(tx_tlv_hdr);
+
+	return tlv_tag;
 }
 #endif /* QCA_MONITOR_2_0_SUPPORT */
 #endif /* _HAL_BE_API_MON_H_ */

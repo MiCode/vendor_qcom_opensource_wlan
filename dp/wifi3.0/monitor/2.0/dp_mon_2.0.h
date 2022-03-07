@@ -29,6 +29,7 @@
 
 #define DP_MON_RING_FILL_LEVEL_DEFAULT 2048
 #define DP_MON_DATA_BUFFER_SIZE     2048
+#define DP_MON_DESC_MAGIC 0xdeadabcd
 
 /**
  * struct dp_mon_filter_be - Monitor TLV filter
@@ -53,6 +54,7 @@ struct dp_mon_filter_be {
  * @unmapped: used to mark desc an unmapped if the corresponding
  * nbuf is already unmapped
  * @cookie: unique desc identifier
+ * @magic: magic number to validate desc data
  */
 struct dp_mon_desc {
 	uint8_t *buf_addr;
@@ -60,6 +62,7 @@ struct dp_mon_desc {
 	uint8_t in_use:1,
 		unmapped:1;
 	uint32_t cookie;
+	uint32_t magic;
 };
 
 /**
@@ -96,10 +99,16 @@ struct dp_mon_desc_pool {
  * struct dp_mon_pdev_be - BE specific monitor pdev object
  * @mon_pdev: monitor pdev structure
  * @filter_be: filters sent to fw
+ * @tx_capture: pointer to tx capture function
+ * @tx_stats: tx monitor drop stats
  */
 struct dp_mon_pdev_be {
 	struct dp_mon_pdev mon_pdev;
 	struct dp_mon_filter_be **filter_be;
+#ifdef WLAN_TX_PKT_CAPTURE_ENH_BE
+	struct dp_pdev_tx_capture_be tx_capture_be;
+#endif
+	struct dp_tx_monitor_drop_stats tx_stats;
 };
 
 /**
@@ -113,6 +122,7 @@ struct dp_mon_pdev_be {
  * @tx_mon_ring_fill_level: tx mon ring refill level
  * @tx_low_thresh_intrs: number of tx mon low threshold interrupts received
  * @rx_low_thresh_intrs: number of rx mon low threshold interrupts received
+ * @is_dp_mon_soc_initialized: flag to indicate soc is initialized
  */
 struct dp_mon_soc_be {
 	struct dp_mon_soc mon_soc;
@@ -129,6 +139,8 @@ struct dp_mon_soc_be {
 	uint16_t tx_mon_ring_fill_level;
 	uint32_t tx_low_thresh_intrs;
 	uint32_t rx_low_thresh_intrs;
+
+	bool is_dp_mon_soc_initialized;
 };
 #endif
 

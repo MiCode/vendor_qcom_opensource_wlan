@@ -39,6 +39,32 @@ static inline void dp_mon_filter_reset_enhanced_stats_1_0(struct dp_pdev *pdev)
 }
 #endif
 
+#ifdef QCA_UNDECODED_METADATA_SUPPORT
+/*
+ * dp_mon_filter_setup_undecoded_metadata_capture() - Setup the filter
+ * for undecoded metadata capture
+ * @pdev: DP pdev handle
+ */
+void dp_mon_filter_setup_undecoded_metadata_capture_1_0(struct dp_pdev *pdev);
+
+/*
+ * dp_mon_filter_reset_undecoded_metadata_capture() - Reset the filter
+ * for undecoded metadata capture
+ * @pdev: DP pdev handle
+ */
+void dp_mon_filter_reset_undecoded_metadata_capture_1_0(struct dp_pdev *pdev);
+#else
+static inline void
+dp_mon_filter_setup_undecoded_metadata_capture_1_0(struct dp_pdev *pdev)
+{
+}
+
+static inline void
+dp_mon_filter_reset_undecoded_metadata_capture_1_0(struct dp_pdev *pdev)
+{
+}
+#endif /* QCA_UNDECODED_METADATA_SUPPORT */
+
 #ifdef QCA_MCOPY_SUPPORT
 /**
  * dp_mon_filter_setup_mcopy_mode() - Setup the m_copy mode filter

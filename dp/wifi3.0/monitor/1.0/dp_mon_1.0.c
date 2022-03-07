@@ -60,6 +60,64 @@ dp_mon_populate_ppdu_info_1_0(struct hal_rx_ppdu_info *hal_ppdu_info,
 {
 	ppdu->punc_bw = 0;
 }
+
+/*
+ * is_ppdu_txrx_capture_enabled() - API to check both pktlog and debug_sniffer
+ *                              modes are enabled or not.
+ * @dp_pdev: dp pdev handle.
+ *
+ * Return: bool
+ */
+static inline bool is_ppdu_txrx_capture_enabled(struct dp_pdev *pdev)
+{
+	struct dp_mon_pdev *mon_pdev = pdev->monitor_pdev;
+
+	if (!mon_pdev->pktlog_ppdu_stats && !mon_pdev->tx_sniffer_enable &&
+	    !mon_pdev->mcopy_mode)
+		return true;
+	else
+		return false;
+}
+
+/**
+ * dp_mon_tx_enable_enhanced_stats_1_0() - Send HTT cmd to FW to enable stats
+ * @pdev: Datapath pdev handle
+ *
+ * Return: none
+ */
+static void dp_mon_tx_enable_enhanced_stats_1_0(struct dp_pdev *pdev)
+{
+	struct dp_mon_pdev *mon_pdev = pdev->monitor_pdev;
+
+	if (is_ppdu_txrx_capture_enabled(pdev) && !mon_pdev->bpr_enable) {
+		dp_h2t_cfg_stats_msg_send(pdev, DP_PPDU_STATS_CFG_ENH_STATS,
+					  pdev->pdev_id);
+	} else if (is_ppdu_txrx_capture_enabled(pdev) &&
+		   mon_pdev->bpr_enable) {
+		dp_h2t_cfg_stats_msg_send(pdev,
+					  DP_PPDU_STATS_CFG_BPR_ENH,
+					  pdev->pdev_id);
+	}
+}
+
+/**
+ * dp_mon_tx_disable_enhanced_stats_1_0() - Send HTT cmd to FW to disable stats
+ * @pdev: Datapath pdev handle
+ *
+ * Return: none
+ */
+static void dp_mon_tx_disable_enhanced_stats_1_0(struct dp_pdev *pdev)
+{
+	struct dp_mon_pdev *mon_pdev = pdev->monitor_pdev;
+
+	if (is_ppdu_txrx_capture_enabled(pdev) && !mon_pdev->bpr_enable) {
+		dp_h2t_cfg_stats_msg_send(pdev, 0, pdev->pdev_id);
+	} else if (is_ppdu_txrx_capture_enabled(pdev) && mon_pdev->bpr_enable) {
+		dp_h2t_cfg_stats_msg_send(pdev,
+					  DP_PPDU_STATS_CFG_BPR,
+					  pdev->pdev_id);
+	}
+}
 #endif
 
 #ifdef QCA_SUPPORT_FULL_MON
@@ -440,7 +498,7 @@ static void dp_mon_vdev_timer(void *arg)
 		lmac_id = pdev->ch_band_lmac_id_mapping[mon_pdev->mon_chan_band];
 
 	start_time = qdf_get_log_timestamp();
-	dp_is_hw_dbs_enable(soc, &max_mac_rings);
+	dp_update_num_mac_rings_for_dbs(soc, &max_mac_rings);
 
 	while (yield == DP_TIMER_NO_YIELD) {
 		for (lmac_iter = 0; lmac_iter < max_mac_rings; lmac_iter++) {
@@ -811,6 +869,74 @@ dp_set_bpr_enable_1_0(struct dp_pdev *pdev, int val)
 }
 #endif
 
+#if defined(WDI_EVENT_ENABLE) &&\
+	(defined(QCA_ENHANCED_STATS_SUPPORT) || !defined(REMOVE_PKT_LOG))
+#ifndef WLAN_TX_PKT_CAPTURE_ENH
+/**
+ * dp_ppdu_desc_notify_1_0 - Notify upper layer for PPDU indication via WDI
+ *
+ * @pdev: Datapath pdev handle
+ * @nbuf: Buffer to be shipped
+ *
+ * Return: void
+ */
+static void dp_ppdu_desc_notify_1_0(struct dp_pdev *pdev, qdf_nbuf_t nbuf)
+{
+	struct dp_mon_pdev *mon_pdev = pdev->monitor_pdev;
+	struct cdp_tx_completion_ppdu *ppdu_desc = NULL;
+
+	ppdu_desc = (struct cdp_tx_completion_ppdu *)qdf_nbuf_data(nbuf);
+
+	/**
+	 * Deliver PPDU stats only for valid (acked) data
+	 * frames if sniffer mode is not enabled.
+	 * If sniffer mode is enabled, PPDU stats
+	 * for all frames including mgmt/control
+	 * frames should be delivered to upper layer
+	 */
+	if (mon_pdev->tx_sniffer_enable || mon_pdev->mcopy_mode) {
+		dp_wdi_event_handler(WDI_EVENT_TX_PPDU_DESC,
+				     pdev->soc,
+				     nbuf, HTT_INVALID_PEER,
+				     WDI_NO_VAL,
+				     pdev->pdev_id);
+	} else {
+		if (ppdu_desc->num_mpdu != 0 &&
+		    ppdu_desc->num_users != 0 &&
+		    ppdu_desc->frame_ctrl &
+		    HTT_FRAMECTRL_DATATYPE) {
+			dp_wdi_event_handler(WDI_EVENT_TX_PPDU_DESC,
+					     pdev->soc,
+					     nbuf, HTT_INVALID_PEER,
+					     WDI_NO_VAL,
+					     pdev->pdev_id);
+		} else {
+			qdf_nbuf_free(nbuf);
+		}
+	}
+}
+#endif
+
+/**
+ * dp_ppdu_stats_feat_enable_check_1_0 - Check if feature(s) is enabled to
+ *				consume ppdu stats from FW
+ *
+ * @pdev: Datapath pdev handle
+ *
+ * Return: true if enabled, else return false
+ */
+static bool dp_ppdu_stats_feat_enable_check_1_0(struct dp_pdev *pdev)
+{
+	struct dp_mon_pdev *mon_pdev = pdev->monitor_pdev;
+
+	if (!mon_pdev->enhanced_stats_en && !mon_pdev->tx_sniffer_enable &&
+	    !mon_pdev->mcopy_mode && !mon_pdev->bpr_enable)
+		return false;
+	else
+		return true;
+}
+#endif
+
 #ifndef QCA_SUPPORT_FULL_MON
 /**
  * dp_rx_mon_process () - Core brain processing for monitor mode
@@ -906,6 +1032,14 @@ dp_mon_register_feature_ops_1_0(struct dp_soc *soc)
 #if defined(WDI_EVENT_ENABLE) &&\
 	(defined(QCA_ENHANCED_STATS_SUPPORT) || !defined(REMOVE_PKT_LOG))
 	mon_ops->mon_ppdu_stats_ind_handler = dp_ppdu_stats_ind_handler;
+#ifndef WLAN_TX_PKT_CAPTURE_ENH
+	mon_ops->mon_ppdu_desc_deliver = dp_ppdu_desc_deliver;
+	mon_ops->mon_ppdu_desc_notify = dp_ppdu_desc_notify_1_0;
+#else
+	mon_ops->mon_ppdu_desc_deliver = dp_ppdu_desc_deliver_1_0;
+#endif
+	mon_ops->mon_ppdu_stats_feat_enable_check =
+				dp_ppdu_stats_feat_enable_check_1_0;
 #endif
 #ifdef WLAN_RX_PKT_CAPTURE_ENH
 	mon_ops->mon_config_enh_rx_capture = dp_config_enh_rx_capture;
@@ -934,6 +1068,10 @@ dp_mon_register_feature_ops_1_0(struct dp_soc *soc)
 				dp_mon_filter_setup_enhanced_stats_1_0;
 	mon_ops->mon_filter_reset_enhanced_stats =
 				dp_mon_filter_reset_enhanced_stats_1_0;
+	mon_ops->mon_tx_enable_enhanced_stats =
+				dp_mon_tx_enable_enhanced_stats_1_0;
+	mon_ops->mon_tx_disable_enhanced_stats =
+				dp_mon_tx_disable_enhanced_stats_1_0;
 #ifdef WLAN_FEATURE_11BE
 	mon_ops->mon_tx_stats_update = NULL;
 #endif
@@ -969,6 +1107,7 @@ dp_mon_register_feature_ops_1_0(struct dp_soc *soc)
 	mon_ops->mon_pktlogmod_exit = dp_pktlogmod_exit;
 #endif
 	mon_ops->rx_packet_length_set = NULL;
+	mon_ops->rx_mon_enable = NULL;
 	mon_ops->rx_wmask_subscribe = NULL;
 	mon_ops->rx_enable_mpdu_logging = NULL;
 	mon_ops->mon_neighbour_peers_detach = dp_neighbour_peers_detach;
@@ -980,6 +1119,14 @@ dp_mon_register_feature_ops_1_0(struct dp_soc *soc)
 	mon_ops->mon_rx_stats_update = NULL;
 	mon_ops->mon_rx_populate_ppdu_usr_info = NULL;
 	mon_ops->mon_rx_populate_ppdu_info = dp_mon_populate_ppdu_info_1_0;
+#endif
+#ifdef QCA_UNDECODED_METADATA_SUPPORT
+	mon_ops->mon_config_undecoded_metadata_capture =
+		dp_mon_config_undecoded_metadata_capture;
+	mon_ops->mon_filter_setup_undecoded_metadata_capture =
+		dp_mon_filter_setup_undecoded_metadata_capture_1_0;
+	mon_ops->mon_filter_reset_undecoded_metadata_capture =
+		dp_mon_filter_reset_undecoded_metadata_capture_1_0;
 #endif
 }
 
