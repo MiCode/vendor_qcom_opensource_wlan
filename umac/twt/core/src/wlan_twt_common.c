@@ -420,9 +420,9 @@ wlan_twt_set_peer_capabilities(struct wlan_objmgr_psoc *psoc,
 		return QDF_STATUS_E_FAILURE;
 	}
 
-	qdf_mutex_acquire(&peer_priv->twt_peer_lock);
+	twt_lock_acquire(&peer_priv->twt_peer_lock);
 	peer_priv->peer_capability = peer_cap;
-	qdf_mutex_release(&peer_priv->twt_peer_lock);
+	twt_lock_release(&peer_priv->twt_peer_lock);
 
 	twt_debug("set peer cap: 0x%x", peer_cap);
 	wlan_objmgr_peer_release_ref(peer, WLAN_TWT_ID);
@@ -454,9 +454,9 @@ wlan_twt_get_peer_capabilities(struct wlan_objmgr_psoc *psoc,
 		return QDF_STATUS_E_FAILURE;
 	}
 
-	qdf_mutex_acquire(&peer_priv->twt_peer_lock);
+	twt_lock_acquire(&peer_priv->twt_peer_lock);
 	*peer_cap = peer_priv->peer_capability;
-	qdf_mutex_release(&peer_priv->twt_peer_lock);
+	twt_lock_release(&peer_priv->twt_peer_lock);
 
 	twt_debug("get peer cap: 0x%x", *peer_cap);
 	wlan_objmgr_peer_release_ref(peer, WLAN_TWT_ID);
