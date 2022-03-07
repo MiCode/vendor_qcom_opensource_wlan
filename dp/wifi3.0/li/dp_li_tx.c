@@ -349,11 +349,11 @@ void dp_sawf_config_li(struct dp_soc *soc, uint32_t *hal_tx_desc_cached,
 	if (!wlan_cfg_get_sawf_config(soc->wlan_cfg_ctx))
 		return;
 
-	dp_sawf_tcl_cmd(fw_metadata, nbuf);
 	q_id = dp_sawf_queue_id_get(nbuf);
-
 	if (q_id == DP_SAWF_DEFAULT_Q_INVALID)
 		return;
+
+	dp_sawf_tcl_cmd(fw_metadata, nbuf);
 
 	search_index = dp_sawf_get_search_index(soc, nbuf, vdev_id,
 						q_id);
@@ -363,15 +363,16 @@ void dp_sawf_config_li(struct dp_soc *soc, uint32_t *hal_tx_desc_cached,
 	hal_tx_desc_set_search_index_li(soc->hal_soc, hal_tx_desc_cached,
 					search_index);
 }
-
 #else
-
 static inline
 void dp_sawf_config_li(struct dp_soc *soc, uint32_t *hal_tx_desc_cached,
 		       uint16_t *fw_metadata, uint16_t vdev_id,
 		       qdf_nbuf_t nbuf)
 {
 }
+
+#define dp_sawf_tx_enqueue_peer_stats(soc, tx_desc)
+#define dp_sawf_tx_enqueue_fail_peer_stats(soc, tx_desc)
 #endif
 
 QDF_STATUS
@@ -431,6 +432,7 @@ dp_tx_hw_enqueue_li(struct dp_soc *soc, struct dp_vdev *vdev,
 	if (dp_sawf_tag_valid_get(tx_desc->nbuf)) {
 		dp_sawf_config_li(soc, hal_tx_desc_cached, &fw_metadata,
 				  vdev->vdev_id, tx_desc->nbuf);
+		dp_sawf_tx_enqueue_peer_stats(soc, tx_desc);
 	}
 
 	hal_tx_desc_set_fw_metadata(hal_tx_desc_cached, fw_metadata);
@@ -480,6 +482,7 @@ dp_tx_hw_enqueue_li(struct dp_soc *soc, struct dp_vdev *vdev,
 			 __func__, __LINE__, hal_ring_hdl);
 		DP_STATS_INC(soc, tx.tcl_ring_full[ring_id], 1);
 		DP_STATS_INC(vdev, tx_i.dropped.enqueue_fail, 1);
+		dp_sawf_tx_enqueue_fail_peer_stats(soc, tx_desc);
 		return status;
 	}
 
@@ -492,6 +495,7 @@ dp_tx_hw_enqueue_li(struct dp_soc *soc, struct dp_vdev *vdev,
 		dp_verbose_debug("TCL ring full ring_id:%d", ring_id);
 		DP_STATS_INC(soc, tx.tcl_ring_full[ring_id], 1);
 		DP_STATS_INC(vdev, tx_i.dropped.enqueue_fail, 1);
+		dp_sawf_tx_enqueue_fail_peer_stats(soc, tx_desc);
 		goto ring_access_fail;
 	}
 
