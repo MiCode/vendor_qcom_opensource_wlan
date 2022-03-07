@@ -771,12 +771,14 @@ dp_send_completion_to_pkt_capture(struct dp_soc *soc,
 /**
  * dp_tx_update_stats() - Update soc level tx stats
  * @soc: DP soc handle
- * @nbuf: packet being transmitted
+ * @tx_desc: TX descriptor reference
+ * @ring_id: TCL ring id
  *
  * Returns: none
  */
 void dp_tx_update_stats(struct dp_soc *soc,
-			qdf_nbuf_t nbuf);
+			struct dp_tx_desc_s *tx_desc,
+			uint8_t ring_id);
 
 /**
  * dp_tx_attempt_coalescing() - Check and attempt TCL register write coalescing
@@ -784,6 +786,7 @@ void dp_tx_update_stats(struct dp_soc *soc,
  * @tx_desc: tx packet descriptor
  * @tid: TID for pkt transmission
  * @msdu_info: MSDU info of tx packet
+ * @ring_id: TCL ring id
  *
  * Returns: 1, if coalescing is to be done
  *	    0, if coalescing is not to be done
@@ -791,7 +794,9 @@ void dp_tx_update_stats(struct dp_soc *soc,
 int
 dp_tx_attempt_coalescing(struct dp_soc *soc, struct dp_vdev *vdev,
 			 struct dp_tx_desc_s *tx_desc,
-			 uint8_t tid, struct dp_tx_msdu_info_s *msdu_info);
+			 uint8_t tid,
+			 struct dp_tx_msdu_info_s *msdu_info,
+			 uint8_t ring_id);
 
 /**
  * dp_tx_ring_access_end() - HAL ring access end for data transmission
@@ -808,12 +813,15 @@ dp_tx_ring_access_end(struct dp_soc *soc, hal_ring_handle_t hal_ring_hdl,
 /**
  * dp_tx_update_stats() - Update soc level tx stats
  * @soc: DP soc handle
- * @nbuf: packet being transmitted
+ * @tx_desc: TX descriptor reference
+ * @ring_id: TCL ring id
  *
  * Returns: none
  */
 static inline void dp_tx_update_stats(struct dp_soc *soc,
-				      qdf_nbuf_t nbuf) { }
+				      struct dp_tx_desc_s *tx_desc,
+				      uint8_t ring_id){ }
+
 static inline void
 dp_tx_ring_access_end(struct dp_soc *soc, hal_ring_handle_t hal_ring_hdl,
 		      int coalesce)
@@ -825,7 +833,8 @@ static inline int
 dp_tx_attempt_coalescing(struct dp_soc *soc, struct dp_vdev *vdev,
 			 struct dp_tx_desc_s *tx_desc,
 			 uint8_t tid,
-			 struct dp_tx_msdu_info_s *msdu_info)
+			 struct dp_tx_msdu_info_s *msdu_info,
+			 uint8_t ring_id)
 {
 	return 0;
 }

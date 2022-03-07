@@ -7983,7 +7983,7 @@ QDF_STATUS dp_txrx_get_soc_stats(struct cdp_soc_t *soc_hdl,
 	uint8_t cpus;
 
 	/* soc tx stats */
-	soc_stats->tx.egress = soc->stats.tx.egress;
+	soc_stats->tx.egress = soc->stats.tx.egress[0];
 	soc_stats->tx.tx_invalid_peer = soc->stats.tx.tx_invalid_peer;
 	for (inx = 0; inx < CDP_MAX_TX_DATA_RINGS; inx++) {
 		soc_stats->tx.tx_hw_enq[inx] = soc->stats.tx.tcl_enq[inx];
