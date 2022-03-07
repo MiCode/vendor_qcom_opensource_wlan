@@ -1775,17 +1775,6 @@ target_if_sops_stop_spectral_scan(void *arg, enum spectral_scan_mode smode)
 		p_sops->configure_spectral(spectral, sparams, smode);
 	}
 
-	if (ret == 0 && smode == SPECTRAL_SCAN_MODE_NORMAL) {
-		struct target_if_spectral_ops *p_sops;
-		struct spectral_config *sparams;
-
-		p_sops = GET_TARGET_IF_SPECTRAL_OPS(spectral);
-		sparams = &spectral->params[smode];
-		sparams->ss_recapture = false;
-
-		p_sops->configure_spectral(spectral, sparams, smode);
-	}
-
 	return ret;
 }
 
@@ -4431,12 +4420,28 @@ _target_if_set_spectral_config(struct target_if_spectral *spectral,
 		break;
 	case SPECTRAL_PARAM_SCAN_PERIOD:
 		sparams->ss_period = param->value;
-		if ((sparams->ss_period >=
-		     SPECTRAL_RECAPTURE_SCAN_PERIOD_THRESHOLD) &&
-		    (smode == SPECTRAL_SCAN_MODE_NORMAL))
-			sparams->ss_recapture = true;
-		else
+		if (sparams->ss_recapture && ((sparams->ss_period <
+		    SPECTRAL_RECAPTURE_SCAN_PERIOD_THRESHOLD) ||
+		    (smode == SPECTRAL_SCAN_MODE_AGILE))) {
 			sparams->ss_recapture = false;
+			spectral_err("FFT recapture cannot be enabled due to scan period: %d us or spectral scan mode: %d",
+				     sparams->ss_period, smode);
+		}
+		break;
+	case SPECTRAL_PARAM_FFT_RECAPTURE:
+		if (param->value) {
+			if (sparams->ss_period >=
+			    SPECTRAL_RECAPTURE_SCAN_PERIOD_THRESHOLD &&
+			    smode == SPECTRAL_SCAN_MODE_NORMAL) {
+				sparams->ss_recapture = true;
+			} else {
+				spectral_err("FFT recapture cannot be enabled due to scan period: %d us or spectral scan mode: %d",
+					     sparams->ss_period, smode);
+				sparams->ss_recapture = false;
+			}
+		} else {
+			sparams->ss_recapture = false;
+		}
 		break;
 	case SPECTRAL_PARAM_SCAN_COUNT:
 		sparams->ss_count = param->value;

@@ -7700,6 +7700,13 @@ enum qca_wlan_vendor_attr_spectral_scan {
 	 * for the current operating bandwidth.
 	 */
 	QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_CONFIG_BANDWIDTH = 30,
+	/* Spectral FFT recapture flag attribute, to enable/disable FFT
+	 * recapture. Recapture can only be enabled for Scan period greater
+	 * than 52us.
+	 * If this attribute is enabled, re-triggers will be enabled in uCode
+	 * when AGC gain changes.
+	 */
+	QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_CONFIG_FFT_RECAPTURE = 31,
 
 	QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_CONFIG_AFTER_LAST,
 	QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_CONFIG_MAX =
