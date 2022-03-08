@@ -226,13 +226,11 @@ void dp_rx_mon_process_tlv_status(struct dp_pdev *pdev,
  * dp_rx_mon_process_status_tlv () - Handle mon status process TLV
  *
  * @pdev: DP pdev handle
- * @status_buf_count : status buf count for a PPDU
  *
  * Return
  */
 static inline struct hal_rx_ppdu_info *
-dp_rx_mon_process_status_tlv(struct dp_pdev *pdev,
-			     uint8_t status_buf_count)
+dp_rx_mon_process_status_tlv(struct dp_pdev *pdev)
 {
 	struct dp_soc *soc = pdev->soc;
 	struct dp_mon_pdev *mon_pdev = pdev->monitor_pdev;
@@ -252,8 +250,9 @@ dp_rx_mon_process_status_tlv(struct dp_pdev *pdev,
 	struct dp_mon_soc_be *mon_soc_be = dp_get_be_mon_soc_from_dp_mon_soc(mon_soc);
 	struct dp_mon_desc_pool *rx_mon_desc_pool = &mon_soc_be->rx_desc_mon;
 	uint8_t work_done = 0;
+	uint16_t status_buf_count;
 
-	if (!status_buf_count) {
+	if (!mon_pdev_be->desc_count) {
 		dp_mon_err("no of status buffer count is zero: %pK", pdev);
 		return NULL;
 	}
@@ -265,6 +264,7 @@ dp_rx_mon_process_status_tlv(struct dp_pdev *pdev,
 		return NULL;
 	}
 
+	status_buf_count = mon_pdev_be->desc_count;
 	for (idx = 0; idx < status_buf_count; idx++) {
 		mon_desc = mon_pdev_be->status[idx];
 		if (!mon_desc) {
@@ -296,6 +296,7 @@ dp_rx_mon_process_status_tlv(struct dp_pdev *pdev,
 
 		/* set status buffer pointer to NULL */
 		mon_pdev_be->status[idx] = NULL;
+		mon_pdev_be->desc_count--;
 
 		qdf_frag_free(buf);
 	}
@@ -327,7 +328,6 @@ dp_rx_mon_srng_process_2_0(struct dp_soc *soc, struct dp_intr *int_ctx,
 	void *mon_dst_srng;
 	uint32_t work_done = 0;
 	struct hal_rx_ppdu_info *ppdu_info = NULL;
-	uint8_t desc_idx = 0;
 	QDF_STATUS status;
 
 	if (!pdev) {
@@ -401,10 +401,10 @@ dp_rx_mon_srng_process_2_0(struct dp_soc *soc, struct dp_intr *int_ctx,
 							mon_dst_srng);
 			continue;
 		}
-		if (desc_idx >= DP_MON_MAX_STATUS_BUF)
+		if (mon_pdev_be->desc_count >= DP_MON_MAX_STATUS_BUF)
 			qdf_assert_always(0);
 
-		mon_pdev_be->status[desc_idx++] = mon_desc;
+		mon_pdev_be->status[mon_pdev_be->desc_count++] = mon_desc;
 
 		rx_mon_dst_ring_desc = hal_srng_dst_get_next(hal_soc, mon_dst_srng);
 
@@ -417,7 +417,7 @@ dp_rx_mon_srng_process_2_0(struct dp_soc *soc, struct dp_intr *int_ctx,
 
 		mon_pdev->rx_mon_stats.status_ppdu_done++;
 
-		ppdu_info = dp_rx_mon_process_status_tlv(pdev, desc_idx);
+		ppdu_info = dp_rx_mon_process_status_tlv(pdev);
 
 		/* Call enhanced stats update API */
 		if (mon_pdev->enhanced_stats_en && ppdu_info)
@@ -429,7 +429,12 @@ dp_rx_mon_srng_process_2_0(struct dp_soc *soc, struct dp_intr *int_ctx,
 			qdf_mem_free(ppdu_info);
 
 		work_done++;
-		desc_idx = 0;
+
+		/* desc_count should be zero  after PPDU status processing */
+		if (mon_pdev_be->desc_count > 0)
+			qdf_assert_always(0);
+
+		mon_pdev_be->desc_count = 0;
 	}
 	dp_srng_access_end(int_ctx, soc, mon_dst_srng);
 

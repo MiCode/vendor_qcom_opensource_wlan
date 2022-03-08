@@ -110,6 +110,7 @@ struct dp_mon_desc_pool {
  * @rx_mon_work: Rx mon work
  * @rx_mon_queue: RxMON queue
  * @rx_mon_queue_depth: RxMON queue depth
+ * @desc_count: reaped status desc count
  * @status: reaped status buffer per ppdu
  */
 struct dp_mon_pdev_be {
@@ -125,6 +126,7 @@ struct dp_mon_pdev_be {
 
 	TAILQ_HEAD(, hal_rx_ppdu_info) rx_mon_queue;
 	uint16_t rx_mon_queue_depth;
+	uint16_t desc_count;
 	struct dp_mon_desc *status[DP_MON_MAX_STATUS_BUF];
 };
 
