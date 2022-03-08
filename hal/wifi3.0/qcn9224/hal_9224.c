@@ -38,7 +38,6 @@
 #include "wfss_ce_reg_seq_hwioreg.h"
 #include <uniform_reo_status_header.h>
 #include <wbm_release_ring_tx.h>
-#include <wbm_release_ring_rx.h>
 #include <phyrx_location.h>
 #ifdef QCA_MONITOR_2_0_SUPPORT
 #include <mon_ingress_ring.h>
