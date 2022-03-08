@@ -2059,7 +2059,41 @@ wlan_reg_decide_6g_ap_pwr_type(struct wlan_objmgr_pdev *pdev);
 QDF_STATUS
 wlan_reg_set_ap_pwr_and_update_chan_list(struct wlan_objmgr_pdev *pdev,
 					 enum reg_6g_ap_type ap_pwr_type);
-#else
+
+/**
+ * wlan_reg_get_best_6g_pwr_type() - Returns the best 6g power type supported
+ * for a given frequency.
+ * @pdev: pdev pointer
+ * @freq: input frequency.
+ *
+ * Return: supported_6g_pwr_types enum.
+ */
+enum supported_6g_pwr_types
+wlan_reg_get_best_6g_pwr_type(struct wlan_objmgr_pdev *pdev, qdf_freq_t freq);
+
+/**
+ * wlan_reg_conv_6g_ap_type_to_supported_6g_pwr_types() - Converts the 6G AP
+ * power type to 6g supported power type enum.
+ * @ap_pwr_type: input 6G AP power type.
+ *
+ * Return: supported_6g_pwr_types enum.
+ */
+enum supported_6g_pwr_types
+wlan_reg_conv_6g_ap_type_to_supported_6g_pwr_types(enum reg_6g_ap_type
+						   ap_pwr_type);
+
+/**
+ * wlan_reg_conv_supported_6g_pwr_type_to_ap_pwr_type() - The supported 6G power
+ * type is a combination of AP and client power types. This API return the 6G AP
+ * power type portion of the supported 6G power type.
+ * @in_6g_pwr_type: input 6G supported power type.
+ *
+ * Return: 6G AP power type.
+ */
+enum reg_6g_ap_type
+wlan_reg_conv_supported_6g_pwr_type_to_ap_pwr_type(enum supported_6g_pwr_types
+						  in_6g_pwr_type);
+#else /* !CONFIG_BAND_6GHZ */
 static inline QDF_STATUS
 wlan_reg_get_cur_6g_ap_pwr_type(struct wlan_objmgr_pdev *pdev,
 				enum reg_6g_ap_type *reg_cur_6g_ap_pwr_type)
@@ -2149,7 +2183,27 @@ wlan_reg_set_ap_pwr_and_update_chan_list(struct wlan_objmgr_pdev *pdev,
 {
 	return QDF_STATUS_E_NOSUPPORT;
 }
-#endif
+
+static inline enum supported_6g_pwr_types
+wlan_reg_get_best_6g_pwr_type(struct wlan_objmgr_pdev *pdev, qdf_freq_t freq)
+{
+	return REG_MAX_AP_TYPE;
+}
+
+static inline enum supported_6g_pwr_types
+wlan_reg_conv_6g_ap_type_to_supported_6g_pwr_types(enum reg_6g_ap_type
+						   ap_pwr_type)
+{
+	return REG_MAX_AP_TYPE;
+}
+
+static inline enum reg_6g_ap_type
+wlan_reg_conv_supported_6g_pwr_type_to_ap_pwr_type(enum supported_6g_pwr_types
+						   in_6g_pwr_type)
+{
+	return REG_MAX_AP_TYPE;
+}
+#endif /* CONFIG_BAND_6GHZ */
 
 /**
  * wlan_reg_is_ext_tpc_supported() - Checks if FW supports new WMI cmd for TPC
@@ -2172,38 +2226,4 @@ bool wlan_reg_is_ext_tpc_supported(struct wlan_objmgr_psoc *psoc);
 QDF_STATUS wlan_reg_is_chwidth_supported(struct wlan_objmgr_pdev *pdev,
 					 enum phy_ch_width ch_width,
 					 bool *is_supported);
-
-/**
- * wlan_reg_get_best_6g_pwr_type() - Returns the best 6g power type supported
- * for a given frequency.
- * @pdev: pdev pointer
- * @freq: input frequency.
- *
- * Return: supported_6g_pwr_types enum.
- */
-enum supported_6g_pwr_types
-wlan_reg_get_best_6g_pwr_type(struct wlan_objmgr_pdev *pdev, qdf_freq_t freq);
-
-/**
- * wlan_reg_conv_6g_ap_type_to_supported_6g_pwr_types() - Converts the 6G AP
- * power type to 6g supported power type enum.
- * @ap_pwr_type: input 6G AP power type.
- *
- * Return: supported_6g_pwr_types enum.
- */
-enum supported_6g_pwr_types
-wlan_reg_conv_6g_ap_type_to_supported_6g_pwr_types(enum reg_6g_ap_type
-						   ap_pwr_type);
-
-/**
- * wlan_reg_conv_supported_6g_pwr_type_to_ap_pwr_type() - The supported 6G power
- * type is a combination of AP and client power types. This API return the 6G AP
- * power type portion of the supported 6G power type.
- * @in_6g_pwr_type: input 6G supported power type.
- *
- * Return: 6G AP power type.
- */
-enum reg_6g_ap_type
-wlan_reg_conv_supported_6g_pwr_type_to_ap_pwr_type(enum supported_6g_pwr_types
-						  in_6g_pwr_type);
 #endif
