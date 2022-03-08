@@ -1512,6 +1512,7 @@ QDF_STATUS dp_txrx_set_vdev_param_be(struct dp_soc *soc,
 	switch (param) {
 	case CDP_TX_ENCAP_TYPE:
 	case CDP_UPDATE_DSCP_TO_TID_MAP:
+	case CDP_UPDATE_TDLS_FLAGS:
 		dp_tx_update_bank_profile(be_soc, be_vdev);
 		break;
 	case CDP_ENABLE_CIPHER:
