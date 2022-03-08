@@ -906,7 +906,7 @@ util_scan_parse_rnr_ie(struct scan_cache_entry *scan_entry,
 
 		for (i = 0; i < (tbtt_count + 1) &&
 		     data < ((uint8_t *)ie + rnr_ie_len + 2); i++) {
-			if (i < MAX_RNR_BSS || idx < MAX_RNR_BSS)
+			if ((i < MAX_RNR_BSS) && (idx < MAX_RNR_BSS))
 				util_scan_update_rnr(
 					&scan_entry->rnr.bss_info[idx++],
 					neighbor_ap_info,
