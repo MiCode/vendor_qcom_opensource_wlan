@@ -3227,4 +3227,64 @@ void *hal_srng_dst_prefetch_next_cached_desc(hal_soc_handle_t hal_soc_hdl,
 	qdf_prefetch(last_prefetched_hw_desc);
 	return (void *)last_prefetched_hw_desc;
 }
+
+/**
+ * hal_srng_dst_prefetch_32_byte_desc() - function to prefetch a desc at
+ *					  64 byte offset
+ * @hal_soc_hdl: HAL SOC handle
+ * @hal_ring_hdl: Destination ring pointer
+ * @num_valid: valid entries in the ring
+ *
+ * return: last prefetched destination ring descriptor
+ */
+static inline
+void *hal_srng_dst_prefetch_32_byte_desc(hal_soc_handle_t hal_soc_hdl,
+					 hal_ring_handle_t hal_ring_hdl,
+					 uint16_t num_valid)
+{
+	struct hal_srng *srng = (struct hal_srng *)hal_ring_hdl;
+	uint8_t *desc;
+
+	if (srng->u.dst_ring.tp == srng->u.dst_ring.cached_hp)
+		return NULL;
+
+	desc = (uint8_t *)&srng->ring_base_vaddr[srng->u.dst_ring.tp];
+
+	if ((uintptr_t)desc & 0x3f)
+		desc += srng->entry_size * sizeof(uint32_t);
+	else
+		desc += (srng->entry_size * sizeof(uint32_t)) * 2;
+
+	if (desc  == ((uint8_t *)srng->ring_vaddr_end))
+		desc = (uint8_t *)&srng->ring_base_vaddr[0];
+
+	qdf_prefetch(desc);
+
+	return (void *)(desc + srng->entry_size * sizeof(uint32_t));
+}
+
+/**
+ * hal_srng_dst_prefetch_next_cached_desc() - function to prefetch next desc
+ * @hal_soc_hdl: HAL SOC handle
+ * @hal_ring_hdl: Destination ring pointer
+ * @last_prefetched_hw_desc: last prefetched HW descriptor
+ *
+ * return: next prefetched destination descriptor
+ */
+static inline
+void *hal_srng_dst_get_next_32_byte_desc(hal_soc_handle_t hal_soc_hdl,
+					 hal_ring_handle_t hal_ring_hdl,
+					 uint8_t *last_prefetched_hw_desc)
+{
+	struct hal_srng *srng = (struct hal_srng *)hal_ring_hdl;
+
+	if (srng->u.dst_ring.tp == srng->u.dst_ring.cached_hp)
+		return NULL;
+
+	last_prefetched_hw_desc += srng->entry_size * sizeof(uint32_t);
+	if (last_prefetched_hw_desc == ((uint8_t *)srng->ring_vaddr_end))
+		last_prefetched_hw_desc = (uint8_t *)&srng->ring_base_vaddr[0];
+
+	return (void *)last_prefetched_hw_desc;
+}
 #endif /* _HAL_APIH_ */

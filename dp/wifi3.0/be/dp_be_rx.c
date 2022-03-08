@@ -163,8 +163,10 @@ uint32_t dp_rx_process_be(struct dp_intr *int_ctx,
 			  uint32_t quota)
 {
 	hal_ring_desc_t ring_desc;
+	hal_ring_desc_t last_prefetched_hw_desc;
 	hal_soc_handle_t hal_soc;
 	struct dp_rx_desc *rx_desc = NULL;
+	struct dp_rx_desc *last_prefetched_sw_desc = NULL;
 	qdf_nbuf_t nbuf, next;
 	bool near_full;
 	union dp_rx_desc_list_elem_t *head[WLAN_MAX_MLO_CHIPS][MAX_PDEV_CNT];
@@ -190,7 +192,6 @@ uint32_t dp_rx_process_be(struct dp_intr *int_ctx,
 	struct dp_srng *dp_rxdma_srng;
 	struct rx_desc_pool *rx_desc_pool;
 	struct dp_soc *soc = int_ctx->soc;
-	uint8_t core_id = 0;
 	struct cdp_tid_rx_stats *tid_stats;
 	qdf_nbuf_t nbuf_head;
 	qdf_nbuf_t nbuf_tail;
@@ -264,14 +265,27 @@ more_data:
 
 	hal_srng_update_ring_usage_wm_no_lock(soc->hal_soc, hal_ring_hdl);
 
+	if (!num_pending)
+		num_pending = hal_srng_dst_num_valid(hal_soc, hal_ring_hdl, 0);
+
+	if (num_pending > quota)
+		num_pending = quota;
+
+	dp_srng_dst_inv_cached_descs(soc, hal_ring_hdl, num_pending);
+	last_prefetched_hw_desc = dp_srng_dst_prefetch_32_byte_desc(hal_soc,
+							    hal_ring_hdl,
+							    num_pending);
 	/*
 	 * start reaping the buffers from reo ring and queue
 	 * them in per vdev queue.
 	 * Process the received pkts in a different per vdev loop.
 	 */
-	while (qdf_likely(quota &&
-			  (ring_desc = hal_srng_dst_peek(hal_soc,
-							 hal_ring_hdl)))) {
+	while (qdf_likely(num_pending)) {
+		ring_desc = dp_srng_dst_get_next(soc, hal_ring_hdl);
+
+		if (qdf_unlikely(!ring_desc))
+			break;
+
 		error = HAL_RX_ERROR_STATUS_GET(ring_desc);
 
 		if (qdf_unlikely(error == HAL_REO_ERROR_DETECTED)) {
@@ -375,19 +389,25 @@ more_data:
 				if ((msdu_desc_info.msdu_len /
 				     (RX_DATA_BUFFER_SIZE -
 				      soc->rx_pkt_tlv_size) + 1) >
-				    num_entries_avail) {
+				    num_pending) {
 					DP_STATS_INC(soc,
 						     rx.msdu_scatter_wait_break,
 						     1);
 					dp_rx_cookie_reset_invalid_bit(
 								     ring_desc);
+					/* As we are going to break out of the
+					 * loop because of unavailability of
+					 * descs to form complete SG, we need to
+					 * reset the TP in the REO destination
+					 * ring.
+					 */
+					hal_srng_dst_dec_tp(hal_soc,
+							    hal_ring_hdl);
 					break;
 				}
 				is_prev_msdu_last = false;
 			}
 		}
-		core_id = smp_processor_id();
-		DP_STATS_INC(soc, rx.ring_packets[core_id][reo_ring_num], 1);
 
 		if (mpdu_desc_info.mpdu_flags & HAL_MPDU_F_RETRY_BIT)
 			qdf_nbuf_set_rx_retry_flag(rx_desc->nbuf, 1);
@@ -400,10 +420,8 @@ more_data:
 		    msdu_desc_info.msdu_flags & HAL_MSDU_F_LAST_MSDU_IN_MPDU)
 			is_prev_msdu_last = true;
 
-		/* Pop out the descriptor*/
-		hal_srng_dst_get_next(hal_soc, hal_ring_hdl);
-
 		rx_bufs_reaped[rx_desc->chip_id][rx_desc->pool_id]++;
+
 		peer_mdata = mpdu_desc_info.peer_meta_data;
 		QDF_NBUF_CB_RX_PEER_ID(rx_desc->nbuf) =
 			dp_rx_peer_metadata_peer_id_get_be(soc, peer_mdata);
@@ -461,23 +479,25 @@ more_data:
 		 * move unmap after scattered msdu waiting break logic
 		 * in case double skb unmap happened.
 		 */
-		rx_desc_pool = &soc->rx_desc_buf[rx_desc->pool_id];
 		dp_rx_nbuf_unmap(soc, rx_desc, reo_ring_num);
 		rx_desc->unmapped = 1;
 		DP_RX_PROCESS_NBUF(soc, nbuf_head, nbuf_tail, ebuf_head,
 				   ebuf_tail, rx_desc);
-		/*
-		 * if continuation bit is set then we have MSDU spread
-		 * across multiple buffers, let us not decrement quota
-		 * till we reap all buffers of that MSDU.
-		 */
-		if (qdf_likely(!qdf_nbuf_is_rx_chfrag_cont(rx_desc->nbuf)))
-			quota -= 1;
+
+		quota -= 1;
+		num_pending -= 1;
 
 		dp_rx_add_to_free_desc_list
 			(&head[rx_desc->chip_id][rx_desc->pool_id],
 			 &tail[rx_desc->chip_id][rx_desc->pool_id], rx_desc);
 		num_rx_bufs_reaped++;
+
+		dp_rx_prefetch_hw_sw_nbuf_32_byte_desc(soc, hal_soc,
+					       num_pending,
+					       hal_ring_hdl,
+					       &last_prefetched_hw_desc,
+					       &last_prefetched_sw_desc);
+
 		/*
 		 * only if complete msdu is received for scatter case,
 		 * then allow break.
@@ -489,6 +509,9 @@ more_data:
 	}
 done:
 	dp_rx_srng_access_end(int_ctx, soc, hal_ring_hdl);
+	qdf_dsb();
+
+	dp_rx_per_core_stats_update(soc, reo_ring_num, num_rx_bufs_reaped);
 
 	for (chip_id = 0; chip_id < WLAN_MAX_MLO_CHIPS; chip_id++) {
 		for (mac_id = 0; mac_id < MAX_PDEV_CNT; mac_id++) {
@@ -506,11 +529,12 @@ done:
 
 			rx_desc_pool = &replenish_soc->rx_desc_buf[mac_id];
 
-			dp_rx_buffers_replenish(replenish_soc, mac_id,
-						dp_rxdma_srng, rx_desc_pool,
-						rx_bufs_reaped[chip_id][mac_id],
-						&head[chip_id][mac_id],
-						&tail[chip_id][mac_id]);
+			dp_rx_buffers_replenish_simple(replenish_soc, mac_id,
+					       dp_rxdma_srng,
+					       rx_desc_pool,
+					       rx_bufs_reaped[chip_id][mac_id],
+					       &head[chip_id][mac_id],
+					       &tail[chip_id][mac_id]);
 		}
 	}
 

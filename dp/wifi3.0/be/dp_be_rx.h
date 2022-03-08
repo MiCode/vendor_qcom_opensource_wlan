@@ -23,6 +23,8 @@
 #include <dp_types.h>
 #include "dp_be.h"
 #include "dp_peer.h"
+#include <dp_rx.h>
+#include "hal_be_rx.h"
 
 /*
  * dp_be_intrabss_params
@@ -396,6 +398,75 @@ void dp_rx_prefetch_nbuf_data_be(qdf_nbuf_t nbuf, qdf_nbuf_t next)
 #else
 static inline
 void dp_rx_prefetch_nbuf_data_be(qdf_nbuf_t nbuf, qdf_nbuf_t next)
+{
+}
+#endif
+
+#ifdef QCA_DP_RX_HW_SW_NBUF_DESC_PREFETCH
+/**
+ * dp_rx_cookie_2_va_rxdma_buf_prefetch() - function to prefetch the SW desc
+ * @soc: Handle to DP Soc structure
+ * @cookie: cookie used to lookup virtual address
+ *
+ * Return: prefetched Rx descriptor virtual address
+ */
+static inline
+void *dp_rx_va_prefetch(void *last_prefetched_hw_desc)
+{
+	void *prefetch_desc;
+
+	prefetch_desc = (void *)hal_rx_get_reo_desc_va(last_prefetched_hw_desc);
+	qdf_prefetch(prefetch_desc);
+	return prefetch_desc;
+}
+
+/**
+ * dp_rx_prefetch_hw_sw_nbuf_desc() - function to prefetch HW and SW desc
+ * @soc: Handle to HAL Soc structure
+ * @num_entries: valid number of HW descriptors
+ * @hal_ring_hdl: Destination ring pointer
+ * @last_prefetched_hw_desc: pointer to the last prefetched HW descriptor
+ * @last_prefetched_sw_desc: input & output param of last prefetch SW desc
+ *
+ * Return: None
+ */
+static inline void
+dp_rx_prefetch_hw_sw_nbuf_32_byte_desc(struct dp_soc *soc,
+			       hal_soc_handle_t hal_soc,
+			       uint32_t num_entries,
+			       hal_ring_handle_t hal_ring_hdl,
+			       hal_ring_desc_t *last_prefetched_hw_desc,
+			       struct dp_rx_desc **last_prefetched_sw_desc)
+{
+	if (*last_prefetched_sw_desc) {
+		qdf_prefetch((uint8_t *)(*last_prefetched_sw_desc)->nbuf);
+		qdf_prefetch((uint8_t *)(*last_prefetched_sw_desc)->nbuf + 64);
+	}
+
+	if (num_entries) {
+		*last_prefetched_sw_desc =
+			dp_rx_va_prefetch(*last_prefetched_hw_desc);
+
+		if ((uintptr_t)*last_prefetched_hw_desc & 0x3f)
+			*last_prefetched_hw_desc =
+				hal_srng_dst_prefetch_next_cached_desc(hal_soc,
+					  hal_ring_hdl,
+					  (uint8_t *)*last_prefetched_hw_desc);
+		else
+			*last_prefetched_hw_desc =
+				hal_srng_dst_get_next_32_byte_desc(hal_soc,
+				   hal_ring_hdl,
+				   (uint8_t *)*last_prefetched_hw_desc);
+	}
+}
+#else
+static inline void
+dp_rx_prefetch_hw_sw_nbuf_32_byte_desc(struct dp_soc *soc,
+			       hal_soc_handle_t hal_soc,
+			       uint32_t num_entries,
+			       hal_ring_handle_t hal_ring_hdl,
+			       hal_ring_desc_t *last_prefetched_hw_desc,
+			       struct dp_rx_desc **last_prefetched_sw_desc)
 {
 }
 #endif

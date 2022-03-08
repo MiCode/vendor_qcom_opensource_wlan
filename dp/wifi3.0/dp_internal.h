@@ -2893,10 +2893,37 @@ static inline void *dp_srng_dst_prefetch(hal_soc_handle_t hal_soc,
 {
 	return hal_srng_dst_prefetch(hal_soc, hal_ring_hdl, num_entries);
 }
+
+/**
+ * dp_srng_dst_prefetch_32_byte_desc() - Wrapper function to prefetch
+ *					 32 byte descriptor starting at
+ *					 64 byte offset
+ * @hal_soc_hdl: HAL SOC handle
+ * @hal_ring: opaque pointer to the HAL Rx Destination ring
+ * @num_entries: Entry count
+ *
+ * Return: None
+ */
+static inline
+void *dp_srng_dst_prefetch_32_byte_desc(hal_soc_handle_t hal_soc,
+					hal_ring_handle_t hal_ring_hdl,
+					uint32_t num_entries)
+{
+	return hal_srng_dst_prefetch_32_byte_desc(hal_soc, hal_ring_hdl,
+						  num_entries);
+}
 #else
 static inline void *dp_srng_dst_prefetch(hal_soc_handle_t hal_soc,
 					 hal_ring_handle_t hal_ring_hdl,
 					 uint32_t num_entries)
+{
+	return NULL;
+}
+
+static inline
+void *dp_srng_dst_prefetch_32_byte_desc(hal_soc_handle_t hal_soc,
+					hal_ring_handle_t hal_ring_hdl,
+					uint32_t num_entries)
 {
 	return NULL;
 }

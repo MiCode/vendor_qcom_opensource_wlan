@@ -2395,7 +2395,7 @@ void dp_rx_nbuf_unmap(struct dp_soc *soc,
 	rx_desc_pool = &soc->rx_desc_buf[rx_desc->pool_id];
 	nbuf = rx_desc->nbuf;
 
-	qdf_nbuf_dma_inv_range((void *)nbuf->data,
+	qdf_nbuf_dma_inv_range_no_dsb((void *)nbuf->data,
 			       (void *)(nbuf->data + rx_desc_pool->buf_size));
 }
 
