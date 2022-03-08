@@ -370,4 +370,27 @@ QDF_STATUS dp_peer_rx_reorder_queue_setup_be(struct dp_soc *soc,
 	return QDF_STATUS_SUCCESS;
 }
 #endif /* WLAN_FEATURE_11BE_MLO */
+
+#ifdef QCA_DP_RX_NBUF_AND_NBUF_DATA_PREFETCH
+static inline
+void dp_rx_prefetch_nbuf_data_be(qdf_nbuf_t nbuf, qdf_nbuf_t next)
+{
+	if (next) {
+		/* prefetch skb->next and first few bytes of skb->cb */
+		qdf_prefetch(next);
+		/* skb->cb spread across 2 cache lines hence below prefetch */
+		qdf_prefetch(&next->_skb_refdst);
+		qdf_prefetch(&next->len);
+		qdf_prefetch(&next->protocol);
+		qdf_prefetch(next->data);
+		qdf_prefetch(next->data + 64);
+		qdf_prefetch(next->data + 128);
+	}
+}
+#else
+static inline
+void dp_rx_prefetch_nbuf_data_be(qdf_nbuf_t nbuf, qdf_nbuf_t next)
+{
+}
+#endif
 #endif
