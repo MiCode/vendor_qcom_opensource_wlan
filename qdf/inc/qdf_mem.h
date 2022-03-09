@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2014-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -198,7 +198,7 @@ void qdf_mem_free_debug(void *ptr, const char *file, uint32_t line);
 
 void qdf_mem_multi_pages_alloc_debug(qdf_device_t osdev,
 				     struct qdf_mem_multi_page_t *pages,
-				     size_t element_size, uint16_t element_num,
+				     size_t element_size, uint32_t element_num,
 				     qdf_dma_context_t memctxt, bool cacheable,
 				     const char *func, uint32_t line,
 				     void *caller);
@@ -354,7 +354,7 @@ static inline void qdf_mem_check_for_leaks(void) { }
 
 void qdf_mem_multi_pages_alloc(qdf_device_t osdev,
 			       struct qdf_mem_multi_page_t *pages,
-			       size_t element_size, uint16_t element_num,
+			       size_t element_size, uint32_t element_num,
 			       qdf_dma_context_t memctxt, bool cacheable);
 
 void qdf_mem_multi_pages_free(qdf_device_t osdev,
