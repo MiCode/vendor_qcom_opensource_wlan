@@ -5440,7 +5440,7 @@ static QDF_STATUS dp_tx_alloc_static_pools(struct dp_soc *soc, int num_pool,
 }
 
 static QDF_STATUS dp_tx_init_static_pools(struct dp_soc *soc, int num_pool,
-					  int num_desc)
+					  uint32_t num_desc)
 {
 	return QDF_STATUS_SUCCESS;
 }
@@ -5458,7 +5458,7 @@ static void dp_tx_delete_static_pools(struct dp_soc *soc, int num_pool)
 }
 #else /* QCA_LL_TX_FLOW_CONTROL_V2! */
 static QDF_STATUS dp_tx_alloc_static_pools(struct dp_soc *soc, int num_pool,
-					   int num_desc)
+					   uint32_t num_desc)
 {
 	uint8_t i, count;
 
@@ -5481,7 +5481,7 @@ fail:
 }
 
 static QDF_STATUS dp_tx_init_static_pools(struct dp_soc *soc, int num_pool,
-					  int num_desc)
+					  uint32_t num_desc)
 {
 	uint8_t i;
 	for (i = 0; i < num_pool; i++) {
@@ -5591,7 +5591,7 @@ void dp_soc_tx_desc_sw_pools_deinit(struct dp_soc *soc)
  */
 QDF_STATUS dp_tx_tso_cmn_desc_pool_alloc(struct dp_soc *soc,
 					 uint8_t num_pool,
-					 uint16_t num_desc)
+					 uint32_t num_desc)
 {
 	if (dp_tx_tso_desc_pool_alloc(soc, num_pool, num_desc)) {
 		dp_err("TSO Desc Pool alloc %d failed %pK", num_pool, soc);
@@ -5620,7 +5620,7 @@ QDF_STATUS dp_tx_tso_cmn_desc_pool_alloc(struct dp_soc *soc,
 
 QDF_STATUS dp_tx_tso_cmn_desc_pool_init(struct dp_soc *soc,
 					uint8_t num_pool,
-					uint16_t num_desc)
+					uint32_t num_desc)
 {
 	if (dp_tx_tso_desc_pool_init(soc, num_pool, num_desc)) {
 		dp_err("TSO Desc Pool alloc %d failed %pK", num_pool, soc);

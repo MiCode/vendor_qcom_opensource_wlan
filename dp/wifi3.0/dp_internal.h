@@ -3224,7 +3224,7 @@ void dp_desc_multi_pages_mem_alloc(struct dp_soc *soc,
 				   enum dp_desc_type desc_type,
 				   struct qdf_mem_multi_page_t *pages,
 				   size_t element_size,
-				   uint16_t element_num,
+				   uint32_t element_num,
 				   qdf_dma_context_t memctxt,
 				   bool cacheable);
 
@@ -3268,7 +3268,7 @@ void dp_desc_multi_pages_mem_alloc(struct dp_soc *soc,
 				   enum dp_desc_type desc_type,
 				   struct qdf_mem_multi_page_t *pages,
 				   size_t element_size,
-				   uint16_t element_num,
+				   uint32_t element_num,
 				   qdf_dma_context_t memctxt,
 				   bool cacheable)
 {

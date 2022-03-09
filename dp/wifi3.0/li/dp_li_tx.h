@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -79,7 +79,7 @@ void dp_tx_process_htt_completion_li(struct dp_soc *soc,
  * Return: QDF_STATUS_SUCCESS - success, others - failure
  */
 QDF_STATUS dp_tx_desc_pool_init_li(struct dp_soc *soc,
-				   uint16_t num_elem,
+				   uint32_t num_elem,
 				   uint8_t pool_id);
 
 /**

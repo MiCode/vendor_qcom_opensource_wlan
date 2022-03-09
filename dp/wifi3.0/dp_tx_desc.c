@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -91,7 +92,7 @@ dp_tx_desc_pool_counter_initialize(struct dp_tx_desc_pool_s *tx_desc_pool,
  * Return: Status code. 0 for success.
  */
 QDF_STATUS dp_tx_desc_pool_alloc(struct dp_soc *soc, uint8_t pool_id,
-				 uint16_t num_elem)
+				 uint32_t num_elem)
 {
 	uint32_t desc_size;
 	struct dp_tx_desc_pool_s *tx_desc_pool;
@@ -138,7 +139,7 @@ void dp_tx_desc_pool_free(struct dp_soc *soc, uint8_t pool_id)
  *	   QDF_STATUS_E_FAULT
  */
 QDF_STATUS dp_tx_desc_pool_init(struct dp_soc *soc, uint8_t pool_id,
-				uint16_t num_elem)
+				uint32_t num_elem)
 {
 	struct dp_tx_desc_pool_s *tx_desc_pool;
 	uint32_t desc_size;
@@ -196,7 +197,7 @@ void dp_tx_desc_pool_deinit(struct dp_soc *soc, uint8_t pool_id)
  *	    QDF_STATUS_E_NOMEM
  */
 QDF_STATUS dp_tx_ext_desc_pool_alloc(struct dp_soc *soc, uint8_t num_pool,
-				     uint16_t num_elem)
+				     uint32_t num_elem)
 {
 	QDF_STATUS status = QDF_STATUS_SUCCESS;
 	qdf_dma_context_t memctx = 0;
@@ -285,7 +286,7 @@ fail_exit:
  *	    QDF_STATUS_E_NOMEM
  */
 QDF_STATUS dp_tx_ext_desc_pool_init(struct dp_soc *soc, uint8_t num_pool,
-				    uint16_t num_elem)
+				    uint32_t num_elem)
 {
 	uint32_t i;
 	struct dp_tx_ext_desc_elem_s *c_elem, *p_elem;
@@ -418,7 +419,7 @@ void dp_tx_ext_desc_pool_deinit(struct dp_soc *soc, uint8_t num_pool)
  *	    QDF_STATUS_E_NOMEM
  */
 QDF_STATUS dp_tx_tso_desc_pool_alloc(struct dp_soc *soc, uint8_t num_pool,
-				     uint16_t num_elem)
+				     uint32_t num_elem)
 {
 	struct dp_tx_tso_seg_pool_s *tso_desc_pool;
 	uint32_t desc_size, pool_id, i;
@@ -480,7 +481,7 @@ void dp_tx_tso_desc_pool_free(struct dp_soc *soc, uint8_t num_pool)
  *	    QDF_STATUS_E_NOMEM
  */
 QDF_STATUS dp_tx_tso_desc_pool_init(struct dp_soc *soc, uint8_t num_pool,
-				    uint16_t num_elem)
+				    uint32_t num_elem)
 {
 	struct dp_tx_tso_seg_pool_s *tso_desc_pool;
 	uint32_t desc_size, pool_id;
@@ -546,7 +547,7 @@ void dp_tx_tso_desc_pool_deinit(struct dp_soc *soc, uint8_t num_pool)
  *	    QDF_STATUS_E_NOMEM
  */
 QDF_STATUS dp_tx_tso_num_seg_pool_alloc(struct dp_soc *soc, uint8_t num_pool,
-					uint16_t num_elem)
+					uint32_t num_elem)
 {
 	struct dp_tx_tso_num_seg_pool_s *tso_num_seg_pool;
 	uint32_t desc_size, pool_id, i;
@@ -610,7 +611,7 @@ void dp_tx_tso_num_seg_pool_free(struct dp_soc *soc, uint8_t num_pool)
  *	    QDF_STATUS_E_FAULT
  */
 QDF_STATUS dp_tx_tso_num_seg_pool_init(struct dp_soc *soc, uint8_t num_pool,
-				       uint16_t num_elem)
+				       uint32_t num_elem)
 {
 	struct dp_tx_tso_num_seg_pool_s *tso_num_seg_pool;
 	uint32_t desc_size, pool_id;
@@ -666,13 +667,13 @@ void dp_tx_tso_num_seg_pool_deinit(struct dp_soc *soc, uint8_t num_pool)
 }
 #else
 QDF_STATUS dp_tx_tso_desc_pool_alloc(struct dp_soc *soc, uint8_t num_pool,
-				     uint16_t num_elem)
+				     uint32_t num_elem)
 {
 	return QDF_STATUS_SUCCESS;
 }
 
 QDF_STATUS dp_tx_tso_desc_pool_init(struct dp_soc *soc, uint8_t num_pool,
-				    uint16_t num_elem)
+				    uint32_t num_elem)
 {
 	return QDF_STATUS_SUCCESS;
 }
@@ -686,7 +687,7 @@ void dp_tx_tso_desc_pool_deinit(struct dp_soc *soc, uint8_t num_pool)
 }
 
 QDF_STATUS dp_tx_tso_num_seg_pool_alloc(struct dp_soc *soc, uint8_t num_pool,
-					uint16_t num_elem)
+					uint32_t num_elem)
 {
 	return QDF_STATUS_SUCCESS;
 }
@@ -696,7 +697,7 @@ void dp_tx_tso_num_seg_pool_free(struct dp_soc *soc, uint8_t num_pool)
 }
 
 QDF_STATUS dp_tx_tso_num_seg_pool_init(struct dp_soc *soc, uint8_t num_pool,
-				       uint16_t num_elem)
+				       uint32_t num_elem)
 {
 	return QDF_STATUS_SUCCESS;
 }

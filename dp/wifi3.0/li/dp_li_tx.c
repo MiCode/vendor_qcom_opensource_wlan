@@ -521,7 +521,7 @@ ring_access_fail:
 }
 
 QDF_STATUS dp_tx_desc_pool_init_li(struct dp_soc *soc,
-				   uint16_t num_elem,
+				   uint32_t num_elem,
 				   uint8_t pool_id)
 {
 	uint32_t id, count, page_id, offset, pool_id_32;

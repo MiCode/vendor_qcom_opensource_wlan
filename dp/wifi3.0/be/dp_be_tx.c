@@ -847,7 +847,7 @@ void dp_tx_update_bank_profile(struct dp_soc_be *be_soc,
 }
 
 QDF_STATUS dp_tx_desc_pool_init_be(struct dp_soc *soc,
-				   uint16_t num_elem,
+				   uint32_t num_elem,
 				   uint8_t pool_id)
 {
 	struct dp_tx_desc_pool_s *tx_desc_pool;

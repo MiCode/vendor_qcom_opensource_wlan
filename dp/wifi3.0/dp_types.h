@@ -1711,7 +1711,7 @@ struct dp_arch_ops {
 				  uint8_t reo_ring_num, uint32_t quota);
 
 	QDF_STATUS (*dp_tx_desc_pool_init)(struct dp_soc *soc,
-					   uint16_t num_elem,
+					   uint32_t num_elem,
 					   uint8_t pool_id);
 	void (*dp_tx_desc_pool_deinit)(
 				struct dp_soc *soc,
