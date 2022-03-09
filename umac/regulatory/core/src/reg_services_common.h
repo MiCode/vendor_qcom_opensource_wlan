@@ -2217,4 +2217,14 @@ reg_get_best_6g_pwr_type(struct wlan_objmgr_pdev *pdev, qdf_freq_t freq);
  */
 enum supported_6g_pwr_types
 reg_conv_6g_ap_type_to_supported_6g_pwr_types(enum reg_6g_ap_type ap_pwr_type);
+
+/**
+ * reg_find_chwidth_from_bw () - Gets channel width for given
+ * bandwidth
+ * @bw: Bandwidth
+ *
+ * Return: phy_ch_width
+ */
+enum phy_ch_width reg_find_chwidth_from_bw(uint16_t bw);
+
 #endif

@@ -8118,3 +8118,46 @@ bool reg_is_freq_idx_enabled(struct wlan_objmgr_pdev *pdev,
 	}
 }
 
+#ifdef WLAN_FEATURE_11BE
+enum phy_ch_width reg_find_chwidth_from_bw(uint16_t bw)
+{
+	switch (bw) {
+	case BW_5_MHZ:
+		return CH_WIDTH_5MHZ;
+	case BW_10_MHZ:
+		return CH_WIDTH_10MHZ;
+	case BW_20_MHZ:
+		return CH_WIDTH_20MHZ;
+	case BW_40_MHZ:
+		return CH_WIDTH_40MHZ;
+	case BW_80_MHZ:
+		return CH_WIDTH_80MHZ;
+	case BW_160_MHZ:
+		return CH_WIDTH_160MHZ;
+	case BW_320_MHZ:
+		return CH_WIDTH_320MHZ;
+	default:
+		return CH_WIDTH_INVALID;
+	}
+}
+#else
+enum phy_ch_width reg_find_chwidth_from_bw(uint16_t bw)
+{
+	switch (bw) {
+	case BW_5_MHZ:
+		return CH_WIDTH_5MHZ;
+	case BW_10_MHZ:
+		return CH_WIDTH_10MHZ;
+	case BW_20_MHZ:
+		return CH_WIDTH_20MHZ;
+	case BW_40_MHZ:
+		return CH_WIDTH_40MHZ;
+	case BW_80_MHZ:
+		return CH_WIDTH_80MHZ;
+	case BW_160_MHZ:
+		return CH_WIDTH_160MHZ;
+	default:
+		return CH_WIDTH_INVALID;
+	}
+}
+#endif
