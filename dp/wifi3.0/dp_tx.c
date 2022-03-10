@@ -148,36 +148,6 @@ dp_update_tx_desc_stats(struct dp_pdev *pdev)
 }
 #endif /* CONFIG_WLAN_SYSFS_MEM_STATS */
 
-#if defined(WLAN_TX_PKT_CAPTURE_ENH) || defined(FEATURE_PERPKT_INFO)
-static inline
-void dp_tx_enh_unmap(struct dp_soc *soc, struct dp_tx_desc_s *desc)
-{
-	qdf_nbuf_unmap_nbytes_single(soc->osdev, desc->nbuf,
-				     QDF_DMA_TO_DEVICE,
-				     desc->nbuf->len);
-	desc->flags |= DP_TX_DESC_FLAG_UNMAP_DONE;
-}
-
-static inline void dp_tx_unmap(struct dp_soc *soc, struct dp_tx_desc_s *desc)
-{
-	if (qdf_likely(!(desc->flags & DP_TX_DESC_FLAG_UNMAP_DONE)))
-		qdf_nbuf_unmap_nbytes_single(soc->osdev, desc->nbuf,
-					     QDF_DMA_TO_DEVICE,
-					     desc->nbuf->len);
-}
-#else
-static inline
-void dp_tx_enh_unmap(struct dp_soc *soc, struct dp_tx_desc_s *desc)
-{
-}
-
-static inline void dp_tx_unmap(struct dp_soc *soc, struct dp_tx_desc_s *desc)
-{
-	qdf_nbuf_unmap_nbytes_single(soc->osdev, desc->nbuf,
-				     QDF_DMA_TO_DEVICE, desc->nbuf->len);
-}
-#endif
-
 #ifdef QCA_TX_LIMIT_CHECK
 /**
  * dp_tx_limit_check - Check if allocated tx descriptors reached
@@ -1928,27 +1898,10 @@ static inline QDF_STATUS dp_tx_msdu_single_map(struct dp_vdev *vdev,
 }
 #endif
 
-#if defined(QCA_DP_TX_NBUF_NO_MAP_UNMAP) && !defined(BUILD_X86)
 static inline
-qdf_dma_addr_t dp_tx_nbuf_map(struct dp_vdev *vdev,
-			      struct dp_tx_desc_s *tx_desc,
-			      qdf_nbuf_t nbuf)
-{
-	qdf_nbuf_dma_clean_range((void *)nbuf->data,
-				 (void *)(nbuf->data + nbuf->len));
-	return (qdf_dma_addr_t)qdf_mem_virt_to_phys(nbuf->data);
-}
-
-static inline
-void dp_tx_nbuf_unmap(struct dp_soc *soc,
-		      struct dp_tx_desc_s *desc)
-{
-}
-#else
-static inline
-qdf_dma_addr_t dp_tx_nbuf_map(struct dp_vdev *vdev,
-			      struct dp_tx_desc_s *tx_desc,
-			      qdf_nbuf_t nbuf)
+qdf_dma_addr_t dp_tx_nbuf_map_regular(struct dp_vdev *vdev,
+				      struct dp_tx_desc_s *tx_desc,
+				      qdf_nbuf_t nbuf)
 {
 	QDF_STATUS ret = QDF_STATUS_E_FAILURE;
 
@@ -1960,14 +1913,76 @@ qdf_dma_addr_t dp_tx_nbuf_map(struct dp_vdev *vdev,
 }
 
 static inline
-void dp_tx_nbuf_unmap(struct dp_soc *soc,
-		      struct dp_tx_desc_s *desc)
+void dp_tx_nbuf_unmap_regular(struct dp_soc *soc, struct dp_tx_desc_s *desc)
 {
 	qdf_nbuf_unmap_nbytes_single_paddr(soc->osdev,
 					   desc->nbuf,
 					   desc->dma_addr,
 					   QDF_DMA_TO_DEVICE,
 					   desc->length);
+}
+
+#if defined(QCA_DP_TX_NBUF_NO_MAP_UNMAP) && !defined(BUILD_X86)
+static inline
+qdf_dma_addr_t dp_tx_nbuf_map(struct dp_vdev *vdev,
+			      struct dp_tx_desc_s *tx_desc,
+			      qdf_nbuf_t nbuf)
+{
+	if (qdf_likely(tx_desc->flags & DP_TX_DESC_FLAG_SIMPLE)) {
+		qdf_nbuf_dma_clean_range((void *)nbuf->data,
+					 (void *)(nbuf->data + nbuf->len));
+		return (qdf_dma_addr_t)qdf_mem_virt_to_phys(nbuf->data);
+	} else {
+		return dp_tx_nbuf_map_regular(vdev, tx_desc, nbuf);
+	}
+}
+
+static inline
+void dp_tx_nbuf_unmap(struct dp_soc *soc,
+		      struct dp_tx_desc_s *desc)
+{
+	if (qdf_unlikely(!(desc->flags & DP_TX_DESC_FLAG_SIMPLE)))
+		return dp_tx_nbuf_unmap_regular(soc, desc);
+}
+#else
+static inline
+qdf_dma_addr_t dp_tx_nbuf_map(struct dp_vdev *vdev,
+			      struct dp_tx_desc_s *tx_desc,
+			      qdf_nbuf_t nbuf)
+{
+	return dp_tx_nbuf_map_regular(vdev, tx_desc, nbuf);
+}
+
+static inline
+void dp_tx_nbuf_unmap(struct dp_soc *soc,
+		      struct dp_tx_desc_s *desc)
+{
+	return dp_tx_nbuf_unmap_regular(soc, desc);
+}
+#endif
+
+#if defined(WLAN_TX_PKT_CAPTURE_ENH) || defined(FEATURE_PERPKT_INFO)
+static inline
+void dp_tx_enh_unmap(struct dp_soc *soc, struct dp_tx_desc_s *desc)
+{
+	dp_tx_nbuf_unmap(soc, desc);
+	desc->flags |= DP_TX_DESC_FLAG_UNMAP_DONE;
+}
+
+static inline void dp_tx_unmap(struct dp_soc *soc, struct dp_tx_desc_s *desc)
+{
+	if (qdf_likely(!(desc->flags & DP_TX_DESC_FLAG_UNMAP_DONE)))
+		dp_tx_nbuf_unmap(soc, desc);
+}
+#else
+static inline
+void dp_tx_enh_unmap(struct dp_soc *soc, struct dp_tx_desc_s *desc)
+{
+}
+
+static inline void dp_tx_unmap(struct dp_soc *soc, struct dp_tx_desc_s *desc)
+{
+	dp_tx_nbuf_unmap(soc, desc);
 }
 #endif
 
@@ -2181,9 +2196,7 @@ dp_tx_send_msdu_single(struct dp_vdev *vdev, qdf_nbuf_t nbuf,
 			     tx_desc, tx_q->ring_id);
 		dp_tx_desc_history_add(soc, tx_desc->dma_addr, nbuf,
 				       tx_desc->id, DP_TX_DESC_UNMAP);
-		qdf_nbuf_unmap_nbytes_single(vdev->osdev, nbuf,
-					     QDF_DMA_TO_DEVICE,
-					     nbuf->len);
+		dp_tx_nbuf_unmap(soc, tx_desc);
 		drop_code = TX_HW_ENQUEUE;
 		goto release_desc;
 	}
