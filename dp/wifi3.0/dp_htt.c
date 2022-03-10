@@ -440,7 +440,8 @@ static int dp_htt_h2t_add_tcl_metadata_ver_v2(struct htt_soc *soc,
 static int dp_htt_h2t_add_tcl_metadata_ver(struct htt_soc *soc, qdf_nbuf_t *msg)
 {
 	/* Use tcl_metadata_v1 when NSS offload is enabled */
-	if (wlan_cfg_get_dp_soc_nss_cfg(soc->dp_soc->wlan_cfg_ctx))
+	if (wlan_cfg_get_dp_soc_nss_cfg(soc->dp_soc->wlan_cfg_ctx) ||
+	    soc->dp_soc->cdp_soc.ol_ops->get_con_mode() == QDF_GLOBAL_FTM_MODE)
 		return dp_htt_h2t_add_tcl_metadata_ver_v1(soc, msg);
 	else
 		return dp_htt_h2t_add_tcl_metadata_ver_v2(soc, msg);
