@@ -29,6 +29,17 @@
 
 static struct wlan_ipa_config *g_ipa_config;
 static bool g_ipa_hw_support;
+static bool g_ipa_pld_enable = true;
+
+void ipa_set_pld_enable(bool flag)
+{
+	g_ipa_pld_enable = flag;
+}
+
+bool ipa_get_pld_enable(void)
+{
+	return g_ipa_pld_enable;
+}
 
 bool ipa_check_hw_present(void)
 {
@@ -805,8 +816,16 @@ void ipa_component_config_update(struct wlan_objmgr_psoc *psoc)
 		return;
 	}
 
-	g_ipa_config->ipa_config =
-		cfg_get(psoc, CFG_DP_IPA_OFFLOAD_CONFIG);
+	if (g_ipa_pld_enable) {
+		g_ipa_config->ipa_config = cfg_get(psoc,
+						   CFG_DP_IPA_OFFLOAD_CONFIG);
+		ipa_info("IPA ini configuration: 0x%x",
+			 g_ipa_config->ipa_config);
+	} else {
+		g_ipa_config->ipa_config = 0;
+		ipa_info("IPA disabled from platform driver");
+	}
+
 	g_ipa_config->desc_size =
 		cfg_get(psoc, CFG_DP_IPA_DESC_SIZE);
 	g_ipa_config->txbuf_count =

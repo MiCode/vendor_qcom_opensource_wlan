@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2018-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -30,6 +30,21 @@
 #include "wlan_ipa_main.h"
 
 #ifdef IPA_OFFLOAD
+
+/**
+ * ucfg_ipa_set_pld_enable() - set g_ipa_pld_enable
+ * @flag: flag to set g_ipa_pld_enable
+ *
+ * Return: None
+ */
+void ucfg_ipa_set_pld_enable(bool flag);
+
+/**
+ * ucfg_ipa_get_pld_enable() - check if IPA is disabled in pld
+ *
+ * Return: g_ipa_pld_enable
+ */
+bool ucfg_ipa_get_pld_enable(void);
 
 /**
  * ucfg_ipa_is_present() - get IPA hw status
@@ -435,6 +450,14 @@ void ucfg_ipa_update_tx_stats(struct wlan_objmgr_pdev *pdev, uint64_t sta_tx,
 void ucfg_ipa_flush_pending_vdev_events(struct wlan_objmgr_pdev *pdev,
 					uint8_t vdev_id);
 #else
+static inline void ucfg_ipa_set_pld_enable(bool flag)
+{
+}
+
+static inline bool ucfg_ipa_get_pld_enable(void)
+{
+	return true;
+}
 
 static inline bool ucfg_ipa_is_present(void)
 {

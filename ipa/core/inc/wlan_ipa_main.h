@@ -68,6 +68,21 @@ extern uint8_t g_instances_added;
 	QDF_TRACE_EXIT(QDF_MODULE_ID_IPA, "exit")
 
 /**
+ * ipa_set_pld_enable() - set g_ipa_pld_enable
+ * @flag: flag to set g_ipa_pld_enable
+ *
+ * Return: None
+ */
+void ipa_set_pld_enable(bool flag);
+
+/**
+ * ipa_get_pld_enable() - check if IPA is disabled in pld
+ *
+ * Return: g_ipa_pld_enable
+ */
+bool ipa_get_pld_enable(void);
+
+/**
  * ipa_check_hw_present() - get IPA hw status
  *
  * ipa_uc_reg_rdyCB is not directly designed to check
