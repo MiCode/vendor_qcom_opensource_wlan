@@ -1337,6 +1337,7 @@ struct wlan_dfs_priv {
  * @cur_dfs_index: index of the current dfs object using the Agile Engine.
  *                 It is used to index struct wlan_dfs_priv dfs_priv[] array.
  * @dfs_precac_timer: agile precac timer
+ * @dfs_precac_completion_work: workqueue to process the precac timeout.
  * @dfs_precac_timer_running: precac timer running flag
  * @ocac_status: Off channel CAC complete status
  * @dfs_nol_ctx: dfs NOL data for all radios.
@@ -1354,7 +1355,8 @@ struct dfs_soc_priv_obj {
 	struct wlan_dfs_priv dfs_priv[WLAN_UMAC_MAX_PDEVS];
 	uint8_t num_dfs_privs;
 	uint8_t cur_agile_dfs_index;
-	qdf_timer_t     dfs_precac_timer;
+	qdf_hrtimer_data_t    dfs_precac_timer;
+	qdf_work_t     dfs_precac_completion_work;
 	uint8_t dfs_precac_timer_running;
 	bool precac_state_started;
 	bool ocac_status;
@@ -2958,6 +2960,14 @@ void dfs_complete_deferred_tasks(struct wlan_dfs *dfs);
  * Return: void.
  */
 void dfs_process_cac_completion(void *context);
+
+/**
+ * dfs_process_precac_completion() - Process DFS preCAC completion event.
+ * @dfs_soc_obj: Pointer to dfs_soc_obj object.
+ *
+ * Return: void.
+ */
+void dfs_process_precac_completion(void *context);
 
 #ifdef WLAN_DFS_TRUE_160MHZ_SUPPORT
 /**
