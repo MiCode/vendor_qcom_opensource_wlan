@@ -1115,7 +1115,6 @@ wlan_reg_chan_has_dfs_attribute_for_freq(struct wlan_objmgr_pdev *pdev,
 	return reg_chan_has_dfs_attribute_for_freq(pdev, freq);
 }
 
-#if defined(WLAN_FEATURE_11BE) && defined(CONFIG_REG_CLIENT)
 enum channel_state
 wlan_reg_get_5g_bonded_channel_state_for_freq(struct wlan_objmgr_pdev *pdev,
 					      qdf_freq_t freq,
@@ -1123,7 +1122,7 @@ wlan_reg_get_5g_bonded_channel_state_for_freq(struct wlan_objmgr_pdev *pdev,
 {
 	struct ch_params params = {0};
 
-	if (bw == CH_WIDTH_320MHZ) {
+	if (reg_is_ch_width_320(bw)) {
 		const struct bonded_channel_freq *bonded_chan_ptr_ptr = NULL;
 
 		return reg_get_5g_bonded_channel_for_freq(pdev, freq, bw,
@@ -1137,22 +1136,6 @@ wlan_reg_get_5g_bonded_channel_state_for_freq(struct wlan_objmgr_pdev *pdev,
 
 qdf_export_symbol(wlan_reg_get_5g_bonded_channel_state_for_freq);
 
-#else
-
-enum channel_state
-wlan_reg_get_5g_bonded_channel_state_for_freq(struct wlan_objmgr_pdev *pdev,
-					      qdf_freq_t freq,
-					      enum phy_ch_width bw)
-{
-	struct ch_params params = {0};
-
-	params.ch_width = bw;
-
-	return reg_get_5g_bonded_channel_state_for_freq(pdev, freq, &params);
-}
-
-qdf_export_symbol(wlan_reg_get_5g_bonded_channel_state_for_freq);
-#endif
 
 #ifdef CONFIG_REG_6G_PWRMODE
 enum channel_state
@@ -1164,7 +1147,16 @@ wlan_reg_get_5g_bonded_channel_state_for_pwrmode(struct wlan_objmgr_pdev *pdev,
 {
 	struct ch_params params = {0};
 
+	if (reg_is_ch_width_320(bw)) {
+		const struct bonded_channel_freq *bonded_ch_ptr_ptr = NULL;
+
+		return reg_get_5g_bonded_channel_for_pwrmode(pdev, freq, bw,
+							     &bonded_ch_ptr_ptr,
+							     in_6g_pwr_type);
+	}
+
 	params.ch_width = bw;
+
 	return reg_get_5g_bonded_channel_state_for_pwrmode(pdev, freq, &params,
 							   in_6g_pwr_type);
 }
@@ -1189,7 +1181,8 @@ void wlan_reg_set_channel_params_for_freq(struct wlan_objmgr_pdev *pdev,
 					  qdf_freq_t sec_ch_2g_freq,
 					  struct ch_params *ch_params)
 {
-	reg_set_channel_params_for_freq(pdev, freq, sec_ch_2g_freq, ch_params);
+	reg_set_channel_params_for_freq(pdev, freq, sec_ch_2g_freq, ch_params,
+					true);
 }
 
 qdf_export_symbol(wlan_reg_set_channel_params_for_freq);
@@ -1204,7 +1197,7 @@ void wlan_reg_set_channel_params_for_pwrmode(struct wlan_objmgr_pdev *pdev,
 {
 	reg_set_channel_params_for_pwrmode(pdev, freq, sec_ch_2g_freq,
 					   ch_params,
-					   in_6g_pwr_mode);
+					   in_6g_pwr_mode, true);
 }
 
 qdf_export_symbol(wlan_reg_set_channel_params_for_pwrmode);
@@ -1216,10 +1209,12 @@ void wlan_reg_fill_channel_list(struct wlan_objmgr_pdev *pdev,
 				qdf_freq_t sec_ch_2g_freq,
 				enum phy_ch_width ch_width,
 				qdf_freq_t band_center_320,
-				struct reg_channel_list *chan_list)
+				struct reg_channel_list *chan_list,
+				bool is_treat_nol_chan_as_disabled)
 {
 	reg_fill_channel_list(pdev, freq, sec_ch_2g_freq, ch_width,
-			      band_center_320, chan_list);
+			      band_center_320, chan_list,
+			      is_treat_nol_chan_as_disabled);
 }
 
 #ifdef CONFIG_REG_6G_PWRMODE
@@ -1231,11 +1226,13 @@ wlan_reg_fill_channel_list_for_pwrmode(struct wlan_objmgr_pdev *pdev,
 				       qdf_freq_t band_center_320,
 				       struct reg_channel_list *chan_list,
 				       enum supported_6g_pwr_types
-				       in_6g_pwr_type)
+				       in_6g_pwr_type,
+				       bool is_treat_nol_chan_as_disabled)
 {
 	reg_fill_channel_list_for_pwrmode(pdev, freq, sec_ch_2g_freq, ch_width,
 					  band_center_320, chan_list,
-					  in_6g_pwr_type);
+					  in_6g_pwr_type,
+					  is_treat_nol_chan_as_disabled);
 }
 #endif /* CONFIG_REG_6G_PWRMODE */
 
