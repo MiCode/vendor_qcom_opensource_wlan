@@ -762,7 +762,7 @@ struct reg_dmn_op_class_map_t {
  */
 struct regdmn_ap_cap_opclass_t {
 	uint8_t op_class;
-	uint8_t ch_width;
+	uint16_t ch_width;
 	qdf_freq_t start_freq;
 	uint16_t behav_limit;
 	uint8_t max_tx_pwr_dbm;

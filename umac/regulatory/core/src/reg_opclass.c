@@ -1448,6 +1448,27 @@ static void reg_get_channel_cen(const struct
 }
 
 /**
+ * reg_is_chan_320mhz() - Return true if the chan width is 320MHZ,
+ * false otherwise.
+ * @chan_spacing: Channel spacing in MHZ.
+ *
+ * Return: true if chan_width is 320, false otherwise.
+ */
+#ifdef WLAN_FEATURE_11BE
+static bool reg_is_chan_320mhz(uint16_t chan_spacing)
+{
+	if (chan_spacing == BW_320_MHZ)
+		return true;
+	return false;
+}
+#else
+static bool reg_is_chan_320mhz(uint16_t chan_spacing)
+{
+	return false;
+}
+#endif
+
+/**
  * reg_get_chan_or_chan_center - Calculate central channel in the channel set.
  *
  * @op_class_tbl - Pointer to op_class_tbl.
@@ -1473,6 +1494,11 @@ static uint8_t reg_get_chan_or_chan_center(const struct
 		reg_get_channel_cen(op_class_tbl,
 				    idx,
 				    NUM_20_MHZ_CHAN_IN_160_MHZ_CHAN,
+				    &center_chan);
+	} else if (reg_is_chan_320mhz(op_class_tbl->chan_spacing)) {
+		reg_get_channel_cen(op_class_tbl,
+				    idx,
+				    NUM_20_MHZ_CHAN_IN_320_MHZ_CHAN,
 				    &center_chan);
 	} else {
 		center_chan = op_class_tbl->channels[*idx];
