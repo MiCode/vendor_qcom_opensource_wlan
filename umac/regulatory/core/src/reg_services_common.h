@@ -2235,4 +2235,20 @@ enum phy_ch_width reg_find_chwidth_from_bw(uint16_t bw);
  */
 qdf_freq_t reg_get_thresh_priority_freq(struct wlan_objmgr_pdev *pdev);
 #endif /* CONFIG_BAND_6GHZ */
+
+/**
+ * reg_get_5g_chan_state() - Get channel state for
+ * 5G bonded channel using the channel frequency
+ * @pdev: Pointer to pdev
+ * @freq: channel center frequency.
+ * @bw: channel band width
+ * @in_6g_pwr_mode: Input power mode which decides the 6G channel list to be
+ * used.
+ *
+ * Return: channel state
+ */
+enum channel_state
+reg_get_5g_chan_state(struct wlan_objmgr_pdev *pdev, qdf_freq_t freq,
+		      enum phy_ch_width bw,
+		      enum supported_6g_pwr_types in_6g_pwr_mode);
 #endif

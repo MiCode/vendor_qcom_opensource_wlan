@@ -3681,6 +3681,154 @@ enum channel_state reg_get_channel_state_for_freq(struct wlan_objmgr_pdev *pdev,
 	return pdev_priv_obj->cur_chan_list[ch_idx].state;
 }
 
+/**
+ * reg_get_nol_channel_state () - Get channel state from regulatory
+ * and treat NOL channels as enabled channels
+ * @pdev: Pointer to pdev
+ * @freq: channel center frequency.
+ *
+ * Return: channel state
+ */
+static enum channel_state
+reg_get_nol_channel_state(struct wlan_objmgr_pdev *pdev,
+			  qdf_freq_t freq,
+			  enum supported_6g_pwr_types in_6g_pwr_mode)
+{
+	enum channel_enum ch_idx;
+	struct regulatory_channel *reg_chan_list;
+	enum channel_state chan_state;
+
+	ch_idx = reg_get_chan_enum_for_freq(freq);
+
+	if (ch_idx == INVALID_CHANNEL)
+		return CHANNEL_STATE_INVALID;
+
+	reg_chan_list = qdf_mem_malloc(NUM_CHANNELS * sizeof(*reg_chan_list));
+	if (!reg_chan_list)
+		return CHANNEL_STATE_INVALID;
+
+	if (reg_get_pwrmode_chan_list(pdev, reg_chan_list, in_6g_pwr_mode) !=
+	    QDF_STATUS_SUCCESS) {
+		qdf_mem_free(reg_chan_list);
+		return CHANNEL_STATE_INVALID;
+	}
+	chan_state = reg_chan_list[ch_idx].state;
+
+	if ((reg_chan_list[ch_idx].nol_chan ||
+	     reg_chan_list[ch_idx].nol_history) &&
+	    chan_state == CHANNEL_STATE_DISABLE)
+		chan_state = CHANNEL_STATE_DFS;
+
+	qdf_mem_free(reg_chan_list);
+	return chan_state;
+}
+
+/**
+ * reg_get_5g_bonded_chan_state()- Return the channel state for a
+ * 5G or 6G channel frequency based on the bonded channel.
+ * @pdev: Pointer to pdev.
+ * @freq: Channel center frequency.
+ * @bonded_chan_ptr: Pointer to bonded_channel_freq.
+ *
+ * Return: Channel State
+ */
+static enum channel_state
+reg_get_5g_bonded_chan_state(struct wlan_objmgr_pdev *pdev,
+			     uint16_t freq,
+			     const struct bonded_channel_freq *bonded_chan_ptr,
+			     enum supported_6g_pwr_types in_6g_pwr_mode)
+{
+	uint16_t chan_cfreq;
+	enum channel_state chan_state = CHANNEL_STATE_INVALID;
+	enum channel_state temp_chan_state;
+
+	chan_cfreq =  bonded_chan_ptr->start_freq;
+	while (chan_cfreq <= bonded_chan_ptr->end_freq) {
+		temp_chan_state = reg_get_nol_channel_state(pdev, chan_cfreq,
+							    in_6g_pwr_mode);
+		if (temp_chan_state < chan_state)
+			chan_state = temp_chan_state;
+		chan_cfreq = chan_cfreq + 20;
+	}
+
+	return chan_state;
+}
+
+enum channel_state
+reg_get_5g_chan_state(struct wlan_objmgr_pdev *pdev, qdf_freq_t freq,
+		      enum phy_ch_width bw,
+		      enum supported_6g_pwr_types in_6g_pwr_mode)
+{
+	enum channel_enum ch_indx;
+	enum channel_state chan_state;
+	struct regulatory_channel *reg_channels;
+	bool bw_enabled = false;
+	const struct bonded_channel_freq *bonded_chan_ptr = NULL;
+
+	if (bw > CH_WIDTH_80P80MHZ) {
+		reg_err_rl("bw passed is not good");
+		return CHANNEL_STATE_INVALID;
+	}
+
+	if (bw == CH_WIDTH_20MHZ)
+		return reg_get_nol_channel_state(pdev, freq, in_6g_pwr_mode);
+
+	/* Fetch the bonded_chan_ptr for width greater than 20MHZ. */
+	bonded_chan_ptr = reg_get_bonded_chan_entry(freq, bw);
+
+	if (!bonded_chan_ptr)
+		return CHANNEL_STATE_INVALID;
+
+	chan_state = reg_get_5g_bonded_chan_state(pdev, freq, bonded_chan_ptr,
+						  in_6g_pwr_mode);
+
+	if ((chan_state == CHANNEL_STATE_INVALID) ||
+	    (chan_state == CHANNEL_STATE_DISABLE))
+		return chan_state;
+
+	reg_channels = qdf_mem_malloc(NUM_CHANNELS * sizeof(*reg_channels));
+	if (!reg_channels)
+		return CHANNEL_STATE_INVALID;
+
+	if (reg_get_pwrmode_chan_list(pdev, reg_channels, in_6g_pwr_mode)) {
+		qdf_mem_free(reg_channels);
+		return CHANNEL_STATE_INVALID;
+	}
+
+	ch_indx = reg_get_chan_enum_for_freq(freq);
+	if (ch_indx == INVALID_CHANNEL) {
+		qdf_mem_free(reg_channels);
+		return CHANNEL_STATE_INVALID;
+	}
+
+	if (bw == CH_WIDTH_5MHZ)
+		bw_enabled = true;
+	else if (bw == CH_WIDTH_10MHZ)
+		bw_enabled = (reg_channels[ch_indx].min_bw <= 10) &&
+			(reg_channels[ch_indx].max_bw >= 10);
+	else if (bw == CH_WIDTH_20MHZ)
+		bw_enabled = (reg_channels[ch_indx].min_bw <= 20) &&
+			(reg_channels[ch_indx].max_bw >= 20);
+	else if (bw == CH_WIDTH_40MHZ)
+		bw_enabled = (reg_channels[ch_indx].min_bw <= 40) &&
+			(reg_channels[ch_indx].max_bw >= 40);
+	else if (bw == CH_WIDTH_80MHZ)
+		bw_enabled = (reg_channels[ch_indx].min_bw <= 80) &&
+			(reg_channels[ch_indx].max_bw >= 80);
+	else if (bw == CH_WIDTH_160MHZ)
+		bw_enabled = (reg_channels[ch_indx].min_bw <= 160) &&
+			(reg_channels[ch_indx].max_bw >= 160);
+	else if (bw == CH_WIDTH_80P80MHZ)
+		bw_enabled = (reg_channels[ch_indx].min_bw <= 80) &&
+			(reg_channels[ch_indx].max_bw >= 80);
+
+	qdf_mem_free(reg_channels);
+	if (bw_enabled)
+		return chan_state;
+	else
+		return CHANNEL_STATE_DISABLE;
+}
+
 #ifdef CONFIG_REG_6G_PWRMODE
 enum channel_state
 reg_get_channel_state_for_pwrmode(struct wlan_objmgr_pdev *pdev,
