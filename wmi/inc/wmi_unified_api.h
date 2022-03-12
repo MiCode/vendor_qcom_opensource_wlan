@@ -4362,6 +4362,33 @@ QDF_STATUS
 wmi_extract_oem_response_param(wmi_unified_t wmi_hdl, void *resp_buf,
 			       struct wmi_oem_response_param *oem_resp_param);
 #endif /* WIFI_POS_CONVERGED */
+
+#if defined(WIFI_POS_CONVERGED) && defined(WLAN_FEATURE_RTT_11AZ_SUPPORT)
+/**
+ * wmi_extract_pasn_peer_create_req() - Extract peer create request event
+ * @wmi_hdl: WMI handle
+ * @evt_buf: Event buffer
+ * @dst: Destination buffer
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+wmi_extract_pasn_peer_create_req(wmi_unified_t wmi, void *evt_buf,
+				 struct wifi_pos_pasn_peer_data *dst);
+
+/**
+ * wmi_extract_pasn_peer_delete_req() - Extract PASN peer delete request
+ * @wmi: WMI handle
+ * @evt_buf: Event buffer
+ * @dst: Destination buffer pointer
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+wmi_extract_pasn_peer_delete_req(wmi_unified_t wmi, void *evt_buf,
+				 struct wifi_pos_pasn_peer_data *dst);
+#endif
+
 /**
  * wmi_critical_events_in_flight() - get the number of critical events in flight
  *

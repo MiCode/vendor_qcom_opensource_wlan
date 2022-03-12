@@ -15954,6 +15954,130 @@ extract_oem_response_param_tlv(wmi_unified_t wmi_handle, void *resp_buf,
 }
 #endif /* WIFI_POS_CONVERGED */
 
+#if defined(WIFI_POS_CONVERGED) && defined(WLAN_FEATURE_RTT_11AZ_SUPPORT)
+static QDF_STATUS
+extract_pasn_peer_create_req_event_tlv(wmi_unified_t wmi_handle, void *evt_buf,
+				       struct wifi_pos_pasn_peer_data *dst)
+{
+	WMI_RTT_PASN_PEER_CREATE_REQ_EVENTID_param_tlvs *param_buf;
+	wmi_rtt_pasn_peer_create_req_event_fixed_param *fixed_param;
+	wmi_rtt_pasn_peer_create_req_param *buf;
+	uint8_t security_mode, i;
+
+	param_buf = (WMI_RTT_PASN_PEER_CREATE_REQ_EVENTID_param_tlvs *)evt_buf;
+	if (!param_buf) {
+		wmi_err("Invalid peer_create req buffer");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	fixed_param = param_buf->fixed_param;
+
+	if (param_buf->num_rtt_pasn_peer_param >
+	    ((WMI_SVC_MSG_MAX_SIZE - sizeof(*fixed_param)) /
+	     sizeof(wmi_rtt_pasn_peer_create_req_param))) {
+		wmi_err("Invalid TLV size");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	if (!param_buf->num_rtt_pasn_peer_param ||
+	    param_buf->num_rtt_pasn_peer_param > WLAN_MAX_11AZ_PEERS) {
+		wmi_err("Invalid num TLV:%d",
+			param_buf->num_rtt_pasn_peer_param);
+		return QDF_STATUS_E_INVAL;
+	}
+
+	dst->vdev_id = fixed_param->vdev_id;
+	if (dst->vdev_id >= WLAN_UMAC_PDEV_MAX_VDEVS) {
+		wmi_err("Invalid vdev id:%d", dst->vdev_id);
+		return QDF_STATUS_E_INVAL;
+	}
+
+	buf = param_buf->rtt_pasn_peer_param;
+	if (!buf) {
+		wmi_err("NULL peer param TLV");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	for (i = 0; i < param_buf->num_rtt_pasn_peer_param; i++) {
+		WMI_MAC_ADDR_TO_CHAR_ARRAY(&buf->self_mac_addr,
+					   dst->peer_info[i].self_mac.bytes);
+		WMI_MAC_ADDR_TO_CHAR_ARRAY(&buf->dest_mac_addr,
+					   dst->peer_info[i].peer_mac.bytes);
+		security_mode = WMI_RTT_PASN_PEER_CREATE_SECURITY_MODE_GET(
+							buf->control_flag);
+		if (security_mode)
+			dst->peer_info[i].peer_type =
+					WLAN_WIFI_POS_PASN_SECURE_PEER;
+		else
+			dst->peer_info[i].peer_type =
+					WLAN_WIFI_POS_PASN_UNSECURE_PEER;
+
+		dst->peer_info[i].force_self_mac_usage =
+			WMI_RTT_PASN_PEER_CREATE_FORCE_SELF_MAC_USE_GET(
+							buf->control_flag);
+		dst->num_peers++;
+		buf++;
+	}
+
+	return QDF_STATUS_SUCCESS;
+}
+
+static QDF_STATUS
+extract_pasn_peer_delete_req_event_tlv(wmi_unified_t wmi_handle, void *evt_buf,
+				       struct wifi_pos_pasn_peer_data *dst)
+{
+	WMI_RTT_PASN_PEER_DELETE_EVENTID_param_tlvs *param_buf;
+	wmi_rtt_pasn_peer_delete_event_fixed_param *fixed_param;
+	wmi_rtt_pasn_peer_delete_param *buf;
+	uint8_t i;
+
+	param_buf = (WMI_RTT_PASN_PEER_DELETE_EVENTID_param_tlvs *)evt_buf;
+	if (!param_buf) {
+		wmi_err("Invalid peer_delete evt buffer");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	fixed_param = param_buf->fixed_param;
+
+	if (param_buf->num_rtt_pasn_peer_param >
+	    ((WMI_SVC_MSG_MAX_SIZE - sizeof(*fixed_param)) /
+	     sizeof(wmi_rtt_pasn_peer_delete_param))) {
+		wmi_err("Invalid TLV size");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	if (!param_buf->num_rtt_pasn_peer_param ||
+	    param_buf->num_rtt_pasn_peer_param > WLAN_MAX_11AZ_PEERS) {
+		wmi_err("Invalid num TLV:%d",
+			param_buf->num_rtt_pasn_peer_param);
+		return QDF_STATUS_E_INVAL;
+	}
+
+	dst->vdev_id = fixed_param->vdev_id;
+	if (dst->vdev_id >= WLAN_UMAC_PDEV_MAX_VDEVS) {
+		wmi_err("Invalid vdev id:%d", dst->vdev_id);
+		return QDF_STATUS_E_INVAL;
+	}
+
+	buf = param_buf->rtt_pasn_peer_param;
+	if (!buf) {
+		wmi_err("NULL peer param TLV");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	for (i = 0; i < param_buf->num_rtt_pasn_peer_param; i++) {
+		WMI_MAC_ADDR_TO_CHAR_ARRAY(&buf->peer_mac_addr,
+					   dst->peer_info[i].peer_mac.bytes);
+		dst->peer_info[i].control_flags = buf->control_flag;
+
+		dst->num_peers++;
+		buf++;
+	}
+
+	return QDF_STATUS_SUCCESS;
+}
+#endif /* WLAN_FEATURE_RTT_11AZ_SUPPORT */
+
 /**
  * extract_hw_mode_resp_event_status_tlv() - Extract HW mode change status
  * @wmi_handle: wmi handle
@@ -17843,6 +17967,12 @@ struct wmi_ops tlv_ops =  {
 #ifdef WIFI_POS_CONVERGED
 	.extract_oem_response_param = extract_oem_response_param_tlv,
 #endif /* WIFI_POS_CONVERGED */
+#if defined(WIFI_POS_CONVERGED) && defined(WLAN_FEATURE_RTT_11AZ_SUPPORT)
+	.extract_pasn_peer_create_req_event =
+			extract_pasn_peer_create_req_event_tlv,
+	.extract_pasn_peer_delete_req_event =
+			extract_pasn_peer_delete_req_event_tlv,
+#endif
 #ifdef WLAN_MWS_INFO_DEBUGFS
 	.send_mws_coex_status_req_cmd = send_mws_coex_status_req_cmd_tlv,
 #endif
@@ -18390,6 +18520,12 @@ static void populate_tlv_events_id(uint32_t *event_ids)
 #endif
 #ifdef MULTI_CLIENT_LL_SUPPORT
 	event_ids[wmi_vdev_latency_event_id] = WMI_VDEV_LATENCY_LEVEL_EVENTID;
+#endif
+#if defined(WIFI_POS_CONVERGED) && defined(WLAN_FEATURE_RTT_11AZ_SUPPORT)
+	event_ids[wmi_rtt_pasn_peer_create_req_eventid] =
+			WMI_RTT_PASN_PEER_CREATE_REQ_EVENTID;
+	event_ids[wmi_rtt_pasn_peer_delete_eventid] =
+			WMI_RTT_PASN_PEER_DELETE_EVENTID;
 #endif
 }
 

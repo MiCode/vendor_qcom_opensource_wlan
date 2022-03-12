@@ -3410,6 +3410,32 @@ wmi_extract_oem_response_param(wmi_unified_t wmi_hdl, void *resp_buf,
 }
 #endif /* WIFI_POS_CONVERGED */
 
+#if defined(WIFI_POS_CONVERGED) && defined(WLAN_FEATURE_RTT_11AZ_SUPPORT)
+QDF_STATUS
+wmi_extract_pasn_peer_create_req(wmi_unified_t wmi, void *evt_buf,
+				 struct wifi_pos_pasn_peer_data *dst)
+{
+	if (wmi->ops->extract_pasn_peer_create_req_event)
+		return wmi->ops->extract_pasn_peer_create_req_event(wmi,
+								    evt_buf,
+								    dst);
+
+	return QDF_STATUS_E_FAILURE;
+}
+
+QDF_STATUS
+wmi_extract_pasn_peer_delete_req(wmi_unified_t wmi, void *evt_buf,
+				 struct wifi_pos_pasn_peer_data *dst)
+{
+	if (wmi->ops->extract_pasn_peer_delete_req_event)
+		return wmi->ops->extract_pasn_peer_delete_req_event(wmi,
+								    evt_buf,
+								    dst);
+
+	return QDF_STATUS_E_FAILURE;
+}
+#endif
+
 QDF_STATUS wmi_unified_extract_hw_mode_resp(wmi_unified_t wmi,
 					    void *evt_buf,
 					    uint32_t *cmd_status)

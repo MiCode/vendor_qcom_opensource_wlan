@@ -41,6 +41,7 @@ INCS += -I$(obj)/$(DEPTH)/cmn_dev/umac/mlme/connection_mgr/dispatcher/inc
 INCS += -I$(obj)/$(DEPTH)/cmn_dev/umac/thermal/dispatcher/inc
 INCS += -I$(obj)/$(DEPTH)/cmn_dev/umac/mlme/connection_mgr/utf/inc
 INCS += -I$(obj)/$(DEPTH)/cmn_dev/umac/mlo_mgr/inc
+INCS += -I$(obj)/$(DEPTH)/cmn_dev/umac/wifi_pos/inc
 
 INCS += -I$(obj)/$(DEPTH)/cmn_dev/umac/cmn_services/crypto/inc
 INCS += -I$(obj)/$(DEPTH)/component_dev/crypto/inc

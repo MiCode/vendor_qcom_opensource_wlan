@@ -32,6 +32,8 @@
 #ifdef WLAN_CONV_SPECTRAL_ENABLE
 #include <wlan_spectral_public_structs.h>
 #endif /* WLAN_CONV_SPECTRAL_ENABLE */
+
+#include "wifi_pos_public_struct.h"
 #include <wlan_vdev_mgr_tgt_if_tx_defs.h>
 #include <wlan_vdev_mgr_tgt_if_rx_defs.h>
 #include <reg_services_public_struct.h>
@@ -4994,6 +4996,10 @@ typedef enum {
 #ifdef MULTI_CLIENT_LL_SUPPORT
 	wmi_vdev_latency_event_id,
 #endif
+#if defined(WIFI_POS_CONVERGED) && defined(WLAN_FEATURE_RTT_11AZ_SUPPORT)
+	wmi_rtt_pasn_peer_create_req_eventid,
+	wmi_rtt_pasn_peer_delete_eventid,
+#endif
 	wmi_events_max,
 } wmi_conv_event_id;
 
@@ -8366,6 +8372,20 @@ struct wmi_oem_response_param {
 	uint8_t  *data_1;
 	uint8_t  *data_2;
 	struct wmi_host_oem_indirect_data indirect_data;
+};
+
+/**
+ * struct wifi_pos_11az_peer_delete_data  - Wifi pos 11az ranging peer delete
+ * data. This structure is used to copy the peer related info from PASN
+ * events and pass it to wifi pos module
+ * @vdev_id: vdev id
+ * @num_peers: Total number of peers to be deleted
+ * @peer_info: PASN peer entry details
+ */
+struct wifi_pos_pasn_peer_data {
+	uint8_t vdev_id;
+	uint8_t num_peers;
+	struct wlan_pasn_request peer_info[WLAN_MAX_11AZ_PEERS];
 };
 
 /**
