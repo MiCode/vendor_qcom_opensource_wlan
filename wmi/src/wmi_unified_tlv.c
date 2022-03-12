@@ -13667,6 +13667,7 @@ static QDF_STATUS extract_reg_chan_list_ext_update_event_tlv(
 	WMI_REG_CHAN_LIST_CC_EXT_EVENTID_param_tlvs *param_buf;
 	wmi_reg_chan_list_cc_event_ext_fixed_param *ext_chan_list_event_hdr;
 	wmi_regulatory_rule_ext_struct *ext_wmi_reg_rule;
+	wmi_regulatory_chan_priority_struct *ext_wmi_chan_priority;
 	uint32_t num_2g_reg_rules, num_5g_reg_rules;
 	uint32_t num_6g_reg_rules_ap[REG_CURRENT_MAX_AP_TYPE];
 	uint32_t *num_6g_reg_rules_client[REG_CURRENT_MAX_AP_TYPE];
@@ -13679,7 +13680,11 @@ static QDF_STATUS extract_reg_chan_list_ext_update_event_tlv(
 	}
 
 	ext_chan_list_event_hdr = param_buf->fixed_param;
+	ext_wmi_chan_priority = param_buf->reg_chan_priority;
 
+	if (ext_wmi_chan_priority)
+		reg_info->reg_6g_thresh_priority_freq =
+			WMI_GET_BITS(ext_wmi_chan_priority->freq_info, 0, 16);
 	reg_info->num_2g_reg_rules = ext_chan_list_event_hdr->num_2g_reg_rules;
 	reg_info->num_5g_reg_rules = ext_chan_list_event_hdr->num_5g_reg_rules;
 	reg_info->num_6g_reg_rules_ap[REG_STANDARD_POWER_AP] =
