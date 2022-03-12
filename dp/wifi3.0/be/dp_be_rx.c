@@ -215,6 +215,9 @@ uint32_t dp_rx_process_be(struct dp_intr *int_ctx,
 	struct dp_soc *replenish_soc;
 	uint8_t chip_id;
 	uint64_t current_time = 0;
+	uint32_t old_tid;
+	uint32_t peer_ext_stats;
+	uint32_t dsf;
 
 	DP_HIST_INIT();
 
@@ -246,12 +249,18 @@ more_data:
 	qdf_mem_zero(&msdu_desc_info, sizeof(msdu_desc_info));
 	qdf_mem_zero(head, sizeof(head));
 	qdf_mem_zero(tail, sizeof(tail));
+	old_tid = 0xff;
+	dsf = 0;
+	peer_ext_stats = 0;
+	rx_pdev = NULL;
+	tid_stats = NULL;
 
 	dp_pkt_get_timestamp(&current_time);
 
 	ring_near_full = _dp_srng_test_and_update_nf_params(soc, rx_ring,
 							    &max_reap_limit);
 
+	peer_ext_stats = wlan_cfg_is_peer_ext_stats_enabled(soc->wlan_cfg_ctx);
 	if (qdf_unlikely(dp_rx_srng_access_start(int_ctx, soc, hal_ring_hdl))) {
 		/*
 		 * Need API to convert from hal_ring pointer to
@@ -573,19 +582,37 @@ done:
 		}
 
 		/* Get TID from struct cb->tid_val, save to tid */
-		if (qdf_nbuf_is_rx_chfrag_start(nbuf))
-			tid = qdf_nbuf_get_tid_val(nbuf);
+		tid = qdf_nbuf_get_tid_val(nbuf);
 
 		if (qdf_unlikely(!txrx_peer)) {
-			txrx_peer = dp_txrx_peer_get_ref_by_id(soc, peer_id,
-							       &txrx_ref_handle,
-							       DP_MOD_ID_RX);
+			txrx_peer = dp_rx_get_txrx_peer_and_vdev(soc, nbuf,
+								 peer_id,
+								 &txrx_ref_handle,
+								 pkt_capture_offload,
+								 &vdev,
+								 &rx_pdev, &dsf,
+								 &old_tid);
+			if (qdf_unlikely(!txrx_peer) || qdf_unlikely(!vdev)) {
+				nbuf = next;
+				continue;
+			}
+			enh_flag = rx_pdev->enhanced_stats_en;
 		} else if (txrx_peer && txrx_peer->peer_id != peer_id) {
 			dp_txrx_peer_unref_delete(txrx_ref_handle,
 						  DP_MOD_ID_RX);
-			txrx_peer = dp_txrx_peer_get_ref_by_id(soc, peer_id,
-							       &txrx_ref_handle,
-							       DP_MOD_ID_RX);
+
+			txrx_peer = dp_rx_get_txrx_peer_and_vdev(soc, nbuf,
+								 peer_id,
+								 &txrx_ref_handle,
+								 pkt_capture_offload,
+								 &vdev,
+								 &rx_pdev, &dsf,
+								 &old_tid);
+			if (qdf_unlikely(!txrx_peer) || qdf_unlikely(!vdev)) {
+				nbuf = next;
+				continue;
+			}
+			enh_flag = rx_pdev->enhanced_stats_en;
 		}
 
 		if (txrx_peer) {
@@ -598,26 +625,6 @@ done:
 
 		rx_bufs_used++;
 
-		if (qdf_likely(txrx_peer)) {
-			vdev = txrx_peer->vdev;
-		} else {
-			nbuf->next = NULL;
-			dp_rx_deliver_to_pkt_capture_no_peer(
-					soc, nbuf, pkt_capture_offload);
-
-			if (!pkt_capture_offload)
-				dp_rx_deliver_to_stack_no_peer(soc, nbuf);
-			nbuf = next;
-			continue;
-		}
-
-		if (qdf_unlikely(!vdev)) {
-			dp_rx_nbuf_free(nbuf);
-			nbuf = next;
-			DP_STATS_INC(soc, rx.err.invalid_vdev, 1);
-			continue;
-		}
-
 		/* when hlos tid override is enabled, save tid in
 		 * skb->priority
 		 */
@@ -625,18 +632,16 @@ done:
 					DP_TXRX_HLOS_TID_OVERRIDE_ENABLED))
 			qdf_nbuf_set_priority(nbuf, tid);
 
-		rx_pdev = vdev->pdev;
 		DP_RX_TID_SAVE(nbuf, tid);
-		if (qdf_unlikely(rx_pdev->delay_stats_flag) ||
-		    qdf_unlikely(wlan_cfg_is_peer_ext_stats_enabled(
-				 soc->wlan_cfg_ctx)) ||
+		if (qdf_unlikely(dsf) || qdf_unlikely(peer_ext_stats) ||
 		    dp_rx_pkt_tracepoints_enabled())
 			qdf_nbuf_set_timestamp(nbuf);
 
-		enh_flag = rx_pdev->enhanced_stats_en;
-
-		tid_stats =
+		if (qdf_likely(old_tid != tid)) {
+			tid_stats =
 		&rx_pdev->stats.tid_stats.tid_rx_stats[reo_ring_num][tid];
+			old_tid = tid;
+		}
 
 		/*
 		 * Check if DMA completed -- msdu_done is the last bit
