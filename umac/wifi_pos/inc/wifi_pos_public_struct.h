@@ -33,10 +33,12 @@
  * enum wifi_pos_pasn_peer_type  - PASN peer type
  * @WLAN_WIFI_POS_PASN_UNSECURE_PEER: Unsecure ranging peer
  * @WLAN_WIFI_POS_PASN_SECURE_PEER: Secure ranging peer
+ * @WLAN_WIFI_POS_PASN_PEER_TYPE_MAX: Max peer type
  */
 enum wifi_pos_pasn_peer_type {
 	WLAN_WIFI_POS_PASN_UNSECURE_PEER,
 	WLAN_WIFI_POS_PASN_SECURE_PEER,
+	WLAN_WIFI_POS_PASN_PEER_TYPE_MAX,
 };
 
 /**
