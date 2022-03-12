@@ -8161,3 +8161,19 @@ enum phy_ch_width reg_find_chwidth_from_bw(uint16_t bw)
 	}
 }
 #endif
+
+#ifdef CONFIG_BAND_6GHZ
+qdf_freq_t reg_get_thresh_priority_freq(struct wlan_objmgr_pdev *pdev)
+{
+	struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj;
+
+	pdev_priv_obj = reg_get_pdev_obj(pdev);
+
+	if (!IS_VALID_PDEV_REG_OBJ(pdev_priv_obj)) {
+		reg_err("reg pdev private obj is NULL");
+		return 0;
+	}
+
+	return pdev_priv_obj->reg_6g_thresh_priority_freq;
+}
+#endif

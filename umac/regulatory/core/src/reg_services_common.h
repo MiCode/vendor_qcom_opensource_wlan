@@ -2228,4 +2228,11 @@ reg_conv_6g_ap_type_to_supported_6g_pwr_types(enum reg_6g_ap_type ap_pwr_type);
  */
 enum phy_ch_width reg_find_chwidth_from_bw(uint16_t bw);
 
+#ifdef CONFIG_BAND_6GHZ
+/**
+ * reg_get_thresh_priority_freq() - Get the prioritized frequency value
+ * @pdev: pdev pointer
+ */
+qdf_freq_t reg_get_thresh_priority_freq(struct wlan_objmgr_pdev *pdev);
+#endif /* CONFIG_BAND_6GHZ */
 #endif

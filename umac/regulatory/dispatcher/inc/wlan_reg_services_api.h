@@ -2232,4 +2232,18 @@ bool wlan_reg_is_ext_tpc_supported(struct wlan_objmgr_psoc *psoc);
 QDF_STATUS wlan_reg_is_chwidth_supported(struct wlan_objmgr_pdev *pdev,
 					 enum phy_ch_width ch_width,
 					 bool *is_supported);
+
+#ifdef CONFIG_BAND_6GHZ
+/**
+ * wlan_reg_get_thresh_priority_freq() - Get the prioritized frequency value
+ * @pdev: pdev pointer
+ */
+qdf_freq_t wlan_reg_get_thresh_priority_freq(struct wlan_objmgr_pdev *pdev);
+#else
+static inline
+qdf_freq_t wlan_reg_get_thresh_priority_freq(struct wlan_objmgr_pdev *pdev)
+{
+	return 0;
+}
+#endif /* CONFIG_BAND_6GHZ */
 #endif

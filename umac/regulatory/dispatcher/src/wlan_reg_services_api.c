@@ -1704,3 +1704,10 @@ QDF_STATUS wlan_reg_is_chwidth_supported(struct wlan_objmgr_pdev *pdev,
 }
 
 qdf_export_symbol(wlan_reg_is_chwidth_supported);
+
+#ifdef CONFIG_BAND_6GHZ
+qdf_freq_t wlan_reg_get_thresh_priority_freq(struct wlan_objmgr_pdev *pdev)
+{
+	return reg_get_thresh_priority_freq(pdev);
+}
+#endif /* CONFIG_BAND_6GHZ */
