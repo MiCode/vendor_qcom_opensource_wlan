@@ -23,6 +23,8 @@
  * target if layer.
  */
 #include "wifi_pos_utils_pub.h"
+#include "wifi_pos_api.h"
+#include "wifi_pos_pasn_api.h"
 
 #include "wmi_unified_api.h"
 #include "wlan_lmac_if_def.h"
@@ -31,7 +33,7 @@
 #include "wifi_pos_utils_i.h"
 #include "target_if.h"
 
-static inline struct wlan_lmac_if_wifi_pos_rx_ops *
+static struct wlan_lmac_if_wifi_pos_rx_ops *
 target_if_wifi_pos_get_rxops(struct wlan_objmgr_psoc *psoc)
 {
 	struct wlan_lmac_if_rx_ops *rx_ops;
@@ -150,3 +152,134 @@ int wifi_pos_oem_err_rpt_ev_handler(ol_scn_t scn, uint8_t *buf,
 	/* TBD */
 	return 0;
 }
+
+#if defined(WIFI_POS_CONVERGED) && defined(WLAN_FEATURE_RTT_11AZ_SUPPORT)
+int target_if_wifi_pos_pasn_peer_create_ev_handler(ol_scn_t scn,
+						   uint8_t *buf,
+						   uint32_t len)
+{
+	wmi_unified_t wmi_handle;
+	struct wlan_objmgr_psoc *psoc;
+	struct wlan_lmac_if_wifi_pos_rx_ops *rx_ops;
+	struct wifi_pos_pasn_peer_data *data = NULL;
+	QDF_STATUS status;
+
+	data = qdf_mem_malloc(sizeof(*data));
+	if (!data)
+		return QDF_STATUS_E_NOMEM;
+
+	psoc = target_if_get_psoc_from_scn_hdl(scn);
+	if (!psoc) {
+		target_if_err("psoc is null");
+		qdf_mem_free(data);
+		return QDF_STATUS_NOT_INITIALIZED;
+	}
+
+	wlan_objmgr_psoc_get_ref(psoc, WLAN_WIFI_POS_TGT_IF_ID);
+
+	wmi_handle = get_wmi_unified_hdl_from_psoc(psoc);
+	if (!wmi_handle) {
+		wlan_objmgr_psoc_release_ref(psoc, WLAN_WIFI_POS_TGT_IF_ID);
+		qdf_mem_free(data);
+		target_if_err("wmi_handle is null");
+		return QDF_STATUS_NOT_INITIALIZED;
+	}
+
+	status = wmi_extract_pasn_peer_create_req(wmi_handle, buf, data);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		wifi_pos_err("Extract PASN peer create failed");
+		wlan_objmgr_psoc_release_ref(psoc, WLAN_WIFI_POS_TGT_IF_ID);
+		qdf_mem_free(data);
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	rx_ops = wifi_pos_get_rx_ops(psoc);
+	if (!rx_ops || !rx_ops->wifi_pos_ranging_peer_create_cb) {
+		wifi_pos_err("%s is null",
+			     !rx_ops ? "rx_ops" : "rx_ops_cb");
+		wlan_objmgr_psoc_release_ref(psoc, WLAN_WIFI_POS_TGT_IF_ID);
+		qdf_mem_free(data);
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	rx_ops->wifi_pos_ranging_peer_create_cb(psoc, data->peer_info,
+						data->vdev_id,
+						data->num_peers);
+
+	wlan_objmgr_psoc_release_ref(psoc, WLAN_WIFI_POS_TGT_IF_ID);
+	qdf_mem_free(data);
+
+	return 0;
+}
+
+int target_if_wifi_pos_pasn_peer_delete_ev_handler(ol_scn_t scn,
+						   uint8_t *buf,
+						   uint32_t len)
+{
+	wmi_unified_t wmi_handle;
+	struct wlan_objmgr_psoc *psoc;
+	struct wlan_lmac_if_wifi_pos_rx_ops *rx_ops;
+	struct wifi_pos_pasn_peer_data *data = NULL;
+	QDF_STATUS status;
+
+	psoc = target_if_get_psoc_from_scn_hdl(scn);
+	if (!psoc) {
+		target_if_err("psoc is null");
+		return QDF_STATUS_NOT_INITIALIZED;
+	}
+
+	wlan_objmgr_psoc_get_ref(psoc, WLAN_WIFI_POS_TGT_IF_ID);
+
+	wmi_handle = get_wmi_unified_hdl_from_psoc(psoc);
+	if (!wmi_handle) {
+		wlan_objmgr_psoc_release_ref(psoc, WLAN_WIFI_POS_TGT_IF_ID);
+		target_if_err("wmi_handle is null");
+		return QDF_STATUS_NOT_INITIALIZED;
+	}
+
+	data = qdf_mem_malloc(sizeof(*data));
+	if (!data) {
+		wlan_objmgr_psoc_release_ref(psoc, WLAN_WIFI_POS_TGT_IF_ID);
+		return QDF_STATUS_E_NOMEM;
+	}
+
+	status = wmi_extract_pasn_peer_delete_req(wmi_handle, buf, data);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		wifi_pos_err("Extract PASN peer delete failed");
+		wlan_objmgr_psoc_release_ref(psoc, WLAN_WIFI_POS_TGT_IF_ID);
+		qdf_mem_free(data);
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	rx_ops = wifi_pos_get_rx_ops(psoc);
+	if (!rx_ops || !rx_ops->wifi_pos_ranging_peer_delete_cb) {
+		wifi_pos_err("%s is null",
+			     !rx_ops ? "rx_ops" : "rx_ops_cb");
+		wlan_objmgr_psoc_release_ref(psoc, WLAN_WIFI_POS_TGT_IF_ID);
+		qdf_mem_free(data);
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	rx_ops->wifi_pos_ranging_peer_delete_cb(psoc, data->peer_info,
+						data->vdev_id,
+						data->num_peers);
+
+	wlan_objmgr_psoc_release_ref(psoc, WLAN_WIFI_POS_TGT_IF_ID);
+	qdf_mem_free(data);
+
+	return 0;
+}
+
+void target_if_wifi_pos_register_rx_ops(struct wlan_lmac_if_rx_ops *rx_ops)
+{
+	struct wlan_lmac_if_wifi_pos_rx_ops *wifi_pos_rx_ops =
+					&rx_ops->wifi_pos_rx_ops;
+
+	wifi_pos_rx_ops->wifi_pos_ranging_peer_create_cb =
+			wifi_pos_handle_ranging_peer_create;
+	wifi_pos_rx_ops->wifi_pos_ranging_peer_create_rsp_cb =
+			wifi_pos_handle_ranging_peer_create_rsp;
+	wifi_pos_rx_ops->wifi_pos_ranging_peer_delete_cb =
+			wifi_pos_handle_ranging_peer_delete;
+}
+#endif

@@ -103,6 +103,63 @@ target_if_wifi_pos_parse_measreq_chan_info(struct wlan_objmgr_pdev *pdev,
 #endif /* WLAN_RTT_MEASUREMENT_NOTIFICATION */
 
 #ifdef WIFI_POS_CONVERGED
+#ifdef WLAN_FEATURE_RTT_11AZ_SUPPORT
+static QDF_STATUS
+target_if_wifi_pos_register_11az_events(struct wlan_objmgr_psoc *psoc)
+{
+	QDF_STATUS status = QDF_STATUS_SUCCESS;
+
+	status = wmi_unified_register_event_handler(
+			get_wmi_unified_hdl_from_psoc(psoc),
+			wmi_rtt_pasn_peer_create_req_eventid,
+			target_if_wifi_pos_pasn_peer_create_ev_handler,
+			WMI_RX_SERIALIZER_CTX);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		target_if_err("register pasn peer create event_handler failed");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	status = wmi_unified_register_event_handler(
+			get_wmi_unified_hdl_from_psoc(psoc),
+			wmi_rtt_pasn_peer_delete_eventid,
+			target_if_wifi_pos_pasn_peer_delete_ev_handler,
+			WMI_RX_SERIALIZER_CTX);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		target_if_err("register pasn peer delete event_handler failed");
+		return status;
+	}
+
+	return status;
+}
+
+static void
+target_if_wifi_pos_unregister_11az_events(struct wlan_objmgr_psoc *psoc)
+{
+	if (!psoc || !GET_WMI_HDL_FROM_PSOC(psoc)) {
+		target_if_err("psoc or psoc->tgt_if_handle is null");
+		return;
+	}
+
+	wmi_unified_unregister_event_handler(
+			get_wmi_unified_hdl_from_psoc(psoc),
+			wmi_rtt_pasn_peer_create_req_eventid);
+
+	wmi_unified_unregister_event_handler(
+			get_wmi_unified_hdl_from_psoc(psoc),
+			wmi_rtt_pasn_peer_delete_eventid);
+}
+#else
+static QDF_STATUS
+target_if_wifi_pos_register_11az_events(struct wlan_objmgr_psoc *psoc)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static void
+target_if_wifi_pos_unregister_11az_events(struct wlan_objmgr_psoc *psoc)
+{}
+#endif /* WLAN_FEATURE_RTT_11AZ_SUPPORT */
+
 static
 QDF_STATUS target_if_wifi_pos_register_events(struct wlan_objmgr_psoc *psoc)
 {
@@ -152,6 +209,8 @@ QDF_STATUS target_if_wifi_pos_register_events(struct wlan_objmgr_psoc *psoc)
 		return QDF_STATUS_E_INVAL;
 	}
 
+	target_if_wifi_pos_register_11az_events(psoc);
+
 	return QDF_STATUS_SUCCESS;
 }
 
@@ -175,6 +234,7 @@ QDF_STATUS target_if_wifi_pos_deregister_events(struct wlan_objmgr_psoc *psoc)
 	wmi_unified_unregister_event_handler(
 			get_wmi_unified_hdl_from_psoc(psoc),
 			wmi_oem_report_event_id);
+	target_if_wifi_pos_unregister_11az_events(psoc);
 
 	return QDF_STATUS_SUCCESS;
 }

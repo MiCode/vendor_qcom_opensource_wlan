@@ -53,8 +53,8 @@
 
 #ifdef WIFI_POS_CONVERGED
 #include "target_if_wifi_pos.h"
-#include "target_if_wifi_pos_tx_ops.h"
 #include "target_if_wifi_pos_rx_ops.h"
+#include "target_if_wifi_pos_tx_ops.h"
 #endif
 
 #ifdef FEATURE_WLAN_TDLS

@@ -41,6 +41,7 @@
 #include <reg_services_public_struct.h>
 
 #include "wlan_crypto_global_def.h"
+#include "wifi_pos_public_struct.h"
 
 #ifdef WLAN_CFR_ENABLE
 #include "wlan_cfr_utils_api.h"
@@ -1886,10 +1887,29 @@ struct wlan_lmac_if_iot_sim_rx_ops {
  * struct wlan_lmac_if_wifi_pos_rx_ops - structure of rx function
  * pointers for wifi_pos component
  * @oem_rsp_event_rx: callback for WMI_OEM_RESPONSE_EVENTID
+ * @wifi_pos_ranging_peer_create_cb: Function pointer to handle PASN peer create
+ * request
+ * @wifi_pos_ranging_peer_create_rsp_cb: Function pointer to handle peer create
+ * confirm event for PASN Peer.
+ * @wifi_pos_ranging_peer_delete_cb: Ranging peer delete handle function
+ * pointer.
  */
 struct wlan_lmac_if_wifi_pos_rx_ops {
 	int (*oem_rsp_event_rx)(struct wlan_objmgr_psoc *psoc,
 				struct oem_data_rsp *oem_rsp);
+	QDF_STATUS (*wifi_pos_ranging_peer_create_cb)
+			(struct wlan_objmgr_psoc *psoc,
+			 struct wlan_pasn_request *req,
+			 uint8_t vdev_id,
+			 uint8_t total_entries);
+	QDF_STATUS (*wifi_pos_ranging_peer_create_rsp_cb)
+			(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
+			 struct qdf_mac_addr *peer_mac,
+			 uint8_t status);
+	QDF_STATUS (*wifi_pos_ranging_peer_delete_cb)
+			(struct wlan_objmgr_psoc *psoc,
+			 struct wlan_pasn_request *info,
+			 uint8_t vdev_id, uint8_t num_peers);
 };
 #endif
 

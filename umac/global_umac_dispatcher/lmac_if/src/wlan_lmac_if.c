@@ -87,6 +87,8 @@
 #include <wlan_p2p_mcc_quota_tgt_api.h>
 #endif
 
+#include "target_if.h"
+
 /* Function pointer for OL/WMA specific UMAC tx_ops
  * registration.
  */
@@ -309,11 +311,24 @@ wlan_lmac_if_crypto_rx_ops_register(struct wlan_lmac_if_rx_ops *rx_ops)
 		wlan_lmac_if_umac_crypto_rxpn_ops_register(rx_ops);
 }
 
+#if defined(WIFI_POS_CONVERGED) && defined(WLAN_FEATURE_RTT_11AZ_SUPPORT)
+static void
+wlan_lmac_if_wifi_pos_rx_ops(struct wlan_lmac_if_rx_ops *rx_ops)
+{
+	target_if_wifi_pos_register_rx_ops(rx_ops);
+}
+#else
+static inline void
+wlan_lmac_if_wifi_pos_rx_ops(struct wlan_lmac_if_rx_ops *rx_ops)
+{}
+#endif
+
 #ifdef WIFI_POS_CONVERGED
-static void wlan_lmac_if_umac_rx_ops_register_wifi_pos(
-				struct wlan_lmac_if_rx_ops *rx_ops)
+static void
+wlan_lmac_if_umac_rx_ops_register_wifi_pos(struct wlan_lmac_if_rx_ops *rx_ops)
 {
 	wifi_pos_register_rx_ops(rx_ops);
+	wlan_lmac_if_wifi_pos_rx_ops(rx_ops);
 }
 #else
 static void wlan_lmac_if_umac_rx_ops_register_wifi_pos(
