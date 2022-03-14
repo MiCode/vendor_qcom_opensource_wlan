@@ -2293,6 +2293,15 @@ reg_fill_best_pwr_mode(struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj,
 		       uint8_t mas_chan_list_power,
 		       uint8_t *max_eirp_pwr)
 {
+	enum reg_6g_client_type curr_6g_client_type;
+	enum reg_6g_client_type client_type =
+			reg_pwr_enum_2_ap_cli_pwrmode[supp_pwr_mode].cli_type;
+
+	reg_get_cur_6g_client_type(pdev_priv_obj->pdev_ptr,
+				   &curr_6g_client_type);
+	if (client_type != curr_6g_client_type)
+		return;
+
 	if (*max_eirp_pwr == 0) {
 		*max_eirp_pwr = mas_chan_list_power;
 		super_chan_list[chn_idx].best_power_mode = supp_pwr_mode;
