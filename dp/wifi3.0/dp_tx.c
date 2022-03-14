@@ -4296,8 +4296,8 @@ static inline void dp_tx_sojourn_stats_process(struct dp_pdev *pdev,
 
 	link_peer_soc = primary_link_peer->vdev->pdev->soc;
 	sojourn_stats->cookie = (void *)
-			dp_monitor_peer_get_rdkstats_ctx(link_peer_soc,
-							 primary_link_peer);
+			dp_monitor_peer_get_peerstats_ctx(link_peer_soc,
+							  primary_link_peer);
 
 	delta_ms = qdf_ktime_to_ms(qdf_ktime_real_get()) -
 				txdesc_ts;
@@ -4706,7 +4706,7 @@ void dp_tx_comp_process_tx_status(struct dp_soc *soc,
 				     ts, ts->tid);
 
 #ifdef QCA_SUPPORT_RDK_STATS
-	if (soc->rdkstats_enabled)
+	if (soc->peerstats_enabled)
 		dp_tx_sojourn_stats_process(vdev->pdev, txrx_peer, ts->tid,
 					    tx_desc->timestamp,
 					    ts->ppdu_id);

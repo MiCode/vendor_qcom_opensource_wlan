@@ -194,12 +194,13 @@ QDF_STATUS dp_mon_peer_attach(struct dp_peer *peer)
 QDF_STATUS dp_mon_peer_detach(struct dp_peer *peer);
 
 /*
- * dp_mon_peer_get_rdkstats_ctx() - Get rdk stats context from monitor peer
+ * dp_mon_peer_get_peerstats_ctx() - Get peer stats context from monitor peer
  * @peer: Datapath peer handle
  *
- * Return: rdkstats_ctx
+ * Return: peerstats_ctx
  */
-struct cdp_peer_rate_stats_ctx *dp_mon_peer_get_rdkstats_ctx(struct dp_peer *peer);
+struct cdp_peer_rate_stats_ctx *dp_mon_peer_get_peerstats_ctx(struct
+							      dp_peer *peer);
 
 #ifdef QCA_ENHANCED_STATS_SUPPORT
 /*
@@ -545,7 +546,8 @@ struct dp_mon_ops {
 	QDF_STATUS (*mon_vdev_detach)(struct dp_vdev *vdev);
 	QDF_STATUS (*mon_peer_attach)(struct dp_peer *peer);
 	QDF_STATUS (*mon_peer_detach)(struct dp_peer *peer);
-	struct cdp_peer_rate_stats_ctx *(*mon_peer_get_rdkstats_ctx)(struct dp_peer *peer);
+	struct cdp_peer_rate_stats_ctx *(*mon_peer_get_peerstats_ctx)(struct
+								dp_peer *peer);
 	void (*mon_peer_reset_stats)(struct dp_peer *peer);
 	void (*mon_peer_get_stats)(struct dp_peer *peer, void *arg,
 				   enum cdp_stat_update_type type);
@@ -849,8 +851,8 @@ struct dp_mon_peer {
 	/* Monitor peer stats */
 	struct dp_mon_peer_stats stats;
 
-	/* rdk statistics context */
-	struct cdp_peer_rate_stats_ctx *rdkstats_ctx;
+	/* peer extended statistics context */
+	struct cdp_peer_rate_stats_ctx *peerstats_ctx;
 };
 
 struct  dp_mon_pdev {
@@ -1772,14 +1774,14 @@ static inline QDF_STATUS dp_monitor_peer_detach(struct dp_soc *soc,
 }
 
 /*
- * dp_monitor_peer_get_rdkstats_ctx() - Get RDK stats context from monitor peer
+ * dp_monitor_peer_get_peerstats_ctx() - Get peerstats context from monitor peer
  * @soc: Datapath soc handle
  * @peer: Datapath peer handle
  *
- * Return: RDK stats context
+ * Return: peer stats context
  */
 static inline struct cdp_peer_rate_stats_ctx*
-dp_monitor_peer_get_rdkstats_ctx(struct dp_soc *soc, struct dp_peer *peer)
+dp_monitor_peer_get_peerstats_ctx(struct dp_soc *soc, struct dp_peer *peer)
 {
 	struct dp_mon_ops *monitor_ops;
 	struct dp_mon_soc *mon_soc = soc->monitor_soc;
@@ -1788,12 +1790,12 @@ dp_monitor_peer_get_rdkstats_ctx(struct dp_soc *soc, struct dp_peer *peer)
 		return NULL;
 
 	monitor_ops = mon_soc->mon_ops;
-	if (!monitor_ops || !monitor_ops->mon_peer_get_rdkstats_ctx) {
+	if (!monitor_ops || !monitor_ops->mon_peer_get_peerstats_ctx) {
 		dp_mon_debug("callback not registered");
 		return NULL;
 	}
 
-	return monitor_ops->mon_peer_get_rdkstats_ctx(peer);
+	return monitor_ops->mon_peer_get_peerstats_ctx(peer);
 }
 
 /*

@@ -2435,14 +2435,14 @@ cdp_peer_flush_rate_stats(ol_txrx_soc_handle soc, uint8_t pdev_id,
 }
 
 /**
- * cdp_peer_get_rdkstats_ctx() - get RDK stats context
+ * cdp_peer_get_peerstats_ctx() - get peer stats context
  * @soc: opaque soc handle
  * @vdev_id: id of vdev handle
  * @mac: peer mac address
  */
 static inline void
-*cdp_peer_get_rdkstats_ctx(ol_txrx_soc_handle soc, uint8_t vdev_id,
-			  uint8_t *mac_addr)
+*cdp_peer_get_peerstats_ctx(ol_txrx_soc_handle soc, uint8_t vdev_id,
+			    uint8_t *mac_addr)
 {
 	if (!soc || !soc->ops) {
 		dp_cdp_debug("Invalid Instance:");
@@ -2451,12 +2451,12 @@ static inline void
 	}
 
 	if (!soc->ops->cmn_drv_ops ||
-	    !soc->ops->cmn_drv_ops->txrx_peer_get_rdkstats_ctx)
+	    !soc->ops->cmn_drv_ops->txrx_peer_get_peerstats_ctx)
 		return NULL;
 
-	return soc->ops->cmn_drv_ops->txrx_peer_get_rdkstats_ctx(soc,
-								   vdev_id,
-								   mac_addr);
+	return soc->ops->cmn_drv_ops->txrx_peer_get_peerstats_ctx(soc,
+								  vdev_id,
+								  mac_addr);
 }
 
 /**

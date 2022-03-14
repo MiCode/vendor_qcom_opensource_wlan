@@ -2213,10 +2213,10 @@ struct dp_soc {
 	uint8_t da_war_enabled;
 	/* number of active ast entries */
 	uint32_t num_ast_entries;
-	/* rdk rate statistics context at soc level*/
+	/* peer extended rate statistics context at soc level*/
 	struct cdp_soc_rate_stats_ctx *rate_stats_ctx;
-	/* rdk rate statistics control flag */
-	bool rdkstats_enabled;
+	/* peer extended rate statistics control flag */
+	bool peerstats_enabled;
 
 	/* 8021p PCP-TID map values */
 	uint8_t pcp_tid_map[PCP_TID_MAP_MAX];

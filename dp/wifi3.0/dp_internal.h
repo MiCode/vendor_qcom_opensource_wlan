@@ -233,7 +233,7 @@ static inline QDF_STATUS dp_monitor_peer_detach(struct dp_soc *soc,
 }
 
 static inline struct cdp_peer_rate_stats_ctx*
-dp_monitor_peer_get_rdkstats_ctx(struct dp_soc *soc, struct dp_peer *peer)
+dp_monitor_peer_get_peerstats_ctx(struct dp_soc *soc, struct dp_peer *peer)
 {
 	return NULL;
 }

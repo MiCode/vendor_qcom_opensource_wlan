@@ -10248,7 +10248,7 @@ dp_set_psoc_param(struct cdp_soc_t *cdp_soc,
 
 	switch (param) {
 	case CDP_ENABLE_RATE_STATS:
-		soc->rdkstats_enabled = val.cdp_psoc_param_en_rate_stats;
+		soc->peerstats_enabled = val.cdp_psoc_param_en_rate_stats;
 		break;
 	case CDP_SET_NSS_CFG:
 		wlan_cfg_set_dp_soc_nss_cfg(wlan_cfg_ctx,
@@ -12021,7 +12021,7 @@ dp_peer_flush_rate_stats_req(struct dp_soc *soc, struct dp_peer *peer,
 
 	dp_wdi_event_handler(
 		WDI_EVENT_FLUSH_RATE_STATS_REQ,
-		soc, dp_monitor_peer_get_rdkstats_ctx(soc, peer),
+		soc, dp_monitor_peer_get_peerstats_ctx(soc, peer),
 		peer->peer_id,
 		WDI_NO_VAL, peer->vdev->pdev->pdev_id);
 }
@@ -12057,13 +12057,13 @@ dp_flush_rate_stats_req(struct cdp_soc_t *soc_hdl,
 }
 #endif
 
-static void *dp_peer_get_rdkstats_ctx(struct cdp_soc_t *soc_hdl,
-				      uint8_t vdev_id,
-				      uint8_t *mac_addr)
+static void *dp_peer_get_peerstats_ctx(struct cdp_soc_t *soc_hdl,
+				       uint8_t vdev_id,
+				       uint8_t *mac_addr)
 {
 	struct dp_soc *soc = (struct dp_soc *)soc_hdl;
 	struct dp_peer *peer;
-	void *rdkstats_ctx = NULL;
+	void *peerstats_ctx = NULL;
 
 	if (mac_addr) {
 		peer = dp_peer_find_hash_find(soc, mac_addr,
@@ -12073,13 +12073,13 @@ static void *dp_peer_get_rdkstats_ctx(struct cdp_soc_t *soc_hdl,
 			return NULL;
 
 		if (!IS_MLO_DP_MLD_PEER(peer))
-			rdkstats_ctx = dp_monitor_peer_get_rdkstats_ctx(soc,
-									peer);
+			peerstats_ctx = dp_monitor_peer_get_peerstats_ctx(soc,
+									  peer);
 
 		dp_peer_unref_delete(peer, DP_MOD_ID_CDP);
 	}
 
-	return rdkstats_ctx;
+	return peerstats_ctx;
 }
 
 #if defined(FEATURE_PERPKT_INFO) && WDI_EVENT_ENABLE
@@ -12495,7 +12495,7 @@ static struct cdp_cmn_ops dp_ops_cmn = {
 	.get_rate_stats_ctx = dp_soc_get_rate_stats_ctx,
 	.txrx_peer_flush_rate_stats = dp_peer_flush_rate_stats,
 	.txrx_flush_rate_stats_request = dp_flush_rate_stats_req,
-	.txrx_peer_get_rdkstats_ctx = dp_peer_get_rdkstats_ctx,
+	.txrx_peer_get_peerstats_ctx = dp_peer_get_peerstats_ctx,
 
 	.set_pdev_pcp_tid_map = dp_set_pdev_pcp_tid_map_wifi3,
 	.set_vdev_pcp_tid_map = dp_set_vdev_pcp_tid_map_wifi3,

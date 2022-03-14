@@ -5158,14 +5158,15 @@ void dp_mon_peer_attach_notify(struct dp_peer *peer)
 			     (void *)&peer_cookie,
 			     peer->peer_id, WDI_NO_VAL, pdev->pdev_id);
 
-	if (soc->rdkstats_enabled) {
+	if (soc->peerstats_enabled) {
 		if (!peer_cookie.ctx) {
 			pdev->next_peer_cookie--;
 			qdf_err("Failed to initialize peer rate stats");
-			mon_peer->rdkstats_ctx = NULL;
+			mon_peer->peerstats_ctx = NULL;
 		} else {
-			mon_peer->rdkstats_ctx = (struct cdp_peer_rate_stats_ctx *)
-						  peer_cookie.ctx;
+			mon_peer->peerstats_ctx =
+				(struct cdp_peer_rate_stats_ctx *)
+				 peer_cookie.ctx;
 		}
 	}
 }
@@ -5190,7 +5191,7 @@ void dp_mon_peer_detach_notify(struct dp_peer *peer)
 	qdf_mem_copy(peer_cookie.mac_addr, peer->mac_addr.raw,
 		     QDF_MAC_ADDR_SIZE);
 	peer_cookie.ctx = NULL;
-	peer_cookie.ctx = (struct cdp_stats_cookie *)mon_peer->rdkstats_ctx;
+	peer_cookie.ctx = (struct cdp_stats_cookie *)mon_peer->peerstats_ctx;
 
 	dp_wdi_event_handler(WDI_EVENT_PEER_DESTROY,
 			     soc,
@@ -5199,19 +5200,19 @@ void dp_mon_peer_detach_notify(struct dp_peer *peer)
 			     WDI_NO_VAL,
 			     pdev->pdev_id);
 
-	mon_peer->rdkstats_ctx = NULL;
+	mon_peer->peerstats_ctx = NULL;
 }
 #else
 static inline
 void dp_mon_peer_attach_notify(struct dp_peer *peer)
 {
-	peer->monitor_peer->rdkstats_ctx = NULL;
+	peer->monitor_peer->peerstats_ctx = NULL;
 }
 
 static inline
 void dp_mon_peer_detach_notify(struct dp_peer *peer)
 {
-	peer->monitor_peer->rdkstats_ctx = NULL;
+	peer->monitor_peer->peerstats_ctx = NULL;
 }
 #endif
 
@@ -5275,12 +5276,13 @@ void dp_mon_register_intr_ops(struct dp_soc *soc)
 }
 #endif
 
-struct cdp_peer_rate_stats_ctx *dp_mon_peer_get_rdkstats_ctx(struct dp_peer *peer)
+struct cdp_peer_rate_stats_ctx *dp_mon_peer_get_peerstats_ctx(struct
+							      dp_peer *peer)
 {
 	struct dp_mon_peer *mon_peer = peer->monitor_peer;
 
 	if (mon_peer)
-		return mon_peer->rdkstats_ctx;
+		return mon_peer->peerstats_ctx;
 	else
 		return NULL;
 }
