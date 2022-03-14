@@ -384,6 +384,12 @@ QDF_STATUS wlan_reg_get_superchan_entry(
 	*p_sup_chan_entry = NULL;
 	return QDF_STATUS_E_NOSUPPORT;
 }
+
+static inline
+const char *wlan_reg_get_power_string(enum reg_6g_ap_type power_type)
+{
+	return "INVALID";
+}
 #endif /* CONFIG_BAND_6GHZ */
 
 /**
