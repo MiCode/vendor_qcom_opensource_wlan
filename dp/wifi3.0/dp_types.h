@@ -3888,7 +3888,8 @@ struct dp_peer {
 		authorize:1, /* Set when authorized */
 		valid:1, /* valid bit */
 		delete_in_progress:1, /* Indicate kickout sent */
-		sta_self_peer:1; /* Indicate STA self peer */
+		sta_self_peer:1, /* Indicate STA self peer */
+		is_tdls_peer:1; /* Indicate TDLS peer */
 
 #ifdef WLAN_FEATURE_11BE_MLO
 	uint8_t first_link:1, /* first link peer for MLO */
