@@ -688,7 +688,7 @@ wlan_cp_stats_twt_get_single_peer_session_params(
 							params,
 							&num_twt_session);
 	if (QDF_IS_STATUS_ERROR(qdf_status)) {
-		qdf_err("No TWT session for " QDF_MAC_ADDR_FMT " dialog_id %d",
+		cp_stats_debug("No TWT session for " QDF_MAC_ADDR_FMT " dialog_id %d",
 			QDF_MAC_ADDR_REF(mac_addr), dialog_id);
 	}
 
