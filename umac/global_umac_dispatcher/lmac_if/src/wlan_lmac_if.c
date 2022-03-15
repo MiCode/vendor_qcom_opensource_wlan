@@ -83,6 +83,9 @@
 #endif
 
 #include <wlan_twt_tgt_if_rx_api.h>
+#ifdef WLAN_FEATURE_MCC_QUOTA
+#include <wlan_p2p_mcc_quota_tgt_api.h>
+#endif
 
 /* Function pointer for OL/WMA specific UMAC tx_ops
  * registration.
