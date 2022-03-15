@@ -1170,7 +1170,7 @@ static uint16_t dfs_find_ch_with_fallback_for_freq(struct wlan_dfs *dfs,
 	struct  chan_bonding_bitmap ch_map = { { {0} } };
 	uint8_t i, index = 0, final_cnt = 0;
 	uint16_t target_channel = 0;
-	uint16_t primary_seg_start_ch = 0, sec_seg_ch = 0, new_start_ch;
+	uint16_t primary_seg_start_ch = 0, sec_seg_ch = 0, new_start_ch = 0;
 	uint16_t final_lst[NUM_CHANNELS] = {0};
 
 	/* initialize ch_map for all 80 MHz bands: we have 6 80MHz bands */
