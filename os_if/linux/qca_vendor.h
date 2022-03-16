@@ -5284,6 +5284,12 @@ enum qca_wlan_ndp_sub_cmd {
  * segment 0 in center freq in MHz.
  * @QCA_WLAN_VENDOR_EXTERNAL_ACS_EVENT_CHAN_INFO_ATTR_FREQ_VHT_SEG_1: vht
  * segment 1 in center freq in MHz.
+ * @QCA_WLAN_VENDOR_EXTERNAL_ACS_EVENT_CHAN_INFO_ATTR_SUPP_POWER_MODES: 3-bits
+ * flag indicating the AP power modes supported by the channel, as given by
+ * enum qca_wlan_vendor_external_acs_chan_power_level.
+ * @QCA_WLAN_VENDOR_EXTERNAL_ACS_EVENT_CHAN_POWER_INFO_ATTR: Array of nested
+ * attributes for each power mode. It takes attr as defined in enum
+ * qca_wlan_vendor_external_acs_event_chan_power_info_attr.
  *
  */
 enum qca_wlan_vendor_external_acs_event_chan_info_attr {
@@ -5344,11 +5350,76 @@ enum qca_wlan_vendor_external_acs_event_chan_info_attr {
 	 * doesn't support the 6 GHz band.
 	 */
 	QCA_WLAN_VENDOR_EXTERNAL_ACS_EVENT_CHAN_INFO_ATTR_FREQ_VHT_SEG_1 = 13,
+	/*
+	 * 16-bit attribute of bits indicating the AP power modes supported by
+	 * the channel (u16).
+	 * Note: Currently, only 3 bits are used in the attribute and each bit
+	 * corresponds to the power mode mentioned in enum
+	 * qca_wlan_vendor_external_acs_chan_power_level and a given bit is
+	 * set if the associated mode is supported.
+	 */
+	QCA_WLAN_VENDOR_EXTERNAL_ACS_EVENT_CHAN_INFO_ATTR_SUPP_POWER_MODES
+									= 14,
+	/* Array of nested attributes for each power mode. It takes attr as
+	 * defined in enum
+	 * qca_wlan_vendor_external_acs_event_chan_power_info_attr.
+	 */
+	QCA_WLAN_VENDOR_EXTERNAL_ACS_EVENT_CHAN_POWER_INFO_ATTR	= 15,
 
 	/* keep last */
 	QCA_WLAN_VENDOR_EXTERNAL_ACS_EVENT_CHAN_INFO_ATTR_LAST,
 	QCA_WLAN_VENDOR_EXTERNAL_ACS_EVENT_CHAN_INFO_ATTR_MAX =
 		QCA_WLAN_VENDOR_EXTERNAL_ACS_EVENT_CHAN_INFO_ATTR_LAST - 1,
+};
+
+/**
+ * qca_wlan_vendor_external_acs_chan_power_level - Specifies the valid
+ * values that the vendor external ACS channel power attribute
+ * QCA_WLAN_VENDOR_EXTERNAL_ACS_EVENT_CHAN_POWER_INFO_ATTR_POWER_MODE can
+ * take.
+ * @QCA_WLAN_VENDOR_EXTERNAL_ACS_CHAN_LOW_POWER: Low power/Indoor mode
+ * @QCA_WLAN_VENDOR_EXTERNAL_ACS_CHAN_STANDARD_POWER: Standard power mode
+ * @QCA_WLAN_VENDOR_EXTERNAL_ACS_CHAN_VERY_LOW_POWER: Very low power mode
+ */
+enum qca_wlan_vendor_external_acs_chan_power_level {
+	QCA_WLAN_VENDOR_EXTERNAL_ACS_CHAN_LOW_POWER = 0,
+	QCA_WLAN_VENDOR_EXTERNAL_ACS_CHAN_STANDARD_POWER = 1,
+	QCA_WLAN_VENDOR_EXTERNAL_ACS_CHAN_VERY_LOW_POWER = 2,
+};
+
+/**
+ * qca_wlan_vendor_external_acs_event_chan_power_info_attr: Represents nested
+ * attributes for power mode type and power values corresponding to that.
+ * These attributes are sent as part of
+ * QCA_WLAN_VENDOR_EXTERNAL_ACS_EVENT_CHAN_POWER_INFO_ATTR.
+ */
+enum qca_wlan_vendor_external_acs_event_chan_power_info_attr {
+	QCA_WLAN_VENDOR_EXTERNAL_ACS_EVENT_CHAN_POWER_INFO_ATTR_INVALID = 0,
+	/*
+	 * Power mode (u8) takes the values defined in enum
+	 * qca_wlan_vendor_external_acs_chan_power_mode
+	 */
+	QCA_WLAN_VENDOR_EXTERNAL_ACS_EVENT_CHAN_POWER_INFO_ATTR_POWER_MODE
+									= 1,
+	/*
+	 * Indicates if power value is a PSD/EIRP value (flag). If flag is
+	 * present, it indicates a PSD value.
+	 */
+	QCA_WLAN_VENDOR_EXTERNAL_ACS_EVENT_CHAN_POWER_INFO_ATTR_PSD_FLAG = 2,
+	/*
+	 * Power value (u32) PSD/EIRP as indicated by
+	 * QCA_WLAN_VENDOR_EXTERNAL_ACS_EVENT_CHAN_POWER_INFO_ATTR_PSD_FLAG,
+	 * for power mode corresponding to the
+	 * QCA_WLAN_VENDOR_EXTERNAL_ACS_EVENT_CHAN_POWER_INFO_ATTR_POWER_MODE.
+	 * Units for PSD - dBm/MHz
+	 * Units for EIRP - dBm
+	 */
+	QCA_WLAN_VENDOR_EXTERNAL_ACS_EVENT_CHAN_POWER_INFO_ATTR_POWER_VALUE
+									= 3,
+	/* keep last */
+	QCA_WLAN_VENDOR_EXTERNAL_ACS_EVENT_CHAN_POWER_INFO_ATTR_LAST,
+	QCA_WLAN_VENDOR_EXTERNAL_ACS_EVENT_CHAN_POWER_INFO_ATTR_MAX =
+	QCA_WLAN_VENDOR_EXTERNAL_ACS_EVENT_CHAN_POWER_INFO_ATTR_LAST - 1,
 };
 
 /**
@@ -5387,6 +5458,8 @@ enum qca_wlan_vendor_external_acs_event_chan_info_attr {
  * @QCA_WLAN_VENDOR_ATTR_EXTERNAL_ACS_EVENT_RROPAVAIL_INFO: Reference RF
  * Operating Parameter (RROP) availability information (u16). It uses values
  * defined in enum qca_wlan_vendor_attr_rropavail_info.
+ * @QCA_WLAN_VENDOR_ATTR_EXTERNAL_ACS_EVENT_AFC_CAPABILITY: Flag attribute to
+ * indicate if driver supports 6 GHz AFC trigger for External ACS.
  */
 enum qca_wlan_vendor_attr_external_acs_event {
 	QCA_WLAN_VENDOR_ATTR_EXTERNAL_ACS_EVENT_INVALID = 0,
@@ -5404,6 +5477,7 @@ enum qca_wlan_vendor_attr_external_acs_event {
 	QCA_WLAN_VENDOR_ATTR_EXTERNAL_ACS_EVENT_CHAN_INFO = 12,
 	QCA_WLAN_VENDOR_ATTR_EXTERNAL_ACS_EVENT_POLICY = 13,
 	QCA_WLAN_VENDOR_ATTR_EXTERNAL_ACS_EVENT_RROPAVAIL_INFO = 14,
+	QCA_WLAN_VENDOR_ATTR_EXTERNAL_ACS_EVENT_AFC_CAPABILITY = 15,
 
 	/* keep last */
 	QCA_WLAN_VENDOR_ATTR_EXTERNAL_ACS_EVENT_LAST,
@@ -7280,6 +7354,8 @@ enum qca_wlan_vendor_acs_select_reason {
 	 * current channel.
 	 */
 	QCA_WLAN_VENDOR_ACS_SELECT_REASON_JAMMER_INTERFERENCE,
+	/* Represents the reason that ACS triggered by AFC */
+	QCA_WLAN_VENDOR_ACS_SELECT_REASON_AFC_TRIGGER,
 };
 
 /**
