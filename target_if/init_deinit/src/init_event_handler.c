@@ -66,6 +66,24 @@ init_deinit_update_p2p_p2p_conc_support(struct wmi_unified *wmi_handle,
 {}
 #endif
 
+#ifdef QCA_RSSI_DB2DBM
+static void
+init_deinit_update_rssi_dbm_conv_support(struct wmi_unified *wmi_handle,
+					 struct wlan_objmgr_psoc *psoc)
+{
+	/* Send RSSI_DBM_CONV to DP layer */
+	if (wmi_service_enabled(wmi_handle,
+				wmi_service_pdev_rssi_dbm_conv_event_support))
+		cdp_soc_set_param(wlan_psoc_get_dp_handle(psoc),
+				  DP_SOC_PARAM_RSSI_DBM_CONV_SUPPORT, 1);
+}
+#else
+static inline void
+init_deinit_update_rssi_dbm_conv_support(struct wmi_unified *wmi_handle,
+					 struct wlan_objmgr_psoc *psoc)
+{}
+#endif
+
 static int init_deinit_service_ready_event_handler(ol_scn_t scn_handle,
 							uint8_t *event,
 							uint32_t data_len)
@@ -270,6 +288,8 @@ static int init_deinit_service_ready_event_handler(ol_scn_t scn_handle,
 				wmi_service_multi_peer_group_cmd_support))
 		cdp_soc_set_param(wlan_psoc_get_dp_handle(psoc),
 				  DP_SOC_PARAM_MULTI_PEER_GRP_CMD_SUPPORT, 1);
+
+	init_deinit_update_rssi_dbm_conv_support(wmi_handle, psoc);
 
 	if (wmi_service_enabled(wmi_handle, wmi_service_ext_msg)) {
 		target_if_debug("Wait for EXT message");

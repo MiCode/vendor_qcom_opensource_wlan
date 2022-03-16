@@ -5579,6 +5579,9 @@ typedef enum {
 	wmi_service_radar_found_chan_freq_eq_center_freq,
 #endif
 	wmi_service_pn_replay_check_support,
+#ifdef QCA_RSSI_DB2DBM
+	wmi_service_pdev_rssi_dbm_conv_event_support,
+#endif
 	wmi_services_max,
 } wmi_conv_service_ids;
 #define WMI_SERVICE_UNAVAILABLE 0xFFFF

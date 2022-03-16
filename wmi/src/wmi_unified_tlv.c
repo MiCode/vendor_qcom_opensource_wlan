@@ -18750,6 +18750,10 @@ static void populate_tlv_service(uint32_t *wmi_service)
 #endif
 	wmi_service[wmi_service_pn_replay_check_support] =
 			WMI_SERVICE_PN_REPLAY_CHECK_SUPPORT;
+#ifdef QCA_RSSI_DB2DBM
+	wmi_service[wmi_service_pdev_rssi_dbm_conv_event_support] =
+			WMI_SERVICE_PDEV_RSSI_DBM_CONV_EVENT_SUPPORT;
+#endif
 }
 
 /**
