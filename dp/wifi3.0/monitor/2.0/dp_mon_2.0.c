@@ -892,9 +892,9 @@ void dp_pdev_mon_rings_deinit_2_0(struct dp_pdev *pdev)
 							 pdev->pdev_id);
 
 		dp_srng_deinit(soc, &soc->rxdma_mon_dst_ring[lmac_id],
-			       RXDMA_MONITOR_DST, 0);
+			       RXDMA_MONITOR_DST, pdev->pdev_id);
 		dp_srng_deinit(soc, &mon_soc_be->tx_mon_dst_ring[lmac_id],
-			       TX_MONITOR_DST, 0);
+			       TX_MONITOR_DST, pdev->pdev_id);
 	}
 }
 
@@ -911,13 +911,13 @@ QDF_STATUS dp_pdev_mon_rings_init_2_0(struct dp_pdev *pdev)
 							 pdev->pdev_id);
 
 		if (dp_srng_init(soc, &soc->rxdma_mon_dst_ring[lmac_id],
-				 RXDMA_MONITOR_DST, 0, lmac_id)) {
+				 RXDMA_MONITOR_DST, pdev->pdev_id, lmac_id)) {
 			dp_mon_err("%pK: " RNG_ERR "rxdma_mon_dst_ring", soc);
 			goto fail;
 		}
 
 		if (dp_srng_init(soc, &mon_soc_be->tx_mon_dst_ring[lmac_id],
-				 TX_MONITOR_DST, 0, lmac_id)) {
+				 TX_MONITOR_DST, pdev->pdev_id, lmac_id)) {
 			dp_mon_err("%pK: " RNG_ERR "tx_mon_dst_ring", soc);
 			goto fail;
 		}

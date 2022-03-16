@@ -1051,7 +1051,8 @@ int htt_h2t_rx_ring_cfg(struct htt_soc *htt_soc, int pdev_id,
 	dp_get_target_pdev_id_for_host_pdev_id(soc->dp_soc, pdev_id);
 
 	if (htt_ring_type == HTT_SW_TO_SW_RING ||
-			htt_ring_type == HTT_SW_TO_HW_RING)
+			htt_ring_type == HTT_SW_TO_HW_RING ||
+			htt_ring_type == HTT_HW_TO_SW_RING)
 		HTT_RX_RING_SELECTION_CFG_PDEV_ID_SET(*msg_word,
 						      target_pdev_id);
 

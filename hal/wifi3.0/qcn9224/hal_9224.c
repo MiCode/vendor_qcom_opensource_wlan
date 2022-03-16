@@ -2307,7 +2307,7 @@ struct hal_hw_srng_config hw_srng_table_9224[] = {
 #ifdef QCA_MONITOR_2_0_SUPPORT
 	{ /* RXDMA_MONITOR_DST */
 		.start_ring_id = HAL_SRNG_WMAC1_RXMON2SW0,
-		.max_rings = 1,
+		.max_rings = 2,
 		.entry_size = sizeof(struct mon_destination_ring) >> 2,
 		.lmac_ring = TRUE,
 		.ring_dir = HAL_SRNG_DST_RING,
@@ -2432,7 +2432,7 @@ struct hal_hw_srng_config hw_srng_table_9224[] = {
 	},
 	{ /* TX_MONITOR_DST */
 		.start_ring_id = HAL_SRNG_WMAC1_TXMON2SW0,
-		.max_rings = 1,
+		.max_rings = 2,
 		.entry_size = sizeof(struct mon_destination_ring) >> 2,
 		.lmac_ring = TRUE,
 		.ring_dir = HAL_SRNG_DST_RING,
