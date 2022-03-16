@@ -475,6 +475,64 @@ dp_rx_pn_error_handle(struct dp_soc *soc, hal_ring_desc_t ring_desc,
 	return rx_bufs_used;
 }
 
+#ifdef DP_RX_DELIVER_ALL_OOR_FRAMES
+/**
+ * dp_rx_deliver_oor_frame() - deliver OOR frames to stack
+ * @soc: Datapath soc handler
+ * @peer: pointer to DP peer
+ * @nbuf: pointer to the skb of RX frame
+ * @frame_mask: the mask for speical frame needed
+ * @rx_tlv_hdr: start of rx tlv header
+ *
+ * note: Msdu_len must have been stored in QDF_NBUF_CB_RX_PKT_LEN(nbuf) and
+ * single nbuf is expected.
+ *
+ * return: true - nbuf has been delivered to stack, false - not.
+ */
+static bool
+dp_rx_deliver_oor_frame(struct dp_soc *soc,
+			struct dp_txrx_peer *txrx_peer,
+			qdf_nbuf_t nbuf, uint32_t frame_mask,
+			uint8_t *rx_tlv_hdr)
+{
+	uint32_t l2_hdr_offset = 0;
+	uint16_t msdu_len = 0;
+	uint32_t skip_len;
+
+	l2_hdr_offset =
+		hal_rx_msdu_end_l3_hdr_padding_get(soc->hal_soc, rx_tlv_hdr);
+
+	if (qdf_unlikely(qdf_nbuf_is_frag(nbuf))) {
+		skip_len = l2_hdr_offset;
+	} else {
+		msdu_len = QDF_NBUF_CB_RX_PKT_LEN(nbuf);
+		skip_len = l2_hdr_offset + soc->rx_pkt_tlv_size;
+		qdf_nbuf_set_pktlen(nbuf, msdu_len + skip_len);
+	}
+
+	QDF_NBUF_CB_RX_NUM_ELEMENTS_IN_LIST(nbuf) = 1;
+	dp_rx_set_hdr_pad(nbuf, l2_hdr_offset);
+	qdf_nbuf_pull_head(nbuf, skip_len);
+	qdf_nbuf_set_exc_frame(nbuf, 1);
+
+	dp_info_rl("OOR frame, mpdu sn 0x%x",
+		   hal_rx_get_rx_sequence(soc->hal_soc, rx_tlv_hdr));
+	dp_rx_deliver_to_stack(soc, txrx_peer->vdev, txrx_peer, nbuf, NULL);
+	return true;
+}
+
+#else
+static bool
+dp_rx_deliver_oor_frame(struct dp_soc *soc,
+			struct dp_txrx_peer *txrx_peer,
+			qdf_nbuf_t nbuf, uint32_t frame_mask,
+			uint8_t *rx_tlv_hdr)
+{
+	return dp_rx_deliver_special_frame(soc, txrx_peer, nbuf, frame_mask,
+					   rx_tlv_hdr);
+}
+#endif
+
 /**
  * dp_rx_oor_handle() - Handles the msdu which is OOR error
  *
@@ -507,8 +565,8 @@ dp_rx_oor_handle(struct dp_soc *soc,
 		goto free_nbuf;
 	}
 
-	if (dp_rx_deliver_special_frame(soc, txrx_peer, nbuf, frame_mask,
-					rx_tlv_hdr)) {
+	if (dp_rx_deliver_oor_frame(soc, txrx_peer, nbuf, frame_mask,
+				    rx_tlv_hdr)) {
 		DP_STATS_INC(soc, rx.err.reo_err_oor_to_stack, 1);
 		dp_txrx_peer_unref_delete(txrx_ref_handle, DP_MOD_ID_RX_ERR);
 		return;

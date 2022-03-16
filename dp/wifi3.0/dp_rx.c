@@ -2382,28 +2382,10 @@ void dp_rx_skip_tlvs(struct dp_soc *soc, qdf_nbuf_t nbuf, uint32_t l3_padding)
 	QDF_NBUF_CB_RX_PACKET_L3_HDR_PAD(nbuf) = l3_padding;
 	qdf_nbuf_pull_head(nbuf, l3_padding + soc->rx_pkt_tlv_size);
 }
-
-/**
- * dp_rx_set_hdr_pad() - set l3 padding in nbuf cb
- * @nbuf: pkt skb pointer
- * @l3_padding: l3 padding
- *
- * Return: None
- */
-static inline
-void dp_rx_set_hdr_pad(qdf_nbuf_t nbuf, uint32_t l3_padding)
-{
-	QDF_NBUF_CB_RX_PACKET_L3_HDR_PAD(nbuf) = l3_padding;
-}
 #else
 void dp_rx_skip_tlvs(struct dp_soc *soc, qdf_nbuf_t nbuf, uint32_t l3_padding)
 {
 	qdf_nbuf_pull_head(nbuf, l3_padding + soc->rx_pkt_tlv_size);
-}
-
-static inline
-void dp_rx_set_hdr_pad(qdf_nbuf_t nbuf, uint32_t l3_padding)
-{
 }
 #endif
 
