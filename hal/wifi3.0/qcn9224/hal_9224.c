@@ -1929,6 +1929,7 @@ static void hal_hw_txrx_ops_attach_qcn9224(struct hal_soc *hal_soc)
 	hal_soc->ops->hal_txmon_status_free_buffer =
 				hal_txmon_status_free_buffer_generic_be;
 #endif /* QCA_MONITOR_2_0_SUPPORT */
+	hal_soc->ops->hal_compute_reo_remap_ix0 = NULL;
 };
 
 struct hal_hw_srng_config hw_srng_table_9224[] = {

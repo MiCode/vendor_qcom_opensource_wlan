@@ -1100,6 +1100,19 @@ void hal_compute_reo_remap_ix2_ix3_6390(uint32_t *ring, uint32_t num_rings,
 	}
 }
 
+static
+void hal_compute_reo_remap_ix0_6390(uint32_t *remap0)
+{
+	*remap0 = HAL_REO_REMAP_IX0(REO_REMAP_SW1, 0) |
+			HAL_REO_REMAP_IX0(REO_REMAP_SW1, 1) |
+			HAL_REO_REMAP_IX0(REO_REMAP_SW2, 2) |
+			HAL_REO_REMAP_IX0(REO_REMAP_SW3, 3) |
+			HAL_REO_REMAP_IX0(REO_REMAP_SW2, 4) |
+			HAL_REO_REMAP_IX0(REO_REMAP_RELEASE, 5) |
+			HAL_REO_REMAP_IX0(REO_REMAP_FW, 6) |
+			HAL_REO_REMAP_IX0(REO_REMAP_FW, 7);
+}
+
 #ifdef WLAN_FEATURE_MARK_FIRST_WAKEUP_PACKET
 /**
  * hal_get_first_wow_wakeup_packet_6390(): Function to get if the buffer
@@ -1293,6 +1306,8 @@ static void hal_hw_txrx_ops_attach_qca6390(struct hal_soc *hal_soc)
 	hal_soc->ops->hal_get_first_wow_wakeup_packet =
 		hal_get_first_wow_wakeup_packet_6390;
 #endif
+	hal_soc->ops->hal_compute_reo_remap_ix0 =
+				hal_compute_reo_remap_ix0_6390;
 };
 
 struct hal_hw_srng_config hw_srng_table_6390[] = {
