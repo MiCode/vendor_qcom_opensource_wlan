@@ -4028,5 +4028,31 @@ static inline void
 dp_lite_mon_vdev_delete(struct dp_pdev *pdev, struct dp_vdev *vdev)
 {
 }
+
+static inline int
+dp_lite_mon_config_nac_peer(struct cdp_soc_t *soc_hdl,
+			    uint8_t vdev_id,
+			    uint32_t cmd, uint8_t *macaddr)
+{
+	return 0;
+}
+
+static inline QDF_STATUS
+dp_lite_mon_config_nac_rssi_peer(struct cdp_soc_t *soc_hdl,
+				 uint8_t vdev_id,
+				 enum cdp_nac_param_cmd cmd,
+				 char *bssid, char *macaddr,
+				 uint8_t chan_num)
+{
+	return QDF_STATUS_E_FAILURE;
+}
+
+static inline QDF_STATUS
+dp_lite_mon_get_nac_peer_rssi(struct cdp_soc_t *soc_hdl,
+			      uint8_t vdev_id, char *macaddr,
+			      uint8_t *rssi)
+{
+	return QDF_STATUS_E_FAILURE;
+}
 #endif
 #endif /* _DP_MON_H_ */

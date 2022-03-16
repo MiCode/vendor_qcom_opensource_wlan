@@ -1259,10 +1259,6 @@ dp_mon_register_feature_ops_2_0(struct dp_soc *soc)
 	mon_ops->mon_ppdu_desc_notify = dp_ppdu_desc_notify_2_0;
 #endif
 #endif
-#if defined(ATH_SUPPORT_NAC_RSSI) || defined(ATH_SUPPORT_NAC)
-	mon_ops->mon_filter_setup_smart_monitor =
-				dp_mon_filter_setup_smart_monitor_2_0;
-#endif
 #ifdef WLAN_RX_PKT_CAPTURE_ENH
 	mon_ops->mon_filter_setup_rx_enh_capture =
 				dp_mon_filter_setup_rx_enh_capture_2_0;

@@ -159,30 +159,6 @@ dp_mon_filter_reset_mcopy_mode_2_0(struct dp_pdev *pdev)
 }
 #endif
 
-#if defined(ATH_SUPPORT_NAC_RSSI) || defined(ATH_SUPPORT_NAC)
-/**
- * dp_mon_filter_setup_smart_monitor() - Setup the smart monitor mode filter
- * @pdev: DP pdev handle
- */
-void dp_mon_filter_setup_smart_monitor_2_0(struct dp_pdev *pdev);
-
-/**
- * dp_mon_filter_reset_smart_monitor() - Reset the smart monitor mode filter
- * @pdev: DP pdev handle
- */
-void dp_mon_filter_reset_smart_monitor_2_0(struct dp_pdev *pdev);
-#else
-static inline void
-dp_mon_filter_setup_smart_monitor_2_0(struct dp_pdev *pdev)
-{
-}
-
-static inline void
-dp_mon_filter_reset_smart_monitor_2_0(struct dp_pdev *pdev)
-{
-}
-#endif
-
 #ifdef WLAN_RX_PKT_CAPTURE_ENH
 /**
  * dp_mon_filter_setup_rx_enh_capture() - Setup the Rx capture mode filters

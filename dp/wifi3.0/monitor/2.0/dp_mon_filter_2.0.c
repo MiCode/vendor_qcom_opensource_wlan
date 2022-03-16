@@ -1128,16 +1128,6 @@ void dp_mon_filter_reset_mcopy_mode_2_0(struct dp_pdev *pdev)
 }
 #endif
 
-#if defined(ATH_SUPPORT_NAC_RSSI) || defined(ATH_SUPPORT_NAC)
-void dp_mon_filter_setup_smart_monitor_2_0(struct dp_pdev *pdev)
-{
-}
-
-void dp_mon_filter_reset_smart_monitor_2_0(struct dp_pdev *pdev)
-{
-}
-#endif /* ATH_SUPPORT_NAC_RSSI || ATH_SUPPORT_NAC */
-
 #ifdef WLAN_RX_PKT_CAPTURE_ENH
 void dp_mon_filter_setup_rx_enh_capture_2_0(struct dp_pdev *pdev)
 {

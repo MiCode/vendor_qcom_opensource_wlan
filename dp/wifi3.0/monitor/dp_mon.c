@@ -34,6 +34,9 @@
 #ifdef FEATURE_PERPKT_INFO
 #include "dp_ratetable.h"
 #endif
+#ifdef QCA_SUPPORT_LITE_MONITOR
+#include "dp_lite_mon.h"
+#endif
 
 #define DP_INTR_POLL_TIMER_MS	5
 #define INVALID_FREE_BUFF 0xffffffff
@@ -5482,10 +5485,30 @@ void dp_mon_cdp_ops_register(struct dp_soc *soc)
 	case TARGET_TYPE_QCA5018:
 	case TARGET_TYPE_QCN6122:
 		dp_mon_cdp_ops_register_1_0(ops);
+#ifdef ATH_SUPPORT_NAC_RSSI
+		ops->ctrl_ops->txrx_vdev_config_for_nac_rssi =
+					dp_config_for_nac_rssi;
+		ops->ctrl_ops->txrx_vdev_get_neighbour_rssi =
+					dp_vdev_get_neighbour_rssi;
+#endif
+#if defined(ATH_SUPPORT_NAC_RSSI) || defined(ATH_SUPPORT_NAC)
+		ops->ctrl_ops->txrx_update_filter_neighbour_peers =
+					dp_update_filter_neighbour_peers;
+#endif /* ATH_SUPPORT_NAC_RSSI || ATH_SUPPORT_NAC */
 		break;
 	case TARGET_TYPE_QCN9224:
 #ifdef QCA_MONITOR_2_0_SUPPORT
 		dp_mon_cdp_ops_register_2_0(ops);
+#ifdef ATH_SUPPORT_NAC_RSSI
+		ops->ctrl_ops->txrx_vdev_config_for_nac_rssi =
+				dp_lite_mon_config_nac_rssi_peer;
+		ops->ctrl_ops->txrx_vdev_get_neighbour_rssi =
+				dp_lite_mon_get_nac_peer_rssi;
+#endif
+#if defined(ATH_SUPPORT_NAC_RSSI) || defined(ATH_SUPPORT_NAC)
+		ops->ctrl_ops->txrx_update_filter_neighbour_peers =
+					dp_lite_mon_config_nac_peer;
+#endif /* ATH_SUPPORT_NAC_RSSI || ATH_SUPPORT_NAC */
 #endif
 		break;
 	default:
@@ -5505,15 +5528,6 @@ void dp_mon_cdp_ops_register(struct dp_soc *soc)
 	ops->misc_ops->pkt_log_con_service = dp_pkt_log_con_service;
 	ops->misc_ops->pkt_log_exit = dp_pkt_log_exit;
 #endif
-#ifdef ATH_SUPPORT_NAC_RSSI
-	ops->ctrl_ops->txrx_vdev_config_for_nac_rssi = dp_config_for_nac_rssi;
-	ops->ctrl_ops->txrx_vdev_get_neighbour_rssi =
-					dp_vdev_get_neighbour_rssi;
-#endif
-#if defined(ATH_SUPPORT_NAC_RSSI) || defined(ATH_SUPPORT_NAC)
-	ops->ctrl_ops->txrx_update_filter_neighbour_peers =
-		dp_update_filter_neighbour_peers;
-#endif /* ATH_SUPPORT_NAC_RSSI || ATH_SUPPORT_NAC */
 	ops->ctrl_ops->enable_peer_based_pktlog =
 				dp_enable_peer_based_pktlog;
 #if defined(WLAN_TX_PKT_CAPTURE_ENH) || defined(WLAN_RX_PKT_CAPTURE_ENH)
