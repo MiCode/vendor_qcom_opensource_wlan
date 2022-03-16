@@ -784,6 +784,17 @@ bool wlan_reg_is_afc_expiry_event_received(struct wlan_objmgr_pdev *pdev);
  */
 bool
 wlan_reg_is_noaction_on_afc_pwr_evt(struct wlan_objmgr_pdev *pdev);
+
+/**
+ * wlan_reg_get_afc_dev_deploy_type() - Get AFC device deployment type
+ * @pdev: pdev pointer
+ * @afc_dev_type: Pointer to afc device deployment type
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+wlan_reg_get_afc_dev_deploy_type(struct wlan_objmgr_pdev *pdev,
+				 enum reg_afc_dev_deploy_type *afc_dev_type);
 #else
 static inline bool
 wlan_reg_is_afc_power_event_received(struct wlan_objmgr_pdev *pdev)

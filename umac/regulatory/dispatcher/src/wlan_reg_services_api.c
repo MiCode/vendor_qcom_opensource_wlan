@@ -1747,7 +1747,15 @@ bool wlan_reg_is_noaction_on_afc_pwr_evt(struct wlan_objmgr_pdev *pdev)
 {
 	return reg_is_noaction_on_afc_pwr_evt(pdev);
 }
-#endif
+
+QDF_STATUS
+wlan_reg_get_afc_dev_deploy_type(struct wlan_objmgr_pdev *pdev,
+				 enum reg_afc_dev_deploy_type *afc_dev_type)
+{
+	return reg_get_afc_dev_deploy_type(pdev, afc_dev_type);
+}
+
+#endif /* CONFIG_AFC_SUPPORT */
 
 QDF_STATUS wlan_reg_is_chwidth_supported(struct wlan_objmgr_pdev *pdev,
 					 enum phy_ch_width ch_width,
