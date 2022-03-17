@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -21,6 +22,7 @@
  */
 #include <mlo_global_h_shmem_arena.h>
 
+#ifdef WLAN_MGMT_RX_REO_SUPPORT
 /**
  * mgmt_rx_reo_snapshot_is_valid() - Check if an MGMT Rx REO snapshot is valid
  * @snapshot_low: lower 32-bits of the snapshot
@@ -97,10 +99,6 @@ QDF_STATUS mgmt_rx_reo_register_wifi3_0_ops(
 		return QDF_STATUS_E_NULL_VALUE;
 	}
 
-	reo_low_level_ops->init_shmem_arena_ctx =
-		mlo_glb_h_shmem_arena_ctx_init;
-	reo_low_level_ops->deinit_shmem_arena_ctx =
-		mlo_glb_h_shmem_arena_ctx_deinit;
 	reo_low_level_ops->get_num_links = mgmt_rx_reo_get_num_links;
 	reo_low_level_ops->get_snapshot_address =
 		mgmt_rx_reo_get_snapshot_address;
@@ -116,6 +114,25 @@ QDF_STATUS mgmt_rx_reo_register_wifi3_0_ops(
 		mgmt_rx_reo_snapshot_get_global_timestamp;
 
 	reo_low_level_ops->implemented = true;
+
+	return QDF_STATUS_SUCCESS;
+}
+#endif
+
+QDF_STATUS global_shmem_register_wifi3_0_ops(
+	struct wlan_lmac_if_global_shmem_local_ops *shmem_local_ops)
+{
+	if (!shmem_local_ops) {
+		target_if_err("Low level ops of global shmem is NULL");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	shmem_local_ops->init_shmem_arena_ctx =
+		mlo_glb_h_shmem_arena_ctx_init;
+	shmem_local_ops->deinit_shmem_arena_ctx =
+		mlo_glb_h_shmem_arena_ctx_deinit;
+
+	shmem_local_ops->implemented = true;
 
 	return QDF_STATUS_SUCCESS;
 }

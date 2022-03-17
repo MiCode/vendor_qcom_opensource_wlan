@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -78,6 +79,7 @@ struct wlan_host_mlo_glb_h_shmem_arena_ctx {
 	qdf_atomic_t init_count;
 };
 
+#ifdef WLAN_MLO_GLOBAL_SHMEM_SUPPORT
 /**
  * mlo_glb_h_shmem_arena_ctx_init() - Initialize MLO Global shared memory arena
  * context on Host
@@ -96,7 +98,9 @@ QDF_STATUS mlo_glb_h_shmem_arena_ctx_init(void *arena_vaddr,
  * Return: QDF_STATUS of operation
  */
 QDF_STATUS mlo_glb_h_shmem_arena_ctx_deinit(void);
+#endif
 
+#ifdef WLAN_MGMT_RX_REO_SUPPORT
 /**
  * mgmt_rx_reo_get_num_links() - Get number of links to be used by MGMT Rx REO
  *
@@ -113,4 +117,5 @@ int mgmt_rx_reo_get_num_links(void);
  */
 void *mgmt_rx_reo_get_snapshot_address(
 	uint8_t link_id, enum mgmt_rx_reo_shared_snapshot_id snapshot_id);
+#endif /* WLAN_MGMT_RX_REO_SUPPORT */
 #endif

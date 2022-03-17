@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -493,6 +494,7 @@ success:
 
 qdf_export_symbol(mlo_glb_h_shmem_arena_ctx_deinit);
 
+#ifdef WLAN_MGMT_RX_REO_SUPPORT
 int mgmt_rx_reo_get_num_links(void)
 {
 	struct wlan_host_mlo_glb_h_shmem_arena_ctx *shmem_arena_ctx;
@@ -556,3 +558,4 @@ void *mgmt_rx_reo_get_snapshot_address(
 
 	return NULL;
 }
+#endif
