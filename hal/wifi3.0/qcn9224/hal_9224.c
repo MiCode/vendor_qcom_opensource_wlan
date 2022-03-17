@@ -1751,7 +1751,7 @@ static void hal_hw_txrx_ops_attach_qcn9224(struct hal_soc *hal_soc)
 	hal_soc->ops->hal_reo_status_get_header =
 					hal_reo_status_get_header_9224;
 	hal_soc->ops->hal_rx_status_get_tlv_info =
-					hal_rx_status_get_tlv_info_generic_be;
+					hal_rx_status_get_tlv_info_wrapper_be;
 	hal_soc->ops->hal_rx_wbm_err_info_get =
 					hal_rx_wbm_err_info_get_generic_be;
 	hal_soc->ops->hal_tx_set_pcp_tid_map =
