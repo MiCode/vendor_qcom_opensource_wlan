@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2016-2017 The Linux Foundation. All rights reserved.
- *
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -48,6 +48,14 @@ QDF_STATUS dfs_init(void);
  * dfs_deinit() - Deinit DFS module.
  */
 QDF_STATUS dfs_deinit(void);
+
+/**
+ * dfs_pdev_close() - Close dfs component
+ * @pdev: Pointer to pdev structure.
+ *
+ * Return: Success or Failure
+ */
+QDF_STATUS dfs_pdev_close(struct wlan_objmgr_pdev *pdev);
 
 /**
  * wlan_dfs_pdev_obj_create_notification() - DFS pdev object create handler.

@@ -492,6 +492,12 @@ static QDF_STATUS dispatcher_regulatory_pdev_close(struct wlan_objmgr_pdev
 	return regulatory_pdev_close(pdev);
 }
 
+static QDF_STATUS dispatcher_dfs_pdev_close(struct wlan_objmgr_pdev
+						  *pdev)
+{
+	return dfs_pdev_close(pdev);
+}
+
 #ifdef WLAN_SA_API_ENABLE
 static QDF_STATUS dispatcher_init_sa_api(void)
 {
@@ -1562,6 +1568,8 @@ QDF_STATUS dispatcher_pdev_close(struct wlan_objmgr_pdev *pdev)
 	QDF_BUG(QDF_STATUS_SUCCESS == dispatcher_spectral_pdev_close(pdev));
 
 	QDF_BUG(QDF_STATUS_SUCCESS == dispatcher_regulatory_pdev_close(pdev));
+
+	QDF_BUG(QDF_STATUS_SUCCESS == dispatcher_dfs_pdev_close(pdev));
 
 	return QDF_STATUS_SUCCESS;
 }
