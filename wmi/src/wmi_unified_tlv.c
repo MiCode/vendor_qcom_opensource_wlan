@@ -16322,10 +16322,10 @@ extract_roam_scan_ap_stats_tlv(wmi_unified_t wmi_handle, void *evt_buf,
 		dst->cu_score = src->cu_score;
 		dst->total_score = src->total_score;
 		dst->timestamp = src->timestamp;
-		dst->bl_reason = src->bl_reason;
-		dst->bl_source = src->bl_source;
-		dst->bl_timestamp = src->bl_timestamp;
-		dst->bl_original_timeout = src->bl_original_timeout;
+		dst->dl_reason = src->bl_reason;
+		dst->dl_source = src->bl_source;
+		dst->dl_timestamp = src->bl_timestamp;
+		dst->dl_original_timeout = src->bl_original_timeout;
 
 		src++;
 		dst++;

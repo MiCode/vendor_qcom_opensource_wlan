@@ -426,16 +426,16 @@ hncm_return:
 
 
 /**
- * hif_exec_bl_irq() - calls irq_modify_status to enable/disable denylisting
+ * hif_exec_dl_irq() - calls irq_modify_status to enable/disable denylisting
  * @napid: pointer to qca_napi_data structure
- * @bl_flag: denylist flag to enable/disable denylisting
+ * @dl_flag: denylist flag to enable/disable denylisting
  *
  * The function enables/disables denylisting for all the copy engine
  * interrupts on which NAPI is enabled.
  *
  * Return: None
  */
-static inline void hif_exec_bl_irq(struct qca_napi_data *napid, bool bl_flag)
+static inline void hif_exec_dl_irq(struct qca_napi_data *napid, bool dl_flag)
 {
 	int i, j;
 	struct hif_exec_context *exec_ctx;
@@ -450,7 +450,7 @@ static inline void hif_exec_bl_irq(struct qca_napi_data *napid, bool bl_flag)
 		if (!(exec_ctx))
 			continue;
 
-		if (bl_flag == true)
+		if (dl_flag == true)
 			for (j = 0; j < exec_ctx->numirq; j++)
 				qdf_dev_modify_irq_status(exec_ctx->os_irq[j],
 							  0,
@@ -460,7 +460,7 @@ static inline void hif_exec_bl_irq(struct qca_napi_data *napid, bool bl_flag)
 				qdf_dev_modify_irq_status(exec_ctx->os_irq[j],
 							  QDF_IRQ_NO_BALANCING,
 							  0);
-		hif_debug("bl_flag %d CE %d", bl_flag, i);
+		hif_debug("dl_flag %d CE %d", dl_flag, i);
 	}
 }
 
@@ -486,12 +486,12 @@ int hif_exec_cpu_denylist(struct qca_napi_data *napid,
 	int rc = 0;
 	static int ref_count; /* = 0 by the compiler */
 	uint8_t flags = napid->flags;
-	bool bl_en = flags & QCA_NAPI_FEATURE_IRQ_BLACKLISTING;
+	bool dl_en = flags & QCA_NAPI_FEATURE_IRQ_BLACKLISTING;
 	bool ccb_en = flags & QCA_NAPI_FEATURE_CORE_CTL_BOOST;
 
 	NAPI_DEBUG("-->%s(%d %d)", __func__, flags, op);
 
-	if (!(bl_en && ccb_en)) {
+	if (!(dl_en && ccb_en)) {
 		rc = -EINVAL;
 		goto out;
 	}
@@ -507,7 +507,7 @@ int hif_exec_cpu_denylist(struct qca_napi_data *napid,
 			rc = hif_napi_core_ctl_set_boost(true);
 			NAPI_DEBUG("boost_on() returns %d - refcnt=%d",
 				rc, ref_count);
-			hif_exec_bl_irq(napid, true);
+			hif_exec_dl_irq(napid, true);
 		}
 		break;
 	case DENYLIST_OFF:
@@ -518,7 +518,7 @@ int hif_exec_cpu_denylist(struct qca_napi_data *napid,
 			rc = hif_napi_core_ctl_set_boost(false);
 			NAPI_DEBUG("boost_off() returns %d - refcnt=%d",
 				   rc, ref_count);
-			hif_exec_bl_irq(napid, false);
+			hif_exec_dl_irq(napid, false);
 		}
 		break;
 	default:

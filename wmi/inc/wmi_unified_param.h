@@ -7971,12 +7971,12 @@ struct wmi_roam_wtc_btm_trigger_data {
  *  @rssi_score:  AP RSSI score
  *  @total_score: Total score of the candidate AP.
  *  @etp:         Estimated throughput value of the AP in Mbps
- *  @bl_reason:   Denylist reason
- *  @bl_source:   Source of adding AP to BL
- *  @bl_timestamp:This timestamp indicates the time when AP added
+ *  @dl_reason:   Denylist reason
+ *  @dl_source:   Source of adding AP to DL
+ *  @dl_timestamp:This timestamp indicates the time when AP added
  *  to denylist.
- *  @bl_original_timeout: Original timeout value in milli seconds
- *  when AP added to BL
+ *  @dl_original_timeout: Original timeout value in milli seconds
+ *  when AP added to DL
  */
 struct wmi_roam_candidate_info {
 	uint32_t timestamp;
@@ -7989,10 +7989,10 @@ struct wmi_roam_candidate_info {
 	uint32_t rssi_score;
 	uint32_t total_score;
 	uint32_t etp;
-	uint32_t bl_reason;
-	uint32_t bl_source;
-	uint32_t bl_timestamp;
-	uint32_t bl_original_timeout;
+	uint32_t dl_reason;
+	uint32_t dl_source;
+	uint32_t dl_timestamp;
+	uint32_t dl_original_timeout;
 };
 
 /**
