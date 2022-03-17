@@ -1084,6 +1084,8 @@ dp_mon_register_feature_ops_1_0(struct dp_soc *soc)
 #if defined(ATH_SUPPORT_NAC_RSSI) || defined(ATH_SUPPORT_NAC)
 	mon_ops->mon_filter_setup_smart_monitor =
 				dp_mon_filter_setup_smart_monitor_1_0;
+	mon_ops->mon_filter_reset_smart_monitor =
+				dp_mon_filter_reset_smart_monitor_1_0;
 #endif
 #ifdef WLAN_RX_PKT_CAPTURE_ENH
 	mon_ops->mon_filter_setup_rx_enh_capture =
