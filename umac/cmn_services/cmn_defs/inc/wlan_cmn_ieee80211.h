@@ -1771,6 +1771,7 @@ struct wlan_ie_ehtops {
 } qdf_packed;
 
 #ifdef WLAN_FEATURE_11BE_MLO
+#define WLAN_MLO_MAX_VDEVS 2
 
 /**
  * struct wlan_ie_multilink - Fixed fields in Multi-Link IE
@@ -1786,6 +1787,35 @@ struct wlan_ie_multilink {
 	uint16_t mlcontrol;
 } qdf_packed;
 
+/**
+ * struct wlan_sta_profile - Per STA profile IE
+ * @sub_elem_id: Sub element ID
+ * @per_sta_len: Per STA profile length
+ * @sta_control: STA control field
+ * @num_data: Number of valid data bytes
+ * @data: Per STA profile IE elements
+ */
+struct wlan_sta_profile {
+	uint8_t sub_elem_id;
+	uint8_t per_sta_len;
+	uint16_t sta_control;
+	uint8_t num_data;
+	uint8_t *data;
+} qdf_packed;
+
+/**
+ * struct wlan_ml_probe_req - Multi-Link Probe req IE
+ * @ml_ie_ff: Multi Link IE fixed field
+ * @common_info_len: Common info length
+ * @mld_id: MLD ID
+ * @sta_profile: STA profile IE
+ */
+struct wlan_ml_probe_req {
+	struct wlan_ie_multilink ml_ie_ff;
+	uint8_t common_info_len;
+	uint8_t mld_id;
+	struct wlan_sta_profile sta_profile[WLAN_MLO_MAX_VDEVS];
+} qdf_packed;
 /* The above fixed fields may be followed by:
  * Common Info (variable size)
  * Link Info (variable size)
