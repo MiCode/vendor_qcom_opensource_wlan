@@ -1849,67 +1849,14 @@ QDF_STATUS util_gen_link_assoc_reqrsp_cmn(uint8_t *frame, qdf_size_t frame_len,
 
 			if ((reportingsta_ie[ID_POS] == WLAN_ELEMID_VENDOR) &&
 			    (sta_prof_iesection_remlen >= MIN_VENDOR_TAG_LEN)) {
-				if (!qdf_mem_cmp(reportingsta_ie +
-							PAYLOAD_START_POS,
-						 sta_prof_ie +
-							PAYLOAD_START_POS,
-						 OUI_LEN)) {
-					/* Same vendor IE, copy from STA profile
-					 */
-					if ((link_frame_currpos +
-							sta_prof_ie_size) <=
-						(link_frame +
-							link_frame_maxsize)) {
-						qdf_mem_copy(link_frame_currpos,
-							     sta_prof_ie,
-							     sta_prof_ie_size);
-
-						link_frame_currpos +=
-							sta_prof_ie_size;
-						link_frame_currlen +=
-							sta_prof_ie_size;
-
-						mlo_debug("Vendor IE (%zu octets) for reporting STA also present in STA profile. Copied IE from STA profile to link specific frame",
-							  sta_prof_ie_size);
-
-						sta_prof_ie[0] = 0;
-					} else {
-						mlo_err_rl("Insufficent space in link specific frame for IE with element ID : %u. Required: %zu octets, available: %zu octets",
-							   sta_prof_ie[ID_POS],
-							   sta_prof_ie_size,
-							   link_frame_maxsize -
-							   link_frame_currlen);
-
-						qdf_mem_free(mlieseqpayload_copy);
-						return QDF_STATUS_E_NOMEM;
-					}
-				} else {
-					if ((link_frame_currpos +
-							reportingsta_ie_size) <=
-						(link_frame +
-							link_frame_maxsize)) {
-						qdf_mem_copy(link_frame_currpos,
-							     reportingsta_ie,
-							     reportingsta_ie_size);
-
-						link_frame_currpos +=
-							reportingsta_ie_size;
-						link_frame_currlen +=
-							reportingsta_ie_size;
-
-						mlo_debug("Vendor IE (%zu octets) present for reporting STA but not present in STA profile. Copied IE from reporting frame to link specific frame",
-							  reportingsta_ie_size);
-					} else {
-						mlo_err_rl("Insufficent space in link specific frame for IE with element ID : %u. Required: %zu octets, available: %zu octets",
-							   reportingsta_ie[ID_POS],
-							   reportingsta_ie_size,
-							   link_frame_maxsize -
-							   link_frame_currlen);
-
-						qdf_mem_free(mlieseqpayload_copy);
-						return QDF_STATUS_E_NOMEM;
-					}
-				}
+				/* If Vendor IE also presents in STA profile,
+				 * then ignore the Vendor IE which is for
+				 * reporting STA. It only needs to copy Vendor
+				 * IE from STA profile to link specific frame.
+				 * The copy happens when going through the
+				 * remaining IEs.
+				 */
+				;
 			} else {
 				/* Copy IE from STA profile into link specific
 				 * frame.

@@ -2373,16 +2373,6 @@ static void util_parse_noninheritance_list(uint8_t *extn_elem,
 	}
 }
 
-static size_t util_oui_header_len(uint8_t *ie)
-{
-	/* Cisco Vendor Specific IEs doesn't have subtype in
-	 * their VSIE header, therefore skip subtype
-	 */
-	if (ie[0] == 0x00 && ie[1] == 0x40 && ie[2] == 0x96)
-		return OUI_LEN - 1;
-	return OUI_LEN;
-}
-
 static uint32_t util_gen_new_ie(uint8_t *ie, uint32_t ielen,
 				uint8_t *subelement,
 				size_t subie_len, uint8_t *new_ie)
@@ -2480,32 +2470,14 @@ static uint32_t util_gen_new_ie(uint8_t *ie, uint32_t ielen,
 			tmp_rem_len = subie_len - (tmp - sub_copy);
 			if (tmp_old[0] == WLAN_ELEMID_VENDOR &&
 			    tmp_rem_len >= MIN_VENDOR_TAG_LEN) {
-				if (!qdf_mem_cmp(tmp_old + PAYLOAD_START_POS,
-						 tmp + PAYLOAD_START_POS,
-						 util_oui_header_len(tmp +
-								     PAYLOAD_START_POS))) {
-					/* same vendor ie, copy from
-					 * subelement
-					 */
-					if ((pos + tmp[1] + MIN_IE_LEN) <=
-					    (new_ie + ielen)) {
-						qdf_mem_copy(pos, tmp,
-							     tmp[1] +
-							     MIN_IE_LEN);
-						pos += tmp[1] + MIN_IE_LEN;
-						tmp[0] = 0;
-					}
-				} else {
-					if ((pos + tmp_old[1] +
-					     MIN_IE_LEN) <=
-					    (new_ie + ielen)) {
-						qdf_mem_copy(pos, tmp_old,
-							     tmp_old[1] +
-							     MIN_IE_LEN);
-						pos += tmp_old[1] +
-							MIN_IE_LEN;
-					}
-				}
+				/* If Vendor IE also presents in STA profile,
+				 * then ignore the Vendor IE which is for
+				 * reporting STA. It only needs to copy Vendor
+				 * IE from STA profile for reported BSSID.
+				 * The copy happens when going through the
+				 * remaining IEs.
+				 */
+				;
 			} else if (tmp_old[0] == WLAN_ELEMID_EXTN_ELEM) {
 				if (tmp_old[PAYLOAD_START_POS] ==
 				    tmp[PAYLOAD_START_POS]) {
