@@ -63,3 +63,11 @@ ucfg_wlan_mgmt_rx_reo_sim_stop(void)
 }
 
 qdf_export_symbol(ucfg_wlan_mgmt_rx_reo_sim_stop);
+
+bool
+ucfg_wlan_mgmt_rx_reo_is_simulation_in_progress(void)
+{
+	return wlan_mgmt_rx_reo_is_simulation_in_progress();
+}
+
+qdf_export_symbol(ucfg_wlan_mgmt_rx_reo_is_simulation_in_progress);

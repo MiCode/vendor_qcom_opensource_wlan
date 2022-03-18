@@ -50,6 +50,15 @@ ucfg_wlan_mgmt_rx_reo_sim_start(void);
 QDF_STATUS
 ucfg_wlan_mgmt_rx_reo_sim_stop(void);
 
+/**
+ * ucfg_wlan_mgmt_rx_reo_is_simulation_in_progress() - API to check whether
+ * simulation is in progress
+ *
+ * Return: true if simulation is in progress, else false
+ */
+bool
+ucfg_wlan_mgmt_rx_reo_is_simulation_in_progress(void);
+
 #else
 /**
  * ucfg_wlan_mgmt_rx_reo_sim_start() - Helper API to start mgmt rx
