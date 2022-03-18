@@ -119,6 +119,36 @@ QDF_STATUS mgmt_rx_reo_register_wifi3_0_ops(
 }
 #endif
 
+#ifdef WLAN_MLO_GLOBAL_SHMEM_SUPPORT
+static inline
+void global_shmem_register_target_recovery_ops(
+	struct wlan_lmac_if_global_shmem_local_ops *shmem_local_ops)
+{
+	if (!shmem_local_ops) {
+		target_if_err("Low level ops of global shmem is NULL");
+		return;
+	}
+
+	shmem_local_ops->get_crash_reason_address =
+		mlo_glb_h_shmem_arena_get_crash_reason_address;
+	shmem_local_ops->get_no_of_chips_from_crash_info =
+		mlo_glb_h_shmem_arena_get_no_of_chips_from_crash_info;
+}
+#else
+static inline
+void global_shmem_register_target_recovery_ops(
+	struct wlan_lmac_if_global_shmem_local_ops *shmem_local_ops)
+{
+	if (!shmem_local_ops) {
+		target_if_err("Low level ops of global shmem is NULL");
+		return;
+	}
+
+	shmem_local_ops->get_crash_reason_address = NULL;
+	shmem_local_ops->get_no_of_chips_from_crash_info = NULL;
+}
+#endif
+
 QDF_STATUS global_shmem_register_wifi3_0_ops(
 	struct wlan_lmac_if_global_shmem_local_ops *shmem_local_ops)
 {
@@ -131,6 +161,8 @@ QDF_STATUS global_shmem_register_wifi3_0_ops(
 		mlo_glb_h_shmem_arena_ctx_init;
 	shmem_local_ops->deinit_shmem_arena_ctx =
 		mlo_glb_h_shmem_arena_ctx_deinit;
+
+	global_shmem_register_target_recovery_ops(shmem_local_ops);
 
 	shmem_local_ops->implemented = true;
 

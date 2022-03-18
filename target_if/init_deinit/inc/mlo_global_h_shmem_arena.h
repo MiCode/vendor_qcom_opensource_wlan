@@ -68,6 +68,32 @@ struct wlan_host_mlo_glb_rx_reo_snapshot_info {
 };
 
 /**
+ * wlan_host_mlo_glb_per_chip_crash_info - per chip crash information in MLO
+ * global shared memory
+ * @chip_id: MLO Chip ID
+ * @crash_reason: Address of the crash_reason corresponding to chip_id
+ */
+struct wlan_host_mlo_glb_per_chip_crash_info {
+	uint8_t chip_id;
+	void *crash_reason;
+};
+
+/**
+ * wlan_host_mlo_glb_chip_crash_info - chip crash information in MLO
+ * global shared memory
+ * @no_of_chips: No of partner chip to which crash information is shared
+ * @valid_chip_bmap: Bitmap to indicate the chip to which the crash information
+ * is shared
+ * @per_chip_crash_info: pointer to an array of crash information associated
+ * with each chip
+ */
+struct wlan_host_mlo_glb_chip_crash_info {
+	uint8_t no_of_chips;
+	qdf_bitmap(valid_chip_bmap, QDF_CHAR_BIT);
+	struct wlan_host_mlo_glb_per_chip_crash_info *per_chip_crash_info;
+};
+
+/**
  * wlan_host_mlo_glb_h_shmem_arena_ctx - MLO Global shared memory arena context
  * @shmem_params: shared memory parameters
  * @rx_reo_snapshot_info: MGMT Rx REO snapshot information
@@ -76,6 +102,7 @@ struct wlan_host_mlo_glb_rx_reo_snapshot_info {
 struct wlan_host_mlo_glb_h_shmem_arena_ctx {
 	struct wlan_host_mlo_glb_h_shmem_params shmem_params;
 	struct wlan_host_mlo_glb_rx_reo_snapshot_info rx_reo_snapshot_info;
+	struct wlan_host_mlo_glb_chip_crash_info chip_crash_info;
 	qdf_atomic_t init_count;
 };
 
@@ -98,6 +125,26 @@ QDF_STATUS mlo_glb_h_shmem_arena_ctx_init(void *arena_vaddr,
  * Return: QDF_STATUS of operation
  */
 QDF_STATUS mlo_glb_h_shmem_arena_ctx_deinit(void);
+#endif
+
+#ifdef WLAN_MLO_GLOBAL_SHMEM_SUPPORT
+/**
+ * mlo_glb_h_shmem_arena_get_crash_reason_address(): get the address of crash
+ * reason associated with chip_id
+ *
+ * Return: Address of crash_reason field fron global shmem arena in case of
+ * success, else returns NULL
+ */
+void *mlo_glb_h_shmem_arena_get_crash_reason_address(uint8_t chip_id);
+
+/**
+ * mlo_glb_h_shmem_arena_get_no_of_chips_from_crash_info() - Get number of chips
+ * from crash info
+ *
+ * Return: number of chips participating in MLO from crash info shared by target
+ * in case of sccess, else returns 0
+ */
+uint8_t mlo_glb_h_shmem_arena_get_no_of_chips_from_crash_info(void);
 #endif
 
 #ifdef WLAN_MGMT_RX_REO_SUPPORT
