@@ -29,9 +29,7 @@
 #include <net/netlink.h>
 #include <net/cfg80211.h>
 
-#if ((LINUX_VERSION_CODE >= KERNEL_VERSION(5, 14, 0)) || \
-		defined(CFG80211_PASN_SUPPORT)) && \
-		defined(WIFI_POS_CONVERGED)
+#if defined(CFG80211_PASN_SUPPORT) && defined(WIFI_POS_CONVERGED)
 void
 wlan_wifi_pos_cfg80211_set_wiphy_ext_feature(struct wiphy *wiphy,
 					     struct wlan_objmgr_psoc *psoc);
