@@ -59,6 +59,17 @@ struct reorder_q_setup {
 };
 
 /**
+ * target_if_get_active_mac_phy_number() - Get max MAC-PHY number enabled by
+ * target
+ * @psoc: psoc
+ *
+ * Get max active MAC-PHY number in all type of hw modes.
+ *
+ * return: active number of MAC-PHY pairs
+ */
+uint32_t target_if_get_active_mac_phy_number(struct wlan_objmgr_psoc *psoc);
+
+/**
  * target_if_peer_set_default_routing() - set peer default routing
  * @psoc: psoc pointer
  * @pdev_id: pdev id
