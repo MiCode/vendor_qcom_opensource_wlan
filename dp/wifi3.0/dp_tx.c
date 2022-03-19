@@ -2932,6 +2932,10 @@ void dp_tx_nawds_handler(struct dp_soc *soc, struct dp_vdev *vdev,
 
 		if (!txrx_peer->bss_peer && txrx_peer->nawds_enabled) {
 			peer_id = peer->peer_id;
+
+			if (!dp_peer_is_primary_link_peer(peer))
+				continue;
+
 			/* Multicast packets needs to be
 			 * dropped in case of intra bss forwarding
 			 */
