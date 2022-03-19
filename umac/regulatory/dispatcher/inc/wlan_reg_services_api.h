@@ -2199,14 +2199,14 @@ wlan_reg_set_ap_pwr_and_update_chan_list(struct wlan_objmgr_pdev *pdev,
 static inline enum supported_6g_pwr_types
 wlan_reg_get_best_6g_pwr_type(struct wlan_objmgr_pdev *pdev, qdf_freq_t freq)
 {
-	return REG_MAX_AP_TYPE;
+	return REG_INVALID_PWR_MODE;
 }
 
 static inline enum supported_6g_pwr_types
 wlan_reg_conv_6g_ap_type_to_supported_6g_pwr_types(enum reg_6g_ap_type
 						   ap_pwr_type)
 {
-	return REG_MAX_AP_TYPE;
+	return REG_INVALID_PWR_MODE;
 }
 
 static inline enum reg_6g_ap_type
