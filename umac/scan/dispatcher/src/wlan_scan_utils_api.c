@@ -2843,11 +2843,12 @@ static QDF_STATUS util_scan_parse_mbssid(struct wlan_objmgr_pdev *pdev,
 				 * handle such scenario.
 				 */
 
-				qdf_mem_copy(split_prof_end,
-					     (subelement + MIN_IE_LEN),
-					     subie_len);
-				split_prof_end =
-					(split_prof_end + subie_len);
+				if (split_prof_end) {
+					qdf_mem_copy(split_prof_end,
+						     (subelement + MIN_IE_LEN),
+						     subie_len);
+					split_prof_end += subie_len;
+				}
 
 				/*
 				 * When to stop the process of accumulating
@@ -2879,9 +2880,11 @@ static QDF_STATUS util_scan_parse_mbssid(struct wlan_objmgr_pdev *pdev,
 				if (mbssid_info.prof_residue)
 					break;
 
-				split_prof_len =
-					(split_prof_end -
-					 split_prof_start - MIN_IE_LEN);
+				if (split_prof_end) {
+					split_prof_len =
+						(split_prof_end -
+						 split_prof_start - MIN_IE_LEN);
+				}
 			}
 
 			if (mbssid_info.split_prof_continue) {
