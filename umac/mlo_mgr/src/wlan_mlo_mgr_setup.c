@@ -36,6 +36,28 @@ void mlo_setup_update_total_socs(uint8_t tot_socs)
 
 qdf_export_symbol(mlo_setup_update_total_socs);
 
+static QDF_STATUS mlo_find_pdev_idx(struct wlan_objmgr_pdev *pdev,
+				    uint8_t *link_idx)
+{
+	struct mlo_mgr_context *mlo_ctx = wlan_objmgr_get_mlo_ctx();
+	uint8_t idx;
+
+	if (!mlo_ctx)
+		return QDF_STATUS_E_FAILURE;
+
+	if (!link_idx)
+		return QDF_STATUS_E_FAILURE;
+
+	for (idx = 0; idx < mlo_ctx->setup_info.tot_links; idx++) {
+		if (mlo_ctx->setup_info.pdev_list[idx] == pdev) {
+			*link_idx = idx;
+			return QDF_STATUS_SUCCESS;
+		}
+	}
+
+	return QDF_STATUS_E_FAILURE;
+}
+
 void mlo_setup_update_num_links(struct wlan_objmgr_psoc *psoc,
 				uint8_t num_links)
 {
@@ -52,26 +74,33 @@ qdf_export_symbol(mlo_setup_update_num_links);
 void mlo_setup_update_soc_ready(struct wlan_objmgr_psoc *psoc)
 {
 	struct mlo_mgr_context *mlo_ctx = wlan_objmgr_get_mlo_ctx();
-	uint8_t chip_idx;
+	uint8_t chip_idx, tot_socs = 0;
 
 	if (!mlo_ctx || !mlo_ctx->setup_info.tot_socs)
 		return;
 
-	chip_idx = mlo_ctx->setup_info.num_soc;
-	qdf_assert_always(chip_idx < MAX_MLO_CHIPS);
+	tot_socs = mlo_ctx->setup_info.tot_socs;
+	chip_idx = wlan_psoc_get_id(psoc);
+
+	if (!(chip_idx < MAX_MLO_CHIPS)) {
+		qdf_err("Invalid chip index, SoC setup failed");
+		return;
+	}
+
 	mlo_ctx->setup_info.soc_list[chip_idx] = psoc;
 	mlo_ctx->setup_info.num_soc++;
+	qdf_debug("soc updated to mld list, id %d num soc %d",
+		  chip_idx, mlo_ctx->setup_info.num_soc);
 
 	if (mlo_ctx->setup_info.num_soc != mlo_ctx->setup_info.tot_socs)
 		return;
 
-	for (chip_idx = 0; chip_idx < mlo_ctx->setup_info.num_soc;
-			chip_idx++) {
+	for (chip_idx = 0; chip_idx < MAX_MLO_CHIPS; chip_idx++) {
 		struct wlan_objmgr_psoc *tmp_soc =
 			mlo_ctx->setup_info.soc_list[chip_idx];
-
-		cdp_soc_mlo_soc_setup(wlan_psoc_get_dp_handle(tmp_soc),
-				      mlo_ctx->dp_handle);
+		if (tmp_soc)
+			cdp_soc_mlo_soc_setup(wlan_psoc_get_dp_handle(tmp_soc),
+					      mlo_ctx->dp_handle);
 	}
 
 	cdp_mlo_setup_complete(wlan_psoc_get_dp_handle(psoc),
@@ -88,12 +117,27 @@ void mlo_setup_link_ready(struct wlan_objmgr_pdev *pdev)
 	if (!mlo_ctx || !mlo_ctx->setup_info.tot_links)
 		return;
 
-	link_idx = mlo_ctx->setup_info.num_links;
-	/* TODO: Get reference to PDEV */
-	qdf_assert_always(link_idx < MAX_MLO_LINKS);
+	if (mlo_find_pdev_idx(pdev, &link_idx) == QDF_STATUS_SUCCESS) {
+		qdf_debug("pdev already part of list link idx %d", link_idx);
+		return;
+	}
+
+	for (link_idx = 0; link_idx < mlo_ctx->setup_info.tot_links; link_idx++)
+		if (!mlo_ctx->setup_info.pdev_list[link_idx])
+			break;
+
+	if (link_idx >= mlo_ctx->setup_info.tot_links) {
+		qdf_err("Exceeding max total mld links");
+		return;
+	}
+
 	mlo_ctx->setup_info.pdev_list[link_idx] = pdev;
 	mlo_ctx->setup_info.state[link_idx] = MLO_LINK_SETUP_INIT;
 	mlo_ctx->setup_info.num_links++;
+	qdf_debug("pdev updated to mld link %d num_links %d",
+		  link_idx, mlo_ctx->setup_info.num_links);
+
+	qdf_assert_always(link_idx < MAX_MLO_LINKS);
 
 	if (mlo_ctx->setup_info.num_links == mlo_ctx->setup_info.tot_links &&
 	    mlo_ctx->setup_info.num_soc == mlo_ctx->setup_info.tot_socs) {
@@ -102,7 +146,7 @@ void mlo_setup_link_ready(struct wlan_objmgr_pdev *pdev)
 
 		psoc = wlan_pdev_get_psoc(pdev);
 		tx_ops = wlan_psoc_get_lmac_if_txops(psoc);
-		/* Trigger MLO setup */
+		qdf_debug("Trigger MLO Setup request");
 		if (tx_ops && tx_ops->mops.target_if_mlo_setup_req) {
 			tx_ops->mops.target_if_mlo_setup_req(
 					mlo_ctx->setup_info.pdev_list,
@@ -152,27 +196,59 @@ void mlo_link_setup_complete(struct wlan_objmgr_pdev *pdev)
 
 qdf_export_symbol(mlo_link_setup_complete);
 
-static QDF_STATUS mlo_find_pdev_idx(struct wlan_objmgr_pdev *pdev,
-				    uint8_t *link_idx)
+static void mlo_setup_link_down(struct wlan_objmgr_psoc *psoc,
+				void *obj, void *args)
 {
+	struct wlan_objmgr_pdev *pdev;
+	uint8_t link_idx;
 	struct mlo_mgr_context *mlo_ctx = wlan_objmgr_get_mlo_ctx();
-	uint8_t idx;
+	pdev = (struct wlan_objmgr_pdev *)obj;
 
-	if (!mlo_ctx)
-		return QDF_STATUS_E_FAILURE;
-
-	if (!link_idx)
-		return QDF_STATUS_E_FAILURE;
-
-	for (idx = 0; idx < mlo_ctx->setup_info.tot_links; idx++) {
-		if (mlo_ctx->setup_info.pdev_list[idx] == pdev) {
-			*link_idx = idx;
-			return QDF_STATUS_SUCCESS;
-		}
+	if (mlo_find_pdev_idx(pdev, &link_idx) != QDF_STATUS_SUCCESS) {
+		qdf_info("Failed to find pdev");
+		return;
 	}
 
-	return QDF_STATUS_E_FAILURE;
+	mlo_ctx->setup_info.pdev_list[link_idx] = NULL;
+	mlo_ctx->setup_info.state[link_idx] = MLO_LINK_UNINITIALIZED;
+	mlo_ctx->setup_info.num_links--;
+	qdf_debug("link down link_idx %d num_links %d",
+		  link_idx, mlo_ctx->setup_info.num_links);
 }
+
+void mlo_setup_update_soc_down(struct wlan_objmgr_psoc *psoc)
+{
+	struct mlo_mgr_context *mlo_ctx = wlan_objmgr_get_mlo_ctx();
+	uint8_t chip_idx;
+
+	if (!mlo_ctx)
+		return;
+
+	if (!mlo_ctx->setup_info.num_links) {
+		qdf_debug("Links are already down");
+		return;
+	}
+
+	wlan_objmgr_iterate_obj_list(psoc, WLAN_PDEV_OP,
+				     mlo_setup_link_down, NULL,
+				     0, WLAN_MLME_NB_ID);
+
+	chip_idx = wlan_psoc_get_id(psoc);
+
+	if (!(chip_idx < MAX_MLO_CHIPS)) {
+		qdf_err("Invalid chip index, SoC setup down failed");
+		return;
+	}
+
+	mlo_ctx->setup_info.soc_list[chip_idx] = NULL;
+	mlo_ctx->setup_info.num_soc--;
+
+	qdf_debug("Soc down, num soc %d num links %d",
+		  mlo_ctx->setup_info.num_soc,
+		  mlo_ctx->setup_info.num_links);
+}
+
+qdf_export_symbol(mlo_setup_update_soc_down);
 
 void mlo_link_teardown_complete(struct wlan_objmgr_pdev *pdev)
 {
@@ -192,10 +268,9 @@ void mlo_link_teardown_complete(struct wlan_objmgr_pdev *pdev)
 		return;
 	}
 
-	qdf_debug("link idx = %d", link_idx);
+	qdf_debug("Teardown link idx = %d", link_idx);
 	mlo_ctx->setup_info.pdev_list[link_idx] = NULL;
 	mlo_ctx->setup_info.state[link_idx] = MLO_LINK_TEARDOWN;
-	mlo_ctx->setup_info.num_links--;
 
 	if (!mlo_ctx->setup_info.num_links) {
 		qdf_info("Teardown complete");
@@ -205,6 +280,61 @@ void mlo_link_teardown_complete(struct wlan_objmgr_pdev *pdev)
 
 qdf_export_symbol(mlo_link_teardown_complete);
 
+static void mlo_check_state(struct wlan_objmgr_psoc *psoc,
+			    void *obj, void *args)
+{
+	struct wlan_objmgr_pdev *pdev;
+	uint8_t link_idx;
+	struct mlo_mgr_context *mlo_ctx = wlan_objmgr_get_mlo_ctx();
+	struct mlo_state_params *params = (struct mlo_state_params *)args;
+
+	pdev = (struct wlan_objmgr_pdev *)obj;
+
+	if (!mlo_ctx)
+		return;
+
+	if (mlo_find_pdev_idx(pdev, &link_idx) != QDF_STATUS_SUCCESS) {
+		qdf_info("Failed to find pdev");
+		return;
+	}
+
+	if (mlo_ctx->setup_info.state[link_idx] != params->check_state)
+		params->link_state_fail = 1;
+}
+
+static void mlo_force_teardown(void)
+{
+	struct mlo_mgr_context *mlo_ctx = wlan_objmgr_get_mlo_ctx();
+	uint8_t link_idx = 0;
+
+	if (!mlo_ctx)
+		return;
+
+	for (link_idx = 0; link_idx < mlo_ctx->setup_info.tot_links; link_idx++)
+		mlo_ctx->setup_info.state[link_idx] = MLO_LINK_TEARDOWN;
+}
+
+static
+QDF_STATUS mlo_check_all_pdev_state(struct wlan_objmgr_psoc *psoc,
+				    enum MLO_LINK_STATE state)
+{
+	QDF_STATUS status = QDF_STATUS_E_INVAL;
+	struct mlo_state_params params = {0};
+
+	params.check_state = state;
+
+	wlan_objmgr_iterate_obj_list(psoc, WLAN_PDEV_OP,
+				     mlo_check_state, &params,
+				     0, WLAN_MLME_NB_ID);
+
+	if (params.link_state_fail)
+		status = QDF_STATUS_E_INVAL;
+	else
+		status = QDF_STATUS_SUCCESS;
+
+	return status;
+}
+
 #define MLO_MGR_TEARDOWN_TIMEOUT 3000
 QDF_STATUS mlo_link_teardown_link(struct wlan_objmgr_psoc *psoc,
 				  uint32_t reason)
@@ -213,7 +343,7 @@ QDF_STATUS mlo_link_teardown_link(struct wlan_objmgr_psoc *psoc,
 	QDF_STATUS status;
 	struct mlo_mgr_context *mlo_ctx = wlan_objmgr_get_mlo_ctx();
 
-	qdf_debug(" %d %d ",
+	qdf_debug("Teardown req with num_soc %d num_link %d",
 		  mlo_ctx->setup_info.num_soc,
 		  mlo_ctx->setup_info.num_links);
 
@@ -223,10 +353,8 @@ QDF_STATUS mlo_link_teardown_link(struct wlan_objmgr_psoc *psoc,
 	if (!mlo_ctx->setup_info.num_soc)
 		return QDF_STATUS_SUCCESS;
 
-	if (!mlo_ctx->setup_info.num_links) {
-		mlo_ctx->setup_info.num_soc--;
+	if (!mlo_check_all_pdev_state(psoc, MLO_LINK_TEARDOWN))
 		return QDF_STATUS_SUCCESS;
-	}
 
 	if (qdf_event_create(&mlo_ctx->setup_info.event) != QDF_STATUS_SUCCESS)
 		return QDF_STATUS_E_FAULT;
@@ -244,12 +372,10 @@ QDF_STATUS mlo_link_teardown_link(struct wlan_objmgr_psoc *psoc,
 					       MLO_MGR_TEARDOWN_TIMEOUT);
 	if (status != QDF_STATUS_SUCCESS) {
 		qdf_info("Teardown timeout");
-		mlo_ctx->setup_info.num_links = 0;
+		mlo_force_teardown();
 	}
 
 	qdf_event_destroy(&mlo_ctx->setup_info.event);
-
-	mlo_ctx->setup_info.num_soc--;
 
 	return status;
 }

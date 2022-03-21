@@ -73,12 +73,14 @@ struct vdev_mlme_obj;
  * @MLO_LINK_SETUP_DONE - MLO link SETUP exchange started
  * @MLO_LINK_READY - MLO link SETUP done and READY sent
  * @MLO_LINK_TEARDOWN - MLO teardown done.
+ * @MLO_LINK_UNINITIALIZED - MLO link in blank state
  */
 enum MLO_LINK_STATE {
 	MLO_LINK_SETUP_INIT,
 	MLO_LINK_SETUP_DONE,
 	MLO_LINK_READY,
-	MLO_LINK_TEARDOWN
+	MLO_LINK_TEARDOWN,
+	MLO_LINK_UNINITIALIZED,
 };
 
 /**
@@ -95,7 +97,7 @@ enum MLO_LINK_STATE {
  * @qdf_event_t: event for tearodwn completion
  */
 #define MAX_MLO_LINKS 6
-#define MAX_MLO_CHIPS 3
+#define MAX_MLO_CHIPS 5
 struct mlo_setup_info {
 	uint8_t ml_grp_id;
 	uint8_t tot_socs;
@@ -107,6 +109,16 @@ struct mlo_setup_info {
 	enum MLO_LINK_STATE state[MAX_MLO_LINKS];
 	qdf_spinlock_t state_lock;
 	qdf_event_t event;
+};
+
+/**
+ * struct mlo_state_params: MLO state params for pdev iteration
+ * @link_state_fail: Flag to check when pdev not in expected state
+ * @check_state: State on against which pdev is to be expected
+ */
+struct mlo_state_params {
+	bool link_state_fail;
+	enum MLO_LINK_STATE check_state;
 };
 
 #define MAX_MLO_GROUP 1

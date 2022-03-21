@@ -69,6 +69,16 @@ void mlo_link_setup_complete(struct wlan_objmgr_pdev *pdev);
 void mlo_link_teardown_complete(struct wlan_objmgr_pdev *pdev);
 
 /**
+ * mlo_setup_update_soc_down() - API to check and clear all links and bring
+ *                               back to initial state for the particular soc
+ *
+ * @pdev: Pointer to pdev object
+ *
+ * Return: None.
+ */
+void mlo_setup_update_soc_down(struct wlan_objmgr_psoc *psoc);
+
+/**
  * mlo_link_teardown_link() - API to trigger teardown
  * @psoc: Pointer to psoc object
  * @reason: Reason code for MLO tear down
