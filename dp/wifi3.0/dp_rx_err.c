@@ -2508,7 +2508,8 @@ static inline void dp_rx_wbm_sg_list_last_msdu_war(struct dp_soc *soc)
 /**
  * dp_rx_wbm_desc_nbuf_sanity_check - Add sanity check to for WBM rx_desc paddr
  *					corruption
- *
+ * @soc: core txrx main context
+ * @hal_ring_hdl: opaque pointer to the HAL Rx Error Ring
  * @ring_desc: REO ring descriptor
  * @rx_desc: Rx descriptor
  *
@@ -2516,6 +2517,7 @@ static inline void dp_rx_wbm_sg_list_last_msdu_war(struct dp_soc *soc)
  */
 static
 QDF_STATUS dp_rx_wbm_desc_nbuf_sanity_check(struct dp_soc *soc,
+					    hal_ring_handle_t hal_ring_hdl,
 					    hal_ring_desc_t ring_desc,
 					    struct dp_rx_desc *rx_desc)
 {
@@ -2526,12 +2528,15 @@ QDF_STATUS dp_rx_wbm_desc_nbuf_sanity_check(struct dp_soc *soc,
 	if (dp_rx_desc_paddr_sanity_check(rx_desc, (&hbi)->paddr))
 		return QDF_STATUS_SUCCESS;
 
+	hal_srng_dump_ring_desc(soc->hal_soc, hal_ring_hdl, ring_desc);
+
 	return QDF_STATUS_E_FAILURE;
 }
 
 #else
 static
 QDF_STATUS dp_rx_wbm_desc_nbuf_sanity_check(struct dp_soc *soc,
+					    hal_ring_handle_t hal_ring_hdl,
 					    hal_ring_desc_t ring_desc,
 					    struct dp_rx_desc *rx_desc)
 {
@@ -2652,11 +2657,12 @@ dp_rx_wbm_err_process(struct dp_intr *int_ctx, struct dp_soc *soc,
 		hal_rx_wbm_err_info_get(ring_desc, &wbm_err_info, hal_soc);
 		nbuf = rx_desc->nbuf;
 
-		status = dp_rx_wbm_desc_nbuf_sanity_check(soc, ring_desc,
-							  rx_desc);
-		if (qdf_likely(QDF_IS_STATUS_ERROR(status))) {
+		status = dp_rx_wbm_desc_nbuf_sanity_check(soc, hal_ring_hdl,
+							  ring_desc, rx_desc);
+		if (qdf_unlikely(QDF_IS_STATUS_ERROR(status))) {
 			DP_STATS_INC(soc, rx.err.nbuf_sanity_fail, 1);
-			dp_info_rl("Rx error Nbuf sanity check failure!");
+			dp_info_rl("Rx error Nbuf %pk sanity check failure!",
+				   nbuf);
 			rx_desc->in_err_state = 1;
 			rx_desc->unmapped = 1;
 			rx_bufs_reaped[rx_desc->pool_id]++;

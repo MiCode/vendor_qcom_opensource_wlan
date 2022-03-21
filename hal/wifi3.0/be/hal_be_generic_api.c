@@ -999,19 +999,20 @@ uint8_t hal_get_idle_link_bm_id_be(uint8_t chip_id)
 	return (WBM_IDLE_DESC_LIST + chip_id);
 }
 
-#ifndef DP_FEATURE_HW_COOKIE_CONVERSION
+#ifdef DP_FEATURE_HW_COOKIE_CONVERSION
+#ifdef DP_HW_COOKIE_CONVERT_EXCEPTION
 static inline void
 hal_rx_wbm_rel_buf_paddr_get_be(hal_ring_desc_t rx_desc,
 				struct hal_buf_info *buf_info)
 {
-	struct wbm_release_ring_rx *wbm_rel_ring =
-		 (struct wbm_release_ring_rx *)rx_desc;
-
-	buf_info->paddr =
-	 (HAL_RX_WBM_BUF_ADDR_31_0_GET(wbm_rel_ring) |
-	  ((uint64_t)(HAL_RX_WBM_BUF_ADDR_39_32_GET(wbm_rel_ring)) << 32));
-
-	buf_info->sw_cookie = HAL_RX_WBM_BUF_COOKIE_GET(wbm_rel_ring);
+	if (hal_rx_wbm_get_cookie_convert_done(rx_desc))
+		buf_info->paddr =
+			(HAL_RX_WBM_COMP_BUF_ADDR_31_0_GET(rx_desc) |
+			 ((uint64_t)(HAL_RX_WBM_COMP_BUF_ADDR_39_32_GET(rx_desc)) << 32));
+	else
+		buf_info->paddr =
+			(HAL_RX_WBM_BUF_ADDR_31_0_GET(rx_desc) |
+			 ((uint64_t)(HAL_RX_WBM_BUF_ADDR_39_32_GET(rx_desc)) << 32));
 }
 #else
 static inline void
@@ -1019,9 +1020,18 @@ hal_rx_wbm_rel_buf_paddr_get_be(hal_ring_desc_t rx_desc,
 				struct hal_buf_info *buf_info)
 {
 	buf_info->paddr =
-	(HAL_RX_GET(rx_desc, WBM2SW_COMPLETION_RING_RX, BUFFER_PHYS_ADDR_31_0) |
-		    (uint64_t)HAL_RX_GET(rx_desc, WBM2SW_COMPLETION_RING_RX,
-			       BUFFER_PHYS_ADDR_39_32) << 32);
+		(HAL_RX_WBM_COMP_BUF_ADDR_31_0_GET(rx_desc) |
+		 ((uint64_t)(HAL_RX_WBM_COMP_BUF_ADDR_39_32_GET(rx_desc)) << 32));
+}
+#endif
+#else /* !DP_FEATURE_HW_COOKIE_CONVERSION */
+static inline void
+hal_rx_wbm_rel_buf_paddr_get_be(hal_ring_desc_t rx_desc,
+				struct hal_buf_info *buf_info)
+{
+	buf_info->paddr =
+		(HAL_RX_WBM_BUF_ADDR_31_0_GET(rx_desc) |
+		 ((uint64_t)(HAL_RX_WBM_BUF_ADDR_39_32_GET(rx_desc)) << 32));
 }
 #endif
 
