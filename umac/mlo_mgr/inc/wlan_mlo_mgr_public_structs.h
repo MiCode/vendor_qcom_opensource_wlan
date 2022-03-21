@@ -231,6 +231,7 @@ struct mlo_sta_quiet_status {
  * @copied_conn_req_lock: lock for the original connect request
  * @assoc_rsp: Raw assoc response frame
  * @mlo_csa_param: CSA request parameters for mlo sta
+ * @disconn_req: disconnect req params
  */
 struct wlan_mlo_sta {
 	qdf_bitmap(wlan_connect_req_links, WLAN_UMAC_MLO_MAX_VDEVS);
@@ -246,6 +247,7 @@ struct wlan_mlo_sta {
 	struct element_info assoc_rsp;
 	struct mlo_sta_quiet_status mlo_quiet_status[WLAN_UMAC_MLO_MAX_VDEVS];
 	struct mlo_sta_csa_params mlo_csa_param[WLAN_UMAC_MLO_MAX_VDEVS];
+	struct wlan_cm_disconnect_req *disconn_req;
 };
 
 /*
