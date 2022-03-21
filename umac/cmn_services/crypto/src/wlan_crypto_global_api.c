@@ -1363,14 +1363,20 @@ QDF_STATUS wlan_crypto_getkey(struct wlan_objmgr_vdev *vdev,
 		req_key->keylen = key->keylen;
 		req_key->keyix = key->keyix;
 		req_key->flags = key->flags;
-		cipher_table = (struct wlan_crypto_cipher *)key->cipher_table;
 
-		if (!cipher_table) {
-			status = QDF_STATUS_SUCCESS;
-			goto err;
+		if (is_igtk(req_key->keyix) || is_bigtk(req_key->keyix)) {
+			req_key->type = key->cipher_type;
+		} else {
+			cipher_table = key->cipher_table;
+
+			if (!cipher_table) {
+				status = QDF_STATUS_SUCCESS;
+				goto err;
+			}
+
+			req_key->type = cipher_table->cipher;
 		}
 
-		req_key->type = cipher_table->cipher;
 		if (req_key->type == WLAN_CRYPTO_CIPHER_WAPI_SMS4) {
 			qdf_mem_copy((uint8_t *)(&req_key->txiv),
 					(uint8_t *)(key->txiv),
