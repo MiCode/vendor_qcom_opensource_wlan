@@ -154,11 +154,8 @@ static void htc_cleanup(HTC_TARGET *target)
 	HTC_PACKET_QUEUE *pkt_queue;
 	qdf_nbuf_t netbuf;
 
-	while (htc_dec_return_runtime_cnt((void *)target) >= 0) {
-		hif_pm_runtime_put(target->hif_dev, RTPM_ID_HTC);
-		hif_pm_runtime_update_stats(target->hif_dev, RTPM_ID_HTC,
-					    HIF_PM_HTC_STATS_PUT_HTC_CLEANUP);
-	}
+	while (htc_dec_return_runtime_cnt((void *)target) >= 0)
+		hif_rtpm_put(HIF_RTPM_PUT_ASYNC, HIF_RTPM_ID_HTT);
 
 	if (target->hif_dev) {
 		hif_detach_htc(target->hif_dev);
@@ -490,6 +487,9 @@ HTC_HANDLE htc_create(void *ol_sc, struct htc_init_info *pInfo,
 
 	htc_init_link_vote_ids();
 
+	hif_rtpm_register(HIF_RTPM_ID_WMI, NULL);
+	hif_rtpm_register(HIF_RTPM_ID_HTT, NULL);
+
 	return (HTC_HANDLE) target;
 }
 
@@ -499,10 +499,15 @@ void htc_destroy(HTC_HANDLE HTCHandle)
 
 	AR_DEBUG_PRINTF(ATH_DEBUG_TRC,
 			("+htc_destroy ..  Destroying :0x%pK\n", target));
+
 	htc_hang_event_notifier_unregister();
-	hif_stop(htc_get_hif_device(HTCHandle));
-	if (target)
+
+	if (target) {
+		hif_rtpm_deregister(HIF_RTPM_ID_HTT);
+		hif_rtpm_deregister(HIF_RTPM_ID_WMI);
+		hif_stop(htc_get_hif_device(HTCHandle));
 		htc_cleanup(target);
+	}
 	AR_DEBUG_PRINTF(ATH_DEBUG_TRC, ("-htc_destroy\n"));
 	htc_credit_history_deinit();
 }
@@ -1216,19 +1221,12 @@ bool htc_can_suspend_link(HTC_HANDLE htc_handle)
 #ifdef FEATURE_RUNTIME_PM
 int htc_pm_runtime_get(HTC_HANDLE htc_handle)
 {
-	HTC_TARGET *target = GET_HTC_TARGET_FROM_HANDLE(htc_handle);
-
-	return hif_pm_runtime_get(target->hif_dev,
-				  RTPM_ID_HTC, false);
+	return hif_rtpm_get(HIF_RTPM_GET_ASYNC, HIF_RTPM_ID_HTT);
 }
 
 int htc_pm_runtime_put(HTC_HANDLE htc_handle)
 {
-	HTC_TARGET *target = GET_HTC_TARGET_FROM_HANDLE(htc_handle);
-
-	hif_pm_runtime_update_stats(target->hif_dev, RTPM_ID_HTC,
-				    HIF_PM_HTC_STATS_PUT_HTT_RESPONSE);
-	return hif_pm_runtime_put(target->hif_dev, RTPM_ID_HTC);
+	return hif_rtpm_put(HIF_RTPM_PUT_ASYNC, HIF_RTPM_ID_HTT);
 }
 #endif
 

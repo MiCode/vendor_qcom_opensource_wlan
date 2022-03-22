@@ -2307,10 +2307,12 @@ struct dp_soc {
 #ifdef WLAN_DP_FEATURE_SW_LATENCY_MGR
 	struct dp_swlm swlm;
 #endif
+
 #ifdef FEATURE_RUNTIME_PM
+	/* DP Rx timestamp */
+	qdf_time_t rx_last_busy;
 	/* Dp runtime refcount */
 	qdf_atomic_t dp_runtime_refcount;
-
 	/* Dp tx pending count in RTPM */
 	qdf_atomic_t tx_pending_rtpm;
 #endif

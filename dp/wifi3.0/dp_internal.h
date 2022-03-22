@@ -3390,14 +3390,40 @@ static inline int32_t dp_runtime_get_refcount(struct dp_soc *soc)
 }
 
 /**
- * dp_runtime_init() - Init dp runtime refcount when dp soc init
+ * dp_runtime_init() - Init DP related runtime PM clients and runtime refcount
  * @soc: Datapath soc handle
  *
  * Return: QDF_STATUS
  */
-static inline QDF_STATUS dp_runtime_init(struct dp_soc *soc)
+static inline void dp_runtime_init(struct dp_soc *soc)
 {
-	return qdf_atomic_init(&soc->dp_runtime_refcount);
+	hif_rtpm_register(HIF_RTPM_ID_DP, NULL);
+	hif_rtpm_register(HIF_RTPM_ID_DP_RING_STATS, NULL);
+	qdf_atomic_init(&soc->dp_runtime_refcount);
+}
+
+/**
+ * dp_runtime_deinit() - Deinit DP related runtime PM clients
+ *
+ * Return: None
+ */
+static inline void dp_runtime_deinit(void)
+{
+	hif_rtpm_deregister(HIF_RTPM_ID_DP);
+	hif_rtpm_deregister(HIF_RTPM_ID_DP_RING_STATS);
+}
+
+/**
+ * dp_runtime_pm_mark_last_busy() - Mark last busy when rx path in use
+ * @soc: Datapath soc handle
+ *
+ * Return: None
+ */
+static inline void dp_runtime_pm_mark_last_busy(struct dp_soc *soc)
+{
+	soc->rx_last_busy = qdf_get_log_timestamp_usecs();
+
+	hif_rtpm_mark_last_busy(HIF_RTPM_ID_DP);
 }
 #else
 static inline int32_t dp_runtime_get(struct dp_soc *soc)
@@ -3413,6 +3439,14 @@ static inline int32_t dp_runtime_put(struct dp_soc *soc)
 static inline QDF_STATUS dp_runtime_init(struct dp_soc *soc)
 {
 	return QDF_STATUS_SUCCESS;
+}
+
+static inline void dp_runtime_deinit(void)
+{
+}
+
+static inline void dp_runtime_pm_mark_last_busy(struct dp_soc *soc)
+{
 }
 #endif
 

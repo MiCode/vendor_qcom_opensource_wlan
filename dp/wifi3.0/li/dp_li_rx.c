@@ -264,9 +264,9 @@ uint32_t dp_rx_process_li(struct dp_intr *int_ctx,
 	qdf_assert_always(hal_soc);
 
 	scn = soc->hif_handle;
-	hif_pm_runtime_mark_dp_rx_busy(scn);
 	intr_id = int_ctx->dp_intr_id;
 	num_entries = hal_srng_get_num_entries(hal_soc, hal_ring_hdl);
+	dp_runtime_pm_mark_last_busy(soc);
 
 more_data:
 	/* reset local variables here to be re-used in the function */

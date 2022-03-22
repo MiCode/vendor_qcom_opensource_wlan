@@ -1548,10 +1548,8 @@ dp_tx_ring_access_end_wrapper(struct dp_soc *soc,
 		return;
 	}
 
-	ret = hif_pm_runtime_get(soc->hif_handle,
-				 RTPM_ID_DW_TX_HW_ENQUEUE, true);
-	switch (ret) {
-	case 0:
+	ret = hif_rtpm_get(HIF_RTPM_GET_ASYNC, HIF_RTPM_ID_DP);
+	if (QDF_IS_STATUS_SUCCESS(ret)) {
 		if (hif_system_pm_state_check(soc->hif_handle)) {
 			dp_tx_hal_ring_access_end_reap(soc, hal_ring_hdl);
 			hal_srng_set_event(hal_ring_hdl, HAL_SRNG_FLUSH_EVENT);
@@ -1559,31 +1557,8 @@ dp_tx_ring_access_end_wrapper(struct dp_soc *soc,
 		} else {
 			dp_tx_ring_access_end(soc, hal_ring_hdl, coalesce);
 		}
-		hif_pm_runtime_put(soc->hif_handle,
-				   RTPM_ID_DW_TX_HW_ENQUEUE);
-		break;
-	/*
-	 * If hif_pm_runtime_get returns -EBUSY or -EINPROGRESS,
-	 * take the dp runtime refcount using dp_runtime_get,
-	 * check link state,if up, write TX ring HP, else just set flush event.
-	 * In dp_runtime_resume, wait until dp runtime refcount becomes
-	 * zero or time out, then flush pending tx.
-	 */
-	case -EBUSY:
-	case -EINPROGRESS:
-		dp_runtime_get(soc);
-		if (hif_pm_get_link_state(soc->hif_handle) ==
-		    HIF_PM_LINK_STATE_UP) {
-			dp_tx_ring_access_end(soc, hal_ring_hdl, coalesce);
-		} else {
-			dp_tx_hal_ring_access_end_reap(soc, hal_ring_hdl);
-			hal_srng_set_event(hal_ring_hdl, HAL_SRNG_FLUSH_EVENT);
-			qdf_atomic_inc(&soc->tx_pending_rtpm);
-			hal_srng_inc_flush_cnt(hal_ring_hdl);
-		}
-		dp_runtime_put(soc);
-		break;
-	default:
+		hif_rtpm_put(HIF_RTPM_PUT_ASYNC, HIF_RTPM_ID_DP);
+	} else {
 		dp_runtime_get(soc);
 		dp_tx_hal_ring_access_end_reap(soc, hal_ring_hdl);
 		hal_srng_set_event(hal_ring_hdl, HAL_SRNG_FLUSH_EVENT);

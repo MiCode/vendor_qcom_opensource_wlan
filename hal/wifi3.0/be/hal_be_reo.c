@@ -360,8 +360,8 @@ hal_reo_cmd_queue_stats_be(hal_ring_handle_t  hal_ring_hdl,
 	HAL_DESC_64_SET_FIELD(reo_desc, REO_GET_QUEUE_STATS, CLEAR_STATS,
 			      cmd->u.stats_params.clear);
 
-	hal_srng_access_end_v1(hal_soc_hdl, hal_ring_hdl, RTPM_ID_HAL_REO_CMD,
-			       true);
+	hal_srng_access_end_v1(hal_soc_hdl, hal_ring_hdl,
+			       HIF_RTPM_ID_HAL_REO_CMD);
 
 	val = reo_desc[CMD_HEADER_DW_OFFSET];
 	return HAL_GET_FIELD(UNIFORM_REO_CMD_HEADER, REO_CMD_NUMBER,
@@ -412,8 +412,9 @@ hal_reo_cmd_flush_queue_be(hal_ring_handle_t hal_ring_hdl,
 				      cmd->u.fl_queue_params.index);
 	}
 
-	hal_srng_access_end_v1(hal_soc_hdl, hal_ring_hdl, RTPM_ID_HAL_REO_CMD,
-			       false);
+	hal_srng_access_end_v1(hal_soc_hdl, hal_ring_hdl,
+			       HIF_RTPM_ID_HAL_REO_CMD);
+
 	val = reo_desc[CMD_HEADER_DW_OFFSET];
 	return HAL_GET_FIELD(UNIFORM_REO_CMD_HEADER, REO_CMD_NUMBER,
 				     val);
@@ -496,8 +497,8 @@ hal_reo_cmd_flush_cache_be(hal_ring_handle_t hal_ring_hdl,
 	HAL_DESC_64_SET_FIELD(reo_desc, REO_FLUSH_CACHE, FLUSH_ENTIRE_CACHE,
 			      cp->flush_entire_cache);
 
-	hal_srng_access_end_v1(hal_soc_hdl, hal_ring_hdl, RTPM_ID_HAL_REO_CMD,
-			       false);
+	hal_srng_access_end_v1(hal_soc_hdl, hal_ring_hdl,
+			       HIF_RTPM_ID_HAL_REO_CMD);
 
 	val = reo_desc[CMD_HEADER_DW_OFFSET];
 	return HAL_GET_FIELD(UNIFORM_REO_CMD_HEADER, REO_CMD_NUMBER,
@@ -812,8 +813,9 @@ hal_reo_cmd_update_rx_queue_be(hal_ring_handle_t hal_ring_hdl,
 	HAL_DESC_64_SET_FIELD(reo_desc, REO_UPDATE_RX_REO_QUEUE,
 			      PN_127_96, p->pn_127_96);
 
-	hal_srng_access_end_v1(hal_soc_hdl, hal_ring_hdl, RTPM_ID_HAL_REO_CMD,
-			       false);
+	hal_srng_access_end_v1(hal_soc_hdl, hal_ring_hdl,
+			       HIF_RTPM_ID_HAL_REO_CMD);
+
 	val = reo_desc[CMD_HEADER_DW_OFFSET];
 	return HAL_GET_FIELD(UNIFORM_REO_CMD_HEADER, REO_CMD_NUMBER,
 				     val);

@@ -870,16 +870,10 @@ static QDF_STATUS htc_issue_packets(HTC_TARGET *target,
 		 */
 		if (pPacket->PktInfo.AsTx.Tag == HTC_TX_PACKET_TAG_RUNTIME_PUT) {
 			rt_put = true;
-			hif_pm_runtime_update_stats(
-					target->hif_dev, RTPM_ID_HTC,
-					HIF_PM_HTC_STATS_GET_HTT_NO_RESPONSE);
 		} else if (pPacket->PktInfo.AsTx.Tag ==
 			 HTC_TX_PACKET_TAG_RTPM_PUT_RC) {
 			rt_put_in_resp = true;
 			htc_inc_runtime_cnt(target);
-			hif_pm_runtime_update_stats(
-					target->hif_dev, RTPM_ID_HTC,
-					HIF_PM_HTC_STATS_GET_HTT_RESPONSE);
 		}
 
 #if DEBUG_BUNDLE
@@ -971,11 +965,7 @@ static QDF_STATUS htc_issue_packets(HTC_TARGET *target,
 			break;
 		}
 		if (rt_put) {
-			hif_pm_runtime_put(target->hif_dev,
-					   RTPM_ID_HTC);
-			hif_pm_runtime_update_stats(
-					target->hif_dev, RTPM_ID_HTC,
-					HIF_PM_HTC_STATS_PUT_HTT_NO_RESPONSE);
+			hif_rtpm_put(HIF_RTPM_PUT_ASYNC, HIF_RTPM_ID_HTT);
 			rt_put = false;
 		}
 	}
@@ -1050,7 +1040,7 @@ static void queue_htc_pm_packets(HTC_ENDPOINT *endpoint,
 #endif
 
 /**
- * htc_send_pkts_rtpm_dbgid_get() - get runtime pm dbgid by service_id
+ * htc_send_pkts_get_rtpm_id() - get runtime pm dbgid by service_id
  * @service_id: service for endpoint
  *
  * For service_id HTT_DATA_MSG_SVC, HTT message donot have a tx complete
@@ -1068,19 +1058,15 @@ static void queue_htc_pm_packets(HTC_ENDPOINT *endpoint,
  * put/get.
  *
  *
- * Return: rtpm_dbgid to trace who use it
+ * Return: rtpm id to trace who used it
  */
-static wlan_rtpm_dbgid
-htc_send_pkts_rtpm_dbgid_get(HTC_SERVICE_ID service_id)
+static unsigned int
+htc_send_pkts_get_rtpm_id(HTC_SERVICE_ID service_id)
 {
-	wlan_rtpm_dbgid rtpm_dbgid;
-
 	if (service_id == HTT_DATA_MSG_SVC)
-		rtpm_dbgid = RTPM_ID_HTC;
+		return HIF_RTPM_ID_HTT;
 	else
-		rtpm_dbgid = RTPM_ID_WMI;
-
-	return rtpm_dbgid;
+		return HIF_RTPM_ID_WMI;
 }
 
 #ifdef SYSTEM_PM_CHECK
@@ -1141,7 +1127,7 @@ static void get_htc_send_packets_credit_based(HTC_TARGET *target,
 	HTC_PACKET_QUEUE *tx_queue;
 	HTC_PACKET_QUEUE pm_queue;
 	bool do_pm_get = false;
-	wlan_rtpm_dbgid rtpm_dbgid = 0;
+	unsigned int rtpm_code = 0;
 	int ret;
 	HTC_PACKET_QUEUE sys_pm_queue;
 	bool sys_pm_check = false;
@@ -1170,20 +1156,16 @@ static void get_htc_send_packets_credit_based(HTC_TARGET *target,
 	/* loop until we can grab as many packets out of the queue as we can */
 	while (true) {
 		if (do_pm_get) {
-			rtpm_dbgid =
-				htc_send_pkts_rtpm_dbgid_get(
-					pEndpoint->service_id);
-			ret = hif_pm_runtime_get(target->hif_dev,
-						 rtpm_dbgid, false);
+			rtpm_code = htc_send_pkts_get_rtpm_id(
+							pEndpoint->service_id);
+			ret = hif_rtpm_get(HIF_RTPM_GET_ASYNC, rtpm_code);
 			if (ret) {
 				/* bus suspended, runtime resume issued */
 				QDF_ASSERT(HTC_PACKET_QUEUE_DEPTH(pQueue) == 0);
-				if (ret == -EAGAIN) {
-					pPacket = htc_get_pkt_at_head(tx_queue);
-					if (!pPacket)
-						break;
-					log_packet_info(target, pPacket);
-				}
+				pPacket = htc_get_pkt_at_head(tx_queue);
+				if (!pPacket)
+					break;
+				log_packet_info(target, pPacket);
 				break;
 			}
 		}
@@ -1193,15 +1175,14 @@ static void get_htc_send_packets_credit_based(HTC_TARGET *target,
 		pPacket = htc_get_pkt_at_head(tx_queue);
 		if (!pPacket) {
 			if (do_pm_get)
-				hif_pm_runtime_put(target->hif_dev,
-						   rtpm_dbgid);
+				hif_rtpm_put(HIF_RTPM_PUT_ASYNC, rtpm_code);
 			break;
 		}
 
 		if (sys_pm_check &&
 		    hif_system_pm_state_check(target->hif_dev)) {
 			if (do_pm_get)
-				hif_pm_runtime_put(target->hif_dev, rtpm_dbgid);
+				hif_rtpm_put(HIF_RTPM_PUT_ASYNC, rtpm_code);
 			break;
 		}
 
@@ -1245,8 +1226,9 @@ static void get_htc_send_packets_credit_based(HTC_TARGET *target,
 						 creditsRequired));
 #endif
 				if (do_pm_get)
-					hif_pm_runtime_put(target->hif_dev,
-							   rtpm_dbgid);
+					hif_rtpm_put(HIF_RTPM_PUT_ASYNC,
+						     rtpm_code);
+
 				break;
 			}
 
@@ -1308,7 +1290,7 @@ static void get_htc_send_packets(HTC_TARGET *target,
 	HTC_PACKET_QUEUE *tx_queue;
 	HTC_PACKET_QUEUE pm_queue;
 	bool do_pm_get = false;
-	wlan_rtpm_dbgid rtpm_dbgid = 0;
+	unsigned int rtpm_code = 0;
 	int ret;
 
 	/*** NOTE : the TX lock is held when this function is called ***/
@@ -1329,34 +1311,26 @@ static void get_htc_send_packets(HTC_TARGET *target,
 		int num_frags;
 
 		if (do_pm_get) {
-			rtpm_dbgid =
-				htc_send_pkts_rtpm_dbgid_get(
-					pEndpoint->service_id);
-			ret = hif_pm_runtime_get(target->hif_dev,
-						 rtpm_dbgid, false);
+			rtpm_code =
+				htc_send_pkts_get_rtpm_id(
+							pEndpoint->service_id);
+			ret = hif_rtpm_get(HIF_RTPM_GET_ASYNC, rtpm_code);
 			if (ret) {
 				/* bus suspended, runtime resume issued */
 				QDF_ASSERT(HTC_PACKET_QUEUE_DEPTH(pQueue) == 0);
-				if (ret == -EAGAIN) {
-					pPacket = htc_get_pkt_at_head(tx_queue);
-					if (!pPacket)
-						break;
-					log_packet_info(target, pPacket);
-				}
+				pPacket = htc_get_pkt_at_head(tx_queue);
+				if (!pPacket)
+					break;
+				log_packet_info(target, pPacket);
 				break;
 			}
-			hif_pm_runtime_update_stats(
-					target->hif_dev, rtpm_dbgid,
-					HIF_PM_HTC_STATS_GET_HTT_FETCH_PKTS);
+
 		}
 
 		ret = hif_system_pm_state_check(target->hif_dev);
 		if (ret) {
 			if (do_pm_get) {
-				hif_pm_runtime_put(target->hif_dev, rtpm_dbgid);
-				hif_pm_runtime_update_stats(
-					target->hif_dev, rtpm_dbgid,
-					HIF_PM_HTC_STATS_PUT_HTT_FETCH_PKTS);
+				hif_rtpm_put(HIF_RTPM_PUT_ASYNC, rtpm_code);
 			}
 			break;
 		}
@@ -1364,10 +1338,7 @@ static void get_htc_send_packets(HTC_TARGET *target,
 		pPacket = htc_packet_dequeue(tx_queue);
 		if (!pPacket) {
 			if (do_pm_get) {
-				hif_pm_runtime_put(target->hif_dev, rtpm_dbgid);
-				hif_pm_runtime_update_stats(
-					target->hif_dev, rtpm_dbgid,
-					HIF_PM_HTC_STATS_PUT_HTT_FETCH_PKTS);
+				hif_rtpm_put(HIF_RTPM_PUT_ASYNC, rtpm_code);
 			}
 			break;
 		}
@@ -1696,7 +1667,7 @@ static enum HTC_SEND_QUEUE_RESULT htc_try_send(HTC_TARGET *target,
 		status = htc_issue_packets(target, pEndpoint, &sendQueue);
 		if (status) {
 			int i;
-			wlan_rtpm_dbgid rtpm_dbgid;
+			unsigned int rtpm_code;
 
 			result = HTC_SEND_QUEUE_DROP;
 
@@ -1719,15 +1690,10 @@ static enum HTC_SEND_QUEUE_RESULT htc_try_send(HTC_TARGET *target,
 				break;
 			}
 
-			rtpm_dbgid =
-				htc_send_pkts_rtpm_dbgid_get(
-					pEndpoint->service_id);
+			rtpm_code = htc_send_pkts_get_rtpm_id(
+							pEndpoint->service_id);
 			for (i = HTC_PACKET_QUEUE_DEPTH(&sendQueue); i > 0; i--) {
-				hif_pm_runtime_put(target->hif_dev,
-						   rtpm_dbgid);
-				hif_pm_runtime_update_stats(
-					target->hif_dev, rtpm_dbgid,
-					HIF_PM_HTC_STATS_PUT_HTT_ERROR);
+				hif_rtpm_put(HIF_RTPM_PUT_ASYNC, rtpm_code);
 			}
 
 			if (!pEndpoint->async_update) {
@@ -2017,7 +1983,7 @@ QDF_STATUS htc_send_data_pkt(HTC_HANDLE htc_hdl, qdf_nbuf_t netbuf, int ep_id,
 	int tx_resources;
 	uint32_t data_attr = 0;
 	int htc_payload_len = actual_length;
-	wlan_rtpm_dbgid rtpm_dbgid;
+	unsigned int rtpm_code;
 
 	pEndpoint = &target->endpoint[ep_id];
 
@@ -2036,9 +2002,9 @@ QDF_STATUS htc_send_data_pkt(HTC_HANDLE htc_hdl, qdf_nbuf_t netbuf, int ep_id,
 			return QDF_STATUS_E_FAILURE;
 	}
 
-	rtpm_dbgid =
-		htc_send_pkts_rtpm_dbgid_get(pEndpoint->service_id);
-	if (hif_pm_runtime_get(target->hif_dev, rtpm_dbgid, false))
+	rtpm_code = htc_send_pkts_get_rtpm_id(
+					pEndpoint->service_id);
+	if (hif_rtpm_get(HIF_RTPM_GET_ASYNC, rtpm_code))
 		return QDF_STATUS_E_FAILURE;
 
 	p_htc_hdr = (HTC_FRAME_HDR *)qdf_nbuf_get_frag_vaddr(netbuf, 0);
@@ -2483,8 +2449,8 @@ QDF_STATUS htc_tx_completion_handler(void *Context,
 		if (pPacket->PktInfo.AsTx.Tag != HTC_TX_PACKET_TAG_AUTO_PM &&
 		    pPacket->PktInfo.AsTx.Tag != HTC_TX_PACKET_TAG_RUNTIME_PUT &&
 		    pPacket->PktInfo.AsTx.Tag != HTC_TX_PACKET_TAG_RTPM_PUT_RC)
-			hif_pm_runtime_put(target->hif_dev,
-					   RTPM_ID_WMI);
+			hif_rtpm_put(HIF_RTPM_PUT_ASYNC, HIF_RTPM_ID_WMI);
+
 
 		if (pPacket->PktInfo.AsTx.Tag == HTC_TX_PACKET_TAG_BUNDLED) {
 			HTC_PACKET *pPacketTemp;
@@ -2592,12 +2558,8 @@ void htc_kick_queues(void *context)
 	HTC_TARGET *target = (HTC_TARGET *)context;
 	HTC_ENDPOINT *endpoint = NULL;
 
-	if (hif_pm_runtime_get_sync(target->hif_dev, RTPM_ID_HTC))
+	if (hif_rtpm_get(HIF_RTPM_GET_SYNC, HIF_RTPM_ID_HTT))
 		return;
-
-	hif_pm_runtime_update_stats(
-			target->hif_dev, RTPM_ID_HTC,
-			HIF_PM_HTC_STATS_GET_HTC_KICK_QUEUES);
 
 	for (i = 0; i < ENDPOINT_MAX; i++) {
 		endpoint = &target->endpoint[i];
@@ -2614,12 +2576,7 @@ void htc_kick_queues(void *context)
 
 	hif_fastpath_resume(target->hif_dev);
 
-	if (hif_pm_runtime_put(target->hif_dev, RTPM_ID_HTC))
-		return;
-
-	hif_pm_runtime_update_stats(
-			target->hif_dev, RTPM_ID_HTC,
-			HIF_PM_HTC_STATS_PUT_HTC_KICK_QUEUES);
+	hif_rtpm_put(HIF_RTPM_PUT_ASYNC, HIF_RTPM_ID_HTT);
 }
 #endif
 
