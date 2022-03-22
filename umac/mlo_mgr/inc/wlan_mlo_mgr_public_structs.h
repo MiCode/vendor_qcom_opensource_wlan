@@ -93,6 +93,7 @@ enum MLO_LINK_STATE {
  * @pdev_list[MAX_MLO_LINKS]: pdev pointers belonging to this group
  * @soc_list[MAX_MLO_CHIPS]: psoc pointers belonging to this group
  * @state[MAX_MLO_LINKS]: MLO link state
+ * @valid_link_bitmap: valid MLO link bitmap
  * @state_lock: lock to protect access to link state
  * @qdf_event_t: event for tearodwn completion
  */
@@ -107,6 +108,7 @@ struct mlo_setup_info {
 	struct wlan_objmgr_pdev *pdev_list[MAX_MLO_LINKS];
 	struct wlan_objmgr_psoc *soc_list[MAX_MLO_CHIPS];
 	enum MLO_LINK_STATE state[MAX_MLO_LINKS];
+	uint16_t valid_link_bitmap;
 	qdf_spinlock_t state_lock;
 	qdf_event_t event;
 };
