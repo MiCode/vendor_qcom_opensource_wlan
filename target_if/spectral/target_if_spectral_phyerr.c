@@ -3445,11 +3445,15 @@ target_if_consume_spectral_report_gen3(
 	bool finite_scan = false;
 	int det = 0;
 	struct sscan_detector_list *det_list;
+	struct spectral_data_stats *spectral_dp_stats;
 
 	if (!spectral) {
 		spectral_err_rl("Spectral LMAC object is null");
 		goto fail_no_print;
 	}
+
+	spectral_dp_stats = &spectral->data_stats;
+	spectral_dp_stats->consume_spectral_calls++;
 
 	if (!report) {
 		spectral_err_rl("Spectral report is null");
@@ -4041,12 +4045,16 @@ int target_if_spectral_process_report_gen3(
 	struct target_if_spectral *spectral;
 	struct spectral_report report;
 	int samp_msg_index;
+	struct spectral_data_stats *spectral_dp_stats;
 
 	spectral = get_target_if_spectral_handle_from_pdev(pdev);
 	if (!spectral) {
 		spectral_err("Spectral target object is null");
 		return -EINVAL;
 	}
+
+	spectral_dp_stats = &spectral->data_stats;
+	spectral_dp_stats->spectral_rx_events++;
 
 	report.data = payload->vaddr;
 	if (payload->meta_data_valid) {

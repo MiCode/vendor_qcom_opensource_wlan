@@ -42,11 +42,15 @@ target_if_spectral_fill_samp_msg(struct target_if_spectral *spectral,
 	uint16_t dest_det_idx;
 	enum spectral_scan_mode spectral_mode;
 	uint16_t pwr_format;
+	struct spectral_data_stats *spectral_dp_stats;
 
 	if (!spectral) {
 		spectral_err_rl("Spectral LMAC object is null");
 		return QDF_STATUS_E_NULL_VALUE;
 	}
+
+	spectral_dp_stats = &spectral->data_stats;
+	spectral_dp_stats->fill_samp_msg_calls++;
 
 	if (!params) {
 		spectral_err_rl("SAMP msg params structure is null");
@@ -281,9 +285,12 @@ target_if_spectral_fill_samp_msg(struct target_if_spectral *spectral,
 		if (spectral_debug_level & DEBUG_SPECTRAL4)
 			target_if_dbg_print_samp_msg(spec_samp_msg);
 
+		spectral_dp_stats->msgs_ready_for_user++;
 		if (spectral->send_phy_data(spectral->pdev_obj,
-					    msg_type) == 0)
+					    msg_type) == 0) {
 			spectral->spectral_sent_msg++;
+			spectral_dp_stats->msgs_queued_to_user++;
+		}
 		if (spectral->spectral_gen == SPECTRAL_GEN3)
 			reset_160mhz_delivery_state_machine(spectral,
 							    spectral_mode);

@@ -1259,6 +1259,7 @@ int get_supported_sscan_bw_pos(enum phy_ch_width sscan_bw);
  * @supported_bws: Supported sscan bandwidths for all sscan modes and
  * operating widths
  * @supported_sscan_bw_list: List of supported sscan widths for all sscan modes
+ * @data_stats: stats in Spectral data path
  */
 struct target_if_spectral {
 	struct wlan_objmgr_pdev *pdev_obj;
@@ -1392,6 +1393,7 @@ struct target_if_spectral {
 		supported_bws[SPECTRAL_SCAN_MODE_MAX][CH_WIDTH_MAX];
 	/* Whether a given sscan BW is supported on a given smode */
 	bool supported_sscan_bw_list[SPECTRAL_SCAN_MODE_MAX][CH_WIDTH_MAX];
+	struct spectral_data_stats data_stats;
 };
 
 /**

@@ -469,6 +469,23 @@ struct spectral_cp_request {
 	};
 };
 
+/**
+ * struct spectral_data_stats - Spectral data stats
+ * @spectral_rx_events: Number of Spectral rx events
+ * @consume_spectral_calls: Number of consume_spectral_report() invocations
+ * @fill_samp_msg_calls: Number of fill_samp_msg() invocations
+ * @msgs_ready_for_user: Number of SAMP messages that are ready to be sent to
+ * user-space
+ * @msgs_queued_to_user: Number of SAMP messages queued to the user-space
+ */
+struct spectral_data_stats {
+	uint32_t spectral_rx_events;
+	uint32_t consume_spectral_calls;
+	uint32_t fill_samp_msg_calls;
+	uint32_t msgs_ready_for_user;
+	uint32_t msgs_queued_to_user;
+};
+
 #ifndef __KERNEL__
 
 static inline int16_t
