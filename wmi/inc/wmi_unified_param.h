@@ -4941,6 +4941,9 @@ typedef enum {
 #endif
 	wmi_peer_rx_pn_response_event_id,
 	wmi_extract_pktlog_decode_info_eventid,
+#ifdef QCA_RSSI_DB2DBM
+	wmi_pdev_rssi_dbm_conversion_params_info_eventid,
+#endif
 	wmi_events_max,
 } wmi_conv_event_id;
 

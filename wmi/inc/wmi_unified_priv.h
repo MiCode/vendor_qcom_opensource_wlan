@@ -1391,6 +1391,12 @@ QDF_STATUS (*extract_offchan_data_tx_compl_param)(wmi_unified_t wmi_handle,
 QDF_STATUS (*extract_pdev_tpc_config_ev_param)(wmi_unified_t wmi_handle,
 		void *evt_buf, wmi_host_pdev_tpc_config_event *param);
 
+#ifdef QCA_RSSI_DB2DBM
+QDF_STATUS (*extract_pdev_rssi_dbm_conv_ev_param)(wmi_unified_t wmi_handle,
+						  void *evt_buf,
+						  struct rssi_db2dbm_param *param);
+#endif
+
 QDF_STATUS (*extract_peer_sta_kickout_ev)(wmi_unified_t wmi_handle,
 		void *evt_buf, wmi_host_peer_sta_kickout_event *ev);
 

@@ -18320,6 +18320,10 @@ event_ids[wmi_roam_scan_chan_list_id] =
 		WMI_PEER_RX_PN_RESPONSE_EVENTID;
 	event_ids[wmi_extract_pktlog_decode_info_eventid] =
 		WMI_PDEV_PKTLOG_DECODE_INFO_EVENTID;
+#ifdef QCA_RSSI_DB2DBM
+	event_ids[wmi_pdev_rssi_dbm_conversion_params_info_eventid] =
+		WMI_PDEV_RSSI_DBM_CONVERSION_PARAMS_INFO_EVENTID;
+#endif
 }
 
 #ifdef WLAN_FEATURE_LINK_LAYER_STATS
