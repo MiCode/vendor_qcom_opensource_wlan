@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2014-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -304,3 +305,11 @@ void qdf_cpumask_copy(qdf_cpu_mask *dstp,
 }
 
 qdf_export_symbol(qdf_cpumask_copy);
+
+void qdf_cpumask_or(qdf_cpu_mask *dstp, qdf_cpu_mask *src1p,
+		    qdf_cpu_mask *src2p)
+{
+	cpumask_or(dstp, src1p, src2p);
+}
+
+qdf_export_symbol(qdf_cpumask_or);

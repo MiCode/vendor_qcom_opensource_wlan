@@ -874,6 +874,8 @@ bool __qdf_nbuf_data_is_ipv4_igmp_pkt(uint8_t *data);
 bool __qdf_nbuf_data_is_ipv6_igmp_pkt(uint8_t *data);
 bool __qdf_nbuf_data_is_ipv4_arp_pkt(uint8_t *data);
 bool __qdf_nbuf_is_bcast_pkt(__qdf_nbuf_t nbuf);
+bool __qdf_nbuf_is_mcast_replay(__qdf_nbuf_t nbuf);
+bool __qdf_nbuf_is_arp_local(struct sk_buff *skb);
 bool __qdf_nbuf_data_is_arp_req(uint8_t *data);
 bool __qdf_nbuf_data_is_arp_rsp(uint8_t *data);
 uint32_t __qdf_nbuf_get_arp_src_ip(uint8_t *data);
@@ -2164,6 +2166,17 @@ static inline size_t __qdf_nbuf_l2l3l4_hdr_len(struct sk_buff *skb)
 }
 
 /**
+ * __qdf_nbuf_get_tcp_hdr_len() - return TCP header length of the skb
+ * @skb: sk buff
+ *
+ * Return: size of TCP header length
+ */
+static inline size_t __qdf_nbuf_get_tcp_hdr_len(struct sk_buff *skb)
+{
+	return tcp_hdrlen(skb);
+}
+
+/**
  * __qdf_nbuf_is_nonlinear() - test whether the nbuf is nonlinear or not
  * @buf: sk buff
  *
@@ -2641,6 +2654,118 @@ static inline qdf_size_t __qdf_nbuf_get_data_len(__qdf_nbuf_t nbuf)
 static inline uint16_t __qdf_nbuf_get_gso_segs(struct sk_buff *skb)
 {
 	return skb_shinfo(skb)->gso_segs;
+}
+
+/**
+ * __qdf_nbuf_get_gso_size() - Return the number of gso size
+ * @skb: Pointer to network buffer
+ *
+ * Return: Return the number of gso segments
+ */
+static inline unsigned int __qdf_nbuf_get_gso_size(struct sk_buff *skb)
+{
+	return skb_shinfo(skb)->gso_size;
+}
+
+/**
+ * __qdf_nbuf_set_gso_size() - Set the gso size in nbuf
+ * @skb: Pointer to network buffer
+ *
+ * Return: Return the number of gso segments
+ */
+static inline void
+__qdf_nbuf_set_gso_size(struct sk_buff *skb, unsigned int val)
+{
+	skb_shinfo(skb)->gso_size = val;
+}
+
+/**
+ * __qdf_nbuf_kfree() - Free nbuf using kfree
+ * @buf: Pointer to network buffer
+ *
+ * This function is called to free the skb on failure cases
+ *
+ * Return: None
+ */
+static inline void __qdf_nbuf_kfree(struct sk_buff *skb)
+{
+	kfree_skb(skb);
+}
+
+/**
+ * __qdf_nbuf_dev_kfree() - Free nbuf using dev based os call
+ * @buf: Pointer to network buffer
+ *
+ * This function is called to free the skb on failure cases
+ *
+ * Return: None
+ */
+static inline void __qdf_nbuf_dev_kfree(struct sk_buff *skb)
+{
+	dev_kfree_skb(skb);
+}
+
+/**
+ * __qdf_nbuf_pkt_type_is_mcast() - check if skb pkt type is mcast
+ * @buf: Network buffer
+ *
+ * Return: TRUE if skb pkt type is mcast
+ *         FALSE if not
+ */
+static inline
+bool __qdf_nbuf_pkt_type_is_mcast(struct sk_buff *skb)
+{
+	return skb->pkt_type == PACKET_MULTICAST;
+}
+
+/**
+ * __qdf_nbuf_pkt_type_is_bcast() - check if skb pkt type is bcast
+ * @buf: Network buffer
+ *
+ * Return: TRUE if skb pkt type is mcast
+ *         FALSE if not
+ */
+static inline
+bool __qdf_nbuf_pkt_type_is_bcast(struct sk_buff *skb)
+{
+	return skb->pkt_type == PACKET_BROADCAST;
+}
+
+/**
+ * __qdf_nbuf_set_dev_scratch() - set dev_scratch of network buffer
+ * @buf: Pointer to network buffer
+ * @value: value to be set in dev_scratch of network buffer
+ *
+ * Return: void
+ */
+static inline
+void __qdf_nbuf_set_dev(struct sk_buff *skb, struct net_device *dev)
+{
+	skb->dev = dev;
+}
+
+/**
+ * __qdf_nbuf_get_dev_mtu() - get dev mtu in n/w buffer
+ * @buf: Pointer to network buffer
+ *
+ * Return: dev mtu value in nbuf
+ */
+static inline
+unsigned int __qdf_nbuf_get_dev_mtu(struct sk_buff *skb)
+{
+	return skb->dev->mtu;
+}
+
+/**
+ * __qdf_nbuf_set_protocol_eth_tye_trans() - set protocol using eth trans os API
+ * @buf: Pointer to network buffer
+ *
+ * Return: None
+ */
+static inline
+void __qdf_nbuf_set_protocol_eth_type_trans(struct sk_buff *skb)
+{
+	skb->protocol = eth_type_trans(skb, skb->dev);
 }
 
 /*

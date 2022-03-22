@@ -175,6 +175,16 @@ typedef __qdf_cpu_mask qdf_cpu_mask;
 typedef __qdf_netdev_t qdf_netdev_t;
 
 /**
+ * pointer to napi struct
+ */
+typedef __qdf_napi_struct qdf_napi_struct;
+
+/**
+ * pointer to net dev stats
+ */
+typedef __qdf_net_dev_stats qdf_net_dev_stats;
+
+/**
  * struct qdf_dma_map_info - Information inside a DMA map.
  * @nsegs: total number mapped segments
  * struct __dma_segs - Information of physical address.

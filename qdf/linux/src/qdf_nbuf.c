@@ -28,6 +28,7 @@
 #include <linux/skbuff.h>
 #include <linux/module.h>
 #include <linux/proc_fs.h>
+#include <linux/inetdevice.h>
 #include <qdf_atomic.h>
 #include <qdf_debugfs.h>
 #include <qdf_lock.h>
@@ -2464,6 +2465,73 @@ bool __qdf_nbuf_is_bcast_pkt(qdf_nbuf_t nbuf)
 	return qdf_is_macaddr_broadcast((struct qdf_mac_addr *)eh->h_dest);
 }
 qdf_export_symbol(__qdf_nbuf_is_bcast_pkt);
+
+/**
+ * __qdf_nbuf_is_mcast_replay() - is multicast replay packet
+ * @nbuf - sk buff
+ *
+ * Return: true if packet is multicast replay
+ *	   false otherwise
+ */
+bool __qdf_nbuf_is_mcast_replay(qdf_nbuf_t nbuf)
+{
+	struct ethhdr *eh = (struct ethhdr *)qdf_nbuf_data(nbuf);
+
+	if (unlikely(nbuf->pkt_type == PACKET_MULTICAST)) {
+		if (unlikely(ether_addr_equal(eh->h_source,
+					      nbuf->dev->dev_addr)))
+			return true;
+	}
+	return false;
+}
+
+/**
+ * __qdf_nbuf_is_arp_local() - check if local or non local arp
+ * @skb: pointer to sk_buff
+ *
+ * Return: true if local arp or false otherwise.
+ */
+bool __qdf_nbuf_is_arp_local(struct sk_buff *skb)
+{
+	struct arphdr *arp;
+	struct in_ifaddr **ifap = NULL;
+	struct in_ifaddr *ifa = NULL;
+	struct in_device *in_dev;
+	unsigned char *arp_ptr;
+	__be32 tip;
+
+	arp = (struct arphdr *)skb->data;
+	if (arp->ar_op == htons(ARPOP_REQUEST)) {
+		/* if fail to acquire rtnl lock, assume it's local arp */
+		if (!rtnl_trylock())
+			return true;
+
+		in_dev = __in_dev_get_rtnl(skb->dev);
+		if (in_dev) {
+			for (ifap = &in_dev->ifa_list; (ifa = *ifap) != NULL;
+				ifap = &ifa->ifa_next) {
+				if (!strcmp(skb->dev->name, ifa->ifa_label))
+					break;
+			}
+		}
+
+		if (ifa && ifa->ifa_local) {
+			arp_ptr = (unsigned char *)(arp + 1);
+			arp_ptr += (skb->dev->addr_len + 4 +
+					skb->dev->addr_len);
+			memcpy(&tip, arp_ptr, 4);
+			qdf_debug("ARP packet: local IP: %x dest IP: %x",
+				  ifa->ifa_local, tip);
+			if (ifa->ifa_local == tip) {
+				rtnl_unlock();
+				return true;
+			}
+		}
+		rtnl_unlock();
+	}
+
+	return false;
+}
 
 #ifdef NBUF_MEMORY_DEBUG
 
