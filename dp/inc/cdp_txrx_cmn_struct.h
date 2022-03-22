@@ -2286,6 +2286,7 @@ struct cdp_tx_completion_msdu {
  * @mpdu_fcs_ok_bitmap - MPDU with fcs ok bitmap
  * @retries - number of retries
  * @rx_ratekpbs - rx rate in kbps
+ * @rix - rate index
  * @mpdu_retries - retries of mpdu in rx
  */
 struct cdp_rx_stats_ppdu_user {
@@ -2324,6 +2325,7 @@ struct cdp_rx_stats_ppdu_user {
 	uint32_t mpdu_err_byte_count;
 	uint32_t retries;
 	uint32_t rx_ratekbps;
+	uint32_t rix;
 	uint32_t mpdu_retries;
 };
 

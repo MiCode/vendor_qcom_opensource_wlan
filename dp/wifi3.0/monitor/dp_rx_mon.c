@@ -449,6 +449,7 @@ dp_rx_populate_cdp_indication_ppdu_user(struct dp_pdev *pdev,
 		rx_stats_peruser->retries =
 			CDP_FC_IS_RETRY_SET(rx_stats_peruser->frame_control) ?
 			rx_stats_peruser->mpdu_cnt_fcs_ok : 0;
+		cdp_rx_ppdu->retries += rx_stats_peruser->retries;
 
 		if (rx_stats_peruser->mpdu_cnt_fcs_ok > 1)
 			rx_stats_peruser->is_ampdu = 1;
@@ -615,6 +616,7 @@ dp_rx_populate_cdp_indication_ppdu(struct dp_pdev *pdev,
 
 	cdp_rx_ppdu->num_mpdu = 0;
 	cdp_rx_ppdu->num_msdu = 0;
+	cdp_rx_ppdu->retries = 0;
 
 	dp_rx_populate_cdp_indication_ppdu_user(pdev, ppdu_info, cdp_rx_ppdu);
 
@@ -687,6 +689,7 @@ static inline void dp_rx_rate_stats_update(struct dp_peer *peer,
 
 	if (!ratekbps) {
 		ppdu->rix = 0;
+		ppdu_user->rix = 0;
 		ppdu->rx_ratekbps = 0;
 		ppdu->rx_ratecode = 0;
 		ppdu_user->rx_ratekbps = 0;
@@ -698,6 +701,7 @@ static inline void dp_rx_rate_stats_update(struct dp_peer *peer,
 	mon_peer->stats.rx.preamble_info = ppdu->u.preamble;
 
 	ppdu->rix = rix;
+	ppdu_user->rix = rix;
 	DP_STATS_UPD(mon_peer, rx.last_rx_rate, ratekbps);
 	mon_peer->stats.rx.avg_rx_rate =
 		dp_ath_rate_lpf(mon_peer->stats.rx.avg_rx_rate, ratekbps);
