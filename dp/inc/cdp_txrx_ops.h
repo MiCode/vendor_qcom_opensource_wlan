@@ -966,6 +966,10 @@ struct cdp_mon_ops {
 				    uint8_t pdev_id,
 				    uint8_t direction);
 #endif
+	/*To set RSSI dbm converstion params in monitor pdev */
+	QDF_STATUS (*txrx_set_mon_pdev_params_rssi_dbm_conv)
+		(struct cdp_soc_t *soc,
+		 struct cdp_rssi_db2dbm_param_dp *params);
 };
 
 struct cdp_host_stats_ops {

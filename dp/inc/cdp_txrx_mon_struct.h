@@ -106,6 +106,10 @@ enum cdp_lite_mon_direction {
 	CDP_LITE_MON_DIRECTION_TX = 2,
 };
 #endif
+/* Same as MAX_20MHZ_SEGMENTS */
+#define CDP_MAX_20MHZ_SEGS 16
+/* Same as MAX_ANTENNA_EIGHT */
+#define CDP_MAX_NUM_ANTENNA 8
 
 /* XXX not really a mode; there are really multiple PHY's */
 enum cdp_mon_phymode {
@@ -505,4 +509,62 @@ struct cdp_lite_mon_peer_info {
 	uint8_t mac[CDP_LITE_MON_PEER_MAX][QDF_MAC_ADDR_SIZE];
 };
 #endif
+/* channel operating width */
+enum cdp_channel_width {
+	CHAN_WIDTH_20 = 0,
+	CHAN_WIDTH_40,
+	CHAN_WIDTH_80,
+	CHAN_WIDTH_160,
+	CHAN_WIDTH_80P80,
+	CHAN_WIDTH_5,
+	CHAN_WIDTH_10,
+	CHAN_WIDTH_165,
+	CHAN_WIDTH_160P160,
+	CHAN_WIDTH_320,
+
+	CHAN_WIDTH_MAX,
+};
+
+/* struct cdp_rssi_temp_off_param_dp
+ * @rssi_temp_offset: Temperature based rssi offset , send every 30 secs
+ */
+
+struct cdp_rssi_temp_off_param_dp {
+	int32_t rssi_temp_offset;
+};
+
+/*
+ * struct cdp_rssi_dbm_conv_param_dp
+ * @curr_bw: Current bandwidth
+ * @curr_rx_chainmask: Current rx chainmask
+ * @xbar_config: 4 bytes, used for BB to RF Chain mapping
+ * @xlna_bypass_offset: Low noise amplifier bypass offset
+ * @xlna_bypass_threshold: Low noise amplifier bypass threshold
+ * @nfHwDbm: HW noise floor in dBm per chain, per 20MHz subband
+ */
+struct cdp_rssi_dbm_conv_param_dp {
+	uint32_t curr_bw;
+	uint32_t curr_rx_chainmask;
+	uint32_t xbar_config;
+	int32_t xlna_bypass_offset;
+	int32_t xlna_bypass_threshold;
+	int8_t nf_hw_dbm[CDP_MAX_NUM_ANTENNA][CDP_MAX_20MHZ_SEGS];
+};
+
+/*
+ * struct cdp_rssi_db2dbm_param_dp
+ * @pdev_id: pdev_id
+ * @rssi_temp_off_present: to check temp offset values present or not
+ * @rssi_dbm_info_present: to check rssi dbm converstion parameters
+ *						   present or not
+ * @temp_off_param: cdp_rssi_temp_off_param_dp structure value
+ * @rssi_dbm_param: cdp_rssi_dbm_conv_param_dp staructure value
+ */
+struct cdp_rssi_db2dbm_param_dp {
+	uint32_t pdev_id;
+	bool rssi_temp_off_present;
+	bool rssi_dbm_info_present;
+	struct cdp_rssi_temp_off_param_dp temp_off_param;
+	struct cdp_rssi_dbm_conv_param_dp rssi_dbm_param;
+};
 #endif

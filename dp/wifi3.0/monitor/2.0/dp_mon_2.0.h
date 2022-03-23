@@ -116,6 +116,11 @@ struct dp_mon_desc_pool {
  * @rx_mon_queue_depth: RxMON queue depth
  * @desc_count: reaped status desc count
  * @status: reaped status buffer per ppdu
+ * @rssi_temp_offset: Temperature based rssi offset
+ * @xlna_bypass_offset: Low noise amplifier bypass offset
+ * @xlna_bypass_threshold: Low noise amplifier bypass threshold
+ * @xbar_config: 3 Bytes of xbar_config are used for RF to BB mapping
+ * @min_nf_dbm: min noise floor in active chains per channel
  */
 struct dp_mon_pdev_be {
 	struct dp_mon_pdev mon_pdev;
@@ -138,6 +143,13 @@ struct dp_mon_pdev_be {
 #endif
 	void *prev_rxmon_desc;
 	uint32_t prev_rxmon_cookie;
+#ifdef QCA_RSSI_DB2DBM
+	int32_t rssi_temp_offset;
+	int32_t xlna_bypass_offset;
+	int32_t xlna_bypass_threshold;
+	uint32_t xbar_config;
+	int8_t min_nf_dbm;
+#endif
 };
 
 /**

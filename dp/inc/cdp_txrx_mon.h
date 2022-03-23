@@ -218,4 +218,31 @@ cdp_is_lite_mon_enabled(ol_txrx_soc_handle soc,
 	return soc->ops->mon_ops->txrx_is_lite_mon_enabled(soc, pdev_id, dir);
 }
 #endif
+
+#ifdef QCA_RSSI_DB2DBM
+/*
+ * cdp_set_params_rssi_dbm_conversion - Set the rssi dbm conversion params
+ *					into dp_pdev structure
+ * @soc: soc txrx handler
+ * @params: cdp_rssi_db2dbm_param_dp pointer
+ *
+ */
+static inline QDF_STATUS
+cdp_set_params_rssi_dbm_conversion(ol_txrx_soc_handle soc,
+				   struct cdp_rssi_db2dbm_param_dp *params)
+{
+	if (!soc || !soc->ops) {
+		dp_cdp_debug("Invalid Instance:");
+		QDF_BUG(0);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	if (!soc->ops->mon_ops ||
+	    !soc->ops->mon_ops->txrx_set_mon_pdev_params_rssi_dbm_conv)
+		return QDF_STATUS_E_FAILURE;
+
+	return soc->ops->mon_ops->txrx_set_mon_pdev_params_rssi_dbm_conv
+							    (soc, params);
+}
+#endif
 #endif
