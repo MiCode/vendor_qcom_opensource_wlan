@@ -351,6 +351,11 @@ typedef __qdf_nbuf_queue_t qdf_nbuf_queue_t;
  * @ht_stbc: Indicate stbc
  * @ht_crc: ht crc
  * @dcm: dcm
+ * @xlna_bypass_offset: Low noise amplifier bypass offset
+ * @xlna_bypass_threshold: Low noise amplifier bypass threshold
+ * @rssi_temp_offset: Temperature based rssi offset
+ * @min_nf_dbm: min noise floor in active chains per channel
+ * @xbar_config: 4 bytes, used for BB to RF Chain mapping
  */
 struct mon_rx_status {
 	uint64_t tsft;
@@ -470,6 +475,13 @@ struct mon_rx_status {
 		ht_crc:8;
 #endif
 	uint8_t  dcm;
+#ifdef QCA_RSSI_DB2DBM
+	int32_t xlna_bypass_offset;
+	int32_t xlna_bypass_threshold;
+	int32_t rssi_temp_offset;
+	int8_t min_nf_dbm;
+	uint32_t xbar_config;
+#endif
 };
 
 /**

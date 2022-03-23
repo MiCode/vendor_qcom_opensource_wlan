@@ -1452,6 +1452,8 @@ dp_mon_register_feature_ops_2_0(struct dp_soc *soc)
 	mon_ops->mon_filter_reset_undecoded_metadata_capture =
 		dp_mon_filter_reset_undecoded_metadata_capture_2_0;
 #endif
+	mon_ops->mon_rx_stats_update_rssi_dbm_params =
+		dp_mon_rx_stats_update_rssi_dbm_params_2_0;
 }
 
 struct dp_mon_ops monitor_ops_2_0 = {

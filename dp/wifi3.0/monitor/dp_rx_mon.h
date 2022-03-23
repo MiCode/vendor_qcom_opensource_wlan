@@ -302,7 +302,8 @@ dp_rx_mon_init_dbg_ppdu_stats(struct hal_rx_ppdu_info *ppdu_info,
 #ifdef QCA_ENHANCED_STATS_SUPPORT
 void
 dp_rx_populate_rx_rssi_chain(struct hal_rx_ppdu_info *ppdu_info,
-			     struct cdp_rx_indication_ppdu *cdp_rx_ppdu);
+			     struct cdp_rx_indication_ppdu *cdp_rx_ppdu,
+			     struct dp_pdev *pdev);
 
 /*
  * dp_rx_populate_su_evm_details() - Populate su evm info

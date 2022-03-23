@@ -289,15 +289,63 @@ dp_bb_captured_chan_status(struct dp_pdev *pdev,
 #endif /* WLAN_CFR_ENABLE */
 
 #ifdef QCA_ENHANCED_STATS_SUPPORT
+#ifdef QCA_RSSI_DB2DBM
+/**
+ * dp_rx_mon_rf_index_conv() - this function will convert BB index to RF
+ *			index in the rssi_chain[chain][bw] array
+ *
+ * @chain: BB chain index
+ * @pdev: pdev structure
+ *
+ * Return: return RF chain index
+ *
+ * Computation:
+ *  3 Bytes of xbar_config are used for RF to BB mapping
+ *  Samples of xbar_config,
+ *
+ * If xbar_config is 0x688FAC(hex):
+ *     RF chains 0-3 are connected to BB chains 4-7
+ *     RF chains 4-7 are connected to BB chains 0-3
+ *     here,
+ *     bits 0 to 2 = 4, maps BB chain 4 for RF chain 0
+ *     bits 3 to 5 = 5, maps BB chain 5 for RF chain 1
+ *     bits 6 to 8 = 6, maps BB chain 6 for RF chain 2
+ *     bits 9 to 11 = 7, maps BB chain 7 for RF chain 3
+ *     bits 12 to 14 = 0, maps BB chain 0 for RF chain 4
+ *     bits 15 to 17 = 1, maps BB chain 1 for RF chain 5
+ *     bits 18 to 20 = 2, maps BB chain 2 for RF chain 6
+ *     bits 21 to 23 = 3, maps BB chain 3 for RF chain 7
+ */
+static uint8_t dp_rx_mon_rf_index_conv(uint8_t chain,
+				       struct hal_rx_ppdu_info *ppdu_info,
+				       struct dp_pdev *pdev)
+{
+	uint32_t xbar_config = ppdu_info->rx_status.xbar_config;
+
+	if (pdev->soc->features.rssi_dbm_conv_support && xbar_config)
+		return ((xbar_config >> (3 * chain)) & 0x07);
+	return chain;
+}
+#else
+static uint8_t dp_rx_mon_rf_index_conv(uint8_t chain,
+				       struct hal_rx_ppdu_info *ppdu_info,
+				       struct dp_pdev *pdev)
+{
+	return chain;
+}
+#endif
 void
 dp_rx_populate_rx_rssi_chain(struct hal_rx_ppdu_info *ppdu_info,
-			     struct cdp_rx_indication_ppdu *cdp_rx_ppdu)
+			     struct cdp_rx_indication_ppdu *cdp_rx_ppdu,
+			     struct dp_pdev *pdev)
 {
 	uint8_t chain, bw;
 	uint8_t rssi;
 
 	for (chain = 0; chain < SS_COUNT; chain++) {
 		for (bw = 0; bw < MAX_BW; bw++) {
+			chain = dp_rx_mon_rf_index_conv(chain,
+							ppdu_info, pdev);
 			rssi = ppdu_info->rx_status.rssi_chain[chain][bw];
 			if (rssi != DP_RSSI_INVAL)
 				cdp_rx_ppdu->rssi_chain[chain][bw] = rssi;
@@ -596,8 +644,7 @@ dp_rx_populate_cdp_indication_ppdu(struct dp_pdev *pdev,
 		cdp_rx_ppdu->u.dcm = (ppdu_info->rx_status.he_data3 >>
 				      QDF_MON_STATUS_DCM_SHIFT) & 0x1;
 	}
-
-	dp_rx_populate_rx_rssi_chain(ppdu_info, cdp_rx_ppdu);
+	dp_rx_populate_rx_rssi_chain(ppdu_info, cdp_rx_ppdu, pdev);
 	dp_rx_populate_su_evm_details(ppdu_info, cdp_rx_ppdu);
 	cdp_rx_ppdu->rx_antenna = ppdu_info->rx_status.rx_antenna;
 
@@ -1202,7 +1249,7 @@ dp_rx_populate_cdp_indication_ppdu_undecoded_metadata(struct dp_pdev *pdev,
 		cdp_rx_ppdu->sig_b_comp = (ppdu_info->rx_status.he_flags2 >>
 			QDF_MON_STATUS_SIG_B_COMPRESSION_FLAG_2_SHIFT) & 0x1;
 	}
-	dp_rx_populate_rx_rssi_chain(ppdu_info, cdp_rx_ppdu);
+	dp_rx_populate_rx_rssi_chain(ppdu_info, cdp_rx_ppdu, pdev);
 	dp_rx_populate_su_evm_details(ppdu_info, cdp_rx_ppdu);
 	cdp_rx_ppdu->rx_antenna = ppdu_info->rx_status.rx_antenna;
 
@@ -1766,7 +1813,7 @@ QDF_STATUS dp_rx_mon_deliver(struct dp_soc *soc, uint32_t mac_id,
 		mon_pdev->ppdu_info.rx_status.device_id = soc->device_id;
 		mon_pdev->ppdu_info.rx_status.chan_noise_floor =
 			pdev->chan_noise_floor;
-
+		dp_mon_rx_stats_update_rssi_dbm_params(soc, mon_pdev);
 		dp_handle_tx_capture(soc, pdev, mon_mpdu);
 
 		if (!qdf_nbuf_update_radiotap(&mon_pdev->ppdu_info.rx_status,

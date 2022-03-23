@@ -5715,6 +5715,7 @@ void dp_mon_feature_ops_deregister(struct dp_soc *soc)
 	mon_ops->mon_rx_populate_ppdu_usr_info = NULL;
 	mon_ops->mon_rx_populate_ppdu_info = NULL;
 #endif
+	mon_ops->mon_rx_stats_update_rssi_dbm_params = NULL;
 }
 
 QDF_STATUS dp_mon_soc_attach(struct dp_soc *soc)
