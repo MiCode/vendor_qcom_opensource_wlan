@@ -1792,8 +1792,7 @@ static void util_scan_set_security(struct scan_cache_entry *scan_params)
 #define ML_CONTROL_OFFSET 3
 #define ML_CMN_INFO_OFFSET ML_CONTROL_OFFSET + 2
 
-#define CMN_INFO_MLD_ADDR_PRESENT_BIT     BIT(4)
-#define CMN_INFO_LINK_ID_PRESENT_BIT      BIT(5)
+#define CMN_INFO_LINK_ID_PRESENT_BIT      BIT(4)
 #define LINK_INFO_MAC_ADDR_PRESENT_BIT    BIT(5)
 
 /* This function is implemented as per IEEE802.11be D1.0, there is no difference
@@ -1833,9 +1832,8 @@ static uint8_t util_get_link_info_offset(uint8_t *ml_ie)
 
 	parsed_ie_len += sizeof(*mlie_fixed);
 
-	/* Check if MLD MAC address is present */
-	if (presencebm & WLAN_ML_BV_CTRL_PBM_MLDMACADDR_P)
-		parsed_ie_len += QDF_MAC_ADDR_SIZE;
+	parsed_ie_len += WLAN_ML_BV_CINFO_LENGTH_SIZE;
+	parsed_ie_len += QDF_MAC_ADDR_SIZE;
 
 	/* Check if Link ID info is present */
 	if (presencebm & WLAN_ML_BV_CTRL_PBM_LINKIDINFO_P)
@@ -1914,6 +1912,9 @@ static void util_get_partner_link_info(struct scan_cache_entry *scan_entry)
 		/* Skip STA control field */
 		offset += 2;
 
+		 /* Skip STA Info Length field */
+		 offset += WLAN_ML_BV_LINFO_PERSTAPROF_STAINFO_LENGTH_SIZE;
+
 		scan_entry->ml_info.link_info[0].link_id = sta_ctrl & 0xF;
 		if (sta_ctrl & LINK_INFO_MAC_ADDR_PRESENT_BIT) {
 			qdf_mem_copy(
@@ -1957,12 +1958,13 @@ static void util_scan_update_ml_info(struct scan_cache_entry *scan_entry)
 
 	multi_link_ctrl = *(uint16_t *)(ml_ie + ML_CONTROL_OFFSET);
 	offset = ML_CMN_INFO_OFFSET;
-	/* TODO: Add proper parsing based on presense bitmap */
-	if (multi_link_ctrl & CMN_INFO_MLD_ADDR_PRESENT_BIT) {
-		qdf_mem_copy(&scan_entry->ml_info.mld_mac_addr,
-			     ml_ie + offset, 6);
-		offset += 6;
-	}
+
+	/* Increment the offset to account for the Common Info Length */
+	offset += WLAN_ML_BV_CINFO_LENGTH_SIZE;
+
+	qdf_mem_copy(&scan_entry->ml_info.mld_mac_addr,
+		     ml_ie + offset, 6);
+	offset += 6;
 
 	/* TODO: Decode it from ML IE */
 	scan_entry->ml_info.num_links = 0;

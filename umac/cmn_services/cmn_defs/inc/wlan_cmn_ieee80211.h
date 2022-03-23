@@ -1849,6 +1849,13 @@ struct wlan_ml_probe_req {
  * variants.
  */
 
+/* Below fields and subfields have been transitioned to D1.4, and rest will
+ * be checked and transitioned to D1.4 separately.
+ * 1. Presence bitmap subfield.
+ * 2. Common info length subfield of common info field.
+ * 3. STA info length subfield in STA Info field.
+ */
+
 /* Size in octets of Multi-Link element Control field */
 #define WLAN_ML_CTRL_SIZE                                          2
 
@@ -1886,20 +1893,24 @@ enum wlan_ml_variant {
 /* Definitions for bits in the Presence Bitmap subfield in Basic variant
  * Multi-Link element Control field. Any unused bits are reserved.
  */
-/* MLD MAC Address Present */
-#define WLAN_ML_BV_CTRL_PBM_MLDMACADDR_P               ((uint16_t)BIT(0))
 /* Link ID Info Present */
-#define WLAN_ML_BV_CTRL_PBM_LINKIDINFO_P               ((uint16_t)BIT(1))
+#define WLAN_ML_BV_CTRL_PBM_LINKIDINFO_P               ((uint16_t)BIT(0))
 /* BSS Parameters Change Count Present */
-#define WLAN_ML_BV_CTRL_PBM_BSSPARAMCHANGECNT_P        ((uint16_t)BIT(2))
+#define WLAN_ML_BV_CTRL_PBM_BSSPARAMCHANGECNT_P        ((uint16_t)BIT(1))
 /* Medium Synchronization Delay Information Present */
-#define WLAN_ML_BV_CTRL_PBM_MEDIUMSYNCDELAYINFO_P      ((uint16_t)BIT(3))
+#define WLAN_ML_BV_CTRL_PBM_MEDIUMSYNCDELAYINFO_P      ((uint16_t)BIT(2))
 /* EML Capabilities Present */
-#define WLAN_ML_BV_CTRL_PBM_EMLCAP_P                   ((uint16_t)BIT(4))
+#define WLAN_ML_BV_CTRL_PBM_EMLCAP_P                   ((uint16_t)BIT(3))
 /* MLD Capabilities */
-#define WLAN_ML_BV_CTRL_PBM_MLDCAP_P                   ((uint16_t)BIT(5))
+#define WLAN_ML_BV_CTRL_PBM_MLDCAP_P                   ((uint16_t)BIT(4))
 
 /* Definitions related to Basic variant Multi-Link element Common Info field */
+
+/* Size in octets of Common Info Length subfield of Common Info field in
+ * Basic variant Multi-Link element.
+ */
+/* Common Info Length  */
+#define WLAN_ML_BV_CINFO_LENGTH_SIZE                               1
 
 /* Size in octets of Link ID Info subfield in Basic variant Multi-Link element
  * Common Info field.
@@ -2071,6 +2082,18 @@ enum wlan_ml_bv_cinfo_emlcap_transtimeout {
 #define WLAN_ML_BV_CINFO_MLDCAP_STRFREQSEPARATION_IDX               7
 #define WLAN_ML_BV_CINFO_MLDCAP_STRFREQSEPARATION_BITS              5
 
+/* Max value in octets of Common Info Length subfield of Common Info field in
+ * Basic variant Multi-Link element
+ */
+#define WLAN_ML_BV_CINFO_LENGTH_MAX \
+	(WLAN_ML_BV_CINFO_LENGTH_SIZE + \
+	 QDF_MAC_ADDR_SIZE + \
+	 WLAN_ML_BV_CINFO_LINKIDINFO_SIZE + \
+	 WLAN_ML_BV_CINFO_BSSPARAMCHNGCNT_SIZE + \
+	 WLAN_ML_BV_CINFO_MEDMSYNCDELAYINFO_SIZE + \
+	 WLAN_ML_BV_CINFO_EMLCAP_SIZE + \
+	 WLAN_ML_BV_CINFO_MLDCAP_SIZE)
+
 /* End of definitions related to Basic variant Multi-Link element Common Info
  * field.
  */
@@ -2143,6 +2166,12 @@ struct wlan_ml_bv_linfo_perstaprof {
 #define WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_NSTRBMSZ_IDX            9
 #define WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_NSTRBMSZ_BITS           1
 
+/* Definitions for subfields in STA Info field of Per-STA Profile subelement
+ * in Basic variant Multi-Link element Link Info field.
+ */
+/* STA Info Length */
+#define WLAN_ML_BV_LINFO_PERSTAPROF_STAINFO_LENGTH_SIZE             1
+
 /**
  * wlan_ml_bv_linfo_perstaprof_stactrl_nstrbmsz - Encoding for NSTR Bitmap Size
  * in STA Control field of Per-STA Profile subelement in Basic variant
@@ -2162,6 +2191,11 @@ enum wlan_ml_bv_linfo_perstaprof_stactrl_nstrbmsz {
 	WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_NSTRBMSZ_INVALIDSTART,
 };
 
+/* Max size in octets of the NSTR Bitmap in STA Control field of Per-STA Profile
+ * subelement in Basic variant Multi-Link element Link Info field.
+ */
+#define WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_NSTRBMSZ_MAX 2
+
 /**
  * struct wlan_ml_bv_linfo_perstaprof_stainfo_dtiminfo - DTIM info in STA info
  * in Per-STA Profile subelement in Basic variant Multi-Link element Link Info
@@ -2173,6 +2207,16 @@ struct wlan_ml_bv_linfo_perstaprof_stainfo_dtiminfo {
 	uint8_t dtimcount;
 	uint8_t dtimperiod;
 } qdf_packed;
+
+/* Max value in octets of STA Info Length in STA Info field of Per-STA Profile
+ * subelement in Basic variant Multi-Link element Link Info field.
+ */
+#define WLAN_ML_BV_LINFO_PERSTAPROF_STAINFO_LENGTH_MAX \
+	(WLAN_ML_BV_LINFO_PERSTAPROF_STAINFO_LENGTH_SIZE + \
+	 QDF_MAC_ADDR_SIZE + \
+	 WLAN_BEACONINTERVAL_LEN + \
+	 sizeof(struct wlan_ml_bv_linfo_perstaprof_stainfo_dtiminfo) + \
+	 WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_NSTRBMSZ_MAX)
 
 /* End of definitions related to Basic variant Multi-Link element Link Info
  * field.
@@ -2748,54 +2792,6 @@ struct wlan_eht_cap_info {
 	uint32_t bw_320_tx_max_nss_for_mcs_10_and_11:4;
 	uint8_t bw_320_rx_max_nss_for_mcs_12_and_13:4;
 	uint8_t bw_320_tx_max_nss_for_mcs_12_and_13:4;
-#endif
-} qdf_packed;
-
-/**
- * struct wlan_mlo_ie_info - struct for mlo IE information
- * mld_mac_addr: MLD MAC address
- * reserved_1: reserved bits
- * mld_capab_present: MLD capability present
- * eml_capab_present: EML capability present
- * medium_sync_delay_info_present: Medium sync delay information present
- * bss_param_change_cnt_present: BSS parameter change count present
- * link_id_info_present: Link ID information present
- * mld_mac_addr_present: MLD MAC address present
- * reserved: reserved bit
- * type: Type bits
- */
-
-struct wlan_mlo_ie_info {
-#ifndef ANI_LITTLE_BIT_ENDIAN
-	union {
-		struct {
-			uint8_t mld_mac_addr[6];
-		} info; /* mld_mac_addr_present = 1 */
-	} mld_mac_addr;
-	uint16_t reserved_1:6;
-	uint16_t mld_capab_present:1;
-	uint16_t eml_capab_present:1;
-	uint16_t medium_sync_delay_info_present:1;
-	uint16_t bss_param_change_cnt_present:1;
-	uint16_t link_id_info_present:1;
-	uint16_t mld_mac_addr_present:1;
-	uint16_t reserved:1;
-	uint16_t type:3;
-#else
-	uint16_t type:3;
-	uint16_t reserved:1;
-	uint16_t mld_mac_addr_present:1;
-	uint16_t link_id_info_present:1;
-	uint16_t bss_param_change_cnt_present:1;
-	uint16_t medium_sync_delay_info_present:1;
-	uint16_t eml_capab_present:1;
-	uint16_t mld_capab_present:1;
-	uint16_t reserved_1:6;
-	union {
-		struct {
-			uint8_t mld_mac_addr[6];
-		} info; /* mld_mac_addr_present = 1 */
-	} mld_mac_addr;
 #endif
 } qdf_packed;
 
