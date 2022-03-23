@@ -986,7 +986,7 @@ reg_get_2g_bonded_channel_state_for_freq(struct wlan_objmgr_pdev *pdev,
  * @freq: Channel center frequency.
  * @sec_ch_2g_freq: Secondary 2G channel frequency
  * @ch_params: pointer to the channel parameters.
- * @is_treat_nol_chan_as_disabled: bool to treat nol channel as enabled or
+ * @treat_nol_chan_as_disabled: bool to treat nol channel as enabled or
  * disabled. If set to true, nol chan is considered as disabled in chan search.
  *
  * Return: None
@@ -995,7 +995,7 @@ void reg_set_channel_params_for_freq(struct wlan_objmgr_pdev *pdev,
 				     qdf_freq_t freq,
 				     qdf_freq_t sec_ch_2g_freq,
 				     struct ch_params *ch_params,
-				     bool is_treat_nol_chan_as_disabled);
+				     bool treat_nol_chan_as_disabled);
 
 #ifdef CONFIG_REG_6G_PWRMODE
 /**
@@ -1006,7 +1006,7 @@ void reg_set_channel_params_for_freq(struct wlan_objmgr_pdev *pdev,
  * @sec_ch_2g_freq: Secondary 2G channel frequency
  * @ch_params: pointer to the channel parameters.
  * @in_6g_pwr_type: 6g power type which decides 6G channel list lookup.
- * @is_treat_nol_chan_as_disabled: bool to treat nol channel as enabled or
+ * @treat_nol_chan_as_disabled: bool to treat nol channel as enabled or
  * disabled. If set to true, nol chan is considered as disabled in chan search.
  *
  * Return: None
@@ -1017,7 +1017,7 @@ void reg_set_channel_params_for_pwrmode(struct wlan_objmgr_pdev *pdev,
 					struct ch_params *ch_params,
 					enum supported_6g_pwr_types
 					in_6g_pwr_mode,
-					bool is_treat_nol_chan_as_disabled);
+					bool treat_nol_chan_as_disabled);
 #endif
 
 #ifdef WLAN_FEATURE_11BE
@@ -1036,7 +1036,7 @@ void reg_set_channel_params_for_pwrmode(struct wlan_objmgr_pdev *pdev,
  * The caller is supposed to provide enough storage for the elements
  * in the list.
  * @in_6g_pwr_type: 6g power type which decides 6G channel list lookup.
- * @is_treat_nol_chan_as_disabled: bool to treat nol channel as enabled or
+ * @treat_nol_chan_as_disabled: bool to treat nol channel as enabled or
  * disabled. If set to true, nol chan is considered as disabled in chan search.
  *
  * Return: None
@@ -1048,7 +1048,7 @@ reg_fill_channel_list(struct wlan_objmgr_pdev *pdev,
 		      enum phy_ch_width ch_width,
 		      qdf_freq_t band_center_320,
 		      struct reg_channel_list *chan_list,
-		      bool is_treat_nol_chan_as_disabled);
+		      bool treat_nol_chan_as_disabled);
 
 #ifdef CONFIG_REG_6G_PWRMODE
 /**
@@ -1066,7 +1066,7 @@ reg_fill_channel_list(struct wlan_objmgr_pdev *pdev,
  * The caller is supposed to provide enough storage for the elements
  * in the list.
  * @in_6g_pwr_type: 6g power type which decides 6G channel list lookup.
- * @is_treat_nol_chan_as_disabled: bool to treat nol channel as enabled or
+ * @treat_nol_chan_as_disabled: bool to treat nol channel as enabled or
  * disabled. If set to true, nol chan is considered as disabled in chan search.
  *
  * Return: None
@@ -1079,7 +1079,7 @@ reg_fill_channel_list_for_pwrmode(struct wlan_objmgr_pdev *pdev,
 				  qdf_freq_t band_center_320,
 				  struct reg_channel_list *chan_list,
 				  enum supported_6g_pwr_types in_6g_pwr_mode,
-				  bool is_treat_nol_chan_as_disabled);
+				  bool treat_nol_chan_as_disabled);
 #endif
 
 /**
@@ -2297,7 +2297,7 @@ reg_get_5g_chan_state(struct wlan_objmgr_pdev *pdev, qdf_freq_t freq,
  * @bw: channel bandwidth
  * @out_punc_bitmap: Output puncturing bitmap
  * @in_6g_pwr_type: Input 6g power type
- * @is_treat_nol_as_dis: Bool to treat nol as enabled/disabled
+ * @treat_nol_chan_as_disabled: Bool to treat nol as enabled/disabled
  *
  * Return - The channel state of the bonded pair.
  */
@@ -2311,7 +2311,7 @@ reg_get_320_bonded_channel_state_for_pwrmode(struct wlan_objmgr_pdev *pdev,
 					     uint16_t *out_punc_bitmap,
 					     enum supported_6g_pwr_types
 					     in_6g_pwr_type,
-					     bool is_treat_nol_as_dis);
+					     bool treat_nol_chan_as_disabled);
 #endif
 
 /**
@@ -2323,11 +2323,11 @@ bool reg_is_ch_width_320(enum phy_ch_width ch_width);
 
 /**
  * reg_get_ch_state_based_on_nol_flag() - Given a channel, find out the
- * state of the channel. If "is_treat_nol_as_dis" flag is set, nol channels
+ * state of the channel. If "treat_nol_chan_as_disabled" flag is set, nol channels
  * are considered disabled, else nol channels are considered enabled.
  * @pdev: Pointer to struct wlan_objmgr_pdev
  * @freq: Primary frequency
- * @is_treat_nol_as_dis: Flag to consider nol chan as enabled/disabled.
+ * @treat_nol_chan_as_disabled: Flag to consider nol chan as enabled/disabled.
  * @ch_param: pointer to struct ch_params
  * @in_6g_pwr_mode: Input 6g power type
  *
@@ -2339,5 +2339,5 @@ reg_get_ch_state_based_on_nol_flag(struct wlan_objmgr_pdev *pdev,
 				   struct ch_params *ch_param,
 				   enum supported_6g_pwr_types
 				   in_6g_pwr_mode,
-				   bool is_treat_nol_as_dis);
+				   bool treat_nol_chan_as_disabled);
 #endif

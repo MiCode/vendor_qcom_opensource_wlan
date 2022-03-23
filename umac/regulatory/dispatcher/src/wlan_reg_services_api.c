@@ -1230,11 +1230,11 @@ void wlan_reg_fill_channel_list(struct wlan_objmgr_pdev *pdev,
 				enum phy_ch_width ch_width,
 				qdf_freq_t band_center_320,
 				struct reg_channel_list *chan_list,
-				bool is_treat_nol_chan_as_disabled)
+				bool treat_nol_chan_as_disabled)
 {
 	reg_fill_channel_list(pdev, freq, sec_ch_2g_freq, ch_width,
 			      band_center_320, chan_list,
-			      is_treat_nol_chan_as_disabled);
+			      treat_nol_chan_as_disabled);
 }
 
 #ifdef CONFIG_REG_6G_PWRMODE
@@ -1247,12 +1247,12 @@ wlan_reg_fill_channel_list_for_pwrmode(struct wlan_objmgr_pdev *pdev,
 				       struct reg_channel_list *chan_list,
 				       enum supported_6g_pwr_types
 				       in_6g_pwr_type,
-				       bool is_treat_nol_chan_as_disabled)
+				       bool treat_nol_chan_as_disabled)
 {
 	reg_fill_channel_list_for_pwrmode(pdev, freq, sec_ch_2g_freq, ch_width,
 					  band_center_320, chan_list,
 					  in_6g_pwr_type,
-					  is_treat_nol_chan_as_disabled);
+					  treat_nol_chan_as_disabled);
 }
 #endif /* CONFIG_REG_6G_PWRMODE */
 
