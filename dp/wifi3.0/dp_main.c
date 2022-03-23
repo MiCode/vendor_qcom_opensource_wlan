@@ -11987,6 +11987,11 @@ static QDF_STATUS dp_soc_set_param(struct cdp_soc_t  *soc_hdl,
 		dp_info("Multi Peer group command support:%d",
 			soc->multi_peer_grp_cmd_supported);
 		break;
+	case DP_SOC_PARAM_RSSI_DBM_CONV_SUPPORT:
+		soc->features.rssi_dbm_conv_support = value;
+		dp_info("Rssi dbm converstion support:%u",
+			soc->features.rssi_dbm_conv_support);
+		break;
 	default:
 		dp_info("not handled param %d ", param);
 		break;

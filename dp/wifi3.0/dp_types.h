@@ -1821,10 +1821,12 @@ struct dp_arch_ops {
  * @pn_in_reo_dest: PN provided by hardware in the REO destination ring.
  * @dmac_cmn_src_rxbuf_ring_enabled: Flag to indicate DMAC mode common Rx
  *				     buffer source rings
+ * @rssi_dbm_conv_support: Rssi dbm converstion support param.
  */
 struct dp_soc_features {
 	uint8_t pn_in_reo_dest:1,
 		dmac_cmn_src_rxbuf_ring_enabled:1;
+	bool rssi_dbm_conv_support;
 };
 
 enum sysfs_printing_mode {
