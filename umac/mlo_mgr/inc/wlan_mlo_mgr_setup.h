@@ -112,4 +112,15 @@ void mlo_setup_update_soc_down(struct wlan_objmgr_psoc *psoc);
  */
 QDF_STATUS mlo_link_teardown_link(struct wlan_objmgr_psoc *psoc,
 				  uint32_t reason);
+
+/**
+ * mlo_vdevs_check_single_soc() - API to check all the vaps in vdev list
+ *                                belong to single soc or not
+ * @wlan_vdev_list: List of all vdevs to check
+ * @vdev_count: Number of vdevs in the list
+ *
+ * Return: bool: True if belongs to single soc else false
+ */
+bool mlo_vdevs_check_single_soc(struct wlan_objmgr_vdev **wlan_vdev_list,
+				uint8_t vdev_count);
 #endif
