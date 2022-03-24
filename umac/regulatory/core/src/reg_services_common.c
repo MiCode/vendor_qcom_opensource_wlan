@@ -9222,3 +9222,27 @@ enum reg_6g_ap_type reg_get_best_pwr_mode(struct wlan_objmgr_pdev *pdev,
 						    REG_MAX_SUPP_AP_TYPE + 1);
 }
 #endif
+
+QDF_STATUS reg_get_regd_rules(struct wlan_objmgr_pdev *pdev,
+			      struct reg_rule_info *reg_rules)
+{
+	struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj;
+
+	if (!pdev) {
+		reg_err("pdev is NULL");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	pdev_priv_obj = reg_get_pdev_obj(pdev);
+	if (!pdev_priv_obj) {
+		reg_err("pdev priv obj is NULL");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	qdf_spin_lock_bh(&pdev_priv_obj->reg_rules_lock);
+	qdf_mem_copy(reg_rules, &pdev_priv_obj->reg_rules,
+		     sizeof(struct reg_rule_info));
+	qdf_spin_unlock_bh(&pdev_priv_obj->reg_rules_lock);
+
+	return QDF_STATUS_SUCCESS;
+}

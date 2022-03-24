@@ -2557,7 +2557,6 @@ void reg_reset_reg_rules(struct reg_rule_info *reg_rules)
 	qdf_mem_zero(reg_rules, sizeof(*reg_rules));
 }
 
-#ifdef CONFIG_REG_CLIENT
 #ifdef CONFIG_BAND_6GHZ
 /**
  * reg_copy_6g_reg_rules() - Copy the 6G reg rules from PSOC to PDEV
@@ -2663,7 +2662,6 @@ void reg_save_reg_rules_to_pdev(
 
 	qdf_spin_unlock_bh(&pdev_priv_obj->reg_rules_lock);
 }
-#endif /* CONFIG_REG_CLIENT */
 
 void reg_propagate_mas_chan_list_to_pdev(struct wlan_objmgr_psoc *psoc,
 					 void *object, void *arg)

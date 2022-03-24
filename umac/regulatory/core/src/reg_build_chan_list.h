@@ -77,7 +77,6 @@ void reg_init_pdev_mas_chan_list(
  */
 void reg_set_ap_pwr_type(struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj);
 
-#ifdef CONFIG_REG_CLIENT
 /**
  * reg_save_reg_rules_to_pdev() - Save psoc reg-rules to pdev.
  * @pdev_priv_obj: Pointer to regdb pdev private object.
@@ -85,13 +84,6 @@ void reg_set_ap_pwr_type(struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj);
 void reg_save_reg_rules_to_pdev(
 		struct reg_rule_info *psoc_reg_rules,
 		struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj);
-#else
-static inline void
-reg_save_reg_rules_to_pdev(struct reg_rule_info *psoc_reg_rules,
-			   struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj)
-{
-}
-#endif
 
 /**
  * reg_compute_pdev_current_chan_list() - Compute pdev current channel list.
