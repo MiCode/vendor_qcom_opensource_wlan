@@ -139,52 +139,16 @@ uint8_t *vdev_start_add_ml_partner_links(uint8_t *buf_ptr,
 		 sizeof(wmi_partner_link_params));
 }
 
+size_t bcn_tmpl_mlo_param_size(struct beacon_tmpl_params *param)
+{
+	return WMI_TLV_HDR_SIZE;
+}
+
 uint8_t *bcn_tmpl_add_ml_partner_links(uint8_t *buf_ptr,
 				       struct beacon_tmpl_params *param)
 {
-	wmi_bcn_tmpl_ml_params *ml_partner_link;
-	struct mlo_bcn_templ_partner_links *ml_bcn_tmpl;
-	uint8_t i;
-
-	if (param->mlo_partner.num_links > WLAN_UMAC_MLO_MAX_VDEVS) {
-		wmi_err("mlo_partner.num_link(%d) are greater than supported partner links(%d)",
-			param->mlo_partner.num_links, WLAN_UMAC_MLO_MAX_VDEVS);
-		return buf_ptr;
-	}
-
-	WMITLV_SET_HDR(buf_ptr, WMITLV_TAG_ARRAY_STRUC,
-		       (param->mlo_partner.num_links *
-			sizeof(wmi_bcn_tmpl_ml_params)));
-	buf_ptr += sizeof(uint32_t);
-
-	ml_bcn_tmpl = &param->mlo_partner;
-	ml_partner_link = (wmi_bcn_tmpl_ml_params *)buf_ptr;
-	for (i = 0; i < ml_bcn_tmpl->num_links; i++) {
-		WMITLV_SET_HDR(&ml_partner_link->tlv_header,
-			       WMITLV_TAG_STRUC_wmi_bcn_tmpl_ml_params,
-			       WMITLV_GET_STRUCT_TLVLEN(wmi_bcn_tmpl_ml_params)
-			       );
-		ml_partner_link->vdev_id = ml_bcn_tmpl->partner_info[i].vdev_id;
-		ml_partner_link->hw_link_id =
-			ml_bcn_tmpl->partner_info[i].hw_link_id;
-		ml_partner_link->beacon_interval =
-			ml_bcn_tmpl->partner_info[i].beacon_interval;
-		ml_partner_link->csa_switch_count_offset =
-			ml_bcn_tmpl->partner_info[i].csa_switch_count_offset;
-		ml_partner_link->ext_csa_switch_count_offset =
-			ml_bcn_tmpl->partner_info[i].ext_csa_switch_count_offset;
-		ml_partner_link->per_sta_profile_offset =
-			ml_bcn_tmpl->partner_info[i].per_sta_profile_offset;
-		ml_partner_link->quiet_ie_offset =
-			ml_bcn_tmpl->partner_info[i].quiet_ie_offset;
-		ml_partner_link->is_other_ie_present =
-			ml_bcn_tmpl->partner_info[i].is_other_ie_present;
-		ml_partner_link++;
-	}
-
-	return buf_ptr +
-		(param->mlo_partner.num_links *
-		 sizeof(wmi_bcn_tmpl_ml_params));
+	WMITLV_SET_HDR(buf_ptr, WMITLV_TAG_ARRAY_STRUC, 0);
+	return buf_ptr + WMI_TLV_HDR_SIZE;
 }
 
 size_t peer_create_mlo_params_size(struct peer_create_params *req)

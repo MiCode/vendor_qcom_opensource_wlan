@@ -60,6 +60,14 @@ uint8_t *vdev_start_add_mlo_params(uint8_t *buf_ptr,
 uint8_t *vdev_start_add_ml_partner_links(uint8_t *buf_ptr,
 					 struct vdev_start_params *req);
 /**
+ * bcn_tmpl_mlo_param_size() - Get ML param size in beacon template
+ * @param: Pointer to beacon template param
+ *
+ * Return: size of ML params in beacon template
+ */
+size_t bcn_tmpl_mlo_param_size(struct beacon_tmpl_params *param);
+
+/**
  * bcn_tmpl_add_ml_partner_links - Add MLO partner links in beacon template
  *                                 command
  * @buf_ptr: pointer to beacon cmd buffer.
@@ -144,6 +152,11 @@ static uint8_t *vdev_start_add_ml_partner_links(uint8_t *buf_ptr,
 {
 	WMITLV_SET_HDR(buf_ptr, WMITLV_TAG_ARRAY_STRUC, 0);
 	return buf_ptr + WMI_TLV_HDR_SIZE;
+}
+
+static size_t bcn_tmpl_mlo_param_size(struct beacon_tmpl_params *param)
+{
+	return WMI_TLV_HDR_SIZE;
 }
 
 static uint8_t *bcn_tmpl_add_ml_partner_links(uint8_t *buf_ptr,
