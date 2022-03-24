@@ -399,7 +399,8 @@ struct hal_rx_fst *
 hal_rx_fst_attach(hal_soc_handle_t hal_soc_hdl,
 		  qdf_device_t qdf_dev,
 		  uint64_t *hal_fst_base_paddr, uint16_t max_entries,
-		  uint16_t max_search, uint8_t *hash_key)
+		  uint16_t max_search, uint8_t *hash_key,
+		  uint64_t fst_cmem_base)
 {
 	struct hal_rx_fst *fst = qdf_mem_malloc(sizeof(struct hal_rx_fst));
 	uint32_t fst_entry_size;
@@ -423,29 +424,39 @@ hal_rx_fst_attach(hal_soc_handle_t hal_soc_hdl,
 		  "HAL FST allocation %pK %d * %d\n", fst,
 		  fst->max_entries, fst_entry_size);
 
+	if (fst_cmem_base == 0) {
+		/* FST is in DDR */
+		fst->base_vaddr = (uint8_t *)qdf_mem_alloc_consistent(qdf_dev,
+				    qdf_dev->dev,
+				    (fst->max_entries * fst_entry_size),
+				    &fst->base_paddr);
 
-	fst->base_vaddr = (uint8_t *)qdf_mem_alloc_consistent(qdf_dev,
-				qdf_dev->dev,
-				(fst->max_entries * fst_entry_size),
-				&fst->base_paddr);
+		if (!fst->base_vaddr) {
+			QDF_TRACE(QDF_MODULE_ID_TXRX, QDF_TRACE_LEVEL_ERROR,
+				  FL("hal fst->base_vaddr allocation failed"));
+			qdf_mem_free(fst);
+			return NULL;
+		}
+
+		*hal_fst_base_paddr = (uint64_t)fst->base_paddr;
+	} else {
+		*hal_fst_base_paddr = fst_cmem_base;
+		goto out;
+	}
 
 	QDF_TRACE(QDF_MODULE_ID_TXRX, QDF_TRACE_LEVEL_INFO,
 		  "hal_rx_fst base address 0x%pK", (void *)fst->base_paddr);
-	if (!fst->base_vaddr) {
-		QDF_TRACE(QDF_MODULE_ID_TXRX, QDF_TRACE_LEVEL_ERROR,
-			  FL("hal fst->base_vaddr allocation failed"));
-		qdf_mem_free(fst);
-		return NULL;
-	}
+
 	QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_ANY, QDF_TRACE_LEVEL_DEBUG,
 			   (void *)fst->key, HAL_FST_HASH_KEY_SIZE_BYTES);
 
 	qdf_mem_set((uint8_t *)fst->base_vaddr,
 		    (fst->max_entries * fst_entry_size), 0);
 
+out:
 	hal_rx_fst_key_configure(fst);
 	hal_flow_toeplitz_create_cache(fst);
-	*hal_fst_base_paddr = (uint64_t)fst->base_paddr;
+
 	return fst;
 }
 qdf_export_symbol(hal_rx_fst_attach);
@@ -459,20 +470,21 @@ qdf_export_symbol(hal_rx_fst_attach);
  *
  * Return:
  */
-void hal_rx_fst_detach(hal_soc_handle_t hal_soc_hdl,
-		       struct hal_rx_fst *rx_fst,
-		       qdf_device_t qdf_dev)
+void hal_rx_fst_detach(hal_soc_handle_t hal_soc_hdl, struct hal_rx_fst *rx_fst,
+		       qdf_device_t qdf_dev, uint64_t fst_cmem_base)
 {
 	uint32_t fst_entry_size;
 
 	if (!rx_fst || !qdf_dev)
 		return;
 
-	fst_entry_size = hal_rx_fst_get_fse_size(hal_soc_hdl);
-
-	qdf_mem_free_consistent(qdf_dev, qdf_dev->dev,
-				rx_fst->max_entries * fst_entry_size,
-				rx_fst->base_vaddr, rx_fst->base_paddr, 0);
+	if (fst_cmem_base == 0 && rx_fst->base_vaddr) {
+		fst_entry_size = hal_rx_fst_get_fse_size(hal_soc_hdl);
+		qdf_mem_free_consistent(qdf_dev, qdf_dev->dev,
+					rx_fst->max_entries * fst_entry_size,
+					rx_fst->base_vaddr, rx_fst->base_paddr,
+					0);
+	}
 
 	qdf_mem_free(rx_fst);
 }

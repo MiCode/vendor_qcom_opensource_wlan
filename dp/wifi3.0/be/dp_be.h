@@ -28,6 +28,11 @@
 #endif
 #include <dp_mon.h>
 
+enum CMEM_MEM_CLIENTS {
+	COOKIE_CONVERSION,
+	FISA_FST,
+};
+
 /* maximum number of entries in one page of secondary page table */
 #define DP_CC_SPT_PAGE_MAX_ENTRIES 512
 
@@ -46,6 +51,9 @@
 /* FST required CMEM offset from CMEM pool */
 #define DP_FST_MEM_OFFSET_IN_CMEM \
 	(DP_CC_MEM_OFFSET_IN_CMEM + DP_CC_PPT_MEM_SIZE)
+
+/* CMEM size for FISA FST 16K */
+#define DP_CMEM_FST_SIZE 16384
 
 /* lower 9 bits in Desc ID for offset in page of SPT */
 #define DP_CC_DESC_ID_SPT_VA_OS_SHIFT 0

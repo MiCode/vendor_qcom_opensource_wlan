@@ -144,6 +144,35 @@ void dp_cc_wbm_sw_en_cfg(struct hal_hw_cc_config *cc_cfg)
 }
 #endif
 
+#if defined(WLAN_SUPPORT_RX_FISA)
+static QDF_STATUS dp_fisa_fst_cmem_addr_init(struct dp_soc *soc)
+{
+	dp_info("cmem base 0x%llx, total size 0x%llx avail_size 0x%llx",
+		soc->cmem_base, soc->cmem_total_size, soc->cmem_avail_size);
+	/* get CMEM for cookie conversion */
+	if (soc->cmem_avail_size < DP_CMEM_FST_SIZE) {
+		dp_err("cmem_size 0x%llx bytes < 16K", soc->cmem_avail_size);
+		return QDF_STATUS_E_NOMEM;
+	}
+
+	soc->fst_cmem_size = DP_CMEM_FST_SIZE;
+
+	soc->fst_cmem_base = soc->cmem_base +
+			     (soc->cmem_total_size - soc->cmem_avail_size);
+	soc->cmem_avail_size -= soc->fst_cmem_size;
+
+	dp_info("fst_cmem_base 0x%llx, fst_cmem_size 0x%llx",
+		soc->fst_cmem_base, soc->fst_cmem_size);
+
+	return QDF_STATUS_SUCCESS;
+}
+#else /* !WLAN_SUPPORT_RX_FISA */
+static QDF_STATUS dp_fisa_fst_cmem_addr_init(struct dp_soc *soc)
+{
+	return QDF_STATUS_SUCCESS;
+}
+#endif
+
 /**
  * dp_cc_reg_cfg_init() - initialize and configure HW cookie
 			  conversion register
@@ -209,17 +238,40 @@ static inline QDF_STATUS dp_hw_cc_cmem_addr_init(struct dp_soc *soc)
 {
 	struct dp_soc_be *be_soc = dp_get_be_soc_from_dp_soc(soc);
 
-	dp_info("cmem base 0x%llx, size 0x%llx",
-		soc->cmem_base, soc->cmem_size);
+	dp_info("cmem base 0x%llx, total size 0x%llx avail_size 0x%llx",
+		soc->cmem_base, soc->cmem_total_size, soc->cmem_avail_size);
 	/* get CMEM for cookie conversion */
-	if (soc->cmem_size < DP_CC_PPT_MEM_SIZE) {
-		dp_err("cmem_size %llu bytes < 4K", soc->cmem_size);
+	if (soc->cmem_avail_size < DP_CC_PPT_MEM_SIZE) {
+		dp_err("cmem_size 0x%llx bytes < 4K", soc->cmem_avail_size);
 		return QDF_STATUS_E_RESOURCES;
 	}
 	be_soc->cc_cmem_base = (uint32_t)(soc->cmem_base +
 					  DP_CC_MEM_OFFSET_IN_CMEM);
 
+	soc->cmem_avail_size -= DP_CC_PPT_MEM_SIZE;
+
+	dp_info("cc_cmem_base 0x%x, cmem_avail_size 0x%llx",
+		be_soc->cc_cmem_base, soc->cmem_avail_size);
 	return QDF_STATUS_SUCCESS;
+}
+
+static QDF_STATUS dp_get_cmem_allocation(struct dp_soc *soc,
+					 uint8_t for_feature)
+{
+	QDF_STATUS status = QDF_STATUS_E_NOMEM;
+
+	switch (for_feature) {
+	case COOKIE_CONVERSION:
+		status = dp_hw_cc_cmem_addr_init(soc);
+		break;
+	case FISA_FST:
+		status = dp_fisa_fst_cmem_addr_init(soc);
+		break;
+	default:
+		dp_err("Invalid CMEM request");
+	}
+
+	return status;
 }
 
 #else
@@ -236,6 +288,13 @@ static inline QDF_STATUS dp_hw_cc_cmem_addr_init(struct dp_soc *soc)
 {
 	return QDF_STATUS_SUCCESS;
 }
+
+static QDF_STATUS dp_get_cmem_allocation(struct dp_soc *soc,
+					 uint8_t for_feature)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
 #endif
 
 QDF_STATUS
@@ -510,7 +569,7 @@ static QDF_STATUS dp_soc_attach_be(struct dp_soc *soc,
 
 	soc->wbm_sw0_bm_id = hal_tx_get_wbm_sw0_bm_id();
 
-	qdf_status = dp_hw_cc_cmem_addr_init(soc);
+	qdf_status = dp_get_cmem_allocation(soc, COOKIE_CONVERSION);
 	if (!QDF_IS_STATUS_SUCCESS(qdf_status))
 		goto fail;
 
@@ -526,6 +585,10 @@ static QDF_STATUS dp_soc_attach_be(struct dp_soc *soc,
 		if (!QDF_IS_STATUS_SUCCESS(qdf_status))
 			goto fail;
 	}
+
+	qdf_status = dp_get_cmem_allocation(soc, FISA_FST);
+	if (!QDF_IS_STATUS_SUCCESS(qdf_status))
+		goto fail;
 
 	for (i = 0; i < MAX_RXDESC_POOLS; i++) {
 		num_entries =
