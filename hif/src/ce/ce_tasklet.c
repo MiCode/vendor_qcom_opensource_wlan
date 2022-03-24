@@ -816,7 +816,7 @@ irqreturn_t ce_dispatch_interrupt(int ce_id,
  *
  * @ce_name: ce_name
  */
-const char *ce_name[] = {
+const char *ce_name[CE_COUNT_MAX] = {
 	"WLAN_CE_0",
 	"WLAN_CE_1",
 	"WLAN_CE_2",
@@ -829,6 +829,12 @@ const char *ce_name[] = {
 	"WLAN_CE_9",
 	"WLAN_CE_10",
 	"WLAN_CE_11",
+#ifdef QCA_WIFI_QCN9224
+	"WLAN_CE_12",
+	"WLAN_CE_13",
+	"WLAN_CE_14",
+	"WLAN_CE_15",
+#endif
 };
 /**
  * ce_unregister_irq() - ce_unregister_irq

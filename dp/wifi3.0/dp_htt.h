@@ -802,6 +802,35 @@ static inline QDF_STATUS DP_HTT_SEND_HTC_PKT(struct htt_soc *soc,
 QDF_STATUS dp_htt_rx_fisa_config(struct dp_pdev *pdev,
 				 struct dp_htt_rx_fisa_cfg *fisa_config);
 
+#ifdef WLAN_SUPPORT_PPEDS
+
+/**
+ * dp_htt_rxdma_rxole_ppe_config: Rx DMA and RxOLE PPE config
+ * @override: RxDMA override to override the reo_destinatoin_indication
+ * @reo_destination_indication: REO destination indication value
+ * @multi_buffer_msdu_override_en: Override the indicatio for SG
+ * @intra_bss_override: Rx OLE IntraBSS override
+ * @decap_raw_override: Rx Decap Raw override
+ * @decap_nwifi_override: Rx Native override
+ * @ip_frag_override: IP fragments override
+ * @reserved: Reserved
+ */
+struct dp_htt_rxdma_rxole_ppe_config {
+	uint32_t override:1,
+		 reo_destination_indication:5,
+		 multi_buffer_msdu_override_en:1,
+		 intra_bss_override:1,
+		 decap_raw_override:1,
+		 decap_nwifi_override:1,
+		 ip_frag_override:1,
+		 reserved:21;
+};
+
+QDF_STATUS
+dp_htt_rxdma_rxole_ppe_cfg_set(struct dp_soc *soc,
+			       struct dp_htt_rxdma_rxole_ppe_config *cfg);
+#endif /* WLAN_SUPPORT_PPEDS */
+
 /*
  * htt_soc_initialize() - SOC level HTT initialization
  * @htt_soc: Opaque htt SOC handle

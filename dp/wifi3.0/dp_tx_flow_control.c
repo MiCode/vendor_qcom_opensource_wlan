@@ -327,7 +327,7 @@ void dp_tx_clear_flow_pool_stats(struct dp_soc *soc)
  * Return: flow_pool pointer / NULL for error
  */
 struct dp_tx_desc_pool_s *dp_tx_create_flow_pool(struct dp_soc *soc,
-	uint8_t flow_pool_id, uint16_t flow_pool_size)
+	uint8_t flow_pool_id, uint32_t flow_pool_size)
 {
 	struct dp_tx_desc_pool_s *pool;
 	uint32_t stop_threshold;
@@ -512,7 +512,7 @@ static void dp_tx_flow_pool_vdev_unmap(struct dp_pdev *pdev,
  * Return: none
  */
 QDF_STATUS dp_tx_flow_pool_map_handler(struct dp_pdev *pdev, uint8_t flow_id,
-	uint8_t flow_type, uint8_t flow_pool_id, uint16_t flow_pool_size)
+	uint8_t flow_type, uint8_t flow_pool_id, uint32_t flow_pool_size)
 {
 	struct dp_soc *soc = pdev->soc;
 	struct dp_tx_desc_pool_s *pool;

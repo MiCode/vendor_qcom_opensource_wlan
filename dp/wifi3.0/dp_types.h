@@ -243,6 +243,7 @@ enum dp_mod_id {
 	DP_MOD_ID_MISC,
 	DP_MOD_ID_MSCS,
 	DP_MOD_ID_TX,
+	DP_MOD_ID_SAWF,
 	DP_MOD_ID_MAX,
 };
 
@@ -319,6 +320,7 @@ enum dp_intr_mode {
 	DP_INTR_INTEGRATED = 0,
 	DP_INTR_MSI,
 	DP_INTR_POLL,
+	DP_INTR_LEGACY_VIRTUAL_IRQ,
 };
 
 /**
@@ -1709,7 +1711,7 @@ struct dp_arch_ops {
 				  uint8_t reo_ring_num, uint32_t quota);
 
 	QDF_STATUS (*dp_tx_desc_pool_init)(struct dp_soc *soc,
-					   uint16_t num_elem,
+					   uint32_t num_elem,
 					   uint8_t pool_id);
 	void (*dp_tx_desc_pool_deinit)(
 				struct dp_soc *soc,
@@ -2865,6 +2867,9 @@ struct dp_pdev {
 #endif
 	/* Is isolation mode enabled */
 	bool  isolation;
+#ifdef WLAN_FEATURE_MARK_FIRST_WAKEUP_PACKET
+	uint8_t is_first_wakeup_packet;
+#endif
 };
 
 struct dp_peer;

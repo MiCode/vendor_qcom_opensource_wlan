@@ -107,30 +107,30 @@ static inline void dp_tx_desc_set_magic(struct dp_tx_desc_s *tx_desc,
 #endif
 
 QDF_STATUS dp_tx_desc_pool_alloc(struct dp_soc *soc, uint8_t pool_id,
-				 uint16_t num_elem);
+				 uint32_t num_elem);
 QDF_STATUS dp_tx_desc_pool_init(struct dp_soc *soc, uint8_t pool_id,
-				uint16_t num_elem);
+				uint32_t num_elem);
 void dp_tx_desc_pool_free(struct dp_soc *soc, uint8_t pool_id);
 void dp_tx_desc_pool_deinit(struct dp_soc *soc, uint8_t pool_id);
 
 QDF_STATUS dp_tx_ext_desc_pool_alloc(struct dp_soc *soc, uint8_t pool_id,
-				     uint16_t num_elem);
+				     uint32_t num_elem);
 QDF_STATUS dp_tx_ext_desc_pool_init(struct dp_soc *soc, uint8_t pool_id,
-				    uint16_t num_elem);
+				    uint32_t num_elem);
 void dp_tx_ext_desc_pool_free(struct dp_soc *soc, uint8_t pool_id);
 void dp_tx_ext_desc_pool_deinit(struct dp_soc *soc, uint8_t pool_id);
 
 QDF_STATUS dp_tx_tso_desc_pool_alloc(struct dp_soc *soc, uint8_t pool_id,
-				     uint16_t num_elem);
+				     uint32_t num_elem);
 QDF_STATUS dp_tx_tso_desc_pool_init(struct dp_soc *soc, uint8_t pool_id,
-				    uint16_t num_elem);
+				    uint32_t num_elem);
 void dp_tx_tso_desc_pool_free(struct dp_soc *soc, uint8_t pool_id);
 void dp_tx_tso_desc_pool_deinit(struct dp_soc *soc, uint8_t pool_id);
 
 QDF_STATUS dp_tx_tso_num_seg_pool_alloc(struct dp_soc *soc, uint8_t pool_id,
-		uint16_t num_elem);
+		uint32_t num_elem);
 QDF_STATUS dp_tx_tso_num_seg_pool_init(struct dp_soc *soc, uint8_t pool_id,
-				       uint16_t num_elem);
+				       uint32_t num_elem);
 void dp_tx_tso_num_seg_pool_free(struct dp_soc *soc, uint8_t pool_id);
 void dp_tx_tso_num_seg_pool_deinit(struct dp_soc *soc, uint8_t pool_id);
 
@@ -146,10 +146,10 @@ void dp_tx_flow_pool_unmap(struct cdp_soc_t *handle, uint8_t pdev_id,
 			   uint8_t vdev_id);
 void dp_tx_clear_flow_pool_stats(struct dp_soc *soc);
 struct dp_tx_desc_pool_s *dp_tx_create_flow_pool(struct dp_soc *soc,
-	uint8_t flow_pool_id, uint16_t flow_pool_size);
+	uint8_t flow_pool_id, uint32_t flow_pool_size);
 
 QDF_STATUS dp_tx_flow_pool_map_handler(struct dp_pdev *pdev, uint8_t flow_id,
-	uint8_t flow_type, uint8_t flow_pool_id, uint16_t flow_pool_size);
+	uint8_t flow_type, uint8_t flow_pool_id, uint32_t flow_pool_size);
 void dp_tx_flow_pool_unmap_handler(struct dp_pdev *pdev, uint8_t flow_id,
 	uint8_t flow_type, uint8_t flow_pool_id);
 
@@ -647,7 +647,7 @@ static inline void dp_tx_flow_control_deinit(struct dp_soc *handle)
 
 static inline QDF_STATUS dp_tx_flow_pool_map_handler(struct dp_pdev *pdev,
 	uint8_t flow_id, uint8_t flow_type, uint8_t flow_pool_id,
-	uint16_t flow_pool_size)
+	uint32_t flow_pool_size)
 {
 	return QDF_STATUS_SUCCESS;
 }

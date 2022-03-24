@@ -30,6 +30,8 @@
 #define DP_MON_RING_FILL_LEVEL_DEFAULT 2048
 #define DP_MON_DATA_BUFFER_SIZE     2048
 #define DP_MON_DESC_MAGIC 0xdeadabcd
+#define DP_MON_MAX_STATUS_BUF 32
+#define DP_MON_QUEUE_DEPTH_MAX 16
 
 /**
  * struct dp_mon_filter_be - Monitor TLV filter
@@ -53,6 +55,7 @@ struct dp_mon_filter_be {
  * @in_use: desc is in use
  * @unmapped: used to mark desc an unmapped if the corresponding
  * nbuf is already unmapped
+ * @end_offset: offset in status buffer where DMA ended
  * @cookie: unique desc identifier
  * @magic: magic number to validate desc data
  */
@@ -61,6 +64,7 @@ struct dp_mon_desc {
 	qdf_dma_addr_t paddr;
 	uint8_t in_use:1,
 		unmapped:1;
+	uint16_t end_offset;
 	uint32_t cookie;
 	uint32_t magic;
 };
@@ -101,6 +105,13 @@ struct dp_mon_desc_pool {
  * @filter_be: filters sent to fw
  * @tx_capture: pointer to tx capture function
  * @tx_stats: tx monitor drop stats
+ * @rx_mon_wq_lock: Rx mon workqueue lock
+ * @rx_mon_workqueue: Rx mon workqueue
+ * @rx_mon_work: Rx mon work
+ * @rx_mon_queue: RxMON queue
+ * @rx_mon_queue_depth: RxMON queue depth
+ * @desc_count: reaped status desc count
+ * @status: reaped status buffer per ppdu
  */
 struct dp_mon_pdev_be {
 	struct dp_mon_pdev mon_pdev;
@@ -109,6 +120,14 @@ struct dp_mon_pdev_be {
 	struct dp_pdev_tx_capture_be tx_capture_be;
 #endif
 	struct dp_tx_monitor_drop_stats tx_stats;
+	qdf_spinlock_t rx_mon_wq_lock;
+	qdf_workqueue_t *rx_mon_workqueue;
+	qdf_work_t rx_mon_work;
+
+	TAILQ_HEAD(, hal_rx_ppdu_info) rx_mon_queue;
+	uint16_t rx_mon_queue_depth;
+	uint16_t desc_count;
+	struct dp_mon_desc *status[DP_MON_MAX_STATUS_BUF];
 };
 
 /**
@@ -224,6 +243,19 @@ QDF_STATUS dp_mon_buffers_replenish(struct dp_soc *dp_soc,
 void dp_mon_filter_show_filter_be(enum dp_mon_filter_mode mode,
 				  struct dp_mon_filter_be *filter);
 
+/*
+ * dp_mon_desc_get() - get monitor sw descriptor
+ *
+ * @cookie: cookie
+ *
+ * Return: dp_mon_desc
+ */
+static inline
+struct dp_mon_desc *dp_mon_desc_get(uint64_t *cookie)
+{
+	return (struct dp_mon_desc *)cookie;
+}
+
 /**
  * dp_rx_add_to_free_desc_list() - Adds to a local free descriptor list
  *
@@ -270,4 +302,33 @@ dp_mon_add_desc_list_to_free_list(struct dp_soc *soc,
 				  union dp_mon_desc_list_elem_t **local_desc_list,
 				  union dp_mon_desc_list_elem_t **tail,
 				  struct dp_mon_desc_pool *mon_desc_pool);
+
+/**
+ * dp_rx_mon_add_frag_to_skb () - Add page frag to skb
+ *
+ * @ppdu_info: PPDU status info
+ * @nbuf: SKB to which frag need to be added
+ * @status_frag: Frag to add
+ *
+ * Return: void
+ */
+static inline void
+dp_rx_mon_add_frag_to_skb(struct hal_rx_ppdu_info *ppdu_info,
+			  qdf_nbuf_t nbuf,
+			  qdf_frag_t status_frag)
+{
+	uint16_t num_frags;
+
+	num_frags = qdf_nbuf_get_nr_frags(nbuf);
+	if (num_frags < QDF_NBUF_MAX_FRAGS) {
+		qdf_nbuf_add_rx_frag(status_frag, nbuf,
+				     ppdu_info->data - (unsigned char *)status_frag,
+				     ppdu_info->hdr_len,
+				     RX_MONITOR_BUFFER_SIZE,
+				     false);
+	} else {
+		dp_mon_err("num_frags exceeding MAX frags");
+		qdf_assert_always(0);
+	}
+}
 #endif /* _DP_MON_2_0_H_ */

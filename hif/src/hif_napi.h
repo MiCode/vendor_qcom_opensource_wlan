@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2015-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -74,7 +75,7 @@ enum qca_napi_event {
  * These flags need to be enabled in the qca_napi_data->flags variable for the
  * feature to kick in.
 .* QCA_NAPI_FEATURE_CPU_CORRECTION   - controls CPU correction logic
-.* QCA_NAPI_FEATURE_IRQ_BLACKLISTING - controls call to  irq_blacklist_on API
+.* QCA_NAPI_FEATURE_IRQ_BLACKLISTING - controls call to  irq_denylist_on API
 .* QCA_NAPI_FEATURE_CORE_CTL_BOOST   - controls call to core_ctl_set_boost API
  */
 #define QCA_NAPI_FEATURE_CPU_CORRECTION            BIT(1)
@@ -120,10 +121,10 @@ void hif_napi_rx_offld_flush_cb_deregister(struct hif_opaque_softc *hif_hdl);
  */
 void *hif_napi_get_lro_info(struct hif_opaque_softc *hif_hdl, int napi_id);
 
-enum qca_blacklist_op {
-	BLACKLIST_QUERY,
-	BLACKLIST_OFF,
-	BLACKLIST_ON
+enum qca_denylist_op {
+	DENYLIST_QUERY,
+	DENYLIST_OFF,
+	DENYLIST_ON
 };
 
 #ifdef FEATURE_NAPI
@@ -289,8 +290,8 @@ int hif_napi_cpu_deinit(struct hif_opaque_softc *hif);
 int hif_napi_cpu_migrate(struct qca_napi_data *napid, int cpu, int action);
 int hif_napi_serialize(struct hif_opaque_softc *hif, int is_on);
 
-int hif_napi_cpu_blacklist(struct qca_napi_data *napid,
-			   enum qca_blacklist_op op);
+int hif_napi_cpu_denylist(struct qca_napi_data *napid,
+			  enum qca_denylist_op op);
 
 /* not directly related to irq affinity, but oh well */
 void hif_napi_stats(struct qca_napi_data *napid);
@@ -317,8 +318,8 @@ static inline void hif_napi_update_yield_stats(struct CE_state *ce_state,
 					       bool time_limit_reached,
 					       bool rxpkt_thresh_reached) { }
 
-static inline int hif_napi_cpu_blacklist(struct qca_napi_data *napid,
-			   enum qca_blacklist_op op)
+static inline int hif_napi_cpu_denylist(struct qca_napi_data *napid,
+					enum qca_denylist_op op)
 { return 0; }
 #endif /* HIF_IRQ_AFFINITY */
 

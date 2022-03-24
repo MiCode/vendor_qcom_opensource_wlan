@@ -1998,6 +1998,16 @@ const struct ap_cli_pwr_mode_info reg_pwr_enum_2_ap_cli_pwrmode[] = {
 							REG_VERY_LOW_POWER_AP},
 };
 
+enum reg_6g_ap_type
+reg_convert_supported_6g_pwr_type_to_ap_pwr_type(enum supported_6g_pwr_types
+						in_6g_pwr_type)
+{
+	if (reg_is_supp_pwr_mode_invalid(in_6g_pwr_type))
+		return REG_MAX_AP_TYPE;
+
+	return reg_pwr_enum_2_ap_cli_pwrmode[in_6g_pwr_type].ap_pwr_mode;
+}
+
 struct regulatory_channel *reg_get_reg_maschan_lst_frm_6g_pwr_mode(
 			enum supported_6g_pwr_types supp_pwr_mode,
 			struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj,

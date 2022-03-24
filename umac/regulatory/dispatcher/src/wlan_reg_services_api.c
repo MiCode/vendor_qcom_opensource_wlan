@@ -1078,6 +1078,13 @@ bool wlan_reg_is_disable_in_secondary_list_for_freq(
 	return reg_is_disable_in_secondary_list_for_freq(pdev, freq);
 }
 
+bool wlan_reg_is_enable_in_secondary_list_for_freq(
+						struct wlan_objmgr_pdev *pdev,
+						qdf_freq_t freq)
+{
+	return reg_is_enable_in_secondary_list_for_freq(pdev, freq);
+}
+
 bool wlan_reg_is_dfs_in_secondary_list_for_freq(struct wlan_objmgr_pdev *pdev,
 						qdf_freq_t freq)
 {
@@ -1632,6 +1639,26 @@ QDF_STATUS wlan_reg_get_superchan_entry(
 		const struct super_chan_info **p_sup_chan_entry)
 {
 	return reg_get_superchan_entry(pdev, chan_enum, p_sup_chan_entry);
+}
+
+enum supported_6g_pwr_types
+wlan_reg_conv_6g_ap_type_to_supported_6g_pwr_types(enum reg_6g_ap_type
+						   ap_pwr_type)
+{
+	return reg_conv_6g_ap_type_to_supported_6g_pwr_types(ap_pwr_type);
+}
+
+enum supported_6g_pwr_types
+wlan_reg_get_best_6g_pwr_type(struct wlan_objmgr_pdev *pdev, qdf_freq_t freq)
+{
+	return reg_get_best_6g_pwr_type(pdev, freq);
+}
+
+enum reg_6g_ap_type
+wlan_reg_conv_supported_6g_pwr_type_to_ap_pwr_type(enum supported_6g_pwr_types
+						  in_6g_pwr_type)
+{
+	return reg_convert_supported_6g_pwr_type_to_ap_pwr_type(in_6g_pwr_type);
 }
 #endif /* CONFIG_BAND_6GHZ */
 

@@ -39,6 +39,7 @@
 #define NUM_20_MHZ_CHAN_IN_40_MHZ_CHAN     2
 #define NUM_20_MHZ_CHAN_IN_80_MHZ_CHAN     4
 #define NUM_20_MHZ_CHAN_IN_160_MHZ_CHAN    8
+#define NUM_20_MHZ_CHAN_IN_320_MHZ_CHAN    16
 
 #define REG_MAX_5GHZ_CH_NUM channel_map[MAX_5GHZ_CHANNEL].chan_num
 
@@ -127,7 +128,7 @@
 /* EEPROM setting is a country code */
 #define    COUNTRY_ERD_FLAG     0x8000
 #define MIN_6GHZ_OPER_CLASS 131
-#define MAX_6GHZ_OPER_CLASS 136
+#define MAX_6GHZ_OPER_CLASS 137
 
 #ifdef CONFIG_AFC_SUPPORT
 #define DEFAULT_REQ_ID 11235813
@@ -1249,6 +1250,17 @@ bool reg_is_disable_for_pwrmode(struct wlan_objmgr_pdev *pdev, qdf_freq_t freq,
  */
 bool reg_is_disable_in_secondary_list_for_freq(struct wlan_objmgr_pdev *pdev,
 					       qdf_freq_t freq);
+
+/**
+ * reg_is_enable_in_secondary_list_for_freq() - Check if the given channel
+ * frequency is in enable state
+ * @pdev: Pointer to pdev
+ * @freq: Channel frequency
+ *
+ * Return: True if channel state is enabled, else false
+ */
+bool reg_is_enable_in_secondary_list_for_freq(struct wlan_objmgr_pdev *pdev,
+					      qdf_freq_t freq);
 #endif
 
 /**
@@ -2185,5 +2197,35 @@ bool reg_is_freq_enabled(struct wlan_objmgr_pdev *pdev,
 bool reg_is_freq_idx_enabled(struct wlan_objmgr_pdev *pdev,
 			     enum channel_enum freq_idx,
 			     enum supported_6g_pwr_types in_6g_pwr_mode);
+
+/**
+ * reg_get_best_6g_pwr_type() - Returns the best 6g power type supported for
+ * a given frequency.
+ * @pdev: pdev pointer
+ * @freq: input frequency.
+ *
+ * Return: supported_6g_pwr_types enum.
+ */
+enum supported_6g_pwr_types
+reg_get_best_6g_pwr_type(struct wlan_objmgr_pdev *pdev, qdf_freq_t freq);
+
+/**
+ * reg_conv_6g_ap_type_to_supported_6g_pwr_types() - Converts the 6G AP power
+ * type to 6g supported power type enum.
+ * @ap_pwr_type: input 6G AP power type.
+ *
+ * Return: supported_6g_pwr_types enum.
+ */
+enum supported_6g_pwr_types
+reg_conv_6g_ap_type_to_supported_6g_pwr_types(enum reg_6g_ap_type ap_pwr_type);
+
+/**
+ * reg_find_chwidth_from_bw () - Gets channel width for given
+ * bandwidth
+ * @bw: Bandwidth
+ *
+ * Return: phy_ch_width
+ */
+enum phy_ch_width reg_find_chwidth_from_bw(uint16_t bw);
 
 #endif

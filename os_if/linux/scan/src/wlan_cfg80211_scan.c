@@ -614,8 +614,8 @@ int wlan_cfg80211_sched_scan_start(struct wlan_objmgr_vdev *vdev,
 	if (req->scan_random.randomize)
 		wlan_pno_scan_rand_attr(vdev, request, req);
 
-	if (ucfg_ie_whitelist_enabled(psoc, vdev))
-		ucfg_copy_ie_whitelist_attrs(psoc, &req->ie_whitelist);
+	if (ucfg_ie_allowlist_enabled(psoc, vdev))
+		ucfg_copy_ie_allowlist_attrs(psoc, &req->ie_allowlist);
 
 	osif_debug("Network count %d n_ssids %d fast_scan_period: %d msec slow_scan_period: %d msec, fast_scan_max_cycles: %d, relative_rssi %d band_pref %d, rssi_pref %d",
 		   req->networks_cnt, request->n_ssids, req->fast_scan_period,
@@ -1690,10 +1690,10 @@ int wlan_cfg80211_scan(struct wlan_objmgr_vdev *vdev,
 	if (!is_p2p_scan) {
 		if (req->scan_req.scan_random.randomize)
 			wlan_scan_rand_attrs(vdev, request, req);
-		if (ucfg_ie_whitelist_enabled(psoc, vdev) &&
-		    ucfg_copy_ie_whitelist_attrs(psoc,
-					&req->scan_req.ie_whitelist))
-			req->scan_req.scan_f_en_ie_whitelist_in_probe = true;
+		if (ucfg_ie_allowlist_enabled(psoc, vdev) &&
+		    ucfg_copy_ie_allowlist_attrs(psoc,
+						 &req->scan_req.ie_allowlist))
+			req->scan_req.scan_f_en_ie_allowlist_in_probe = true;
 	}
 
 	if (request->flags & NL80211_SCAN_FLAG_FLUSH)

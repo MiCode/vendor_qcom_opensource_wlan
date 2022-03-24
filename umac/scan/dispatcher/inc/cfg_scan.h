@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1325,7 +1326,7 @@ enum scan_mode_6ghz {
  * gEnableSNRMonitoring - Enables SNR Monitoring
  * @Min: 0
  * @Max: 1
- * @Default: 0
+ * @Default: 1
  *
  * This ini is used to set default snr monitor
  *
@@ -1339,7 +1340,7 @@ enum scan_mode_6ghz {
  */
 #define CFG_ENABLE_SNR_MONITORING CFG_INI_BOOL(\
 			"gEnableSNRMonitoring",\
-			false,\
+			true,\
 			"Enable/Disable SNR Monitoring")
 
 /*

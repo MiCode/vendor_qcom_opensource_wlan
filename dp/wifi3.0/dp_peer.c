@@ -40,11 +40,148 @@
 #ifdef QCA_PEER_EXT_STATS
 #include "dp_hist.h"
 #endif
+#ifdef BYPASS_OL_OPS
+#include <target_if_dp.h>
+#endif
 
 #ifdef REO_QDESC_HISTORY
 #define REO_QDESC_HISTORY_SIZE 512
 uint64_t reo_qdesc_history_idx;
 struct reo_qdesc_event reo_qdesc_history[REO_QDESC_HISTORY_SIZE];
+#endif
+
+#ifdef BYPASS_OL_OPS
+/*
+ * dp_add_wds_entry_wrapper() - Add new AST entry for the wds station
+ * @soc: DP soc structure pointer
+ * @peer: dp peer structure
+ * @dest_mac: MAC address of ast node
+ * @flags: wds or hmwds
+ * @type: type from enum cdp_txrx_ast_entry_type
+ *
+ * This API is used by WDS source port learning function to
+ * add a new AST entry in the fw.
+ *
+ * Return: 0 on success, error code otherwise.
+ */
+static int dp_add_wds_entry_wrapper(struct dp_soc *soc,
+				    struct dp_peer *peer,
+				    const uint8_t *dest_macaddr,
+				    uint32_t flags,
+				    uint8_t type)
+{
+	QDF_STATUS status;
+
+	status = target_if_add_wds_entry(soc->ctrl_psoc,
+					 peer->vdev->vdev_id,
+					 peer->mac_addr.raw,
+					 dest_macaddr,
+					 WMI_HOST_WDS_FLAG_STATIC,
+					 type);
+
+	return qdf_status_to_os_return(status);
+}
+
+/*
+ * dp_update_wds_entry_wrapper() - update an existing wds entry with new peer
+ * @soc: DP soc structure pointer
+ * @peer: dp peer structure
+ * @dest_macaddr: MAC address of ast node
+ * @flags: wds or hmwds
+ *
+ * This API is used by update the peer mac address for the ast
+ * in the fw.
+ *
+ * Return: 0 on success, error code otherwise.
+ */
+static int dp_update_wds_entry_wrapper(struct dp_soc *soc,
+				       struct dp_peer *peer,
+				       uint8_t *dest_macaddr,
+				       uint32_t flags)
+{
+	QDF_STATUS status;
+
+	status = target_if_update_wds_entry(soc->ctrl_psoc,
+					    peer->vdev->vdev_id,
+					    dest_macaddr,
+					    peer->mac_addr.raw,
+					    WMI_HOST_WDS_FLAG_STATIC);
+
+	return qdf_status_to_os_return(status);
+}
+
+/*
+ * dp_del_wds_entry_wrapper() - delete a WSD AST entry
+ * @soc: DP soc structure pointer
+ * @vdev_id: vdev_id
+ * @wds_macaddr: MAC address of ast node
+ * @type: type from enum cdp_txrx_ast_entry_type
+ * @delete_in_fw: Flag to indicate if entry needs to be deleted in fw
+ *
+ * This API is used to delete an AST entry from fw
+ *
+ * Return: None
+ */
+static void dp_del_wds_entry_wrapper(struct dp_soc *soc,
+				     uint8_t vdev_id,
+				     uint8_t *wds_macaddr,
+				     uint8_t type,
+				     uint8_t delete_in_fw)
+{
+	target_if_del_wds_entry(soc->ctrl_psoc, vdev_id,
+				wds_macaddr, type, delete_in_fw);
+}
+#else
+static int dp_add_wds_entry_wrapper(struct dp_soc *soc,
+				    struct dp_peer *peer,
+				    const uint8_t *dest_macaddr,
+				    uint32_t flags,
+				    uint8_t type)
+{
+	int status;
+
+	status = soc->cdp_soc.ol_ops->peer_add_wds_entry(
+					soc->ctrl_psoc,
+					peer->vdev->vdev_id,
+					peer->mac_addr.raw,
+					peer->peer_id,
+					dest_macaddr,
+					peer->mac_addr.raw,
+					flags,
+					type);
+
+	return status;
+}
+
+static int dp_update_wds_entry_wrapper(struct dp_soc *soc,
+				       struct dp_peer *peer,
+				       uint8_t *dest_macaddr,
+				       uint32_t flags)
+{
+	int status;
+
+	status = soc->cdp_soc.ol_ops->peer_update_wds_entry(
+				soc->ctrl_psoc,
+				peer->vdev->vdev_id,
+				dest_macaddr,
+				peer->mac_addr.raw,
+				flags);
+
+	return status;
+}
+
+static void dp_del_wds_entry_wrapper(struct dp_soc *soc,
+				     uint8_t vdev_id,
+				     uint8_t *wds_macaddr,
+				     uint8_t type,
+				     uint8_t delete_in_fw)
+{
+	soc->cdp_soc.ol_ops->peer_del_wds_entry(soc->ctrl_psoc,
+						vdev_id,
+						wds_macaddr,
+						type,
+						delete_in_fw);
+}
 #endif
 
 #ifdef FEATURE_WDS
@@ -1460,11 +1597,11 @@ QDF_STATUS dp_peer_add_ast(struct dp_soc *soc,
 	struct dp_ast_entry *ast_entry = NULL;
 	struct dp_vdev *vdev = NULL;
 	struct dp_pdev *pdev = NULL;
-	uint8_t next_node_mac[6];
 	txrx_ast_free_cb cb = NULL;
 	void *cookie = NULL;
 	struct dp_peer *vap_bss_peer = NULL;
 	bool is_peer_found = false;
+	int status = 0;
 
 	if (soc->ast_offload_support)
 		return QDF_STATUS_E_INVAL;
@@ -1671,36 +1808,21 @@ add_ast_entry:
 	soc->num_ast_entries++;
 	dp_peer_ast_hash_add(soc, ast_entry);
 
-	qdf_copy_macaddr((struct qdf_mac_addr *)next_node_mac,
-			 (struct qdf_mac_addr *)peer->mac_addr.raw);
-
 	if ((ast_entry->type != CDP_TXRX_AST_TYPE_STATIC) &&
 	    (ast_entry->type != CDP_TXRX_AST_TYPE_SELF) &&
 	    (ast_entry->type != CDP_TXRX_AST_TYPE_STA_BSS) &&
-	    (ast_entry->type != CDP_TXRX_AST_TYPE_WDS_HM_SEC)) {
-		if (QDF_STATUS_SUCCESS ==
-				soc->cdp_soc.ol_ops->peer_add_wds_entry(
-				soc->ctrl_psoc,
-				peer->vdev->vdev_id,
-				peer->mac_addr.raw,
-				peer->peer_id,
-				mac_addr,
-				next_node_mac,
-				flags,
-				ast_entry->type)) {
-			if (vap_bss_peer)
-				dp_peer_unref_delete(vap_bss_peer,
-						     DP_MOD_ID_AST);
-			qdf_spin_unlock_bh(&soc->ast_lock);
-			return QDF_STATUS_SUCCESS;
-		}
-	}
+	    (ast_entry->type != CDP_TXRX_AST_TYPE_WDS_HM_SEC))
+		status = dp_add_wds_entry_wrapper(soc,
+						  peer,
+						  mac_addr,
+						  flags,
+						  ast_entry->type);
 
 	if (vap_bss_peer)
 		dp_peer_unref_delete(vap_bss_peer, DP_MOD_ID_AST);
 
 	qdf_spin_unlock_bh(&soc->ast_lock);
-	return QDF_STATUS_E_FAILURE;
+	return qdf_status_from_os_return(status);
 }
 
 qdf_export_symbol(dp_peer_add_ast);
@@ -1931,12 +2053,10 @@ int dp_peer_update_ast(struct dp_soc *soc, struct dp_peer *peer,
 	ast_entry->is_active = TRUE;
 	TAILQ_INSERT_TAIL(&peer->ast_entry_list, ast_entry, ase_list_elem);
 
-	ret = soc->cdp_soc.ol_ops->peer_update_wds_entry(
-				soc->ctrl_psoc,
-				peer->vdev->vdev_id,
-				ast_entry->mac_addr.raw,
-				peer->mac_addr.raw,
-				flags);
+	ret = dp_update_wds_entry_wrapper(soc,
+					  peer,
+					  ast_entry->mac_addr.raw,
+					  flags);
 
 	return ret;
 }
@@ -2070,7 +2190,6 @@ void dp_peer_ast_send_wds_del(struct dp_soc *soc,
 			      struct dp_ast_entry *ast_entry,
 			      struct dp_peer *peer)
 {
-	struct cdp_soc_t *cdp_soc = &soc->cdp_soc;
 	bool delete_in_fw = false;
 
 	QDF_TRACE(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_TRACE,
@@ -2093,13 +2212,12 @@ void dp_peer_ast_send_wds_del(struct dp_soc *soc,
 		else
 			delete_in_fw = true;
 
-		cdp_soc->ol_ops->peer_del_wds_entry(soc->ctrl_psoc,
-						    ast_entry->vdev_id,
-						    ast_entry->mac_addr.raw,
-						    ast_entry->type,
-						    delete_in_fw);
+		dp_del_wds_entry_wrapper(soc,
+					 ast_entry->vdev_id,
+					 ast_entry->mac_addr.raw,
+					 ast_entry->type,
+					 delete_in_fw);
 	}
-
 }
 
 #ifdef WLAN_FEATURE_MULTI_AST_DEL

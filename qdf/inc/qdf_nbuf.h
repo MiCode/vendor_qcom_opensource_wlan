@@ -208,6 +208,7 @@ typedef __qdf_nbuf_queue_t qdf_nbuf_queue_t;
  * increase this when we add more radiotap elements.
  * Number after '+' indicates maximum possible increase due to alignment
  */
+#define RADIOTAP_TX_FLAGS_LEN (2 + 1)
 #define RADIOTAP_VHT_FLAGS_LEN (12 + 1)
 #define RADIOTAP_HE_FLAGS_LEN (12 + 1)
 #define RADIOTAP_HE_MU_FLAGS_LEN (8 + 1)
@@ -228,6 +229,7 @@ typedef __qdf_nbuf_queue_t qdf_nbuf_queue_t;
 	(sizeof(struct qdf_radiotap_ext2))
 #define RADIOTAP_HEADER_LEN (RADIOTAP_BASE_HEADER_LEN + \
 				RADIOTAP_FIXED_HEADER_LEN + \
+				RADIOTAP_TX_FLAGS_LEN + \
 				RADIOTAP_HT_FLAGS_LEN + \
 				RADIOTAP_VHT_FLAGS_LEN + \
 				RADIOTAP_AMPDU_STATUS_LEN + \

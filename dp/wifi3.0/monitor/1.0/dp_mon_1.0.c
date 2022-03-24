@@ -58,6 +58,8 @@ void
 dp_mon_populate_ppdu_info_1_0(struct hal_rx_ppdu_info *hal_ppdu_info,
 			      struct cdp_rx_indication_ppdu *ppdu)
 {
+	ppdu->u.preamble = hal_ppdu_info->rx_status.preamble_type;
+	ppdu->u.bw = hal_ppdu_info->rx_status.bw;
 	ppdu->punc_bw = 0;
 }
 
@@ -744,6 +746,9 @@ QDF_STATUS dp_mon_htt_srng_setup_1_0(struct dp_soc *soc,
 			return status;
 	}
 
+	if (!soc->rxdma_mon_status_ring[mac_id].hal_srng)
+		return QDF_STATUS_SUCCESS;
+
 	status = htt_srng_setup(soc->htt_handle, mac_for_pdev,
 				soc->rxdma_mon_status_ring[mac_id]
 				.hal_srng,
@@ -1214,6 +1219,7 @@ struct cdp_mon_ops dp_ops_mon_1_0 = {
 	.config_full_mon_mode = dp_config_full_mon_mode,
 	.soc_config_full_mon_mode = dp_soc_config_full_mon_mode,
 	.get_mon_pdev_rx_stats = dp_pdev_get_rx_mon_stats,
+	.txrx_enable_mon_reap_timer = dp_enable_mon_reap_timer,
 };
 
 #ifdef QCA_MONITOR_OPS_PER_SOC_SUPPORT

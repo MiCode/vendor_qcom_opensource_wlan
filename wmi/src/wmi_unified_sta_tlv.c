@@ -1223,7 +1223,7 @@ error:
 	return status;
 }
 
-void wmi_blacklist_mgr_attach_tlv(struct wmi_unified *wmi_handle)
+void wmi_denylist_mgr_attach_tlv(struct wmi_unified *wmi_handle)
 {
 	struct wmi_ops *ops = wmi_handle->ops;
 
@@ -2444,6 +2444,6 @@ void wmi_sta_attach_tlv(wmi_unified_t wmi_handle)
 
 	wmi_tdls_attach_tlv(wmi_handle);
 	wmi_policy_mgr_attach_tlv(wmi_handle);
-	wmi_blacklist_mgr_attach_tlv(wmi_handle);
+	wmi_denylist_mgr_attach_tlv(wmi_handle);
 }
 

@@ -26,7 +26,7 @@
 #include "wlan_scan_api.h"
 #include "wlan_crypto_global_api.h"
 #ifdef CONN_MGR_ADV_FEATURE
-#include "wlan_blm_api.h"
+#include "wlan_dlm_api.h"
 #endif
 #include <wlan_mlo_mgr_sta.h>
 
@@ -475,7 +475,7 @@ cm_disconnect_continue_after_rso_stop(struct wlan_objmgr_vdev *vdev,
 
 #ifdef CONN_MGR_ADV_FEATURE
 static void
-cm_inform_blm_disconnect_complete(struct wlan_objmgr_vdev *vdev,
+cm_inform_dlm_disconnect_complete(struct wlan_objmgr_vdev *vdev,
 				  struct wlan_cm_discon_rsp *resp)
 {
 	struct wlan_objmgr_pdev *pdev;
@@ -494,7 +494,7 @@ cm_inform_blm_disconnect_complete(struct wlan_objmgr_vdev *vdev,
 
 #else
 static inline void
-cm_inform_blm_disconnect_complete(struct wlan_objmgr_vdev *vdev,
+cm_inform_dlm_disconnect_complete(struct wlan_objmgr_vdev *vdev,
 				  struct wlan_cm_discon_rsp *resp)
 {}
 #endif
@@ -527,7 +527,7 @@ QDF_STATUS cm_notify_disconnect_complete(struct cnx_mgr *cm_ctx,
 	mlo_sta_link_disconn_notify(cm_ctx->vdev, resp);
 	mlme_cm_osif_disconnect_complete(cm_ctx->vdev, resp);
 	cm_if_mgr_inform_disconnect_complete(cm_ctx->vdev);
-	cm_inform_blm_disconnect_complete(cm_ctx->vdev, resp);
+	cm_inform_dlm_disconnect_complete(cm_ctx->vdev, resp);
 
 	/* Clear MLO cap only when it is the last disconnect req
 	 * as osif would not have informed userspace for other disconnect

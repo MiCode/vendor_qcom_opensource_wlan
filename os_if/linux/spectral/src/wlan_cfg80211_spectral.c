@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2017-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -93,6 +94,8 @@ const struct nla_policy spectral_scan_policy[
 							.type = NLA_U8},
 	[QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_CONFIG_BANDWIDTH] = {
 							.type = NLA_U8},
+	[QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_CONFIG_FFT_RECAPTURE] = {
+							.type = NLA_U32},
 };
 
 const struct nla_policy spectral_scan_get_status_policy[
@@ -107,6 +110,7 @@ const struct nla_policy spectral_scan_get_status_policy[
 static void wlan_spectral_intit_config(struct spectral_config *config_req)
 {
 	config_req->ss_period =          SPECTRAL_PHYERR_PARAM_NOVAL;
+	config_req->ss_recapture =       SPECTRAL_PHYERR_PARAM_NOVAL;
 	config_req->ss_count =           SPECTRAL_PHYERR_PARAM_NOVAL;
 	config_req->ss_fft_period =      SPECTRAL_PHYERR_PARAM_NOVAL;
 	config_req->ss_short_report =    SPECTRAL_PHYERR_PARAM_NOVAL;
@@ -396,6 +400,10 @@ int wlan_cfg80211_spectral_scan_config_and_start(struct wiphy *wiphy,
 	if (tb[QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_CONFIG_SCAN_PERIOD])
 		config_req.ss_period = nla_get_u32(tb
 		[QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_CONFIG_SCAN_PERIOD]);
+
+	if (tb[QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_CONFIG_FFT_RECAPTURE])
+		config_req.ss_recapture = nla_get_u32(tb
+		[QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_CONFIG_FFT_RECAPTURE]);
 
 	if (tb[QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_CONFIG_PRIORITY])
 		config_req.ss_spectral_pri = nla_get_u32(tb
@@ -806,7 +814,10 @@ int wlan_cfg80211_spectral_scan_get_config(struct wiphy *wiphy,
 			sconfig->ss_frequency.cfreq2) ||
 	    nla_put_u8(skb,
 		       QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_CONFIG_BANDWIDTH,
-		       sscan_bw_nl))
+		       sscan_bw_nl) ||
+	    nla_put_u32(skb,
+			QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_CONFIG_FFT_RECAPTURE,
+			sconfig->ss_recapture))
 
 		goto fail;
 

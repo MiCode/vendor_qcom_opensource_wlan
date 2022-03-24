@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -41,11 +42,12 @@
 /* 10MHz channel width */
 #define DFS_CH_WIDTH_10MHZ      6
 
+#define DFS_CH_WIDTH_320MHZ     7
 /* Invalid channel width */
-#define DFS_CH_WIDTH_INVALID    7
+#define DFS_CH_WIDTH_INVALID    8
 
 /* Max channel width */
-#define DFS_CH_WIDTH_MAX        8
+#define DFS_CH_WIDTH_MAX        9
 
 /* Next 5GHz channel number */
 #define DFS_80_NUM_SUB_CHANNEL                 4
@@ -60,8 +62,9 @@
 #define DFS_NEXT_5GHZ_CHANNEL_FREQ_OFFSET       20
 
 /* Number of 20MHz channels in bitmap */
-#define DFS_MAX_20M_SUB_CH                      8
+#define DFS_MAX_NUM_160_SUBCHAN                 8
 
+#define DFS_MAX_NUM_240_SUBCHAN                 12
 /* Frequency difference between 80+80 MHz */
 #define DFS_80P80M_FREQ_DIFF                    40
 

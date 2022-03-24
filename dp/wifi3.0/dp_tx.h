@@ -22,12 +22,19 @@
 #include <qdf_types.h>
 #include <qdf_nbuf.h>
 #include "dp_types.h"
-#if defined(MESH_MODE_SUPPORT) || defined(FEATURE_PERPKT_INFO)
+#ifdef FEATURE_PERPKT_INFO
+#if defined(QCA_SUPPORT_LATENCY_CAPTURE) || \
+	defined(QCA_TX_CAPTURE_SUPPORT) || \
+	defined(QCA_MCOPY_SUPPORT)
 #include "if_meta_hdr.h"
+#endif
 #endif
 #include "dp_internal.h"
 #include "hal_tx.h"
 #include <qdf_tracepoint.h>
+#ifdef CONFIG_SAWF
+#include "dp_sawf.h"
+#endif
 
 #define DP_INVALID_VDEV_ID 0xFF
 
@@ -181,6 +188,7 @@ struct dp_tx_queue {
  * @ix_tx_sniffer: Indicates if the packet has to be sniffed
  * @gsn: global sequence for reinjected mcast packets
  * @vdev_id : vdev_id for reinjected mcast packets
+ * @skip_hp_update : Skip HP update for TSO segments and update in last segment
  *
  * This structure holds the complete MSDU information needed to program the
  * Hardware TCL and MSDU extension descriptors for different frame types
@@ -205,6 +213,9 @@ struct dp_tx_msdu_info_s {
 	uint8_t vdev_id;
 #endif
 #endif
+#ifdef WLAN_DP_FEATURE_SW_LATENCY_MGR
+	uint8_t skip_hp_update;
+#endif
 };
 
 #ifndef QCA_HOST_MODE_WIFI_DISABLED
@@ -225,21 +236,14 @@ void dp_tx_deinit_pair_by_index(struct dp_soc *soc, int index);
 
 void dp_tx_tso_cmn_desc_pool_deinit(struct dp_soc *soc, uint8_t num_pool);
 void dp_tx_tso_cmn_desc_pool_free(struct dp_soc *soc, uint8_t num_pool);
-QDF_STATUS dp_tx_tso_cmn_desc_pool_alloc(struct dp_soc *soc,
-					 uint8_t num_pool,
-					 uint16_t num_desc);
-QDF_STATUS dp_tx_tso_cmn_desc_pool_init(struct dp_soc *soc,
-					uint8_t num_pool,
-					uint16_t num_desc);
-
 void dp_tx_tso_cmn_desc_pool_deinit(struct dp_soc *soc, uint8_t num_pool);
 void dp_tx_tso_cmn_desc_pool_free(struct dp_soc *soc, uint8_t num_pool);
 QDF_STATUS dp_tx_tso_cmn_desc_pool_alloc(struct dp_soc *soc,
 					 uint8_t num_pool,
-					 uint16_t num_desc);
+					 uint32_t num_desc);
 QDF_STATUS dp_tx_tso_cmn_desc_pool_init(struct dp_soc *soc,
 					uint8_t num_pool,
-					uint16_t num_desc);
+					uint32_t num_desc);
 void dp_tx_comp_free_buf(struct dp_soc *soc, struct dp_tx_desc_s *desc);
 void dp_tx_desc_release(struct dp_tx_desc_s *tx_desc, uint8_t desc_pool_id);
 void dp_tx_compute_delay(struct dp_vdev *vdev, struct dp_tx_desc_s *tx_desc,
@@ -713,6 +717,9 @@ static inline void dp_tx_vdev_update_search_flags(struct dp_vdev *vdev)
 
 #endif /* QCA_HOST_MODE_WIFI_DISABLED */
 
+#if defined(QCA_SUPPORT_LATENCY_CAPTURE) || \
+	defined(QCA_TX_CAPTURE_SUPPORT) || \
+	defined(QCA_MCOPY_SUPPORT)
 #ifdef FEATURE_PERPKT_INFO
 QDF_STATUS
 dp_get_completion_indication_for_stack(struct dp_soc *soc,
@@ -725,6 +732,7 @@ dp_get_completion_indication_for_stack(struct dp_soc *soc,
 void dp_send_completion_to_stack(struct dp_soc *soc,  struct dp_pdev *pdev,
 			    uint16_t peer_id, uint32_t ppdu_id,
 			    qdf_nbuf_t netbuf);
+#endif
 #else
 static inline
 QDF_STATUS dp_get_completion_indication_for_stack(struct dp_soc *soc,
@@ -775,6 +783,7 @@ void dp_tx_update_stats(struct dp_soc *soc,
  * @soc: Datapath soc handle
  * @tx_desc: tx packet descriptor
  * @tid: TID for pkt transmission
+ * @msdu_info: MSDU info of tx packet
  *
  * Returns: 1, if coalescing is to be done
  *	    0, if coalescing is not to be done
@@ -782,7 +791,7 @@ void dp_tx_update_stats(struct dp_soc *soc,
 int
 dp_tx_attempt_coalescing(struct dp_soc *soc, struct dp_vdev *vdev,
 			 struct dp_tx_desc_s *tx_desc,
-			 uint8_t tid);
+			 uint8_t tid, struct dp_tx_msdu_info_s *msdu_info);
 
 /**
  * dp_tx_ring_access_end() - HAL ring access end for data transmission
@@ -815,7 +824,8 @@ dp_tx_ring_access_end(struct dp_soc *soc, hal_ring_handle_t hal_ring_hdl,
 static inline int
 dp_tx_attempt_coalescing(struct dp_soc *soc, struct dp_vdev *vdev,
 			 struct dp_tx_desc_s *tx_desc,
-			 uint8_t tid)
+			 uint8_t tid,
+			 struct dp_tx_msdu_info_s *msdu_info)
 {
 	return 0;
 }
@@ -978,6 +988,13 @@ void dp_tx_desc_set_timestamp(struct dp_tx_desc_s *tx_desc)
 static inline
 void dp_tx_desc_check_corruption(struct dp_tx_desc_s *tx_desc)
 {
+}
+#endif
+
+#ifndef CONFIG_SAWF
+static inline bool dp_sawf_tag_valid_get(qdf_nbuf_t nbuf)
+{
+	return false;
 }
 #endif
 

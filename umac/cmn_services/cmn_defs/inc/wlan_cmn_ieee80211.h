@@ -1691,6 +1691,11 @@ struct subelem_header {
 #define EHTCAP_PHY_MUBFMR320MHZ_IDX                     62
 #define EHTCAP_PHY_MUBFMR320MHZ_BITS                    1
 
+#define EHTCAP_PPET_NSS_IDX               0
+#define EHTCAP_PPET_NSS_BITS              4
+#define EHTCAP_PPET_RU_INDEX_BITMASK_IDX  4
+#define EHTCAP_PPET_RU_INDEX_BITMASK_BITS 5
+
 #define MAX_EHT_MCS_NSS_MAP_LEN 9
 
 /**

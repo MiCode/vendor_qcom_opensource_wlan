@@ -56,8 +56,13 @@
 #define WMI_SIZE_UTC_TIME (10)
 /* The size of the utc time error in bytes. */
 #define WMI_SIZE_UTC_TIME_ERROR (5)
+#ifdef WLAN_MCC_MIN_CHANNEL_QUOTA
+#define WMI_MCC_MIN_CHANNEL_QUOTA             WLAN_MCC_MIN_CHANNEL_QUOTA
+#define WMI_MCC_MAX_CHANNEL_QUOTA             (100 - WLAN_MCC_MIN_CHANNEL_QUOTA)
+#else
 #define WMI_MCC_MIN_CHANNEL_QUOTA             20
 #define WMI_MCC_MAX_CHANNEL_QUOTA             80
+#endif
 #define WMI_MCC_MIN_NON_ZERO_CHANNEL_LATENCY  30
 
 #ifdef WMI_AP_SUPPORT
@@ -819,6 +824,28 @@ struct peer_create_params {
 	bool mlo_enabled;
 #endif
 };
+
+#ifdef WLAN_SUPPORT_PPEDS
+/**
+ * struct peer_ppe_ds_param - Per peer PPE Direct Switch parameter
+ * @peer_macaddr: PPE mac address
+ * @ppe_routing_enabled: Master flag for PPE routing
+ * @use_ppe: Use PPE command for the peer entry
+ * @service_code: Service code
+ * @priority_valid: If PRI to TID conversion is enabled
+ * @src_info: Source info/PPE port of the interface
+ * @vdev_id: VAP ID
+ */
+struct peer_ppe_ds_param {
+	uint8_t peer_macaddr[QDF_MAC_ADDR_SIZE];
+	bool ppe_routing_enabled;
+	bool use_ppe;
+	uint16_t service_code;
+	uint16_t src_info;
+	uint8_t priority_valid;
+	uint8_t vdev_id;
+};
+#endif
 
 /**
  * struct peer_remove_params - peer remove cmd parameter
@@ -1719,13 +1746,13 @@ struct set_key_params {
  * @oui: oui parameters
  * @vdev_id: interface id
  * @enb_probe_req_sno_randomization: control probe req sequence no randomization
- * @ie_whitelist: probe req IE whitelist attrs
+ * @ie_allowlist: probe req IE allowlist attrs
  */
 struct scan_mac_oui {
 	uint8_t oui[WMI_WIFI_SCANNING_MAC_OUI_LENGTH];
 	uint32_t vdev_id;
 	bool enb_probe_req_sno_randomization;
-	struct probe_req_whitelist_attr ie_whitelist;
+	struct probe_req_allowlist_attr ie_allowlist;
 };
 
 #define WMI_PASSPOINT_REALM_LEN 256
@@ -2950,6 +2977,7 @@ struct smart_ant_enable_tx_feedback_params {
  * @vdev_id: VDEV id
  * @count: count
  * @period: period
+ * @fft_recap: FFT recapture enable/disable
  * @spectral_pri: Spectral priority
  * @fft_size: FFT size
  * @gc_enable: GC enable
@@ -2976,6 +3004,7 @@ struct vdev_spectral_configure_params {
 	uint8_t vdev_id;
 	uint16_t count;
 	uint16_t period;
+	uint16_t fft_recap;
 	uint16_t spectral_pri;
 	uint16_t fft_size;
 	uint16_t gc_enable;
@@ -4019,7 +4048,7 @@ typedef struct {
  * @last_tx_power: Tx power latest
  * @atf_tokens_allocated: atf tokens allocated
  * @atf_tokens_utilized: atf tokens utilized
- * @num_mu_tx_blacklisted: Blacklisted MU Tx count
+ * @num_mu_tx_denylisted: Denylisted MU Tx count
  * @sgi_count: sgi count of the peer
  * @rx_mc_bc_cnt: Total number of received multicast & broadcast data frames
  * corresponding to this peer, 1 in the MSB of rx_mc_bc_cnt represents a
@@ -4036,7 +4065,7 @@ typedef struct {
 	uint32_t last_tx_power;
 	uint32_t atf_tokens_allocated;
 	uint32_t atf_tokens_utilized;
-	uint32_t num_mu_tx_blacklisted;
+	uint32_t num_mu_tx_denylisted;
 	uint32_t sgi_count;
 	uint32_t rx_mc_bc_cnt;
 	uint32_t rx_retry_cnt;
@@ -4833,7 +4862,7 @@ typedef enum {
 	wmi_esp_estimate_event_id,
 	wmi_pdev_ctl_failsafe_check_event_id,
 	wmi_vdev_bcn_reception_stats_event_id,
-	wmi_roam_blacklist_event_id,
+	wmi_roam_denylist_event_id,
 	wmi_wlm_stats_event_id,
 	wmi_peer_cfr_capture_event_id,
 	wmi_pdev_cold_boot_cal_event_id,
@@ -4894,6 +4923,9 @@ typedef enum {
 #endif
 #ifdef WLAN_FEATURE_11BE_MLO
 	wmi_vdev_quiet_offload_eventid,
+#endif
+#ifdef WLAN_FEATURE_MCC_QUOTA
+	wmi_resmgr_chan_time_quota_changed_eventid,
 #endif
 	wmi_events_max,
 } wmi_conv_event_id;
@@ -5530,6 +5562,9 @@ typedef enum {
 #endif
 	wmi_service_pdev_rate_config_support,
 	wmi_service_multi_peer_group_cmd_support,
+#ifdef WLAN_FEATURE_11BE
+	wmi_service_radar_found_chan_freq_eq_center_freq,
+#endif
 	wmi_services_max,
 } wmi_conv_service_ids;
 #define WMI_SERVICE_UNAVAILABLE 0xFFFF
@@ -6121,7 +6156,7 @@ typedef enum {
  * @WMI_HOST_PEER_EXT_STATS_ENABLE: Enable extended peer stats
  * @WMI_HOST_PEER_USE_FIXED_PWR: Use FIXED Pwr,
  * @WMI_HOST_PEER_PARAM_FIXED_RATE: Set peer fixed rate
- * @WMI_HOST_PEER_SET_MU_WHITELIST: Whitelist peer TIDs
+ * @WMI_HOST_PEER_SET_MU_ALLOWLIST: Allowlist peer TIDs
  * @WMI_HOST_PEER_MEMBERSHIP: set group membership status
  * @WMI_HOST_PEER_USERPOS: User POS
  * @WMI_HOST_PEER_CRIT_PROTO_HINT_ENABLED: Critical Protocol Hint enabled
@@ -6151,7 +6186,7 @@ enum {
 	WMI_HOST_PEER_EXT_STATS_ENABLE,
 	WMI_HOST_PEER_USE_FIXED_PWR,
 	WMI_HOST_PEER_PARAM_FIXED_RATE,
-	WMI_HOST_PEER_SET_MU_WHITELIST,
+	WMI_HOST_PEER_SET_MU_ALLOWLIST,
 	WMI_HOST_PEER_MEMBERSHIP,
 	WMI_HOST_PEER_USERPOS,
 	WMI_HOST_PEER_CRIT_PROTO_HINT_ENABLED,
@@ -7907,10 +7942,10 @@ struct wmi_roam_wtc_btm_trigger_data {
  *  @rssi_score:  AP RSSI score
  *  @total_score: Total score of the candidate AP.
  *  @etp:         Estimated throughput value of the AP in Mbps
- *  @bl_reason:   Blacklist reason
+ *  @bl_reason:   Denylist reason
  *  @bl_source:   Source of adding AP to BL
  *  @bl_timestamp:This timestamp indicates the time when AP added
- *  to blacklist.
+ *  to denylist.
  *  @bl_original_timeout: Original timeout value in milli seconds
  *  when AP added to BL
  */

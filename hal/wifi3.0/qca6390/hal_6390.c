@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1100,6 +1100,24 @@ void hal_compute_reo_remap_ix2_ix3_6390(uint32_t *ring, uint32_t num_rings,
 	}
 }
 
+#ifdef WLAN_FEATURE_MARK_FIRST_WAKEUP_PACKET
+/**
+ * hal_get_first_wow_wakeup_packet_6390(): Function to get if the buffer
+ * is the first one that wakes up host from WoW.
+ *
+ * @buf: network buffer
+ *
+ * Dummy function for QCA6390
+ *
+ * Returns: 1 to indicate it is first packet received that wakes up host from
+ *	    WoW. Otherwise 0
+ */
+static inline uint8_t hal_get_first_wow_wakeup_packet_6390(uint8_t *buf)
+{
+	return 0;
+}
+#endif
+
 static void hal_hw_txrx_ops_attach_qca6390(struct hal_soc *hal_soc)
 {
 	/* init and setup */
@@ -1271,6 +1289,10 @@ static void hal_hw_txrx_ops_attach_qca6390(struct hal_soc *hal_soc)
 					hal_compute_reo_remap_ix2_ix3_6390;
 	hal_soc->ops->hal_setup_link_idle_list =
 				hal_setup_link_idle_list_generic_li;
+#ifdef WLAN_FEATURE_MARK_FIRST_WAKEUP_PACKET
+	hal_soc->ops->hal_get_first_wow_wakeup_packet =
+		hal_get_first_wow_wakeup_packet_6390;
+#endif
 };
 
 struct hal_hw_srng_config hw_srng_table_6390[] = {

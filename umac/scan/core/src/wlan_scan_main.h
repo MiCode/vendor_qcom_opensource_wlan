@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2017-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -367,7 +368,7 @@ struct extscan_def_config {
  * @scan_f_add_ds_ie_in_probe: add DS ie in probe req frame
  * @scan_f_add_spoofed_mac_in_probe: use random mac address for TA in probe
  * @scan_f_add_rand_seq_in_probe: use random sequence number in probe
- * @scan_f_en_ie_whitelist_in_probe: enable ie whitelist in probe
+ * @scan_f_en_ie_allowlist_in_probe: enable ie allowlist in probe
  * @scan_f_forced: force scan even in presence of data traffic
  * @scan_f_2ghz: scan 2.4 GHz channels
  * @scan_f_5ghz: scan 5 GHz channels
@@ -461,7 +462,7 @@ struct scan_default_params {
 				scan_f_add_ds_ie_in_probe:1,
 				scan_f_add_spoofed_mac_in_probe:1,
 				scan_f_add_rand_seq_in_probe:1,
-				scan_f_en_ie_whitelist_in_probe:1,
+				scan_f_en_ie_allowlist_in_probe:1,
 				scan_f_forced:1,
 				scan_f_2ghz:1,
 				scan_f_5ghz:1,
@@ -516,7 +517,7 @@ struct scan_cb {
  * @pdev_info: pointer to pdev info
  * @pno_cfg: default pno configuration
  * @extscan_cfg: default extscan configuration
- * @ie_whitelist: default ie whitelist attrs
+ * @ie_allowlist: default ie allowlist attrs
  * @bt_a2dp_enabled: if bt a2dp is enabled
  * @miracast_enabled: miracast enabled
  * @disable_timeout: command timeout disabled
@@ -549,7 +550,7 @@ struct wlan_scan_obj {
 #ifdef FEATURE_WLAN_EXTSCAN
 	struct extscan_def_config extscan_cfg;
 #endif
-	struct probe_req_whitelist_attr ie_whitelist;
+	struct probe_req_allowlist_attr ie_allowlist;
 	bool bt_a2dp_enabled;
 	bool miracast_enabled;
 	bool disable_timeout;

@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2013-2014, 2016 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -23,10 +24,10 @@
  * indicated version does not break WMI compatibility even though it has
  * a minor version change.
  */
-#ifndef _WMI_VERSION_WHITELIST_H_
-#define _WMI_VERSION_WHITELIST_H_
+#ifndef _WMI_VERSION_ALLOWLIST_H_
+#define _WMI_VERSION_ALLOWLIST_H_
 static wmi_whitelist_version_info version_whitelist[] = {
 	{0, 0, 0x5F414351, 0x00004C4D, 0, 0}
 	/* Placeholder: Major=0, Minor=0, Namespace="QCA_ML" (Dummy entry) */
 };
-#endif /* _WMI_VERSION_WHITELIST_H_ */
+#endif /* _WMI_VERSION_ALLOWLIST_H_ */

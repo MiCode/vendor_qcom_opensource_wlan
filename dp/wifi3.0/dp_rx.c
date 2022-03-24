@@ -870,9 +870,6 @@ bool dp_rx_intrabss_mcbc_fwd(struct dp_soc *soc, struct dp_txrx_peer *ta_peer,
 
 	len = QDF_NBUF_CB_RX_PKT_LEN(nbuf);
 
-	qdf_nbuf_set_tx_fctx_type(nbuf_copy, &ta_peer->peer_id,
-				  CB_FTYPE_INTRABSS_FWD);
-
 	dp_classify_critical_pkts(soc, ta_peer->vdev, nbuf_copy);
 
 	if (soc->arch_ops.dp_rx_intrabss_handle_nawds(soc, ta_peer, nbuf_copy,
@@ -2998,5 +2995,23 @@ bool dp_rx_deliver_special_frame(struct dp_soc *soc,
 	}
 
 	return false;
+}
+#endif
+
+#ifdef WLAN_FEATURE_MARK_FIRST_WAKEUP_PACKET
+void dp_rx_mark_first_packet_after_wow_wakeup(struct dp_pdev *pdev,
+					      uint8_t *rx_tlv,
+					      qdf_nbuf_t nbuf)
+{
+	struct dp_soc *soc;
+
+	if (!pdev->is_first_wakeup_packet)
+		return;
+
+	soc = pdev->soc;
+	if (hal_get_first_wow_wakeup_packet(soc->hal_soc, rx_tlv)) {
+		qdf_nbuf_mark_wakeup_frame(nbuf);
+		dp_info("First packet after WOW Wakeup rcvd");
+	}
 }
 #endif

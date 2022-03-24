@@ -182,8 +182,7 @@ target_if_update_wds_entry(struct cdp_ctrl_objmgr_psoc *soc, uint8_t vdev_id,
 #else
 static inline QDF_STATUS
 target_if_add_wds_entry(struct cdp_ctrl_objmgr_psoc *soc, uint8_t vdev_id,
-			uint8_t *peer_mac, uint16_t peer_id,
-			const uint8_t *dest_mac, uint8_t *next_node_mac,
+			uint8_t *peer_mac, const uint8_t *dest_mac,
 			uint32_t flags, uint8_t type)
 {
 	return QDF_STATUS_SUCCESS;

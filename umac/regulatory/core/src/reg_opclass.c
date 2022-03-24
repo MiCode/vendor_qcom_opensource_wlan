@@ -1448,6 +1448,27 @@ static void reg_get_channel_cen(const struct
 }
 
 /**
+ * reg_is_chan_320mhz() - Return true if the chan width is 320MHZ,
+ * false otherwise.
+ * @chan_spacing: Channel spacing in MHZ.
+ *
+ * Return: true if chan_width is 320, false otherwise.
+ */
+#ifdef WLAN_FEATURE_11BE
+static bool reg_is_chan_320mhz(uint16_t chan_spacing)
+{
+	if (chan_spacing == BW_320_MHZ)
+		return true;
+	return false;
+}
+#else
+static bool reg_is_chan_320mhz(uint16_t chan_spacing)
+{
+	return false;
+}
+#endif
+
+/**
  * reg_get_chan_or_chan_center - Calculate central channel in the channel set.
  *
  * @op_class_tbl - Pointer to op_class_tbl.
@@ -1474,11 +1495,10 @@ static uint8_t reg_get_chan_or_chan_center(const struct
 				    idx,
 				    NUM_20_MHZ_CHAN_IN_160_MHZ_CHAN,
 				    &center_chan);
-	} else if ((op_class_tbl->op_class == BW_40_MHZ) &&
-		   (op_class_tbl->op_class == OPCLS_132)) {
+	} else if (reg_is_chan_320mhz(op_class_tbl->chan_spacing)) {
 		reg_get_channel_cen(op_class_tbl,
 				    idx,
-				    NUM_20_MHZ_CHAN_IN_40_MHZ_CHAN,
+				    NUM_20_MHZ_CHAN_IN_320_MHZ_CHAN,
 				    &center_chan);
 	} else {
 		center_chan = op_class_tbl->channels[*idx];
@@ -1486,6 +1506,200 @@ static uint8_t reg_get_chan_or_chan_center(const struct
 	}
 
 	return center_chan;
+}
+
+static inline qdf_freq_t reg_get_nearest_primary_freq(uint16_t bw,
+						      qdf_freq_t cfi_freq,
+						      uint8_t op_class)
+{
+	qdf_freq_t pri_freq;
+
+	if (bw <= BW_40_MHZ && op_class != OPCLS_132) {
+		pri_freq = cfi_freq;
+	} else {
+		if (cfi_freq >= BW_10_MHZ)
+			pri_freq = cfi_freq - BW_10_MHZ;
+		else
+			pri_freq = 0;
+	}
+
+	return pri_freq;
+}
+
+#ifdef WLAN_FEATURE_11BE
+/**
+ * reg_is_chan_supported()- Check if given channel is supported based on its
+ * freq provided
+ * @pdev: Pointer to pdev
+ * @pri_freq: Primary frequency of the input channel
+ * @cfi_freq: cfi frequency of the input channel
+ * @ch_width: Input channel width
+ *
+ * Return: True if the channel is supported, else false
+ */
+static bool reg_is_chan_supported(struct wlan_objmgr_pdev *pdev,
+				  qdf_freq_t pri_freq,
+				  qdf_freq_t cfi_freq,
+				  enum phy_ch_width ch_width)
+{
+	struct reg_channel_list chan_list;
+	qdf_freq_t center_320;
+	struct ch_params ch_params;
+
+	center_320 = (ch_width == CH_WIDTH_320MHZ) ? cfi_freq : 0;
+	reg_fill_channel_list(pdev,
+			      pri_freq,
+			      0,
+			      ch_width,
+			      center_320,
+			      &chan_list);
+	ch_params = chan_list.chan_param[0];
+
+	if (ch_params.ch_width == ch_width)
+		return true;
+
+	return false;
+}
+#else
+static bool reg_is_chan_supported(struct wlan_objmgr_pdev *pdev,
+				  qdf_freq_t pri_freq,
+				  qdf_freq_t cfi_freq,
+				  enum phy_ch_width ch_width)
+{
+	struct ch_params ch_params;
+
+	ch_params.ch_width = ch_width;
+	reg_set_channel_params_for_freq(pdev, pri_freq, 0, &ch_params);
+	if (ch_params.ch_width == ch_width)
+		return true;
+
+	return false;
+}
+#endif
+
+/**
+ * reg_is_cfi_supported()- Check if given cfi is supported
+ * @pdev: Pointer to pdev
+ * @cfi_freq: cfi frequency
+ * @bw: bandwidth
+ *
+ * Return: True if the cfi is supported, else false
+ */
+static bool reg_is_cfi_supported(struct wlan_objmgr_pdev *pdev,
+				 qdf_freq_t cfi_freq,
+				 uint16_t bw,
+				 uint8_t op_class)
+{
+	enum phy_ch_width ch_width;
+	qdf_freq_t pri_freq;
+	bool is_cfi_supported;
+
+	ch_width = reg_find_chwidth_from_bw(bw);
+	pri_freq = reg_get_nearest_primary_freq(bw, cfi_freq, op_class);
+	is_cfi_supported = reg_is_chan_supported(pdev,
+						 pri_freq,
+						 cfi_freq,
+						 ch_width);
+
+	return is_cfi_supported;
+}
+
+/**
+ * reg_get_cfis_from_opclassmap_for_6g()- Get channels from the opclass map
+ * for 6GHz
+ * @pdev: Pointer to pdev
+ * @cap: Pointer to regdmn_ap_cap_opclass_t
+ * @op_class_tbl: Pointer to op_class_tbl
+ *
+ * Populate channels from opclass map to regdmn_ap_cap_opclass_t as supported
+ * and non-supported channels for 6Ghz.
+ *
+ * Return: void.
+ */
+static void reg_get_cfis_from_opclassmap_for_6g(
+			struct wlan_objmgr_pdev *pdev,
+			struct regdmn_ap_cap_opclass_t *cap,
+			const struct reg_dmn_op_class_map_t *op_class_tbl)
+{
+	uint8_t n_sup_chans = 0, n_unsup_chans = 0, j;
+	const struct c_freq_lst *p_cfi_lst = op_class_tbl->p_cfi_lst_obj;
+	qdf_freq_t cfi_freq;
+	qdf_freq_t start_freq = op_class_tbl->start_freq;
+	uint16_t bw = op_class_tbl->chan_spacing;
+
+	for (j = 0; j < p_cfi_lst->num_cfis; j++) {
+		uint8_t cfi = p_cfi_lst->p_cfis_arr[j];
+		bool is_cfi_supported;
+
+		cfi_freq = start_freq + FREQ_TO_CHAN_SCALE * cfi;
+		is_cfi_supported = reg_is_cfi_supported(pdev,
+							cfi_freq,
+							bw,
+							op_class_tbl->op_class);
+		if (is_cfi_supported) {
+			cap->sup_chan_list[n_sup_chans++] = cfi;
+			cap->num_supported_chan++;
+		} else {
+			cap->non_sup_chan_list[n_unsup_chans++] = cfi;
+			cap->num_non_supported_chan++;
+		}
+	}
+}
+
+static uint16_t reg_find_nearest_ieee_bw(uint16_t spacing)
+{
+	#define SMALLEST_BW 20
+	return (spacing / SMALLEST_BW) * SMALLEST_BW;
+}
+
+/**
+ * reg_get_cfis_from_opclassmap_for_non6g()- Get channels from the opclass map
+ * for non-6GHz
+ * @pdev: Pointer to pdev
+ * @cap: Pointer to regdmn_ap_cap_opclass_t
+ * @op_class_tbl: Pointer to op_class_tbl
+ *
+ * Populate channels from opclass map to regdmn_ap_cap_opclass_t as supported
+ * and non-supported channels for non-6Ghz.
+ *
+ * Return: void.
+ */
+static void reg_get_cfis_from_opclassmap_for_non6g(
+			struct wlan_objmgr_pdev *pdev,
+			struct regdmn_ap_cap_opclass_t *cap,
+			const struct reg_dmn_op_class_map_t *op_class_tbl)
+{
+	qdf_freq_t start_freq = op_class_tbl->start_freq;
+	uint8_t chan_idx = 0, n_sup_chans = 0, n_unsup_chans = 0;
+
+	while (op_class_tbl->channels[chan_idx]) {
+		uint8_t op_cls_chan;
+		qdf_freq_t pri_freq;
+		enum phy_ch_width ch_width;
+		bool is_supported;
+		uint16_t opcls_bw;
+
+		op_cls_chan = reg_get_chan_or_chan_center(op_class_tbl,
+							  &chan_idx);
+		pri_freq = start_freq + FREQ_TO_CHAN_SCALE * op_cls_chan;
+		opcls_bw = reg_find_nearest_ieee_bw(op_class_tbl->chan_spacing);
+		ch_width = reg_find_chwidth_from_bw(opcls_bw);
+		pri_freq = reg_get_nearest_primary_freq(opcls_bw,
+							pri_freq,
+							op_class_tbl->op_class);
+		is_supported = reg_is_chan_supported(pdev,
+						     pri_freq,
+						     0,
+						     ch_width);
+
+		if (!is_supported) {
+			cap->non_sup_chan_list[n_unsup_chans++] = op_cls_chan;
+			cap->num_non_supported_chan++;
+		} else {
+			cap->sup_chan_list[n_sup_chans++] = op_cls_chan;
+			cap->num_supported_chan++;
+		}
+	}
 }
 
 /**
@@ -1509,32 +1723,19 @@ reg_get_channels_from_opclassmap(
 		const struct reg_dmn_op_class_map_t *op_class_tbl,
 		bool *is_opclass_operable)
 {
-	uint8_t op_cls_chan;
-	qdf_freq_t search_freq;
-	bool is_freq_present;
-	uint8_t chan_idx = 0, n_sup_chans = 0, n_unsup_chans = 0;
+	struct regdmn_ap_cap_opclass_t *cap = &reg_ap_cap[index];
 
-	while (op_class_tbl->channels[chan_idx]) {
-		op_cls_chan = op_class_tbl->channels[chan_idx];
-		search_freq = op_class_tbl->start_freq +
-					(FREQ_TO_CHAN_SCALE * op_cls_chan);
-		is_freq_present =
-			reg_is_freq_present_in_cur_chan_list(pdev, search_freq);
-
-		if (!is_freq_present) {
-			reg_ap_cap[index].non_sup_chan_list[n_unsup_chans++] =
-				reg_get_chan_or_chan_center(op_class_tbl,
-							    &chan_idx);
-			reg_ap_cap[index].num_non_supported_chan++;
-		} else {
-			reg_ap_cap[index].sup_chan_list[n_sup_chans++] =
-				reg_get_chan_or_chan_center(op_class_tbl,
-							    &chan_idx);
-			reg_ap_cap[index].num_supported_chan++;
-		}
+	if (reg_is_6ghz_op_class(pdev, op_class_tbl->op_class)) {
+		reg_get_cfis_from_opclassmap_for_6g(pdev,
+						    cap,
+						    op_class_tbl);
+	} else {
+		reg_get_cfis_from_opclassmap_for_non6g(pdev,
+						       cap,
+						       op_class_tbl);
 	}
 
-	if (reg_ap_cap[index].num_supported_chan >= 1)
+	if (cap->num_supported_chan >= 1)
 		*is_opclass_operable = true;
 }
 

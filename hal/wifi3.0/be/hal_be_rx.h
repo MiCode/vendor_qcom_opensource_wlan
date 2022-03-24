@@ -22,6 +22,7 @@
 
 #include "hal_be_hw_headers.h"
 #include "hal_rx.h"
+#include <wbm_release_ring_rx.h>
 
 #define HAL_RX_DA_IDX_CHIP_ID_OFFSET    14
 #define HAL_RX_DA_IDX_CHIP_ID_MASK      0x3
@@ -359,16 +360,16 @@ static inline uintptr_t hal_rx_wbm_get_desc_va(void *hal_desc)
 
 #define HAL_RX_WBM_BUF_ADDR_39_32_GET(wbm_desc)	\
 	(HAL_RX_BUFFER_ADDR_39_32_GET(&			\
-	(((struct wbm_release_ring *) \
+	(((struct wbm_release_ring_rx *) \
 	wbm_desc)->released_buff_or_desc_addr_info)))
 
 #define HAL_RX_WBM_BUF_ADDR_31_0_GET(wbm_desc)	\
 	(HAL_RX_BUFFER_ADDR_31_0_GET(&			\
-	(((struct wbm_release_ring *) \
+	(((struct wbm_release_ring_rx *) \
 	wbm_desc)->released_buff_or_desc_addr_info)))
 
 #define HAL_RX_WBM_BUF_COOKIE_GET(wbm_desc) \
-	HAL_RX_BUF_COOKIE_GET(&((struct wbm_release_ring *) \
+	HAL_RX_BUF_COOKIE_GET(&((struct wbm_release_ring_rx *) \
 	wbm_desc)->released_buff_or_desc_addr_info)
 
 /**

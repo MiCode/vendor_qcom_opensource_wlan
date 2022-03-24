@@ -88,6 +88,9 @@
 	_OFFSET_TO_BYTE_PTR(msdu_details_ptr, \
 RX_MSDU_DETAILS_RX_MSDU_DESC_INFO_DETAILS_RESERVED_0A_OFFSET))
 
+#define HAL_RX_TLV_MSDU_DONE_COPY_GET(_rx_pkt_tlv)	\
+	HAL_RX_MSDU_END(_rx_pkt_tlv).msdu_done_copy
+
 #define HAL_RX_LINK_DESC_MSDU0_PTR(link_desc)   \
 	((struct rx_msdu_details *) \
 	 _OFFSET_TO_BYTE_PTR((link_desc),\

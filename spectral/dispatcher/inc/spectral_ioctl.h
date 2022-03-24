@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2011, 2017-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -69,6 +70,7 @@
 enum spectral_params {
 	SPECTRAL_PARAM_FFT_PERIOD,
 	SPECTRAL_PARAM_SCAN_PERIOD,
+	SPECTRAL_PARAM_FFT_RECAPTURE,
 	SPECTRAL_PARAM_SCAN_COUNT,
 	SPECTRAL_PARAM_SHORT_REPORT,
 	SPECTRAL_PARAM_SPECT_PRI,
@@ -247,6 +249,7 @@ struct spectral_config_frequency {
  * struct spectral_config - spectral config parameters
  * @ss_fft_period:        Skip interval for FFT reports
  * @ss_period:            Spectral scan period
+ * @ss_recapture          Set this to allow FFT recapture if scan period > 52us
  * @ss_count:             # of reports to return from ss_active
  * @ss_short_report:      Set to report only 1 set of FFT results
  * @radar_bin_thresh_sel: Select threshold to classify strong bin for FFT
@@ -322,6 +325,7 @@ struct spectral_config_frequency {
 struct spectral_config {
 	uint16_t ss_fft_period;
 	uint16_t ss_period;
+	uint16_t ss_recapture;
 	uint16_t ss_count;
 	uint16_t ss_short_report;
 	uint8_t radar_bin_thresh_sel;
@@ -409,6 +413,8 @@ struct spectral_caps {
 #define MAX_NUM_FREQ_SPANS            (3)
 #define MAX_NUM_DETECTORS             (2)
 #define MAX_SPECTRAL_PAYLOAD          (3028)
+
+#define SPECTRAL_RECAPTURE_SCAN_PERIOD_THRESHOLD   (52)
 
 /**
  * enum dcs_int_type - Interference type indicated by DCS

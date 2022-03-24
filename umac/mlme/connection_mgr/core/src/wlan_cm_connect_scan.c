@@ -88,7 +88,7 @@ static QDF_STATUS cm_fill_scan_req(struct cnx_mgr *cm_ctx,
 		state = wlan_reg_get_channel_state_for_pwrmode(
 							pdev,
 							ch_freq,
-							REG_CURRENT_PWR_MODE);
+							REG_BEST_PWR_MODE);
 
 		if (state == CHANNEL_STATE_DISABLE ||
 		    state == CHANNEL_STATE_INVALID) {

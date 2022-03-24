@@ -889,6 +889,14 @@ struct cdp_me_ops {
 					bool is_igmp, bool is_dms_pkt);
 };
 
+/**
+ * struct cdp_mon_ops - host mon ops
+ * @txrx_reset_monitor_mode: Handler to reset monitor mode
+ * @txrx_deliver_tx_mgmt: deliver mgmt tx frame
+ * @txrx_set_advance_monitor_filter: set advanced monitor mode
+ * @config_full_mon_mode: configure full monitor mode
+ * @txrx_enable_mon_reap_timer: Enable/Disable reap timer of monitor status ring
+ */
 struct cdp_mon_ops {
 
 	QDF_STATUS (*txrx_reset_monitor_mode)
@@ -912,6 +920,11 @@ struct cdp_mon_ops {
 	QDF_STATUS
 		(*get_mon_pdev_rx_stats)(struct cdp_soc_t *soc, uint8_t pdev_id,
 					 struct cdp_pdev_mon_stats *stats);
+
+	/* Configure monitor status srng reap timer */
+	 void (*txrx_enable_mon_reap_timer)(struct cdp_soc_t *soc_hdl,
+					    uint8_t pdev_id,
+					    bool enable);
 };
 
 struct cdp_host_stats_ops {
@@ -1850,7 +1863,6 @@ struct cdp_rx_offld_ops {
  * @txrx_set_cfr_rcc: Handler to enable/disable CFR mode
  * @txrx_get_cfr_dbg_stats: Handler to get debug statistics for CFR mode
  * @txrx_clear_cfr_dbg_stats: Handler to clear debug statistics for CFR mode
- * @txrx_enable_mon_reap_timer: Enable/Disable reap timer of monitor status ring
  */
 struct cdp_cfr_ops {
 	void (*txrx_cfr_filter)(struct cdp_soc_t *soc_hdl,
@@ -1867,9 +1879,6 @@ struct cdp_cfr_ops {
 				       struct cdp_cfr_rcc_stats *buf);
 	void (*txrx_clear_cfr_dbg_stats)(struct cdp_soc_t *soc_hdl,
 					 uint8_t pdev_id);
-	void (*txrx_enable_mon_reap_timer)(struct cdp_soc_t *soc_hdl,
-					   uint8_t pdev_id,
-					   bool enable);
 };
 #endif
 

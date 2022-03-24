@@ -763,6 +763,8 @@ struct dp_mon_ops {
 	void (*mon_filter_reset_undecoded_metadata_capture)
 	    (struct dp_pdev *pdev);
 #endif
+	QDF_STATUS (*mon_pdev_ext_init)(struct dp_pdev *pdev);
+	QDF_STATUS (*mon_pdev_ext_deinit)(struct dp_pdev *pdev);
 };
 
 struct dp_mon_soc {
@@ -3905,4 +3907,14 @@ void dp_mon_register_feature_ops(struct dp_soc *soc)
  */
 QDF_STATUS dp_pdev_get_rx_mon_stats(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
 				    struct cdp_pdev_mon_stats *stats);
+/*
+ * dp_enable_mon_reap_timer() - enable/disable reap timer
+ * @soc_hdl: Datapath soc handle
+ * @pdev_id: id of objmgr pdev
+ * @enable: Enable/Disable reap timer of monitor status ring
+ *
+ * Return: none
+ */
+void dp_enable_mon_reap_timer(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
+			      bool enable);
 #endif /* _DP_MON_H_ */

@@ -100,12 +100,94 @@ struct twt_session {
  * @session_info: session info
  */
 struct twt_peer_priv_obj {
+#ifdef WLAN_TWT_SPINLOCK
+	qdf_spinlock_t twt_peer_lock;
+#else
 	qdf_mutex_t twt_peer_lock;
+#endif
 	uint8_t peer_capability;
 	uint8_t num_twt_sessions;
 	struct twt_session session_info
 		[WLAN_MAX_TWT_SESSIONS_PER_PEER];
 };
+
+#ifdef WLAN_TWT_SPINLOCK
+/**
+ * twt_lock_create - Create TWT peer mutex/spinlock
+ * @twt_lock: lock object
+ *
+ * Creates TWT peer mutex/spinlock
+ *
+ * Return: void
+ */
+static inline void
+twt_lock_create(qdf_spinlock_t *twt_lock)
+{
+	qdf_spinlock_create(twt_lock);
+}
+
+/**
+ * twt_lock_destroy - Destroy TWT mutex/spinlock
+ * @twt_lock: lock object
+ *
+ * Destroy TWT peer mutex/spinlock
+ *
+ * Return: void
+ */
+static inline void
+twt_lock_destroy(qdf_spinlock_t *twt_lock)
+{
+	qdf_spinlock_destroy(twt_lock);
+}
+
+/**
+ * twt_lock_acquire - acquire TWT mutex/spinlock
+ * @twt_lock: lock object
+ *
+ * acquire TWT mutex/spinlock
+ *
+ * return: void
+ */
+static inline void twt_lock_acquire(qdf_spinlock_t *twt_lock)
+{
+	qdf_spin_lock_bh(twt_lock);
+}
+
+/**
+ * twt_lock_release - release TWT mutex/spinlock
+ * @twt_lock: lock object
+ *
+ * release TWT mutex/spinlock
+ *
+ * return: void
+ */
+static inline void twt_lock_release(qdf_spinlock_t *twt_lock)
+{
+	qdf_spin_unlock_bh(twt_lock);
+}
+#else
+static inline void
+twt_lock_create(qdf_mutex_t *twt_lock)
+{
+	qdf_mutex_create(twt_lock);
+}
+
+static inline void
+twt_lock_destroy(qdf_mutex_t *twt_lock)
+{
+	qdf_mutex_destroy(twt_lock);
+}
+
+static inline void twt_lock_acquire(qdf_mutex_t *twt_lock)
+{
+	qdf_mutex_acquire(twt_lock);
+}
+
+static inline void twt_lock_release(qdf_mutex_t *twt_lock)
+{
+	qdf_mutex_release(twt_lock);
+}
+#endif /* WLAN_TWT_SPINLOCK */
 
 #endif /* End  of _WLAN_TWT_PRIV_H_ */
 

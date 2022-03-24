@@ -120,7 +120,7 @@ cdp_dump_flow_pool_info(struct cdp_soc_t *soc)
 #define TXCOMP_RING4_NUM WBM2SW_TXCOMP_RING4_NUM
 #endif
 
-#ifdef WLAN_MCAST_MLO
+#ifdef QCA_DP_TX_FW_METADATA_V2
 #define DP_TX_TCL_METADATA_PDEV_ID_SET(_var, _val) \
 		HTT_TX_TCL_METADATA_V2_PDEV_ID_SET(_var, _val)
 #else
@@ -455,6 +455,7 @@ dp_soc_get_mon_mask_for_interrupt_mode(struct dp_soc *soc, int intr_ctx_num)
 }
 #endif
 
+#ifdef IPA_OFFLOAD
 /**
  * dp_get_num_rx_contexts() - get number of RX contexts
  * @soc_hdl: cdp opaque soc handle
@@ -463,17 +464,51 @@ dp_soc_get_mon_mask_for_interrupt_mode(struct dp_soc *soc, int intr_ctx_num)
  */
 static int dp_get_num_rx_contexts(struct cdp_soc_t *soc_hdl)
 {
-	int i;
-	int num_rx_contexts = 0;
-
+	int num_rx_contexts;
+	uint32_t reo_ring_map;
 	struct dp_soc *soc = (struct dp_soc *)soc_hdl;
 
-	for (i = 0; i < wlan_cfg_get_num_contexts(soc->wlan_cfg_ctx); i++)
-		if (wlan_cfg_get_rx_ring_mask(soc->wlan_cfg_ctx, i))
-			num_rx_contexts++;
+	reo_ring_map = wlan_cfg_get_reo_rings_mapping(soc->wlan_cfg_ctx);
+
+	switch (soc->arch_id) {
+	case CDP_ARCH_TYPE_BE:
+		/* 2 REO rings are used for IPA */
+		reo_ring_map &=  ~(BIT(3) | BIT(7));
+
+		break;
+	case CDP_ARCH_TYPE_LI:
+		/* 1 REO ring is used for IPA */
+		reo_ring_map &=  ~BIT(3);
+		break;
+	default:
+		dp_err("unkonwn arch_id 0x%x", soc->arch_id);
+		QDF_BUG(0);
+	}
+	/*
+	 * qdf_get_hweight32 prefer over qdf_get_hweight8 in case map is scaled
+	 * in future
+	 */
+	num_rx_contexts = qdf_get_hweight32(reo_ring_map);
 
 	return num_rx_contexts;
 }
+#else
+static int dp_get_num_rx_contexts(struct cdp_soc_t *soc_hdl)
+{
+	int num_rx_contexts;
+	uint32_t reo_config;
+	struct dp_soc *soc = (struct dp_soc *)soc_hdl;
+
+	reo_config = wlan_cfg_get_reo_rings_mapping(soc->wlan_cfg_ctx);
+	/*
+	 * qdf_get_hweight32 prefer over qdf_get_hweight8 in case map is scaled
+	 * in future
+	 */
+	num_rx_contexts = qdf_get_hweight32(reo_config);
+
+	return num_rx_contexts;
+}
+#endif
 
 #else
 
@@ -1989,7 +2024,7 @@ void dp_desc_multi_pages_mem_alloc(struct dp_soc *soc,
 				   enum dp_desc_type desc_type,
 				   struct qdf_mem_multi_page_t *pages,
 				   size_t element_size,
-				   uint16_t element_num,
+				   uint32_t element_num,
 				   qdf_dma_context_t memctxt,
 				   bool cacheable)
 {
@@ -2929,6 +2964,84 @@ static QDF_STATUS dp_soc_interrupt_attach_wrapper(struct cdp_soc_t *txrx_soc)
 #endif
 #endif
 
+#ifdef QCA_SUPPORT_LEGACY_INTERRUPTS
+/**
+ * dp_soc_interrupt_map_calculate_wifi3_pci_legacy()
+ * Calculate interrupt map for legacy interrupts
+ * @soc: DP soc handle
+ * @intr_ctx_num: Interrupt context number
+ * @irq_id_map: IRQ map
+ * num_irq_r: Number of interrupts assigned for this context
+ *
+ * Return: void
+ */
+static void dp_soc_interrupt_map_calculate_wifi3_pci_legacy(struct dp_soc *soc,
+							    int intr_ctx_num,
+							    int *irq_id_map,
+							    int *num_irq_r)
+{
+	int j;
+	int num_irq = 0;
+	int tx_mask = wlan_cfg_get_tx_ring_mask(
+					soc->wlan_cfg_ctx, intr_ctx_num);
+	int rx_mask = wlan_cfg_get_rx_ring_mask(
+					soc->wlan_cfg_ctx, intr_ctx_num);
+	int rx_mon_mask = wlan_cfg_get_rx_mon_ring_mask(
+					soc->wlan_cfg_ctx, intr_ctx_num);
+	int rx_err_ring_mask = wlan_cfg_get_rx_err_ring_mask(
+					soc->wlan_cfg_ctx, intr_ctx_num);
+	int rx_wbm_rel_ring_mask = wlan_cfg_get_rx_wbm_rel_ring_mask(
+					soc->wlan_cfg_ctx, intr_ctx_num);
+	int reo_status_ring_mask = wlan_cfg_get_reo_status_ring_mask(
+					soc->wlan_cfg_ctx, intr_ctx_num);
+	int rxdma2host_ring_mask = wlan_cfg_get_rxdma2host_ring_mask(
+					soc->wlan_cfg_ctx, intr_ctx_num);
+	int host2rxdma_ring_mask = wlan_cfg_get_host2rxdma_ring_mask(
+					soc->wlan_cfg_ctx, intr_ctx_num);
+	int host2rxdma_mon_ring_mask = wlan_cfg_get_host2rxdma_mon_ring_mask(
+					soc->wlan_cfg_ctx, intr_ctx_num);
+	soc->intr_mode = DP_INTR_LEGACY_VIRTUAL_IRQ;
+	for (j = 0; j < HIF_MAX_GRP_IRQ; j++) {
+		if (tx_mask & (1 << j))
+			irq_id_map[num_irq++] = (wbm2sw0_release - j);
+		if (rx_mask & (1 << j))
+			irq_id_map[num_irq++] = (reo2sw1_intr - j);
+		if (rx_mon_mask & (1 << j))
+			irq_id_map[num_irq++] = (rxmon2sw_p0_dest0 - j);
+		if (rx_err_ring_mask & (1 << j))
+			irq_id_map[num_irq++] = (reo2sw0_intr - j);
+		if (rx_wbm_rel_ring_mask & (1 << j))
+			irq_id_map[num_irq++] = (wbm2sw5_release - j);
+		if (reo_status_ring_mask & (1 << j))
+			irq_id_map[num_irq++] = (reo_status - j);
+		if (rxdma2host_ring_mask & (1 << j))
+			irq_id_map[num_irq++] = (rxdma2sw_dst_ring0 - j);
+		if (host2rxdma_ring_mask & (1 << j))
+			irq_id_map[num_irq++] = (sw2rxdma_0 - j);
+		if (host2rxdma_mon_ring_mask & (1 << j))
+			irq_id_map[num_irq++] = (sw2rxmon_src_ring - j);
+	}
+	*num_irq_r = num_irq;
+}
+#else
+/**
+ * dp_soc_interrupt_map_calculate_wifi3_pci_legacy()
+ * Calculate interrupt map for legacy interrupts
+ * @soc: DP soc handle
+ * @intr_ctx_num: Interrupt context number
+ * @irq_id_map: IRQ map
+ * num_irq_r: Number of interrupts assigned for this context
+ *
+ * Return: void
+ */
+static void dp_soc_interrupt_map_calculate_wifi3_pci_legacy(struct dp_soc *soc,
+							    int intr_ctx_num,
+							    int *irq_id_map,
+							    int *num_irq_r)
+{
+}
+#endif
+
 static void dp_soc_interrupt_map_calculate_integrated(struct dp_soc *soc,
 		int intr_ctx_num, int *irq_id_map, int *num_irq_r)
 {
@@ -3064,6 +3177,11 @@ static void dp_soc_interrupt_map_calculate(struct dp_soc *soc, int intr_ctx_num,
 {
 	int msi_vector_count, ret;
 	uint32_t msi_base_data, msi_vector_start;
+
+	if (pld_get_enable_intx(soc->osdev->dev)) {
+		return dp_soc_interrupt_map_calculate_wifi3_pci_legacy(soc,
+				intr_ctx_num, irq_id_map, num_irq);
+	}
 
 	ret = pld_get_user_msi_assignment(soc->osdev->dev, "DP",
 					    &msi_vector_count,
@@ -4112,25 +4230,28 @@ static void dp_soc_reset_intr_mask(struct dp_soc *soc)
 bool dp_reo_remap_config(struct dp_soc *soc, uint32_t *remap0,
 			 uint32_t *remap1, uint32_t *remap2)
 {
-	uint32_t ring[8] = {REO_REMAP_SW1, REO_REMAP_SW2, REO_REMAP_SW3};
-	int target_type;
+	uint32_t ring[WLAN_CFG_NUM_REO_DEST_RING_MAX] = {
+				REO_REMAP_SW1, REO_REMAP_SW2, REO_REMAP_SW3,
+				REO_REMAP_SW5, REO_REMAP_SW6, REO_REMAP_SW7};
 
-	target_type = hal_get_target_type(soc->hal_soc);
-
-	switch (target_type) {
-	case TARGET_TYPE_KIWI:
+	switch (soc->arch_id) {
+	case CDP_ARCH_TYPE_BE:
 		hal_compute_reo_remap_ix2_ix3(soc->hal_soc, ring,
 					      soc->num_reo_dest_rings -
 					      USE_2_IPA_RX_REO_RINGS, remap1,
 					      remap2);
 		break;
 
-	default:
+	case CDP_ARCH_TYPE_LI:
 		hal_compute_reo_remap_ix2_ix3(soc->hal_soc, ring,
 					      soc->num_reo_dest_rings -
 					      USE_1_IPA_RX_REO_RING, remap1,
 					      remap2);
 		break;
+	default:
+		dp_err("unkonwn arch_id 0x%x", soc->arch_id);
+		QDF_BUG(0);
+
 	}
 
 	dp_debug("remap1 %x remap2 %x", *remap1, *remap2);
@@ -4210,6 +4331,29 @@ static uint8_t dp_reo_ring_selection(uint32_t value, uint32_t *ring)
 	uint8_t num = 0;
 
 	switch (value) {
+	/* should we have all the different possible ring configs */
+	case 0xFF:
+		num = 8;
+		ring[0] = REO_REMAP_SW1;
+		ring[1] = REO_REMAP_SW2;
+		ring[2] = REO_REMAP_SW3;
+		ring[3] = REO_REMAP_SW4;
+		ring[4] = REO_REMAP_SW5;
+		ring[5] = REO_REMAP_SW6;
+		ring[6] = REO_REMAP_SW7;
+		ring[7] = REO_REMAP_SW8;
+		break;
+
+	case 0x3F:
+		num = 6;
+		ring[0] = REO_REMAP_SW1;
+		ring[1] = REO_REMAP_SW2;
+		ring[2] = REO_REMAP_SW3;
+		ring[3] = REO_REMAP_SW4;
+		ring[4] = REO_REMAP_SW5;
+		ring[5] = REO_REMAP_SW6;
+		break;
+
 	case 0xF:
 		num = 4;
 		ring[0] = REO_REMAP_SW1;
@@ -4287,6 +4431,9 @@ static uint8_t dp_reo_ring_selection(uint32_t value, uint32_t *ring)
 		num = 1;
 		ring[0] = REO_REMAP_SW1;
 		break;
+	default:
+		dp_err("unkonwn reo ring map 0x%x", value);
+		QDF_BUG(0);
 	}
 	return num;
 }
@@ -4299,14 +4446,14 @@ bool dp_reo_remap_config(struct dp_soc *soc,
 	uint8_t offload_radio = wlan_cfg_get_dp_soc_nss_cfg(soc->wlan_cfg_ctx);
 	uint32_t reo_config = wlan_cfg_get_reo_rings_mapping(soc->wlan_cfg_ctx);
 	uint8_t target_type, num;
-	uint32_t ring[4];
+	uint32_t ring[WLAN_CFG_NUM_REO_DEST_RING_MAX];
 	uint32_t value;
 
 	target_type = hal_get_target_type(soc->hal_soc);
 
 	switch (offload_radio) {
 	case dp_nss_cfg_default:
-		value = reo_config & 0xF;
+		value = reo_config & WLAN_CFG_NUM_REO_RINGS_MAP_MAX;
 		num = dp_reo_ring_selection(value, ring);
 		hal_compute_reo_remap_ix2_ix3(soc->hal_soc, ring,
 					      num, remap1, remap2);
@@ -6026,6 +6173,53 @@ static inline QDF_STATUS dp_print_swlm_stats(struct dp_soc *soc)
 }
 #endif /* !WLAN_DP_FEATURE_SW_LATENCY_MGR */
 
+#ifdef WLAN_SUPPORT_PPEDS
+/*
+ * dp_soc_target_ppe_rxole_rxdma_cfg() - Configure the RxOLe and RxDMA for PPE
+ * @soc: DP Tx/Rx handle
+ *
+ * Return: QDF_STATUS
+ */
+static
+QDF_STATUS dp_soc_target_ppe_rxole_rxdma_cfg(struct dp_soc *soc)
+{
+	struct dp_htt_rxdma_rxole_ppe_config htt_cfg = {0};
+	QDF_STATUS status;
+
+	/*
+	 * Program RxDMA to override the reo destination indication
+	 * with REO2PPE_DST_IND, when use_ppe is set to 1 in RX_MSDU_END,
+	 * thereby driving the packet to REO2PPE ring.
+	 * If the MSDU is spanning more than 1 buffer, then this
+	 * override is not done.
+	 */
+	htt_cfg.override = 1;
+	htt_cfg.reo_destination_indication = REO2PPE_DST_IND;
+	htt_cfg.multi_buffer_msdu_override_en = 0;
+
+	/*
+	 * Override use_ppe to 0 in RxOLE for the following
+	 * cases.
+	 */
+	htt_cfg.intra_bss_override = 1;
+	htt_cfg.decap_raw_override = 1;
+	htt_cfg.decap_nwifi_override = 1;
+	htt_cfg.ip_frag_override = 1;
+
+	status = dp_htt_rxdma_rxole_ppe_cfg_set(soc, &htt_cfg);
+	if (status != QDF_STATUS_SUCCESS)
+		dp_err("RxOLE and RxDMA PPE config failed %d", status);
+
+	return status;
+}
+#else
+static inline
+QDF_STATUS dp_soc_target_ppe_rxole_rxdma_cfg(struct dp_soc *soc)
+{
+	return QDF_STATUS_SUCCESS;
+}
+#endif /* WLAN_SUPPORT_PPEDS */
+
 /*
  * dp_soc_attach_target_wifi3() - SOC initialization in the target
  * @cdp_soc: Opaque Datapath SOC handle
@@ -6039,6 +6233,12 @@ dp_soc_attach_target_wifi3(struct cdp_soc_t *cdp_soc)
 	QDF_STATUS status = QDF_STATUS_SUCCESS;
 
 	htt_soc_attach_target(soc->htt_handle);
+
+	status = dp_soc_target_ppe_rxole_rxdma_cfg(soc);
+	if (status != QDF_STATUS_SUCCESS) {
+		dp_err("Failed to send htt RxOLE and RxDMA messages to target");
+		return status;
+	}
 
 	status = dp_rxdma_ring_config(soc);
 	if (status != QDF_STATUS_SUCCESS) {
@@ -12342,7 +12542,6 @@ static struct cdp_cfr_ops dp_ops_cfr = {
 	.txrx_set_cfr_rcc = dp_set_cfr_rcc,
 	.txrx_get_cfr_dbg_stats = dp_get_cfr_dbg_stats,
 	.txrx_clear_cfr_dbg_stats = dp_clear_cfr_dbg_stats,
-	.txrx_enable_mon_reap_timer = NULL,
 };
 #endif
 
@@ -12938,6 +13137,32 @@ uint32_t dp_get_tx_rings_grp_bitmap(struct cdp_soc_t *soc_hdl)
 	return soc->wlan_cfg_ctx->tx_rings_grp_bitmap;
 }
 
+#ifdef WLAN_FEATURE_MARK_FIRST_WAKEUP_PACKET
+/**
+ * dp_mark_first_wakeup_packet() - set flag to indicate that
+ *    fw is compatible for marking first packet after wow wakeup
+ * @soc_hdl: Datapath soc handle
+ * @pdev_id: id of data path pdev handle
+ * @value: 1 for enabled/ 0 for disabled
+ *
+ * Return: None
+ */
+static void dp_mark_first_wakeup_packet(struct cdp_soc_t *soc_hdl,
+					uint8_t pdev_id, uint8_t value)
+{
+	struct dp_soc *soc = cdp_soc_t_to_dp_soc(soc_hdl);
+	struct dp_pdev *pdev;
+
+	pdev = dp_get_pdev_from_soc_pdev_id_wifi3(soc, pdev_id);
+	if (!pdev) {
+		dp_err("pdev is NULL");
+		return;
+	}
+
+	pdev->is_first_wakeup_packet = value;
+}
+#endif
+
 #ifdef DP_PEER_EXTENDED_API
 static struct cdp_misc_ops dp_ops_misc = {
 #ifdef FEATURE_WLAN_TDLS
@@ -12968,6 +13193,9 @@ static struct cdp_misc_ops dp_ops_misc = {
 #endif
 	.display_txrx_hw_info = dp_display_srng_info,
 	.get_tx_rings_grp_bitmap = dp_get_tx_rings_grp_bitmap,
+#ifdef WLAN_FEATURE_MARK_FIRST_WAKEUP_PACKET
+	.mark_first_wakeup_packet = dp_mark_first_wakeup_packet,
+#endif
 };
 #endif
 
@@ -14964,6 +15192,7 @@ static QDF_STATUS dp_pdev_init(struct cdp_soc_t *txrx_soc,
 	TAILQ_INIT(&pdev->vdev_list);
 	qdf_spinlock_create(&pdev->vdev_list_lock);
 	pdev->vdev_count = 0;
+	pdev->is_lro_hash_configured = 0;
 
 	qdf_spinlock_create(&pdev->tx_mutex);
 	pdev->ch_band_lmac_id_mapping[REG_BAND_2G] = DP_MON_INVALID_LMAC_ID;

@@ -214,8 +214,7 @@ mld_get_best_primary_umac_w_rssi(struct wlan_mlo_peer_context *ml_peer,
 	}
 
 	if (prim_link != 0xff)
-		ml_peer->primary_umac_psoc_id =
-			wlan_vdev_get_psoc_id(link_vdevs[prim_link]);
+		ml_peer->primary_umac_psoc_id = prim_link;
 	else
 		ml_peer->primary_umac_psoc_id =
 			wlan_peer_get_psoc_id(assoc_peer);

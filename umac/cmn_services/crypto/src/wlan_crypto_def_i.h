@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2017-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -225,7 +226,7 @@ static inline void wlan_crypto_put_be64(u8 *a, u64 val)
 #define RESET_PARAM(__param)         ((__param) = 0)
 #define SET_PARAM(__param, __val)    ((__param) |= (1 << (__val)))
 #define HAS_PARAM(__param, __val)    ((__param) &  (1 << (__val)))
-#define CLEAR_PARAM(__param, __val)  ((__param) &= ((~1) << (__val)))
+#define CLEAR_PARAM(__param, __val)  ((__param) &= (~(1 << (__val))))
 
 
 #define RESET_AUTHMODE(_param)       ((_param)->authmodeset = 0)

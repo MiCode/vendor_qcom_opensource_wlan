@@ -74,19 +74,6 @@ void dp_rx_mon_buf_desc_pool_free(struct dp_soc *soc);
 QDF_STATUS
 dp_rx_mon_buf_desc_pool_alloc(struct dp_soc *soc);
 
-/*
- * dp_rx_mon_process_status_tlv() - process status tlv
- * @soc: dp soc handle
- * @pdev: dp pdev handle
- * @mon_ring_desc: HAL monitor ring descriptor
- * @frag_addr: frag address
- *
- */
-void dp_rx_mon_process_status_tlv(struct dp_soc *soc,
-				  struct dp_pdev *pdev,
-				  struct hal_mon_desc *mon_ring_desc,
-				  qdf_dma_addr_t addr);
-
 /**
  * dp_rx_mon_stats_update_2_0 () - update rx stats
  *
@@ -150,6 +137,13 @@ QDF_STATUS dp_rx_process_pktlog_be(struct dp_soc *soc, struct dp_pdev *pdev,
 uint32_t
 dp_rx_mon_process_2_0(struct dp_soc *soc, struct dp_intr *int_ctx,
 		      uint32_t mac_id, uint32_t quota);
+
+/**
+ * dp_rx_mon_process_ppdu () - RxMON Workqueue processing API
+ *
+ * @context: workqueue context
+ */
+void dp_rx_mon_process_ppdu(void *context);
 #else
 static uint32_t
 dp_rx_mon_process_2_0(struct dp_soc *soc, struct dp_intr *int_ctx,
@@ -158,5 +152,8 @@ dp_rx_mon_process_2_0(struct dp_soc *soc, struct dp_intr *int_ctx,
 	return 0;
 }
 
+static inline void dp_rx_mon_process_ppdu(void *context)
+{
+}
 #endif /* DISABLE_MON_CONFIG */
 #endif /* _DP_RX_MON_2_0_H_ */

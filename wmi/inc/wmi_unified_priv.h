@@ -400,7 +400,7 @@ QDF_STATUS
 
 QDF_STATUS
 (*extract_roam_frame_info)(wmi_unified_t wmi_handle, void *evt_buf,
-			   struct roam_frame_info *dst, uint8_t idx,
+			   struct roam_frame_stats *dst, uint8_t idx,
 			   uint8_t num_frames);
 /**
  * extract_roam_sync_event  - Extract roam sync event func ptr
@@ -431,7 +431,7 @@ QDF_STATUS
 QDF_STATUS
 (*extract_btm_bl_event)(wmi_unified_t wmi_handle,
 			uint8_t *event, uint32_t data_len,
-			struct roam_blacklist_event **dst_list);
+			struct roam_denylist_event **dst_list);
 QDF_STATUS
 (*extract_vdev_disconnect_event)(wmi_unified_t wmi_handle,
 				 uint8_t *event, uint32_t data_len,
@@ -720,6 +720,12 @@ QDF_STATUS (*send_set_mcc_channel_time_latency_cmd)
 QDF_STATUS (*send_set_enable_disable_mcc_adaptive_scheduler_cmd)(
 		  wmi_unified_t wmi_handle, uint32_t mcc_adaptive_scheduler,
 		  uint32_t pdev_id);
+
+#ifdef WLAN_FEATURE_MCC_QUOTA
+QDF_STATUS (*extract_mcc_quota_ev_param)(wmi_unified_t wmi_handle,
+					 void *evt_buf,
+					 struct mcc_quota_info *param);
+#endif
 #endif /* WMI_CONCURRENCY_SUPPORT */
 
 QDF_STATUS (*send_p2p_go_set_beacon_ie_cmd)(wmi_unified_t wmi_handle,
@@ -2941,6 +2947,12 @@ QDF_STATUS (*extract_quiet_offload_event)(
 				wmi_unified_t wmi_handle, void *evt_buf,
 				struct vdev_sta_quiet_event *quiet_event);
 #endif
+
+#ifdef WLAN_SUPPORT_PPEDS
+QDF_STATUS
+(*peer_ppe_ds_param_send)(wmi_unified_t wmi_handle,
+			  struct peer_ppe_ds_param *param);
+#endif /* WLAN_SUPPORT_PPEDS */
 };
 
 /* Forward declartion for psoc*/
@@ -3361,10 +3373,10 @@ void wmi_policy_mgr_attach_tlv(struct wmi_unified *wmi_handle)
 #endif
 
 #if defined(WLAN_FEATURE_ROAM_OFFLOAD) && defined(FEATURE_DENYLIST_MGR)
-void wmi_blacklist_mgr_attach_tlv(struct wmi_unified *wmi_handle);
+void wmi_denylist_mgr_attach_tlv(struct wmi_unified *wmi_handle);
 #else
 static inline
-void wmi_blacklist_mgr_attach_tlv(struct wmi_unified *wmi_handle)
+void wmi_denylist_mgr_attach_tlv(struct wmi_unified *wmi_handle)
 {
 }
 #endif

@@ -509,15 +509,9 @@ more_data:
 		rx_desc->unmapped = 1;
 		DP_RX_PROCESS_NBUF(soc, nbuf_head, nbuf_tail, ebuf_head,
 				   ebuf_tail, rx_desc);
-		/*
-		 * if continuation bit is set then we have MSDU spread
-		 * across multiple buffers, let us not decrement quota
-		 * till we reap all buffers of that MSDU.
-		 */
-		if (qdf_likely(!qdf_nbuf_is_rx_chfrag_cont(rx_desc->nbuf))) {
-			quota -= 1;
-			num_pending -= 1;
-		}
+
+		quota -= 1;
+		num_pending -= 1;
 
 		dp_rx_add_to_free_desc_list(&head[rx_desc->pool_id],
 					    &tail[rx_desc->pool_id], rx_desc);
@@ -903,6 +897,9 @@ done:
 		}
 
 		dp_rx_fill_gro_info(soc, rx_tlv_hdr, nbuf, &rx_ol_pkt_cnt);
+
+		dp_rx_mark_first_packet_after_wow_wakeup(vdev->pdev, rx_tlv_hdr,
+							 nbuf);
 
 		dp_rx_update_stats(soc, nbuf);
 

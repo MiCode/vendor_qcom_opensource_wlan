@@ -992,6 +992,7 @@ ucfg_scan_init_bssid_params(struct scan_start_request *req,
 /**
  * is_chan_enabled_for_scan() - helper API to check if a frequency
  * is allowed to scan.
+ * @pdev: pointer to pdev
  * @reg_chan: regulatory_channel object
  * @low_2g: lower 2.4 GHz frequency thresold
  * @high_2g: upper 2.4 GHz frequency thresold
@@ -1001,14 +1002,19 @@ ucfg_scan_init_bssid_params(struct scan_start_request *req,
  * Return: true if scan is allowed. false otherwise.
  */
 static bool
-is_chan_enabled_for_scan(struct regulatory_channel *reg_chan,
+is_chan_enabled_for_scan(struct wlan_objmgr_pdev *pdev,
+		struct regulatory_channel *reg_chan,
 		qdf_freq_t low_2g, qdf_freq_t high_2g, qdf_freq_t low_5g,
 		qdf_freq_t high_5g)
 {
-	if (reg_chan->state == CHANNEL_STATE_DISABLE)
+	if (wlan_reg_is_disable_for_pwrmode(pdev,
+					    reg_chan->center_freq,
+					    REG_BEST_PWR_MODE))
 		return false;
+
 	if (reg_chan->nol_chan)
 		return false;
+
 	/* 2 GHz channel */
 	if ((util_scan_scm_freq_to_band(reg_chan->center_freq) ==
 			WLAN_BAND_2_4_GHZ) &&
@@ -1076,7 +1082,8 @@ ucfg_scan_init_chanlist_params(struct scan_start_request *req,
 
 		for (idx = 0, num_chans = 0;
 			(idx < NUM_CHANNELS && num_chans < max_chans); idx++)
-			if ((is_chan_enabled_for_scan(&reg_chan_list[idx],
+			if ((is_chan_enabled_for_scan(pdev,
+						      &reg_chan_list[idx],
 						      low_2g, high_2g,
 						      low_5g, high_5g)) &&
 			    ((req->scan_req.scan_f_2ghz &&
@@ -1201,7 +1208,7 @@ QDF_STATUS ucfg_scan_update_user_config(struct wlan_objmgr_psoc *psoc,
 	}
 
 	scan_def = &scan_obj->scan_def;
-	scan_obj->ie_whitelist = scan_cfg->ie_whitelist;
+	scan_obj->ie_allowlist = scan_cfg->ie_allowlist;
 	scan_def->sta_miracast_mcc_rest_time =
 				scan_cfg->sta_miracast_mcc_rest_time;
 
@@ -1450,8 +1457,8 @@ ucfg_scan_get_max_active_scans(struct wlan_objmgr_psoc *psoc)
 	return scan_params->max_active_scans_allowed;
 }
 
-bool ucfg_copy_ie_whitelist_attrs(struct wlan_objmgr_psoc *psoc,
-				  struct probe_req_whitelist_attr *ie_whitelist)
+bool ucfg_copy_ie_allowlist_attrs(struct wlan_objmgr_psoc *psoc,
+				  struct probe_req_allowlist_attr *ie_allowlist)
 {
 	struct wlan_scan_obj *scan_obj = NULL;
 
@@ -1459,13 +1466,13 @@ bool ucfg_copy_ie_whitelist_attrs(struct wlan_objmgr_psoc *psoc,
 	if (!scan_obj)
 		return false;
 
-	qdf_mem_copy(ie_whitelist, &scan_obj->ie_whitelist,
-		     sizeof(*ie_whitelist));
+	qdf_mem_copy(ie_allowlist, &scan_obj->ie_allowlist,
+		     sizeof(*ie_allowlist));
 
 	return true;
 }
 
-bool ucfg_ie_whitelist_enabled(struct wlan_objmgr_psoc *psoc,
+bool ucfg_ie_allowlist_enabled(struct wlan_objmgr_psoc *psoc,
 			       struct wlan_objmgr_vdev *vdev)
 {
 	struct wlan_scan_obj *scan_obj = NULL;
@@ -1478,7 +1485,7 @@ bool ucfg_ie_whitelist_enabled(struct wlan_objmgr_psoc *psoc,
 	    wlan_vdev_is_up(vdev) == QDF_STATUS_SUCCESS)
 		return false;
 
-	if (!scan_obj->ie_whitelist.white_list)
+	if (!scan_obj->ie_allowlist.allow_list)
 		return false;
 
 	return true;
