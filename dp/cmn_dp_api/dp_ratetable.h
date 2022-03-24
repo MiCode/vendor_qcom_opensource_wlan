@@ -235,17 +235,6 @@ enum BW_TYPES_FP {
 };
 #endif
 
-enum PUNCTURED_MODES {
-	NO_PUNCTURE,
-#ifdef WLAN_FEATURE_11BE
-	PUNCTURED_20MHZ,
-	PUNCTURED_40MHZ,
-	PUNCTURED_80MHZ,
-	PUNCTURED_120MHZ,
-	PUNCTURED_MODE_CNT,
-#endif
-};
-
 enum DP_CMN_MODULATION_TYPE dp_getmodulation(uint16_t pream_type,
 					     uint8_t width,
 					     uint8_t punc_mode);

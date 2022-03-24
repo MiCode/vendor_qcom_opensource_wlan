@@ -672,6 +672,9 @@ void
 dp_rx_mon_populate_ppdu_info_2_0(struct hal_rx_ppdu_info *hal_ppdu_info,
 				 struct cdp_rx_indication_ppdu *ppdu)
 {
+	uint16_t puncture_pattern;
+	enum cdp_punctured_modes punc_mode;
+
 	/* Align bw value as per host data structures */
 	if (hal_ppdu_info->rx_status.bw == HAL_FULL_RX_BW_320)
 		ppdu->u.bw = CMN_BW_320MHZ;
@@ -683,7 +686,10 @@ dp_rx_mon_populate_ppdu_info_2_0(struct hal_rx_ppdu_info *hal_ppdu_info,
 	else
 		ppdu->u.preamble = hal_ppdu_info->rx_status.preamble_type;
 
-	ppdu->punc_bw = hal_ppdu_info->rx_status.punctured_bw;
+	puncture_pattern = hal_ppdu_info->rx_status.punctured_pattern;
+	punc_mode = dp_mon_get_puncture_type(puncture_pattern,
+					     ppdu->u.bw);
+	ppdu->punc_bw = punc_mode;
 }
 #else
 void dp_rx_mon_stats_update_2_0(struct dp_mon_peer *mon_peer,
@@ -697,7 +703,7 @@ void
 dp_rx_mon_populate_ppdu_info_2_0(struct hal_rx_ppdu_info *hal_ppdu_info,
 				 struct cdp_rx_indication_ppdu *ppdu)
 {
-	ppdu->punc_bw = 0;
+	ppdu->punc_bw = NO_PUNCTURE;
 }
 #endif
 #endif

@@ -325,7 +325,7 @@ typedef __qdf_nbuf_queue_t qdf_nbuf_queue_t;
  * @ba_bitmap: 256 bit block ack bitmap
  * @add_rtap_ext2: add radiotap extension2
  * @mpdu_retry_cnt: Rx mpdu retry count
- * @punctured_bw: puntured bw
+ * @punctured_pattern: punctured pattern (0 means the band is punctured)
  * @rx_user_status: pointer to mon_rx_user_status, when set update
  * radiotap header will use userinfo from this structure.
  * @usig_common: U-SIG property of received frame
@@ -441,7 +441,7 @@ struct mon_rx_status {
 	bool add_rtap_ext2;
 	uint32_t mpdu_retry_cnt;
 #ifdef WLAN_FEATURE_11BE
-	uint8_t punctured_bw;
+	uint16_t punctured_pattern;
 #endif
 	struct mon_rx_user_status *rx_user_status;
 	uint32_t usig_common;

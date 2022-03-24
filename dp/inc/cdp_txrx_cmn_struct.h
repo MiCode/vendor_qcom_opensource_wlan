@@ -2377,7 +2377,7 @@ struct cdp_rx_stats_ppdu_user {
  * @user: per user stats in MU-user case
  * @nf: noise floor
  * @per_chain_rssi: rssi per antenna
- * @punc_bw: puncered bw
+ * @punc_bw: punctured bw
  * @phyrx_abort: rx aborted undecoded frame indication
  * @phyrx_abort_reason: abort reason defined in phyrx_abort_request_info
  * @l_sig_length: L SIG A length

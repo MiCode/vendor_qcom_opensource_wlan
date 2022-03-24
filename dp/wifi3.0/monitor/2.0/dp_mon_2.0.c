@@ -518,6 +518,65 @@ dp_mon_tx_stats_update_2_0(struct dp_mon_peer *mon_peer,
 		      (preamble == DOT11_BE) &&
 		      (ppdu->ppdu_type == HTT_PPDU_STATS_PPDU_TYPE_MU_MIMO)));
 }
+
+enum cdp_punctured_modes
+dp_mon_get_puncture_type(uint16_t puncture_pattern, uint8_t bw)
+{
+	uint16_t mask;
+	uint8_t punctured_bits;
+
+	switch (bw) {
+	case CMN_BW_80MHZ:
+		mask = PUNCTURE_80MHZ_MASK;
+		break;
+	case CMN_BW_160MHZ:
+		mask = PUNCTURE_160MHZ_MASK;
+		break;
+	case CMN_BW_320MHZ:
+		mask = PUNCTURE_320MHZ_MASK;
+		break;
+	default:
+		return NO_PUNCTURE;
+	}
+
+	/* 0s in puncture pattern received in TLV indicates punctured 20Mhz,
+	 * after complement, 1s will indicate punctured 20Mhz
+	 */
+	puncture_pattern = ~puncture_pattern;
+	puncture_pattern &= mask;
+
+	if (puncture_pattern) {
+		punctured_bits = 0;
+		while (puncture_pattern != 0) {
+			punctured_bits++;
+			puncture_pattern &= (puncture_pattern - 1);
+		}
+
+		if (bw == CMN_BW_80MHZ) {
+			if (punctured_bits == IEEE80211_PUNC_MINUS20MHZ)
+				return PUNCTURED_20MHZ;
+			else
+				return NO_PUNCTURE;
+		} else if (bw == CMN_BW_160MHZ) {
+			if (punctured_bits == IEEE80211_PUNC_MINUS20MHZ)
+				return PUNCTURED_20MHZ;
+			else if (punctured_bits == IEEE80211_PUNC_MINUS40MHZ)
+				return PUNCTURED_40MHZ;
+			else
+				return NO_PUNCTURE;
+		} else if (bw == CMN_BW_320MHZ) {
+			if (punctured_bits == IEEE80211_PUNC_MINUS40MHZ)
+				return PUNCTURED_40MHZ;
+			else if (punctured_bits == IEEE80211_PUNC_MINUS80MHZ)
+				return PUNCTURED_80MHZ;
+			else if (punctured_bits == IEEE80211_PUNC_MINUS120MHZ)
+				return PUNCTURED_120MHZ;
+			else
+				return NO_PUNCTURE;
+		}
+	}
+	return NO_PUNCTURE;
+}
 #endif
 
 #if defined(QCA_ENHANCED_STATS_SUPPORT) && !defined(WLAN_FEATURE_11BE)
@@ -525,6 +584,12 @@ void
 dp_mon_tx_stats_update_2_0(struct dp_mon_peer *mon_peer,
 			   struct cdp_tx_completion_ppdu_user *ppdu)
 {
+}
+
+enum cdp_punctured_modes
+dp_mon_get_puncture_type(uint16_t puncture_pattern, uint8_t bw)
+{
+	return NO_PUNCTURE;
 }
 #endif /* QCA_ENHANCED_STATS_SUPPORT && WLAN_FEATURE_11BE */
 

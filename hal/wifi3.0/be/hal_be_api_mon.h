@@ -1432,6 +1432,7 @@ hal_rx_parse_cmn_usr_info(struct hal_soc *hal_soc, uint8_t *tlv,
 	ppdu_info->rx_status.eht_data[0] |= (cmn_usr_info->ltf_size <<
 					     QDF_MON_STATUS_EHT_LTF_SHIFT);
 	ppdu_info->rx_status.ltf_size = cmn_usr_info->ltf_size;
+	ppdu_info->rx_status.punctured_pattern = cmn_usr_info->puncture_bitmap;
 
 	return HAL_TLV_STATUS_PPDU_NOT_DONE;
 }

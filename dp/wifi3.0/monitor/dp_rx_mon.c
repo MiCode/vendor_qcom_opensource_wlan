@@ -646,7 +646,6 @@ static inline void dp_rx_rate_stats_update(struct dp_peer *peer,
 	uint32_t rix;
 	uint16_t ratecode = 0;
 	struct cdp_rx_stats_ppdu_user *ppdu_user = NULL;
-	enum PUNCTURED_MODES punc_mode = NO_PUNCTURE;
 	struct dp_mon_peer *mon_peer = NULL;
 
 	if (!peer || !ppdu)
@@ -683,7 +682,7 @@ static inline void dp_rx_rate_stats_update(struct dp_peer *peer,
 				   nss,
 				   ppdu->u.preamble,
 				   ppdu->u.bw,
-				   punc_mode,
+				   ppdu->punc_bw,
 				   &rix,
 				   &ratecode);
 

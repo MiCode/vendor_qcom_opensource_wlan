@@ -257,6 +257,16 @@ void dp_mon_filter_show_filter_be(enum dp_mon_filter_mode mode,
 void dp_mon_filter_show_tx_filter_be(enum dp_mon_filter_mode mode,
 				     struct dp_mon_filter_be *filter);
 
+#ifdef QCA_ENHANCED_STATS_SUPPORT
+/**
+ * dp_mon_get_puncture_type() - Get puncture type
+ * @puncture_pattern: puncture bitmap
+ * @bw: Bandwidth
+ */
+enum cdp_punctured_modes
+dp_mon_get_puncture_type(uint16_t puncture_pattern, uint8_t bw);
+#endif
+
 /*
  * dp_mon_desc_get() - get monitor sw descriptor
  *

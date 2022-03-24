@@ -140,6 +140,17 @@ enum CMN_BW_TYPES {
 	CMN_BW_IDLE = 0xFF, /*default BW state */
 };
 
+enum cdp_punctured_modes {
+	NO_PUNCTURE,
+#ifdef WLAN_FEATURE_11BE
+	PUNCTURED_20MHZ,
+	PUNCTURED_40MHZ,
+	PUNCTURED_80MHZ,
+	PUNCTURED_120MHZ,
+#endif
+	PUNCTURED_MODE_CNT,
+};
+
 struct cdp_mon_status {
 	/* bss color value 1-63 used for update on ppdu_desc bsscolor */
 	uint8_t bsscolor;
