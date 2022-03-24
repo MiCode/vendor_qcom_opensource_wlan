@@ -95,7 +95,43 @@ util_gen_link_assoc_rsp(uint8_t *frame, qdf_size_t frame_len, bool isreassoc,
 			qdf_size_t *link_frame_len);
 
 /**
- * util_find_mlie() - Find the  Multi-Link element
+ * util_gen_link_probe_rsp() - Generate link specific probe response
+ * @frame: Pointer to original probe response. This should not contain the
+ * 802.11 header, and must start from the fixed fields in the probe
+ * response. This is required due to some caller semantics built into the end to
+ * end design.
+ * @frame_len: Length of original probe response
+ * @link_addr: Secondary link's MAC address
+ * @link_frame: Generated secondary link specific probe response. Note
+ * that this will start from the 802.11 header (unlike the original probe
+ * response). This should be ignored in the case of failure.
+ * @link_frame_maxsize: Maximum size of generated secondary link specific
+ * probe response
+ * @link_frame_len: Pointer to location where populated length of generated
+ * secondary link specific probe response should be written. This should
+ * be ignored in the case of failure.
+ *
+ * Generate a link specific logically equivalent probe response for the
+ * secondary link from the original probe response containing a Multi-Link
+ * element. This applies to both probe responses.
+ * Currently, only two link MLO is supported.
+ *
+ * Return: QDF_STATUS_SUCCESS in the case of success, QDF_STATUS value giving
+ * the reason for error in the case of failure.
+ */
+QDF_STATUS
+util_gen_link_probe_rsp(uint8_t *frame, qdf_size_t frame_len,
+			struct qdf_mac_addr link_addr,
+			uint8_t *link_frame,
+			qdf_size_t link_frame_maxsize,
+			qdf_size_t *link_frame_len);
+
+/**
+ * util_find_mlie - Find the first Multi-Link element or the start of the first
+ * Multi-Link element fragment sequence in a given buffer containing elements,
+ * if a Multi-Link element or element fragment sequence exists in the given
+ * buffer.
+ *
  * @buf: Buffer to be searched for the Multi-Link element or the start of the
  * Multi-Link element fragment sequence
  * @buflen: Length of the buffer
