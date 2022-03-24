@@ -50,14 +50,6 @@ QDF_STATUS dfs_init(void);
 QDF_STATUS dfs_deinit(void);
 
 /**
- * dfs_pdev_close() - Close dfs component
- * @pdev: Pointer to pdev structure.
- *
- * Return: Success or Failure
- */
-QDF_STATUS dfs_pdev_close(struct wlan_objmgr_pdev *pdev);
-
-/**
  * wlan_dfs_pdev_obj_create_notification() - DFS pdev object create handler.
  * @pdev: Pointer to DFS pdev object.
  */

@@ -406,22 +406,6 @@ QDF_STATUS dfs_deinit(void)
 	return QDF_STATUS_SUCCESS;
 }
 
-QDF_STATUS dfs_pdev_close(struct wlan_objmgr_pdev *pdev)
-{
-	struct wlan_dfs *dfs = NULL;
-
-	if (!pdev) {
-		dfs_err(dfs, WLAN_DEBUG_DFS_ALWAYS,  "PDEV is NULL");
-		return QDF_STATUS_E_FAILURE;
-	}
-
-	dfs = wlan_pdev_get_dfs_obj(pdev);
-	if (dfs)
-		dfs_detach(dfs);
-
-	return QDF_STATUS_SUCCESS;
-}
-
 QDF_STATUS wlan_dfs_pdev_obj_create_notification(struct wlan_objmgr_pdev *pdev,
 		void *arg)
 {
@@ -544,6 +528,7 @@ QDF_STATUS wlan_dfs_pdev_obj_destroy_notification(struct wlan_objmgr_pdev *pdev,
 
 	/* DFS is NULL during unload. should we call this function before */
 	if (dfs) {
+		dfs_detach(dfs);
 		global_dfs_to_mlme.pdev_component_obj_detach(pdev,
 				WLAN_UMAC_COMP_DFS,
 				(void *)dfs);
