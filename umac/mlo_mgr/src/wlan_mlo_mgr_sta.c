@@ -579,7 +579,7 @@ mlo_send_link_connect(struct wlan_objmgr_vdev *vdev,
 			&ssid.length);
 
 	if (!ml_parnter_info->num_partner_links) {
-		mlo_err("No patner info in connect resp");
+		mlo_err("No partner info in connect resp");
 		return;
 	}
 
@@ -619,7 +619,7 @@ mlo_send_link_connect(struct wlan_objmgr_vdev *vdev,
 	uint8_t j = 0;
 
 	if (!ml_parnter_info->num_partner_links) {
-		mlo_err("No patner info in connect resp");
+		mlo_err("No partner info in connect resp");
 		return;
 	}
 

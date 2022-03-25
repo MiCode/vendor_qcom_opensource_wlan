@@ -409,9 +409,8 @@ QDF_STATUS mlo_ser_set_link_req(struct mlo_link_set_active_req *req);
 typedef void (*mlo_vdev_ops_handler)(struct wlan_objmgr_vdev *vdev,
 				     void *arg);
 
-/*
- * mlo_iterate_ml_vdev_list: Iterate on ML vdevs of MLD
- *
+/**
+ * mlo_iterate_ml_vdev_list() - Iterate on ML vdevs of MLD
  * @vdev: vdev object
  * @handler: the handler will be called for each object in ML list
  * @arg: argument to be passed to handler
@@ -458,5 +457,27 @@ void mlo_iterate_ml_vdev_list(struct wlan_objmgr_vdev *vdev,
 		mlo_dev_lock_release(mlo_dev_ctx);
 }
 
+/**
+ * struct mlo_stats_vdev_params - vdev params for MLO stats request
+ * @ml_vdev_count: Num of connected mlo vdevs
+ * @ml_vdev_id: vdev_ids of ml vdevs
+ */
+struct mlo_stats_vdev_params {
+	uint8_t ml_vdev_count;
+	uint8_t ml_vdev_id[WLAN_UMAC_MLO_MAX_VDEVS];
+};
+
+/**
+ * mlo_get_mlstats_vdev_params() - Get vdev params for MLO stats
+ * @psoc: psoc object
+ * @vdev_id: vdev id
+ * @ml_vdev_info: pointer to mlo_stats_vdev_params
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+mlo_get_mlstats_vdev_params(struct wlan_objmgr_psoc *psoc,
+			    struct mlo_stats_vdev_params *ml_vdev_info,
+			    uint8_t vdev_id);
 #endif
 #endif

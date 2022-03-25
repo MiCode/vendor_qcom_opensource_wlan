@@ -5812,6 +5812,77 @@ static QDF_STATUS send_process_ll_stats_get_cmd_tlv(wmi_unified_t wmi_handle,
 	return QDF_STATUS_SUCCESS;
 }
 
+#ifdef WLAN_FEATURE_11BE_MLO
+static int
+wmi_get_tlv_length_for_mlo_stats(const struct ll_stats_get_params *get_req)
+{
+	int32_t len = 0;
+
+	/* In case of MLO connection, update the length of the buffer.
+	 * The wmi_inst_rssi_stats_params structure is not needed for MLO stats,
+	 * hence just update the TLV header, but allocate no memory for it.
+	 */
+	if (!get_req->is_mlo_req)
+		return len;
+
+	len +=  WMI_TLV_HDR_SIZE + 0 * sizeof(wmi_inst_rssi_stats_params) +
+		WMI_TLV_HDR_SIZE + 1 * sizeof(uint32_t) +
+		WMI_TLV_HDR_SIZE + 1 * sizeof(wmi_mac_addr);
+
+	return len;
+}
+
+static void
+wmi_update_tlv_headers_for_mlo_stats(const struct ll_stats_get_params *get_req,
+				     void *buf_ptr)
+{
+	wmi_request_unified_ll_get_sta_cmd_fixed_param *unified_cmd;
+	uint32_t *vdev_id_bitmap;
+	wmi_mac_addr *mld_mac;
+
+	/* In case of MLO connection, update the TLV Headers */
+	if (!get_req->is_mlo_req)
+		return;
+
+	buf_ptr += sizeof(*unified_cmd);
+
+	/* Fill TLV but no data for wmi_inst_rssi_stats_params */
+	WMITLV_SET_HDR(buf_ptr, WMITLV_TAG_ARRAY_STRUC, 0);
+	buf_ptr += WMI_TLV_HDR_SIZE;
+
+	/* Adding vdev_bitmap_id array TLV */
+	WMITLV_SET_HDR(buf_ptr, WMITLV_TAG_ARRAY_UINT32,
+		       sizeof(*vdev_id_bitmap));
+	buf_ptr += WMI_TLV_HDR_SIZE;
+	vdev_id_bitmap = buf_ptr;
+	*(vdev_id_bitmap) = get_req->vdev_id_bitmap;
+	buf_ptr += sizeof(*vdev_id_bitmap);
+
+	/* Adding mld_macaddr array TLV */
+	WMITLV_SET_HDR(buf_ptr, WMITLV_TAG_ARRAY_FIXED_STRUC,
+		       sizeof(*mld_mac));
+	buf_ptr += WMI_TLV_HDR_SIZE;
+	mld_mac = buf_ptr;
+	WMI_CHAR_ARRAY_TO_MAC_ADDR(get_req->mld_macaddr.bytes, mld_mac);
+
+	wmi_debug("MLO vdev_id_bitmap: 0x%x MLD MAC Addr: "
+		  QDF_MAC_ADDR_FMT, get_req->vdev_id_bitmap,
+		  QDF_MAC_ADDR_REF(get_req->mld_macaddr.bytes));
+}
+#else
+static inline int
+wmi_get_tlv_length_for_mlo_stats(const struct ll_stats_get_params *get_req)
+{
+	return 0;
+}
+
+static inline void
+wmi_update_tlv_headers_for_mlo_stats(const struct ll_stats_get_params *get_req,
+				     void *buf_ptr)
+{
+}
+#endif
+
 #ifdef FEATURE_CLUB_LL_STATS_AND_GET_STATION
 /**
  * send_unified_ll_stats_get_sta_cmd_tlv() - unified link layer stats and get
@@ -5833,8 +5904,9 @@ static QDF_STATUS send_unified_ll_stats_get_sta_cmd_tlv(
 	bool is_ll_get_sta_stats_over_qmi;
 
 	len = sizeof(*unified_cmd);
-	buf = wmi_buf_alloc(wmi_handle, len);
+	len += wmi_get_tlv_length_for_mlo_stats(get_req);
 
+	buf = wmi_buf_alloc(wmi_handle, len);
 	if (!buf)
 		return QDF_STATUS_E_NOMEM;
 
@@ -5868,6 +5940,7 @@ static QDF_STATUS send_unified_ll_stats_get_sta_cmd_tlv(
 		  get_req->req_id, get_req->param_id_mask, get_req->vdev_id,
 		  QDF_MAC_ADDR_REF(get_req->peer_macaddr.bytes));
 
+	wmi_update_tlv_headers_for_mlo_stats(get_req, buf_ptr);
 	wmi_mtrace(WMI_REQUEST_UNIFIED_LL_GET_STA_CMDID, get_req->vdev_id, 0);
 
 	/**

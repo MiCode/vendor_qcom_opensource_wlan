@@ -625,3 +625,31 @@ void mlo_mlme_handle_sta_csa_param(struct wlan_objmgr_vdev *vdev,
 
 	mlo_ctx->mlme_ops->mlo_mlme_ext_handle_sta_csa_param(vdev, csa_param);
 }
+
+QDF_STATUS
+mlo_get_mlstats_vdev_params(struct wlan_objmgr_psoc *psoc,
+			    struct mlo_stats_vdev_params *info,
+			    uint8_t vdev_id)
+{
+	struct wlan_objmgr_vdev *ml_vdev_list[WLAN_UMAC_MLO_MAX_VDEVS] = {0};
+	struct wlan_objmgr_vdev *vdev;
+	int i;
+	uint16_t ml_vdev_cnt = 0;
+
+	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(psoc, vdev_id,
+						    WLAN_MLO_MGR_ID);
+	if (!vdev) {
+		mlo_err("vdev object is NULL for vdev %d", vdev_id);
+		return QDF_STATUS_E_INVAL;
+	}
+
+	mlo_get_ml_vdev_list(vdev, &ml_vdev_cnt, ml_vdev_list);
+	for (i = 0; i < ml_vdev_cnt; i++) {
+		info->ml_vdev_id[i] = wlan_vdev_get_id(ml_vdev_list[i]);
+		mlo_release_vdev_ref(ml_vdev_list[i]);
+	}
+	info->ml_vdev_count = ml_vdev_cnt;
+	mlo_release_vdev_ref(vdev);
+
+	return QDF_STATUS_SUCCESS;
+}

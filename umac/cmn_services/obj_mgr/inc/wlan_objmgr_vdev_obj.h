@@ -1599,7 +1599,7 @@ bool wlan_vdev_mlme_is_mlo_mcast_vdev(struct wlan_objmgr_vdev *vdev)
 #endif
 
 /**
- * wlan_vdev_mlme_is_mlo_vdev() - whether it is mlo sta link vdev or not
+ * wlan_vdev_mlme_is_mlo_link_vdev() - whether it is mlo sta link vdev or not
  * @vdev: VDEV object
  *
  * Return: True if it is mlo sta link, otherwise false.

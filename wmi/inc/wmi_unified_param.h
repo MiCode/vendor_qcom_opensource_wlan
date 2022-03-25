@@ -1222,7 +1222,7 @@ struct peer_assoc_ml_partner_links {
  * @peer_bss_max_idle_option: Peer BSS Max Idle option update
  * @akm: AKM info
  * @peer_assoc_mlo_params mlo_params: MLO assoc params
- * @peer_assoc_ml_partner_links: MLO patner links
+ * @peer_assoc_ml_partner_links: MLO partner links
  * @t2lm_params: TID-to-link mapping params
  */
 struct peer_assoc_params {
@@ -2338,12 +2338,20 @@ struct ll_stats_set_params {
  * @vdev_id: vdev id
  * @param_id_mask: param is mask
  * @peer_macaddr: MAC address of the peer for which stats are desired
+ * @is_mlo_req: is the request for mlo vdev
+ * @vdev_id_bitmap: vdev_id_bitmap of all the connected mlo vdevs
+ * @mld_macaddr: MLD MAC address
  */
 struct ll_stats_get_params {
 	uint32_t req_id;
 	uint8_t vdev_id;
 	uint32_t param_id_mask;
 	struct qdf_mac_addr peer_macaddr;
+#ifdef WLAN_FEATURE_11BE_MLO
+	bool is_mlo_req;
+	uint32_t vdev_id_bitmap;
+	struct qdf_mac_addr mld_macaddr;
+#endif
 };
 
 
