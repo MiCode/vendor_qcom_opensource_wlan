@@ -2357,6 +2357,11 @@ reg_compute_super_chan_list(struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj)
 		reg_update_super_chan_entry(pdev_priv_obj, i);
 }
 #else /* CONFIG_BAND_6GHZ */
+static void reg_init_pdev_super_chan_list(
+			struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj)
+{
+}
+
 static inline void
 reg_compute_super_chan_list(struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj)
 {
