@@ -12376,6 +12376,23 @@ dp_check_vdev_tx_delay_stats_enabled(struct cdp_soc_t *soc_hdl,
 }
 #endif
 
+#if defined(WLAN_FEATURE_11BE_MLO) && defined(WLAN_MLO_MULTI_CHIP)
+static void
+dp_recovery_vdev_flush_peers(struct cdp_soc_t *cdp_soc, uint8_t vdev_id)
+{
+	struct dp_soc *soc = (struct dp_soc *)cdp_soc;
+	struct dp_vdev *vdev;
+
+	vdev = dp_vdev_get_ref_by_id(soc, vdev_id, DP_MOD_ID_CDP);
+
+	if (!vdev)
+		return;
+
+	dp_vdev_flush_peers((struct cdp_vdev *)vdev, false);
+	dp_vdev_unref_delete(soc, vdev, DP_MOD_ID_CDP);
+}
+#endif
+
 static struct cdp_cmn_ops dp_ops_cmn = {
 	.txrx_soc_attach_target = dp_soc_attach_target_wifi3,
 	.txrx_vdev_attach = dp_vdev_attach_wifi3,
@@ -12487,6 +12504,9 @@ static struct cdp_cmn_ops dp_ops_cmn = {
 #endif /* WLAN_SYSFS_DP_STATS */
 #ifdef WLAN_FEATURE_PKT_CAPTURE_V2
 	.set_pkt_capture_mode = dp_set_pkt_capture_mode,
+#endif
+#if defined(WLAN_FEATURE_11BE_MLO) && defined(WLAN_MLO_MULTI_CHIP)
+	.txrx_recovery_vdev_flush_peers = dp_recovery_vdev_flush_peers,
 #endif
 };
 

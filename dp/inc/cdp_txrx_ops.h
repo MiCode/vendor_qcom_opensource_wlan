@@ -613,6 +613,11 @@ struct cdp_cmn_ops {
 #ifdef FEATURE_RUNTIME_PM
 	void (*set_rtpm_tput_policy)(struct cdp_soc_t *soc, bool val);
 #endif
+
+#if defined(WLAN_FEATURE_11BE_MLO) && defined(WLAN_MLO_MULTI_CHIP)
+	void (*txrx_recovery_vdev_flush_peers)(struct cdp_soc_t *soc,
+					       uint8_t vdev_id);
+#endif
 };
 
 struct cdp_ctrl_ops {
