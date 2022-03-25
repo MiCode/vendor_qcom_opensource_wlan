@@ -1767,30 +1767,25 @@ struct wlan_ie_ehtcaps {
  * @elem_id: EHT caps IE
  * @elem_len: EHT caps IE len
  * @elem_id_extn: EHT caps extension id
- * @basic_mcs_nss_set: Basic MCS NSS set
- * @primary_channel: primary channel number
  * @width: EHT BSS Channel Width
- * @puncture_pattern_present: Bit indicates whether puncture_pattern field
- * is included or not in ehtop ie
- * @reserved: Reserved bits
- * @chan_freq_seg0: EHT Channel Centre Frequency Segment 0
- * @chan_freq_seg1: EHT Channel Centre Frequency Segment 1
- * @minimum_rate: EHT Minimum Rate
- * @puncture_pattern: per 20MHz puncturing bitmap
+ * @reserved1: Reserved bits
+ * @ccfs: EHT Channel Centre Frequency Segment information
+ * @disable_sub_chan_bitmap_present: Flag to indicate disable subchannel
+ *                                   bitmap present
+ * @reserved2: Reserved bits
+ * @disable_sub_chan_bitmap: Bitmap to indicate 20MHz subchannel is punctured
+ *                           or not
  */
 struct wlan_ie_ehtops {
 	uint8_t elem_id;
 	uint8_t elem_len;
 	uint8_t elem_id_extn;
-	uint8_t basic_mcs_nss_set[2];
-	uint8_t primary_channel;
 	uint8_t width:3,
-		puncture_pattern_present:1,
-		reserved:4;
-	uint8_t chan_freq_seg0;
-	uint8_t chan_freq_seg1;
-	uint8_t minimum_rate;
-	uint16_t puncture_pattern;
+		reserved1:5;
+	uint8_t ccfs;
+	uint8_t disable_sub_chan_bitmap_present:1,
+		reserved2:7;
+	uint8_t disable_sub_chan_bitmap[2];
 } qdf_packed;
 
 #ifdef WLAN_FEATURE_11BE_MLO

@@ -218,15 +218,18 @@ util_scan_get_phymode_11be(struct wlan_objmgr_pdev *pdev,
 		break;
 	}
 
-	scan_params->channel.cfreq0 =
-		wlan_reg_chan_band_to_freq(pdev,
-					   eht_ops->chan_freq_seg0,
-					   band_mask);
 	scan_params->channel.cfreq1 =
 		wlan_reg_chan_band_to_freq(pdev,
-					   eht_ops->chan_freq_seg1,
+					   eht_ops->ccfs,
 					   band_mask);
-	scan_params->channel.puncture_bitmap = eht_ops->puncture_pattern;
+
+	if (eht_ops->disable_sub_chan_bitmap_present) {
+		scan_params->channel.puncture_bitmap =
+				QDF_GET_BITS(eht_ops->disable_sub_chan_bitmap[0], 0, 8);
+		scan_params->channel.puncture_bitmap |=
+				QDF_GET_BITS(eht_ops->disable_sub_chan_bitmap[1], 0, 8) << 8;
+	}
+
 	return phymode;
 }
 #else
