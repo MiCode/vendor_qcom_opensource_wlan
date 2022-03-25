@@ -525,7 +525,7 @@ void dp_sawf_config_be(struct dp_soc *soc, uint32_t *hal_tx_desc_cached,
 {
 	uint8_t q_id = 0;
 
-	if (wlan_cfg_get_sawf_config(soc->wlan_cfg_ctx))
+	if (!wlan_cfg_get_sawf_config(soc->wlan_cfg_ctx))
 		return;
 
 	dp_sawf_tcl_cmd(fw_metadata, nbuf);
@@ -533,12 +533,13 @@ void dp_sawf_config_be(struct dp_soc *soc, uint32_t *hal_tx_desc_cached,
 
 	if (q_id == DP_SAWF_DEFAULT_Q_INVALID)
 		return;
-
-	hal_tx_desc_set_hlos_tid(hal_tx_desc_cached, (q_id & 0x0e) >> 1);
-	hal_tx_desc_set_flow_override_enable(hal_tx_desc_cached, 1);
-	hal_tx_desc_set_flow_override(hal_tx_desc_cached, q_id & 0x1);
+	hal_tx_desc_set_hlos_tid(hal_tx_desc_cached, DP_TX_HLOS_TID_GET(q_id));
+	hal_tx_desc_set_flow_override_enable(hal_tx_desc_cached,
+					     DP_TX_FLOW_OVERRIDE_ENABLE);
+	hal_tx_desc_set_flow_override(hal_tx_desc_cached,
+				      DP_TX_FLOW_OVERRIDE_GET(q_id));
 	hal_tx_desc_set_who_classify_info_sel(hal_tx_desc_cached,
-					      (q_id & 0x30) >> 4);
+					      DP_TX_WHO_CLFY_INF_SEL_GET(q_id));
 }
 
 #else
