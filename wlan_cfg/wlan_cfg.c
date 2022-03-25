@@ -2103,6 +2103,8 @@ wlan_cfg_soc_attach(struct cdp_ctrl_objmgr_psoc *psoc)
 	wlan_cfg_ctx->mon_drop_thresh =
 		cfg_get(psoc, CFG_DP_RXDMA_MONITOR_RX_DROP_THRESHOLD);
 	wlan_cfg_ctx->is_rx_fisa_enabled = cfg_get(psoc, CFG_DP_RX_FISA_ENABLE);
+	wlan_cfg_ctx->is_rx_fisa_lru_del_enabled =
+				cfg_get(psoc, CFG_DP_RX_FISA_LRU_DEL_ENABLE);
 	wlan_cfg_ctx->reo_rings_mapping = cfg_get(psoc, CFG_DP_REO_RINGS_MAP);
 	wlan_cfg_ctx->pext_stats_enabled = cfg_get(psoc, CFG_DP_PEER_EXT_STATS);
 	wlan_cfg_ctx->is_rx_buff_pool_enabled =
@@ -2987,8 +2989,18 @@ bool wlan_cfg_is_rx_fisa_enabled(struct wlan_cfg_dp_soc_ctxt *cfg)
 {
 	return (bool)(cfg->is_rx_fisa_enabled);
 }
+
+bool wlan_cfg_is_rx_fisa_lru_del_enabled(struct wlan_cfg_dp_soc_ctxt *cfg)
+{
+	return cfg->is_rx_fisa_lru_del_enabled;
+}
 #else
 bool wlan_cfg_is_rx_fisa_enabled(struct wlan_cfg_dp_soc_ctxt *cfg)
+{
+	return false;
+}
+
+bool wlan_cfg_is_rx_fisa_lru_del_enabled(struct wlan_cfg_dp_soc_ctxt *cfg)
 {
 	return false;
 }

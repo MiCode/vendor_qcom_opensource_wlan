@@ -2252,7 +2252,7 @@ struct dp_soc {
 	struct dp_rx_fst *rx_fst;
 #ifdef WLAN_SUPPORT_RX_FISA
 	uint8_t fisa_enable;
-
+	uint8_t fisa_lru_del_enable;
 	/**
 	 * Params used for controlling the fisa aggregation dynamically
 	 */

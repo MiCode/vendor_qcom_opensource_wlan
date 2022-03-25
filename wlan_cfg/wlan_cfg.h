@@ -363,6 +363,7 @@ struct wlan_cfg_dp_soc_ctxt {
 	uint8_t *rx_toeplitz_hash_key;
 	uint8_t pktlog_buffer_size;
 	uint8_t is_rx_fisa_enabled;
+	bool is_rx_fisa_lru_del_enabled;
 	bool is_tso_desc_attach_defer;
 	uint32_t delayed_replenish_entries;
 	uint32_t reo_rings_mapping;
@@ -1667,6 +1668,16 @@ void wlan_cfg_fill_interrupt_mask(struct wlan_cfg_dp_soc_ctxt *wlan_cfg_ctx,
  * Return: true if enabled, false otherwise.
  */
 bool wlan_cfg_is_rx_fisa_enabled(struct wlan_cfg_dp_soc_ctxt *cfg);
+
+/**
+ * wlan_cfg_is_rx_fisa_lru_del_enabled() - Get Rx FISA LRU del enabled flag
+ *
+ *
+ * @cfg: soc configuration context
+ *
+ * Return: true if enabled, false otherwise.
+ */
+bool wlan_cfg_is_rx_fisa_lru_del_enabled(struct wlan_cfg_dp_soc_ctxt *cfg);
 
 /**
  * wlan_cfg_is_rx_buffer_pool_enabled() - Get RX buffer pool enabled flag
