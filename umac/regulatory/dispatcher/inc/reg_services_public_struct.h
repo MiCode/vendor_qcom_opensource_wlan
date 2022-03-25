@@ -1361,7 +1361,7 @@ struct reg_afc_expiry_event {
  * @afc_chan_info: Pointer to AFC channel object
  */
 struct reg_fw_afc_power_event {
-	uint8_t resp_id;
+	uint32_t resp_id;
 	enum reg_fw_afc_power_event_status_code fw_status_code;
 	enum reg_afc_serv_resp_code serv_resp_code;
 	uint32_t afc_wfa_version;
