@@ -18993,7 +18993,7 @@ static void populate_tlv_service(uint32_t *wmi_service)
 	wmi_service[wmi_service_phy_dma_byte_swap_support] =
 			WMI_SERVICE_UNAVAILABLE;
 	wmi_service[wmi_service_spectral_session_info_support] =
-			WMI_SERVICE_UNAVAILABLE;
+			WMI_SERVICE_SPECTRAL_SESSION_INFO_SUPPORT;
 	wmi_service[wmi_service_mu_snif] = WMI_SERVICE_MU_SNIF;
 #ifdef WLAN_FEATURE_DYNAMIC_MAC_ADDR_UPDATE
 	wmi_service[wmi_service_dynamic_update_vdev_macaddr_support] =
