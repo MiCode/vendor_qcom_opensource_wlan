@@ -1610,12 +1610,12 @@ struct subelem_header {
 
 #ifdef WLAN_FEATURE_11BE
 #define WLAN_EHT_MACCAP_LEN 2
-#define WLAN_EHT_PHYCAP_LEN 8
+#define WLAN_EHT_PHYCAP_LEN 9
 
 #define WLAN_EHT_MAX_MCS_MAPS 3
 
-#define EHTCAP_MAC_NSEPPRIACCESS_IDX                    0
-#define EHTCAP_MAC_NSEPPRIACCESS_BITS                   1
+#define EHTCAP_MAC_EPCSPRIACCESS_IDX                    0
+#define EHTCAP_MAC_EPCSPRIACCESS_BITS                   1
 #define EHTCAP_MAC_EHTOMCTRL_IDX                        1
 #define EHTCAP_MAC_EHTOMCTRL_BITS                       1
 #define EHTCAP_MAC_TRIGGERED_TXOP_MODE1_IDX             2
@@ -1710,6 +1710,10 @@ struct subelem_header {
 #define EHTCAP_PHY_MUBFMR320MHZ_BITS                    1
 #define EHTCAP_PHY_TB_SOUNDING_FEEDBACK_RL_IDX          63
 #define EHTCAP_PHY_TB_SOUNDING_FEEDBACK_RL_BITS         1
+#define EHTCAP_PHY_RX_1K_QAM_IN_WIDER_BW_DL_OFDMA_IDX   64
+#define EHTCAP_PHY_RX_1K_QAM_IN_WIDER_BW_DL_OFDMA_BITS  1
+#define EHTCAP_PHY_RX_4K_QAM_IN_WIDER_BW_DL_OFDMA_IDX   65
+#define EHTCAP_PHY_RX_4K_QAM_IN_WIDER_BW_DL_OFDMA_BITS  1
 
 #define EHTCAP_RX_MCS_NSS_MAP_IDX                       0
 #define EHTCAP_RX_MCS_NSS_MAP_BITS                      4
@@ -2473,7 +2477,7 @@ struct wlan_ext_cap_ie {
 
 /**
  * struct wlan_eht_cap_info - struct for eht capabilities information
- * nsep_pri_access: NSEP priority access support
+ * EPCS_pri_access: EPCS priority access support
  * eht_om_ctl: EHT OM control support
  * triggered_txop_sharing_mode1: Triggered TXOP sharing support mode 1 support
  * triggered_txop_sharing_mode2: Triggered TXOP sharing mode 2 support
@@ -2526,6 +2530,11 @@ struct wlan_ext_cap_ie {
  * mu_bformer_160mhz: MU Beamformer (BW ≤ 160 MHz)
  * mu_bformer_320mhz: MU Beamformer (BW ≤ 320 MHz)
  * tb_sounding_feedback_rl: TB sounding feedback rate limit
+ * rx_1k_qam_in_wider_bw_dl_ofdma: Rx 1024-QAM in wider bandwidth DL
+ *                                 OFDMA support
+ * rx_4k_qam_in_wider_bw_dl_ofdma: Rx 4096-QAM in wider bandwidth DL
+ *                                 OFDMA support
+ * reserved3: reserved bits
  * bw_20_rx_max_nss_for_mcs_0_to_7: Max Rx NSS for MCS 0 to 7 (BW = 20MHz)
  * bw_20_tx_max_nss_for_mcs_0_to_7: Max Tx NSS for MCS 0 to 7 (BW = 20MHz)
  * bw_20_rx_max_nss_for_mcs_8_and_9: Max Rx NSS for MCS 8 and 9 (BW = 20MHz)
@@ -2574,7 +2583,7 @@ struct wlan_eht_cap_info {
 	uint16_t triggered_txop_sharing_mode2:1;
 	uint16_t triggered_txop_sharing_mode1:1;
 	uint16_t eht_om_ctl:1;
-	uint16_t nsep_pri_access:1;
+	uint16_t epcs_pri_access:1;
 
 	uint32_t triggered_cqi_feedback:1;
 	uint32_t trig_mu_bforming_partial_bw_feedback:1;
@@ -2619,6 +2628,10 @@ struct wlan_eht_cap_info {
 	uint32_t psr_based_sr:1;
 	uint32_t partial_bw_dl_mu_mimo:1;
 
+	uint8_t reserved3:6;
+	uint8_t rx_4k_qam_in_wider_bw_dl_ofdma:1;
+	uint8_t rx_1k_qam_in_wider_bw_dl_ofdma:1;
+
 	uint32_t bw_20_rx_max_nss_for_mcs_12_and_13:4;
 	uint32_t bw_20_tx_max_nss_for_mcs_12_and_13:4;
 	uint32_t bw_20_rx_max_nss_for_mcs_10_and_11:4;
@@ -2650,7 +2663,7 @@ struct wlan_eht_cap_info {
 	uint8_t bw_320_tx_max_nss_for_mcs_0_to_9:4;
 
 #else
-	uint16_t nsep_pri_access:1;
+	uint16_t epcs_pri_access:1;
 	uint16_t eht_om_ctl:1;
 	uint16_t triggered_txop_sharing_mode1:1;
 	uint16_t triggered_txop_sharing_mode2:1;
@@ -2701,6 +2714,10 @@ struct wlan_eht_cap_info {
 	uint32_t mu_bformer_160mhz:1;
 	uint32_t mu_bformer_320mhz:1;
 	uint32_t tb_sounding_feedback_rl:1;
+
+	uint8_t rx_1k_qam_in_wider_bw_dl_ofdma:1;
+	uint8_t rx_4k_qam_in_wider_bw_dl_ofdma:1;
+	uint8_t reserved3:6;
 
 	uint32_t bw_20_rx_max_nss_for_mcs_0_to_7:4;
 	uint32_t bw_20_tx_max_nss_for_mcs_0_to_7:4;
@@ -2784,7 +2801,7 @@ struct wlan_mlo_ie_info {
 
 /**
  * wlan_eht_cap_info_network_endian - struct for eht capabilities information
- * nsep_pri_access: NSEP priority access support
+ * epcs_pri_access: EPCS priority access support
  * eht_om_ctl: EHT OM control support
  * triggered_txop_sharing_mode1: Triggered TXOP sharing mode 1 support
  * triggered_txop_sharing_mode2: Triggered TXOP sharing mode 2 support
@@ -2837,6 +2854,11 @@ struct wlan_mlo_ie_info {
  * mu_bformer_160mhz: MU Beamformer (BW ≤ 160 MHz)
  * mu_bformer_320mhz: MU Beamformer (BW ≤ 320 MHz)
  * tb_sounding_feedback_rl: TB sounding feedback rate limit
+ * rx_1k_qam_in_wider_bw_dl_ofdma: Rx 1024-QAM in wider bandwidth DL
+ *                                 OFDMA support
+ * rx_4k_qam_in_wider_bw_dl_ofdma: Rx 4096-QAM in wider bandwidth DL
+ *                                 OFDMA support
+ * reserved3: reserved bits
  * bw_20_rx_max_nss_for_mcs_0_to_7: Max Rx NSS for MCS 0 to 7 (BW = 20MHz)
  * bw_20_tx_max_nss_for_mcs_0_to_7: Max Tx NSS for MCS 0 to 7 (BW = 20MHz)
  * bw_20_rx_max_nss_for_mcs_8_and_9: Max Rx NSS for MCS 8 and 9 (BW = 20MHz)
@@ -2877,7 +2899,7 @@ struct wlan_mlo_ie_info {
  *                                      (BW = 320MHz)
  */
 struct wlan_eht_cap_info_network_endian {
-	uint16_t nsep_pri_access:1;
+	uint16_t epcs_pri_access:1;
 	uint16_t eht_om_ctl:1;
 	uint16_t triggered_txop_sharing_mode1:1;
 	uint16_t triggered_txop_sharing_mode2:1;
@@ -2928,6 +2950,10 @@ struct wlan_eht_cap_info_network_endian {
 	uint32_t mu_bformer_160mhz:1;
 	uint32_t mu_bformer_320mhz:1;
 	uint32_t tb_sounding_feedback_rl:1;
+
+	uint8_t rx_1k_qam_in_wider_bw_dl_ofdma:1;
+	uint8_t rx_4k_qam_in_wider_bw_dl_ofdma:1;
+	uint8_t reserved3:6;
 
 	uint32_t bw_20_rx_max_nss_for_mcs_0_to_7:4;
 	uint32_t bw_20_tx_max_nss_for_mcs_0_to_7:4;
