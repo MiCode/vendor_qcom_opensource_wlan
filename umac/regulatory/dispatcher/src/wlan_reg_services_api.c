@@ -1161,11 +1161,17 @@ qdf_export_symbol(wlan_reg_get_5g_bonded_channel_state_for_freq);
 enum channel_state
 wlan_reg_get_5g_bonded_channel_state_for_pwrmode(struct wlan_objmgr_pdev *pdev,
 						 qdf_freq_t freq,
-						 enum phy_ch_width bw,
+						 struct ch_params *ch_params,
 						 enum supported_6g_pwr_types
 						 in_6g_pwr_type)
 {
-	struct ch_params params = {0};
+	enum phy_ch_width bw;
+
+	if (!ch_params) {
+		reg_err_rl("Invalid ch_params");
+		return CHANNEL_STATE_INVALID;
+	}
+	bw = ch_params->ch_width;
 
 	if (reg_is_ch_width_320(bw)) {
 		const struct bonded_channel_freq *bonded_ch_ptr_ptr = NULL;
@@ -1175,20 +1181,25 @@ wlan_reg_get_5g_bonded_channel_state_for_pwrmode(struct wlan_objmgr_pdev *pdev,
 							     in_6g_pwr_type);
 	}
 
-	params.ch_width = bw;
-
-	return reg_get_5g_bonded_channel_state_for_pwrmode(pdev, freq, &params,
+	return reg_get_5g_bonded_channel_state_for_pwrmode(pdev, freq,
+							   ch_params,
 							   in_6g_pwr_type);
 }
 #else
 enum channel_state
 wlan_reg_get_5g_bonded_channel_state_for_pwrmode(struct wlan_objmgr_pdev *pdev,
 						 qdf_freq_t freq,
-						 enum phy_ch_width bw,
+						 struct ch_params *ch_params,
 						 enum supported_6g_pwr_types
 						 in_6g_pwr_type)
 {
-	struct ch_params params = {0};
+	enum phy_ch_width bw;
+
+	if (!ch_params) {
+		reg_err_rl("Invalid ch_params");
+		return CHANNEL_STATE_INVALID;
+	}
+	bw = ch_params->ch_width;
 
 	if (reg_is_ch_width_320(bw)) {
 		const struct bonded_channel_freq *bonded_ch_ptr_ptr = NULL;
@@ -1197,9 +1208,7 @@ wlan_reg_get_5g_bonded_channel_state_for_pwrmode(struct wlan_objmgr_pdev *pdev,
 							  &bonded_ch_ptr_ptr);
 	}
 
-	params.ch_width = bw;
-
-	return reg_get_5g_bonded_channel_state_for_freq(pdev, freq, &params);
+	return reg_get_5g_bonded_channel_state_for_freq(pdev, freq, ch_params);
 }
 #endif
 

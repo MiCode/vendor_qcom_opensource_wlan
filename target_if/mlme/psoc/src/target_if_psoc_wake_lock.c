@@ -204,6 +204,7 @@ void target_if_vdev_start_link_handler(struct wlan_objmgr_vdev *vdev,
 	enum phy_ch_width ch_width, prev_ch_width;
 	uint32_t is_dfs, prev_ch_is_dfs;
 	enum channel_state ch_state, prev_ch_state;
+	struct ch_params ch_params = {0};
 
 	psoc = wlan_vdev_get_psoc(vdev);
 	pdev = wlan_vdev_get_pdev(vdev);
@@ -218,9 +219,10 @@ void target_if_vdev_start_link_handler(struct wlan_objmgr_vdev *vdev,
 	ch_width = curr_channel->ch_width;
 	is_dfs = wlan_reg_is_dfs_for_freq(pdev, ch_freq);
 
+	ch_params.ch_width = ch_width;
 	ch_state =
 	    wlan_reg_get_5g_bonded_channel_state_for_pwrmode(
-						pdev, ch_freq, ch_width,
+						pdev, ch_freq, &ch_params,
 						REG_CURRENT_PWR_MODE);
 	rx_ops = target_if_vdev_mgr_get_rx_ops(psoc);
 	if (!rx_ops || !rx_ops->psoc_get_wakelock_info) {
@@ -237,10 +239,11 @@ void target_if_vdev_start_link_handler(struct wlan_objmgr_vdev *vdev,
 			prev_ch_width = prev_channel->ch_width;
 			prev_ch_is_dfs = wlan_reg_is_dfs_for_freq(pdev,
 								  prev_ch_freq);
+			ch_params.ch_width = prev_ch_width;
 			prev_ch_state =
 			wlan_reg_get_5g_bonded_channel_state_for_pwrmode(
 						pdev,
-						prev_ch_freq, prev_ch_width,
+						prev_ch_freq, &ch_params,
 						REG_CURRENT_PWR_MODE);
 			/*
 			 * In restart case, if SAP is on non DFS channel and
@@ -276,6 +279,7 @@ void target_if_vdev_stop_link_handler(struct wlan_objmgr_vdev *vdev)
 	uint32_t ch_freq;
 	enum phy_ch_width ch_width;
 	uint32_t is_dfs;
+	struct ch_params ch_params = {0};
 
 	psoc = wlan_vdev_get_psoc(vdev);
 	pdev = wlan_vdev_get_pdev(vdev);
@@ -298,12 +302,13 @@ void target_if_vdev_stop_link_handler(struct wlan_objmgr_vdev *vdev)
 	}
 
 	psoc_wakelock = rx_ops->psoc_get_wakelock_info(psoc);
+	ch_params.ch_width = ch_width;
 	if (wlan_vdev_mlme_get_opmode(vdev) == QDF_SAP_MODE)
 		if (is_dfs ||
 		    (wlan_reg_get_5g_bonded_channel_state_for_pwrmode(
 				pdev,
 				ch_freq,
-				ch_width,
+				&ch_params,
 				REG_CURRENT_PWR_MODE) == CHANNEL_STATE_DFS))
 			target_if_vote_for_link_down(psoc, psoc_wakelock);
 }

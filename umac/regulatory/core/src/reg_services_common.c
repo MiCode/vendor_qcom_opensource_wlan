@@ -3902,20 +3902,18 @@ reg_get_5g_chan_state(struct wlan_objmgr_pdev *pdev, qdf_freq_t freq,
 enum channel_state
 reg_get_ch_state_based_on_nol_flag(struct wlan_objmgr_pdev *pdev,
 				   qdf_freq_t freq,
-				   struct ch_params *ch_param,
+				   struct ch_params *ch_params,
 				   enum supported_6g_pwr_types
 				   in_6g_pwr_mode,
 				   bool treat_nol_chan_as_disabled)
 {
-	uint16_t ch_width = ch_param->ch_width;
-
 	if (treat_nol_chan_as_disabled)
 		return wlan_reg_get_5g_bonded_channel_state_for_pwrmode(pdev,
 									freq,
-									ch_width,
+									ch_params,
 									in_6g_pwr_mode);
 
-	return reg_get_5g_chan_state(pdev, freq, ch_param->ch_width,
+	return reg_get_5g_chan_state(pdev, freq, ch_params->ch_width,
 				     in_6g_pwr_mode);
 }
 

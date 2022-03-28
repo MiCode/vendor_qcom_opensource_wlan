@@ -1363,7 +1363,7 @@ wlan_reg_get_5g_bonded_channel_state_for_freq(struct wlan_objmgr_pdev *pdev,
  * state.
  * @pdev: The physical dev to program country code or regdomain
  * @freq: channel frequency.
- * @bw: channel band width
+ * @ch_params: channel parameters
  * @in_6g_pwr_type: 6g power type which decides 6G channel list lookup.
  *
  * Return: channel state
@@ -1371,7 +1371,7 @@ wlan_reg_get_5g_bonded_channel_state_for_freq(struct wlan_objmgr_pdev *pdev,
 enum channel_state
 wlan_reg_get_5g_bonded_channel_state_for_pwrmode(struct wlan_objmgr_pdev *pdev,
 						 qdf_freq_t freq,
-						 enum phy_ch_width bw,
+						 struct ch_params *ch_params,
 						 enum supported_6g_pwr_types
 						 in_6g_pwr_type);
 #endif
