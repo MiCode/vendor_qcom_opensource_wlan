@@ -859,6 +859,21 @@ exit:
 }
 
 #if defined(WLAN_FEATURE_11BE_MLO) && defined(WLAN_MLO_MULTI_CHIP)
+static void init_deinit_mlo_setup_done_event(struct wlan_objmgr_psoc *psoc)
+{
+	struct target_psoc_info *tgt_hdl;
+
+	tgt_hdl = wlan_psoc_get_tgt_if_handle(psoc);
+	if (!tgt_hdl) {
+		target_if_err("target_psoc_info is null");
+		return;
+	}
+
+	if ((tgt_hdl->tif_ops) &&
+	    (tgt_hdl->tif_ops->mlo_setup_done_event))
+		tgt_hdl->tif_ops->mlo_setup_done_event(psoc);
+}
+
 static int init_deinit_mlo_setup_comp_event_handler(ol_scn_t scn_handle,
 						    uint8_t *event,
 						    uint32_t data_len)
@@ -897,6 +912,8 @@ static int init_deinit_mlo_setup_comp_event_handler(ol_scn_t scn_handle,
 		mlo_link_setup_complete(pdev);
 		wlan_objmgr_pdev_release_ref(pdev, WLAN_INIT_DEINIT_ID);
 	}
+
+	init_deinit_mlo_setup_done_event(psoc);
 
 	return 0;
 }
