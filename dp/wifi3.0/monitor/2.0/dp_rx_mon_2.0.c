@@ -289,6 +289,13 @@ dp_rx_mon_process_status_tlv(struct dp_pdev *pdev)
 
 			rx_tlv = hal_rx_status_get_next_tlv(rx_tlv, 1);
 
+			/* HW provides end_offset (how many bytes HW DMA'ed)
+			 * as part of descriptor, use this as delimiter for
+			 * status buffer
+			 */
+			if ((rx_tlv - rx_tlv_start) >= (end_offset + 1))
+				break;
+
 	} while ((tlv_status == HAL_TLV_STATUS_PPDU_NOT_DONE) ||
 			(tlv_status == HAL_TLV_STATUS_HEADER) ||
 			(tlv_status == HAL_TLV_STATUS_MPDU_END) ||
