@@ -1908,7 +1908,7 @@ static void reg_init_pdev_super_chan_list(
 {
 	uint8_t i;
 
-	qdf_mem_zero(&pdev_priv_obj->super_chan_list,
+	qdf_mem_zero(pdev_priv_obj->super_chan_list, NUM_6GHZ_CHANNELS *
 		     sizeof(struct super_chan_info));
 	for (i = 0; i < NUM_6GHZ_CHANNELS; i++)
 		reg_init_super_chan_entry(pdev_priv_obj, i);
@@ -4100,6 +4100,8 @@ reg_process_afc_power_event(struct afc_regulatory_info *afc_info)
 		return QDF_STATUS_E_FAILURE;
 	}
 
+	reg_init_pdev_super_chan_list(pdev_priv_obj);
+	reg_init_6g_master_chan(pdev_priv_obj->afc_chan_list, soc_reg);
 	/* Free the old power_info event if it was allocated */
 	if (pdev_priv_obj->power_info)
 		reg_free_afc_pwr_info(pdev_priv_obj);
