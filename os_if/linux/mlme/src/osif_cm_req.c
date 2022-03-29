@@ -611,6 +611,11 @@ QDF_STATUS osif_update_mlo_partner_info(
 			return status;
 		}
 
+		if (partner_info.num_partner_links >= 2) {
+			osif_err("Rejecting connect for 3 or more link MLD");
+			return QDF_STATUS_E_FAILURE;
+		}
+
 		wlan_vdev_set_link_id(vdev, linkid);
 		wlan_vdev_mlme_feat_ext2_cap_set(vdev, WLAN_VDEV_FEXT2_MLO);
 	}
