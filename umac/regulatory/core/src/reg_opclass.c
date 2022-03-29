@@ -743,18 +743,6 @@ static void reg_dmn_fill_6g_opcls_chan_lists(struct wlan_objmgr_pdev *pdev,
 	}
 }
 
-static bool reg_is_val_within_range(qdf_freq_t val,
-				    qdf_freq_t left,
-				    qdf_freq_t right)
-{
-	bool is_within = false;
-
-	if (val >= left && val <= right)
-		is_within = true;
-
-	return is_within;
-}
-
 QDF_STATUS reg_dmn_get_6g_opclasses_and_channels(struct wlan_objmgr_pdev *pdev,
 						 struct wlan_afc_frange_list *p_frange_lst,
 						 uint8_t *num_opclasses,

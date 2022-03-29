@@ -6773,14 +6773,15 @@ static void reg_afc_get_intersected_ranges(struct freq_range *rule_fr,
 {
 	struct wlan_afc_freq_range_obj *p_range;
 	struct wlan_afc_freq_range_obj **pp_range;
+	qdf_freq_t low, high;
 
 	pp_range = (struct wlan_afc_freq_range_obj **)arg;
 	p_range = *pp_range;
 
 	if (!reg_is_empty_range(rule_fr)) {
-		reg_assign_vars_with_range_vals(rule_fr,
-						&p_range->lowfreq,
-						&p_range->highfreq);
+		reg_assign_vars_with_range_vals(rule_fr, &low, &high);
+		p_range->lowfreq = (uint16_t)low;
+		p_range->highfreq = (uint16_t)high;
 		reg_debug("Range = [%u, %u]", p_range->lowfreq, p_range->highfreq);
 		(*pp_range)++;
 	}
