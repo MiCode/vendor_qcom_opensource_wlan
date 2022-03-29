@@ -1180,9 +1180,30 @@ wlan_reg_get_5g_bonded_channel_state_for_pwrmode(struct wlan_objmgr_pdev *pdev,
 	return reg_get_5g_bonded_channel_state_for_pwrmode(pdev, freq, &params,
 							   in_6g_pwr_type);
 }
+#else
+enum channel_state
+wlan_reg_get_5g_bonded_channel_state_for_pwrmode(struct wlan_objmgr_pdev *pdev,
+						 qdf_freq_t freq,
+						 enum phy_ch_width bw,
+						 enum supported_6g_pwr_types
+						 in_6g_pwr_type)
+{
+	struct ch_params params = {0};
+
+	if (reg_is_ch_width_320(bw)) {
+		const struct bonded_channel_freq *bonded_ch_ptr_ptr = NULL;
+
+		return reg_get_5g_bonded_channel_for_freq(pdev, freq, bw,
+							  &bonded_ch_ptr_ptr);
+	}
+
+	params.ch_width = bw;
+
+	return reg_get_5g_bonded_channel_state_for_freq(pdev, freq, &params);
+}
+#endif
 
 qdf_export_symbol(wlan_reg_get_5g_bonded_channel_state_for_pwrmode);
-#endif
 
 enum channel_state
 wlan_reg_get_2g_bonded_channel_state_for_freq(struct wlan_objmgr_pdev *pdev,
