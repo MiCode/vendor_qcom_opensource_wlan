@@ -48,6 +48,8 @@ target_if_twt_register_events(struct wlan_objmgr_psoc *psoc)
 					WMI_RX_WORK_CTX);
 	if (QDF_IS_STATUS_ERROR(status)) {
 		target_if_err("Failed to register twt enable event cb");
+		if (status ==  QDF_STATUS_E_NOSUPPORT)
+			status = QDF_STATUS_SUCCESS;
 		return status;
 	}
 
@@ -57,12 +59,16 @@ target_if_twt_register_events(struct wlan_objmgr_psoc *psoc)
 				WMI_RX_WORK_CTX);
 	if (QDF_IS_STATUS_ERROR(status)) {
 		target_if_err("Failed to register twt disable event cb");
+		if (status ==  QDF_STATUS_E_NOSUPPORT)
+			status = QDF_STATUS_SUCCESS;
 		return status;
 	}
 
 	status = target_if_twt_register_ext_events(psoc);
 	if (QDF_IS_STATUS_ERROR(status)) {
 		target_if_err("Failed to register twt ext events");
+		if (status ==  QDF_STATUS_E_NOSUPPORT)
+			status = QDF_STATUS_SUCCESS;
 		return status;
 	}
 
@@ -90,6 +96,8 @@ target_if_twt_deregister_events(struct wlan_objmgr_psoc *psoc)
 					wmi_twt_enable_complete_event_id);
 	if (QDF_IS_STATUS_ERROR(status)) {
 		target_if_err("Failed to deregister twt enable event cb");
+		if (status ==  QDF_STATUS_E_NOSUPPORT)
+			status = QDF_STATUS_SUCCESS;
 		return status;
 	}
 
@@ -97,12 +105,16 @@ target_if_twt_deregister_events(struct wlan_objmgr_psoc *psoc)
 					 wmi_twt_disable_complete_event_id);
 	if (QDF_IS_STATUS_ERROR(status)) {
 		target_if_err("Failed to deregister twt disable event cb");
+		if (status ==  QDF_STATUS_E_NOSUPPORT)
+			status = QDF_STATUS_SUCCESS;
 		return status;
 	}
 
 	status = target_if_twt_deregister_ext_events(psoc);
 	if (QDF_IS_STATUS_ERROR(status)) {
 		target_if_err("Failed to deregister twt ext events");
+		if (status ==  QDF_STATUS_E_NOSUPPORT)
+			status = QDF_STATUS_SUCCESS;
 		return status;
 	}
 

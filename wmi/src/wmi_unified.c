@@ -2167,12 +2167,18 @@ wmi_register_event_handler_with_ctx(wmi_unified_t wmi_handle,
 
 	soc = wmi_handle->soc;
 
-	if (event_id >= wmi_events_max ||
-		wmi_handle->wmi_events[event_id] == WMI_EVENT_ID_INVALID) {
+	if (event_id >= wmi_events_max) {
 		QDF_TRACE(QDF_MODULE_ID_WMI, QDF_TRACE_LEVEL_INFO,
 			  "%s: Event id %d is unavailable",
 					__func__, event_id);
 		return QDF_STATUS_E_FAILURE;
+	}
+
+	if (wmi_handle->wmi_events[event_id] == WMI_EVENT_ID_INVALID) {
+		QDF_TRACE(QDF_MODULE_ID_WMI, QDF_TRACE_LEVEL_DEBUG,
+			  "%s: Event id %d is not supported",
+			  __func__, event_id);
+		return QDF_STATUS_E_NOSUPPORT;
 	}
 	evt_id = wmi_handle->wmi_events[event_id];
 
@@ -2299,11 +2305,16 @@ QDF_STATUS wmi_unified_unregister_event_handler(wmi_unified_t wmi_handle,
 
 	soc = wmi_handle->soc;
 
-	if (event_id >= wmi_events_max ||
-		wmi_handle->wmi_events[event_id] == WMI_EVENT_ID_INVALID) {
+	if (event_id >= wmi_events_max) {
 		wmi_err("Event id %d is unavailable", event_id);
 		return QDF_STATUS_E_FAILURE;
 	}
+
+	if (wmi_handle->wmi_events[event_id] == WMI_EVENT_ID_INVALID) {
+		wmi_debug("Event id %d is not supported", event_id);
+		return QDF_STATUS_E_NOSUPPORT;
+	}
+
 	evt_id = wmi_handle->wmi_events[event_id];
 
 	idx = wmi_unified_get_event_handler_ix(wmi_handle, evt_id);
