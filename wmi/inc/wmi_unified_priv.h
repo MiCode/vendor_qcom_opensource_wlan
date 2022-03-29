@@ -3003,6 +3003,11 @@ QDF_STATUS
 				    uint8_t *pdev_id, uint8_t *software_image,
 				    uint8_t *chip_info,
 				    uint32_t *pktlog_json_version);
+
+QDF_STATUS
+(*extract_pdev_telemetry_stats)(
+		wmi_unified_t wmi_handle, void *evt_buf,
+		struct wmi_host_pdev_telemetry_stats *pdev_stats);
 };
 
 /* Forward declartion for psoc*/

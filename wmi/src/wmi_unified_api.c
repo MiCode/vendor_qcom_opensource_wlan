@@ -3851,3 +3851,22 @@ wmi_extract_pktlog_decode_info_event(wmi_unified_t wmi_handle,
 					pktlog_json_version);
 	return QDF_STATUS_E_FAILURE;
 }
+
+/**
+ * wmi_extract_pdev_telemetry_stats_tlv - extract pdev telemetry stats
+ * @wmi_handle: wmi handle
+ * @evt_buf: pointer to event buffer
+ * @pdev stats: Pointer to hold pdev telemetry stats
+ *
+ * Return: QDF_STATUS_SUCCESS for success or error code
+ */
+QDF_STATUS wmi_extract_pdev_telemetry_stats(
+		wmi_unified_t wmi_handle, void *evt_buf,
+		struct wmi_host_pdev_telemetry_stats *pdev_stats)
+{
+	if (wmi_handle->ops->extract_pdev_telemetry_stats)
+		return wmi_handle->ops->extract_pdev_telemetry_stats(
+			wmi_handle, evt_buf, pdev_stats);
+
+	return QDF_STATUS_E_FAILURE;
+}

@@ -893,6 +893,7 @@ typedef enum {
 	WMI_HOST_REQUEST_PEER_ADV_STATS = 0x4000,
 	WMI_HOST_REQUEST_PMF_BCN_PROTECT_STAT = 0x8000,
 	WMI_HOST_REQUEST_VDEV_PRB_FILS_STAT = 0x10000,
+	WMI_HOST_REQUEST_PDEV_TELEMETRY_STAT = 0x40000,
 } wmi_host_stats_id;
 
 typedef struct {
@@ -4714,6 +4715,20 @@ struct wmi_host_tsf_event {
 	uint32_t tqm_timer_low;
 	uint32_t tqm_timer_high;
 	uint32_t use_tqm_timer;
+};
+
+/**
+ * struct wmi_host_peer_adv_stats - peer adv stats event structure
+ * @avg_chan_lat_per_ac: average channel latency
+ * @estimated_air_time_per_ac: Percentage of air time available for each AC
+ * BIT[0-7]   : AC_BE
+ * BIT[8-15]  : AC_BK
+ * BIT[16-23] : AC_VI
+ * BIT[24-31] : AC_VO
+ */
+struct wmi_host_pdev_telemetry_stats {
+	uint32_t avg_chan_lat_per_ac[WIFI_AC_MAX];
+	uint32_t estimated_air_time_per_ac;
 };
 
 #define WMI_EVENT_ID_INVALID 0

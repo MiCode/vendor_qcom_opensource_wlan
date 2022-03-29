@@ -17770,6 +17770,35 @@ extract_pktlog_decode_info_event_tlv(wmi_unified_t wmi_handle, void *evt_buf,
 	qdf_mem_copy(chip_info, event->chip_info, 40);
 	*pktlog_json_version = event->pktlog_defs_json_version;
 	*pdev_id = event->pdev_id;
+	return QDF_STATUS_SUCCESS;
+}
+
+/**
+ * extract_pdev_telemetry_stats_tlv - extract pdev telemetry stats
+ * @wmi_handle: wmi handle
+ * @evt_buf: pointer to event buffer
+ * @pdev stats: Pointer to hold pdev telemetry stats
+ *
+ * Return: QDF_STATUS_SUCCESS for success or error code
+ */
+static QDF_STATUS
+extract_pdev_telemetry_stats_tlv(
+		wmi_unified_t wmi_handle, void *evt_buf,
+		struct wmi_host_pdev_telemetry_stats *pdev_stats)
+{
+	WMI_UPDATE_STATS_EVENTID_param_tlvs *param_buf;
+	wmi_pdev_telemetry_stats *ev;
+
+	param_buf = (WMI_UPDATE_STATS_EVENTID_param_tlvs *)evt_buf;
+
+	if (param_buf->pdev_telemetry_stats) {
+		ev = (wmi_pdev_telemetry_stats *)(param_buf->pdev_telemetry_stats);
+		qdf_mem_copy(pdev_stats->avg_chan_lat_per_ac,
+			     ev->avg_chan_lat_per_ac,
+			     sizeof(ev->avg_chan_lat_per_ac));
+		pdev_stats->estimated_air_time_per_ac =
+			     ev->estimated_air_time_per_ac;
+	}
 
 	return QDF_STATUS_SUCCESS;
 }
@@ -18219,6 +18248,7 @@ struct wmi_ops tlv_ops =  {
 	.send_vdev_pn_mgmt_rxfilter_cmd = send_vdev_pn_mgmt_rxfilter_cmd_tlv,
 	.extract_pktlog_decode_info_event =
 		extract_pktlog_decode_info_event_tlv,
+	.extract_pdev_telemetry_stats = extract_pdev_telemetry_stats_tlv,
 };
 
 #ifdef WLAN_FEATURE_11BE_MLO

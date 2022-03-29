@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2016-2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -593,7 +593,7 @@ extract_all_stats_counts_tlv(wmi_unified_t wmi_handle, void *evt_buf,
 		return QDF_STATUS_E_FAULT;
 	}
 
-	for (i = 1; i <= WMI_REQUEST_VDEV_EXTD_STAT; i = i << 1) {
+	for (i = 1; i <= WMI_REQUEST_PDEV_TELEMETRY_STAT; i = i << 1) {
 		switch (ev->stats_id & i) {
 		case WMI_REQUEST_PEER_STAT:
 			stats_param->stats_id |= WMI_HOST_REQUEST_PEER_STAT;
@@ -640,6 +640,10 @@ extract_all_stats_counts_tlv(wmi_unified_t wmi_handle, void *evt_buf,
 		case WMI_REQUEST_VDEV_EXTD_STAT:
 			stats_param->stats_id |=
 				WMI_HOST_REQUEST_VDEV_PRB_FILS_STAT;
+			break;
+		case WMI_REQUEST_PDEV_TELEMETRY_STAT:
+			stats_param->stats_id |=
+				WMI_HOST_REQUEST_PDEV_TELEMETRY_STAT;
 			break;
 		}
 	}
