@@ -2776,6 +2776,11 @@ QDF_STATUS reg_get_pwrmode_chan_list(struct wlan_objmgr_pdev *pdev,
 
 	pdev_priv_obj = reg_get_pdev_obj(pdev);
 
+	if (!IS_VALID_PDEV_REG_OBJ(pdev_priv_obj)) {
+		reg_err_rl("reg pdev priv obj is NULL");
+		return QDF_STATUS_E_INVAL;
+	}
+
 	/* Get the current channel list */
 	qdf_mem_copy(chan_list, pdev_priv_obj->cur_chan_list,
 		     NUM_CHANNELS * sizeof(struct regulatory_channel));
