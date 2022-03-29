@@ -19,6 +19,31 @@
 
 #ifdef WLAN_MLO_MULTI_CHIP
 /**
+ * mlo_is_ml_soc() - API to check if psoc belongs to ML group
+ * @psoc: Soc to be checked.
+ *
+ * Return: true if psoc found in ml soc_list, or else return false
+ */
+bool mlo_is_ml_soc(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * mlo_get_soc_list() - API to get the list of SOCs participating in MLO
+ * @soc_list: list where ML participating SOCs need to be populated
+ *
+ * Return: None
+ */
+void mlo_get_soc_list(struct wlan_objmgr_psoc **soc_list);
+
+/**
+ * mlo_cleanup_asserted_soc_setup_info() - API to cleanup the mlo setup info of
+ * asserted soc
+ * @psoc: Soc to be cleaned up
+ *
+ * Return: None
+ */
+void mlo_cleanup_asserted_soc_setup_info(struct wlan_objmgr_psoc *psoc);
+
+/**
  * mlo_setup_update_total_socs() - API to update total socs for mlo
  * @tot_socs: Total socs
  *

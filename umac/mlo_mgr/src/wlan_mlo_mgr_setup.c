@@ -24,6 +24,73 @@
 #endif
 
 #ifdef WLAN_MLO_MULTI_CHIP
+bool mlo_is_ml_soc(struct wlan_objmgr_psoc *psoc)
+{
+	struct mlo_mgr_context *mlo_ctx = wlan_objmgr_get_mlo_ctx();
+	uint8_t chip_idx;
+
+	if (!mlo_ctx)
+		return false;
+
+	for (chip_idx = 0; chip_idx < MAX_MLO_CHIPS; chip_idx++)
+		if (mlo_ctx->setup_info.soc_list[chip_idx] == psoc)
+			return true;
+
+	return false;
+}
+
+qdf_export_symbol(mlo_is_ml_soc);
+
+void mlo_get_soc_list(struct wlan_objmgr_psoc **soc_list)
+{
+	struct mlo_mgr_context *mlo_ctx = wlan_objmgr_get_mlo_ctx();
+	uint8_t chip_idx;
+
+	if (!mlo_ctx) {
+		for (chip_idx = 0; chip_idx < MAX_MLO_CHIPS; chip_idx++)
+			soc_list[chip_idx] = NULL;
+
+		return;
+	}
+
+	for (chip_idx = 0; chip_idx < MAX_MLO_CHIPS; chip_idx++)
+		soc_list[chip_idx] = mlo_ctx->setup_info.soc_list[chip_idx];
+}
+
+qdf_export_symbol(mlo_get_soc_list);
+
+void mlo_cleanup_asserted_soc_setup_info(struct wlan_objmgr_psoc *psoc)
+{
+	struct mlo_mgr_context *mlo_ctx = wlan_objmgr_get_mlo_ctx();
+	uint8_t link_idx;
+	struct wlan_objmgr_pdev *pdev;
+
+	if (!mlo_ctx)
+		return;
+
+	if (!mlo_ctx->setup_info.num_links)
+		return;
+
+	if (!psoc) {
+		qdf_info("NULL psoc");
+		return;
+	}
+
+	for (link_idx = 0; link_idx < MAX_MLO_LINKS; link_idx++) {
+		pdev = mlo_ctx->setup_info.pdev_list[link_idx];
+		if (pdev) {
+			if (wlan_pdev_get_psoc(pdev) == psoc) {
+				mlo_ctx->setup_info.pdev_list[link_idx] = NULL;
+				mlo_ctx->setup_info.state[link_idx] =
+					MLO_LINK_TEARDOWN;
+				mlo_ctx->setup_info.num_links--;
+			}
+		}
+	}
+}
+
+qdf_export_symbol(mlo_cleanup_asserted_soc_setup_info);
+
 void mlo_setup_update_total_socs(uint8_t tot_socs)
 {
 	struct mlo_mgr_context *mlo_ctx = wlan_objmgr_get_mlo_ctx();
