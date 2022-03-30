@@ -414,6 +414,47 @@ next_mac_phy_cap:
 	}
 }
 
+#if defined(CONFIG_AFC_SUPPORT)
+/**
+ * init_deinit_derive_afc_dev_type_param() - Derive AFC init deployment param
+ *
+ * @psoc: PSOC object
+ * @init_param: Pointer to init param
+ *
+ * Return: void
+ */
+static void init_deinit_derive_afc_dev_type_param(
+		struct wlan_objmgr_psoc *psoc,
+		struct wmi_init_cmd_param *init_param)
+{
+	enum reg_afc_dev_deploy_type reg_afc_dev_type;
+	target_resource_config *tgt_cfg;
+	QDF_STATUS ret_val;
+
+	tgt_cfg = init_param->res_cfg;
+
+	ret_val = target_if_reg_get_afc_dev_type(psoc,
+						 &reg_afc_dev_type);
+
+	if (QDF_IS_STATUS_ERROR(ret_val)) {
+		target_if_err("get afc dev type failed");
+		return;
+	}
+	tgt_cfg->afc_indoor_support = false;
+	tgt_cfg->afc_outdoor_support = false;
+	if (reg_afc_dev_type == AFC_DEPLOYMENT_INDOOR)
+		tgt_cfg->afc_indoor_support = true;
+	else if (reg_afc_dev_type == AFC_DEPLOYMENT_OUTDOOR)
+		tgt_cfg->afc_outdoor_support = true;
+}
+#else
+static inline void init_deinit_derive_afc_dev_type_param(
+		struct wlan_objmgr_psoc *psoc,
+		struct wmi_init_cmd_param *init_param)
+{
+}
+#endif
+
 void init_deinit_prepare_send_init_cmd(
 		 struct wlan_objmgr_psoc *psoc,
 		 struct target_psoc_info *tgt_hdl)
@@ -485,6 +526,9 @@ void init_deinit_prepare_send_init_cmd(
 	} else {
 		target_if_debug("0x%x\n", info->target_caps.fw_version_1);
 	}
+
+	if (wmi_service_enabled(wmi_handle, wmi_service_ext2_msg))
+		init_deinit_derive_afc_dev_type_param(psoc, &init_param);
 
 	target_if_ext_res_cfg_enable(psoc, tgt_hdl, NULL);
 

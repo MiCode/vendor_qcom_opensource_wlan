@@ -5827,6 +5827,8 @@ struct wmi_host_fw_abi_ver {
  *                                       inclusive of SP power mode.
  * @afc_timer_check_disable: Disables AFC Timer related checks in FW
  * @afc_req_id_check_disable: Disables AFC Request ID check in FW
+ * @afc_indoor_support: AFC support indoor deployment
+ * @afc_outdoor_support: AFC support outdoor deployment
  * @carrier_profile_config: Configuration for per-carrier profile
  * @reo_qdesc_shared_addr_table_enabled: Reo shared qref enhancement enabled
  */
@@ -5948,6 +5950,8 @@ typedef struct {
 	bool is_6ghz_sp_pwrmode_supp_enabled;
 	bool afc_timer_check_disable;
 	bool afc_req_id_check_disable;
+	bool afc_indoor_support;
+	bool afc_outdoor_support;
 	uint32_t carrier_profile_config;
 	bool sawf;
 	bool reo_qdesc_shared_addr_table_enabled;

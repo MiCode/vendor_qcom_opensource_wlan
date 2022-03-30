@@ -7872,6 +7872,27 @@ void wmi_set_nan_channel_support(wmi_resource_config *resource_cfg)
 }
 #endif
 
+#if defined(CONFIG_AFC_SUPPORT)
+static
+void wmi_copy_afc_deployment_config(wmi_resource_config *resource_cfg,
+				    target_resource_config *tgt_res_cfg)
+{
+	WMI_RSRC_CFG_HOST_SERVICE_FLAG_AFC_INDOOR_SUPPORT_CHECK_SET(
+		resource_cfg->host_service_flags,
+		tgt_res_cfg->afc_indoor_support);
+
+	WMI_RSRC_CFG_HOST_SERVICE_FLAG_AFC_OUTDOOR_SUPPORT_CHECK_SET(
+		resource_cfg->host_service_flags,
+		tgt_res_cfg->afc_outdoor_support);
+}
+#else
+static
+void wmi_copy_afc_deployment_config(wmi_resource_config *resource_cfg,
+				    target_resource_config *tgt_res_cfg)
+{
+}
+#endif
+
 static
 void wmi_copy_resource_config(wmi_resource_config *resource_cfg,
 				target_resource_config *tgt_res_cfg)
@@ -8130,6 +8151,8 @@ void wmi_copy_resource_config(wmi_resource_config *resource_cfg,
 	WMI_RSRC_CFG_HOST_SERVICE_FLAG_REG_DISCARD_AFC_REQ_ID_CHECK_SET(
 		resource_cfg->host_service_flags,
 		tgt_res_cfg->afc_req_id_check_disable);
+
+	wmi_copy_afc_deployment_config(resource_cfg, tgt_res_cfg);
 
 	wmi_set_nan_channel_support(resource_cfg);
 
@@ -12424,6 +12447,50 @@ static QDF_STATUS extract_service_ready_ext_tlv(wmi_unified_t wmi_handle,
 	return QDF_STATUS_SUCCESS;
 }
 
+#if defined(CONFIG_AFC_SUPPORT)
+/**
+ * extract_svc_rdy_ext2_afc_tlv() - extract service ready ext2 afc deployment
+ * type from event
+ * @ev: pointer to event fixed param
+ * @param: Pointer to hold the params
+ *
+ * Return: void
+ */
+static void
+extract_svc_rdy_ext2_afc_tlv(wmi_service_ready_ext2_event_fixed_param *ev,
+			     struct wlan_psoc_host_service_ext2_param *param)
+{
+	WMI_AFC_FEATURE_6G_DEPLOYMENT_TYPE tgt_afc_dev_type;
+	enum reg_afc_dev_deploy_type reg_afc_dev_type;
+
+	tgt_afc_dev_type = ev->afc_deployment_type;
+	switch (tgt_afc_dev_type) {
+	case WMI_AFC_FEATURE_6G_DEPLOYMENT_UNSPECIFIED:
+		reg_afc_dev_type = AFC_DEPLOYMENT_INDOOR;
+		break;
+	case WMI_AFC_FEATURE_6G_DEPLOYMENT_INDOOR_ONLY:
+		reg_afc_dev_type = AFC_DEPLOYMENT_INDOOR;
+		break;
+	case WMI_AFC_FEATURE_6G_DEPLOYMENT_OUTDOOR_ONLY:
+		reg_afc_dev_type = AFC_DEPLOYMENT_OUTDOOR;
+		break;
+	default:
+		wmi_err("invalid afc deloyment %d", tgt_afc_dev_type);
+		reg_afc_dev_type = AFC_DEPLOYMENT_UNKNOWN;
+		break;
+	}
+	param->afc_dev_type = reg_afc_dev_type;
+
+	wmi_debug("afc dev type:%d", ev->afc_deployment_type);
+}
+#else
+static inline void
+extract_svc_rdy_ext2_afc_tlv(wmi_service_ready_ext2_event_fixed_param *ev,
+			     struct wlan_psoc_host_service_ext2_param *param)
+{
+}
+#endif
+
 /**
  * extract_service_ready_ext2_tlv() - extract service ready ext2 params from
  * event
@@ -12482,6 +12549,9 @@ extract_service_ready_ext2_tlv(wmi_unified_t wmi_handle, uint8_t *event,
 						ev->max_user_per_ppdu_mumimo);
 	param->target_cap_flags = ev->target_cap_flags;
 	wmi_debug("htt peer data :%d", ev->target_cap_flags);
+
+	extract_svc_rdy_ext2_afc_tlv(ev, param);
+
 	return QDF_STATUS_SUCCESS;
 }
 
