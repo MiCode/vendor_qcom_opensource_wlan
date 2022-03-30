@@ -24,8 +24,8 @@
 
 #include <wlan_cmn.h>
 #include <reg_services_public_struct.h>
-#ifdef CONFIG_AFC_SUPPORT
 #include <wlan_reg_services_api.h>
+#ifdef CONFIG_AFC_SUPPORT
 #include "reg_opclass.h"
 #endif
 #include <wlan_objmgr_psoc_obj.h>
