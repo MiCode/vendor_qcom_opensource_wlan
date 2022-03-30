@@ -1632,6 +1632,17 @@ struct wlan_lmac_if_reg_rx_ops {
 	(*reg_set_disable_upper_6g_edge_ch_supp)(struct wlan_objmgr_psoc *psoc,
 						 bool val);
 #endif
+
+#ifdef CONFIG_AFC_SUPPORT
+	QDF_STATUS
+	(*reg_set_afc_dev_type)(struct wlan_objmgr_psoc *psoc,
+				enum reg_afc_dev_deploy_type
+				reg_afc_dev_type);
+	QDF_STATUS
+	(*reg_get_afc_dev_type)(struct wlan_objmgr_psoc *psoc,
+				enum reg_afc_dev_deploy_type
+				*reg_afc_dev_type);
+#endif
 };
 
 #ifdef CONVERGED_P2P_ENABLE

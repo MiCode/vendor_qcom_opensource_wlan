@@ -7454,6 +7454,41 @@ reg_get_afc_dev_deploy_type(struct wlan_objmgr_pdev *pdev,
 
 	return QDF_STATUS_SUCCESS;
 }
+
+QDF_STATUS reg_set_afc_soc_dev_type(struct wlan_objmgr_psoc *psoc,
+				    enum reg_afc_dev_deploy_type
+				    reg_afc_dev_type)
+{
+	struct wlan_regulatory_psoc_priv_obj *psoc_priv_obj;
+
+	psoc_priv_obj = reg_get_psoc_obj(psoc);
+
+	if (!IS_VALID_PSOC_REG_OBJ(psoc_priv_obj)) {
+		reg_err("psoc reg component is NULL");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	psoc_priv_obj->reg_afc_dev_type = reg_afc_dev_type;
+
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS
+reg_get_afc_soc_dev_type(struct wlan_objmgr_psoc *psoc,
+			 enum reg_afc_dev_deploy_type *reg_afc_dev_type)
+{
+	struct wlan_regulatory_psoc_priv_obj *psoc_priv_obj;
+
+	psoc_priv_obj = reg_get_psoc_obj(psoc);
+	if (!IS_VALID_PSOC_REG_OBJ(psoc_priv_obj)) {
+		reg_err("psoc reg component is NULL");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	*reg_afc_dev_type = psoc_priv_obj->reg_afc_dev_type;
+
+	return QDF_STATUS_SUCCESS;
+}
 #endif /* CONFIG_AFC_SUPPORT */
 
 QDF_STATUS

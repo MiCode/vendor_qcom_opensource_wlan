@@ -119,6 +119,7 @@ struct chan_change_cbk_entry {
  * userspace
  * @coex_unsafe_chan_reg_disable: To disable reg channels for received coex
  * unsafe channels list
+ * @reg_afc_dev_type: AFC device deployment type from BDF
  */
 struct wlan_regulatory_psoc_priv_obj {
 	struct mas_chan_params mas_chan_params[PSOC_MAX_PHY_REG_CAP];
@@ -185,6 +186,9 @@ struct wlan_regulatory_psoc_priv_obj {
 	struct ch_avoid_ind_type avoid_freq_ext_list;
 	bool coex_unsafe_chan_nb_user_prefer;
 	bool coex_unsafe_chan_reg_disable;
+#endif
+#ifdef CONFIG_AFC_SUPPORT
+	enum reg_afc_dev_deploy_type reg_afc_dev_type;
 #endif
 };
 
