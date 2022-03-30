@@ -850,7 +850,7 @@ hal_tx_status_get_next_tlv(uint8_t *tx_tlv) {
 	tlv_tag = HAL_RX_GET_USER_TLV32_TYPE(tx_tlv);
 
 	return (uint8_t *)(((unsigned long)(tx_tlv + tlv_len +
-					    HAL_RX_TLV32_HDR_SIZE + 3)) & (~3));
+					    HAL_RX_TLV32_HDR_SIZE + 7)) & (~7));
 }
 
 /**
@@ -907,17 +907,19 @@ hal_txmon_status_get_num_users(hal_soc_handle_t hal_soc_hdl,
  * hal_txmon_status_free_buffer() - api to free status buffer
  * @hal_soc: HAL soc handle
  * @status_frag: qdf_frag_t buffer
+ * @end_offset: end offset within buffer that has valid data
  *
- * Return void
+ * Return status
  */
-static inline void
+static inline QDF_STATUS
 hal_txmon_status_free_buffer(hal_soc_handle_t hal_soc_hdl,
-			     qdf_frag_t status_frag)
+			     qdf_frag_t status_frag,
+			     uint32_t end_offset)
 {
 	struct hal_soc *hal_soc = (struct hal_soc *)hal_soc_hdl;
 
-	if (hal_soc->ops->hal_txmon_status_free_buffer)
-		hal_soc->ops->hal_txmon_status_free_buffer(status_frag);
+	return hal_soc->ops->hal_txmon_status_free_buffer(status_frag,
+							  end_offset);
 }
 
 /**

@@ -1136,7 +1136,7 @@ dp_mon_register_feature_ops_2_0(struct dp_soc *soc)
 	mon_ops->mon_tx_capture_debugfs_init = NULL;
 	mon_ops->mon_tx_add_to_comp_queue = NULL;
 	mon_ops->mon_print_pdev_tx_capture_stats = NULL;
-	mon_ops->mon_config_enh_tx_capture = NULL;
+	mon_ops->mon_config_enh_tx_capture = dp_config_enh_tx_core_capture_2_0;
 	mon_ops->mon_tx_peer_filter = NULL;
 #endif
 #if defined(WDI_EVENT_ENABLE) &&\

@@ -22,8 +22,8 @@
 #include <qdf_nbuf_frag.h>
 #include <hal_be_api_mon.h>
 #include <dp_mon.h>
-#include <dp_mon_2.0.h>
 #include <dp_tx_mon_2.0.h>
+#include <dp_mon_2.0.h>
 
 #if defined(WLAN_TX_PKT_CAPTURE_ENH_BE) && defined(QCA_MONITOR_2_0_SUPPORT)
 /**
@@ -40,10 +40,12 @@ dp_tx_mon_status_queue_free(struct dp_pdev *pdev,
 	uint8_t last_frag_q_idx = tx_cap_be->last_frag_q_idx;
 	qdf_frag_t status_frag = NULL;
 	uint8_t i = 0;
+	uint32_t end_offset = 0;
 
 	for (; i < last_frag_q_idx; i++) {
 		status_frag = tx_cap_be->status_frag_queue[last_frag_q_idx];
-		hal_txmon_status_free_buffer(pdev->soc->hal_soc, status_frag);
+		hal_txmon_status_free_buffer(pdev->soc->hal_soc, status_frag,
+					     end_offset);
 		qdf_frag_free(status_frag);
 		tx_cap_be->status_frag_queue[last_frag_q_idx] = NULL;
 	}
@@ -1104,11 +1106,15 @@ QDF_STATUS dp_tx_mon_process_tlv_2_0(struct dp_pdev *pdev)
 	tx_prot_ppdu_info = dp_tx_mon_get_ppdu_info(pdev, TX_PROT_PPDU_INFO,
 						    1, tx_cap_be->be_ppdu_id);
 
-	if (!tx_prot_ppdu_info)
+	if (!tx_prot_ppdu_info) {
+		dp_mon_info("tx prot ppdu info alloc got failed!!");
 		return QDF_STATUS_E_NOMEM;
+	}
 
 	status_frag = tx_cap_be->status_frag_queue[cur_frag_q_idx];
 	tx_tlv = status_frag;
+	dp_mon_debug("last_frag_q_idx: %d status_frag:%pK",
+		     tx_cap_be->last_frag_q_idx, status_frag);
 
 	/* get number of user from tlv window */
 	tlv_status = hal_txmon_status_get_num_users(pdev->soc->hal_soc,
@@ -1123,8 +1129,10 @@ QDF_STATUS dp_tx_mon_process_tlv_2_0(struct dp_pdev *pdev)
 	tx_data_ppdu_info = dp_tx_mon_get_ppdu_info(pdev, TX_DATA_PPDU_INFO,
 						    num_users,
 						    tx_cap_be->be_ppdu_id);
-	if (!tx_data_ppdu_info)
+	if (!tx_data_ppdu_info) {
+		dp_mon_info("tx prot ppdu info alloc got failed!!");
 		return QDF_STATUS_E_NOMEM;
+	}
 
 	/* iterate status buffer queue */
 	while (tx_cap_be->cur_frag_q_idx < tx_cap_be->last_frag_q_idx) {
@@ -1237,6 +1245,33 @@ QDF_STATUS dp_tx_mon_process_tlv_2_0(struct dp_pdev *pdev)
 	return QDF_STATUS_SUCCESS;
 }
 
+/**
+ * dp_tx_mon_update_end_reason() - API to update end reason
+ *
+ * @mon_pdev - DP_MON_PDEV handle
+ * @ppdu_id - ppdu_id
+ * @end_reason - monitor destiantion descriptor end reason
+ *
+ * Return: void
+ */
+void dp_tx_mon_update_end_reason(struct dp_mon_pdev *mon_pdev,
+				 int ppdu_id, int end_reason)
+{
+	struct dp_mon_pdev_be *mon_pdev_be;
+	struct dp_pdev_tx_capture_be *tx_cap_be;
+
+	mon_pdev_be = dp_get_be_mon_pdev_from_dp_mon_pdev(mon_pdev);
+	if (qdf_unlikely(!mon_pdev_be))
+		return;
+
+	tx_cap_be = &mon_pdev_be->tx_capture_be;
+
+	if (tx_cap_be->be_ppdu_id != ppdu_id)
+		return;
+
+	tx_cap_be->be_end_reason_bitmap |= (1 << end_reason);
+}
+
 /*
  * dp_tx_mon_process_status_tlv() - API to processed TLV
  * invoked from interrupt handler
@@ -1244,14 +1279,16 @@ QDF_STATUS dp_tx_mon_process_tlv_2_0(struct dp_pdev *pdev)
  * @soc - DP_SOC handle
  * @pdev - DP_PDEV handle
  * @mon_ring_desc - descriptor status info
- * @addr - status buffer frag address
+ * @status_frag - status buffer frag address
+ * @end_offset - end offset of buffer that has valid buffer
  *
  * Return: QDF_STATUS
  */
 QDF_STATUS dp_tx_mon_process_status_tlv(struct dp_soc *soc,
 					struct dp_pdev *pdev,
 					struct hal_mon_desc *mon_ring_desc,
-					qdf_dma_addr_t addr)
+					qdf_frag_t status_frag,
+					uint32_t end_offset)
 {
 	struct dp_mon_pdev *mon_pdev;
 	struct dp_mon_pdev_be *mon_pdev_be;
@@ -1285,16 +1322,18 @@ QDF_STATUS dp_tx_mon_process_status_tlv(struct dp_soc *soc,
 	if (tx_cap_be->mode == TX_MON_BE_DISABLE)
 		return QDF_STATUS_E_INVAL;
 
-	if (tx_cap_be->be_ppdu_id != mon_ring_desc->ppdu_id) {
+	if (tx_cap_be->be_ppdu_id != mon_ring_desc->ppdu_id &&
+	    tx_cap_be->last_frag_q_idx) {
 		if (tx_cap_be->be_end_reason_bitmap &
-		    (1 << HAL_TX_MON_FLUSH_DETECTED)) {
+		    (1 << HAL_MON_FLUSH_DETECTED)) {
 			dp_tx_mon_status_queue_free(pdev, tx_cap_be);
 		} else if (tx_cap_be->be_end_reason_bitmap &
-			   (1 << HAL_TX_MON_PPDU_TRUNCATED)) {
+			   (1 << HAL_MON_PPDU_TRUNCATED)) {
 			dp_tx_mon_status_queue_free(pdev, tx_cap_be);
-		} else {
+		} else if (dp_tx_mon_process_tlv_2_0(pdev) !=
+			   QDF_STATUS_SUCCESS) {
 			/* schedule ppdu worth information */
-			dp_tx_mon_process_tlv_2_0(pdev);
+			dp_tx_mon_status_queue_free(pdev, tx_cap_be);
 		}
 
 		/* reset end reason bitmap */
@@ -1306,20 +1345,20 @@ QDF_STATUS dp_tx_mon_process_status_tlv(struct dp_soc *soc,
 
 	/* get ppdu id from destination descriptor and store it in mon pdev */
 	if (mon_ring_desc->empty_descriptor == 1 ||
-	    mon_ring_desc->end_reason == HAL_TX_MON_FLUSH_DETECTED ||
-	    mon_ring_desc->end_reason == HAL_TX_MON_PPDU_TRUNCATED) {
+	    mon_ring_desc->end_reason == HAL_MON_FLUSH_DETECTED ||
+	    mon_ring_desc->end_reason == HAL_MON_PPDU_TRUNCATED) {
 		/*
 		 * free all page frags maintained  at pdev level queue
 		 * update stats counter
 		 */
-		tx_cap_be->status_frag_queue[last_frag_q_idx] = (void *)addr;
+		tx_cap_be->status_frag_queue[last_frag_q_idx] = status_frag;
 		last_frag_q_idx = ++tx_cap_be->last_frag_q_idx;
 		/* TODO: stats counter need to be updated */
 		return QDF_STATUS_SUCCESS;
 	}
 
-	if (mon_ring_desc->end_reason == HAL_TX_MON_STATUS_BUFFER_FULL ||
-	    mon_ring_desc->end_reason == HAL_TX_MON_END_OF_PPDU) {
+	if (mon_ring_desc->end_reason == HAL_MON_STATUS_BUFFER_FULL ||
+	    mon_ring_desc->end_reason == HAL_MON_END_OF_PPDU) {
 		/*
 		 * Get 64 bits sw desc virtual address from
 		 * stats_buf_virtual_address,
@@ -1327,7 +1366,7 @@ QDF_STATUS dp_tx_mon_process_status_tlv(struct dp_soc *soc,
 		 * add status page frag to pdev level queue
 		 * add sw descriptor to local free list
 		 */
-		tx_cap_be->status_frag_queue[last_frag_q_idx] = (void *)addr;
+		tx_cap_be->status_frag_queue[last_frag_q_idx] = status_frag;
 		last_frag_q_idx = ++tx_cap_be->last_frag_q_idx;
 		return QDF_STATUS_SUCCESS;
 	}
@@ -1345,14 +1384,30 @@ QDF_STATUS dp_tx_mon_process_status_tlv(struct dp_soc *soc,
  * @pdev - DP_PDEV handle
  * @mon_ring_desc - descriptor status info
  * @addr - status buffer frag address
+ * @end_offset - end offset of buffer that has valid buffer
  *
  * Return: QDF_STATUS
  */
 QDF_STATUS dp_tx_mon_process_status_tlv(struct dp_soc *soc,
 					struct dp_pdev *pdev,
 					struct hal_mon_desc *mon_ring_desc,
-					qdf_dma_addr_t addr)
+					qdf_frag_t status_frag,
+					uint32_t end_offset)
 {
 	return QDF_STATUS_E_INVAL;
+}
+
+/**
+ * dp_tx_mon_update_end_reason() - API to update end reason
+ *
+ * @mon_pdev - DP_MON_PDEV handle
+ * @ppdu_id - ppdu_id
+ * @end_reason - monitor destiantion descriptor end reason
+ *
+ * Return: void
+ */
+void dp_tx_mon_update_end_reason(struct dp_mon_pdev *mon_pdev,
+				 int ppdu_id, int end_reason)
+{
 }
 #endif
