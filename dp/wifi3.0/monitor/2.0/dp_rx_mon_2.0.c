@@ -448,6 +448,17 @@ dp_rx_mon_srng_process_2_0(struct dp_soc *soc, struct dp_intr *int_ctx,
 		mon_desc = (struct dp_mon_desc *)(uintptr_t)(hal_mon_rx_desc.buf_addr);
 		qdf_assert_always(mon_desc);
 
+		if ((mon_desc == mon_pdev_be->prev_rxmon_desc) &&
+		    (mon_desc->cookie == mon_pdev_be->prev_rxmon_cookie)) {
+			dp_mon_err("duplicate descritout found mon_pdev: %pK mon_desc: %pK cookie: %d",
+				   mon_pdev, mon_desc, mon_desc->cookie);
+			mon_pdev->rx_mon_stats.dup_mon_buf_cnt++;
+			hal_srng_dst_get_next(hal_soc, mon_dst_srng);
+			continue;
+		}
+		mon_pdev_be->prev_rxmon_desc = mon_desc;
+		mon_pdev_be->prev_rxmon_cookie = mon_desc->cookie;
+
 		if (!mon_desc->unmapped) {
 			qdf_mem_unmap_page(soc->osdev, mon_desc->paddr,
 					   rx_mon_desc_pool->buf_size,

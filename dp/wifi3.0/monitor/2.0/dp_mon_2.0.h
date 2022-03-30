@@ -134,6 +134,8 @@ struct dp_mon_pdev_be {
 	struct dp_lite_mon_rx_config *lite_mon_rx_config;
 	struct dp_lite_mon_tx_config *lite_mon_tx_config;
 #endif
+	void *prev_rxmon_desc;
+	uint32_t prev_rxmon_cookie;
 };
 
 /**
