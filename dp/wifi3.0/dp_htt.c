@@ -2401,6 +2401,18 @@ static void dp_vdev_txrx_hw_stats_handler(struct htt_soc *soc,
 			tx_comp.bytes += byte_count;
 			tx_failed.bytes += byte_count;
 
+			/* Extract tqm bypass packet count from buffer */
+			tag_buf = tlv_buf_temp +
+				HTT_VDEV_STATS_GET_INDEX(TX_TQM_BYPASS_PKT_CNT);
+			pkt_count = HTT_VDEV_GET_STATS_U64(tag_buf);
+			tx_comp.num += pkt_count;
+
+			/* Extract tx bypass packet byte count from buffer */
+			tag_buf = tlv_buf_temp +
+				HTT_VDEV_STATS_GET_INDEX(TX_TQM_BYPASS_BYTE_CNT);
+			byte_count = HTT_VDEV_GET_STATS_U64(tag_buf);
+			tx_comp.bytes += byte_count;
+
 			DP_STATS_UPD(vdev, tx.comp_pkt.num, tx_comp.num);
 			DP_STATS_UPD(vdev, tx.comp_pkt.bytes, tx_comp.bytes);
 
