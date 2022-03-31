@@ -23,6 +23,7 @@
 #include "wlan_ipa_main.h"
 #include "cdp_txrx_ipa.h"
 #include "host_diag_core_event.h"
+#include "wlan_reg_services_api.h"
 
 QDF_STATUS wlan_ipa_set_perf_level(struct wlan_ipa_priv *ipa_ctx,
 				    uint64_t tx_packets,
@@ -68,6 +69,37 @@ QDF_STATUS wlan_ipa_set_perf_level(struct wlan_ipa_priv *ipa_ctx,
 	return QDF_STATUS_SUCCESS;
 }
 
+#ifdef QCA_IPA_LL_TX_FLOW_CONTROL
+static inline
+QDF_STATUS wlan_ipa_update_perf_level(struct wlan_ipa_priv *ipa_ctx, int client)
+{
+	struct wlan_objmgr_pdev *pdev = ipa_ctx->pdev;
+	qdf_freq_t low_2g, high_2g;
+
+	wlan_reg_get_freq_range(pdev, &low_2g, &high_2g, NULL, NULL);
+
+	if (low_2g != 0 || high_2g != 0) {
+		return cdp_ipa_set_perf_level(
+				ipa_ctx->dp_soc,
+				client,
+				WLAN_IPA_MAX_BANDWIDTH_2G, ipa_ctx->hdl);
+	} else {
+		return cdp_ipa_set_perf_level(
+				ipa_ctx->dp_soc,
+				client,
+				WLAN_IPA_MAX_BANDWIDTH, ipa_ctx->hdl);
+	}
+}
+#else
+static inline
+QDF_STATUS wlan_ipa_update_perf_level(struct wlan_ipa_priv *ipa_ctx, int client)
+{
+	return cdp_ipa_set_perf_level(ipa_ctx->dp_soc,
+				      client,
+				      WLAN_IPA_MAX_BANDWIDTH, ipa_ctx->hdl);
+}
+#endif
+
 QDF_STATUS wlan_ipa_init_perf_level(struct wlan_ipa_priv *ipa_ctx)
 {
 	int ret;
@@ -79,17 +111,13 @@ QDF_STATUS wlan_ipa_init_perf_level(struct wlan_ipa_priv *ipa_ctx)
 	ipa_debug("IPA clk scaling disabled. Set perf level to maximum %d",
 		  WLAN_IPA_MAX_BANDWIDTH);
 
-	ret = cdp_ipa_set_perf_level(ipa_ctx->dp_soc,
-				     QDF_IPA_CLIENT_WLAN1_CONS,
-				     WLAN_IPA_MAX_BANDWIDTH, ipa_ctx->hdl);
+	ret = wlan_ipa_update_perf_level(ipa_ctx, QDF_IPA_CLIENT_WLAN1_CONS);
 	if (ret) {
 		ipa_err("CONS set perf profile failed: %d", ret);
 		return QDF_STATUS_E_FAILURE;
 	}
 
-	ret = cdp_ipa_set_perf_level(ipa_ctx->dp_soc,
-				     QDF_IPA_CLIENT_WLAN1_PROD,
-				     WLAN_IPA_MAX_BANDWIDTH, ipa_ctx->hdl);
+	ret = wlan_ipa_update_perf_level(ipa_ctx, QDF_IPA_CLIENT_WLAN1_PROD);
 	if (ret) {
 		ipa_err("PROD set perf profile failed: %d", ret);
 		return QDF_STATUS_E_FAILURE;
