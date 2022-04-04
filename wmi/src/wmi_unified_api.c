@@ -3797,3 +3797,18 @@ QDF_STATUS wmi_unified_pn_mgmt_rxfilter_send_cmd(
 					wmi_handle, params);
 	return QDF_STATUS_E_FAILURE;
 }
+
+QDF_STATUS
+wmi_extract_pktlog_decode_info_event(wmi_unified_t wmi_handle,
+				     void *evt_buf, uint8_t *pdev_id,
+				     uint8_t *software_image,
+				     uint8_t *chip_info,
+				     uint32_t *pktlog_json_version)
+{
+	if (wmi_handle->ops->extract_pktlog_decode_info_event)
+		return wmi_handle->ops->extract_pktlog_decode_info_event(
+					wmi_handle, evt_buf, pdev_id,
+					software_image, chip_info,
+					pktlog_json_version);
+	return QDF_STATUS_E_FAILURE;
+}

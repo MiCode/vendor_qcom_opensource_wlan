@@ -4709,6 +4709,25 @@ wmi_unified_peer_ppe_ds_param_send(wmi_unified_t wmi_handle,
 #endif /* WLAN_SUPPORT_PPEDS */
 
 /**
+ * wmi_extract_pktlog_decode_info_event() - Extract pktlog decode info
+ * @wmi_handle: WMI handle
+ * @evt_buf: event buffer
+ * @pdev_id: pdev_id
+ * @software_image: software image version
+ * @chip_info: chip info
+ * @pktlog_json_version: pktlog json version
+ *
+ * Return: QDF_STATUS_SUCCESS for success or error code
+ */
+QDF_STATUS
+wmi_extract_pktlog_decode_info_event(wmi_unified_t wmi_handle,
+				     void *evt_buf,
+				     uint8_t *pdev_id,
+				     uint8_t *software_image,
+				     uint8_t *chip_info,
+				     uint32_t *pktlog_json_version);
+
+/**
  * wmi_unified_pn_mgmt_rxfilter_send_cmd() - Send PN mgmt RxFilter command to FW
  * @wmi_handle: WMI handle
  * @params: RxFilter params

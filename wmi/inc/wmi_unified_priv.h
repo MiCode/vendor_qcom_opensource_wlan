@@ -2965,6 +2965,12 @@ QDF_STATUS
 QDF_STATUS
 (*send_vdev_pn_mgmt_rxfilter_cmd)(wmi_unified_t wmi_handle,
 				  struct vdev_pn_mgmt_rxfilter_params *params);
+
+QDF_STATUS
+(*extract_pktlog_decode_info_event)(wmi_unified_t wmi_handle, void *evt_buf,
+				    uint8_t *pdev_id, uint8_t *software_image,
+				    uint8_t *chip_info,
+				    uint32_t *pktlog_json_version);
 };
 
 /* Forward declartion for psoc*/

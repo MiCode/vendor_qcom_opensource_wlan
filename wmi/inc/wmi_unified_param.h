@@ -4940,6 +4940,7 @@ typedef enum {
 	wmi_resmgr_chan_time_quota_changed_eventid,
 #endif
 	wmi_peer_rx_pn_response_event_id,
+	wmi_extract_pktlog_decode_info_eventid,
 	wmi_events_max,
 } wmi_conv_event_id;
 
@@ -5588,6 +5589,7 @@ typedef enum {
 	wmi_service_rtt_11az_ntb_support,
 	wmi_service_rtt_11az_tb_support,
 #endif
+	wmi_service_pktlog_decode_info_support,
 	wmi_services_max,
 } wmi_conv_service_ids;
 #define WMI_SERVICE_UNAVAILABLE 0xFFFF
