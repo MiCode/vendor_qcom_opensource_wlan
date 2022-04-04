@@ -235,6 +235,7 @@ wlan_mgmt_rx_reo_validate_mlo_hw_link_info(struct wlan_objmgr_psoc *psoc);
  *
  * Return: QDF_STATUS
  */
+QDF_STATUS
 wlan_mgmt_rx_reo_pdev_obj_open_notification
 		(struct wlan_objmgr_pdev *pdev,
 		 struct mgmt_txrx_priv_pdev_context *mgmt_txrx_pdev_ctx);
