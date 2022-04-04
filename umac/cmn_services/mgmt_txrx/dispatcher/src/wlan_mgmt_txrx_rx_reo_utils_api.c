@@ -166,9 +166,9 @@ qdf_export_symbol(wlan_get_pdev_from_mlo_link_id);
 #endif /* WLAN_MGMT_RX_REO_SIM_SUPPORT */
 
 QDF_STATUS
-wlan_mgmt_rx_reo_validate_mlo_hw_link_info(struct wlan_objmgr_psoc *psoc)
+wlan_mgmt_rx_reo_validate_mlo_link_info(struct wlan_objmgr_psoc *psoc)
 {
-	return mgmt_rx_reo_validate_mlo_hw_link_info(psoc);
+	return mgmt_rx_reo_validate_mlo_link_info(psoc);
 }
 
 QDF_STATUS

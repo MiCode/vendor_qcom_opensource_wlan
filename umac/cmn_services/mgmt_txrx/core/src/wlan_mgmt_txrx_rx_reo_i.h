@@ -956,7 +956,7 @@ mgmt_rx_reo_list_max_size_exceeded(struct mgmt_rx_reo_list *reo_list)
 }
 
 /**
- * mgmt_rx_reo_validate_mlo_hw_link_info() - Validate the MLO HW link info
+ * mgmt_rx_reo_validate_mlo_link_info() - Validate the MLO HW link info
  * obtained from the global shared memory arena
  * @psoc: Pointer to psoc object
  *
@@ -968,6 +968,6 @@ mgmt_rx_reo_list_max_size_exceeded(struct mgmt_rx_reo_list *reo_list)
  * Return: QDF_STATUS of operation
  */
 QDF_STATUS
-mgmt_rx_reo_validate_mlo_hw_link_info(struct wlan_objmgr_psoc *psoc);
+mgmt_rx_reo_validate_mlo_link_info(struct wlan_objmgr_psoc *psoc);
 #endif /* WLAN_MGMT_RX_REO_SUPPORT */
 #endif /* _WLAN_MGMT_TXRX_RX_REO_I_H */

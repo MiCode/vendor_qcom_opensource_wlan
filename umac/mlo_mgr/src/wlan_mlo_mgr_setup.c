@@ -22,6 +22,7 @@
 #include "wlan_lmac_if_def.h"
 #include <cdp_txrx_mlo.h>
 #endif
+#include <wlan_mgmt_txrx_rx_reo_utils_api.h>
 
 #ifdef WLAN_MLO_MULTI_CHIP
 bool mlo_is_ml_soc(struct wlan_objmgr_psoc *psoc)
@@ -201,6 +202,7 @@ void mlo_setup_link_ready(struct wlan_objmgr_pdev *pdev)
 {
 	struct mlo_mgr_context *mlo_ctx = wlan_objmgr_get_mlo_ctx();
 	uint8_t link_idx;
+	uint16_t link_id;
 
 	if (!mlo_ctx || !mlo_ctx->setup_info.tot_links)
 		return;
@@ -222,6 +224,14 @@ void mlo_setup_link_ready(struct wlan_objmgr_pdev *pdev)
 	mlo_ctx->setup_info.pdev_list[link_idx] = pdev;
 	mlo_ctx->setup_info.state[link_idx] = MLO_LINK_SETUP_INIT;
 	mlo_ctx->setup_info.num_links++;
+
+	link_id = wlan_mlo_get_pdev_hw_link_id(pdev);
+	if (link_id == INVALID_HW_LINK_ID) {
+		qdf_err("Invalid HW link id for the pdev");
+		return;
+	}
+	mlo_ctx->setup_info.valid_link_bitmap |= (1 << link_id);
+
 	qdf_debug("pdev updated to mld link %d num_links %d",
 		  link_idx, mlo_ctx->setup_info.num_links);
 
@@ -231,9 +241,17 @@ void mlo_setup_link_ready(struct wlan_objmgr_pdev *pdev)
 	    mlo_ctx->setup_info.num_soc == mlo_ctx->setup_info.tot_socs) {
 		struct wlan_objmgr_psoc *psoc;
 		struct wlan_lmac_if_tx_ops *tx_ops;
+		QDF_STATUS status;
 
 		psoc = wlan_pdev_get_psoc(pdev);
 		tx_ops = wlan_psoc_get_lmac_if_txops(psoc);
+
+		status = wlan_mgmt_rx_reo_validate_mlo_link_info(psoc);
+		if (QDF_IS_STATUS_ERROR(status)) {
+			mlo_err("Failed to validate MLO HW link info");
+			qdf_assert_always(0);
+		}
+
 		qdf_debug("Trigger MLO Setup request");
 		if (tx_ops && tx_ops->mops.target_if_mlo_setup_req) {
 			tx_ops->mops.target_if_mlo_setup_req(
@@ -290,6 +308,8 @@ static void mlo_setup_link_down(struct wlan_objmgr_psoc *psoc,
 	struct wlan_objmgr_pdev *pdev;
 	uint8_t link_idx;
 	struct mlo_mgr_context *mlo_ctx = wlan_objmgr_get_mlo_ctx();
+	uint16_t link_id;
+
 	pdev = (struct wlan_objmgr_pdev *)obj;
 
 	if (mlo_find_pdev_idx(pdev, &link_idx) != QDF_STATUS_SUCCESS) {
@@ -300,6 +320,14 @@ static void mlo_setup_link_down(struct wlan_objmgr_psoc *psoc,
 	mlo_ctx->setup_info.pdev_list[link_idx] = NULL;
 	mlo_ctx->setup_info.state[link_idx] = MLO_LINK_UNINITIALIZED;
 	mlo_ctx->setup_info.num_links--;
+
+	link_id = wlan_mlo_get_pdev_hw_link_id(pdev);
+	if (link_id == INVALID_HW_LINK_ID) {
+		qdf_err("Invalid HW link id for the pdev");
+		return;
+	}
+	mlo_ctx->setup_info.valid_link_bitmap &= ~(1 << link_id);
+
 	qdf_debug("link down link_idx %d num_links %d",
 		  link_idx, mlo_ctx->setup_info.num_links);
 }

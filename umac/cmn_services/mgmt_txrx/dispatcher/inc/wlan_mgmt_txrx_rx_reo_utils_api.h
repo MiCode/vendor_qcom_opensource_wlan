@@ -210,7 +210,7 @@ QDF_STATUS
 wlan_mgmt_rx_reo_deinit(void);
 
 /**
- * wlan_mgmt_rx_reo_validate_mlo_hw_link_info() - Validate the MLO HW link
+ * wlan_mgmt_rx_reo_validate_mlo_link_info() - Validate the MLO HW link
  * related information extracted from the MLO global shared memory arena
  * @psoc: pointer to psoc object
  *
@@ -222,7 +222,7 @@ wlan_mgmt_rx_reo_deinit(void);
  * Return: QDF_STATUS
  */
 QDF_STATUS
-wlan_mgmt_rx_reo_validate_mlo_hw_link_info(struct wlan_objmgr_psoc *psoc);
+wlan_mgmt_rx_reo_validate_mlo_link_info(struct wlan_objmgr_psoc *psoc);
 
 /**
  * wlan_mgmt_rx_reo_pdev_obj_open_notification() - pdev open handler for
@@ -326,7 +326,7 @@ QDF_STATUS
 wlan_mgmt_rx_reo_print_egress_frame_debug_info(void);
 #else
 static inline QDF_STATUS
-wlan_mgmt_rx_reo_validate_mlo_hw_link_info(struct wlan_objmgr_psoc *psoc)
+wlan_mgmt_rx_reo_validate_mlo_link_info(struct wlan_objmgr_psoc *psoc)
 {
 	return QDF_STATUS_SUCCESS;
 }

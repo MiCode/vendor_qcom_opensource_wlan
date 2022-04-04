@@ -131,7 +131,7 @@ mgmt_rx_reo_is_stale_frame(
 }
 
 QDF_STATUS
-mgmt_rx_reo_validate_mlo_hw_link_info(struct wlan_objmgr_psoc *psoc)
+mgmt_rx_reo_validate_mlo_link_info(struct wlan_objmgr_psoc *psoc)
 {
 	uint16_t valid_link_bitmap_shmem;
 	uint16_t valid_link_bitmap;
