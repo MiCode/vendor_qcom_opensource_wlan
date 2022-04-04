@@ -67,11 +67,17 @@
 #define MGMT_RX_REO_INGRESS_FRAME_DEBUG_ENTRIES_MAX             (1000)
 #define MGMT_RX_REO_EGRESS_FRAME_DEBUG_ENTRIES_MAX              (1000)
 
+#define MGMT_RX_REO_EGRESS_FRAME_DEBUG_INFO_BOARDER_MAX_SIZE   (166)
+#define MGMT_RX_REO_EGRESS_FRAME_DELIVERY_REASON_STATS_BOARDER_A_MAX_SIZE  (66)
+#define MGMT_RX_REO_EGRESS_FRAME_DELIVERY_REASON_STATS_BOARDER_B_MAX_SIZE  (73)
 #define MGMT_RX_REO_EGRESS_FRAME_DEBUG_INFO_FLAG_MAX_SIZE   (3)
-#define MGMT_RX_REO_EGRESS_FRAME_DEBUG_INFO_WAIT_COUNT_MAX_SIZE   (49)
+#define MGMT_RX_REO_EGRESS_FRAME_DEBUG_INFO_WAIT_COUNT_MAX_SIZE   (69)
 
+#define MGMT_RX_REO_INGRESS_FRAME_DEBUG_INFO_BOARDER_MAX_SIZE   (728)
 #define MGMT_RX_REO_INGRESS_FRAME_DEBUG_INFO_FLAG_MAX_SIZE   (9)
-#define MGMT_RX_REO_INGRESS_FRAME_DEBUG_INFO_WAIT_COUNT_MAX_SIZE   (49)
+#define MGMT_RX_REO_INGRESS_FRAME_DEBUG_INFO_WAIT_COUNT_MAX_SIZE   (69)
+#define MGMT_RX_REO_INGRESS_FRAME_DEBUG_INFO_PER_LINK_SNAPSHOTS_MAX_SIZE   (94)
+#define MGMT_RX_REO_INGRESS_FRAME_DEBUG_INFO_SNAPSHOT_MAX_SIZE     (22)
 #endif /* WLAN_MGMT_RX_REO_DEBUG_SUPPORT*/
 
 /*
@@ -442,6 +448,9 @@ struct reo_ingress_debug_frame_info {
 	struct mgmt_rx_reo_global_ts_info ts_last_released_frame;
 	int16_t list_size_rx;
 	int16_t list_insertion_pos;
+	struct mgmt_rx_reo_snapshot_params shared_snapshots
+			[MAX_MLO_LINKS][MGMT_RX_REO_SHARED_SNAPSHOT_MAX];
+	struct mgmt_rx_reo_snapshot_params host_snapshot[MAX_MLO_LINKS];
 };
 
 /**
@@ -543,7 +552,7 @@ struct reo_egress_frame_stats {
 struct reo_ingress_debug_info {
 	struct reo_ingress_debug_frame_info
 			frame_list[MGMT_RX_REO_INGRESS_FRAME_DEBUG_ENTRIES_MAX];
-	uint32_t next_index;
+	int next_index;
 	bool wrap_aroud;
 	struct reo_ingress_frame_stats stats;
 };
@@ -560,7 +569,7 @@ struct reo_ingress_debug_info {
 struct reo_egress_debug_info {
 	struct reo_egress_debug_frame_info
 			frame_list[MGMT_RX_REO_EGRESS_FRAME_DEBUG_ENTRIES_MAX];
-	uint32_t next_index;
+	int next_index;
 	bool wrap_aroud;
 	struct reo_egress_frame_stats stats;
 };
@@ -639,6 +648,9 @@ struct mgmt_rx_reo_frame_descriptor {
 	bool immediate_delivery;
 	int16_t list_size_rx;
 	int16_t list_insertion_pos;
+	struct mgmt_rx_reo_snapshot_params shared_snapshots
+			[MAX_MLO_LINKS][MGMT_RX_REO_SHARED_SNAPSHOT_MAX];
+	struct mgmt_rx_reo_snapshot_params host_snapshot[MAX_MLO_LINKS];
 };
 
 /**

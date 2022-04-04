@@ -624,9 +624,7 @@ wlan_mgmt_rx_reo_get_priv_object(struct wlan_objmgr_pdev *pdev)
  * wlan_mgmt_rx_reo_algo_calculate_wait_count() - Calculates the number of
  * frames an incoming frame should wait for before it gets delivered.
  * @in_frame_pdev: pdev on which this frame is received
- * @in_frame_params: Pointer to MGMT REO parameters of this frame
- * @wait_count: Pointer to wait count data structure to fill the calculated
- * wait count
+ * @desc: frame Descriptor
  *
  * Each frame carrys a MGMT pkt number which is local to that link, and a
  * timestamp which is global across all the links. MAC HW and FW also captures
@@ -643,9 +641,8 @@ wlan_mgmt_rx_reo_get_priv_object(struct wlan_objmgr_pdev *pdev)
  */
 static QDF_STATUS
 wlan_mgmt_rx_reo_algo_calculate_wait_count(
-	struct wlan_objmgr_pdev *in_frame_pdev,
-	struct mgmt_rx_reo_params *in_frame_params,
-	struct mgmt_rx_reo_wait_count *wait_count)
+		struct wlan_objmgr_pdev *in_frame_pdev,
+		struct mgmt_rx_reo_frame_descriptor *desc)
 {
 	QDF_STATUS status;
 	uint8_t link;
@@ -659,21 +656,31 @@ wlan_mgmt_rx_reo_algo_calculate_wait_count(
 		[MGMT_RX_REO_SHARED_SNAPSHOT_MAX];
 	struct mgmt_rx_reo_snapshot_params *mac_hw_ss, *fw_forwarded_ss,
 					    *fw_consumed_ss, *host_ss;
-
-	if (!in_frame_params) {
-		mgmt_rx_reo_err("MGMT Rx REO params of incoming frame is NULL");
-		return QDF_STATUS_E_NULL_VALUE;
-	}
-
-	if (!wait_count) {
-		mgmt_rx_reo_err("wait count pointer to be filled is NULL");
-		return QDF_STATUS_E_NULL_VALUE;
-	}
+	struct mgmt_rx_reo_params *in_frame_params;
+	struct mgmt_rx_reo_wait_count *wait_count;
 
 	if (!in_frame_pdev) {
 		mgmt_rx_reo_err("pdev is null");
 		return QDF_STATUS_E_NULL_VALUE;
 	}
+
+	if (!desc) {
+		mgmt_rx_reo_err("Frame descriptor is null");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	if (!desc->rx_params) {
+		mgmt_rx_reo_err("MGMT Rx params of incoming frame is NULL");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	in_frame_params = desc->rx_params->reo_params;
+	if (!in_frame_params) {
+		mgmt_rx_reo_err("MGMT Rx REO params of incoming frame is NULL");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	wait_count = &desc->wait_count;
 
 	/* Get the MLO link ID of incoming frame */
 	in_frame_link = wlan_get_mlo_link_id_from_pdev(in_frame_pdev);
@@ -707,6 +714,7 @@ wlan_mgmt_rx_reo_algo_calculate_wait_count(
 		}
 
 		host_ss = &rx_reo_pdev_ctx->host_snapshot;
+		desc->host_snapshot[link] = rx_reo_pdev_ctx->host_snapshot;
 
 		mgmt_rx_reo_debug("link_id = %u HOST SS: valid = %u, ctr = %u, ts = %u",
 				  link, host_ss->valid, host_ss->mgmt_pkt_ctr,
@@ -771,6 +779,9 @@ wlan_mgmt_rx_reo_algo_calculate_wait_count(
 				   last_valid_shared_snapshot[snapshot_id] =
 				   snapshot_params[snapshot_id];
 			}
+			desc->shared_snapshots[link][snapshot_id] =
+						snapshot_params[snapshot_id];
+
 			snapshot_id++;
 		}
 
@@ -1070,6 +1081,8 @@ mgmt_rx_reo_print_egress_frame_stats(struct mgmt_rx_reo_context *reo_ctx)
 	uint64_t delivery_count_per_link[MAX_MLO_LINKS] = {0};
 	uint64_t delivery_count_per_reason[MGMT_RX_REO_RELEASE_REASON_MAX] = {0};
 	uint64_t total_delivery_count = 0;
+	char delivery_reason_stats_boarder_a[MGMT_RX_REO_EGRESS_FRAME_DELIVERY_REASON_STATS_BOARDER_A_MAX_SIZE + 1] = {0};
+	char delivery_reason_stats_boarder_b[MGMT_RX_REO_EGRESS_FRAME_DELIVERY_REASON_STATS_BOARDER_B_MAX_SIZE + 1] = {0};
 
 	if (!reo_ctx)
 		return QDF_STATUS_E_NULL_VALUE;
@@ -1097,55 +1110,66 @@ mgmt_rx_reo_print_egress_frame_stats(struct mgmt_rx_reo_context *reo_ctx)
 			delivery_count_per_reason[reason] +=
 				stats->delivery_count[link_id][reason];
 
-	mgmt_rx_reo_err("Egress frame stats:");
-	mgmt_rx_reo_err("\t1) Delivery related stats:");
-	mgmt_rx_reo_err("\t------------------------------------------");
-	mgmt_rx_reo_err("\t|link id   |Attempts |Success |Premature |");
-	mgmt_rx_reo_err("\t|          | count   | count  | count    |");
-	mgmt_rx_reo_err("\t------------------------------------------");
+	mgmt_rx_reo_alert("Egress frame stats:");
+	mgmt_rx_reo_alert("\t1) Delivery related stats:");
+	mgmt_rx_reo_alert("\t------------------------------------------");
+	mgmt_rx_reo_alert("\t|link id   |Attempts |Success |Premature |");
+	mgmt_rx_reo_alert("\t|          | count   | count  | count    |");
+	mgmt_rx_reo_alert("\t------------------------------------------");
 	for (link_id = 0; link_id < MAX_MLO_LINKS; link_id++) {
-		mgmt_rx_reo_err("\t|%10u|%9llu|%8llu|%10llu|", link_id,
-				stats->delivery_attempts_count[link_id],
-				stats->delivery_success_count[link_id],
-				stats->premature_delivery_count[link_id]);
-	mgmt_rx_reo_err("\t------------------------------------------");
+		mgmt_rx_reo_alert("\t|%10u|%9llu|%8llu|%10llu|", link_id,
+				  stats->delivery_attempts_count[link_id],
+				  stats->delivery_success_count[link_id],
+				  stats->premature_delivery_count[link_id]);
+	mgmt_rx_reo_alert("\t------------------------------------------");
 	}
-	mgmt_rx_reo_err("\t           |%9llu|%8llu|%10llu|\n\n",
-			total_delivery_attempts_count,
-			total_delivery_success_count,
-			total_premature_delivery_count);
+	mgmt_rx_reo_alert("\t%11s|%9llu|%8llu|%10llu|\n\n", "",
+			  total_delivery_attempts_count,
+			  total_delivery_success_count,
+			  total_premature_delivery_count);
 
-	mgmt_rx_reo_err("\t2) Delivery reason related stats");
-	mgmt_rx_reo_err("\tRelease Reason Values:-");
-	mgmt_rx_reo_err("\tRELEASE_REASON_ZERO_WAIT_COUNT - 0x%lx",
-			MGMT_RX_REO_LIST_ENTRY_RELEASE_REASON_ZERO_WAIT_COUNT);
-	mgmt_rx_reo_err("\tRELEASE_REASON_AGED_OUT - 0x%lx",
-			MGMT_RX_REO_LIST_ENTRY_RELEASE_REASON_AGED_OUT);
-	mgmt_rx_reo_err("\tRELEASE_REASON_OLDER_THAN_AGED_OUT_FRAME - 0x%lx",
-			MGMT_RX_REO_LIST_ENTRY_RELEASE_REASON_OLDER_THAN_AGED_OUT_FRAME);
-	mgmt_rx_reo_err("\tRELEASE_REASON_LIST_MAX_SIZE_EXCEEDED - 0x%lx",
-			MGMT_RX_REO_LIST_ENTRY_RELEASE_REASON_LIST_MAX_SIZE_EXCEEDED);
-	mgmt_rx_reo_err("\t------------------------------------------------------------------");
-	mgmt_rx_reo_err("\t|Release Reason/ |       |       |       |       |       |       |");
-	mgmt_rx_reo_err("\t|link id         |      0|      1|      2|      3|      4|      5| ");
-	mgmt_rx_reo_err("\t------------------------------------------------------------------");
+	mgmt_rx_reo_alert("\t2) Delivery reason related stats");
+	mgmt_rx_reo_alert("\tRelease Reason Values:-");
+	mgmt_rx_reo_alert("\tRELEASE_REASON_ZERO_WAIT_COUNT - 0x%lx",
+			  MGMT_RX_REO_LIST_ENTRY_RELEASE_REASON_ZERO_WAIT_COUNT);
+	mgmt_rx_reo_alert("\tRELEASE_REASON_AGED_OUT - 0x%lx",
+			  MGMT_RX_REO_LIST_ENTRY_RELEASE_REASON_AGED_OUT);
+	mgmt_rx_reo_alert("\tRELEASE_REASON_OLDER_THAN_AGED_OUT_FRAME - 0x%lx",
+			  MGMT_RX_REO_LIST_ENTRY_RELEASE_REASON_OLDER_THAN_AGED_OUT_FRAME);
+	mgmt_rx_reo_alert("\tRELEASE_REASON_LIST_MAX_SIZE_EXCEEDED - 0x%lx",
+			  MGMT_RX_REO_LIST_ENTRY_RELEASE_REASON_LIST_MAX_SIZE_EXCEEDED);
+
+	qdf_mem_set(delivery_reason_stats_boarder_a,
+		    MGMT_RX_REO_EGRESS_FRAME_DELIVERY_REASON_STATS_BOARDER_A_MAX_SIZE, '-');
+	qdf_mem_set(delivery_reason_stats_boarder_b,
+		    MGMT_RX_REO_EGRESS_FRAME_DELIVERY_REASON_STATS_BOARDER_B_MAX_SIZE, '-');
+
+	mgmt_rx_reo_alert("\t%66s", delivery_reason_stats_boarder_a);
+	mgmt_rx_reo_alert("\t|%16s|%7s|%7s|%7s|%7s|%7s|%7s|", "Release Reason/",
+			  "", "", "", "", "", "");
+	mgmt_rx_reo_alert("\t|%16s|%7s|%7s|%7s|%7s|%7s|%7s|", "link id",
+			  "0", "1", "2", "3", "4", "5");
+	mgmt_rx_reo_alert("\t%s", delivery_reason_stats_boarder_b);
 
 	for (reason = 0; reason < MGMT_RX_REO_RELEASE_REASON_MAX; reason++) {
-		mgmt_rx_reo_err("\t|%16x|%7llu|%7llu|%7llu|%7llu|%7llu|%7llu|%7llu", reason,
-				stats->delivery_count[0][reason],
-				stats->delivery_count[1][reason],
-				stats->delivery_count[2][reason],
-				stats->delivery_count[3][reason],
-				stats->delivery_count[4][reason],
-				stats->delivery_count[5][reason],
-				delivery_count_per_reason[reason]);
-		mgmt_rx_reo_err("\t---------------------------------------------------------");
+		mgmt_rx_reo_alert("\t|%16x|%7llu|%7llu|%7llu|%7llu|%7llu|%7llu|%7llu",
+				  reason, stats->delivery_count[0][reason],
+				  stats->delivery_count[1][reason],
+				  stats->delivery_count[2][reason],
+				  stats->delivery_count[3][reason],
+				  stats->delivery_count[4][reason],
+				  stats->delivery_count[5][reason],
+				  delivery_count_per_reason[reason]);
+		mgmt_rx_reo_alert("\t%s", delivery_reason_stats_boarder_b);
 	}
-	mgmt_rx_reo_err("\t                 |%7llu|%7llu|%7llu|%7llu|%7llu|%7llu|%7llu\n\n",
-			delivery_count_per_link[0], delivery_count_per_link[1],
-			delivery_count_per_link[2], delivery_count_per_link[3],
-			delivery_count_per_link[4], delivery_count_per_link[5],
-			total_delivery_count);
+	mgmt_rx_reo_alert("\t%17s|%7llu|%7llu|%7llu|%7llu|%7llu|%7llu|%7llu\n\n",
+			  "", delivery_count_per_link[0],
+			  delivery_count_per_link[1],
+			  delivery_count_per_link[2],
+			  delivery_count_per_link[3],
+			  delivery_count_per_link[4],
+			  delivery_count_per_link[5],
+			  total_delivery_count);
 
 	return QDF_STATUS_SUCCESS;
 }
@@ -1253,41 +1277,74 @@ mgmt_rx_reo_log_egress_frame_after_delivery(
  * mgmt_rx_reo_print_egress_frame_info() - Print the debug information about the
  * latest frames leaving the reorder module
  * @reo_ctx: management rx reorder context
+ * @num_frames: Number of frames for which the debug information is to be
+ * printed. If @num_frames is 0, then debug information about all the frames
+ * in the ring buffer will be  printed.
  *
  * Return: QDF_STATUS of operation
  */
 static QDF_STATUS
-mgmt_rx_reo_print_egress_frame_info(struct mgmt_rx_reo_context *reo_ctx)
+mgmt_rx_reo_print_egress_frame_info(struct mgmt_rx_reo_context *reo_ctx,
+				    uint16_t num_frames))
 {
 	struct reo_egress_debug_info *egress_frame_debug_info;
-	uint16_t start_index;
+	int start_index;
 	uint16_t index;
 	uint16_t entry;
 	uint16_t num_valid_entries;
+	uint16_t num_entries_to_print;
+	char boarder[MGMT_RX_REO_EGRESS_FRAME_DEBUG_INFO_BOARDER_MAX_SIZE + 1] = {'\0'};
 
 	if (!reo_ctx)
 		return QDF_STATUS_E_NULL_VALUE;
 
 	egress_frame_debug_info = &reo_ctx->egress_frame_debug_info;
 
-	if (egress_frame_debug_info->wrap_aroud) {
-		start_index = egress_frame_debug_info->next_index;
+	if (egress_frame_debug_info->wrap_aroud)
 		num_valid_entries = MGMT_RX_REO_EGRESS_FRAME_DEBUG_ENTRIES_MAX;
+	else
+		num_valid_entries = egress_frame_debug_info->next_index;
+
+	if (num_frames == 0) {
+		num_entries_to_print = num_valid_entries;
+
+		if (egress_frame_debug_info->wrap_aroud)
+			start_index = egress_frame_debug_info->next_index;
+		else
+			start_index = 0;
 	} else {
-		start_index = 0;
-		num_valid_entries =
-			egress_frame_debug_info->next_index - start_index;
+		num_entries_to_print = qdf_min(num_frames, num_valid_entries);
+
+		start_index = (egress_frame_debug_info->next_index -
+			       num_entries_to_print +
+			       MGMT_RX_REO_EGRESS_FRAME_DEBUG_ENTRIES_MAX)
+			      % MGMT_RX_REO_EGRESS_FRAME_DEBUG_ENTRIES_MAX;
+
+		qdf_assert_always(start_index >= 0 &&
+				  start_index < MGMT_RX_REO_EGRESS_FRAME_DEBUG_ENTRIES_MAX);
 	}
 
-	if (!num_valid_entries)
+	mgmt_rx_reo_alert_no_fl("Egress Frame Info:-");
+	mgmt_rx_reo_alert_no_fl("num_frames = %u, wrap = %u, next_index = %u",
+				num_frames,
+				egress_frame_debug_info->wrap_aroud,
+				egress_frame_debug_info->next_index);
+	mgmt_rx_reo_alert_no_fl("start_index = %d num_entries_to_print = %u",
+				start_index, num_entries_to_print);
+
+	if (!num_entries_to_print)
 		return QDF_STATUS_SUCCESS;
 
-	mgmt_rx_reo_err_no_fl("Egress Frame Info:-");
-	mgmt_rx_reo_err_no_fl("Number of valid entries = %u",
-			      num_valid_entries);
-	mgmt_rx_reo_err_no_fl("--------------------------------------------------------------------------------------------------------------------------------------------------");
-	mgmt_rx_reo_err_no_fl("|No.|Link|SeqNo|Global ts |Ingress ts|Insert. ts|Removal ts|Egress ts |E Dur|W Dur  |Flags|Rea.|Wait Count                                       |");
-	mgmt_rx_reo_err_no_fl("--------------------------------------------------------------------------------------------------------------------------------------------------");
+	qdf_mem_set(boarder,
+		    MGMT_RX_REO_EGRESS_FRAME_DEBUG_INFO_BOARDER_MAX_SIZE, '-');
+
+	mgmt_rx_reo_alert_no_fl("%s", boarder);
+	mgmt_rx_reo_alert_no_fl("|%3s|%4s|%5s|%10s|%10s|%10s|%10s|%10s|%5s|%7s|%5s|%4s|%69s|",
+				"No.", "Link", "SeqNo", "Global ts",
+				"Ingress ts", "Insert. ts", "Removal ts",
+				"Egress ts", "E Dur", "W Dur", "Flags", "Rea.",
+				"Wait Count");
+	mgmt_rx_reo_alert_no_fl("%s", boarder);
 
 	index = start_index;
 	for (entry = 0; entry < num_valid_entries; entry++) {
@@ -1308,24 +1365,27 @@ mgmt_rx_reo_print_egress_frame_info(struct mgmt_rx_reo_context *reo_ctx)
 		snprintf(flags, sizeof(flags), "%c %c", flag_error,
 			 flag_premature_delivery);
 		snprintf(wait_count, sizeof(wait_count),
-			 "%9llx(%8x, %8x, %8x, %8x)",
+			 "%9llx(%8x, %8x, %8x, %8x, %8x, %8x)",
 			 info->wait_count.total_count,
 			 info->wait_count.per_link_count[0],
 			 info->wait_count.per_link_count[1],
 			 info->wait_count.per_link_count[2],
-			 info->wait_count.per_link_count[3]);
+			 info->wait_count.per_link_count[3],
+			 info->wait_count.per_link_count[4],
+			 info->wait_count.per_link_count[5]);
 
-		mgmt_rx_reo_err_no_fl("|%3u|%4u|%5u|%10u|%10llu|%10llu|%10llu|%10llu|%5llu|%7llu|%5s|%4x|%49s|",
-				      entry, info->link_id, info->mgmt_pkt_ctr,
-				      info->global_timestamp,
-				      info->ingress_timestamp,
-				      info->insertion_ts, info->removal_ts,
-				      info->egress_timestamp,
-				      info->egress_duration,
-				      info->removal_ts - info->insertion_ts,
-				      flags, info->release_reason, wait_count);
-		mgmt_rx_reo_err_no_fl("-------------------------------------------------------------------------"
-				      "-------------------------------------------------------------------------");
+		mgmt_rx_reo_alert_no_fl("|%3u|%4u|%5u|%10u|%10llu|%10llu|%10llu|%10llu|%5llu|%7llu|%5s|%4x|%69s|",
+					entry, info->link_id,
+					info->mgmt_pkt_ctr,
+					info->global_timestamp,
+					info->ingress_timestamp,
+					info->insertion_ts, info->removal_ts,
+					info->egress_timestamp,
+					info->egress_duration,
+					info->removal_ts - info->insertion_ts,
+					flags, info->release_reason,
+					wait_count);
+		mgmt_rx_reo_alert_no_fl("%s", boarder);
 
 		index++;
 		index %= MGMT_RX_REO_EGRESS_FRAME_DEBUG_ENTRIES_MAX;
@@ -2183,85 +2243,85 @@ mgmt_rx_reo_print_ingress_frame_stats(struct mgmt_rx_reo_context *reo_ctx)
 				stats->immediate_delivery_count[link_id];
 	}
 
-	mgmt_rx_reo_err("Ingress Frame Stats:");
-	mgmt_rx_reo_err("\t1) Ingress Frame Count:");
-	mgmt_rx_reo_err("\tDescriptor Type Values:-");
-	mgmt_rx_reo_err("\t\t0 - MGMT_RX_REO_FRAME_DESC_HOST_CONSUMED_FRAME");
-	mgmt_rx_reo_err("\t\t1 - MGMT_RX_REO_FRAME_DESC_FW_CONSUMED_FRAME");
-	mgmt_rx_reo_err("\t\t2 - MGMT_RX_REO_FRAME_DESC_ERROR_FRAME");
-	mgmt_rx_reo_err("\t------------------------------------");
-	mgmt_rx_reo_err("\t|link id/  |       |       |       |");
-	mgmt_rx_reo_err("\t|desc type |      0|      1|      2|");
-	mgmt_rx_reo_err("\t-------------------------------------------");
+	mgmt_rx_reo_alert("Ingress Frame Stats:");
+	mgmt_rx_reo_alert("\t1) Ingress Frame Count:");
+	mgmt_rx_reo_alert("\tDescriptor Type Values:-");
+	mgmt_rx_reo_alert("\t\t0 - MGMT_RX_REO_FRAME_DESC_HOST_CONSUMED_FRAME");
+	mgmt_rx_reo_alert("\t\t1 - MGMT_RX_REO_FRAME_DESC_FW_CONSUMED_FRAME");
+	mgmt_rx_reo_alert("\t\t2 - MGMT_RX_REO_FRAME_DESC_ERROR_FRAME");
+	mgmt_rx_reo_alert("\t------------------------------------");
+	mgmt_rx_reo_alert("\t|link id/  |       |       |       |");
+	mgmt_rx_reo_alert("\t|desc type |      0|      1|      2|");
+	mgmt_rx_reo_alert("\t-------------------------------------------");
 
 	for (link_id = 0; link_id < MAX_MLO_LINKS; link_id++) {
-		mgmt_rx_reo_err("\t|%10u|%7llu|%7llu|%7llu|%7llu", link_id,
-				stats->ingress_count[link_id][0],
-				stats->ingress_count[link_id][1],
-				stats->ingress_count[link_id][2],
-				ingress_count_per_link[link_id]);
-		mgmt_rx_reo_err("\t-------------------------------------------");
+		mgmt_rx_reo_alert("\t|%10u|%7llu|%7llu|%7llu|%7llu", link_id,
+				  stats->ingress_count[link_id][0],
+				  stats->ingress_count[link_id][1],
+				  stats->ingress_count[link_id][2],
+				  ingress_count_per_link[link_id]);
+		mgmt_rx_reo_alert("\t-------------------------------------------");
 	}
-	mgmt_rx_reo_err("\t           |%7llu|%7llu|%7llu|%7llu\n\n",
-			ingress_count_per_desc_type[0],
-			ingress_count_per_desc_type[1],
-			ingress_count_per_desc_type[2],
-			total_ingress_count);
+	mgmt_rx_reo_alert("\t           |%7llu|%7llu|%7llu|%7llu\n\n",
+			  ingress_count_per_desc_type[0],
+			  ingress_count_per_desc_type[1],
+			  ingress_count_per_desc_type[2],
+			  total_ingress_count);
 
-	mgmt_rx_reo_err("\t2) Stale Frame Count:");
-	mgmt_rx_reo_err("\t------------------------------------");
-	mgmt_rx_reo_err("\t|link id/  |       |       |       |");
-	mgmt_rx_reo_err("\t|desc type |      0|      1|      2|");
-	mgmt_rx_reo_err("\t-------------------------------------------");
+	mgmt_rx_reo_alert("\t2) Stale Frame Count:");
+	mgmt_rx_reo_alert("\t------------------------------------");
+	mgmt_rx_reo_alert("\t|link id/  |       |       |       |");
+	mgmt_rx_reo_alert("\t|desc type |      0|      1|      2|");
+	mgmt_rx_reo_alert("\t-------------------------------------------");
 	for (link_id = 0; link_id < MAX_MLO_LINKS; link_id++) {
-		mgmt_rx_reo_err("\t|%10u|%7llu|%7llu|%7llu|%7llu", link_id,
-				stats->stale_count[link_id][0],
-				stats->stale_count[link_id][1],
-				stats->stale_count[link_id][2],
-				stale_count_per_link[link_id]);
-		mgmt_rx_reo_err("\t-------------------------------------------");
+		mgmt_rx_reo_alert("\t|%10u|%7llu|%7llu|%7llu|%7llu", link_id,
+				  stats->stale_count[link_id][0],
+				  stats->stale_count[link_id][1],
+				  stats->stale_count[link_id][2],
+				  stale_count_per_link[link_id]);
+		mgmt_rx_reo_alert("\t-------------------------------------------");
 	}
-	mgmt_rx_reo_err("\t           |%7llu|%7llu|%7llu|%7llu\n\n",
-			stale_count_per_desc_type[0],
-			stale_count_per_desc_type[1],
-			stale_count_per_desc_type[2],
-			total_stale_count);
+	mgmt_rx_reo_alert("\t           |%7llu|%7llu|%7llu|%7llu\n\n",
+			  stale_count_per_desc_type[0],
+			  stale_count_per_desc_type[1],
+			  stale_count_per_desc_type[2],
+			  total_stale_count);
 
-	mgmt_rx_reo_err("\t3) Error Frame Count:");
-	mgmt_rx_reo_err("\t------------------------------------");
-	mgmt_rx_reo_err("\t|link id/  |       |       |       |");
-	mgmt_rx_reo_err("\t|desc type |      0|      1|      2|");
-	mgmt_rx_reo_err("\t-------------------------------------------");
+	mgmt_rx_reo_alert("\t3) Error Frame Count:");
+	mgmt_rx_reo_alert("\t------------------------------------");
+	mgmt_rx_reo_alert("\t|link id/  |       |       |       |");
+	mgmt_rx_reo_alert("\t|desc type |      0|      1|      2|");
+	mgmt_rx_reo_alert("\t-------------------------------------------");
 	for (link_id = 0; link_id < MAX_MLO_LINKS; link_id++) {
-		mgmt_rx_reo_err("\t|%10u|%7llu|%7llu|%7llu|%7llu", link_id,
-				stats->error_count[link_id][0],
-				stats->error_count[link_id][1],
-				stats->error_count[link_id][2],
-				error_count_per_link[link_id]);
-		mgmt_rx_reo_err("\t-------------------------------------------");
+		mgmt_rx_reo_alert("\t|%10u|%7llu|%7llu|%7llu|%7llu", link_id,
+				  stats->error_count[link_id][0],
+				  stats->error_count[link_id][1],
+				  stats->error_count[link_id][2],
+				  error_count_per_link[link_id]);
+		mgmt_rx_reo_alert("\t-------------------------------------------");
 	}
-	mgmt_rx_reo_err("\t           |%7llu|%7llu|%7llu|%7llu\n\n",
-			error_count_per_desc_type[0],
-			error_count_per_desc_type[1],
-			error_count_per_desc_type[2],
-			total_error_count);
+	mgmt_rx_reo_alert("\t           |%7llu|%7llu|%7llu|%7llu\n\n",
+			  error_count_per_desc_type[0],
+			  error_count_per_desc_type[1],
+			  error_count_per_desc_type[2],
+			  total_error_count);
 
-	mgmt_rx_reo_err("\t4) Host consumed frames related stats:");
-	mgmt_rx_reo_err("\t------------------------------------------------");
-	mgmt_rx_reo_err("\t|link id   |Queued frame |Zero wait |Immediate |");
-	mgmt_rx_reo_err("\t|          |    count    |  count   | delivery |");
-	mgmt_rx_reo_err("\t------------------------------------------------");
+	mgmt_rx_reo_alert("\t4) Host consumed frames related stats:");
+	mgmt_rx_reo_alert("\t------------------------------------------------");
+	mgmt_rx_reo_alert("\t|link id   |Queued frame |Zero wait |Immediate |");
+	mgmt_rx_reo_alert("\t|          |    count    |  count   | delivery |");
+	mgmt_rx_reo_alert("\t------------------------------------------------");
 	for (link_id = 0; link_id < MAX_MLO_LINKS; link_id++) {
-		mgmt_rx_reo_err("\t|%10u|%13llu|%10llu|%10llu|", link_id,
-				stats->queued_count[link_id],
-				stats->zero_wait_count_rx_count[link_id],
-				stats->immediate_delivery_count[link_id]);
-		mgmt_rx_reo_err("\t------------------------------------------------");
+		mgmt_rx_reo_alert("\t|%10u|%13llu|%10llu|%10llu|", link_id,
+				  stats->queued_count[link_id],
+				  stats->zero_wait_count_rx_count[link_id],
+				  stats->immediate_delivery_count[link_id]);
+		mgmt_rx_reo_alert("\t------------------------------------------------");
 	}
-	mgmt_rx_reo_err("\t           |%13llu|%10llu|%10llu|\n\n",
-			total_queued_count,
-			total_zero_wait_count_rx_count,
-			total_immediate_delivery_count);
+	mgmt_rx_reo_alert("\t%11s|%13llu|%10llu|%10llu|\n\n", "",
+			  total_queued_count,
+			  total_zero_wait_count_rx_count,
+			  total_immediate_delivery_count);
 
 	return QDF_STATUS_SUCCESS;
 }
@@ -2302,6 +2362,13 @@ mgmt_rx_reo_log_ingress_frame(struct mgmt_rx_reo_context *reo_ctx,
 				mgmt_rx_reo_get_global_ts(desc->rx_params);
 	cur_frame_debug_info->type = desc->type;
 	cur_frame_debug_info->wait_count = desc->wait_count;
+	qdf_mem_copy(cur_frame_debug_info->shared_snapshots,
+		     desc->shared_snapshots,
+		     qdf_min(sizeof(cur_frame_debug_info->shared_snapshots),
+			     sizeof(desc->shared_snapshots)));
+	qdf_mem_copy(cur_frame_debug_info->host_snapshot, desc->host_snapshot,
+		     qdf_min(sizeof(cur_frame_debug_info->host_snapshot),
+			     sizeof(desc->host_snapshot)));
 	cur_frame_debug_info->is_queued = is_queued;
 	cur_frame_debug_info->is_stale = desc->is_stale;
 	cur_frame_debug_info->zero_wait_count_rx = desc->zero_wait_count_rx;
@@ -2340,55 +2407,92 @@ mgmt_rx_reo_log_ingress_frame(struct mgmt_rx_reo_context *reo_ctx,
 
 /**
  * mgmt_rx_reo_print_ingress_frame_info() - Print the debug information about
- * the latest frames entering the reorder module
+ * the latest frames entered the reorder module
  * @reo_ctx: management rx reorder context
+ * @num_frames: Number of frames for which the debug information is to be
+ * printed. If @num_frames is 0, then debug information about all the frames
+ * in the ring buffer will be  printed.
  *
  * Return: QDF_STATUS of operation
  */
 static QDF_STATUS
-mgmt_rx_reo_print_ingress_frame_info(struct mgmt_rx_reo_context *reo_ctx)
+mgmt_rx_reo_print_ingress_frame_info(struct mgmt_rx_reo_context *reo_ctx,
+				     uint16_t num_frames)
 {
 	struct reo_ingress_debug_info *ingress_frame_debug_info;
-	uint16_t start_index;
+	int start_index;
 	uint16_t index;
 	uint16_t entry;
 	uint16_t num_valid_entries;
+	uint16_t num_entries_to_print;
+	char boarder[MGMT_RX_REO_INGRESS_FRAME_DEBUG_INFO_BOARDER_MAX_SIZE + 1] = {'\0'};
 
 	if (!reo_ctx)
 		return QDF_STATUS_E_NULL_VALUE;
 
 	ingress_frame_debug_info = &reo_ctx->ingress_frame_debug_info;
 
-	if (ingress_frame_debug_info->wrap_aroud) {
-		start_index = ingress_frame_debug_info->next_index;
+	if (ingress_frame_debug_info->wrap_aroud)
 		num_valid_entries = MGMT_RX_REO_INGRESS_FRAME_DEBUG_ENTRIES_MAX;
+	else
+		num_valid_entries = ingress_frame_debug_info->next_index;
+
+	if (num_frames == 0) {
+		num_entries_to_print = num_valid_entries;
+
+		if (ingress_frame_debug_info->wrap_aroud)
+			start_index = ingress_frame_debug_info->next_index;
+		else
+			start_index = 0;
 	} else {
-		start_index = 0;
-		num_valid_entries =
-			ingress_frame_debug_info->next_index - start_index;
+		num_entries_to_print = qdf_min(num_frames, num_valid_entries);
+
+		start_index = (ingress_frame_debug_info->next_index -
+			       num_entries_to_print +
+			       MGMT_RX_REO_INGRESS_FRAME_DEBUG_ENTRIES_MAX)
+			      % MGMT_RX_REO_INGRESS_FRAME_DEBUG_ENTRIES_MAX;
+
+		qdf_assert_always(start_index >= 0 &&
+				  start_index < MGMT_RX_REO_INGRESS_FRAME_DEBUG_ENTRIES_MAX);
 	}
 
-	if (!num_valid_entries)
+	mgmt_rx_reo_alert_no_fl("Ingress Frame Info:-");
+	mgmt_rx_reo_alert_no_fl("num_frames = %u, wrap = %u, next_index = %u",
+				num_frames,
+				ingress_frame_debug_info->wrap_aroud,
+				ingress_frame_debug_info->next_index);
+	mgmt_rx_reo_alert_no_fl("start_index = %d num_entries_to_print = %u",
+				start_index, num_entries_to_print);
+
+	if (!num_entries_to_print)
 		return QDF_STATUS_SUCCESS;
 
-	mgmt_rx_reo_err_no_fl("Ingress Frame Info:-");
-	mgmt_rx_reo_err_no_fl("Number of valid entries = %u",
-			      num_valid_entries);
-	mgmt_rx_reo_err_no_fl("-----------------------------------------------------------------------------------------------------------------------------------------");
-	mgmt_rx_reo_err_no_fl("|Index|Type|Link|SeqNo|Global ts |Last ts   |Ingress ts|Flags    |Ingress Dur|Size|Pos|Wait Count                                       |");
-	mgmt_rx_reo_err_no_fl("-----------------------------------------------------------------------------------------------------------------------------------------");
+	qdf_mem_set(boarder,
+		    MGMT_RX_REO_INGRESS_FRAME_DEBUG_INFO_BOARDER_MAX_SIZE, '-');
+
+	mgmt_rx_reo_alert_no_fl("%s", boarder);
+	mgmt_rx_reo_alert_no_fl("|%5s|%4s|%4s|%5s|%10s|%10s|%11s|%9s|%11s|%4s|%3s|%69s|%94s|%94s|%94s|%94s|%94s|%94s|",
+				"Index", "Type", "Link", "SeqNo", "Global ts",
+				"Last ts", "Ingress ts", "Flags", "Ingress Dur",
+				"Size", "Pos", "Wait Count",
+				"Snapshot : link 0", "Snapshot : link 1",
+				"Snapshot : link 2", "Snapshot : link 3",
+				"Snapshot : link 4", "Snapshot : link 5");
+	mgmt_rx_reo_alert_no_fl("%s", boarder);
 
 	index = start_index;
-	for (entry = 0; entry < num_valid_entries; entry++) {
+	for (entry = 0; entry < num_entries_to_print; entry++) {
 		struct reo_ingress_debug_frame_info *info;
 		char flags[MGMT_RX_REO_INGRESS_FRAME_DEBUG_INFO_FLAG_MAX_SIZE + 1] = {'\0'};
 		char wait_count[MGMT_RX_REO_INGRESS_FRAME_DEBUG_INFO_WAIT_COUNT_MAX_SIZE + 1] = {'\0'};
+		char snapshots[MAX_MLO_LINKS][MGMT_RX_REO_INGRESS_FRAME_DEBUG_INFO_PER_LINK_SNAPSHOTS_MAX_SIZE + 1] = {'\0'};
 		char flag_queued = ' ';
 		char flag_stale = ' ';
 		char flag_error = ' ';
 		char flag_zero_wait_count_rx = ' ';
 		char flag_immediate_delivery = ' ';
 		int64_t ts_last_released_frame = -1;
+		uint8_t link;
 
 		info = &reo_ctx->ingress_frame_debug_info.frame_list[index];
 
@@ -2415,25 +2519,68 @@ mgmt_rx_reo_print_ingress_frame_info(struct mgmt_rx_reo_context *reo_ctx)
 			 flag_stale, flag_queued, flag_zero_wait_count_rx,
 			 flag_immediate_delivery);
 		snprintf(wait_count, sizeof(wait_count),
-			 "%9llx(%8x, %8x, %8x, %8x)",
+			 "%9llx(%8x, %8x, %8x, %8x, %8x, %8x)",
 			 info->wait_count.total_count,
 			 info->wait_count.per_link_count[0],
 			 info->wait_count.per_link_count[1],
 			 info->wait_count.per_link_count[2],
-			 info->wait_count.per_link_count[3]);
+			 info->wait_count.per_link_count[3],
+			 info->wait_count.per_link_count[4],
+			 info->wait_count.per_link_count[5]);
 
-		mgmt_rx_reo_err_no_fl("|%5u|%4u|%4u|%5u|%10u|%10lld|%10llu|%9s|%11llu|%4d|%3d|%49s|",
-				      entry, info->type, info->link_id,
-				      info->mgmt_pkt_ctr,
-				      info->global_timestamp,
-				      ts_last_released_frame,
-				      info->ingress_timestamp, flags,
-				      info->ingress_duration,
-				      info->list_size_rx,
-				      info->list_insertion_pos, wait_count);
-	mgmt_rx_reo_err_no_fl("----------------------------------------------"
-			      "----------------------------------------------"
-			      "---------------------------------------------");
+		for (link = 0; link < MAX_MLO_LINKS; link++) {
+			char mac_hw[MGMT_RX_REO_INGRESS_FRAME_DEBUG_INFO_SNAPSHOT_MAX_SIZE + 1] = {'\0'};
+			char fw_consumed[MGMT_RX_REO_INGRESS_FRAME_DEBUG_INFO_SNAPSHOT_MAX_SIZE + 1] = {'\0'};
+			char fw_forwaded[MGMT_RX_REO_INGRESS_FRAME_DEBUG_INFO_SNAPSHOT_MAX_SIZE + 1] = {'\0'};
+			char host[MGMT_RX_REO_INGRESS_FRAME_DEBUG_INFO_SNAPSHOT_MAX_SIZE + 1] = {'\0'};
+			struct mgmt_rx_reo_snapshot_params *mac_hw_ss;
+			struct mgmt_rx_reo_snapshot_params *fw_consumed_ss;
+			struct mgmt_rx_reo_snapshot_params *fw_forwarded_ss;
+			struct mgmt_rx_reo_snapshot_params *host_ss;
+
+			mac_hw_ss = &info->shared_snapshots
+				[link][MGMT_RX_REO_SHARED_SNAPSHOT_MAC_HW];
+			fw_consumed_ss = &info->shared_snapshots
+				[link][MGMT_RX_REO_SHARED_SNAPSHOT_FW_CONSUMED];
+			fw_forwarded_ss = &info->shared_snapshots
+				[link][MGMT_RX_REO_SHARED_SNAPSHOT_FW_FORWADED];
+			host_ss = &info->host_snapshot[link];
+
+			snprintf(mac_hw, sizeof(mac_hw), "(%1u, %5u, %10u)",
+				 mac_hw_ss->valid, mac_hw_ss->mgmt_pkt_ctr,
+				 mac_hw_ss->global_timestamp);
+			snprintf(fw_consumed, sizeof(fw_consumed),
+				 "(%1u, %5u, %10u)",
+				 fw_consumed_ss->valid,
+				 fw_consumed_ss->mgmt_pkt_ctr,
+				 fw_consumed_ss->global_timestamp);
+			snprintf(fw_forwaded, sizeof(fw_forwaded),
+				 "(%1u, %5u, %10u)",
+				 fw_forwarded_ss->valid,
+				 fw_forwarded_ss->mgmt_pkt_ctr,
+				 fw_forwarded_ss->global_timestamp);
+			snprintf(host, sizeof(host), "(%1u, %5u, %10u)",
+				 host_ss->valid,
+				 host_ss->mgmt_pkt_ctr,
+				 host_ss->global_timestamp);
+			snprintf(snapshots[link], sizeof(snapshots[link]),
+				 "%22s, %22s, %22s, %22s", mac_hw, fw_consumed,
+				 fw_forwaded, host);
+		}
+
+		mgmt_rx_reo_alert_no_fl("|%5u|%4u|%4u|%5u|%10u|%10lld|%11llu|%9s|%11llu|%4d|%3d|%69s|%70s|%70s|%70s|%70s|%70s|%70s|",
+					entry, info->type, info->link_id,
+					info->mgmt_pkt_ctr,
+					info->global_timestamp,
+					ts_last_released_frame,
+					info->ingress_timestamp, flags,
+					info->ingress_duration,
+					info->list_size_rx,
+					info->list_insertion_pos, wait_count,
+					snapshots[0], snapshots[1],
+					snapshots[2], snapshots[3],
+					snapshots[4], snapshots[5]);
+		mgmt_rx_reo_alert_no_fl("%s", boarder);
 
 		index++;
 		index %= MGMT_RX_REO_INGRESS_FRAME_DEBUG_ENTRIES_MAX;
@@ -2611,10 +2758,7 @@ wlan_mgmt_rx_reo_algo_entry(struct wlan_objmgr_pdev *pdev,
 		goto failure;
 
 	/* Compute wait count for this frame/event */
-	ret = wlan_mgmt_rx_reo_algo_calculate_wait_count(
-						pdev,
-						desc->rx_params->reo_params,
-						&desc->wait_count);
+	ret = wlan_mgmt_rx_reo_algo_calculate_wait_count(pdev, desc);
 	if (QDF_IS_STATUS_ERROR(ret))
 		goto failure;
 
@@ -4448,7 +4592,7 @@ mgmt_rx_reo_print_ingress_frame_debug_info(void)
 		return status;
 	}
 
-	status = mgmt_rx_reo_print_ingress_frame_info(reo_context);
+	status = mgmt_rx_reo_print_ingress_frame_info(reo_context, 0);
 	if (QDF_IS_STATUS_ERROR(status)) {
 		mgmt_rx_reo_err("Failed to print ingress frame info");
 		return status;
@@ -4475,7 +4619,7 @@ mgmt_rx_reo_print_egress_frame_debug_info(void)
 		return status;
 	}
 
-	status = mgmt_rx_reo_print_egress_frame_info(reo_context);
+	status = mgmt_rx_reo_print_egress_frame_info(reo_context, 0);
 	if (QDF_IS_STATUS_ERROR(status)) {
 		mgmt_rx_reo_err("Failed to print egress frame info");
 		return status;
