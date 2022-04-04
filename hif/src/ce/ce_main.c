@@ -1104,12 +1104,20 @@ static struct service_to_pipe target_service_to_ce_map_kiwi[] = {
 	{ WMI_DATA_VI_SVC, PIPEDIR_IN, 2, },
 	{ WMI_CONTROL_SVC, PIPEDIR_OUT, 3, },
 	{ WMI_CONTROL_SVC, PIPEDIR_IN, 2, },
+#ifdef FEATURE_XPAN
+	{ HTC_CTRL_RSVD_SVC, PIPEDIR_OUT, 4, },
+#else
 	{ HTC_CTRL_RSVD_SVC, PIPEDIR_OUT, 0, },
+#endif
 	{ HTC_CTRL_RSVD_SVC, PIPEDIR_IN, 2, },
 	{ HTT_DATA_MSG_SVC, PIPEDIR_OUT, 4, },
 	{ HTT_DATA_MSG_SVC, PIPEDIR_IN, 1, },
 #ifdef WLAN_FEATURE_WMI_DIAG_OVER_CE7
 	{ WMI_CONTROL_DIAG_SVC, PIPEDIR_IN, 7, },
+#endif
+#ifdef FEATURE_XPAN
+	{ LPASS_DATA_MSG_SVC, PIPEDIR_OUT, 0, },
+	{ LPASS_DATA_MSG_SVC, PIPEDIR_IN, 5, },
 #endif
 	/* (Additions here) */
 	{ 0, 0, 0, },
