@@ -1060,6 +1060,7 @@ void dp_mon_filter_setup_enhanced_stats_2_0(struct dp_pdev *pdev)
 	rx_tlv_filter->tlv_filter.mo_mgmt_filter = 0;
 	rx_tlv_filter->tlv_filter.mo_ctrl_filter = 0;
 	rx_tlv_filter->tlv_filter.mo_data_filter = 0;
+	rx_tlv_filter->tlv_filter.ppdu_start_user_info = 1;
 	/* Enabled the filter */
 	rx_tlv_filter->valid = true;
 
@@ -1332,6 +1333,8 @@ static void dp_rx_mon_filter_show_filter(struct dp_mon_filter_be *filter)
 			    rx_tlv_filter->ppdu_end_user_stats_ext);
 	DP_MON_FILTER_PRINT("ppdu_end_status_done: %d",
 			    rx_tlv_filter->ppdu_end_status_done);
+	DP_MON_FILTER_PRINT("ppdu_start_user_info: %d",
+			    rx_tlv_filter->ppdu_start_user_info);
 	DP_MON_FILTER_PRINT("header_per_msdu: %d",
 			    rx_tlv_filter->header_per_msdu);
 	DP_MON_FILTER_PRINT("enable_fp: %d", rx_tlv_filter->enable_fp);

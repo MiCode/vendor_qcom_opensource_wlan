@@ -1608,6 +1608,8 @@ int htt_h2t_rx_ring_cfg(struct htt_soc *htt_soc, int pdev_id,
 		htt_tlv_filter->ppdu_end_user_stats_ext);
 	htt_rx_ring_tlv_filter_in_enable_set(tlv_filter, PPDU_END_STATUS_DONE,
 		htt_tlv_filter->ppdu_end_status_done);
+	htt_rx_ring_tlv_filter_in_enable_set(tlv_filter, PPDU_START_USER_INFO,
+		htt_tlv_filter->ppdu_start_user_info);
 	/* RESERVED bit maps to header_per_msdu in htt_tlv_filter*/
 	 htt_rx_ring_tlv_filter_in_enable_set(tlv_filter, RESERVED,
 		 htt_tlv_filter->header_per_msdu);
