@@ -3487,7 +3487,7 @@ struct dp_peer_per_pkt_tx_stats {
  * @tx_ppdus: ppdus in tx
  * @tx_mpdus_success: mpdus successful in tx
  * @tx_mpdus_tried: mpdus tried in tx
- * @tx_rate: Tx Rate
+ * @tx_rate: Tx Rate in kbps
  * @last_tx_rate: Last tx rate for unicast packets
  * @last_tx_rate_mcs: Tx rate mcs for unicast packets
  * @mcast_last_tx_rate: Last tx rate for multicast packets

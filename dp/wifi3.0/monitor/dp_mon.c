@@ -2432,8 +2432,6 @@ dp_tx_rate_stats_update(struct dp_peer *peer,
 				   &rix,
 				   &ratecode);
 
-	DP_STATS_UPD(mon_peer, tx.last_tx_rate, ratekbps);
-
 	if (!ratekbps)
 		return;
 
@@ -2448,6 +2446,7 @@ dp_tx_rate_stats_update(struct dp_peer *peer,
 	ppdu->rix = rix;
 	ppdu->tx_ratekbps = ratekbps;
 	ppdu->tx_ratecode = ratecode;
+	DP_STATS_UPD(mon_peer, tx.tx_rate, ratekbps);
 	mon_peer->stats.tx.avg_tx_rate =
 		dp_ath_rate_lpf(mon_peer->stats.tx.avg_tx_rate, ratekbps);
 	ppdu_tx_rate = dp_ath_rate_out(mon_peer->stats.tx.avg_tx_rate);
@@ -2628,6 +2627,7 @@ dp_tx_stats_update(struct dp_pdev *pdev, struct dp_peer *peer,
 	struct dp_mon_ops *mon_ops;
 	enum cdp_ru_index ru_index;
 	struct dp_mon_peer *mon_peer = NULL;
+	uint32_t ratekbps = 0;
 
 	preamble = ppdu->preamble;
 	mcs = ppdu->mcs;
@@ -2701,7 +2701,6 @@ dp_tx_stats_update(struct dp_pdev *pdev, struct dp_peer *peer,
 	DP_STATS_INC(mon_peer, tx.transmit_type[ppdu->ppdu_type].mpdu_tried,
 		     mpdu_tried);
 
-	DP_STATS_UPD(mon_peer, tx.tx_rate, ppdu->tx_rate);
 	DP_STATS_INC(mon_peer, tx.sgi_count[ppdu->gi], num_msdu);
 	DP_STATS_INC(mon_peer, tx.bw[ppdu->bw], num_msdu);
 	DP_STATS_INC(mon_peer, tx.nss[ppdu->nss], num_msdu);
@@ -2754,7 +2753,12 @@ dp_tx_stats_update(struct dp_pdev *pdev, struct dp_peer *peer,
 	if (mon_ops && mon_ops->mon_tx_stats_update)
 		mon_ops->mon_tx_stats_update(mon_peer, ppdu);
 
+	dp_tx_rate_stats_update(peer, ppdu);
+
 	dp_peer_stats_notify(pdev, peer);
+
+	ratekbps = mon_peer->stats.tx.tx_rate;
+	DP_STATS_UPD(mon_peer, tx.last_tx_rate, ratekbps);
 
 	dp_send_stats_event(pdev, peer, ppdu->peer_id);
 }
@@ -4056,7 +4060,6 @@ dp_ppdu_desc_user_stats_update(struct dp_pdev *pdev,
 			dp_tx_stats_update(pdev, peer,
 					   &ppdu_desc->user[i],
 					   ppdu_desc->ack_rssi);
-			dp_tx_rate_stats_update(peer, &ppdu_desc->user[i]);
 		}
 
 		dp_ppdu_desc_user_phy_tx_time_update(pdev, ppdu_desc,
