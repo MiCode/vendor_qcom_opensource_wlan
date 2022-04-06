@@ -970,6 +970,7 @@ hal_rx_parse_u_sig_cmn(struct hal_soc *hal_soc, void *rx_tlv,
 
 	ppdu_info->u_sig_info.ul_dl = usig_1->ul_dl;
 	ppdu_info->u_sig_info.bw = usig_1->bw;
+	ppdu_info->rx_status.bw = usig_1->bw;
 
 	return HAL_TLV_STATUS_PPDU_NOT_DONE;
 }
@@ -1452,6 +1453,69 @@ hal_rx_parse_cmn_usr_info(struct hal_soc *hal_soc, uint8_t *tlv,
 	return HAL_TLV_STATUS_PPDU_NOT_DONE;
 }
 
+static inline void
+hal_rx_ul_ofdma_ru_size_to_width(uint32_t ru_size,
+				 uint32_t *ru_width)
+{
+	uint32_t width;
+
+	width = 0;
+	switch (ru_size) {
+	case IEEE80211_EHT_RU_26:
+		width = RU_26;
+		break;
+	case IEEE80211_EHT_RU_52:
+		width = RU_52;
+		break;
+	case IEEE80211_EHT_RU_52_26:
+		width = RU_52_26;
+		break;
+	case IEEE80211_EHT_RU_106:
+		width = RU_106;
+		break;
+	case IEEE80211_EHT_RU_106_26:
+		width = RU_106_26;
+		break;
+	case IEEE80211_EHT_RU_242:
+		width = RU_242;
+		break;
+	case IEEE80211_EHT_RU_484:
+		width = RU_484;
+		break;
+	case IEEE80211_EHT_RU_484_242:
+		width = RU_484_242;
+		break;
+	case IEEE80211_EHT_RU_996:
+		width = RU_996;
+		break;
+	case IEEE80211_EHT_RU_996_484:
+		width = RU_996_484;
+		break;
+	case IEEE80211_EHT_RU_996_484_242:
+		width = RU_996_484_242;
+		break;
+	case IEEE80211_EHT_RU_996x2:
+		width = RU_2X996;
+		break;
+	case IEEE80211_EHT_RU_996x2_484:
+		width = RU_2X996_484;
+		break;
+	case IEEE80211_EHT_RU_996x3:
+		width = RU_3X996;
+		break;
+	case IEEE80211_EHT_RU_996x3_484:
+		width = RU_3X996_484;
+		break;
+	case IEEE80211_EHT_RU_996x4:
+		width = RU_4X996;
+		break;
+	default:
+		hal_err_rl("RU size(%d) to width convert err", ru_size);
+		break;
+	}
+	*ru_width = width;
+}
+
 static inline enum ieee80211_eht_ru_size
 hal_rx_mon_hal_ru_size_to_ieee80211_ru_size(struct hal_soc *hal_soc,
 					    uint32_t hal_ru_size)
@@ -1503,14 +1567,17 @@ hal_rx_mon_hal_ru_size_to_ieee80211_ru_size(struct hal_soc *hal_soc,
 
 static inline uint32_t
 hal_rx_parse_receive_user_info(struct hal_soc *hal_soc, uint8_t *tlv,
-			       struct hal_rx_ppdu_info *ppdu_info)
+			       struct hal_rx_ppdu_info *ppdu_info,
+			       uint32_t user_id)
 {
 	struct receive_user_info *rx_usr_info = (struct receive_user_info *)tlv;
+	struct mon_rx_user_status *mon_rx_user_status = NULL;
 	uint64_t ru_index_320mhz = 0;
 	uint16_t ru_index_per80mhz;
 	uint32_t ru_size = 0, num_80mhz_with_ru = 0;
 	uint32_t ru_index = HAL_EHT_RU_INVALID;
 	uint32_t rtap_ru_size = IEEE80211_EHT_RU_INVALID;
+	uint32_t ru_width;
 
 	ppdu_info->rx_status.eht_known |=
 				QDF_MON_STATUS_EHT_CONTENT_CH_INDEX_KNOWN;
@@ -1521,6 +1588,16 @@ hal_rx_parse_receive_user_info(struct hal_soc *hal_soc, uint8_t *tlv,
 	ppdu_info->rx_status.reception_type = rx_usr_info->reception_type;
 	ppdu_info->rx_status.is_stbc = rx_usr_info->stbc;
 	ppdu_info->rx_status.ldpc = rx_usr_info->ldpc;
+	ppdu_info->rx_status.dcm = rx_usr_info->sta_dcm;
+	ppdu_info->rx_status.mcs = rx_usr_info->rate_mcs;
+	ppdu_info->rx_status.nss = rx_usr_info->nss + 1;
+
+	if (user_id < HAL_MAX_UL_MU_USERS) {
+		mon_rx_user_status =
+			&ppdu_info->rx_user_status[user_id];
+		mon_rx_user_status->mcs = ppdu_info->rx_status.mcs;
+		mon_rx_user_status->nss = ppdu_info->rx_status.nss;
+	}
 
 	if (!(rx_usr_info->reception_type == HAL_RX_TYPE_MU_MIMO ||
 	      rx_usr_info->reception_type == HAL_RX_TYPE_MU_OFDMA ||
@@ -1640,6 +1717,14 @@ hal_rx_parse_receive_user_info(struct hal_soc *hal_soc, uint8_t *tlv,
 					QDF_MON_STATUS_EHT_RU_MRU_INDEX_SHIFT);
 	}
 
+	if (mon_rx_user_status) {
+		mon_rx_user_status->ofdma_ru_start_index = ru_index;
+		mon_rx_user_status->ofdma_ru_size = rtap_ru_size;
+		hal_rx_ul_ofdma_ru_size_to_width(rtap_ru_size, &ru_width);
+		mon_rx_user_status->ofdma_ru_width = ru_width;
+		mon_rx_user_status->mu_ul_info_valid = 1;
+	}
+
 	return HAL_TLV_STATUS_PPDU_NOT_DONE;
 }
 
@@ -1756,7 +1841,7 @@ hal_rx_status_get_tlv_info_generic_be(void *rx_tlv_hdr, void *ppduinfo,
 	}
 
 	case WIFIRX_PPDU_START_USER_INFO_E:
-		hal_rx_parse_receive_user_info(hal, rx_tlv, ppdu_info);
+		hal_rx_parse_receive_user_info(hal, rx_tlv, ppdu_info, user_id);
 		break;
 
 	case WIFIRX_PPDU_END_E:

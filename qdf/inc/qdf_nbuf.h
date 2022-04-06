@@ -349,6 +349,7 @@ typedef __qdf_nbuf_queue_t qdf_nbuf_queue_t;
  * @aggregation: Indicate A-MPDU format
  * @ht_stbc: Indicate stbc
  * @ht_crc: ht crc
+ * @dcm: dcm
  */
 struct mon_rx_status {
 	uint64_t tsft;
@@ -467,6 +468,7 @@ struct mon_rx_status {
 		ht_stbc:2,
 		ht_crc:8;
 #endif
+	uint8_t  dcm;
 };
 
 /**

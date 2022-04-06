@@ -1252,11 +1252,14 @@ dp_rx_mon_populate_ppdu_info_2_0(struct hal_rx_ppdu_info *hal_ppdu_info,
 		ppdu->u.bw = CMN_BW_320MHZ;
 	else
 		ppdu->u.bw = hal_ppdu_info->rx_status.bw;
-	/* Align preamble value as per host data structures */
-	if (hal_ppdu_info->rx_status.preamble_type == HAL_RX_PKT_TYPE_11BE)
+	if (hal_ppdu_info->rx_status.preamble_type == HAL_RX_PKT_TYPE_11BE) {
+		/* Align preamble value as per host data structures */
 		ppdu->u.preamble = DOT11_BE;
-	else
+		ppdu->u.stbc = hal_ppdu_info->rx_status.is_stbc;
+		ppdu->u.dcm = hal_ppdu_info->rx_status.dcm;
+	} else {
 		ppdu->u.preamble = hal_ppdu_info->rx_status.preamble_type;
+	}
 
 	puncture_pattern = hal_ppdu_info->rx_status.punctured_pattern;
 	punc_mode = dp_mon_get_puncture_type(puncture_pattern,
