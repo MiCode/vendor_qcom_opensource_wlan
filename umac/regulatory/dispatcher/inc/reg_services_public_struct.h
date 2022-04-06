@@ -749,6 +749,21 @@ struct reg_dmn_op_class_map_t {
 };
 
 /**
+ * enum opclass_config: Opclass configuration
+ * @OPCLASSES_SUPPORTED_BY_CUR_HWMODE: Retrieve opclasses that is supported
+ * by the current hw mode.
+ * @OPCLASSES_NOT_SUPPORTED_BY_CUR_HWMODE: Retrieve opclasses that are not
+ * supported by the current hw mode.
+ * OPCLASSES_SUPPORTED_BY_DOMAIN: Populate the opclass supported by the radio
+ * without considering the capability of current hwmode.
+ */
+enum opclass_config {
+	OPCLASSES_SUPPORTED_BY_CUR_HWMODE = 1,
+	OPCLASSES_NOT_SUPPORTED_BY_CUR_HWMODE = 2,
+	OPCLASSES_SUPPORTED_BY_DOMAIN = 3
+};
+
+/**
  * struct regdmn_ap_cap_opclass_t: AP Cap operation class table
  * @op_class: operating class number
  * @ch_width: channel width in MHz
