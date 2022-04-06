@@ -2918,6 +2918,15 @@ struct dp_pdev {
 
 struct dp_peer;
 
+#ifdef DP_RX_UDP_OVER_PEER_ROAM
+#define WLAN_ROAM_PEER_AUTH_STATUS_NONE 0x0
+/**
+ * This macro is equivalent to macro ROAM_AUTH_STATUS_AUTHENTICATED used
+ * in connection mgr
+ */
+#define WLAN_ROAM_PEER_AUTH_STATUS_AUTHENTICATED 0x2
+#endif
+
 /* VDEV structure for data path state */
 struct dp_vdev {
 	/* OS device abstraction */
@@ -3214,6 +3223,10 @@ struct dp_vdev {
 #ifdef HW_TX_DELAY_STATS_ENABLE
 	/* hw tx delay stats enable */
 	uint8_t hw_tx_delay_stats_enabled;
+#endif
+#ifdef DP_RX_UDP_OVER_PEER_ROAM
+	uint32_t roaming_peer_status;
+	union dp_align_mac_addr roaming_peer_mac;
 #endif
 };
 
