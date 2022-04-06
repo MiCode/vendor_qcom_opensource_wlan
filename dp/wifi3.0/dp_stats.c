@@ -273,12 +273,12 @@ const char *mu_reception_mode[TXRX_TYPE_MU_MAX] = {
 
 #ifdef QCA_ENH_V3_STATS_SUPPORT
 const char *fw_to_hw_delay_bucket[CDP_DELAY_BUCKET_MAX + 1] = {
-	"0 to 10 ms", "11 to 20 ms",
-	"21 to 30 ms", "31 to 40 ms",
-	"41 to 50 ms", "51 to 60 ms",
-	"61 to 70 ms", "71 to 80 ms",
-	"81 to 90 ms", "91 to 100 ms",
-	"101 to 250 ms", "251 to 500 ms", "500+ ms"
+	"0 to 9 ms", "10 to 19 ms",
+	"20 to 29 ms", "30 to 39 ms",
+	"40 to 49 ms", "50 to 59 ms",
+	"60 to 69 ms", "70 to 79 ms",
+	"80 to 89 ms", "90 to 99 ms",
+	"101 to 249 ms", "250 to 499 ms", "500+ ms"
 };
 #elif defined(HW_TX_DELAY_STATS_ENABLE)
 const char *fw_to_hw_delay_bucket[CDP_DELAY_BUCKET_MAX + 1] = {
@@ -302,12 +302,12 @@ const char *sw_enq_delay_bucket[CDP_DELAY_BUCKET_MAX + 1] = {
 };
 
 const char *intfrm_delay_bucket[CDP_DELAY_BUCKET_MAX + 1] = {
-	"0 to 5 ms", "6 to 10 ms",
-	"11 to 15 ms", "16 to 20 ms",
-	"21 to 25 ms", "26 to 30 ms",
-	"31 to 35 ms", "36 to 40 ms",
-	"41 to 45 ms", "46 to 50 ms",
-	"51 to 55 ms", "56 to 60 ms", "60+ ms"
+	"0 to 4 ms", "5 to 9 ms",
+	"10 to 14 ms", "15 to 19 ms",
+	"20 to 24 ms", "25 to 29 ms",
+	"30 to 34 ms", "35 to 39 ms",
+	"40 to 44 ms", "45 to 49 ms",
+	"50 to 54 ms", "55 to 59 ms", "60+ ms"
 };
 #endif
 

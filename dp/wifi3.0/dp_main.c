@@ -14171,7 +14171,7 @@ static uint8_t dp_bucket_index(uint32_t delay, uint16_t *array)
 	uint8_t i = CDP_DELAY_BUCKET_0;
 
 	for (; i < CDP_DELAY_BUCKET_MAX - 1; i++) {
-		if (delay >= array[i] && delay <= array[i + 1])
+		if (delay >= array[i] && delay < array[i + 1])
 			return i;
 	}
 
