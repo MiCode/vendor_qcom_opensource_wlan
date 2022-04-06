@@ -53,6 +53,66 @@ void dp_rx_mon_add_ppdu_info_to_wq(struct dp_mon_pdev_be *mon_pdev_be,
 }
 
 /**
+ * dp_rx_mon_flush_status_buf_queue () - Flush status buffer queue
+ *
+ * @pdev: DP pdev handle
+ *
+ *Return: void
+ */
+static inline void
+dp_rx_mon_flush_status_buf_queue(struct dp_pdev *pdev)
+{
+	struct dp_soc *soc = pdev->soc;
+	struct dp_mon_pdev *mon_pdev = pdev->monitor_pdev;
+	struct dp_mon_pdev_be *mon_pdev_be =
+		dp_get_be_mon_pdev_from_dp_mon_pdev(mon_pdev);
+	union dp_mon_desc_list_elem_t *desc_list = NULL;
+	union dp_mon_desc_list_elem_t *tail = NULL;
+	struct dp_mon_desc *mon_desc;
+	uint8_t idx;
+	void *buf;
+	struct dp_mon_soc *mon_soc = soc->monitor_soc;
+	struct dp_mon_soc_be *mon_soc_be = dp_get_be_mon_soc_from_dp_mon_soc(mon_soc);
+	struct dp_mon_desc_pool *rx_mon_desc_pool = &mon_soc_be->rx_desc_mon;
+	uint8_t work_done = 0;
+	uint16_t status_buf_count;
+
+	if (!mon_pdev_be->desc_count) {
+		dp_mon_info("no of status buffer count is zero: %pK", pdev);
+		return;
+	}
+
+	status_buf_count = mon_pdev_be->desc_count;
+	for (idx = 0; idx < status_buf_count; idx++) {
+		mon_desc = mon_pdev_be->status[idx];
+		if (!mon_desc) {
+			qdf_assert_always(0);
+			return;
+		}
+
+		buf = mon_desc->buf_addr;
+
+		dp_mon_add_to_free_desc_list(&desc_list, &tail, mon_desc);
+		work_done++;
+
+		/* set status buffer pointer to NULL */
+		mon_pdev_be->status[idx] = NULL;
+		mon_pdev_be->desc_count--;
+
+		qdf_frag_free(buf);
+	}
+
+	if (work_done) {
+		mon_pdev->rx_mon_stats.mon_rx_bufs_replenished_dest +=
+			work_done;
+		dp_mon_buffers_replenish(soc, &soc->rxdma_mon_buf_ring[0],
+					 rx_mon_desc_pool,
+					 work_done,
+					 &desc_list, &tail);
+	}
+}
+
+/**
  * dp_rx_mon_handle_flush_n_trucated_ppdu () - Handle flush and truncated ppdu
  *
  * @soc: DP soc handle
@@ -72,6 +132,8 @@ dp_rx_mon_handle_flush_n_trucated_ppdu(struct dp_soc *soc,
 	struct dp_mon_desc_pool *rx_mon_desc_pool = &mon_soc_be->rx_desc_mon;
 	uint16_t work_done;
 
+	/* Flush status buffers in queue */
+	dp_rx_mon_flush_status_buf_queue(pdev);
 	qdf_frag_free(mon_desc->buf_addr);
 	dp_mon_add_to_free_desc_list(&desc_list, &tail, mon_desc);
 	work_done = 1;
