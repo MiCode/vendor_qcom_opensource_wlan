@@ -1674,6 +1674,7 @@ static inline void hal_srng_dst_inv_cached_descs(void *hal_soc,
 	struct hal_srng *srng = (struct hal_srng *)hal_ring_hdl;
 	uint32_t *first_desc;
 	uint32_t *last_desc;
+	uint32_t last_desc_index;
 
 	/*
 	 * If SRNG does not have cached descriptors this
@@ -1686,20 +1687,27 @@ static inline void hal_srng_dst_inv_cached_descs(void *hal_soc,
 		return;
 
 	first_desc = &srng->ring_base_vaddr[srng->u.dst_ring.tp];
-	last_desc = &srng->ring_base_vaddr[srng->u.dst_ring.cached_hp];
+
+	last_desc_index = (srng->u.dst_ring.tp +
+			   (entry_count * srng->entry_size)) %
+			  srng->ring_size;
+
+	last_desc =  &srng->ring_base_vaddr[last_desc_index];
 
 	if (last_desc > (uint32_t *)first_desc)
 		/* invalidate from tp to cached_hp */
-		qdf_nbuf_dma_inv_range((void *)first_desc, (void *)(last_desc));
+		qdf_nbuf_dma_inv_range_no_dsb((void *)first_desc,
+					      (void *)(last_desc));
 	else {
 		/* invalidate from tp to end of the ring */
-		qdf_nbuf_dma_inv_range((void *)first_desc,
-				       (void *)srng->ring_vaddr_end);
+		qdf_nbuf_dma_inv_range_no_dsb((void *)first_desc,
+					      (void *)srng->ring_vaddr_end);
 
 		/* invalidate from start of ring to cached_hp */
-		qdf_nbuf_dma_inv_range((void *)srng->ring_base_vaddr,
-				       (void *)last_desc);
+		qdf_nbuf_dma_inv_range_no_dsb((void *)srng->ring_base_vaddr,
+					      (void *)last_desc);
 	}
+	qdf_dsb();
 }
 
 /**
