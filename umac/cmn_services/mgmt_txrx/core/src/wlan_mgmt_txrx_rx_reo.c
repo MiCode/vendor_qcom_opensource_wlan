@@ -827,9 +827,10 @@ wlan_mgmt_rx_reo_algo_calculate_wait_count(
 					host_ss->mgmt_pkt_ctr);
 		qdf_assert_always(frames_pending >= 0);
 
-		if (mgmt_rx_reo_compare_global_timestamps_gte(
-					mac_hw_ss->global_timestamp,
-					in_frame_params->global_timestamp)) {
+		if (frames_pending &&
+		    mgmt_rx_reo_compare_global_timestamps_gte
+					(mac_hw_ss->global_timestamp,
+					 in_frame_params->global_timestamp)) {
 			/**
 			 * Last frame seen at MAC HW has timestamp greater than
 			 * or equal to incoming frame's timestamp. So no need to
@@ -4431,7 +4432,7 @@ wlan_mgmt_rx_reo_initialize_snapshot_params(
 			struct mgmt_rx_reo_snapshot_params *snapshot_params)
 {
 	snapshot_params->valid = false;
-	snapshot_params->mgmt_pkt_ctr = 0;
+	snapshot_params->mgmt_pkt_ctr = MGMT_RX_REO_MGMT_PKT_CTR_INITIAL_VALUE;
 	snapshot_params->global_timestamp = 0;
 }
 
