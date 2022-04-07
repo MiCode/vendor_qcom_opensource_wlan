@@ -1792,7 +1792,7 @@ enum hif_exec_type {
 	HIF_EXEC_TASKLET_TYPE,
 };
 
-typedef uint32_t (*ext_intr_handler)(void *, uint32_t);
+typedef uint32_t (*ext_intr_handler)(void *, uint32_t, int);
 
 /**
  * hif_get_int_ctx_irq_num() - retrieve an irq num for an interrupt context id
