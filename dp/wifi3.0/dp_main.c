@@ -268,9 +268,12 @@ static QDF_STATUS dp_alloc_tx_ring_pair_by_index(struct dp_soc *soc,
 static uint8_t dp_soc_ring_if_nss_offloaded(struct dp_soc *soc,
 					    enum hal_ring_type ring_type,
 					    int ring_num);
-
 #ifdef FEATURE_AST
 void dp_print_mlo_ast_stats(struct dp_soc *soc);
+#endif
+
+#ifdef DP_UMAC_HW_RESET_SUPPORT
+static QDF_STATUS dp_umac_reset_handle_pre_reset(struct dp_soc *soc);
 #endif
 
 #define DP_INTR_POLL_TIMER_MS	5
@@ -2551,10 +2554,12 @@ budget_done:
  * @dp_ctx: Datapath SoC handle
  * @dp_budget: Number of SRNGs which can be processed in a single attempt
  *		without rescheduling
+ * @cpu: cpu id
  *
  * Return: remaining budget/quota for the soc device
  */
-static uint32_t dp_service_near_full_srngs(void *dp_ctx, uint32_t dp_budget)
+static
+uint32_t dp_service_near_full_srngs(void *dp_ctx, uint32_t dp_budget, int cpu)
 {
 	struct dp_intr *int_ctx = (struct dp_intr *)dp_ctx;
 	struct dp_soc *soc = int_ctx->soc;
@@ -2574,10 +2579,11 @@ static uint32_t dp_service_near_full_srngs(void *dp_ctx, uint32_t dp_budget)
  * dp_service_srngs() - Top level interrupt handler for DP Ring interrupts
  * @dp_ctx: DP SOC handle
  * @budget: Number of frames/descriptors that can be processed in one shot
+ * @cpu: CPU on which this instance is running
  *
  * Return: remaining budget/quota for the soc device
  */
-static uint32_t dp_service_srngs(void *dp_ctx, uint32_t dp_budget)
+static uint32_t dp_service_srngs(void *dp_ctx, uint32_t dp_budget, int cpu)
 {
 	struct dp_intr *int_ctx = (struct dp_intr *)dp_ctx;
 	struct dp_intr_stats *intr_stats = &int_ctx->intr_stats;
@@ -2592,6 +2598,8 @@ static uint32_t dp_service_srngs(void *dp_ctx, uint32_t dp_budget)
 	uint8_t rx_wbm_rel_mask = int_ctx->rx_wbm_rel_ring_mask;
 	uint8_t reo_status_mask = int_ctx->reo_status_ring_mask;
 	uint32_t remaining_quota = dp_budget;
+
+	qdf_atomic_set_bit(cpu, &soc->service_rings_running);
 
 	dp_verbose_debug("tx %x rx %x rx_err %x rx_wbm_rel %x reo_status %x rx_mon_ring %x host2rxdma %x rxdma2host %x\n",
 			 tx_mask, rx_mask, rx_err_mask, rx_wbm_rel_mask,
@@ -2700,6 +2708,11 @@ static uint32_t dp_service_srngs(void *dp_ctx, uint32_t dp_budget)
 	intr_stats->num_masks++;
 
 budget_done:
+	qdf_atomic_clear_bit(cpu, &soc->service_rings_running);
+
+	if (soc->notify_fw_callback)
+		soc->notify_fw_callback(soc);
+
 	return dp_budget - budget;
 }
 
@@ -2712,7 +2725,7 @@ budget_done:
  *
  * Return: remaining budget/quota for the soc device
  */
-static uint32_t dp_service_srngs(void *dp_ctx, uint32_t dp_budget)
+static uint32_t dp_service_srngs(void *dp_ctx, uint32_t dp_budget, int cpu)
 {
 	struct dp_intr *int_ctx = (struct dp_intr *)dp_ctx;
 	struct dp_intr_stats *intr_stats = &int_ctx->intr_stats;
@@ -2767,6 +2780,7 @@ static void dp_interrupt_timer(void *arg)
 	uint32_t lmac_iter;
 	int max_mac_rings = wlan_cfg_get_num_mac_rings(pdev->wlan_cfg_ctx);
 	enum reg_wifi_band mon_band;
+	int cpu = smp_processor_id();
 
 	/*
 	 * this logic makes all data path interfacing rings (UMAC/LMAC)
@@ -2777,7 +2791,8 @@ static void dp_interrupt_timer(void *arg)
 		if (qdf_atomic_read(&soc->cmn_init_done)) {
 			for (i = 0; i < wlan_cfg_get_num_contexts(
 						soc->wlan_cfg_ctx); i++)
-				dp_service_srngs(&soc->intr_ctx[i], 0xffff);
+				dp_service_srngs(&soc->intr_ctx[i], 0xffff,
+						 cpu);
 
 			qdf_timer_mod(&soc->int_timer, DP_INTR_POLL_TIMER_MS);
 		}
@@ -6507,6 +6522,17 @@ QDF_STATUS dp_soc_target_ppe_rxole_rxdma_cfg(struct dp_soc *soc)
 }
 #endif /* WLAN_SUPPORT_PPEDS */
 
+#ifdef DP_UMAC_HW_RESET_SUPPORT
+static void dp_register_umac_reset_handlers(struct dp_soc *soc)
+{
+	dp_umac_reset_register_rx_action_callback(soc,
+		dp_umac_reset_handle_pre_reset, UMAC_RESET_ACTION_DO_PRE_RESET);
+}
+#else
+static void dp_register_umac_reset_handlers(struct dp_soc *soc)
+{
+}
+#endif
 /*
  * dp_soc_attach_target_wifi3() - SOC initialization in the target
  * @cdp_soc: Opaque Datapath SOC handle
@@ -6545,6 +6571,8 @@ dp_soc_attach_target_wifi3(struct cdp_soc_t *cdp_soc)
 		dp_err("Failed to initialize UMAC reset");
 		return status;
 	}
+
+	dp_register_umac_reset_handlers(soc);
 
 	status = dp_rx_target_fst_config(soc);
 	if (status != QDF_STATUS_SUCCESS &&
@@ -6912,6 +6940,33 @@ fail0:
 
 #ifndef QCA_HOST_MODE_WIFI_DISABLED
 /**
+ * dp_vdev_fetch_tx_handlers() - Fetch Tx handlers
+ * @vdev: struct dp_vdev *
+ * @soc: struct dp_soc *
+ * @ctx: struct ol_txrx_hardtart_ctxt *
+ */
+static inline void dp_vdev_fetch_tx_handler(struct dp_vdev *vdev,
+					    struct dp_soc *soc,
+					    struct ol_txrx_hardtart_ctxt *ctx)
+{
+	/* Enable vdev_id check only for ap, if flag is enabled */
+	if (vdev->mesh_vdev)
+		ctx->tx = dp_tx_send_mesh;
+	else if ((wlan_cfg_is_tx_per_pkt_vdev_id_check_enabled(soc->wlan_cfg_ctx)) &&
+		 (vdev->opmode == wlan_op_mode_ap))
+		ctx->tx = dp_tx_send_vdev_id_check;
+	else
+		ctx->tx = dp_tx_send;
+
+	/* Avoid check in regular exception Path */
+	if ((wlan_cfg_is_tx_per_pkt_vdev_id_check_enabled(soc->wlan_cfg_ctx)) &&
+	    (vdev->opmode == wlan_op_mode_ap))
+		ctx->tx_exception = dp_tx_send_exception_vdev_id_check;
+	else
+		ctx->tx_exception = dp_tx_send_exception;
+}
+
+/**
  * dp_vdev_register_tx_handler() - Register Tx handler
  * @vdev: struct dp_vdev *
  * @soc: struct dp_soc *
@@ -6921,21 +6976,12 @@ static inline void dp_vdev_register_tx_handler(struct dp_vdev *vdev,
 					       struct dp_soc *soc,
 					       struct ol_txrx_ops *txrx_ops)
 {
-	/* Enable vdev_id check only for ap, if flag is enabled */
-	if (vdev->mesh_vdev)
-		txrx_ops->tx.tx = dp_tx_send_mesh;
-	else if ((wlan_cfg_is_tx_per_pkt_vdev_id_check_enabled(soc->wlan_cfg_ctx)) &&
-		 (vdev->opmode == wlan_op_mode_ap))
-		txrx_ops->tx.tx = dp_tx_send_vdev_id_check;
-	else
-		txrx_ops->tx.tx = dp_tx_send;
+	struct ol_txrx_hardtart_ctxt ctx = {0};
 
-	/* Avoid check in regular exception Path */
-	if ((wlan_cfg_is_tx_per_pkt_vdev_id_check_enabled(soc->wlan_cfg_ctx)) &&
-	    (vdev->opmode == wlan_op_mode_ap))
-		txrx_ops->tx.tx_exception = dp_tx_send_exception_vdev_id_check;
-	else
-		txrx_ops->tx.tx_exception = dp_tx_send_exception;
+	dp_vdev_fetch_tx_handler(vdev, soc, &ctx);
+
+	txrx_ops->tx.tx = ctx.tx;
+	txrx_ops->tx.tx_exception = ctx.tx_exception;
 
 	dp_info("Configure tx_vdev_id_chk_handler Feature Flag: %d and mode:%d for vdev_id:%d",
 		wlan_cfg_is_tx_per_pkt_vdev_id_check_enabled(soc->wlan_cfg_ctx),
@@ -6945,6 +6991,12 @@ static inline void dp_vdev_register_tx_handler(struct dp_vdev *vdev,
 static inline void dp_vdev_register_tx_handler(struct dp_vdev *vdev,
 					       struct dp_soc *soc,
 					       struct ol_txrx_ops *txrx_ops)
+{
+}
+
+static inline void dp_vdev_fetch_tx_handler(struct dp_vdev *vdev,
+					    struct dp_soc *soc,
+					    struct ol_txrx_hardtart_ctxt *ctx)
 {
 }
 #endif /* QCA_HOST_MODE_WIFI_DISABLED */
@@ -12660,6 +12712,7 @@ static void dp_drain_txrx(struct cdp_soc_t *soc_handle)
 	uint32_t budget = 0xffff;
 	uint32_t val;
 	int i;
+	int cpu = smp_processor_id();
 
 	cur_tx_limit = soc->wlan_cfg_ctx->tx_comp_loop_pkt_limit;
 	cur_rx_limit = soc->wlan_cfg_ctx->rx_reap_loop_pkt_limit;
@@ -12673,7 +12726,7 @@ static void dp_drain_txrx(struct cdp_soc_t *soc_handle)
 	dp_update_soft_irq_limits(soc, budget, budget);
 
 	for (i = 0; i < wlan_cfg_get_num_contexts(soc->wlan_cfg_ctx); i++)
-		dp_service_srngs(&soc->intr_ctx[i], budget);
+		dp_service_srngs(&soc->intr_ctx[i], budget, cpu);
 
 	dp_update_soft_irq_limits(soc, cur_tx_limit, cur_rx_limit);
 
@@ -12682,6 +12735,184 @@ static void dp_drain_txrx(struct cdp_soc_t *soc_handle)
 	 */
 	val = HAL_REG_READ((struct hal_soc *)soc->hal_soc, 0);
 	dp_debug("Register value at offset 0: %u\n", val);
+}
+#endif
+
+#ifdef DP_UMAC_HW_RESET_SUPPORT
+/**
+ * dp_reset_interrupt_ring_masks(): Reset rx interrupt masks
+ * @soc: dp soc handle
+ *
+ * Return: void
+ */
+static void dp_reset_interrupt_ring_masks(struct dp_soc *soc)
+{
+	struct dp_intr_bkp *intr_bkp;
+	struct dp_intr *intr_ctx;
+	int num_ctxt = wlan_cfg_get_num_contexts(soc->wlan_cfg_ctx);
+	int i;
+
+	intr_bkp =
+	(struct dp_intr_bkp *)qdf_mem_malloc_atomic(sizeof(struct dp_intr_bkp) *
+			num_ctxt);
+
+	qdf_assert_always(intr_bkp);
+
+	soc->umac_reset_ctx.intr_ctx_bkp = intr_bkp;
+	for (i = 0; i < num_ctxt; i++) {
+		intr_ctx = &soc->intr_ctx[i];
+
+		intr_bkp->tx_ring_mask = intr_ctx->tx_ring_mask;
+		intr_bkp->rx_ring_mask = intr_ctx->rx_ring_mask;
+		intr_bkp->rx_mon_ring_mask = intr_ctx->rx_mon_ring_mask;
+		intr_bkp->rx_err_ring_mask = intr_ctx->rx_err_ring_mask;
+		intr_bkp->rx_wbm_rel_ring_mask = intr_ctx->rx_wbm_rel_ring_mask;
+		intr_bkp->reo_status_ring_mask = intr_ctx->reo_status_ring_mask;
+		intr_bkp->rxdma2host_ring_mask = intr_ctx->rxdma2host_ring_mask;
+		intr_bkp->host2rxdma_ring_mask = intr_ctx->host2rxdma_ring_mask;
+		intr_bkp->host2rxdma_mon_ring_mask =
+					intr_ctx->host2rxdma_mon_ring_mask;
+		intr_bkp->tx_mon_ring_mask = intr_ctx->tx_mon_ring_mask;
+
+		intr_ctx->tx_ring_mask = 0;
+		intr_ctx->rx_ring_mask = 0;
+		intr_ctx->rx_mon_ring_mask = 0;
+		intr_ctx->rx_err_ring_mask = 0;
+		intr_ctx->rx_wbm_rel_ring_mask = 0;
+		intr_ctx->reo_status_ring_mask = 0;
+		intr_ctx->rxdma2host_ring_mask = 0;
+		intr_ctx->host2rxdma_ring_mask = 0;
+		intr_ctx->host2rxdma_mon_ring_mask = 0;
+		intr_ctx->tx_mon_ring_mask = 0;
+
+		intr_bkp = (struct dp_intr_bkp *)((char *)intr_bkp +
+					(sizeof(struct dp_intr_bkp)));
+	}
+}
+
+/**
+ * dp_resume_tx_hardstart(): Restore the old Tx hardstart functions
+ * @soc: dp soc handle
+ *
+ * Return: void
+ */
+static void dp_resume_tx_hardstart(struct dp_soc *soc)
+{
+	struct dp_vdev *vdev;
+	struct ol_txrx_hardtart_ctxt ctxt = {0};
+	struct cdp_ctrl_objmgr_psoc *psoc = soc->ctrl_psoc;
+	int i;
+
+	for (i = 0; i < MAX_PDEV_CNT; i++) {
+		struct dp_pdev *pdev = soc->pdev_list[i];
+
+		if (!pdev)
+			continue;
+
+		TAILQ_FOREACH(vdev, &pdev->vdev_list, vdev_list_elem) {
+			uint8_t vdev_id = vdev->vdev_id;
+
+			dp_vdev_fetch_tx_handler(vdev, soc, &ctxt);
+			soc->cdp_soc.ol_ops->dp_update_tx_hardstart(psoc,
+								    vdev_id,
+								    &ctxt);
+		}
+	}
+}
+
+/**
+ * dp_pause_tx_hardstart(): Register Tx hardstart functions to drop packets
+ * @soc: dp soc handle
+ *
+ * Return: void
+ */
+static void dp_pause_tx_hardstart(struct dp_soc *soc)
+{
+	struct dp_vdev *vdev;
+	struct ol_txrx_hardtart_ctxt ctxt;
+	struct cdp_ctrl_objmgr_psoc *psoc = soc->ctrl_psoc;
+	int i;
+
+	ctxt.tx = &dp_tx_drop;
+	ctxt.tx_exception = &dp_tx_exc_drop;
+
+	for (i = 0; i < MAX_PDEV_CNT; i++) {
+		struct dp_pdev *pdev = soc->pdev_list[i];
+
+		if (!pdev)
+			continue;
+
+		TAILQ_FOREACH(vdev, &pdev->vdev_list, vdev_list_elem) {
+			uint8_t vdev_id = vdev->vdev_id;
+
+			soc->cdp_soc.ol_ops->dp_update_tx_hardstart(psoc,
+								    vdev_id,
+								    &ctxt);
+		}
+	}
+}
+
+/**
+ * dp_unregister_notify_umac_pre_reset_fw_callback(): unregister notify_fw_cb
+ * @soc: dp soc handle
+ *
+ * Return: void
+ */
+static inline
+void dp_unregister_notify_umac_pre_reset_fw_callback(struct dp_soc *soc)
+{
+	soc->notify_fw_callback = NULL;
+}
+
+/**
+ * dp_check_n_notify_umac_prereset_done(): Send pre reset done to firmware
+ * @soc: dp soc handle
+ *
+ * Return: void
+ */
+static inline
+void dp_check_n_notify_umac_prereset_done(struct dp_soc *soc)
+{
+	/* Some Cpu(s) is processing the umac rings*/
+	if (soc->service_rings_running)
+		return;
+
+	/* Notify the firmware that Umac pre reset is complete */
+	dp_umac_reset_notify_action_completion(soc,
+					       UMAC_RESET_ACTION_DO_PRE_RESET);
+
+	/* Unregister the callback */
+	dp_unregister_notify_umac_pre_reset_fw_callback(soc);
+}
+
+/**
+ * dp_register_notify_umac_pre_reset_fw_callback(): register notify_fw_cb
+ * @soc: dp soc handle
+ *
+ * Return: void
+ */
+static inline
+void dp_register_notify_umac_pre_reset_fw_callback(struct dp_soc *soc)
+{
+	soc->notify_fw_callback = dp_check_n_notify_umac_prereset_done;
+}
+
+/**
+ * dp_umac_reset_handle_pre_reset(): Handle Umac prereset interrupt from FW
+ * @soc: dp soc handle
+ *
+ * Return: QDF_STATUS
+ */
+static QDF_STATUS dp_umac_reset_handle_pre_reset(struct dp_soc *soc)
+{
+	dp_reset_interrupt_ring_masks(soc);
+
+	dp_pause_tx_hardstart(soc);
+	dp_pause_reo_send_cmd(soc);
+
+	dp_check_n_notify_umac_prereset_done(soc);
+
+	return QDF_STATUS_SUCCESS;
 }
 #endif
 

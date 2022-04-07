@@ -942,6 +942,37 @@ struct dp_intr_stats {
 	uint32_t num_tx_mon_ring_masks;
 };
 
+#ifdef DP_UMAC_HW_RESET_SUPPORT
+/**
+ * struct dp_intr_bkp - DP per interrupt context ring masks old state
+ * @tx_ring_mask: WBM Tx completion rings (0-2) associated with this napi ctxt
+ * @rx_ring_mask: Rx REO rings (0-3) associated with this interrupt context
+ * @rx_mon_ring_mask: Rx monitor ring mask (0-2)
+ * @rx_err_ring_mask: REO Exception Ring
+ * @rx_wbm_rel_ring_mask: WBM2SW Rx Release Ring
+ * @reo_status_ring_mask: REO command response ring
+ * @rxdma2host_ring_mask: RXDMA to host destination ring
+ * @host2rxdma_ring_mask: Host to RXDMA buffer ring
+ * @host2rxdma_mon_ring_mask: Host to RXDMA monitor  buffer ring
+ * @host2txmon_ring_mask: Tx monitor buffer ring
+ * @tx_mon_ring_mask: Tx monitor ring mask (0-2)
+ *
+ */
+struct dp_intr_bkp {
+	uint8_t tx_ring_mask;
+	uint8_t rx_ring_mask;
+	uint8_t rx_mon_ring_mask;
+	uint8_t rx_err_ring_mask;
+	uint8_t rx_wbm_rel_ring_mask;
+	uint8_t reo_status_ring_mask;
+	uint8_t rxdma2host_ring_mask;
+	uint8_t host2rxdma_ring_mask;
+	uint8_t host2rxdma_mon_ring_mask;
+	uint8_t host2txmon_ring_mask;
+	uint8_t tx_mon_ring_mask;
+};
+#endif
+
 /* per interrupt context  */
 struct dp_intr {
 	uint8_t tx_ring_mask;   /* WBM Tx completion rings (0-2)
@@ -1925,6 +1956,13 @@ enum sysfs_printing_mode {
 	PRINTING_MODE_ENABLED
 };
 
+/**
+ * @typedef tx_pause_callback
+ * @brief OSIF function registered with the data path
+ */
+
+typedef void (*notify_pre_reset_fw_callback)(struct dp_soc *soc);
+
 #ifdef WLAN_SYSFS_DP_STATS
 /**
  * struct sysfs_stats_config: Data structure holding stats sysfs config.
@@ -2125,6 +2163,10 @@ struct dp_soc {
 	/* flow pool related statistics */
 	struct dp_txrx_pool_stats pool_stats;
 #endif /* !QCA_LL_TX_FLOW_CONTROL_V2 */
+
+	notify_pre_reset_fw_callback notify_fw_callback;
+
+	unsigned long service_rings_running;
 
 	uint32_t wbm_idle_scatter_buf_size;
 

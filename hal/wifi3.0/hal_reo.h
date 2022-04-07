@@ -567,7 +567,7 @@ hal_uniform_desc_hdr_setup(uint32_t *desc, uint32_t owner, uint32_t buffer_type)
 /**
  * hal_reo_send_cmd() - Send reo cmd using the params provided.
  * @hal_soc_hdl: HAL soc handle
- * @hal_soc_hdl: srng handle
+ * @hal_ring_hdl: srng handle
  * @cmd: cmd ID
  * @cmd_params: command params
  *
@@ -593,6 +593,49 @@ hal_reo_send_cmd(hal_soc_handle_t hal_soc_hdl,
 
 	return -EINVAL;
 }
+
+#ifdef DP_UMAC_HW_RESET_SUPPORT
+/**
+ * hal_register_reo_send_cmd() - Register Reo send command callback.
+ * @hal_soc_hdl: HAL soc handle
+ *
+ * Return: void
+ */
+static inline void hal_register_reo_send_cmd(hal_soc_handle_t hal_soc_hdl)
+{
+	struct hal_soc *hal_soc = (struct hal_soc *)hal_soc_hdl;
+
+	if (!hal_soc || !hal_soc->ops) {
+		hal_err("hal handle is NULL");
+		QDF_BUG(0);
+		return;
+	}
+
+	if (hal_soc->ops->hal_register_reo_send_cmd)
+		hal_soc->ops->hal_register_reo_send_cmd(hal_soc);
+}
+
+/**
+ * hal_unregister_reo_send_cmd() - Unregister Reo send command callback.
+ * @hal_soc_hdl: HAL soc handle
+ *
+ * Return: void
+ */
+static inline void
+hal_unregister_reo_send_cmd(hal_soc_handle_t hal_soc_hdl)
+{
+	struct hal_soc *hal_soc = (struct hal_soc *)hal_soc_hdl;
+
+	if (!hal_soc || !hal_soc->ops) {
+		hal_err("hal handle is NULL");
+		QDF_BUG(0);
+		return;
+	}
+
+	if (hal_soc->ops->hal_unregister_reo_send_cmd)
+		return hal_soc->ops->hal_unregister_reo_send_cmd(hal_soc);
+}
+#endif
 
 static inline QDF_STATUS
 hal_reo_status_update(hal_soc_handle_t hal_soc_hdl,

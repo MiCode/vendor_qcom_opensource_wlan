@@ -775,6 +775,32 @@ hal_rx_wbm_rel_buf_paddr_get_be(hal_ring_desc_t rx_desc,
 }
 #endif
 
+#ifdef DP_UMAC_HW_RESET_SUPPORT
+/**
+ * hal_unregister_reo_send_cmd_be() - Unregister Reo send command callback.
+ * @hal_soc_hdl: HAL soc handle
+ *
+ * Return: status
+ */
+static
+void hal_unregister_reo_send_cmd_be(struct hal_soc *hal_soc)
+{
+	hal_soc->ops->hal_reo_send_cmd = NULL;
+}
+
+/**
+ * hal_register_reo_send_cmd_be() - Register Reo send command callback.
+ * @hal_soc_hdl: HAL soc handle
+ *
+ * Return: status
+ */
+static
+void hal_register_reo_send_cmd_be(struct hal_soc *hal_soc)
+{
+	hal_soc->ops->hal_reo_send_cmd = hal_reo_send_cmd_be;
+}
+#endif
+
 /**
  * hal_hw_txrx_default_ops_attach_be() - Attach the default hal ops for
  *		beryllium chipsets.
@@ -828,4 +854,9 @@ void hal_hw_txrx_default_ops_attach_be(struct hal_soc *hal_soc)
 					hal_rx_msdu_ext_desc_info_get_ptr_be;
 	hal_soc->ops->hal_msdu_desc_info_set = hal_msdu_desc_info_set_be;
 	hal_soc->ops->hal_mpdu_desc_info_set = hal_mpdu_desc_info_set_be;
+#ifdef DP_UMAC_HW_RESET_SUPPORT
+	hal_soc->ops->hal_unregister_reo_send_cmd =
+					hal_unregister_reo_send_cmd_be;
+	hal_soc->ops->hal_register_reo_send_cmd = hal_register_reo_send_cmd_be;
+#endif
 }

@@ -3292,7 +3292,53 @@ void dp_tx_prefetch_nbuf_data(qdf_nbuf_t nbuf)
 }
 #endif
 
-/**
+#ifdef DP_UMAC_HW_RESET_SUPPORT
+/*
+ * dp_tx_drop() - Drop the frame on a given VAP
+ * @soc: DP soc handle
+ * @vdev_id: id of DP vdev handle
+ * @nbuf: skb
+ *
+ * Drop all the incoming packets
+ *
+ * Return: nbuf
+ *
+ */
+qdf_nbuf_t dp_tx_drop(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
+		      qdf_nbuf_t nbuf)
+{
+	struct dp_soc *soc = cdp_soc_t_to_dp_soc(soc_hdl);
+	struct dp_vdev *vdev = NULL;
+
+	vdev = soc->vdev_id_map[vdev_id];
+	if (qdf_unlikely(!vdev))
+		return nbuf;
+
+	DP_STATS_INC(vdev, tx_i.dropped.drop_ingress, 1);
+	return nbuf;
+}
+
+/*
+ * dp_tx_exc_drop() - Drop the frame on a given VAP
+ * @soc: DP soc handle
+ * @vdev_id: id of DP vdev handle
+ * @nbuf: skb
+ * @tx_exc_metadata: Handle that holds exception path meta data
+ *
+ * Drop all the incoming packets
+ *
+ * Return: nbuf
+ *
+ */
+qdf_nbuf_t dp_tx_exc_drop(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
+			  qdf_nbuf_t nbuf,
+			  struct cdp_tx_exception_metadata *tx_exc_metadata)
+{
+	return dp_tx_drop(soc_hdl, vdev_id, nbuf);
+}
+#endif
+
+/*
  * dp_tx_send() - Transmit a frame on a given VAP
  * @soc: DP soc handle
  * @vdev_id: id of DP vdev handle

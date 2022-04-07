@@ -1074,6 +1074,10 @@ struct hal_hw_txrx_ops {
 				       uint32_t nbuf_len);
 	void (*hal_mpdu_desc_info_set)(hal_soc_handle_t hal_soc_hdl,
 				       void *mpdu_desc_info, uint32_t seq_no);
+#ifdef DP_UMAC_HW_RESET_SUPPORT
+	void (*hal_unregister_reo_send_cmd)(struct hal_soc *hal_soc);
+	void (*hal_register_reo_send_cmd)(struct hal_soc *hal_soc);
+#endif
 	uint32_t (*hal_rx_tlv_sgi_get)(uint8_t *buf);
 	uint32_t (*hal_rx_tlv_get_freq)(uint8_t *buf);
 	uint8_t (*hal_rx_msdu_get_keyid)(uint8_t *buf);

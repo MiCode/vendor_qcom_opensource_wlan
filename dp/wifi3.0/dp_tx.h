@@ -271,6 +271,13 @@ void dp_tx_update_peer_basic_stats(struct dp_txrx_peer *txrx_peer,
 				   uint32_t length, uint8_t tx_status,
 				   bool update);
 
+#ifdef DP_UMAC_HW_RESET_SUPPORT
+qdf_nbuf_t dp_tx_drop(struct cdp_soc_t *soc, uint8_t vdev_id, qdf_nbuf_t nbuf);
+
+qdf_nbuf_t dp_tx_exc_drop(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
+			  qdf_nbuf_t nbuf,
+			  struct cdp_tx_exception_metadata *tx_exc_metadata);
+#endif
 #ifndef QCA_HOST_MODE_WIFI_DISABLED
 /**
  * dp_tso_attach() - TSO Attach handler

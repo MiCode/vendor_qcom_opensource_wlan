@@ -1457,6 +1457,11 @@ struct ol_if_ops {
 				    uint8_t vdev_id, uint32_t rule_id,
 				    uint8_t *peer_mac);
 #endif
+#ifdef DP_UMAC_HW_RESET_SUPPORT
+	void (*dp_update_tx_hardstart)(struct cdp_ctrl_objmgr_psoc *psoc,
+				       uint8_t vdev_id,
+				       struct ol_txrx_hardtart_ctxt *ctxt);
+#endif
 };
 
 #ifdef DP_PEER_EXTENDED_API

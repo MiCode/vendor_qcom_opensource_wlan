@@ -1064,6 +1064,15 @@ struct ol_txrx_ops {
 };
 
 /**
+ * ol_txrx_hardtart_ctxt - handlers for dp tx path
+ *
+ */
+struct ol_txrx_hardtart_ctxt {
+	ol_txrx_tx_fp         tx;
+	ol_txrx_tx_exc_fp     tx_exception;
+};
+
+/**
  * ol_txrx_stats_req - specifications of the requested
  * statistics
  */

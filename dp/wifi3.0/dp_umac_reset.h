@@ -134,6 +134,7 @@ struct umac_reset_rx_actions {
  * @current_state: current state of the UMAC reset state machine
  * @shmem_exp_magic_num: Expected magic number in the shared memory
  * @rx_actions: callbacks for handling UMAC reset actions
+ * @intr_ctx_bkp: DP Interrupts ring masks backup
  */
 struct dp_soc_umac_reset_ctx {
 	qdf_dma_addr_t shmem_paddr_unaligned;
@@ -145,6 +146,7 @@ struct dp_soc_umac_reset_ctx {
 	enum umac_reset_state current_state;
 	uint32_t shmem_exp_magic_num;
 	struct umac_reset_rx_actions rx_actions;
+	struct dp_intr_bkp *intr_ctx_bkp;
 };
 
 /**

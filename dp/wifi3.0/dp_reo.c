@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -63,6 +64,30 @@ void dp_reo_cmd_srng_event_record(struct dp_soc *soc,
 {
 }
 #endif /*WLAN_FEATURE_DP_EVENT_HISTORY */
+
+#ifdef DP_UMAC_HW_RESET_SUPPORT
+/**
+ * dp_pause_reo_send_cmd() - Pause Reo send commands.
+ * @soc: dp soc
+ *
+ * Return: status
+ */
+void dp_pause_reo_send_cmd(struct dp_soc *soc)
+{
+	hal_unregister_reo_send_cmd(soc->hal_soc);
+}
+
+/**
+ * dp_resume_reo_send_cmd() - Resume Reo send commands.
+ * @soc: dp soc
+ *
+ * Return: status
+ */
+void dp_resume_reo_send_cmd(struct dp_soc *soc)
+{
+	hal_register_reo_send_cmd(soc->hal_soc);
+}
+#endif
 
 QDF_STATUS dp_reo_send_cmd(struct dp_soc *soc, enum hal_reo_cmd_type type,
 		     struct hal_reo_cmd_params *params,

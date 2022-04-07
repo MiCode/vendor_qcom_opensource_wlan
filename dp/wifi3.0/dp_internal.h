@@ -2149,6 +2149,12 @@ extern QDF_STATUS dp_rx_tid_setup_wifi3(struct dp_peer *peer, int tid,
 					uint32_t ba_window_size,
 					uint32_t start_seq);
 
+#ifdef DP_UMAC_HW_RESET_SUPPORT
+void dp_pause_reo_send_cmd(struct dp_soc *soc);
+
+void dp_resume_reo_send_cmd(struct dp_soc *soc);
+#endif
+
 extern QDF_STATUS dp_reo_send_cmd(struct dp_soc *soc,
 	enum hal_reo_cmd_type type, struct hal_reo_cmd_params *params,
 	void (*callback_fn), void *data);

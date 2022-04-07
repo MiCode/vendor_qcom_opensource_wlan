@@ -1731,6 +1731,7 @@ struct cdp_rx_stats {
  * @dma_error: dma fail
  * @res_full: Resource Full: Congestion Control
  * @fail_per_pkt_vdev_id_check: Per pkt vdev id check
+ * @drop_ingress: Packets dropped during Umac reset
  * @exception_fw: packets sent to fw
  * @completion_fw: packets completions received from fw
  * @cce_classified:Number of packets classified by CCE
@@ -1792,6 +1793,7 @@ struct cdp_tx_ingress_stats {
 		/* headroom insufficient */
 		uint32_t headroom_insufficient;
 		uint32_t fail_per_pkt_vdev_id_check;
+		uint32_t drop_ingress;
 	} dropped;
 
 	/* Mesh packets info */
