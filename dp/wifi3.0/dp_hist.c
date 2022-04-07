@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -212,5 +213,6 @@ void dp_hist_init(struct cdp_hist_stats *hist_stats,
 		  enum cdp_hist_types hist_type)
 {
 	qdf_mem_zero(hist_stats, sizeof(*hist_stats));
+	hist_stats->min =  INT_MAX;
 	hist_stats->hist.hist_type = hist_type;
 }

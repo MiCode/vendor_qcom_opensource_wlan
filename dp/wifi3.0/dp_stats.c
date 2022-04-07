@@ -5841,11 +5841,13 @@ static void dp_print_hist_stats(struct cdp_hist_stats *hstats,
 {
 	uint8_t index = 0;
 	uint64_t count = 0;
+	bool hist_delay_data = false;
 
 	for (index = 0; index < CDP_HIST_BUCKET_MAX; index++) {
 		count = hstats->hist.freq[index];
 		if (!count)
 			continue;
+		hist_delay_data = true;
 		if (hist_type == CDP_HIST_TYPE_SW_ENQEUE_DELAY)
 			DP_PRINT_STATS("%s:  Packets = %llu",
 				       dp_vow_str_sw_enq_delay(index),
@@ -5860,9 +5862,15 @@ static void dp_print_hist_stats(struct cdp_hist_stats *hstats,
 				       count);
 	}
 
-	DP_PRINT_STATS("Min = %u", hstats->min);
-	DP_PRINT_STATS("Max = %u", hstats->max);
-	DP_PRINT_STATS("Avg = %u\n", hstats->avg);
+	/*
+	 * If none of the buckets have any packets,
+	 * there is no need to display the stats.
+	 */
+	if (hist_delay_data) {
+		DP_PRINT_STATS("Min = %u", hstats->min);
+		DP_PRINT_STATS("Max = %u", hstats->max);
+		DP_PRINT_STATS("Avg = %u\n", hstats->avg);
+	}
 }
 
 /*
@@ -5964,14 +5972,14 @@ void dp_peer_print_tx_delay_stats(struct dp_pdev *pdev,
 	for (tid = 0; tid < CDP_MAX_DATA_TIDS; tid++) {
 		DP_PRINT_STATS("----TID: %d----", tid);
 		DP_PRINT_STATS("Software Enqueue Delay:");
-		qdf_mem_zero(&hist_stats, sizeof(*(&hist_stats)));
+		dp_hist_init(&hist_stats, CDP_HIST_TYPE_SW_ENQEUE_DELAY);
 		dp_accumulate_delay_tid_stats(soc, delay_stats->delay_tid_stats,
 					      &hist_stats, tid,
 					      CDP_HIST_TYPE_SW_ENQEUE_DELAY);
 		dp_print_hist_stats(&hist_stats, CDP_HIST_TYPE_SW_ENQEUE_DELAY);
-		qdf_mem_zero(&hist_stats, sizeof(*(&hist_stats)));
 
 		DP_PRINT_STATS("Hardware Transmission Delay:");
+		dp_hist_init(&hist_stats, CDP_HIST_TYPE_HW_COMP_DELAY);
 		dp_accumulate_delay_tid_stats(soc, delay_stats->delay_tid_stats,
 					      &hist_stats, tid,
 					      CDP_HIST_TYPE_HW_COMP_DELAY);
@@ -6011,7 +6019,7 @@ void dp_peer_print_rx_delay_stats(struct dp_pdev *pdev,
 	for (tid = 0; tid < CDP_MAX_DATA_TIDS; tid++) {
 		DP_PRINT_STATS("----TID: %d----", tid);
 		DP_PRINT_STATS("Rx Reap2stack Deliver Delay:");
-		qdf_mem_zero(&hist_stats, sizeof(*(&hist_stats)));
+		dp_hist_init(&hist_stats, CDP_HIST_TYPE_REAP_STACK);
 		dp_accumulate_delay_tid_stats(soc, delay_stats->delay_tid_stats,
 					      &hist_stats, tid,
 					      CDP_HIST_TYPE_REAP_STACK);
