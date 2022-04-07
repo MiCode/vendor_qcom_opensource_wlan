@@ -536,8 +536,8 @@ dp_set_bpr_enable_2_0(struct dp_pdev *pdev, int val)
 }
 #endif /* QCA_SUPPORT_BPR */
 
-#if defined(WDI_EVENT_ENABLE) &&\
-	(defined(QCA_ENHANCED_STATS_SUPPORT) || !defined(REMOVE_PKT_LOG))
+#ifdef QCA_ENHANCED_STATS_SUPPORT
+#ifdef WDI_EVENT_ENABLE
 /**
  * dp_ppdu_desc_notify_2_0 - Notify upper layer for PPDU indication via WDI
  *
@@ -563,6 +563,7 @@ static void dp_ppdu_desc_notify_2_0(struct dp_pdev *pdev, qdf_nbuf_t nbuf)
 		qdf_nbuf_free(nbuf);
 	}
 }
+#endif
 
 /**
  * dp_ppdu_stats_feat_enable_check_2_0 - Check if feature(s) is enabled to
@@ -1145,10 +1146,6 @@ dp_mon_register_feature_ops_2_0(struct dp_soc *soc)
 #if defined(WDI_EVENT_ENABLE) &&\
 	(defined(QCA_ENHANCED_STATS_SUPPORT) || !defined(REMOVE_PKT_LOG))
 	mon_ops->mon_ppdu_stats_ind_handler = dp_ppdu_stats_ind_handler;
-	mon_ops->mon_ppdu_desc_deliver = dp_ppdu_desc_deliver;
-	mon_ops->mon_ppdu_desc_notify = dp_ppdu_desc_notify_2_0;
-	mon_ops->mon_ppdu_stats_feat_enable_check =
-				dp_ppdu_stats_feat_enable_check_2_0;
 #endif
 #ifdef WLAN_RX_PKT_CAPTURE_ENH
 	mon_ops->mon_config_enh_rx_capture = NULL;
@@ -1181,7 +1178,13 @@ dp_mon_register_feature_ops_2_0(struct dp_soc *soc)
 				dp_mon_tx_enable_enhanced_stats_2_0;
 	mon_ops->mon_tx_disable_enhanced_stats =
 				dp_mon_tx_disable_enhanced_stats_2_0;
+	mon_ops->mon_ppdu_stats_feat_enable_check =
+				dp_ppdu_stats_feat_enable_check_2_0;
 	mon_ops->mon_tx_stats_update = dp_mon_tx_stats_update_2_0;
+	mon_ops->mon_ppdu_desc_deliver = dp_ppdu_desc_deliver;
+#ifdef WDI_EVENT_ENABLE
+	mon_ops->mon_ppdu_desc_notify = dp_ppdu_desc_notify_2_0;
+#endif
 #endif
 #if defined(ATH_SUPPORT_NAC_RSSI) || defined(ATH_SUPPORT_NAC)
 	mon_ops->mon_filter_setup_smart_monitor =

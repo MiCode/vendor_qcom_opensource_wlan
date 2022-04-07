@@ -514,8 +514,10 @@ dp_vdev_set_monitor_mode_rings(struct dp_pdev *pdev,
 bool dp_ppdu_stats_ind_handler(struct htt_soc *soc,
 			       uint32_t *msg_word,
 			       qdf_nbuf_t htt_t2h_msg);
+#endif
 
-#if !defined(WLAN_TX_PKT_CAPTURE_ENH) || defined(QCA_MONITOR_2_0_SUPPORT)
+#if defined(QCA_ENHANCED_STATS_SUPPORT) && \
+	(!defined(WLAN_TX_PKT_CAPTURE_ENH) || defined(QCA_MONITOR_2_0_SUPPORT))
 /**
  * dp_ppdu_desc_deliver(): Function to deliver Tx PPDU status descriptor
  * to upper layer
@@ -525,7 +527,6 @@ bool dp_ppdu_stats_ind_handler(struct htt_soc *soc,
  * return: void
  */
 void dp_ppdu_desc_deliver(struct dp_pdev *pdev, struct ppdu_info *ppdu_info);
-#endif
 #endif
 
 struct dp_mon_ops {
@@ -611,10 +612,6 @@ struct dp_mon_ops {
 	bool (*mon_ppdu_stats_ind_handler)(struct htt_soc *soc,
 					   uint32_t *msg_word,
 					   qdf_nbuf_t htt_t2h_msg);
-	void (*mon_ppdu_desc_deliver)(struct dp_pdev *pdev,
-				      struct ppdu_info *ppdu_info);
-	void (*mon_ppdu_desc_notify)(struct dp_pdev *pdev, qdf_nbuf_t nbuf);
-	bool (*mon_ppdu_stats_feat_enable_check)(struct dp_pdev *pdev);
 #endif
 	QDF_STATUS (*mon_htt_ppdu_stats_attach)(struct dp_pdev *pdev);
 	void (*mon_htt_ppdu_stats_detach)(struct dp_pdev *pdev);
@@ -687,6 +684,10 @@ struct dp_mon_ops {
 				    struct cdp_tx_completion_ppdu_user *ppdu);
 	void (*mon_tx_enable_enhanced_stats)(struct dp_pdev *pdev);
 	void (*mon_tx_disable_enhanced_stats)(struct dp_pdev *pdev);
+	void (*mon_ppdu_desc_deliver)(struct dp_pdev *pdev,
+				      struct ppdu_info *ppdu_info);
+	bool (*mon_ppdu_stats_feat_enable_check)(struct dp_pdev *pdev);
+	void (*mon_ppdu_desc_notify)(struct dp_pdev *pdev, qdf_nbuf_t nbuf);
 #endif
 #ifdef QCA_MCOPY_SUPPORT
 	void (*mon_filter_setup_mcopy_mode)(struct dp_pdev *pdev);

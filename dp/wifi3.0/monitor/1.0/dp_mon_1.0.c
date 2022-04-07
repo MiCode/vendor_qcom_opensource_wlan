@@ -877,9 +877,8 @@ dp_set_bpr_enable_1_0(struct dp_pdev *pdev, int val)
 }
 #endif
 
-#if defined(WDI_EVENT_ENABLE) &&\
-	(defined(QCA_ENHANCED_STATS_SUPPORT) || !defined(REMOVE_PKT_LOG))
-#ifndef WLAN_TX_PKT_CAPTURE_ENH
+#ifdef QCA_ENHANCED_STATS_SUPPORT
+#if defined(WDI_EVENT_ENABLE) && !defined(WLAN_TX_PKT_CAPTURE_ENH)
 /**
  * dp_ppdu_desc_notify_1_0 - Notify upper layer for PPDU indication via WDI
  *
@@ -1040,14 +1039,6 @@ dp_mon_register_feature_ops_1_0(struct dp_soc *soc)
 #if defined(WDI_EVENT_ENABLE) &&\
 	(defined(QCA_ENHANCED_STATS_SUPPORT) || !defined(REMOVE_PKT_LOG))
 	mon_ops->mon_ppdu_stats_ind_handler = dp_ppdu_stats_ind_handler;
-#ifndef WLAN_TX_PKT_CAPTURE_ENH
-	mon_ops->mon_ppdu_desc_deliver = dp_ppdu_desc_deliver;
-	mon_ops->mon_ppdu_desc_notify = dp_ppdu_desc_notify_1_0;
-#else
-	mon_ops->mon_ppdu_desc_deliver = dp_ppdu_desc_deliver_1_0;
-#endif
-	mon_ops->mon_ppdu_stats_feat_enable_check =
-				dp_ppdu_stats_feat_enable_check_1_0;
 #endif
 #ifdef WLAN_RX_PKT_CAPTURE_ENH
 	mon_ops->mon_config_enh_rx_capture = dp_config_enh_rx_capture;
@@ -1080,6 +1071,16 @@ dp_mon_register_feature_ops_1_0(struct dp_soc *soc)
 				dp_mon_tx_enable_enhanced_stats_1_0;
 	mon_ops->mon_tx_disable_enhanced_stats =
 				dp_mon_tx_disable_enhanced_stats_1_0;
+	mon_ops->mon_ppdu_stats_feat_enable_check =
+				dp_ppdu_stats_feat_enable_check_1_0;
+#ifndef WLAN_TX_PKT_CAPTURE_ENH
+	mon_ops->mon_ppdu_desc_deliver = dp_ppdu_desc_deliver;
+#ifdef WDI_EVENT_ENABLE
+	mon_ops->mon_ppdu_desc_notify = dp_ppdu_desc_notify_1_0;
+#endif
+#else
+	mon_ops->mon_ppdu_desc_deliver = dp_ppdu_desc_deliver_1_0;
+#endif
 #ifdef WLAN_FEATURE_11BE
 	mon_ops->mon_tx_stats_update = NULL;
 #endif

@@ -4555,7 +4555,6 @@ static struct ppdu_info *dp_htt_process_tlv(struct dp_pdev *pdev,
 }
 #endif /* QCA_ENHANCED_STATS_SUPPORT */
 
-#if defined(WDI_EVENT_ENABLE)
 #ifdef QCA_ENHANCED_STATS_SUPPORT
 /**
  * dp_tx_ppdu_stats_feat_enable_check() - Check if feature(s) is enabled to
@@ -4575,7 +4574,10 @@ static bool dp_tx_ppdu_stats_feat_enable_check(struct dp_pdev *pdev)
 	else
 		return false;
 }
+#endif
 
+#if defined(WDI_EVENT_ENABLE)
+#ifdef QCA_ENHANCED_STATS_SUPPORT
 /**
  * dp_txrx_ppdu_stats_handler() - Function to process HTT PPDU stats from FW
  * @soc: DP SOC handle
@@ -5619,9 +5621,6 @@ void dp_mon_feature_ops_deregister(struct dp_soc *soc)
 #if defined(WDI_EVENT_ENABLE) &&\
 	(defined(QCA_ENHANCED_STATS_SUPPORT) || !defined(REMOVE_PKT_LOG))
 	mon_ops->mon_ppdu_stats_ind_handler = NULL;
-	mon_ops->mon_ppdu_desc_deliver = NULL;
-	mon_ops->mon_ppdu_desc_notify = NULL;
-	mon_ops->mon_ppdu_stats_feat_enable_check = NULL;
 #endif
 #ifdef WLAN_RX_PKT_CAPTURE_ENH
 	mon_ops->mon_config_enh_rx_capture = NULL;
@@ -5647,6 +5646,9 @@ void dp_mon_feature_ops_deregister(struct dp_soc *soc)
 	mon_ops->mon_filter_setup_enhanced_stats = NULL;
 	mon_ops->mon_tx_enable_enhanced_stats = NULL;
 	mon_ops->mon_tx_disable_enhanced_stats = NULL;
+	mon_ops->mon_ppdu_desc_deliver = NULL;
+	mon_ops->mon_ppdu_desc_notify = NULL;
+	mon_ops->mon_ppdu_stats_feat_enable_check = NULL;
 #ifdef WLAN_FEATURE_11BE
 	mon_ops->mon_tx_stats_update = NULL;
 #endif
