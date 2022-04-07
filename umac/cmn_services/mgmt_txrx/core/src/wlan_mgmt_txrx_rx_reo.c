@@ -2645,6 +2645,9 @@ wlan_mgmt_rx_reo_algo_entry(struct wlan_objmgr_pdev *pdev,
 {
 	struct mgmt_rx_reo_context *reo_ctx;
 	QDF_STATUS ret;
+	uint8_t frame_type;
+	uint8_t frame_subtype;
+	struct ieee80211_frame *wh;
 
 	if (!is_queued)
 		return QDF_STATUS_E_NULL_VALUE;
@@ -2750,6 +2753,16 @@ wlan_mgmt_rx_reo_algo_entry(struct wlan_objmgr_pdev *pdev,
 	 * }
 	 */
 	qdf_spin_lock(&reo_ctx->reo_algo_entry_lock);
+
+	if ((desc->type == MGMT_RX_REO_FRAME_DESC_HOST_CONSUMED_FRAME ||
+	     desc->type == MGMT_RX_REO_FRAME_DESC_FW_CONSUMED_FRAME) &&
+	    !desc->rx_params->reo_params->valid)
+		qdf_assert_always(0);
+
+	wh = (struct ieee80211_frame *)qdf_nbuf_data(desc->nbuf);
+	frame_type = wh->i_fc[0] & IEEE80211_FC0_TYPE_MASK;
+	frame_subtype = wh->i_fc[0] & IEEE80211_FC0_SUBTYPE_MASK;
+	qdf_assert_always(mgmt_type == IEEE80211_FC0_TYPE_MGT);
 
 	/* Update the Host snapshot */
 	ret = wlan_mgmt_rx_reo_update_host_snapshot(
