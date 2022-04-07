@@ -393,6 +393,7 @@ typedef enum {
 	WLAN_LITE_MON_ID      = 95,
 	WLAN_PRE_CAC_ID       = 96,
 	WLAN_DP_ID            = 97,
+	WLAN_UMAC_RESET_ID    = 98,
 	WLAN_REF_ID_MAX,
 } wlan_objmgr_ref_dbgid;
 
