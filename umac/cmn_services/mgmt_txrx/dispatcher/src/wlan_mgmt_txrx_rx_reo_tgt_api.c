@@ -239,6 +239,10 @@ QDF_STATUS tgt_mgmt_rx_reo_frame_handler(
 	QDF_STATUS status;
 	struct mgmt_rx_reo_frame_descriptor desc = {0};
 	bool is_queued;
+	int8_t link_id;
+	uint8_t frame_type;
+	uint8_t frame_subtype;
+	struct ieee80211_frame *wh;
 
 	if (!pdev) {
 		mgmt_rx_reo_err("pdev is NULL");
@@ -275,8 +279,13 @@ QDF_STATUS tgt_mgmt_rx_reo_frame_handler(
 	desc.list_size_rx = -1;
 	desc.list_insertion_pos = -1;
 
+	wh = (struct ieee80211_frame *)qdf_nbuf_data(buf);
+	frame_type = wh->i_fc[0] & IEEE80211_FC0_TYPE_MASK;
+	frame_subtype = wh->i_fc[0] & IEEE80211_FC0_SUBTYPE_MASK;
+
 	/* If REO is not required for this frame, process it right away */
-	if (!is_mgmt_rx_reo_required(pdev, &desc)) {
+	if (frame_type != IEEE80211_FC0_TYPE_MGT ||
+	    !is_mgmt_rx_reo_required(pdev, &desc)) {
 		return tgt_mgmt_txrx_process_rx_frame(pdev, buf,
 						      mgmt_rx_params);
 	}
