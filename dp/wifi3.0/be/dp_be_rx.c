@@ -1270,8 +1270,10 @@ dp_rx_intrabss_ucast_check_be(qdf_nbuf_t nbuf,
 
 	dest_chip_id = HAL_RX_DEST_CHIP_ID_GET(msdu_metadata);
 	qdf_assert_always(dest_chip_id <= (DP_MLO_MAX_DEST_CHIP_ID - 1));
+	da_peer_id = HAL_RX_PEER_ID_GET(msdu_metadata);
 
-	if (be_soc->mlo_enabled) {
+	/* TA is MLD peer */
+	if (be_soc->mlo_enabled && ta_peer->mld_peer) {
 		/* validate chip_id, get a ref, and re-assign soc */
 		params->dest_soc =
 			dp_mlo_get_soc_ref_by_chip_id(be_soc->ml_ctxt,
@@ -1280,8 +1282,6 @@ dp_rx_intrabss_ucast_check_be(qdf_nbuf_t nbuf,
 			return false;
 	}
 
-	da_peer_id = dp_rx_peer_metadata_peer_id_get_be(params->dest_soc,
-							msdu_metadata->da_idx);
 	da_peer = dp_txrx_peer_get_ref_by_id(params->dest_soc, da_peer_id,
 					     &txrx_ref_handle, DP_MOD_ID_RX);
 	if (!da_peer)
@@ -1308,6 +1308,12 @@ dp_rx_intrabss_ucast_check_be(qdf_nbuf_t nbuf,
 
 	/* MLO specific Intra-BSS check */
 	if (dp_rx_intrabss_fwd_mlo_allow(ta_peer, da_peer)) {
+		/* TA is legacy peer */
+		if (!ta_peer->mld_peer) {
+			params->dest_soc = da_peer->vdev->pdev->soc;
+			ret = true;
+			goto rel_da_peer;
+		}
 		/* index of soc in the array */
 		soc_idx = dest_chip_id << DP_MLO_DEST_CHIP_ID_SHIFT;
 		if (!(be_vdev->partner_vdev_list[soc_idx][0] ==
