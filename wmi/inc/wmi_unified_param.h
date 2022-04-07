@@ -4600,12 +4600,12 @@ struct ftm_time_sync_start_stop_params {
 /**
  * struct wlan_time_sync_qtime_pair- Get wlan time sync qtime pair value
  * @vdev_id: vdev id
- * @qtime_master: qtimer value of master
- * @qtime_slave: qtimer value of slave
+ * @qtime_initiator: qtimer value of initiator
+ * @qtime_target: qtimer value of target
  */
 struct wlan_time_sync_qtime_pair {
-	uint64_t qtime_master;
-	uint64_t qtime_slave;
+	uint64_t qtime_initiator;
+	uint64_t qtime_target;
 };
 
 /**
@@ -4902,7 +4902,7 @@ typedef enum {
 	wmi_roam_pmkid_request_event_id,
 #ifdef FEATURE_WLAN_TIME_SYNC_FTM
 	wmi_wlan_time_sync_ftm_start_stop_event_id,
-	wmi_wlan_time_sync_q_master_slave_offset_eventid,
+	wmi_wlan_time_sync_q_initiator_target_offset_eventid,
 #endif
 	wmi_roam_scan_chan_list_id,
 	wmi_muedca_params_config_eventid,

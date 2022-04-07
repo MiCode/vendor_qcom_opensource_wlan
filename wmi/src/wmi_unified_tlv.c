@@ -16770,10 +16770,10 @@ extract_time_sync_ftm_offset_event_tlv(wmi_unified_t wmi, void *buf,
 	}
 
 	for (iter = 0; iter < param->num_qtime; iter++) {
-		param->pairs[iter].qtime_master = (
+		param->pairs[iter].qtime_initiator = (
 			(uint64_t)q_pair[iter].qmaster_u32 << 32) |
 			 q_pair[iter].qmaster_l32;
-		param->pairs[iter].qtime_slave = (
+		param->pairs[iter].qtime_target = (
 			(uint64_t)q_pair[iter].qslave_u32 << 32) |
 			 q_pair[iter].qslave_l32;
 	}
@@ -18257,7 +18257,7 @@ static void populate_tlv_events_id(uint32_t *event_ids)
 #ifdef FEATURE_WLAN_TIME_SYNC_FTM
 	event_ids[wmi_wlan_time_sync_ftm_start_stop_event_id] =
 				WMI_VDEV_AUDIO_SYNC_START_STOP_EVENTID;
-	event_ids[wmi_wlan_time_sync_q_master_slave_offset_eventid] =
+	event_ids[wmi_wlan_time_sync_q_initiator_target_offset_eventid] =
 			WMI_VDEV_AUDIO_SYNC_Q_MASTER_SLAVE_OFFSET_EVENTID;
 #endif
 event_ids[wmi_roam_scan_chan_list_id] =
