@@ -291,11 +291,7 @@ static struct dp_int_mask_assignment dp_mask_assignment[NUM_INTERRUPT_COMBINATIO
 		  WLAN_CFG_RX_MON_RING_MASK_2,
 		  0, 0, 0, 0},
 		/* host2rxdma ring masks */
-		{ WLAN_CFG_HOST2RXDMA_RING_MASK_0,
-		  WLAN_CFG_HOST2RXDMA_RING_MASK_1,
-		  WLAN_CFG_HOST2RXDMA_RING_MASK_2,
-		  WLAN_CFG_HOST2RXDMA_RING_MASK_3,
-		  0, 0, 0, 0, 0, 0, 0},
+		{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 		/* rxdma2host ring masks */
 		{ WLAN_CFG_RXDMA2HOST_RING_MASK_0,
 		  WLAN_CFG_RXDMA2HOST_RING_MASK_1,
@@ -349,11 +345,7 @@ static struct dp_int_mask_assignment dp_mask_assignment[NUM_INTERRUPT_COMBINATIO
 		    WLAN_CFG_RX_MON_RING_MASK_2,
 		  0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 		/* host2rxdma ring masks */
-		{ WLAN_CFG_HOST2RXDMA_RING_MASK_0 |
-		    WLAN_CFG_HOST2RXDMA_RING_MASK_1 |
-		    WLAN_CFG_HOST2RXDMA_RING_MASK_2 |
-		    WLAN_CFG_HOST2RXDMA_RING_MASK_3,
-		  0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 		/* rxdma2host ring masks */
 		{ WLAN_CFG_RXDMA2HOST_RING_MASK_0 |
 		    WLAN_CFG_RXDMA2HOST_RING_MASK_1 |
@@ -405,11 +397,7 @@ static struct dp_int_mask_assignment dp_mask_assignment[NUM_INTERRUPT_COMBINATIO
 		  WLAN_CFG_RX_MON_RING_MASK_2,
 		  0, 0, 0, 0, 0, 0, 0, 0, 0},
 		/* host2rxdma ring masks */
-		{ WLAN_CFG_HOST2RXDMA_RING_MASK_0 |
-		    WLAN_CFG_HOST2RXDMA_RING_MASK_1,
-		  WLAN_CFG_HOST2RXDMA_RING_MASK_2 |
-		    WLAN_CFG_HOST2RXDMA_RING_MASK_3,
-		  0, 0, 0, 0, 0, 0, 0, 0, 0},
+		{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 		/* rxdma2host ring masks */
 		{ WLAN_CFG_RXDMA2HOST_RING_MASK_0 |
 		    WLAN_CFG_RXDMA2HOST_RING_MASK_1,
@@ -462,12 +450,7 @@ static struct dp_int_mask_assignment dp_mask_assignment[NUM_INTERRUPT_COMBINATIO
 		    WLAN_CFG_RX_MON_RING_MASK_2,
 		  0, 0, 0, 0, 0, 0, 0, 0},
 		/* host2rxdma ring masks */
-		{ 0, 0,
-		  WLAN_CFG_HOST2RXDMA_RING_MASK_0 |
-		    WLAN_CFG_HOST2RXDMA_RING_MASK_1 |
-		    WLAN_CFG_HOST2RXDMA_RING_MASK_2 |
-		    WLAN_CFG_HOST2RXDMA_RING_MASK_3,
-		  0, 0, 0, 0, 0, 0, 0, 0},
+		{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 		/* rxdma2host ring masks */
 		{ 0, 0,
 		  WLAN_CFG_RXDMA2HOST_RING_MASK_0 |
@@ -525,11 +508,7 @@ static struct dp_int_mask_assignment dp_mask_assignment[NUM_INTERRUPT_COMBINATIO
 		  WLAN_CFG_RX_MON_RING_MASK_2,
 		  0, 0, 0, 0, 0, 0, 0, 0},
 		/* host2rxdma ring masks */
-		{ WLAN_CFG_HOST2RXDMA_RING_MASK_0,
-		  WLAN_CFG_HOST2RXDMA_RING_MASK_1,
-		  WLAN_CFG_HOST2RXDMA_RING_MASK_2,
-		  WLAN_CFG_HOST2RXDMA_RING_MASK_3,
-		  0, 0, 0, 0, 0, 0, 0},
+		{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 		/* rxdma2host ring masks */
 		{ WLAN_CFG_RXDMA2HOST_RING_MASK_0,
 		  WLAN_CFG_RXDMA2HOST_RING_MASK_1,
@@ -582,12 +561,7 @@ static struct dp_int_mask_assignment dp_mask_assignment[NUM_INTERRUPT_COMBINATIO
 		    WLAN_CFG_RX_MON_RING_MASK_2,
 		  0, 0, 0, 0, 0, 0},
 		/* host2rxdma ring masks */
-		{ 0, 0, 0, 0,
-		  WLAN_CFG_HOST2RXDMA_RING_MASK_0 |
-		    WLAN_CFG_HOST2RXDMA_RING_MASK_1 |
-		    WLAN_CFG_HOST2RXDMA_RING_MASK_2 |
-		    WLAN_CFG_HOST2RXDMA_RING_MASK_3,
-		  0, 0, 0, 0, 0, 0},
+		{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 		/* rxdma2host ring masks */
 		{ 0, 0, 0, 0,
 		  WLAN_CFG_RXDMA2HOST_RING_MASK_0 |
@@ -646,11 +620,7 @@ static struct dp_int_mask_assignment dp_mask_assignment[NUM_INTERRUPT_COMBINATIO
 		  WLAN_CFG_RX_MON_RING_MASK_2,
 		  0, 0, 0, 0, 0, 0, 0, 0},
 		/* host2rxdma ring masks */
-		{ WLAN_CFG_HOST2RXDMA_RING_MASK_0,
-		  WLAN_CFG_HOST2RXDMA_RING_MASK_1,
-		  WLAN_CFG_HOST2RXDMA_RING_MASK_2,
-		  WLAN_CFG_HOST2RXDMA_RING_MASK_3,
-		  0, 0, 0, 0, 0, 0, 0},
+		{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 		/* rxdma2host ring masks */
 		{ WLAN_CFG_RXDMA2HOST_RING_MASK_0,
 		  WLAN_CFG_RXDMA2HOST_RING_MASK_1,
@@ -704,12 +674,7 @@ static struct dp_int_mask_assignment dp_mask_assignment[NUM_INTERRUPT_COMBINATIO
 		  WLAN_CFG_RX_MON_RING_MASK_2,
 		  0, 0, 0, 0, 0},
 		/* host2rxdma ring masks */
-		{ 0, 0, 0,
-		  WLAN_CFG_HOST2RXDMA_RING_MASK_0,
-		  WLAN_CFG_HOST2RXDMA_RING_MASK_1,
-		  WLAN_CFG_HOST2RXDMA_RING_MASK_2,
-		  WLAN_CFG_HOST2RXDMA_RING_MASK_3,
-		  0, 0, 0, 0},
+		{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 		/* rxdma2host ring masks */
 		{ 0, 0, 0,
 		  WLAN_CFG_RXDMA2HOST_RING_MASK_0,
@@ -769,12 +734,7 @@ static struct dp_int_mask_assignment dp_mask_assignment[NUM_INTERRUPT_COMBINATIO
 		  WLAN_CFG_RX_MON_RING_MASK_2,
 		  0, 0, 0, 0, 0},
 		/* host2rxdma ring masks */
-		{ 0, 0, 0,
-		  WLAN_CFG_HOST2RXDMA_RING_MASK_0,
-		  WLAN_CFG_HOST2RXDMA_RING_MASK_1,
-		  WLAN_CFG_HOST2RXDMA_RING_MASK_2,
-		  WLAN_CFG_HOST2RXDMA_RING_MASK_3,
-		  0, 0, 0, 0},
+		{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 		/* rxdma2host ring masks */
 		{ 0, 0, 0,
 		  WLAN_CFG_RXDMA2HOST_RING_MASK_0,
