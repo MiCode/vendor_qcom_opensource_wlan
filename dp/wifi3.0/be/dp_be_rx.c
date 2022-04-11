@@ -1112,10 +1112,17 @@ bool dp_rx_mlo_igmp_handler(struct dp_soc *soc,
 	if (!(qdf_nbuf_is_ipv4_igmp_pkt(nbuf) ||
 	      qdf_nbuf_is_ipv6_igmp_pkt(nbuf)))
 		return false;
+	/*
+	 * In the case of ME6, Backhaul WDS, NAWDS
+	 * send the igmp pkt on the same link where it received,
+	 * as these features will use peer based tcl metadata
+	 */
 
 	qdf_nbuf_set_next(nbuf, NULL);
 
-	if (vdev->mcast_enhancement_en || be_vdev->mcast_primary)
+	if (vdev->mcast_enhancement_en || be_vdev->mcast_primary ||
+	    qdf_atomic_test_bit(WDS_EXT_PEER_INIT_BIT, &peer->wds_ext.init) ||
+	    peer->nawds_enabled)
 		goto send_pkt;
 
 	mcast_primary_vdev = dp_mlo_get_mcast_primary_vdev(be_soc, be_vdev,

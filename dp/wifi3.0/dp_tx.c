@@ -2103,6 +2103,15 @@ int dp_tx_frame_is_drop(struct dp_vdev *vdev, uint8_t *srcmac, uint8_t *dstmac)
 #define DP_MLO_VDEV_ID_OFFSET 0x80
 
 static inline void
+dp_tx_bypass_reinjection(struct dp_soc *soc, struct dp_tx_desc_s *tx_desc)
+{
+	if (!(tx_desc->flags & DP_TX_DESC_FLAG_TO_FW)) {
+		tx_desc->flags |= DP_TX_DESC_FLAG_TO_FW;
+		qdf_atomic_inc(&soc->num_tx_exception);
+	}
+}
+
+static inline void
 dp_tx_update_mcast_param(uint16_t peer_id,
 			 uint16_t *htt_tcl_metadata,
 			 struct dp_vdev *vdev,
@@ -2122,6 +2131,11 @@ dp_tx_update_mcast_param(uint16_t peer_id,
 	}
 }
 #else
+static inline void
+dp_tx_bypass_reinjection(struct dp_soc *soc, struct dp_tx_desc_s *tx_desc)
+{
+}
+
 static inline void
 dp_tx_update_mcast_param(uint16_t peer_id,
 			 uint16_t *htt_tcl_metadata,
@@ -2179,6 +2193,7 @@ dp_tx_send_msdu_single(struct dp_vdev *vdev, qdf_nbuf_t nbuf,
 					    DP_TCL_METADATA_TYPE_PEER_BASED);
 		DP_TX_TCL_METADATA_PEER_ID_SET(htt_tcl_metadata,
 					       peer_id);
+		dp_tx_bypass_reinjection(soc, tx_desc);
 	} else
 		htt_tcl_metadata = vdev->htt_tcl_metadata;
 
