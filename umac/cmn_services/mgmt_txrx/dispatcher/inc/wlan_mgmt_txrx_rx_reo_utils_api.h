@@ -156,20 +156,20 @@ wlan_mgmt_rx_reo_sim_stop(void)
 #endif /* WLAN_MGMT_RX_REO_SIM_SUPPORT */
 
 /**
- * wlan_mgmt_rx_reo_get_snapshot_address() - Get snapshot address
+ * wlan_mgmt_rx_reo_get_snapshot_info() - Get snapshot info
  * @pdev: pointer to pdev
  * @id: snapshot identifier
- * @address: pointer to snapshot address
+ * @snapshot_info: pointer to snapshot info
  *
- * Helper API to get address of snapshot @id for pdev @pdev.
+ * Helper API to get information of snapshot @id for pdev @pdev.
  *
  * Return: QDF_STATUS
  */
 QDF_STATUS
-wlan_mgmt_rx_reo_get_snapshot_address(
-			struct wlan_objmgr_pdev *pdev,
-			enum mgmt_rx_reo_shared_snapshot_id id,
-			struct mgmt_rx_reo_snapshot **address);
+wlan_mgmt_rx_reo_get_snapshot_info
+			(struct wlan_objmgr_pdev *pdev,
+			 enum mgmt_rx_reo_shared_snapshot_id id,
+			 struct mgmt_rx_reo_snapshot_info *snapshot_info);
 
 /**
  * wlan_mgmt_txrx_process_rx_frame() - API to process the incoming management

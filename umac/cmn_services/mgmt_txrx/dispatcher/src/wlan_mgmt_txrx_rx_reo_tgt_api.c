@@ -69,7 +69,7 @@ tgt_mgmt_rx_reo_get_valid_hw_link_bitmap(struct wlan_objmgr_psoc *psoc,
 QDF_STATUS
 tgt_mgmt_rx_reo_read_snapshot(
 			struct wlan_objmgr_pdev *pdev,
-			struct mgmt_rx_reo_snapshot *address,
+			struct mgmt_rx_reo_snapshot_info *snapshot_info,
 			enum mgmt_rx_reo_shared_snapshot_id id,
 			struct mgmt_rx_reo_snapshot_params *value)
 {
@@ -86,8 +86,8 @@ tgt_mgmt_rx_reo_read_snapshot(
 		return QDF_STATUS_E_NULL_VALUE;
 	}
 
-	return mgmt_rx_reo_txops->read_mgmt_rx_reo_snapshot(pdev, address, id,
-							    value);
+	return mgmt_rx_reo_txops->read_mgmt_rx_reo_snapshot(pdev, snapshot_info,
+							    id, value);
 }
 
 /**
@@ -209,10 +209,10 @@ QDF_STATUS tgt_mgmt_rx_reo_filter_config(struct wlan_objmgr_pdev *pdev,
 }
 
 QDF_STATUS
-tgt_mgmt_rx_reo_get_snapshot_address(
-			struct wlan_objmgr_pdev *pdev,
-			enum mgmt_rx_reo_shared_snapshot_id id,
-			struct mgmt_rx_reo_snapshot **address)
+tgt_mgmt_rx_reo_get_snapshot_info
+			(struct wlan_objmgr_pdev *pdev,
+			 enum mgmt_rx_reo_shared_snapshot_id id,
+			 struct mgmt_rx_reo_snapshot_info *snapshot_info)
 {
 	struct wlan_lmac_if_mgmt_rx_reo_tx_ops *mgmt_rx_reo_txops;
 
@@ -222,13 +222,13 @@ tgt_mgmt_rx_reo_get_snapshot_address(
 		return QDF_STATUS_E_NULL_VALUE;
 	}
 
-	if (!mgmt_rx_reo_txops->get_mgmt_rx_reo_snapshot_address) {
-		mgmt_rx_reo_err("txops entry for get snapshot address is null");
+	if (!mgmt_rx_reo_txops->get_mgmt_rx_reo_snapshot_info) {
+		mgmt_rx_reo_err("txops entry for get snapshot info is null");
 		return QDF_STATUS_E_NULL_VALUE;
 	}
 
-	return mgmt_rx_reo_txops->get_mgmt_rx_reo_snapshot_address(pdev, id,
-								   address);
+	return mgmt_rx_reo_txops->get_mgmt_rx_reo_snapshot_info(pdev, id,
+								snapshot_info);
 }
 
 QDF_STATUS tgt_mgmt_rx_reo_frame_handler(

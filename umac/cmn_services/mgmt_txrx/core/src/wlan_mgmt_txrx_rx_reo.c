@@ -651,9 +651,9 @@ wlan_mgmt_rx_reo_algo_calculate_wait_count(
 	uint8_t snapshot_id;
 	struct wlan_objmgr_pdev *pdev;
 	struct mgmt_rx_reo_pdev_info *rx_reo_pdev_ctx;
-	struct mgmt_rx_reo_snapshot *address;
+	struct mgmt_rx_reo_snapshot_info *snapshot_info;
 	struct mgmt_rx_reo_snapshot_params snapshot_params
-		[MGMT_RX_REO_SHARED_SNAPSHOT_MAX];
+				[MGMT_RX_REO_SHARED_SNAPSHOT_MAX];
 	struct mgmt_rx_reo_snapshot_params *mac_hw_ss, *fw_forwarded_ss,
 					    *fw_consumed_ss, *host_ss;
 	struct mgmt_rx_reo_params *in_frame_params;
@@ -754,15 +754,15 @@ wlan_mgmt_rx_reo_algo_calculate_wait_count(
 		/* Read all the shared snapshots */
 		while (snapshot_id <
 			MGMT_RX_REO_SHARED_SNAPSHOT_MAX) {
-			address = rx_reo_pdev_ctx->
-				   host_target_shared_snapshot[snapshot_id],
+			snapshot_info = &rx_reo_pdev_ctx->
+				host_target_shared_snapshot_info[snapshot_id];
 
 			qdf_mem_zero(&snapshot_params[snapshot_id],
 				     sizeof(snapshot_params[snapshot_id]));
 
 			status = tgt_mgmt_rx_reo_read_snapshot(
-						pdev, address, snapshot_id,
-						&snapshot_params[snapshot_id]);
+					pdev, snapshot_info, snapshot_id,
+					&snapshot_params[snapshot_id]);
 
 			/* Read operation shouldn't fail */
 			if (QDF_IS_STATUS_ERROR(status)) {
@@ -3344,10 +3344,10 @@ error_print:
 static QDF_STATUS
 mgmt_rx_reo_sim_write_snapshot(uint8_t link_id,
 			       enum mgmt_rx_reo_shared_snapshot_id id,
-			       struct mgmt_rx_reo_snapshot value)
+			       struct mgmt_rx_reo_shared_snapshot value)
 {
 	struct wlan_objmgr_pdev *pdev;
-	struct mgmt_rx_reo_snapshot *snapshot_address;
+	struct mgmt_rx_reo_shared_snapshot *snapshot_address;
 	QDF_STATUS status;
 
 	pdev = wlan_get_pdev_from_mlo_link_id(link_id, WLAN_MGMT_RX_REO_SIM_ID);
@@ -3397,13 +3397,13 @@ mgmt_rx_reo_sim_write_snapshot(uint8_t link_id,
  * This API gets the snapshot value for a frame with time stamp
  * @global_timestamp and sequence number @mgmt_pkt_ctr.
  *
- * Return: snapshot value (struct mgmt_rx_reo_snapshot)
+ * Return: snapshot value (struct mgmt_rx_reo_shared_snapshot)
  */
-static struct mgmt_rx_reo_snapshot
+static struct mgmt_rx_reo_shared_snapshot
 mgmt_rx_reo_sim_get_snapshot_value(uint32_t global_timestamp,
 				   uint16_t mgmt_pkt_ctr)
 {
-	struct mgmt_rx_reo_snapshot snapshot = {0};
+	struct mgmt_rx_reo_shared_snapshot snapshot = {0};
 
 	QDF_SET_BITS(snapshot.mgmt_rx_reo_snapshot_low,
 		     MGMT_RX_REO_SNAPSHOT_LOW_VALID_POS,
@@ -3449,7 +3449,7 @@ mgmt_rx_reo_sim_frame_handler_fw(void *arg)
 	QDF_STATUS status;
 	struct mgmt_rx_reo_sim_context *sim_context;
 	enum mgmt_rx_reo_shared_snapshot_id snapshot_id;
-	struct mgmt_rx_reo_snapshot snapshot_value;
+	struct mgmt_rx_reo_shared_snapshot snapshot_value;
 	bool ret;
 
 	if (!frame_hw) {
@@ -3691,7 +3691,7 @@ mgmt_rx_reo_sim_mac_hw_thread(void *data)
 		int8_t link_id = -1;
 		QDF_STATUS status;
 		enum mgmt_rx_reo_shared_snapshot_id snapshot_id;
-		struct mgmt_rx_reo_snapshot snapshot_value;
+		struct mgmt_rx_reo_shared_snapshot snapshot_value;
 		int8_t num_mlo_links;
 		bool ret;
 
@@ -4254,7 +4254,7 @@ QDF_STATUS
 mgmt_rx_reo_sim_get_snapshot_address(
 			struct wlan_objmgr_pdev *pdev,
 			enum mgmt_rx_reo_shared_snapshot_id id,
-			struct mgmt_rx_reo_snapshot **address)
+			struct mgmt_rx_reo_shared_snapshot **address)
 {
 	int8_t link_id;
 	struct mgmt_rx_reo_sim_context *sim_context;
@@ -4472,17 +4472,18 @@ mgmt_rx_reo_pdev_obj_open_notification
 
 	snapshot_id = 0;
 	while (snapshot_id < MGMT_RX_REO_SHARED_SNAPSHOT_MAX) {
-		struct mgmt_rx_reo_snapshot **snapshot_address;
+		struct mgmt_rx_reo_snapshot_info *snapshot_info;
 		struct mgmt_rx_reo_pdev_info *mgmt_rx_reo_pdev_ctx;
 
 		mgmt_rx_reo_pdev_ctx =
 				mgmt_txrx_pdev_ctx->mgmt_rx_reo_pdev_ctx;
-		snapshot_address =
-			&mgmt_rx_reo_pdev_ctx->host_target_shared_snapshot[snapshot_id];
-		status = wlan_mgmt_rx_reo_get_snapshot_address
-					(pdev, snapshot_id, snapshot_address);
+		snapshot_info =
+			&mgmt_rx_reo_pdev_ctx->host_target_shared_snapshot_info
+			[snapshot_id];
+		status = wlan_mgmt_rx_reo_get_snapshot_info
+					(pdev, snapshot_id, snapshot_info);
 		if (QDF_IS_STATUS_ERROR(status)) {
-			mgmt_rx_reo_err("Get snapshot address failed, id = %u",
+			mgmt_rx_reo_err("Get snapshot info failed, id = %u",
 					snapshot_id);
 			return status;
 		}

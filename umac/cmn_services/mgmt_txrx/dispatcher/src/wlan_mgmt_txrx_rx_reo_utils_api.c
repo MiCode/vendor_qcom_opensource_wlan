@@ -50,12 +50,12 @@ QDF_STATUS wlan_mgmt_txrx_process_rx_frame(
 }
 
 QDF_STATUS
-wlan_mgmt_rx_reo_get_snapshot_address(
-			struct wlan_objmgr_pdev *pdev,
-			enum mgmt_rx_reo_shared_snapshot_id id,
-			struct mgmt_rx_reo_snapshot **address)
+wlan_mgmt_rx_reo_get_snapshot_info
+			(struct wlan_objmgr_pdev *pdev,
+			 enum mgmt_rx_reo_shared_snapshot_id id,
+			 struct mgmt_rx_reo_snapshot_info *snapshot_info)
 {
-	return tgt_mgmt_rx_reo_get_snapshot_address(pdev, id, address);
+	return tgt_mgmt_rx_reo_get_snapshot_info(pdev, id, snapshot_info);
 }
 
 /**
@@ -122,12 +122,12 @@ QDF_STATUS wlan_mgmt_txrx_process_rx_frame(
 }
 
 QDF_STATUS
-wlan_mgmt_rx_reo_get_snapshot_address(
-			struct wlan_objmgr_pdev *pdev,
-			enum mgmt_rx_reo_shared_snapshot_id id,
-			struct mgmt_rx_reo_snapshot **address)
+wlan_mgmt_rx_reo_get_snapshot_info
+			(struct wlan_objmgr_pdev *pdev,
+			 enum mgmt_rx_reo_shared_snapshot_id id,
+			 struct mgmt_rx_reo_snapshot_info *snapshot_info)
 {
-	return mgmt_rx_reo_sim_get_snapshot_address(pdev, id, address);
+	return mgmt_rx_reo_sim_get_snapshot_info(pdev, id, snapshot_info);
 }
 
 /**

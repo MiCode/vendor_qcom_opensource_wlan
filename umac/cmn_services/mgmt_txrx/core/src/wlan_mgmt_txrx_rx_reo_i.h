@@ -88,15 +88,15 @@
  * It considers both MGMT Rx and MGMT FW consumed.
  * @last_valid_shared_snapshot: Array of last valid snapshots(for snapshots
  * shared between host and target)
- * @host_target_shared_snapshot: Array of snapshot addresses(for snapshots
- * shared between host and target)
+ * @host_target_shared_snapshot_info: Array of meta information related to
+ * snapshots(for snapshots shared between host and target)
  * @filter: MGMT Rx REO filter
  */
 struct mgmt_rx_reo_pdev_info {
 	struct mgmt_rx_reo_snapshot_params host_snapshot;
 	struct mgmt_rx_reo_snapshot_params last_valid_shared_snapshot
 				[MGMT_RX_REO_SHARED_SNAPSHOT_MAX];
-	struct mgmt_rx_reo_snapshot *host_target_shared_snapshot
+	struct mgmt_rx_reo_snapshot_info host_target_shared_snapshot_info
 				[MGMT_RX_REO_SHARED_SNAPSHOT_MAX];
 	struct mgmt_rx_reo_filter filter;
 };

@@ -29,6 +29,8 @@
 #include "wmi.h"
 #include <osdep.h>
 
+#define MGMT_RX_REO_INVALID_SNAPSHOT_VERSION      (-1)
+
 /**
  * wlan_host_mlo_glb_h_shmem_params - MLO global shared memory parameters
  * @major_version: Major version
@@ -60,11 +62,17 @@ struct wlan_host_mlo_glb_rx_reo_per_link_info {
  * @num_links: Number of valid links
  * @valid_link_bmap: Valid link bitmap
  * @link_info: pointer to an array of Rx REO per-link information
+ * @hw_forwaded_snapshot_ver: HW forwaded snapshot version
+ * @fw_forwaded_snapshot_ver: FW forwaded snapshot version
+ * @fw_consumed_snapshot_ver: FW consumed snapshot version
  */
 struct wlan_host_mlo_glb_rx_reo_snapshot_info {
 	uint8_t num_links;
 	uint16_t valid_link_bmap;
 	struct wlan_host_mlo_glb_rx_reo_per_link_info *link_info;
+	uint8_t hw_forwaded_snapshot_ver;
+	uint8_t fw_forwaded_snapshot_ver;
+	uint8_t fw_consumed_snapshot_ver;
 };
 
 /**
@@ -171,5 +179,14 @@ int mgmt_rx_reo_get_num_links(void);
  */
 void *mgmt_rx_reo_get_snapshot_address(
 	uint8_t link_id, enum mgmt_rx_reo_shared_snapshot_id snapshot_id);
+
+/**
+ * mgmt_rx_reo_get_snapshot_version() - Get the version of MGMT Rx REO snapshot
+ * @snapshot_id: ID of the snapshot
+ *
+ * Return: Snapshot version
+ */
+int8_t mgmt_rx_reo_get_snapshot_version
+			(enum mgmt_rx_reo_shared_snapshot_id snapshot_id);
 #endif /* WLAN_MGMT_RX_REO_SUPPORT */
 #endif

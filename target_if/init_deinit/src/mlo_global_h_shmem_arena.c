@@ -28,6 +28,20 @@ static struct wlan_host_mlo_glb_h_shmem_arena_ctx g_shmem_arena_ctx;
 #define get_shmem_arena_ctx() (&g_shmem_arena_ctx)
 
 /**
+ * is_field_present_in_tlv() - Check whether a given field is present
+ * in a given TLV
+ * @ptlv: Pointer to start of the TLV
+ * @field_name: name of the field in the TLV structure
+ * @tlv_len: Length of the TLV
+ *
+ * Return: true if the field is present within the TLV,
+ * else false
+ */
+#define is_field_present_in_tlv(ptlv, field_name, tlv_len) \
+	(qdf_offsetof(typeof(*(ptlv)), field_name) < (tlv_len) ? \
+		true : false)
+
+/**
  * get_field_value_in_tlv() - Get the value of a given field in a given TLV
  * @ptlv: Pointer to start of the TLV
  * @field_name: name of the field in the TLV structure
@@ -268,6 +282,20 @@ extract_mlo_glb_rx_reo_snapshot_info_tlv(
 		MLO_SHMEM_GLB_LINK_INFO_PARAM_VALID_LINK_BMAP_GET(link_info);
 
 	snapshot_info->valid_link_bmap = valid_link_bmap;
+
+	if (is_field_present_in_tlv(ptlv, snapshot_ver_info, tlv_len)) {
+		uint32_t snapshot_ver_info;
+
+		snapshot_ver_info = get_field_value_in_tlv
+					(ptlv, snapshot_ver_info, tlv_len);
+		snapshot_info->hw_forwaded_snapshot_ver =
+			MLO_SHMEM_GLB_RX_REO_SNAPSHOT_PARAM_HW_FWD_SNAPSHOT_VER_GET(snapshot_ver_info);
+		snapshot_info->fw_forwaded_snapshot_ver =
+			MLO_SHMEM_GLB_RX_REO_SNAPSHOT_PARAM_FW_FWD_SNAPSHOT_VER_GET(snapshot_ver_info);
+		snapshot_info->fw_consumed_snapshot_ver =
+			MLO_SHMEM_GLB_RX_REO_SNAPSHOT_PARAM_FW_CONSUMED_SNAPSHOT_VER_GET(snapshot_ver_info);
+	}
+
 	snapshot_info->num_links =
 			get_num_links_from_valid_link_bitmap(valid_link_bmap);
 	snapshot_info->link_info = qdf_mem_malloc(
@@ -888,5 +916,45 @@ void *mgmt_rx_reo_get_snapshot_address(
 	}
 
 	return NULL;
+}
+
+int8_t mgmt_rx_reo_get_snapshot_version(enum mgmt_rx_reo_shared_snapshot_id id)
+{
+	struct wlan_host_mlo_glb_h_shmem_arena_ctx *shmem_arena_ctx;
+	struct wlan_host_mlo_glb_rx_reo_snapshot_info *snapshot_info;
+	int8_t snapshot_version;
+
+	if (id >= MGMT_RX_REO_SHARED_SNAPSHOT_MAX) {
+		target_if_err("Invalid snapshot ID: %d", id);
+		return MGMT_RX_REO_INVALID_SNAPSHOT_VERSION;
+	}
+
+	shmem_arena_ctx = get_shmem_arena_ctx();
+	if (!shmem_arena_ctx) {
+		target_if_err("mlo_glb_h_shmem_arena context is NULL");
+		return MGMT_RX_REO_INVALID_SNAPSHOT_VERSION;
+	}
+
+	snapshot_info = &shmem_arena_ctx->rx_reo_snapshot_info;
+
+	switch (id) {
+	case MGMT_RX_REO_SHARED_SNAPSHOT_MAC_HW:
+		snapshot_version = snapshot_info->hw_forwaded_snapshot_ver;
+		break;
+
+	case MGMT_RX_REO_SHARED_SNAPSHOT_FW_CONSUMED:
+		snapshot_version = snapshot_info->fw_consumed_snapshot_ver;
+		break;
+
+	case MGMT_RX_REO_SHARED_SNAPSHOT_FW_FORWADED:
+		snapshot_version = snapshot_info->fw_forwaded_snapshot_ver;
+		break;
+
+	default:
+		snapshot_version = MGMT_RX_REO_INVALID_SNAPSHOT_VERSION;
+		break;
+	}
+
+	return snapshot_version;
 }
 #endif /* WLAN_MGMT_RX_REO_SUPPORT */
