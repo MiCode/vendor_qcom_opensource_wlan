@@ -47,6 +47,7 @@
 #ifdef WLAN_FEATURE_11BE
 #define MAX_MCS (16 + 1)
 #define MAX_MCS_11BE 16
+#define MAX_PUNCTURED_MODE 5
 #else
 #define MAX_MCS (14 + 1)
 #endif
@@ -1364,6 +1365,7 @@ struct protocol_trace_count {
  * @last_tx_ts: last timestamp in jiffies when tx comp occurred
  * @su_be_ppdu_cnt: SU Tx packet count
  * @mu_be_ppdu_cnt: MU Tx packet count
+ * @punc_bw[MAX_PUNCTURED_MODE]: MSDU count for punctured BW
  */
 struct cdp_tx_stats {
 	struct cdp_pkt_info comp_pkt;
@@ -1479,6 +1481,7 @@ struct cdp_tx_stats {
 #ifdef WLAN_FEATURE_11BE
 	struct cdp_pkt_type su_be_ppdu_cnt;
 	struct cdp_pkt_type mu_be_ppdu_cnt[TXRX_TYPE_MU_MAX];
+	uint32_t punc_bw[MAX_PUNCTURED_MODE];
 #endif
 };
 
@@ -1567,6 +1570,7 @@ struct cdp_tx_stats {
  * @mpdu_retry_cnt: retries of mpdu in rx
  * @su_be_ppdu_cnt: SU Rx packet count for BE
  * @mu_be_ppdu_cnt: MU rx packet count for BE
+ * @punc_bw[MAX_PUNCTURED_MODE]: MSDU count for punctured BW
  */
 struct cdp_rx_stats {
 	struct cdp_pkt_info to_stack;
@@ -1652,6 +1656,7 @@ struct cdp_rx_stats {
 #ifdef WLAN_FEATURE_11BE
 	struct cdp_pkt_type su_be_ppdu_cnt;
 	struct cdp_pkt_type mu_be_ppdu_cnt[TXRX_TYPE_MU_MAX];
+	uint32_t punc_bw[MAX_PUNCTURED_MODE];
 #endif
 };
 

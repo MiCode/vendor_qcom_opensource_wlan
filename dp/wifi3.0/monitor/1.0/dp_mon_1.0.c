@@ -942,6 +942,19 @@ static bool dp_ppdu_stats_feat_enable_check_1_0(struct dp_pdev *pdev)
 	else
 		return true;
 }
+
+/**
+ * dp_mon_tx_stats_update_1_0 - Update Tx stats from HTT PPDU completion path
+ *
+ * @monitor: Monitor peer
+ * @ppdu: Tx PPDU user completion info
+ */
+void
+dp_mon_tx_stats_update_1_0(struct dp_mon_peer *mon_peer,
+			   struct cdp_tx_completion_ppdu_user *ppdu)
+{
+	ppdu->punc_mode = NO_PUNCTURE;
+}
 #endif
 
 #ifndef QCA_SUPPORT_FULL_MON
@@ -1081,9 +1094,7 @@ dp_mon_register_feature_ops_1_0(struct dp_soc *soc)
 #else
 	mon_ops->mon_ppdu_desc_deliver = dp_ppdu_desc_deliver_1_0;
 #endif
-#ifdef WLAN_FEATURE_11BE
-	mon_ops->mon_tx_stats_update = NULL;
-#endif
+	mon_ops->mon_tx_stats_update = dp_mon_tx_stats_update_1_0;
 #endif
 #if defined(ATH_SUPPORT_NAC_RSSI) || defined(ATH_SUPPORT_NAC)
 	mon_ops->mon_filter_setup_smart_monitor =

@@ -1508,6 +1508,10 @@ void dp_update_vdev_stats_on_peer_unmap(struct dp_vdev *vdev,
 					_srcobj->rx.mu_be_ppdu_cnt[mu_type].mcs_count[i]; \
 			} \
 		} \
+		for (i = 0; i < MAX_PUNCTURED_MODE; i++) { \
+			_tgtobj->tx.punc_bw[i] += _srcobj->tx.punc_bw[i]; \
+			_tgtobj->rx.punc_bw[i] += _srcobj->rx.punc_bw[i]; \
+		} \
 	} while (0)
 #else
 #define DP_UPDATE_11BE_STATS(_tgtobj, _srcobj)

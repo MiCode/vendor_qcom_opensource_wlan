@@ -1862,6 +1862,8 @@ struct cdp_delayed_tx_completion_ppdu_user {
  * @peer_last_delayed_ba: flag to indicate peer last delayed ba
  * @phy_tx_time_us: Phy TX duration for the User
  * @mpdu_bytes: accumulated bytes per mpdu for mem limit feature
+ * @punc_mode: puncutured mode to indicate punctured bw
+ * @punc_pattern_bitmap: bitmap indicating punctured pattern
  */
 struct cdp_tx_completion_ppdu_user {
 	uint32_t completion_status:8,
@@ -1965,6 +1967,8 @@ struct cdp_tx_completion_ppdu_user {
 
 	uint16_t phy_tx_time_us;
 	uint32_t mpdu_bytes;
+	uint8_t punc_mode;
+	uint16_t punc_pattern_bitmap;
 };
 
 /**

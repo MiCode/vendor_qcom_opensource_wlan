@@ -2411,7 +2411,6 @@ dp_tx_rate_stats_update(struct dp_peer *peer,
 	uint32_t rix;
 	uint16_t ratecode = 0;
 	struct dp_mon_peer *mon_peer = NULL;
-	enum cdp_punctured_modes punc_mode = NO_PUNCTURE;
 
 	if (!peer || !ppdu)
 		return;
@@ -2428,7 +2427,7 @@ dp_tx_rate_stats_update(struct dp_peer *peer,
 				   ppdu->nss,
 				   ppdu->preamble,
 				   ppdu->bw,
-				   punc_mode,
+				   ppdu->punc_mode,
 				   &rix,
 				   &ratecode);
 

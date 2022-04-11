@@ -630,12 +630,13 @@ void dp_rx_mon_stats_update_2_0(struct dp_mon_peer *mon_peer,
 				struct cdp_rx_indication_ppdu *ppdu,
 				struct cdp_rx_stats_ppdu_user *ppdu_user)
 {
-	uint8_t mcs, preamble, ppdu_type;
+	uint8_t mcs, preamble, ppdu_type, punc_mode;
 	uint32_t num_msdu;
 
 	preamble = ppdu->u.preamble;
 	ppdu_type = ppdu->u.ppdu_type;
 	num_msdu = ppdu_user->num_msdu;
+	punc_mode = ppdu->punc_bw;
 
 	if (ppdu_type == HAL_RX_TYPE_SU)
 		mcs = ppdu->u.mcs;
@@ -643,6 +644,7 @@ void dp_rx_mon_stats_update_2_0(struct dp_mon_peer *mon_peer,
 		mcs = ppdu_user->mcs;
 
 	DP_STATS_INC(mon_peer, rx.mpdu_retry_cnt, ppdu_user->mpdu_retries);
+	DP_STATS_INC(mon_peer, rx.punc_bw[punc_mode], num_msdu);
 	DP_STATS_INCC(mon_peer,
 		      rx.pkt_type[preamble].mcs_count[MAX_MCS - 1], num_msdu,
 		      ((mcs >= MAX_MCS_11BE) && (preamble == DOT11_BE)));

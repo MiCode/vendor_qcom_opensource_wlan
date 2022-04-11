@@ -475,12 +475,16 @@ void
 dp_mon_tx_stats_update_2_0(struct dp_mon_peer *mon_peer,
 			   struct cdp_tx_completion_ppdu_user *ppdu)
 {
-	uint8_t preamble;
-	uint8_t mcs;
+	uint8_t preamble, mcs, punc_mode;
 
 	preamble = ppdu->preamble;
 	mcs = ppdu->mcs;
 
+	punc_mode = dp_mon_get_puncture_type(ppdu->punc_pattern_bitmap,
+					     ppdu->bw);
+	ppdu->punc_mode = punc_mode;
+
+	DP_STATS_INC(mon_peer, tx.punc_bw[punc_mode], ppdu->num_msdu);
 	DP_STATS_INCC(mon_peer,
 		      tx.pkt_type[preamble].mcs_count[MAX_MCS - 1],
 		      ppdu->num_msdu,
@@ -524,6 +528,9 @@ dp_mon_get_puncture_type(uint16_t puncture_pattern, uint8_t bw)
 {
 	uint16_t mask;
 	uint8_t punctured_bits;
+
+	if (!puncture_pattern)
+		return NO_PUNCTURE;
 
 	switch (bw) {
 	case CMN_BW_80MHZ:
@@ -584,6 +591,7 @@ void
 dp_mon_tx_stats_update_2_0(struct dp_mon_peer *mon_peer,
 			   struct cdp_tx_completion_ppdu_user *ppdu)
 {
+	ppdu->punc_mode = NO_PUNCTURE;
 }
 
 enum cdp_punctured_modes

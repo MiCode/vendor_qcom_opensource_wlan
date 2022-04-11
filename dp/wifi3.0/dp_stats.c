@@ -5659,7 +5659,7 @@ dp_print_mu_be_ppdu_rates_info(struct cdp_pkt_type *pkt_type_array)
 
 			DP_PRINT_STATS("	%s = %d",
 				       dp_mu_be_rate_string[pkt_type][mcs].mcs_type,
-				       pkt_type_array->mcs_count[mcs]);
+				       pkt_type_array[pkt_type].mcs_count[mcs]);
 		}
 
 		DP_PRINT_STATS("\n");
@@ -6052,6 +6052,12 @@ void dp_print_peer_txrx_stats_be(struct cdp_peer_stats *peer_stats,
 			       peer_stats->tx.bw[CMN_BW_80MHZ],
 			       peer_stats->tx.bw[CMN_BW_160MHZ],
 			       peer_stats->tx.bw[CMN_BW_320MHZ]);
+		DP_PRINT_STATS("Punctured BW Counts = NO_PUNC %d 20MHz %d 40MHz %d 80MHz %d 120MHz %d\n",
+			       peer_stats->tx.punc_bw[NO_PUNCTURE],
+			       peer_stats->tx.punc_bw[PUNCTURED_20MHZ],
+			       peer_stats->tx.punc_bw[PUNCTURED_40MHZ],
+			       peer_stats->tx.punc_bw[PUNCTURED_80MHZ],
+			       peer_stats->tx.punc_bw[PUNCTURED_120MHZ]);
 		DP_PRINT_STATS("RU Locations RU[26 52 52_26 106 106_26 242 484 484_242 996 996_484 996_484_242 2X996 2X996_484 3X996 3X996_484 4X996]:");
 		for (i = 0; i < RU_INDEX_MAX; i++)
 			DP_PRINT_STATS("%s:  %d", cdp_ru_string[i].ru_type,
@@ -6067,6 +6073,12 @@ void dp_print_peer_txrx_stats_be(struct cdp_peer_stats *peer_stats,
 			       peer_stats->rx.bw[CMN_BW_80MHZ],
 			       peer_stats->rx.bw[CMN_BW_160MHZ],
 			       peer_stats->rx.bw[CMN_BW_320MHZ]);
+		DP_PRINT_STATS("Punctured BW Counts = NO_PUNC %d 20MHz %d 40MHz %d 80MHz %d 120MHz %d\n",
+			       peer_stats->rx.punc_bw[NO_PUNCTURE],
+			       peer_stats->rx.punc_bw[PUNCTURED_20MHZ],
+			       peer_stats->rx.punc_bw[PUNCTURED_40MHZ],
+			       peer_stats->rx.punc_bw[PUNCTURED_80MHZ],
+			       peer_stats->rx.punc_bw[PUNCTURED_120MHZ]);
 		dp_print_common_ppdu_rates_info(&peer_stats->rx.su_be_ppdu_cnt,
 						DOT11_BE);
 		dp_print_mu_be_ppdu_rates_info(&peer_stats->rx.mu_be_ppdu_cnt[0]);

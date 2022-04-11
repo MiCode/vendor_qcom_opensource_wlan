@@ -3521,6 +3521,7 @@ struct dp_peer_per_pkt_tx_stats {
  * @mpdu_success_with_retries: mpdu retry count in case of successful tx
  * @su_be_ppdu_cnt: SU Tx packet count for 11BE
  * @mu_be_ppdu_cnt[TXRX_TYPE_MU_MAX]: MU Tx packet count for 11BE
+ * @punc_bw[MAX_PUNCTURED_MODE]: MSDU count for punctured bw
  */
 struct dp_peer_extd_tx_stats {
 	uint32_t stbc;
@@ -3569,6 +3570,7 @@ struct dp_peer_extd_tx_stats {
 #ifdef WLAN_FEATURE_11BE
 	struct cdp_pkt_type su_be_ppdu_cnt;
 	struct cdp_pkt_type mu_be_ppdu_cnt[TXRX_TYPE_MU_MAX];
+	uint32_t punc_bw[MAX_PUNCTURED_MODE];
 #endif
 };
 
@@ -3681,6 +3683,7 @@ struct dp_peer_per_pkt_rx_stats {
  * @mpdu_retry_cnt: retries of mpdu in rx
  * @su_be_ppdu_cnt: SU Rx packet count for BE
  * @mu_be_ppdu_cnt[TXRX_TYPE_MU_MAX]: MU rx packet count for BE
+ * @punc_bw[MAX_PUNCTURED_MODE]: MSDU count for punctured bw
  */
 struct dp_peer_extd_rx_stats {
 	struct cdp_pkt_type pkt_type[DOT11_MAX];
@@ -3724,6 +3727,7 @@ struct dp_peer_extd_rx_stats {
 #ifdef WLAN_FEATURE_11BE
 	struct cdp_pkt_type su_be_ppdu_cnt;
 	struct cdp_pkt_type mu_be_ppdu_cnt[TXRX_TYPE_MU_MAX];
+	uint32_t punc_bw[MAX_PUNCTURED_MODE];
 #endif
 };
 
