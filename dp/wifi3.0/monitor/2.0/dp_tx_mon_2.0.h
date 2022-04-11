@@ -394,6 +394,16 @@ struct dp_peer_tx_capture_be {
 #else
 
 /**
+ * struct dp_txmon_frag_vec - a contiguous range of physical memory address
+ * @frag_buf: frag buffer address
+ * @end_offset: byte offset within the frag buffer where valid data resides
+ */
+struct dp_txmon_frag_vec {
+	qdf_frag_t frag_buf;
+	uint32_t end_offset;
+};
+
+/**
  * dp_pdev_tx_capture_be - info to store tx capture information in pdev
  * @be_ppdu_id: current ppdu id
  * @be_end_reason_bitmap: current end reason bitmap
@@ -428,11 +438,11 @@ struct dp_pdev_tx_capture_be {
 
 	uint32_t tx_ppdu_info_list_depth;
 
-	TAILQ_HEAD(, dp_tx_ppdu_info) tx_ppdu_info_list;
+	STAILQ_HEAD(, dp_tx_ppdu_info) tx_ppdu_info_queue;
 
 	uint32_t defer_ppdu_info_list_depth;
 
-	TAILQ_HEAD(, dp_tx_ppdu_info) defer_ppdu_info_list;
+	STAILQ_HEAD(, dp_tx_ppdu_info) defer_tx_ppdu_info_queue;
 
 	struct dp_tx_monitor_drop_stats tx_stats;
 
@@ -447,7 +457,7 @@ struct dp_pdev_tx_capture_be {
 
 	uint8_t last_frag_q_idx;
 	uint8_t cur_frag_q_idx;
-	qdf_frag_t status_frag_queue[MAX_STATUS_BUFFER_IN_PPDU];
+	struct dp_txmon_frag_vec frag_q_vec[MAX_STATUS_BUFFER_IN_PPDU];
 };
 
 /**

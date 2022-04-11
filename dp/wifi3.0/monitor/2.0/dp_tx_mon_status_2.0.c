@@ -39,40 +39,24 @@ dp_tx_mon_status_queue_free(struct dp_pdev *pdev,
 {
 	uint8_t last_frag_q_idx = tx_cap_be->last_frag_q_idx;
 	qdf_frag_t status_frag = NULL;
-	uint8_t i = 0;
+	uint8_t i = tx_cap_be->cur_frag_q_idx;
 	uint32_t end_offset = 0;
 
 	for (; i < last_frag_q_idx; i++) {
-		status_frag = tx_cap_be->status_frag_queue[last_frag_q_idx];
+		status_frag = tx_cap_be->frag_q_vec[i].frag_buf;
+
+		if (qdf_unlikely(!status_frag))
+			continue;
+
+		end_offset = tx_cap_be->frag_q_vec[i].end_offset;
 		hal_txmon_status_free_buffer(pdev->soc->hal_soc, status_frag,
 					     end_offset);
 		qdf_frag_free(status_frag);
-		tx_cap_be->status_frag_queue[last_frag_q_idx] = NULL;
+		tx_cap_be->frag_q_vec[i].frag_buf = NULL;
+		tx_cap_be->frag_q_vec[i].end_offset = 0;
 	}
 	tx_cap_be->last_frag_q_idx = 0;
-}
-
-/**
- * dp_tx_mon_dequeue_mpdu_nbuf() - API to dequeue nbuf from per user mpdu queue
- * @tx_ppdu_info: pointer to tx ppdu info structure
- * @user_id: user index
- *
- * Return: qdf_nbuf_t
- */
-static qdf_nbuf_t
-dp_tx_mon_dequeue_mpdu_nbuf(struct dp_tx_ppdu_info *tx_ppdu_info,
-			    uint8_t user_id)
-{
-	/* dequeue mpdu_nbuf to the per user mpdu_q */
-	qdf_nbuf_queue_t *usr_mpdu_q = NULL;
-
-	if (!TXMON_PPDU_HAL(tx_ppdu_info, rx_user_status) ||
-	    !TXMON_PPDU_HAL(tx_ppdu_info, num_users))
-		QDF_BUG(0);
-
-	usr_mpdu_q = &TXMON_PPDU_USR(tx_ppdu_info, user_id, mpdu_q);
-
-	return qdf_nbuf_queue_remove(usr_mpdu_q);
+	tx_cap_be->cur_frag_q_idx = 0;
 }
 
 /**
@@ -323,6 +307,8 @@ dp_tx_mon_generate_rts_frm(struct dp_pdev *pdev,
 	wh_min->i_aidordur[1] = (duration_le & 0xFF00) >> 8;
 	wh_min->i_aidordur[0] = (duration_le & 0xFF);
 
+	if (!tx_status_info->protection_addr)
+		tx_status_info = &tx_cap_be->data_status_info;
 	qdf_mem_copy(wh_min->i_addr1,
 		     TXMON_STATUS_INFO(tx_status_info, addr1),
 		     QDF_MAC_ADDR_SIZE);
@@ -368,7 +354,7 @@ dp_tx_mon_generate_ack_frm(struct dp_pdev *pdev,
 		return;
 
 	tx_cap_be = &mon_pdev_be->tx_capture_be;
-	tx_status_info = &tx_cap_be->prot_status_info;
+	tx_status_info = &tx_cap_be->data_status_info;
 	/*
 	 * for radiotap we allocate new skb,
 	 * so we don't need reserver skb header
@@ -430,7 +416,7 @@ dp_tx_mon_generate_3addr_qos_null_frm(struct dp_pdev *pdev,
 		return;
 
 	tx_cap_be = &mon_pdev_be->tx_capture_be;
-	tx_status_info = &tx_cap_be->prot_status_info;
+	tx_status_info = &tx_cap_be->data_status_info;
 	/*
 	 * for radiotap we allocate new skb,
 	 * so we don't need reserver skb header
@@ -503,7 +489,7 @@ dp_tx_mon_generate_4addr_qos_null_frm(struct dp_pdev *pdev,
 		return;
 
 	tx_cap_be = &mon_pdev_be->tx_capture_be;
-	tx_status_info = &tx_cap_be->prot_status_info;
+	tx_status_info = &tx_cap_be->data_status_info;
 	/*
 	 * for radiotap we allocate new skb,
 	 * so we don't need reserver skb header
@@ -588,7 +574,7 @@ dp_tx_mon_generate_mu_block_ack_frm(struct dp_pdev *pdev,
 		return;
 
 	tx_cap_be = &mon_pdev_be->tx_capture_be;
-	tx_status_info = &tx_cap_be->prot_status_info;
+	tx_status_info = &tx_cap_be->data_status_info;
 	for (i = 0; i < num_users; i++)
 		ba_sz += (4 << TXMON_BA_INFO_SZ(TXMON_PPDU_USR(tx_ppdu_info,
 							       i,
@@ -696,7 +682,7 @@ dp_tx_mon_generate_block_ack_frm(struct dp_pdev *pdev,
 		return;
 
 	tx_cap_be = &mon_pdev_be->tx_capture_be;
-	tx_status_info = &tx_cap_be->prot_status_info;
+	tx_status_info = &tx_cap_be->data_status_info;
 	/*
 	 * for multi sta block ack, do we need to increase the size
 	 * or copy info on subsequent frame offset
@@ -871,7 +857,7 @@ dp_tx_mon_generate_data_frm(struct dp_pdev *pdev,
 			  TXMON_STATUS_INFO(tx_status_info, offset),
 			  TXMON_STATUS_INFO(tx_status_info, length),
 			  TX_MON_STATUS_BUF_SIZE,
-			  TRUE, TXMON_NO_BUFFER_SZ);
+			  true, TXMON_NO_BUFFER_SZ);
 }
 
 /**
@@ -904,6 +890,10 @@ dp_tx_mon_generate_prot_frm(struct dp_pdev *pdev,
 
 	tx_cap_be = &mon_pdev_be->tx_capture_be;
 	tx_status_info = &tx_cap_be->prot_status_info;
+
+	/* update medium prot type from data */
+	TXMON_STATUS_INFO(tx_status_info, medium_prot_type) =
+		tx_cap_be->data_status_info.medium_prot_type;
 
 	switch (TXMON_STATUS_INFO(tx_status_info, medium_prot_type)) {
 	case TXMON_MEDIUM_NO_PROTECTION:
@@ -1006,6 +996,15 @@ dp_tx_mon_update_ppdu_info_status(struct dp_pdev *pdev,
 	case HAL_MON_TX_FES_STATUS_PROT:
 	{
 		TXMON_PPDU_HAL(tx_prot_ppdu_info, is_used) = 1;
+		/* update timestamp */
+		TXMON_PPDU_COM(tx_prot_ppdu_info,
+			       tsft) = TXMON_PPDU_COM(tx_prot_ppdu_info,
+						      tsft) << 1;
+		TXMON_PPDU_COM(tx_prot_ppdu_info, ppdu_timestamp) =
+			TXMON_PPDU_COM(tx_prot_ppdu_info, ppdu_timestamp) << 1;
+		TXMON_PPDU_USR(tx_prot_ppdu_info, 0, duration) =
+			TXMON_PPDU_USR(tx_prot_ppdu_info, 0, duration) << 1;
+
 		/* based on medium protection type we need to generate frame */
 		dp_tx_mon_generate_prot_frm(pdev, tx_prot_ppdu_info);
 		break;
@@ -1052,6 +1051,19 @@ dp_tx_mon_update_ppdu_info_status(struct dp_pdev *pdev,
 		dp_tx_mon_generate_data_frm(pdev, tx_data_ppdu_info);
 		break;
 	}
+	case HAL_MON_TX_FES_STATUS_END:
+	{
+		break;
+	}
+	case HAL_MON_RESPONSE_END_STATUS_INFO:
+	{
+		break;
+	}
+	case HAL_MON_TX_FES_STATUS_START:
+	{
+		/* update the medium protection type */
+		break;
+	}
 	default:
 	{
 		/* return or break in default case */
@@ -1084,6 +1096,7 @@ QDF_STATUS dp_tx_mon_process_tlv_2_0(struct dp_pdev *pdev)
 	uint32_t status;
 	uint8_t num_users = 0;
 	uint8_t cur_frag_q_idx;
+	uint32_t end_offset = 0;
 
 	/* sanity check */
 	if (qdf_unlikely(!pdev))
@@ -1111,7 +1124,8 @@ QDF_STATUS dp_tx_mon_process_tlv_2_0(struct dp_pdev *pdev)
 		return QDF_STATUS_E_NOMEM;
 	}
 
-	status_frag = tx_cap_be->status_frag_queue[cur_frag_q_idx];
+	status_frag = tx_cap_be->frag_q_vec[cur_frag_q_idx].frag_buf;
+	end_offset = tx_cap_be->frag_q_vec[cur_frag_q_idx].end_offset;
 	tx_tlv = status_frag;
 	dp_mon_debug("last_frag_q_idx: %d status_frag:%pK",
 		     tx_cap_be->last_frag_q_idx, status_frag);
@@ -1136,8 +1150,9 @@ QDF_STATUS dp_tx_mon_process_tlv_2_0(struct dp_pdev *pdev)
 
 	/* iterate status buffer queue */
 	while (tx_cap_be->cur_frag_q_idx < tx_cap_be->last_frag_q_idx) {
-		/* get status buffer from status_frag_queue */
-		status_frag = tx_cap_be->status_frag_queue[cur_frag_q_idx];
+		/* get status buffer from frag_q_vec */
+		status_frag = tx_cap_be->frag_q_vec[cur_frag_q_idx].frag_buf;
+		end_offset = tx_cap_be->frag_q_vec[cur_frag_q_idx].end_offset;
 		if (qdf_unlikely(!status_frag)) {
 			dp_mon_err("status frag is NULL\n");
 			QDF_BUG(0);
@@ -1166,26 +1181,40 @@ QDF_STATUS dp_tx_mon_process_tlv_2_0(struct dp_pdev *pdev)
 							tx_tlv,
 							status_frag,
 							tlv_status);
-
 			/* need api definition for hal_tx_status_get_next_tlv */
 			tx_tlv = hal_tx_status_get_next_tlv(tx_tlv);
-			if ((tx_tlv - tx_tlv_start) >= TX_MON_STATUS_BUF_SIZE)
+			if ((tx_tlv - tx_tlv_start) >= end_offset)
 				break;
-
-		} while (tlv_status == HAL_MON_TX_STATUS_PPDU_NOT_DONE);
+		} while ((tx_tlv - tx_tlv_start) < end_offset);
 
 		/*
 		 * free status buffer after parsing
 		 * is status_frag mapped to mpdu if so make sure
 		 */
 		qdf_frag_free(status_frag);
-		tx_cap_be->status_frag_queue[cur_frag_q_idx] = NULL;
+		tx_cap_be->frag_q_vec[cur_frag_q_idx].frag_buf = NULL;
+		tx_cap_be->frag_q_vec[cur_frag_q_idx].end_offset = 0;
 		cur_frag_q_idx = ++tx_cap_be->cur_frag_q_idx;
 	}
-	/* clear the frag array */
+
+	/* clear the unreleased frag array */
 	dp_tx_mon_status_queue_free(pdev, tx_cap_be);
 
 	if (TXMON_PPDU_HAL(tx_prot_ppdu_info, is_used)) {
+		if (qdf_unlikely(!TXMON_PPDU_COM(tx_prot_ppdu_info,
+						 chan_num))) {
+			/* update channel number, if not fetched properly */
+			TXMON_PPDU_COM(tx_prot_ppdu_info,
+				       chan_num) = mon_pdev->mon_chan_num;
+		}
+
+		if (qdf_unlikely(!TXMON_PPDU_COM(tx_prot_ppdu_info,
+						 chan_freq))) {
+			/* update channel frequency, if not fetched properly */
+			TXMON_PPDU_COM(tx_prot_ppdu_info,
+				       chan_freq) = mon_pdev->mon_chan_freq;
+		}
+
 		/*
 		 * add dp_tx_ppdu_info to pdev queue
 		 * for post processing
@@ -1195,9 +1224,9 @@ QDF_STATUS dp_tx_mon_process_tlv_2_0(struct dp_pdev *pdev)
 		qdf_spin_lock_bh(&tx_cap_be->tx_mon_list_lock);
 		tx_cap_be->last_prot_ppdu_info =
 					tx_cap_be->tx_prot_ppdu_info;
-		TAILQ_INSERT_TAIL(&tx_cap_be->tx_ppdu_info_list,
-				  tx_prot_ppdu_info,
-				  tx_ppdu_info_list_elem);
+		STAILQ_INSERT_TAIL(&tx_cap_be->tx_ppdu_info_queue,
+				   tx_prot_ppdu_info,
+				   tx_ppdu_info_queue_elem);
 		tx_cap_be->tx_ppdu_info_list_depth++;
 
 		tx_cap_be->tx_prot_ppdu_info = NULL;
@@ -1211,6 +1240,20 @@ QDF_STATUS dp_tx_mon_process_tlv_2_0(struct dp_pdev *pdev)
 	}
 
 	if (TXMON_PPDU_HAL(tx_data_ppdu_info, is_used)) {
+		if (qdf_unlikely(!TXMON_PPDU_COM(tx_data_ppdu_info,
+						 chan_num))) {
+			/* update channel number, if not fetched properly */
+			TXMON_PPDU_COM(tx_data_ppdu_info,
+				       chan_num) = mon_pdev->mon_chan_num;
+		}
+
+		if (qdf_unlikely(!TXMON_PPDU_COM(tx_data_ppdu_info,
+						 chan_freq))) {
+			/* update channel frequency, if not fetched properly */
+			TXMON_PPDU_COM(tx_data_ppdu_info,
+				       chan_freq) = mon_pdev->mon_chan_freq;
+		}
+
 		/*
 		 * add dp_tx_ppdu_info to pdev queue
 		 * for post processing
@@ -1220,9 +1263,9 @@ QDF_STATUS dp_tx_mon_process_tlv_2_0(struct dp_pdev *pdev)
 		qdf_spin_lock_bh(&tx_cap_be->tx_mon_list_lock);
 		tx_cap_be->last_data_ppdu_info =
 					tx_cap_be->tx_data_ppdu_info;
-		TAILQ_INSERT_TAIL(&tx_cap_be->tx_ppdu_info_list,
-				  tx_data_ppdu_info,
-				  tx_ppdu_info_list_elem);
+		STAILQ_INSERT_TAIL(&tx_cap_be->tx_ppdu_info_queue,
+				   tx_data_ppdu_info,
+				   tx_ppdu_info_queue_elem);
 		tx_cap_be->tx_ppdu_info_list_depth++;
 
 		tx_cap_be->tx_data_ppdu_info = NULL;
@@ -1279,7 +1322,7 @@ void dp_tx_mon_update_end_reason(struct dp_mon_pdev *mon_pdev,
  * @soc - DP_SOC handle
  * @pdev - DP_PDEV handle
  * @mon_ring_desc - descriptor status info
- * @status_frag - status buffer frag address
+ * @addr - status buffer frag address
  * @end_offset - end offset of buffer that has valid buffer
  *
  * Return: QDF_STATUS
@@ -1293,34 +1336,33 @@ QDF_STATUS dp_tx_mon_process_status_tlv(struct dp_soc *soc,
 	struct dp_mon_pdev *mon_pdev;
 	struct dp_mon_pdev_be *mon_pdev_be;
 	struct dp_pdev_tx_capture_be *tx_cap_be;
-	uint8_t last_frag_q_idx;
+	uint8_t last_frag_q_idx = 0;
 
 	/* sanity check */
 	if (qdf_unlikely(!pdev))
-		return QDF_STATUS_E_NOMEM;
+		goto free_status_buffer;
 
 	mon_pdev = pdev->monitor_pdev;
 	if (qdf_unlikely(!mon_pdev))
-		return QDF_STATUS_E_NOMEM;
+		goto free_status_buffer;
 
 	mon_pdev_be = dp_get_be_mon_pdev_from_dp_mon_pdev(mon_pdev);
 	if (qdf_unlikely(!mon_pdev_be))
-		return QDF_STATUS_E_NOMEM;
+		goto free_status_buffer;
 
 	tx_cap_be = &mon_pdev_be->tx_capture_be;
 
-	last_frag_q_idx = tx_cap_be->last_frag_q_idx;
-
-	if (qdf_unlikely(last_frag_q_idx > MAX_STATUS_BUFFER_IN_PPDU)) {
+	if (qdf_unlikely(tx_cap_be->last_frag_q_idx >
+			 MAX_STATUS_BUFFER_IN_PPDU)) {
 		dp_mon_err("status frag queue for a ppdu[%d] exceed %d\n",
 			   tx_cap_be->be_ppdu_id,
 			   MAX_STATUS_BUFFER_IN_PPDU);
 		dp_tx_mon_status_queue_free(pdev, tx_cap_be);
-		return QDF_STATUS_E_NOMEM;
+		goto free_status_buffer;
 	}
 
 	if (tx_cap_be->mode == TX_MON_BE_DISABLE)
-		return QDF_STATUS_E_INVAL;
+		goto free_status_buffer;
 
 	if (tx_cap_be->be_ppdu_id != mon_ring_desc->ppdu_id &&
 	    tx_cap_be->last_frag_q_idx) {
@@ -1330,48 +1372,43 @@ QDF_STATUS dp_tx_mon_process_status_tlv(struct dp_soc *soc,
 		} else if (tx_cap_be->be_end_reason_bitmap &
 			   (1 << HAL_MON_PPDU_TRUNCATED)) {
 			dp_tx_mon_status_queue_free(pdev, tx_cap_be);
-		} else if (dp_tx_mon_process_tlv_2_0(pdev) !=
-			   QDF_STATUS_SUCCESS) {
+		} else {
+			dp_mon_err("End of ppdu not seen PID:%d cur_pid:%d idx:%d",
+				   tx_cap_be->be_ppdu_id,
+				   mon_ring_desc->ppdu_id,
+				   tx_cap_be->last_frag_q_idx);
 			/* schedule ppdu worth information */
 			dp_tx_mon_status_queue_free(pdev, tx_cap_be);
 		}
 
 		/* reset end reason bitmap */
 		tx_cap_be->be_end_reason_bitmap = 0;
+		tx_cap_be->last_frag_q_idx = 0;
+		tx_cap_be->cur_frag_q_idx = 0;
 	}
 
 	tx_cap_be->be_ppdu_id = mon_ring_desc->ppdu_id;
 	tx_cap_be->be_end_reason_bitmap |= (1 << mon_ring_desc->end_reason);
 
-	/* get ppdu id from destination descriptor and store it in mon pdev */
-	if (mon_ring_desc->empty_descriptor == 1 ||
-	    mon_ring_desc->end_reason == HAL_MON_FLUSH_DETECTED ||
-	    mon_ring_desc->end_reason == HAL_MON_PPDU_TRUNCATED) {
-		/*
-		 * free all page frags maintained  at pdev level queue
-		 * update stats counter
-		 */
-		tx_cap_be->status_frag_queue[last_frag_q_idx] = status_frag;
-		last_frag_q_idx = ++tx_cap_be->last_frag_q_idx;
-		/* TODO: stats counter need to be updated */
-		return QDF_STATUS_SUCCESS;
+	last_frag_q_idx = tx_cap_be->last_frag_q_idx;
+
+	tx_cap_be->frag_q_vec[last_frag_q_idx].frag_buf = status_frag;
+	tx_cap_be->frag_q_vec[last_frag_q_idx].end_offset = end_offset;
+	tx_cap_be->last_frag_q_idx++;
+
+	if (mon_ring_desc->end_reason == HAL_MON_END_OF_PPDU) {
+		if (dp_tx_mon_process_tlv_2_0(pdev) != QDF_STATUS_SUCCESS)
+			dp_tx_mon_status_queue_free(pdev, tx_cap_be);
 	}
 
-	if (mon_ring_desc->end_reason == HAL_MON_STATUS_BUFFER_FULL ||
-	    mon_ring_desc->end_reason == HAL_MON_END_OF_PPDU) {
-		/*
-		 * Get 64 bits sw desc virtual address from
-		 * stats_buf_virtual_address,
-		 * unmap status page frag
-		 * add status page frag to pdev level queue
-		 * add sw descriptor to local free list
-		 */
-		tx_cap_be->status_frag_queue[last_frag_q_idx] = status_frag;
-		last_frag_q_idx = ++tx_cap_be->last_frag_q_idx;
-		return QDF_STATUS_SUCCESS;
-	}
+	return QDF_STATUS_SUCCESS;
 
-	return QDF_STATUS_E_INVAL;
+free_status_buffer:
+	hal_txmon_status_free_buffer(pdev->soc->hal_soc,
+				     status_frag, end_offset);
+	qdf_frag_free(status_frag);
+
+	return QDF_STATUS_E_NOMEM;
 }
 
 #else
@@ -1394,6 +1431,10 @@ QDF_STATUS dp_tx_mon_process_status_tlv(struct dp_soc *soc,
 					qdf_frag_t status_frag,
 					uint32_t end_offset)
 {
+	hal_txmon_status_free_buffer(pdev->soc->hal_soc,
+				     status_frag, end_offset);
+	qdf_frag_free(status_frag);
+
 	return QDF_STATUS_E_INVAL;
 }
 

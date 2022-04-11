@@ -815,11 +815,11 @@ struct hal_tx_status_info {
 	uint32_t offset;
 	uint32_t length;
 
+	uint8_t protection_addr;
 	uint8_t addr1[QDF_MAC_ADDR_SIZE];
 	uint8_t addr2[QDF_MAC_ADDR_SIZE];
 	uint8_t addr3[QDF_MAC_ADDR_SIZE];
 	uint8_t addr4[QDF_MAC_ADDR_SIZE];
-
 };
 
 struct hal_tx_ppdu_info {

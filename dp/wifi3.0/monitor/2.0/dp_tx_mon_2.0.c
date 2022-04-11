@@ -46,7 +46,6 @@ dp_tx_mon_srng_process_2_0(struct dp_soc *soc, struct dp_intr *int_ctx,
 	union dp_mon_desc_list_elem_t *desc_list = NULL;
 	union dp_mon_desc_list_elem_t *tail = NULL;
 	struct dp_mon_desc_pool *tx_mon_desc_pool = &mon_soc_be->tx_desc_mon;
-	QDF_STATUS status;
 	uint32_t tx_monitor_reap_cnt = 0;
 
 	if (!pdev) {
@@ -130,7 +129,7 @@ dp_tx_mon_srng_process_2_0(struct dp_soc *soc, struct dp_intr *int_ctx,
 		}
 
 		if (mon_desc->magic != DP_MON_DESC_MAGIC) {
-			dp_mon_debug("Invalid monitor descriptor");
+			dp_mon_err("Invalid monitor descriptor");
 			qdf_assert_always(0);
 		}
 
@@ -144,6 +143,7 @@ dp_tx_mon_srng_process_2_0(struct dp_soc *soc, struct dp_intr *int_ctx,
 						    hal_mon_tx_desc.end_reason);
 
 			qdf_frag_free(mon_desc->buf_addr);
+			mon_desc->buf_addr = NULL;
 			++tx_monitor_reap_cnt;
 			dp_mon_add_to_free_desc_list(&desc_list,
 						     &tail, mon_desc);
@@ -173,18 +173,9 @@ dp_tx_mon_srng_process_2_0(struct dp_soc *soc, struct dp_intr *int_ctx,
 			continue;
 		}
 
-		status = dp_tx_mon_process_status_tlv(soc, pdev,
-						      &hal_mon_tx_desc,
-						      mon_desc->buf_addr,
-						      end_offset);
-
-		if (status != QDF_STATUS_SUCCESS) {
-			hal_txmon_status_free_buffer(pdev->soc->hal_soc,
-						     mon_desc->buf_addr,
-						     end_offset);
-		}
-
-		qdf_frag_free(mon_desc->buf_addr);
+		dp_tx_mon_process_status_tlv(soc, pdev,
+					     &hal_mon_tx_desc,
+					     mon_desc->buf_addr, end_offset);
 
 		mon_desc->buf_addr = NULL;
 		++tx_monitor_reap_cnt;
@@ -342,7 +333,7 @@ void dp_tx_mon_free_ppdu_info(struct dp_tx_ppdu_info *tx_ppdu_info)
 		qdf_nbuf_queue_t *mpdu_q;
 
 		mpdu_q = &TXMON_PPDU_USR(tx_ppdu_info, user, mpdu_q);
-		qdf_nbuf_queue_remove(mpdu_q);
+		qdf_nbuf_queue_free(mpdu_q);
 	}
 
 	TXMON_PPDU_HAL(tx_ppdu_info, is_used) = 0;
@@ -475,7 +466,7 @@ dp_config_enh_tx_capture_2_0(struct dp_pdev *pdev, uint8_t val)
 		/* TODO: send HTT msg to configure TLV based on mode */
 		tx_cap_be->mode = TX_MON_BE_FULL_CAPTURE;
 		mon_pdev_be->tx_mon_mode = 1;
-		mon_pdev_be->tx_mon_filter_length = DEFAULT_DMA_LENGTH;
+		mon_pdev_be->tx_mon_filter_length = DMA_LENGTH_256B;
 		break;
 	}
 	case TX_MON_BE_PEER_FILTER:
@@ -483,7 +474,7 @@ dp_config_enh_tx_capture_2_0(struct dp_pdev *pdev, uint8_t val)
 		/* TODO: send HTT msg to configure TLV based on mode */
 		tx_cap_be->mode = TX_MON_BE_PEER_FILTER;
 		mon_pdev_be->tx_mon_mode = 1;
-		mon_pdev_be->tx_mon_filter_length = DEFAULT_DMA_LENGTH;
+		mon_pdev_be->tx_mon_filter_length = DMA_LENGTH_256B;
 		break;
 	}
 	default:
@@ -613,7 +604,7 @@ dp_tx_mon_alloc_radiotap_hdr(struct dp_pdev *pdev, qdf_nbuf_t *nbuf_ref)
 				   MAX_MONITOR_HEADER,
 				   MAX_MONITOR_HEADER,
 				   4, FALSE);
-	if (*nbuf_ref)
+	if (!*nbuf_ref)
 		return QDF_STATUS_E_NOMEM;
 
 	return QDF_STATUS_SUCCESS;
@@ -634,8 +625,19 @@ dp_tx_mon_update_radiotap(struct dp_pdev *pdev,
 	uint32_t num_users = 0;
 	qdf_nbuf_t radiotap_hdr = NULL;
 	QDF_STATUS status = QDF_STATUS_SUCCESS;
+	struct dp_mon_pdev *mon_pdev;
+
+	mon_pdev = pdev->monitor_pdev;
 
 	num_users = TXMON_PPDU_HAL(ppdu_info, num_users);
+
+	if (qdf_unlikely(TXMON_PPDU_COM(ppdu_info, chan_num) == 0))
+		TXMON_PPDU_COM(ppdu_info, chan_num) =
+				pdev->operating_channel.num;
+
+	if (qdf_unlikely(TXMON_PPDU_COM(ppdu_info, chan_freq) == 0))
+		TXMON_PPDU_COM(ppdu_info, chan_freq) =
+				pdev->operating_channel.freq;
 
 	for (i = 0; i < num_users; i++) {
 		/* allocate radiotap_hdr */
@@ -698,21 +700,21 @@ void dp_tx_mon_ppdu_process(void *context)
 
 	/* take lock here */
 	qdf_spin_lock_bh(&tx_cap_be->tx_mon_list_lock);
-	TAILQ_CONCAT(&tx_cap_be->defer_ppdu_info_list,
-		     &tx_cap_be->tx_ppdu_info_list,
-		     tx_ppdu_info_list_elem);
-	tx_cap_be->defer_ppdu_info_list_depth =
+	STAILQ_CONCAT(&tx_cap_be->defer_tx_ppdu_info_queue,
+		      &tx_cap_be->tx_ppdu_info_queue);
+	tx_cap_be->defer_ppdu_info_list_depth +=
 		tx_cap_be->tx_ppdu_info_list_depth;
 	tx_cap_be->tx_ppdu_info_list_depth = 0;
 	qdf_spin_unlock_bh(&tx_cap_be->tx_mon_list_lock);
 
-	TAILQ_FOREACH_SAFE(defer_ppdu_info,
-			   &tx_cap_be->defer_ppdu_info_list,
-			   tx_ppdu_info_list_elem, defer_ppdu_info_next) {
+	STAILQ_FOREACH_SAFE(defer_ppdu_info,
+			    &tx_cap_be->defer_tx_ppdu_info_queue,
+			    tx_ppdu_info_queue_elem, defer_ppdu_info_next) {
 		/* remove dp_tx_ppdu_info from the list */
-		TAILQ_REMOVE(&tx_cap_be->defer_ppdu_info_list,
-			     defer_ppdu_info,
-			     tx_ppdu_info_list_elem);
+		STAILQ_REMOVE(&tx_cap_be->defer_tx_ppdu_info_queue,
+			      defer_ppdu_info,
+			      dp_tx_ppdu_info,
+			      tx_ppdu_info_queue_elem);
 		tx_cap_be->defer_ppdu_info_list_depth--;
 
 		dp_tx_mon_update_radiotap(pdev, defer_ppdu_info);
@@ -749,8 +751,11 @@ void dp_tx_ppdu_stats_attach_2_0(struct dp_pdev *pdev)
 
 	tx_cap_be = &mon_pdev_be->tx_capture_be;
 
-	TAILQ_INIT(&tx_cap_be->tx_ppdu_info_list);
+	STAILQ_INIT(&tx_cap_be->tx_ppdu_info_queue);
 	tx_cap_be->tx_ppdu_info_list_depth = 0;
+
+	STAILQ_INIT(&tx_cap_be->defer_tx_ppdu_info_queue);
+	tx_cap_be->defer_ppdu_info_list_depth = 0;
 
 	qdf_spinlock_create(&tx_cap_be->tx_mon_list_lock);
 	/* Work queue setup for TX MONITOR post handling */
@@ -800,12 +805,12 @@ void dp_tx_ppdu_stats_detach_2_0(struct dp_pdev *pdev)
 	 * free the tx_ppdu_info and decrement depth
 	 */
 	qdf_spin_lock_bh(&tx_cap_be->tx_mon_list_lock);
-	TAILQ_FOREACH_SAFE(tx_ppdu_info,
-			   &tx_cap_be->tx_ppdu_info_list,
-			   tx_ppdu_info_list_elem, tx_ppdu_info_next) {
+	STAILQ_FOREACH_SAFE(tx_ppdu_info,
+			    &tx_cap_be->tx_ppdu_info_queue,
+			    tx_ppdu_info_queue_elem, tx_ppdu_info_next) {
 		/* remove dp_tx_ppdu_info from the list */
-		TAILQ_REMOVE(&tx_cap_be->tx_ppdu_info_list, tx_ppdu_info,
-			     tx_ppdu_info_list_elem);
+		STAILQ_REMOVE(&tx_cap_be->tx_ppdu_info_queue, tx_ppdu_info,
+			      dp_tx_ppdu_info, tx_ppdu_info_queue_elem);
 		/* decrement list length */
 		tx_cap_be->tx_ppdu_info_list_depth--;
 		/* free tx_ppdu_info */
@@ -814,11 +819,13 @@ void dp_tx_ppdu_stats_detach_2_0(struct dp_pdev *pdev)
 	qdf_spin_unlock_bh(&tx_cap_be->tx_mon_list_lock);
 
 	qdf_spin_lock_bh(&tx_cap_be->tx_mon_list_lock);
-	TAILQ_FOREACH_SAFE(tx_ppdu_info, &tx_cap_be->defer_ppdu_info_list,
-			   tx_ppdu_info_list_elem, tx_ppdu_info_next) {
+	STAILQ_FOREACH_SAFE(tx_ppdu_info,
+			    &tx_cap_be->defer_tx_ppdu_info_queue,
+			    tx_ppdu_info_queue_elem, tx_ppdu_info_next) {
 		/* remove dp_tx_ppdu_info from the list */
-		TAILQ_REMOVE(&tx_cap_be->defer_ppdu_info_list, tx_ppdu_info,
-			     tx_ppdu_info_list_elem);
+		STAILQ_REMOVE(&tx_cap_be->defer_tx_ppdu_info_queue,
+			      tx_ppdu_info,
+			      dp_tx_ppdu_info, tx_ppdu_info_queue_elem);
 		/* decrement list length */
 		tx_cap_be->defer_ppdu_info_list_depth--;
 		/* free tx_ppdu_info */
