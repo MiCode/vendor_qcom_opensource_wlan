@@ -186,16 +186,27 @@ static QDF_STATUS wlan_mlo_peer_set_aid(
 
 	if (qdf_test_bit(WLAN_AID(assoc_id) - 1,  ml_aid_mgr->aid_bitmap)) {
 		ml_aid_lock_release(mlo_mgr_ctx);
+		mlo_err("Assoc id %d is not available on ml aid mgr", assoc_id);
 		return QDF_STATUS_E_FAILURE;
 	}
 
 	if (is_mlo_peer) {
+		if ((assoc_id < ml_aid_mgr->start_aid) ||
+		    (assoc_id >= ml_aid_mgr->max_aid)) {
+			ml_aid_lock_release(mlo_mgr_ctx);
+			mlo_err("Assoc id %d is not in bounds, start aid %d, max aid %d",
+				assoc_id, ml_aid_mgr->start_aid,
+				ml_aid_mgr->max_aid);
+			return QDF_STATUS_E_FAILURE;
+		}
 		for (j = 0; j < WLAN_UMAC_MLO_MAX_VDEVS; j++) {
 			vdev_aid_mgr = ml_aid_mgr->aid_mgr[j];
 			if (vdev_aid_mgr &&
 			    qdf_test_bit(WLAN_AID(assoc_id) - 1,
 					 vdev_aid_mgr->aid_bitmap)) {
 				ml_aid_lock_release(mlo_mgr_ctx);
+				mlo_err("Assoc id %d is not available on link vdev %d",
+					assoc_id, j);
 				return QDF_STATUS_E_FAILURE;
 			}
 			/* AID is free */
@@ -210,10 +221,20 @@ static QDF_STATUS wlan_mlo_peer_set_aid(
 			ml_aid_lock_release(mlo_mgr_ctx);
 			return QDF_STATUS_E_FAILURE;
 		}
+		if ((assoc_id < vdev_aid_mgr->start_aid) ||
+		    (assoc_id >= vdev_aid_mgr->max_aid)) {
+			ml_aid_lock_release(mlo_mgr_ctx);
+			mlo_err("Assoc id %d is not in bounds, start aid %d, max aid %d",
+				assoc_id, vdev_aid_mgr->start_aid,
+				vdev_aid_mgr->max_aid);
+			return QDF_STATUS_E_FAILURE;
+		}
 
 		if (qdf_test_bit(WLAN_AID(assoc_id) - 1,
 				 vdev_aid_mgr->aid_bitmap)) {
 			ml_aid_lock_release(mlo_mgr_ctx);
+			mlo_err("Assoc id %d is not available on vdev aid mgr",
+				assoc_id);
 			return QDF_STATUS_E_FAILURE;
 		}
 
@@ -237,6 +258,17 @@ static QDF_STATUS wlan_mlme_peer_set_aid(
 
 	if (!no_lock)
 		ml_aid_lock_acquire(mlo_mgr_ctx);
+
+	if ((assoc_id < vdev_aid_mgr->start_aid) ||
+	    (assoc_id >= vdev_aid_mgr->max_aid)) {
+		if (!no_lock)
+			ml_aid_lock_release(mlo_mgr_ctx);
+
+		mlo_err("Assoc id %d is not in bounds, start aid %d, max aid %d",
+			assoc_id, vdev_aid_mgr->start_aid,
+			vdev_aid_mgr->max_aid);
+		return QDF_STATUS_E_FAILURE;
+	}
 
 	if (!qdf_test_bit(WLAN_AID(assoc_id) - 1, vdev_aid_mgr->aid_bitmap)) {
 		qdf_set_bit(WLAN_AID(assoc_id) - 1, vdev_aid_mgr->aid_bitmap);
@@ -371,7 +403,7 @@ QDF_STATUS mlo_peer_allocate_aid(
 
 	assoc_id = wlan_mlo_peer_alloc_aid(ml_aid_mgr, true, 0xff);
 	if (assoc_id == (uint16_t)-1) {
-		mlo_err("MLD ID %d aid mgr is NULL", ml_dev->mld_id);
+		mlo_err("MLD ID %d AID alloc failed", ml_dev->mld_id);
 		return QDF_STATUS_E_NOENT;
 	}
 
@@ -401,8 +433,10 @@ QDF_STATUS mlo_peer_free_aid(struct wlan_mlo_dev_context *ml_dev,
 	}
 
 	ml_aid_mgr = ml_dev->ap_ctx->ml_aid_mgr;
-	if (!ml_aid_mgr)
+	if (!ml_aid_mgr) {
+		mlo_err(" Free failed, ml_aid_mgr is NULL");
 		return QDF_STATUS_E_INVAL;
+	}
 
 	if (!ml_peer->assoc_id) {
 		mlo_info("MLD ID %d ML Peer " QDF_MAC_ADDR_FMT " ML assoc id is 0",
@@ -610,12 +644,42 @@ void wlan_vdev_mlme_aid_mgr_max_aid_set(struct wlan_objmgr_vdev *vdev,
 					uint16_t max_aid)
 {
 	struct wlan_vdev_aid_mgr *aid_mgr;
+	struct wlan_vdev_aid_mgr *vdev_aid_mgr;
+	struct wlan_ml_vdev_aid_mgr *ml_aid_mgr;
+	struct wlan_mlo_dev_context *ml_dev;
+	uint16_t j, vap_max_aid = 0;
 
 	aid_mgr = wlan_vdev_mlme_get_aid_mgr(vdev);
-	if (!aid_mgr)
+	if (!aid_mgr || !max_aid)
 		return;
 
 	aid_mgr->max_aid = max_aid;
+	mlo_debug("VDEV mgr max aid %d", max_aid);
+
+	ml_dev = vdev->mlo_dev_ctx;
+	if (ml_dev) {
+		ml_aid_mgr = ml_dev->ap_ctx->ml_aid_mgr;
+		if (!ml_aid_mgr)
+			return;
+
+		/* Derive higher start_aid */
+		for (j = 0; j < WLAN_UMAC_MLO_MAX_VDEVS; j++) {
+			vdev_aid_mgr = ml_aid_mgr->aid_mgr[j];
+			if (!vdev_aid_mgr)
+				continue;
+
+			if (!vap_max_aid) {
+				vap_max_aid = vdev_aid_mgr->max_aid;
+				continue;
+			}
+
+			if (vap_max_aid > vdev_aid_mgr->max_aid)
+				vap_max_aid = vdev_aid_mgr->max_aid;
+		}
+
+		ml_aid_mgr->max_aid = vap_max_aid;
+		mlo_debug("MLO mgr max aid %d", vap_max_aid);
+	}
 }
 
 QDF_STATUS wlan_vdev_mlme_set_start_aid(struct wlan_objmgr_vdev *vdev,
@@ -631,6 +695,7 @@ QDF_STATUS wlan_vdev_mlme_set_start_aid(struct wlan_objmgr_vdev *vdev,
 		return QDF_STATUS_E_FAILURE;
 
 	vdev_aid_mgr->start_aid = start_aid;
+	mlo_debug("VDEV mgr start aid %d", start_aid);
 
 	ml_dev = vdev->mlo_dev_ctx;
 	if (ml_dev) {
@@ -649,9 +714,21 @@ QDF_STATUS wlan_vdev_mlme_set_start_aid(struct wlan_objmgr_vdev *vdev,
 		}
 
 		ml_aid_mgr->start_aid = max_aid_start;
+		mlo_debug("MLO mgr start aid %d", max_aid_start);
 	}
 
 	return QDF_STATUS_SUCCESS;
+}
+
+uint16_t wlan_vdev_mlme_get_start_aid(struct wlan_objmgr_vdev *vdev)
+{
+	struct wlan_vdev_aid_mgr *vdev_aid_mgr;
+
+	vdev_aid_mgr = wlan_vdev_mlme_get_aid_mgr(vdev);
+	if (!vdev_aid_mgr)
+		return 0;
+
+	return vdev_aid_mgr->start_aid;
 }
 
 struct wlan_vdev_aid_mgr *wlan_vdev_aid_mgr_init(uint16_t max_aid)
@@ -683,14 +760,205 @@ void wlan_vdev_aid_mgr_free(struct wlan_vdev_aid_mgr *aid_mgr)
 	qdf_mem_free(aid_mgr);
 }
 
+QDF_STATUS wlan_mlo_vdev_init_mbss_aid_mgr(struct wlan_mlo_dev_context *ml_dev,
+					   struct wlan_objmgr_vdev *vdev,
+					   struct wlan_objmgr_vdev *tx_vdev)
+{
+	struct wlan_vdev_aid_mgr *aid_mgr;
+	struct wlan_vdev_aid_mgr *txvdev_aid_mgr;
+	struct wlan_objmgr_vdev *vdev_iter;
+	struct wlan_ml_vdev_aid_mgr *ml_aid_mgr;
+	uint16_t start_aid = 0;
+	uint8_t i;
+
+	if (!ml_dev) {
+		mlo_err("ML DEV pointer is NULL");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	ml_aid_mgr = ml_dev->ap_ctx->ml_aid_mgr;
+	if (!ml_aid_mgr) {
+		mlo_err("AID mgr of ML VDEV(%d) is invalid", ml_dev->mld_id);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	txvdev_aid_mgr = wlan_vdev_mlme_get_aid_mgr(tx_vdev);
+	if (!txvdev_aid_mgr) {
+		mlo_err("AID mgr of Tx VDEV%d is invalid",
+			wlan_vdev_get_id(tx_vdev));
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	aid_mgr = wlan_vdev_mlme_get_aid_mgr(vdev);
+
+	for (i = 0; i < WLAN_UMAC_MLO_MAX_VDEVS; i++) {
+		vdev_iter = ml_dev->wlan_vdev_list[i];
+		if (!vdev_iter)
+			continue;
+
+		if (vdev != vdev_iter)
+			continue;
+
+		start_aid = wlan_vdev_mlme_get_start_aid(tx_vdev);
+		/* Update start_aid, which updates MLO Dev start aid */
+		wlan_vdev_mlme_set_start_aid(vdev, start_aid);
+
+		qdf_atomic_inc(&txvdev_aid_mgr->ref_cnt);
+		wlan_vdev_mlme_set_aid_mgr(vdev,
+					   txvdev_aid_mgr);
+		ml_aid_mgr->aid_mgr[i] = txvdev_aid_mgr;
+
+		if (aid_mgr) {
+			mlo_info("AID mgr is freed for vdev %d with txvdev %d",
+				 wlan_vdev_get_id(vdev),
+				 wlan_vdev_get_id(tx_vdev));
+			wlan_vdev_aid_mgr_free(aid_mgr);
+		}
+
+		mlo_debug("AID mgr replaced for vdev %d with txvdev %d",
+			  wlan_vdev_get_id(vdev), wlan_vdev_get_id(tx_vdev));
+	}
+
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS wlan_mlo_vdev_deinit_mbss_aid_mgr(struct wlan_mlo_dev_context *mldev,
+					     struct wlan_objmgr_vdev *vdev,
+					     struct wlan_objmgr_vdev *tx_vdev)
+{
+	struct wlan_vdev_aid_mgr *aid_mgr;
+	struct wlan_vdev_aid_mgr *txvdev_aid_mgr;
+	struct wlan_objmgr_vdev *vdev_iter;
+	struct wlan_ml_vdev_aid_mgr *ml_aid_mgr;
+	uint8_t i;
+
+	if (!mldev) {
+		mlo_err("ML DEV pointer is NULL");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	ml_aid_mgr = mldev->ap_ctx->ml_aid_mgr;
+	if (!ml_aid_mgr) {
+		mlo_err("AID mgr of ML VDEV(%d) is invalid", mldev->mld_id);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	txvdev_aid_mgr = wlan_vdev_mlme_get_aid_mgr(tx_vdev);
+	if (!txvdev_aid_mgr) {
+		mlo_err("AID mgr of Tx VDEV%d is invalid",
+			wlan_vdev_get_id(tx_vdev));
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	aid_mgr = wlan_vdev_mlme_get_aid_mgr(vdev);
+	if (!aid_mgr) {
+		mlo_err("AID mgr of VDEV%d is invalid",
+			wlan_vdev_get_id(vdev));
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	for (i = 0; i < WLAN_UMAC_MLO_MAX_VDEVS; i++) {
+		vdev_iter = mldev->wlan_vdev_list[i];
+		if (!vdev_iter)
+			continue;
+
+		if (vdev != vdev_iter)
+			continue;
+
+		aid_mgr = wlan_vdev_aid_mgr_init(ml_aid_mgr->max_aid);
+		if (!aid_mgr) {
+			mlo_err("AID bitmap allocation failed for VDEV%d",
+				wlan_vdev_get_id(vdev));
+			QDF_BUG(0);
+			return QDF_STATUS_E_NOMEM;
+		}
+
+		wlan_vdev_mlme_set_aid_mgr(vdev, aid_mgr);
+		ml_aid_mgr->aid_mgr[i] = aid_mgr;
+
+		wlan_vdev_aid_mgr_free(txvdev_aid_mgr);
+
+		mlo_debug("AID mgr restored for vdev %d (txvdev %d)",
+			  wlan_vdev_get_id(vdev), wlan_vdev_get_id(tx_vdev));
+	}
+
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS wlan_mlme_vdev_init_mbss_aid_mgr(struct wlan_objmgr_vdev *vdev,
+					    struct wlan_objmgr_vdev *tx_vdev)
+{
+	struct wlan_vdev_aid_mgr *aid_mgr;
+	struct wlan_vdev_aid_mgr *txvdev_aid_mgr;
+
+	txvdev_aid_mgr = wlan_vdev_mlme_get_aid_mgr(tx_vdev);
+	if (!txvdev_aid_mgr) {
+		mlo_err("AID mgr of Tx VDEV%d is invalid",
+			wlan_vdev_get_id(tx_vdev));
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	aid_mgr = wlan_vdev_mlme_get_aid_mgr(vdev);
+
+	qdf_atomic_inc(&txvdev_aid_mgr->ref_cnt);
+	wlan_vdev_mlme_set_aid_mgr(vdev,
+				   txvdev_aid_mgr);
+
+	if (aid_mgr) {
+		mlo_info("AID mgr is freed for vdev %d with txvdev %d",
+			 wlan_vdev_get_id(vdev), wlan_vdev_get_id(tx_vdev));
+		wlan_vdev_aid_mgr_free(aid_mgr);
+	}
+
+	mlo_debug("AID mgr replaced for vdev %d with txvdev %d",
+		  wlan_vdev_get_id(vdev), wlan_vdev_get_id(tx_vdev));
+
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS wlan_mlme_vdev_deinit_mbss_aid_mgr(struct wlan_objmgr_vdev *vdev,
+					      struct wlan_objmgr_vdev *tx_vdev)
+{
+	struct wlan_vdev_aid_mgr *aid_mgr;
+	struct wlan_vdev_aid_mgr *txvdev_aid_mgr;
+
+	txvdev_aid_mgr = wlan_vdev_mlme_get_aid_mgr(tx_vdev);
+	if (!txvdev_aid_mgr) {
+		mlo_err("AID mgr of Tx VDEV%d is invalid",
+			wlan_vdev_get_id(tx_vdev));
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	aid_mgr = wlan_vdev_mlme_get_aid_mgr(vdev);
+	if (!aid_mgr) {
+		mlo_err("AID mgr of VDEV%d is invalid",
+			wlan_vdev_get_id(vdev));
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	aid_mgr = wlan_vdev_aid_mgr_init(txvdev_aid_mgr->max_aid);
+	if (!aid_mgr) {
+		mlo_err("AID bitmap allocation failed for VDEV%d",
+			wlan_vdev_get_id(vdev));
+		QDF_BUG(0);
+		return QDF_STATUS_E_NOMEM;
+	}
+
+	wlan_vdev_mlme_set_aid_mgr(vdev, aid_mgr);
+
+	wlan_vdev_aid_mgr_free(txvdev_aid_mgr);
+
+	mlo_debug("AID mgr restored for vdev %d (txvdev %d)",
+		  wlan_vdev_get_id(vdev), wlan_vdev_get_id(tx_vdev));
+
+	return QDF_STATUS_SUCCESS;
+}
+
 QDF_STATUS wlan_mlo_vdev_alloc_aid_mgr(struct wlan_mlo_dev_context *ml_dev,
 				       struct wlan_objmgr_vdev *vdev)
 {
 	uint8_t i;
-	uint8_t is_mbss_enabled = 0;
 	struct wlan_objmgr_vdev *vdev_iter;
-	struct wlan_objmgr_vdev *tx_vdev = NULL;
-	struct wlan_vdev_aid_mgr *aid_mgr;
 	struct wlan_ml_vdev_aid_mgr *ml_aidmgr;
 	uint16_t max_aid = WLAN_UMAC_MAX_AID;
 
@@ -713,30 +981,14 @@ QDF_STATUS wlan_mlo_vdev_alloc_aid_mgr(struct wlan_mlo_dev_context *ml_dev,
 		if (vdev != vdev_iter)
 			continue;
 
-		/* TODO */
-		/* Get Tx VDEV, if VDEV is MBSSID */
-		if (is_mbss_enabled) {
-			aid_mgr = wlan_vdev_mlme_get_aid_mgr(tx_vdev);
-			if (!aid_mgr) {
-				mlo_err("AID bitmap allocation failed for Tx VDEV%d",
-					wlan_vdev_get_id(tx_vdev));
-				return QDF_STATUS_E_NOMEM;
-			}
-			qdf_atomic_inc(&aid_mgr->ref_cnt);
-			ml_aidmgr->aid_mgr[i] = aid_mgr;
-			wlan_vdev_mlme_set_aid_mgr(vdev,
-						   ml_aidmgr->aid_mgr[i]);
-			break;
-		} else {
-			ml_aidmgr->aid_mgr[i] = wlan_vdev_aid_mgr_init(max_aid);
-			if (!ml_aidmgr->aid_mgr[i]) {
-				mlo_err("AID bitmap allocation failed for VDEV%d",
-					wlan_vdev_get_id(vdev));
-				return QDF_STATUS_E_NOMEM;
-			}
-			wlan_vdev_mlme_set_aid_mgr(vdev, ml_aidmgr->aid_mgr[i]);
-			break;
+		ml_aidmgr->aid_mgr[i] = wlan_vdev_aid_mgr_init(max_aid);
+		if (!ml_aidmgr->aid_mgr[i]) {
+			mlo_err("AID bitmap allocation failed for VDEV%d",
+				wlan_vdev_get_id(vdev));
+			return QDF_STATUS_E_NOMEM;
 		}
+		wlan_vdev_mlme_set_aid_mgr(vdev, ml_aidmgr->aid_mgr[i]);
+		break;
 	}
 
 	return QDF_STATUS_SUCCESS;
@@ -779,10 +1031,7 @@ QDF_STATUS wlan_mlo_vdev_free_aid_mgr(struct wlan_mlo_dev_context *ml_dev,
 QDF_STATUS wlan_mlo_vdev_aid_mgr_init(struct wlan_mlo_dev_context *ml_dev)
 {
 	uint8_t i;
-	uint8_t is_mbss_enabled = 0;
 	struct wlan_objmgr_vdev *vdev;
-	struct wlan_objmgr_vdev *tx_vdev = NULL;
-	struct wlan_vdev_aid_mgr *aid_mgr;
 	struct wlan_ml_vdev_aid_mgr *ml_aidmgr;
 	uint16_t max_aid = WLAN_UMAC_MAX_AID;
 
@@ -801,28 +1050,14 @@ QDF_STATUS wlan_mlo_vdev_aid_mgr_init(struct wlan_mlo_dev_context *ml_dev)
 		vdev = ml_dev->wlan_vdev_list[i];
 		if (!vdev)
 			continue;
-		/* TODO */
-		/* Get Tx VDEV, if VDEV is MBSSID */
-		if (is_mbss_enabled) {
-			aid_mgr = wlan_vdev_mlme_get_aid_mgr(tx_vdev);
-			if (!aid_mgr) {
-				mlo_err("AID bitmap allocation failed for Tx VDEV%d",
-					wlan_vdev_get_id(tx_vdev));
-				goto free_ml_aid_mgr;
-			}
 
-			qdf_atomic_inc(&aid_mgr->ref_cnt);
-			ml_aidmgr->aid_mgr[i] = aid_mgr;
-		} else {
-			ml_aidmgr->aid_mgr[i] = wlan_vdev_aid_mgr_init(max_aid);
-			if (!ml_aidmgr->aid_mgr[i]) {
-				mlo_err("AID bitmap allocation failed for VDEV%d",
-					wlan_vdev_get_id(vdev));
-				goto free_ml_aid_mgr;
-			}
-			wlan_vdev_mlme_set_aid_mgr(vdev,
-						   ml_aidmgr->aid_mgr[i]);
+		ml_aidmgr->aid_mgr[i] = wlan_vdev_aid_mgr_init(max_aid);
+		if (!ml_aidmgr->aid_mgr[i]) {
+			mlo_err("AID bitmap allocation failed for VDEV%d",
+				wlan_vdev_get_id(vdev));
+			goto free_ml_aid_mgr;
 		}
+		wlan_vdev_mlme_set_aid_mgr(vdev, ml_aidmgr->aid_mgr[i]);
 	}
 
 	return QDF_STATUS_SUCCESS;
