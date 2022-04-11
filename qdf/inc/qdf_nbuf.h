@@ -4319,6 +4319,27 @@ QDF_STATUS qdf_nbuf_move_frag_page_offset_debug(qdf_nbuf_t nbuf, uint8_t idx,
 						int offset, const char *func,
 						uint32_t line);
 
+#define qdf_nbuf_remove_frag(n, i, t) \
+	qdf_nbuf_remove_frag_debug(n, i, t, __func__, __LINE__)
+
+/**
+ * qdf_nbuf_remove_frag_debug - Remove frag from nbuf
+ * @nbuf: nbuf where frag will be removed
+ * @idx: frag index
+ * @truesize: truesize of frag
+ * @func: Caller function name
+ * @line:  Caller function line no.
+ *
+ * Return: QDF_STATUS
+ *
+ */
+QDF_STATUS
+qdf_nbuf_remove_frag_debug(qdf_nbuf_t nbuf,
+			   uint16_t idx,
+			   uint16_t truesize,
+			   const char *func,
+			   uint32_t line);
+
 #define qdf_nbuf_add_rx_frag(f, b, o, l, s, r) \
 	qdf_nbuf_add_rx_frag_debug(f, b, o, l, s, r, __func__, __LINE__)
 
@@ -4414,6 +4435,22 @@ static inline QDF_STATUS qdf_nbuf_move_frag_page_offset(qdf_nbuf_t nbuf,
 							int offset)
 {
 	return __qdf_nbuf_move_frag_page_offset(nbuf, idx, offset);
+}
+
+/**
+ * qdf_nbuf_remove_frag() - Remove frag from nbuf
+ *
+ * @nbuf: nbuf pointer
+ * @idx: idx at which frag need to be removed
+ * @truesize: truesize of frag
+ *
+ * Return: void
+ */
+static inline void qdf_nbuf_remove_frag(qdf_nbuf_t nbuf,
+					uint16_t idx,
+					uint16_t truesize)
+{
+	return __qdf_nbuf_remove_frag(nbuf, idx, truesize);
 }
 
 /**

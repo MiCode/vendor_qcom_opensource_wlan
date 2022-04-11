@@ -2562,6 +2562,15 @@ QDF_STATUS __qdf_nbuf_move_frag_page_offset(__qdf_nbuf_t nbuf, uint8_t idx,
 					    int offset);
 
 /**
+ * __qdf_nbuf_remove_frag() - Remove frag from nbuf
+ * @nbuf: nbuf pointer
+ * @idx: frag idx need to be removed
+ * @truesize: truesize of frag
+ *
+ * Return : void
+ */
+void __qdf_nbuf_remove_frag(__qdf_nbuf_t nbuf, uint16_t idx, uint16_t truesize);
+/**
  * __qdf_nbuf_add_rx_frag() - Add frag to nbuf at nr_frag index
  * @buf: Frag pointer needs to be added in nbuf frag
  * @nbuf: qdf_nbuf_t where frag will be added

@@ -5504,6 +5504,28 @@ QDF_STATUS __qdf_nbuf_move_frag_page_offset(__qdf_nbuf_t nbuf, uint8_t idx,
 
 qdf_export_symbol(__qdf_nbuf_move_frag_page_offset);
 
+void __qdf_nbuf_remove_frag(__qdf_nbuf_t nbuf,
+			    uint16_t idx,
+			    uint16_t truesize)
+{
+	struct page *page;
+	uint16_t frag_len;
+
+	page = skb_frag_page(&skb_shinfo(nbuf)->frags[idx]);
+
+	if (qdf_unlikely(!page))
+		return;
+
+	frag_len = qdf_nbuf_get_frag_size_by_idx(nbuf, idx);
+	put_page(page);
+	nbuf->len -= frag_len;
+	nbuf->data_len -= frag_len;
+	nbuf->truesize -= truesize;
+	skb_shinfo(nbuf)->nr_frags--;
+}
+
+qdf_export_symbol(__qdf_nbuf_remove_frag);
+
 void __qdf_nbuf_add_rx_frag(__qdf_frag_t buf, __qdf_nbuf_t nbuf,
 			    int offset, int frag_len,
 			    unsigned int truesize, bool take_frag_ref)
@@ -5730,6 +5752,51 @@ void qdf_net_buf_debug_release_frag(qdf_nbuf_t buf, const char *func,
 }
 
 qdf_export_symbol(qdf_net_buf_debug_release_frag);
+
+/**
+ * qdf_nbuf_remove_frag_debug - Remove frag from nbuf
+ * @nbuf: nbuf  where frag will be removed
+ * @idx: frag index
+ * @truesize: truesize of frag
+ * @func: Caller function name
+ * @line:  Caller function line no.
+ *
+ * Return: QDF_STATUS
+ *
+ */
+QDF_STATUS
+qdf_nbuf_remove_frag_debug(qdf_nbuf_t nbuf,
+			   uint16_t idx,
+			   uint16_t truesize,
+			   const char *func,
+			   uint32_t line)
+{
+	uint16_t num_frags;
+	qdf_frag_t frag;
+
+	if (qdf_unlikely(!nbuf))
+		return QDF_STATUS_E_INVAL;
+
+	num_frags = qdf_nbuf_get_nr_frags(nbuf);
+	if (idx >= num_frags)
+		return QDF_STATUS_E_INVAL;
+
+	if (qdf_likely(is_initial_mem_debug_disabled)) {
+		__qdf_nbuf_remove_frag(nbuf, idx, truesize);
+		return QDF_STATUS_SUCCESS;
+	}
+
+	frag = qdf_nbuf_get_frag_addr(nbuf, idx);
+	if (qdf_likely(frag))
+		qdf_frag_debug_refcount_dec(frag, func, line);
+
+	__qdf_nbuf_remove_frag(nbuf, idx, truesize);
+
+	return QDF_STATUS_SUCCESS;
+}
+
+qdf_export_symbol(qdf_nbuf_remove_frag_debug);
+
 #endif /* NBUF_FRAG_MEMORY_DEBUG */
 
 /**
