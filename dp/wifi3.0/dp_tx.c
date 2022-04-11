@@ -2956,7 +2956,7 @@ void dp_tx_nawds_handler(struct dp_soc *soc, struct dp_vdev *vdev,
 			/* Multicast packets needs to be
 			 * dropped in case of intra bss forwarding
 			 */
-			if (sa_peer_id == peer->peer_id) {
+			if (sa_peer_id == txrx_peer->peer_id) {
 				dp_tx_debug("multicast packet");
 				DP_PEER_PER_PKT_STATS_INC(txrx_peer,
 							  tx.nawds_mcast_drop,
