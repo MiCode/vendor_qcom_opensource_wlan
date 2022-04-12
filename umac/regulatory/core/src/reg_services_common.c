@@ -6889,6 +6889,7 @@ static uint16_t reg_get_afc_req_length(struct wlan_objmgr_pdev *pdev,
 	uint16_t fixed_param_len;
 	uint16_t num_opclasses_len;
 	uint16_t opclasses_arr_len;
+	uint16_t afc_location_len;
 
 	fixed_param_len = sizeof(struct wlan_afc_host_req_fixed_params);
 	frange_lst_len = reg_get_frange_list_len(num_freq_ranges);
@@ -6896,12 +6897,14 @@ static uint16_t reg_get_afc_req_length(struct wlan_objmgr_pdev *pdev,
 	opclasses_arr_len = reg_get_opclasses_array_len(pdev,
 							num_opclasses,
 							chansize_lst);
+	afc_location_len = sizeof(struct wlan_afc_location);
 
 	afc_req_len =
 		fixed_param_len +
 		frange_lst_len +
 		num_opclasses_len +
-		opclasses_arr_len;
+		opclasses_arr_len +
+		afc_location_len;
 
 	return afc_req_len;
 }
@@ -6989,9 +6992,9 @@ reg_fill_afc_opclass_obj(struct wlan_afc_opclass_obj *p_obj_opclass_obj,
  * @channel_lists: The array of channel lists
  * @p_opclass_obj_arr: Pointer to the first opclass object
  *
- * Return: Void
+ * Return: Pointer to the end of last opclass object
  */
-static inline void
+static inline struct wlan_afc_opclass_obj *
 reg_fill_afc_opclasses_arr(struct wlan_objmgr_pdev *pdev,
 			   uint8_t num_opclasses,
 			   uint8_t *opclass_lst,
@@ -7010,6 +7013,7 @@ reg_fill_afc_opclasses_arr(struct wlan_objmgr_pdev *pdev,
 							 chansize_lst[i],
 							 channel_lists[i]);
 	}
+	return p_opclass_obj;
 }
 
 /**
@@ -7050,6 +7054,8 @@ void reg_print_partial_afc_req_info(struct wlan_objmgr_pdev *pdev,
 	struct wlan_afc_opclass_obj *p_opclass_obj;
 	uint8_t num_freq_ranges;
 	uint8_t *p_temp;
+	struct wlan_afc_location *p_afc_location;
+	uint8_t *deployment_type_str;
 
 	p_fixed_params = &afc_req->fixed_params;
 	reg_debug("req_length=%hu", p_fixed_params->req_length);
@@ -7092,6 +7098,19 @@ void reg_print_partial_afc_req_info(struct wlan_objmgr_pdev *pdev,
 
 		p_opclass_obj = reg_next_opcls_ptr(p_opclass_obj, num_cfis);
 	}
+
+	p_afc_location = (struct wlan_afc_location *)p_opclass_obj;
+	switch (p_afc_location->deployment_type) {
+	case AFC_DEPLOYMENT_INDOOR:
+		deployment_type_str = "Indoor";
+		break;
+	case AFC_DEPLOYMENT_OUTDOOR:
+		deployment_type_str = "Outdoor";
+		break;
+	default:
+		deployment_type_str = "Unknown";
+	}
+	reg_debug("AFC location=%s", deployment_type_str);
 }
 
 /**
@@ -7140,6 +7159,7 @@ reg_get_partial_afc_req_info(struct wlan_objmgr_pdev *pdev,
 	uint8_t num_freq_ranges;
 	uint8_t num_opclasses;
 	struct wlan_afc_opclass_obj *p_obj_opclass_arr;
+	struct wlan_afc_location *p_afc_location;
 
 	uint8_t *opclass_lst;
 	uint8_t *chansize_lst;
@@ -7207,12 +7227,21 @@ reg_get_partial_afc_req_info(struct wlan_objmgr_pdev *pdev,
 	p_num_opclasses->num_opclasses = num_opclasses;
 
 	p_obj_opclass_arr = (struct wlan_afc_opclass_obj *)&p_num_opclasses[1];
-	reg_fill_afc_opclasses_arr(pdev,
-				   num_opclasses,
-				   opclass_lst,
-				   chansize_lst,
-				   channel_lists,
-				   p_obj_opclass_arr);
+	p_obj_opclass_arr = reg_fill_afc_opclasses_arr(pdev,
+						       num_opclasses,
+						       opclass_lst,
+						       chansize_lst,
+						       channel_lists,
+						       p_obj_opclass_arr);
+
+	p_afc_location = (struct wlan_afc_location *)p_obj_opclass_arr;
+	p_afc_location->deployment_type =
+				pdev_priv_obj->reg_afc_dev_deployment_type;
+	p_afc_location->afc_elem_type = AFC_OBJ_LOCATION;
+	p_afc_location->afc_elem_len =
+				sizeof(*p_afc_location) -
+				sizeof(p_afc_location->afc_elem_type) -
+				sizeof(p_afc_location->afc_elem_len);
 free_opcls_chan_mem:
 	reg_dmn_free_6g_opclasses_and_channels(pdev,
 					       num_opclasses,

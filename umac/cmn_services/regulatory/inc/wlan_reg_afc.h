@@ -101,7 +101,8 @@ struct wlan_afc_num_opclasses {
  *      <variable-size> struct wlan_afc_opclass_obj obj[0];
  *      <variable-size> struct wlan_afc_opclass_obj obj[1];
  *      ....
- *      <variable-size>  struct wlan_afc_opclass_obj obj[opclass_list_size-1];
+ *      <variable-size> struct wlan_afc_opclass_obj obj[opclass_list_size-1];
+ *      <fixed-size>    struct wlan_afc_location afc_location;
  * };
  *
  * struct wlan_afc_host_partial_request - Structure to send AFC request info
@@ -125,6 +126,28 @@ enum reg_afc_dev_deploy_type {
 	AFC_DEPLOYMENT_INDOOR  = 1,
 	AFC_DEPLOYMENT_OUTDOOR = 2,
 };
+
+/**
+ * enum afc_object_type - AFC Request object types
+ *
+ * @AFC_OBJ_LOCATION: Location object
+ */
+enum afc_object_type {
+	AFC_OBJ_LOCATION = 1
+};
+
+/**
+ * struct wlan_afc_location - Structure for afc location info.
+ *
+ * @afc_elem_type: AFC element type of enum afc_object_type
+ * @afc_elem_len: AFC element length
+ * @deployment_type: Deployment type of enum reg_afc_dev_deploy_type
+ */
+struct wlan_afc_location {
+	uint32_t afc_elem_type;
+	uint32_t afc_elem_len;
+	uint32_t deployment_type;
+} qdf_packed;
 
 /**
  * The following is the layout of the AFC response.
