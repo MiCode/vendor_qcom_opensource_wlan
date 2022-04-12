@@ -240,6 +240,9 @@
 /* 11AZ Secure ranging PHY Security support */
 #define WLAN_RTT_11AZ_MAC_PHY_SEC_SUPPORT 0x00000004
 
+/* Roam Frame info stats - per candidate frames support */
+#define WLAN_ROAM_STATS_FRAME_INFO_PER_CANDIDATE  0x00000008
+
 /* PSOC op flags */
 
 	/* Invalid VHT cap */

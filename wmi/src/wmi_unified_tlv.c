@@ -18806,6 +18806,10 @@ static void populate_tlv_service(uint32_t *wmi_service)
 #endif
 	wmi_service[wmi_service_pktlog_decode_info_support] =
 		WMI_SERVICE_PKTLOG_DECODE_INFO_SUPPORT;
+#ifdef WLAN_FEATURE_ROAM_OFFLOAD
+	wmi_service[wmi_service_roam_stats_per_candidate_frame_info] =
+		WMI_SERVICE_ROAM_STAT_PER_CANDIDATE_FRAME_INFO_SUPPORT;
+#endif
 }
 
 /**

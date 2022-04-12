@@ -5594,6 +5594,9 @@ typedef enum {
 	wmi_service_rtt_11az_tb_support,
 #endif
 	wmi_service_pktlog_decode_info_support,
+#ifdef WLAN_FEATURE_ROAM_OFFLOAD
+	wmi_service_roam_stats_per_candidate_frame_info,
+#endif
 	wmi_services_max,
 } wmi_conv_service_ids;
 #define WMI_SERVICE_UNAVAILABLE 0xFFFF
@@ -7875,7 +7878,7 @@ struct wmi_roam_scan_stats_res {
 #define MAX_ROAM_SCAN_CHAN       38
 #define MAX_ROAM_SCAN_STATS_TLV  5
 #define WLAN_MAX_BTM_CANDIDATE   8
-#define WLAN_ROAM_MAX_FRAME_INFO 6
+#define WLAN_ROAM_MAX_FRAME_INFO (MAX_ROAM_CANDIDATE_AP * 6)
 /**
  * struct btm_req_candidate_info  - BTM request candidate
  * info
