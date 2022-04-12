@@ -269,9 +269,11 @@ wlan_dcs_wlan_interference_process(
 	bool start_dcs_cbk_handler = false;
 
 	uint32_t reg_tsf_delta = 0;
+	uint32_t scaled_reg_tsf_delta;
 	uint32_t rxclr_delta = 0;
 	uint32_t rxclr_ext_delta = 0;
 	uint32_t cycle_count_delta = 0;
+	uint32_t scaled_cycle_count_delta;
 	uint32_t tx_frame_delta = 0;
 	uint32_t rx_frame_delta = 0;
 	uint32_t my_bss_rx_delta = 0;
@@ -355,12 +357,6 @@ wlan_dcs_wlan_interference_process(
 			  rxclr_delta, rxclr_ext_delta, tx_frame_delta,
 			  rx_frame_delta, cycle_count_delta, my_bss_rx_delta);
 
-	if (0 == (cycle_count_delta >> 8)) {
-		if (unlikely(dcs_host_params.dcs_debug >= DCS_DEBUG_VERBOSE))
-			dcs_debug("cycle count NULL --Investigate--");
-		goto copy_stats;
-	}
-
 	/* Update user stats */
 	wlan_dcs_pdev_obj_lock(dcs_pdev_priv);
 	if (dcs_pdev_priv->dcs_host_params.user_request_count) {
@@ -395,15 +391,26 @@ wlan_dcs_wlan_interference_process(
 	 * refer to mac documentation. It means either TX or RX is ON
 	 *
 	 * Why shift by 8 ? after multiplication it could overflow. At one
-	 * second rate, neither cycle_count_celta nor the tsf_delta would be
-	 * zero after shift by 8 bits
+	 * second rate, normally neither cycle_count_delta nor the tsf_delta
+	 * would be zero after shift by 8 bits. In corner case, host resets
+	 * dcs stats, and at the same time tsf counters is wrapped.
+	 * Then all the variable in prev_stats are 0, and the variable in
+	 * curr_stats may be a small value, so add check for cycle_count_delta
+	 * and the tsf_delta after shift by 8 bits.
 	 */
-	reg_total_cu = ((rxclr_delta >> 8) * 100) / (cycle_count_delta >> 8);
-	reg_tx_cu = ((tx_frame_delta >> 8) * 100) / (cycle_count_delta >> 8);
-	reg_rx_cu = ((rx_frame_delta >> 8) * 100) / (cycle_count_delta >> 8);
-	rx_time_cu = ((curr_stats->rx_time >> 8) * 100) / (reg_tsf_delta >> 8);
+	scaled_cycle_count_delta = cycle_count_delta >> 8;
+	scaled_reg_tsf_delta = reg_tsf_delta >> 8;
+	if (!scaled_cycle_count_delta || !scaled_reg_tsf_delta) {
+		if (unlikely(dcs_host_params.dcs_debug >= DCS_DEBUG_VERBOSE))
+			dcs_debug("cycle count or TSF NULL --Investigate--");
+		goto copy_stats;
+	}
+	reg_total_cu = ((rxclr_delta >> 8) * 100) / scaled_cycle_count_delta;
+	reg_tx_cu = ((tx_frame_delta >> 8) * 100) / scaled_cycle_count_delta;
+	reg_rx_cu = ((rx_frame_delta >> 8) * 100) / scaled_cycle_count_delta;
+	rx_time_cu = ((curr_stats->rx_time >> 8) * 100) / scaled_reg_tsf_delta;
 	obss_rx_cu = (((rx_frame_delta - my_bss_rx_delta) >> 8) * 100) /
-		     (cycle_count_delta >> 8);
+		     scaled_cycle_count_delta;
 	wlan_dcs_update_chan_util(p_dcs_im_stats, reg_rx_cu, reg_tx_cu,
 				  obss_rx_cu, reg_total_cu,
 				  curr_stats->chan_nf);
@@ -443,7 +450,7 @@ wlan_dcs_wlan_interference_process(
 	 * channel utilization).
 	 */
 	wasted_tx_cu = ((curr_stats->tx_waste_time >> 8) * 100) /
-							(reg_tsf_delta >> 8);
+							scaled_reg_tsf_delta;
 
 	/*
 	 * Transmit channel utilization cannot go higher than the amount of time
@@ -496,7 +503,7 @@ wlan_dcs_wlan_interference_process(
 				dcs_host_params.phy_err_penalty;
 	total_wasted_cu +=
 		(reg_ofdm_phyerr_cu > 0) ?
-		(((reg_ofdm_phyerr_cu >> 8) * 100) / (reg_tsf_delta >> 8)) : 0;
+		(((reg_ofdm_phyerr_cu >> 8) * 100) / scaled_reg_tsf_delta) : 0;
 
 	ofdm_phy_err_rate = (curr_stats->mib_stats.reg_ofdm_phyerr_cnt * 1000) /
 				curr_stats->mib_stats.listen_time;
