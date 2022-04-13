@@ -2857,6 +2857,8 @@ hal_rx_status_get_tlv_info_generic_be(void *rx_tlv_hdr, void *ppduinfo,
 		else if (filter_category == 1)
 			ppdu_info->rx_status.monitor_direct_used = 1;
 
+		ppdu_info->rx_user_status[user_id].filter_category = filter_category;
+
 		ppdu_info->nac_info.mcast_bcast =
 			rx_mpdu_start->rx_mpdu_info_details.mcast_bcast;
 		ppdu_info->mpdu_info[user_id].decap_type =

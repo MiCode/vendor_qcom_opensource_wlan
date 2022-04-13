@@ -31,6 +31,9 @@
 #include <dp_rx.h>
 #include <dp_be.h>
 #include <hal_be_api_mon.h>
+#ifdef QCA_SUPPORT_LITE_MONITOR
+#include "dp_lite_mon.h"
+#endif
 
 /**
  * dp_rx_mon_deliver_mpdu() - Deliver MPDU to osif layer
@@ -86,29 +89,39 @@ dp_rx_mon_process_ppdu_info(struct dp_pdev *pdev,
 
 			mpdu_meta = (struct hal_rx_mon_mpdu_info *)qdf_nbuf_data(mpdu);
 
-			if (mpdu_meta->full_pkt) {
-				dp_rx_mon_handle_full_mon(pdev, ppdu_info, mpdu);
+			if (dp_lite_mon_is_rx_enabled(mon_pdev)) {
+				status = dp_lite_mon_rx_mpdu_process(pdev, ppdu_info,
+								     mpdu, mpdu_idx, user);
+				if (status != QDF_STATUS_SUCCESS) {
+					qdf_nbuf_free(mpdu);
+					continue;
+				}
 			} else {
-				qdf_nbuf_free(mpdu);
-				continue;
+				if (mpdu_meta->full_pkt) {
+					dp_rx_mon_handle_full_mon(pdev,
+								  ppdu_info, mpdu);
+				} else {
+					qdf_nbuf_free(mpdu);
+					continue;
+				}
+
+				/* reset mpdu metadata and apply radiotap header over MPDU */
+				qdf_mem_zero(mpdu_meta, sizeof(struct hal_rx_mon_mpdu_info));
+				if (!qdf_nbuf_update_radiotap(&ppdu_info->rx_status,
+							      mpdu,
+							      qdf_nbuf_headroom(mpdu))) {
+					dp_mon_err("failed to update radiotap pdev: %pK",
+						   pdev);
+				}
+
+				/* Deliver MPDU to osif layer */
+				status = dp_rx_mon_deliver_mpdu(mon_pdev,
+								mpdu,
+								&ppdu_info->rx_status);
+
+				if (status != QDF_STATUS_SUCCESS)
+					qdf_nbuf_free(mpdu);
 			}
-
-			/* reset mpdu metadata and apply radiotap header over MPDU */
-			qdf_mem_zero(mpdu_meta, sizeof(struct hal_rx_mon_mpdu_info));
-			if (!qdf_nbuf_update_radiotap(&ppdu_info->rx_status,
-						      mpdu,
-						      qdf_nbuf_headroom(mpdu))) {
-				dp_mon_err("failed to update radiotap pdev: %pK",
-					   pdev);
-			}
-
-			/* Deliver MPDU to osif layer */
-			status = dp_rx_mon_deliver_mpdu(mon_pdev,
-							mpdu,
-							&ppdu_info->rx_status);
-
-			if (status != QDF_STATUS_SUCCESS)
-				qdf_nbuf_free(mpdu);
 		}
 	}
 }
@@ -178,7 +191,8 @@ dp_rx_mon_add_ppdu_info_to_wq(struct dp_mon_pdev *mon_pdev,
 		dp_get_be_mon_pdev_from_dp_mon_pdev(mon_pdev);
 
 	/* Full monitor or lite monitor mode is not enabled, return */
-	if (!mon_pdev->monitor_configured)
+	if (!mon_pdev->monitor_configured &&
+	    !dp_lite_mon_is_rx_enabled(mon_pdev))
 		return QDF_STATUS_E_FAILURE;
 
 	if (qdf_likely(ppdu_info)) {
@@ -238,7 +252,6 @@ dp_rx_mon_handle_full_mon(struct dp_pdev *pdev,
 		qdf_nbuf_trim_add_frag_size(mpdu,
 					    qdf_nbuf_get_nr_frags(mpdu) - 1,
 					    -HAL_RX_FCS_LEN, 0);
-
 		return;
 	}
 
@@ -604,7 +617,8 @@ uint8_t dp_rx_mon_process_tlv_status(struct dp_pdev *pdev,
 	struct ieee80211_frame *qwh;
 	uint8_t num_buf_reaped = 0;
 
-	if (!mon_pdev->monitor_configured) {
+	if (!mon_pdev->monitor_configured &&
+	    !dp_lite_mon_is_rx_enabled(mon_pdev)) {
 		return num_buf_reaped;
 	}
 
@@ -628,6 +642,7 @@ uint8_t dp_rx_mon_process_tlv_status(struct dp_pdev *pdev,
 				dp_mon_err("malloc failed pdev: %pK ", pdev);
 				return num_buf_reaped;
 			}
+
 			qdf_nbuf_set_next(nbuf, NULL);
 
 			ppdu_info->mpdu_q[user_id][mpdu_idx] = nbuf;
@@ -655,6 +670,10 @@ uint8_t dp_rx_mon_process_tlv_status(struct dp_pdev *pdev,
 					HAL_HW_RX_DECAP_FORMAT_RAW) {
 				return num_buf_reaped;
 			}
+
+			if (dp_lite_mon_is_rx_enabled(mon_pdev) &&
+			    !dp_lite_mon_is_level_msdu(mon_pdev))
+				break;
 
 			nbuf = ppdu_info->mpdu_q[user_id][mpdu_idx];
 			num_frags = qdf_nbuf_get_nr_frags(nbuf);

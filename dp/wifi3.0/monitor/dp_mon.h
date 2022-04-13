@@ -4054,5 +4054,14 @@ dp_lite_mon_get_nac_peer_rssi(struct cdp_soc_t *soc_hdl,
 {
 	return QDF_STATUS_E_FAILURE;
 }
+
+static inline QDF_STATUS
+dp_lite_mon_rx_mpdu_process(struct dp_pdev *pdev,
+			    struct hal_rx_ppdu_info *ppdu_info,
+			    qdf_nbuf_t mon_mpdu, uint16_t mpdu_id,
+			    uint8_t user)
+{
+	return QDF_STATUS_E_FAILURE;
+}
 #endif
 #endif /* _DP_MON_H_ */
