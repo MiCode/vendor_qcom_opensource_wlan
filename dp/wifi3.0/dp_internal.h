@@ -3582,4 +3582,32 @@ dp_get_rx_hash_key_bytes(struct cdp_lro_hash_config *lro_hash)
 			     (sizeof(lro_hash->toeplitz_hash_ipv6[0]) *
 			      LRO_IPV6_SEED_ARR_SZ));
 }
+
+#ifdef WLAN_TELEMETRY_STATS_SUPPORT
+/*
+ * dp_get_pdev_telemetry_stats- API to get pdev telemetry stats
+ * @soc_hdl: soc handle
+ * @pdev_id: id of pdev handle
+ * @stats: pointer to pdev telemetry stats
+ *
+ * Return: QDF_STATUS_SUCCESS: Success
+ *         QDF_STATUS_E_FAILURE: Error
+ */
+QDF_STATUS
+dp_get_pdev_telemetry_stats(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
+			    struct cdp_pdev_telemetry_stats *stats);
+
+/*
+ * dp_get_peer_telemetry_stats- API to get peer telemetry stats
+ * @soc_hdl: soc handle
+ * @addr: peer mac
+ * @stats: pointer to peer telemetry stats
+ *
+ * Return: QDF_STATUS_SUCCESS: Success
+ *         QDF_STATUS_E_FAILURE: Error
+ */
+QDF_STATUS
+dp_get_peer_telemetry_stats(struct cdp_soc_t *soc_hdl, uint8_t *addr,
+			    struct cdp_peer_telemetry_stats *stats);
+#endif /* WLAN_TELEMETRY_STATS_SUPPORT */
 #endif /* #ifndef _DP_INTERNAL_H_ */

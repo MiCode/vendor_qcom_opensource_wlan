@@ -2415,6 +2415,8 @@ struct cdp_rx_stats_ppdu_user {
  * @sig_b_sym: Number of symbols of HE-SIG-B
  * @sig_b_comp: Compression mode of HE-SIG-B
  * @he_crc: CRC for HE-SIG contents
+ * @usr_nss_sum: Sum of user nss
+ * @usr_ru_tones_sum: Sum of user ru_tones
  */
 struct cdp_rx_indication_ppdu {
 	uint32_t ppdu_id;
@@ -2510,6 +2512,8 @@ struct cdp_rx_indication_ppdu {
 		 sig_b_comp:1,
 		 he_crc:4;
 #endif
+	uint8_t usr_nss_sum;
+	uint32_t usr_ru_tones_sum;
 };
 
 /**

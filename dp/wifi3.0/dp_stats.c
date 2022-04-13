@@ -8538,3 +8538,38 @@ dp_pdev_get_tx_capture_stats(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
 	return QDF_STATUS_E_FAILURE;
 }
 #endif /* WLAN_TX_PKT_CAPTURE_ENH */
+
+#ifdef WLAN_TELEMETRY_STATS_SUPPORT
+QDF_STATUS
+dp_get_pdev_telemetry_stats(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
+			    struct cdp_pdev_telemetry_stats *stats)
+{
+	struct dp_soc *soc = (struct dp_soc *)soc_hdl;
+	struct dp_pdev *pdev = dp_get_pdev_from_soc_pdev_id_wifi3(soc, pdev_id);
+
+	if (!pdev)
+		return QDF_STATUS_E_FAILURE;
+
+	stats->tx_mpdu_failed = pdev->stats.telemetry_stats.tx_mpdu_failed;
+	stats->tx_mpdu_total = pdev->stats.telemetry_stats.tx_mpdu_total;
+
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS
+dp_get_peer_telemetry_stats(struct cdp_soc_t *soc_hdl, uint8_t *addr,
+			    struct cdp_peer_telemetry_stats *stats)
+{
+	struct dp_soc *soc = (struct dp_soc *)soc_hdl;
+	struct dp_peer *peer = dp_peer_find_hash_find(soc, addr, 0, DP_VDEV_ALL,
+						      DP_MOD_ID_MISC);
+
+	if (!peer)
+		return QDF_STATUS_E_FAILURE;
+
+	dp_monitor_peer_telemetry_stats(peer, stats);
+	dp_peer_unref_delete(peer, DP_MOD_ID_MISC);
+
+	return QDF_STATUS_SUCCESS;
+}
+#endif

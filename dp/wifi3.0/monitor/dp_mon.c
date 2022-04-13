@@ -2132,6 +2132,47 @@ QDF_STATUS dp_rx_populate_cbf_hdr(struct dp_soc *soc,
 }
 
 #ifdef ATH_SUPPORT_EXT_STAT
+#ifdef WLAN_TELEMETRY_STATS_SUPPORT
+/* dp_peer_update_telemetry_stats- update peer telemetry stats
+ * @peer : Datapath peer
+ */
+static inline
+void dp_peer_update_telemetry_stats(struct dp_peer *peer)
+{
+	struct dp_pdev *pdev;
+	struct dp_vdev *vdev;
+	struct dp_mon_peer *mon_peer = NULL;
+	uint8_t idx;
+
+	vdev = peer->vdev;
+	if (!vdev)
+		return;
+
+	pdev = vdev->pdev;
+	if (!pdev)
+		return;
+
+	mon_peer = peer->monitor_peer;
+	if (qdf_likely(mon_peer)) {
+		DP_STATS_INC(pdev, telemetry_stats.tx_mpdu_failed,
+			     mon_peer->stats.tx.retries);
+		DP_STATS_INC(pdev, telemetry_stats.tx_mpdu_total,
+			     mon_peer->stats.tx.tx_mpdus_tried);
+		idx = mon_peer->stats.airtime_consumption.avg_consumption.idx;
+		mon_peer->stats.airtime_consumption.avg_consumption.avg_consumption_per_sec[idx] =
+				mon_peer->stats.airtime_consumption.consumption;
+		mon_peer->stats.airtime_consumption.consumption = 0;
+		mon_peer->stats.airtime_consumption.avg_consumption.idx++;
+		if (idx == MAX_CONSUMPTION_TIME)
+			mon_peer->stats.airtime_consumption.avg_consumption.idx = 0;
+	}
+}
+#else
+static inline
+void dp_peer_update_telemetry_stats(struct dp_peer *peer)
+{ }
+#endif
+
 /*dp_peer_cal_clients_stats_update - update peer stats on cal client timer
  * @soc : Datapath SOC
  * @peer : Datapath peer
@@ -2152,6 +2193,8 @@ dp_peer_cal_clients_stats_update(struct dp_soc *soc,
 	tgt_peer = dp_get_tgt_peer_from_peer(peer);
 	if (!tgt_peer || !(tgt_peer->txrx_peer))
 		return;
+
+	dp_peer_update_telemetry_stats(peer);
 
 	txrx_peer = tgt_peer->txrx_peer;
 	peer_stats_intf.to_stack = txrx_peer->to_stack;
@@ -4045,24 +4088,46 @@ static void dp_process_ppdu_tag(struct dp_pdev *pdev,
 	}
 }
 
-#ifdef WLAN_ATF_ENABLE
+#ifdef WLAN_TELEMETRY_STATS_SUPPORT
+static inline
+void dp_ppdu_desc_user_airtime_consumption_update(
+			struct dp_peer *peer,
+			struct cdp_tx_completion_ppdu_user *user)
+{
+	struct dp_mon_peer *mon_peer = NULL;
+
+	mon_peer = peer->monitor_peer;
+	if (qdf_unlikely(!mon_peer))
+		return;
+
+	DP_STATS_INC(mon_peer, airtime_consumption.consumption,
+		     user->phy_tx_time_us);
+}
+#else
+static inline
+void dp_ppdu_desc_user_airtime_consumption_update(
+			struct dp_peer *peer,
+			struct cdp_tx_completion_ppdu_user *user)
+{ }
+#endif
+#if defined(WLAN_ATF_ENABLE) || defined(WLAN_TELEMETRY_STATS_SUPPORT)
 static void
 dp_ppdu_desc_user_phy_tx_time_update(struct dp_pdev *pdev,
+				     struct dp_peer *peer,
 				     struct cdp_tx_completion_ppdu *ppdu_desc,
 				     struct cdp_tx_completion_ppdu_user *user)
 {
 	uint32_t nss_ru_width_sum = 0;
-	struct dp_mon_pdev *mon_pdev = NULL;
+	struct dp_mon_peer *mon_peer = NULL;
 
-	if (!pdev || !ppdu_desc || !user)
-		return;
-
-	mon_pdev = pdev->monitor_pdev;
-
-	if (!mon_pdev || !mon_pdev->dp_atf_stats_enable)
+	if (!pdev || !ppdu_desc || !user || !peer)
 		return;
 
 	if (ppdu_desc->frame_type != CDP_PPDU_FTYPE_DATA)
+		return;
+
+	mon_peer = peer->monitor_peer;
+	if (qdf_unlikely(!mon_peer))
 		return;
 
 	nss_ru_width_sum = ppdu_desc->usr_nss_sum * ppdu_desc->usr_ru_tones_sum;
@@ -4084,10 +4149,13 @@ dp_ppdu_desc_user_phy_tx_time_update(struct dp_pdev *pdev,
 		user->phy_tx_time_us = (ppdu_desc->phy_ppdu_tx_time_us *
 				user->nss * user->ru_tones) / nss_ru_width_sum;
 	}
+
+	dp_ppdu_desc_user_airtime_consumption_update(peer, user);
 }
 #else
 static void
 dp_ppdu_desc_user_phy_tx_time_update(struct dp_pdev *pdev,
+				     struct dp_peer *peer,
 				     struct cdp_tx_completion_ppdu *ppdu_desc,
 				     struct cdp_tx_completion_ppdu_user *user)
 {
@@ -4191,7 +4259,7 @@ dp_ppdu_desc_user_stats_update(struct dp_pdev *pdev,
 					   ppdu_desc->ack_rssi);
 		}
 
-		dp_ppdu_desc_user_phy_tx_time_update(pdev, ppdu_desc,
+		dp_ppdu_desc_user_phy_tx_time_update(pdev, peer, ppdu_desc,
 						     &ppdu_desc->user[i]);
 
 		dp_peer_unref_delete(peer, DP_MOD_ID_TX_PPDU_STATS);

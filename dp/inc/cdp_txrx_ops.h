@@ -1170,6 +1170,18 @@ struct cdp_host_stats_ops {
 	QDF_STATUS
 	(*txrx_get_pdev_tid_stats)(struct cdp_soc_t *soc, uint8_t pdev_id,
 				   struct cdp_tid_stats_intf *tid_stats);
+#ifdef WLAN_TELEMETRY_STATS_SUPPORT
+	QDF_STATUS
+		(*txrx_pdev_telemetry_stats)(
+				struct cdp_soc_t *soc,
+				uint8_t pdev_id,
+				struct cdp_pdev_telemetry_stats *stats);
+	QDF_STATUS
+		(*txrx_peer_telemetry_stats)(
+				struct cdp_soc_t *soc,
+				uint8_t *addr,
+				struct cdp_peer_telemetry_stats *stats);
+#endif
 };
 
 struct cdp_wds_ops {

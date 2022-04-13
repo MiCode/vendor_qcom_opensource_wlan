@@ -2628,6 +2628,36 @@ struct cdp_soc_stats {
 	} mec;
 };
 
+#ifdef WLAN_TELEMETRY_STATS_SUPPORT
+/**
+ * struct cdp_pdev_telemetry_stats- Structure to hold pdev telemetry stats
+ * @tx_mpdu_failed: Tx mpdu failed
+ * @tx_mpdu_total: Total tx mpdus
+ */
+struct cdp_pdev_telemetry_stats {
+	uint32_t tx_mpdu_failed;
+	uint32_t tx_mpdu_total;
+};
+
+/**
+ * struct cdp_peer_telemetry_stats- Structure to hold peer telemetry stats
+ * @tx_mpdu_retried: Tx mpdus retried
+ * @tx_mpdu_total: Total tx mpdus
+ * @rx_mpdu_retried: Rx mpdus retried
+ * @rx_mpdu_total: Total rx mpdus
+ * @airtime_consumption: airtime consumption of that peer
+ * @snr: peer average snr
+ */
+struct cdp_peer_telemetry_stats {
+	uint32_t tx_mpdu_retried;
+	uint32_t tx_mpdu_total;
+	uint32_t rx_mpdu_retried;
+	uint32_t rx_mpdu_total;
+	uint8_t airtime_consumption;
+	uint8_t snr;
+};
+#endif
+
 /* struct cdp_pdev_stats - pdev stats
  * @msdu_not_done: packets dropped because msdu done bit not set
  * @mec:Multicast Echo check
@@ -2670,6 +2700,7 @@ struct cdp_soc_stats {
  * @ppdu_drop: stats counter for ppdu_desc drop once threshold reached
  * @ppdu_wrap_drop: stats counter for ppdu desc drop on wrap around
  * @peer_unauth_rx_pkt_drop: stats counter for drops due to unauthorized peer
+ * @telemetry_stats: pdev telemetry stats
  */
 struct cdp_pdev_stats {
 	struct {
@@ -2753,6 +2784,9 @@ struct cdp_pdev_stats {
 	} rx_refill_buff_pool;
 
 	uint32_t peer_unauth_rx_pkt_drop;
+#ifdef WLAN_TELEMETRY_STATS_SUPPORT
+	struct cdp_pdev_telemetry_stats telemetry_stats;
+#endif
 };
 
 /* struct cdp_peer_hmwds_ast_add_status - hmwds peer ast add status
