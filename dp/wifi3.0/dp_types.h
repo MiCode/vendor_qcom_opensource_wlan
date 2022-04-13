@@ -55,6 +55,7 @@
 #ifndef REMOVE_PKT_LOG
 #include <pktlog.h>
 #endif
+#include <dp_umac_reset.h>
 
 //#include "dp_tx.h"
 
@@ -2361,6 +2362,10 @@ struct dp_soc {
 
 	unsigned long vdev_stats_id_map;
 	bool txmon_hw_support;
+
+#ifdef DP_UMAC_HW_RESET_SUPPORT
+	struct dp_soc_umac_reset_ctx umac_reset_ctx;
+#endif
 };
 
 #ifdef IPA_OFFLOAD
