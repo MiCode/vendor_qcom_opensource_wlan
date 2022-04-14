@@ -1414,6 +1414,20 @@ hal_rx_parse_eht_sig_hdr(struct hal_soc *hal_soc, uint8_t *tlv,
 	return HAL_TLV_STATUS_PPDU_NOT_DONE;
 }
 
+#ifdef WLAN_FEATURE_11BE
+static inline void
+hal_rx_parse_punctured_pattern(struct phyrx_common_user_info *cmn_usr_info,
+			       struct hal_rx_ppdu_info *ppdu_info)
+{
+	ppdu_info->rx_status.punctured_pattern = cmn_usr_info->puncture_bitmap;
+}
+#else
+static inline void
+hal_rx_parse_punctured_pattern(struct phyrx_common_user_info *cmn_usr_info,
+			       struct hal_rx_ppdu_info *ppdu_info)
+{
+}
+#endif
 static inline uint32_t
 hal_rx_parse_cmn_usr_info(struct hal_soc *hal_soc, uint8_t *tlv,
 			  struct hal_rx_ppdu_info *ppdu_info)
@@ -1432,7 +1446,8 @@ hal_rx_parse_cmn_usr_info(struct hal_soc *hal_soc, uint8_t *tlv,
 	ppdu_info->rx_status.eht_data[0] |= (cmn_usr_info->ltf_size <<
 					     QDF_MON_STATUS_EHT_LTF_SHIFT);
 	ppdu_info->rx_status.ltf_size = cmn_usr_info->ltf_size;
-	ppdu_info->rx_status.punctured_pattern = cmn_usr_info->puncture_bitmap;
+
+	hal_rx_parse_punctured_pattern(cmn_usr_info, ppdu_info);
 
 	return HAL_TLV_STATUS_PPDU_NOT_DONE;
 }
