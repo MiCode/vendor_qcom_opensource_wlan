@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2014-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -131,6 +131,14 @@ typedef __qdf_wait_queue_head_t qdf_wait_queue_head_t;
 #define QDF_SET_BITS(_var, _index, _num_bits, _val) do { \
 		(_var) &= ~(((1 << (_num_bits)) - 1) << (_index)); \
 		(_var) |= (((_val) & ((1 << (_num_bits)) - 1)) << (_index)); \
+		} while (0)
+
+#define QDF_SET_BITS64(_var, _tmp, _index, _num_bits, _val) do { \
+		(_var) = (((_var) & 0xffffffff00000000) >> 32); \
+		(_var) &= ~(((1 << (_num_bits)) - 1) << ((_index) - 32)); \
+		(_var) |= (((_val) & ((1 << (_num_bits)) - 1)) << ((_index) - 32)); \
+		(_var) = (((_var) & 0x00000000ffffffff) << 32); \
+		(_var) |= ((_tmp) & 0x00000000ffffffff); \
 		} while (0)
 
 /* Get number of bits from the index bit supporting 64 bits */
