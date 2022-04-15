@@ -1670,6 +1670,40 @@ static QDF_STATUS dp_peer_map_attach_be(struct dp_soc *soc)
 	return QDF_STATUS_SUCCESS;
 }
 
+#ifdef WLAN_FEATURE_11BE_MLO
+#ifdef WLAN_MCAST_MLO
+static inline void
+dp_initialize_arch_ops_be_mcast_mlo(struct dp_arch_ops *arch_ops)
+{
+	arch_ops->dp_tx_mcast_handler = dp_tx_mlo_mcast_handler_be;
+	arch_ops->dp_rx_mcast_handler = dp_rx_mlo_igmp_handler;
+}
+#else /* WLAN_MCAST_MLO */
+static inline void
+dp_initialize_arch_ops_be_mcast_mlo(struct dp_arch_ops *arch_ops)
+{
+}
+#endif /* WLAN_MCAST_MLO */
+
+static inline void
+dp_initialize_arch_ops_be_mlo(struct dp_arch_ops *arch_ops)
+{
+	dp_initialize_arch_ops_be_mcast_mlo(arch_ops);
+	arch_ops->mlo_peer_find_hash_detach =
+	dp_mlo_peer_find_hash_detach_wrapper;
+	arch_ops->mlo_peer_find_hash_attach =
+	dp_mlo_peer_find_hash_attach_wrapper;
+	arch_ops->mlo_peer_find_hash_add = dp_mlo_peer_find_hash_add_be;
+	arch_ops->mlo_peer_find_hash_remove = dp_mlo_peer_find_hash_remove_be;
+	arch_ops->mlo_peer_find_hash_find = dp_mlo_peer_find_hash_find_be;
+}
+#else /* WLAN_FEATURE_11BE_MLO */
+static inline void
+dp_initialize_arch_ops_be_mlo(struct dp_arch_ops *arch_ops)
+{
+}
+#endif /* WLAN_FEATURE_11BE_MLO */
+
 void dp_initialize_arch_ops_be(struct dp_arch_ops *arch_ops)
 {
 #ifndef QCA_HOST_MODE_WIFI_DISABLED
@@ -1714,20 +1748,7 @@ void dp_initialize_arch_ops_be(struct dp_arch_ops *arch_ops)
 	arch_ops->peer_get_reo_hash = dp_peer_get_reo_hash_be;
 	arch_ops->reo_remap_config = dp_reo_remap_config_be;
 	arch_ops->txrx_set_vdev_param = dp_txrx_set_vdev_param_be;
-
-#ifdef WLAN_FEATURE_11BE_MLO
-#ifdef WLAN_MCAST_MLO
-	arch_ops->dp_tx_mcast_handler = dp_tx_mlo_mcast_handler_be;
-	arch_ops->dp_rx_mcast_handler = dp_rx_mlo_igmp_handler;
-#endif
-	arch_ops->mlo_peer_find_hash_detach =
-		dp_mlo_peer_find_hash_detach_wrapper;
-	arch_ops->mlo_peer_find_hash_attach =
-		dp_mlo_peer_find_hash_attach_wrapper;
-	arch_ops->mlo_peer_find_hash_add = dp_mlo_peer_find_hash_add_be;
-	arch_ops->mlo_peer_find_hash_remove = dp_mlo_peer_find_hash_remove_be;
-	arch_ops->mlo_peer_find_hash_find = dp_mlo_peer_find_hash_find_be;
-#endif
+	dp_initialize_arch_ops_be_mlo(arch_ops);
 	arch_ops->dp_peer_rx_reorder_queue_setup =
 					dp_peer_rx_reorder_queue_setup_be;
 	arch_ops->txrx_print_peer_stats = dp_print_peer_txrx_stats_be;

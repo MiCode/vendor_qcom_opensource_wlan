@@ -3582,6 +3582,45 @@ int dp_tx_proxy_arp(struct dp_vdev *vdev, qdf_nbuf_t nbuf)
 }
 #endif
 
+#if defined(WLAN_FEATURE_11BE_MLO) && defined(WLAN_MLO_MULTI_CHIP)
+#ifdef WLAN_MCAST_MLO
+static bool
+dp_tx_reinject_mlo_hdl(struct dp_soc *soc, struct dp_vdev *vdev,
+		       struct dp_tx_desc_s *tx_desc,
+		       qdf_nbuf_t nbuf,
+		       uint8_t reinject_reason)
+{
+	if (reinject_reason == HTT_TX_FW2WBM_REINJECT_REASON_MLO_MCAST) {
+		if (soc->arch_ops.dp_tx_mcast_handler)
+			soc->arch_ops.dp_tx_mcast_handler(soc, vdev, nbuf);
+
+		dp_tx_desc_release(tx_desc, tx_desc->pool_id);
+		return true;
+	}
+
+	return false;
+}
+#else /* WLAN_MCAST_MLO */
+static inline bool
+dp_tx_reinject_mlo_hdl(struct dp_soc *soc, struct dp_vdev *vdev,
+		       struct dp_tx_desc_s *tx_desc,
+		       qdf_nbuf_t nbuf,
+		       uint8_t reinject_reason)
+{
+	return false;
+}
+#endif /* WLAN_MCAST_MLO */
+#else
+static inline bool
+dp_tx_reinject_mlo_hdl(struct dp_soc *soc, struct dp_vdev *vdev,
+		       struct dp_tx_desc_s *tx_desc,
+		       qdf_nbuf_t nbuf,
+		       uint8_t reinject_reason)
+{
+	return false;
+}
+#endif
+
 /**
  * dp_tx_reinject_handler() - Tx Reinject Handler
  * @soc: datapath soc handle
@@ -3621,17 +3660,8 @@ void dp_tx_reinject_handler(struct dp_soc *soc,
 	DP_STATS_INC_PKT(vdev, tx_i.reinject_pkts, 1,
 			qdf_nbuf_len(tx_desc->nbuf));
 
-#if defined(WLAN_FEATURE_11BE_MLO) && defined(WLAN_MLO_MULTI_CHIP)
-#ifdef WLAN_MCAST_MLO
-	if (reinject_reason == HTT_TX_FW2WBM_REINJECT_REASON_MLO_MCAST) {
-		if (soc->arch_ops.dp_tx_mcast_handler)
-			soc->arch_ops.dp_tx_mcast_handler(soc, vdev, nbuf);
-
-		dp_tx_desc_release(tx_desc, tx_desc->pool_id);
+	if (dp_tx_reinject_mlo_hdl(soc, vdev, tx_desc, nbuf, reinject_reason))
 		return;
-	}
-#endif
-#endif
 
 #ifdef WDS_VENDOR_EXTENSION
 	if (qdf_unlikely(vdev->tx_encap_type != htt_cmn_pkt_type_raw)) {

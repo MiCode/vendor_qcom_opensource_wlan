@@ -17869,6 +17869,24 @@ struct wmi_ops tlv_ops =  {
 		extract_pktlog_decode_info_event_tlv,
 };
 
+#ifdef WLAN_FEATURE_11BE_MLO
+static void populate_tlv_events_id_mlo(uint32_t *event_ids)
+{
+	event_ids[wmi_mlo_setup_complete_event_id] =
+			WMI_MLO_SETUP_COMPLETE_EVENTID;
+	event_ids[wmi_mlo_teardown_complete_event_id] =
+			WMI_MLO_TEARDOWN_COMPLETE_EVENTID;
+	event_ids[wmi_mlo_link_set_active_resp_eventid] =
+			WMI_MLO_LINK_SET_ACTIVE_RESP_EVENTID;
+	event_ids[wmi_vdev_quiet_offload_eventid] =
+			WMI_QUIET_HANDLING_EVENTID;
+}
+#else /* WLAN_FEATURE_11BE_MLO */
+static inline void populate_tlv_events_id_mlo(uint32_t *event_ids)
+{
+}
+#endif /* WLAN_FEATURE_11BE_MLO */
+
 /**
  * populate_tlv_event_id() - populates wmi event ids
  *
@@ -18261,7 +18279,7 @@ static void populate_tlv_events_id(uint32_t *event_ids)
 	event_ids[wmi_wlan_time_sync_q_initiator_target_offset_eventid] =
 			WMI_VDEV_AUDIO_SYNC_Q_MASTER_SLAVE_OFFSET_EVENTID;
 #endif
-event_ids[wmi_roam_scan_chan_list_id] =
+	event_ids[wmi_roam_scan_chan_list_id] =
 			WMI_ROAM_SCAN_CHANNEL_LIST_EVENTID;
 	event_ids[wmi_muedca_params_config_eventid] =
 			WMI_MUEDCA_PARAMS_CONFIG_EVENTID;
@@ -18295,23 +18313,12 @@ event_ids[wmi_roam_scan_chan_list_id] =
 	event_ids[wmi_mgmt_rx_fw_consumed_eventid] =
 			WMI_MGMT_RX_FW_CONSUMED_EVENTID;
 #endif
-#ifdef WLAN_FEATURE_11BE_MLO
-	event_ids[wmi_mlo_setup_complete_event_id] =
-			WMI_MLO_SETUP_COMPLETE_EVENTID;
-	event_ids[wmi_mlo_teardown_complete_event_id] =
-			WMI_MLO_TEARDOWN_COMPLETE_EVENTID;
-	event_ids[wmi_mlo_link_set_active_resp_eventid] =
-			WMI_MLO_LINK_SET_ACTIVE_RESP_EVENTID;
-#endif
+	populate_tlv_events_id_mlo(event_ids);
 	event_ids[wmi_roam_frame_event_id] =
 				WMI_ROAM_FRAME_EVENTID;
 #ifdef WLAN_FEATURE_DYNAMIC_MAC_ADDR_UPDATE
 	event_ids[wmi_vdev_update_mac_addr_conf_eventid] =
 			WMI_VDEV_UPDATE_MAC_ADDR_CONF_EVENTID;
-#endif
-#ifdef WLAN_FEATURE_11BE_MLO
-	event_ids[wmi_vdev_quiet_offload_eventid] =
-			WMI_QUIET_HANDLING_EVENTID;
 #endif
 #ifdef WLAN_FEATURE_MCC_QUOTA
 	event_ids[wmi_resmgr_chan_time_quota_changed_eventid] =
@@ -18344,6 +18351,18 @@ static void wmi_populate_service_get_sta_in_ll_stats_req(uint32_t *wmi_service)
 {
 }
 #endif /* WLAN_FEATURE_LINK_LAYER_STATS */
+
+#ifdef WLAN_FEATURE_11BE_MLO
+static void populate_tlv_service_mlo(uint32_t *wmi_service)
+{
+	wmi_service[wmi_service_mlo_sta_nan_ndi_support] =
+			WMI_SERVICE_MLO_STA_NAN_NDI_SUPPORT;
+}
+#else /* WLAN_FEATURE_11BE_MLO */
+static inline void populate_tlv_service_mlo(uint32_t *wmi_service)
+{
+}
+#endif /* WLAN_FEATURE_11BE_MLO */
 
 /**
  * populate_tlv_service() - populates wmi services
@@ -18786,10 +18805,7 @@ static void populate_tlv_service(uint32_t *wmi_service)
 	wmi_service[wmi_service_fp_phy_err_filter_support] =
 			WMI_SERVICE_FP_PHY_ERR_FILTER_SUPPORT;
 #endif
-#ifdef WLAN_FEATURE_11BE_MLO
-	wmi_service[wmi_service_mlo_sta_nan_ndi_support] =
-			WMI_SERVICE_MLO_STA_NAN_NDI_SUPPORT;
-#endif
+	populate_tlv_service_mlo(wmi_service);
 	wmi_service[wmi_service_pdev_rate_config_support] =
 			WMI_SERVICE_PDEV_RATE_CONFIG_SUPPORT;
 	wmi_service[wmi_service_multi_peer_group_cmd_support] =
