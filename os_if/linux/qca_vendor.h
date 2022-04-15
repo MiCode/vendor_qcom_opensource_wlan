@@ -8998,6 +8998,18 @@ enum qca_wlan_vendor_attr_wifi_test_config {
 	 */
 	QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_BCAST_TWT_SUPPORT = 57,
 
+	/* 8-bit unsigned value to configure the driver/firmware to allow eMLSR
+	 * mode for 802.11be MLO capable devices. If the attribute is set to 1,
+	 * and if the FW supports this capability too, then the STA host
+	 * advertises this capability to AP over assoc request frame. This
+	 * attribute will not have any effect on legacy devices with no 802.11be
+	 * support.
+	 * 0 - Default behavior
+	 * 1 - Enable eMLSR (Enhanced Multi-link Single-Radio) mode
+	 * This attribute is used to configure the testbed device.
+	 */
+	QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_11BE_EMLSR_MODE = 58,
+
 	/* keep last */
 	QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_AFTER_LAST,
 	QCA_WLAN_VENDOR_ATTR_WIFI_TEST_CONFIG_MAX =
