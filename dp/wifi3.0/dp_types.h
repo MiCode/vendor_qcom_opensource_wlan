@@ -1934,6 +1934,13 @@ struct dp_arch_ops {
 	struct dp_peer *(*dp_find_peer_by_destmac)(struct dp_soc *soc,
 						   uint8_t *dest_mac_addr,
 						   uint8_t vdev_id);
+	void (*dp_bank_reconfig)(struct dp_soc *soc, struct dp_vdev *vdev);
+
+	void (*dp_reconfig_tx_vdev_mcast_ctrl)(struct dp_soc *soc,
+					       struct dp_vdev *vdev);
+
+	void (*dp_cc_reg_cfg_init)(struct dp_soc *soc, bool is_4k_align);
+
 	QDF_STATUS
 	(*dp_tx_compute_hw_delay)(struct dp_soc *soc,
 				  struct dp_vdev *vdev,

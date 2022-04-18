@@ -13046,6 +13046,61 @@ void dp_register_notify_umac_pre_reset_fw_callback(struct dp_soc *soc)
 	soc->notify_fw_callback = dp_check_n_notify_umac_prereset_done;
 }
 
+#ifdef DP_UMAC_HW_HARD_RESET
+/**
+ * dp_set_umac_regs(): Reinitialize host umac registers
+ * @soc: dp soc handle
+ *
+ * Return: void
+ */
+static void dp_set_umac_regs(struct dp_soc *soc)
+{
+	int i;
+	struct hal_reo_params reo_params;
+
+	qdf_mem_zero(&reo_params, sizeof(reo_params));
+
+	if (wlan_cfg_is_rx_hash_enabled(soc->wlan_cfg_ctx)) {
+		if (dp_reo_remap_config(soc, &reo_params.remap0,
+					&reo_params.remap1,
+					&reo_params.remap2))
+
+			reo_params.rx_hash_enabled = true;
+		else
+			reo_params.rx_hash_enabled = false;
+	}
+
+	hal_reo_setup(soc->hal_soc, &reo_params, 0);
+
+	soc->arch_ops.dp_cc_reg_cfg_init(soc, true);
+
+	for (i = 0; i < PCP_TID_MAP_MAX; i++)
+		hal_tx_update_pcp_tid_map(soc->hal_soc, soc->pcp_tid_map[i], i);
+
+	for (i = 0; i < MAX_PDEV_CNT; i++) {
+		struct dp_vdev *vdev = NULL;
+		struct dp_pdev *pdev = soc->pdev_list[i];
+
+		if (!pdev)
+			continue;
+
+		for (i = 0; i < soc->num_hw_dscp_tid_map; i++)
+			hal_tx_set_dscp_tid_map(soc->hal_soc,
+						pdev->dscp_tid_map[i], i);
+
+		TAILQ_FOREACH(vdev, &pdev->vdev_list, vdev_list_elem) {
+			soc->arch_ops.dp_bank_reconfig(soc, vdev);
+			soc->arch_ops.dp_reconfig_tx_vdev_mcast_ctrl(soc,
+								      vdev);
+		}
+	}
+}
+#else
+static void dp_set_umac_regs(struct dp_soc *soc)
+{
+}
+#endif
+
 /**
  * dp_reinit_rings(): Reinitialize host managed rings
  * @soc: dp soc handle
@@ -13100,6 +13155,8 @@ static QDF_STATUS dp_umac_reset_handle_pre_reset(struct dp_soc *soc)
 static QDF_STATUS dp_umac_reset_handle_post_reset(struct dp_soc *soc)
 {
 	qdf_nbuf_t *nbuf_list = &soc->umac_reset_ctx.nbuf_list;
+
+	dp_set_umac_regs(soc);
 
 	dp_reinit_rings(soc);
 

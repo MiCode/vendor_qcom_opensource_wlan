@@ -1590,6 +1590,62 @@ void dp_print_mlo_ast_stats_be(struct dp_soc *soc)
 
 #endif
 
+#if defined(DP_UMAC_HW_HARD_RESET) && defined(DP_UMAC_HW_RESET_SUPPORT)
+static void dp_reconfig_tx_vdev_mcast_ctrl_be(struct dp_soc *soc,
+					      struct dp_vdev *vdev)
+{
+	struct dp_soc_be *be_soc = dp_get_be_soc_from_dp_soc(soc);
+	struct dp_vdev_be *be_vdev = dp_get_be_vdev_from_dp_vdev(vdev);
+	hal_soc_handle_t hal_soc = soc->hal_soc;
+	uint8_t vdev_id = vdev->vdev_id;
+
+	if (vdev->opmode == wlan_op_mode_sta) {
+		if (vdev->pdev->isolation)
+			hal_tx_vdev_mcast_ctrl_set(hal_soc, vdev_id,
+						HAL_TX_MCAST_CTRL_FW_EXCEPTION);
+		else
+			hal_tx_vdev_mcast_ctrl_set(hal_soc, vdev_id,
+						HAL_TX_MCAST_CTRL_MEC_NOTIFY);
+	} else if (vdev->opmode == wlan_op_mode_ap) {
+		if (vdev->mlo_vdev) {
+			if (be_vdev->mcast_primary) {
+				hal_tx_vdev_mcast_ctrl_set(hal_soc, vdev_id,
+					   HAL_TX_MCAST_CTRL_NO_SPECIAL);
+				hal_tx_vdev_mcast_ctrl_set(hal_soc,
+						vdev_id + 128,
+						HAL_TX_MCAST_CTRL_FW_EXCEPTION);
+				dp_mcast_mlo_iter_ptnr_soc(be_soc,
+					dp_tx_mcast_mlo_reinject_routing_set,
+					(void *)&be_vdev->mcast_primary);
+			} else {
+				hal_tx_vdev_mcast_ctrl_set(hal_soc, vdev_id,
+							HAL_TX_MCAST_CTRL_DROP);
+			}
+		} else {
+			hal_tx_vdev_mcast_ctrl_set(vdev->pdev->soc->hal_soc,
+						   vdev_id,
+						   HAL_TX_MCAST_CTRL_FW_EXCEPTION);
+		}
+	}
+}
+
+static void dp_bank_reconfig_be(struct dp_soc *soc, struct dp_vdev *vdev)
+{
+	struct dp_soc_be *be_soc = dp_get_be_soc_from_dp_soc(soc);
+	struct dp_vdev_be *be_vdev = dp_get_be_vdev_from_dp_vdev(vdev);
+	union hal_tx_bank_config *bank_config;
+
+	if (!be_vdev || be_vdev->bank_id == DP_BE_INVALID_BANK_ID)
+		return;
+
+	bank_config = &be_soc->bank_profiles[be_vdev->bank_id].bank_config;
+
+	hal_tx_populate_bank_register(be_soc->soc.hal_soc, bank_config,
+				      be_vdev->bank_id);
+}
+
+#endif
+
 #if defined(WLAN_FEATURE_11BE_MLO) && defined(WLAN_MLO_MULTI_CHIP) && \
 	defined(WLAN_MCAST_MLO)
 static void dp_txrx_set_mlo_mcast_primary_vdev_param_be(
@@ -1844,6 +1900,12 @@ void dp_initialize_arch_ops_be(struct dp_arch_ops *arch_ops)
 					dp_peer_rx_reorder_queue_setup_be;
 	arch_ops->txrx_print_peer_stats = dp_print_peer_txrx_stats_be;
 	arch_ops->dp_find_peer_by_destmac = dp_find_peer_by_destmac_be;
+#if defined(DP_UMAC_HW_HARD_RESET) && defined(DP_UMAC_HW_RESET_SUPPORT)
+	arch_ops->dp_bank_reconfig = dp_bank_reconfig_be;
+	arch_ops->dp_reconfig_tx_vdev_mcast_ctrl =
+					dp_reconfig_tx_vdev_mcast_ctrl_be;
+	arch_ops->dp_cc_reg_cfg_init = dp_cc_reg_cfg_init;
+#endif
 	dp_init_near_full_arch_ops_be(arch_ops);
 	arch_ops->get_rx_hash_key = dp_get_rx_hash_key_be;
 	arch_ops->print_mlo_ast_stats = dp_print_mlo_ast_stats_be;
