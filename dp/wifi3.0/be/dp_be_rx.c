@@ -1087,17 +1087,25 @@ struct dp_rx_desc *dp_rx_desc_cookie_2_va_be(struct dp_soc *soc,
 
 #if defined(WLAN_FEATURE_11BE_MLO)
 #if defined(WLAN_MLO_MULTI_CHIP) && defined(WLAN_MCAST_MLO)
-static inline void dp_rx_dummy_src_mac(qdf_nbuf_t nbuf)
+#define DP_RANDOM_MAC_ID_BIT_MASK	0xC0
+#define DP_RANDOM_MAC_OFFSET	1
+#define DP_MAC_LOCAL_ADMBIT_MASK	0x2
+#define DP_MAC_LOCAL_ADMBIT_OFFSET	0
+static inline void dp_rx_dummy_src_mac(struct dp_vdev *vdev,
+				       qdf_nbuf_t nbuf)
 {
+	uint8_t random_mac[QDF_MAC_ADDR_SIZE] = {0};
 	qdf_ether_header_t *eh =
 			(qdf_ether_header_t *)qdf_nbuf_data(nbuf);
 
-	eh->ether_shost[0] = 0x4d;	/* M */
-	eh->ether_shost[1] = 0x4c;	/* L */
-	eh->ether_shost[2] = 0x4d;	/* M */
-	eh->ether_shost[3] = 0x43;	/* C */
-	eh->ether_shost[4] = 0x41;	/* A */
-	eh->ether_shost[5] = 0x53;	/* S */
+	qdf_mem_copy(random_mac, &vdev->mld_mac_addr.raw[0], QDF_MAC_ADDR_SIZE);
+	random_mac[DP_MAC_LOCAL_ADMBIT_OFFSET] =
+					random_mac[DP_MAC_LOCAL_ADMBIT_OFFSET] |
+					DP_MAC_LOCAL_ADMBIT_MASK;
+	random_mac[DP_RANDOM_MAC_OFFSET] =
+		random_mac[DP_RANDOM_MAC_OFFSET] ^ DP_RANDOM_MAC_ID_BIT_MASK;
+
+	qdf_mem_copy(&eh->ether_shost[0], random_mac,  QDF_MAC_ADDR_SIZE);
 }
 
 #ifdef QCA_SUPPORT_WDS_EXTENDED
@@ -1145,7 +1153,7 @@ bool dp_rx_mlo_igmp_handler(struct dp_soc *soc,
 		dp_rx_debug("Non mlo vdev");
 		goto send_pkt;
 	}
-	dp_rx_dummy_src_mac(nbuf);
+	dp_rx_dummy_src_mac(vdev, nbuf);
 	dp_rx_deliver_to_stack(mcast_primary_vdev->pdev->soc,
 			       mcast_primary_vdev,
 			       peer,
