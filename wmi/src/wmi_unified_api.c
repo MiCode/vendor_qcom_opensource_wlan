@@ -162,11 +162,12 @@ wmi_unified_peer_flush_tids_send(wmi_unified_t wmi_handle,
 
 QDF_STATUS wmi_unified_peer_delete_send(wmi_unified_t wmi_handle,
 					uint8_t peer_addr[QDF_MAC_ADDR_SIZE],
-					uint8_t vdev_id)
+					struct peer_delete_cmd_params *param)
 {
 	if (wmi_handle->ops->send_peer_delete_cmd)
-		return wmi_handle->ops->send_peer_delete_cmd(wmi_handle,
-				  peer_addr, vdev_id);
+		return wmi_handle->ops->send_peer_delete_cmd(
+				wmi_handle,
+				peer_addr, param);
 
 	return QDF_STATUS_E_FAILURE;
 }

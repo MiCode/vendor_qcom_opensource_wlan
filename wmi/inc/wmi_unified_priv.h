@@ -494,8 +494,8 @@ QDF_STATUS (*send_peer_flush_tids_cmd)(wmi_unified_t wmi,
 					 struct peer_flush_params *param);
 
 QDF_STATUS (*send_peer_delete_cmd)(wmi_unified_t wmi,
-				    uint8_t peer_addr[QDF_MAC_ADDR_SIZE],
-				    uint8_t vdev_id);
+				   uint8_t peer_addr[QDF_MAC_ADDR_SIZE],
+				   struct peer_delete_cmd_params *param);
 
 QDF_STATUS (*send_peer_delete_all_cmd)(
 				wmi_unified_t wmi,

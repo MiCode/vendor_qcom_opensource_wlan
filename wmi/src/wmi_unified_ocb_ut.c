@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2018-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -379,7 +380,7 @@ static QDF_STATUS fake_peer_create_cmd_tlv(wmi_unified_t wmi,
  */
 static QDF_STATUS fake_peer_delete_cmd_tlv(wmi_unified_t wmi,
 				 uint8_t peer_addr[QDF_MAC_ADDR_SIZE],
-				 uint8_t vdev_id)
+				 struct peer_delete_cmd_params *param)
 {
 	wmi_debug("called");
 	return QDF_STATUS_SUCCESS;

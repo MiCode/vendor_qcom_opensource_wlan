@@ -251,6 +251,36 @@ uint8_t *peer_assoc_add_ml_partner_links(uint8_t *buf_ptr,
 		sizeof(wmi_peer_assoc_mlo_partner_link_params));
 }
 
+size_t peer_delete_mlo_params_size(struct peer_delete_cmd_params *req)
+{
+	if (!req->hw_link_id_bitmap)
+		return WMI_TLV_HDR_SIZE;
+
+	return sizeof(wmi_peer_delete_mlo_params) + WMI_TLV_HDR_SIZE;
+}
+
+uint8_t *peer_delete_add_mlo_params(uint8_t *buf_ptr,
+				    struct peer_delete_cmd_params *req)
+{
+	wmi_peer_delete_mlo_params *mlo_params;
+
+	if (!req->hw_link_id_bitmap) {
+		WMITLV_SET_HDR(buf_ptr, WMITLV_TAG_ARRAY_STRUC, 0);
+		return buf_ptr + WMI_TLV_HDR_SIZE;
+	}
+
+	WMITLV_SET_HDR(buf_ptr, WMITLV_TAG_ARRAY_STRUC,
+		       sizeof(wmi_peer_delete_mlo_params));
+	buf_ptr += sizeof(uint32_t);
+
+	mlo_params = (wmi_peer_delete_mlo_params *)buf_ptr;
+	WMITLV_SET_HDR(&mlo_params->tlv_header,
+		       WMITLV_TAG_STRUC_wmi_peer_delete_mlo_params,
+		       WMITLV_GET_STRUCT_TLVLEN(wmi_peer_delete_mlo_params));
+	mlo_params->mlo_hw_link_id_bitmap = req->hw_link_id_bitmap;
+	return buf_ptr + sizeof(wmi_peer_delete_mlo_params);
+}
+
 /**
  * force_mode_host_to_fw() - translate force mode for MLO link set active
  *  command

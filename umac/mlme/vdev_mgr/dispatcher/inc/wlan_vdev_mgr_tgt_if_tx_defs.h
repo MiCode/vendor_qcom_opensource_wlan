@@ -423,6 +423,17 @@ struct peer_flush_params {
 	uint8_t peer_mac[QDF_MAC_ADDR_SIZE];
 };
 
+/**
+ * struct peer_delete_params - peer delete cmd parameter
+ * @vdev_id: vdev id
+ * @mlo_logical_link_id_bitmap: logical link id bitmap for peers
+ * not getting created
+ */
+struct peer_delete_cmd_params {
+	uint8_t vdev_id;
+	uint32_t hw_link_id_bitmap;
+};
+
 /* Default FILS DISCOVERY/probe response sent in period of 20TU */
 #define DEFAULT_FILS_DISCOVERY_PERIOD 20
 #define DEFAULT_PROBE_RESP_PERIOD 20
