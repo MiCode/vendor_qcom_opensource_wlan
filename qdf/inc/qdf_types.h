@@ -281,6 +281,10 @@ enum qdf_driver_type {
 	QDF_DRIVER_TYPE_INVALID = 0x7FFFFFFF
 };
 
+#ifdef DP_UMAC_HW_RESET_SUPPORT
+typedef void (*qdf_mem_release_cb) (void *ctxt, void *elem, void *elem_list);
+#endif
+
 /* work queue(kernel thread)/DPC function callback */
 typedef void (*qdf_defer_fn_t)(void *);
 

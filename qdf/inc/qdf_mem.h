@@ -1053,6 +1053,25 @@ qdf_mem_set_dma_pa(qdf_device_t osdev,
  */
 qdf_shared_mem_t *qdf_mem_shared_mem_alloc(qdf_device_t osdev, uint32_t size);
 
+#ifdef DP_UMAC_HW_RESET_SUPPORT
+/**
+ * qdf_tx_desc_pool_free_bufs() - Go through elems and call the registered  cb
+ * @ctxt: Context to be passed to the cb
+ * @pages: Multi page information storage
+ * @elem_size: Each element size
+ * @elem_count: Total number of elements should be allocated
+ * @cacheable: Coherent memory or cacheable memory
+ * @cb: Callback to free the elements
+ * @elem_list: elem list for delayed free
+ *
+ * Return: 0 on Succscc, or Error code
+ */
+int qdf_tx_desc_pool_free_bufs(void *ctxt, struct qdf_mem_multi_page_t *pages,
+			       uint32_t elem_size, uint32_t elem_count,
+			       uint8_t cacheable, qdf_mem_release_cb cb,
+			       void *elem_list);
+#endif
+
 /**
  * qdf_mem_shared_mem_free() - Free shared memory
  * @osdev: parent device instance
