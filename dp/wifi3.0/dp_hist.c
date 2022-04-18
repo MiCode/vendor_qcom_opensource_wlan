@@ -160,8 +160,7 @@ void dp_hist_update_stats(struct cdp_hist_stats *hist_stats, int value)
 	if (qdf_unlikely(!hist_stats->avg))
 		hist_stats->avg = value;
 	else
-		hist_stats->avg = hist_stats->avg +
-			((value - hist_stats->avg) >> HIST_AVG_WEIGHT_DENOM);
+		hist_stats->avg = (hist_stats->avg + value) / 2;
 }
 
 /*
@@ -194,14 +193,26 @@ void dp_copy_hist_stats(struct cdp_hist_stats *src_hist_stats,
 void dp_accumulate_hist_stats(struct cdp_hist_stats *src_hist_stats,
 			      struct cdp_hist_stats *dst_hist_stats)
 {
-	uint8_t index;
+	uint8_t index, hist_stats_valid = 0;
 
-	for (index = 0; index < CDP_HIST_BUCKET_MAX; index++)
+	for (index = 0; index < CDP_HIST_BUCKET_MAX; index++) {
 		dst_hist_stats->hist.freq[index] +=
 			src_hist_stats->hist.freq[index];
-	dst_hist_stats->min = QDF_MIN(src_hist_stats->min, dst_hist_stats->min);
-	dst_hist_stats->max = QDF_MAX(src_hist_stats->max, dst_hist_stats->max);
-	dst_hist_stats->avg = (src_hist_stats->avg + dst_hist_stats->avg) >> 1;
+		if (src_hist_stats->hist.freq[index])
+			hist_stats_valid = 1;
+	}
+	/*
+	 * If at least one hist-bucket has non-zero count,
+	 * proceed with the detailed calculation.
+	 */
+	if (hist_stats_valid) {
+		dst_hist_stats->min = QDF_MIN(src_hist_stats->min,
+					      dst_hist_stats->min);
+		dst_hist_stats->max = QDF_MAX(src_hist_stats->max,
+					      dst_hist_stats->max);
+		dst_hist_stats->avg = (src_hist_stats->avg +
+				       dst_hist_stats->avg) >> 1;
+	}
 }
 
 /*
