@@ -1117,6 +1117,32 @@ int dp_rx_err_match_dhost(qdf_ether_header_t *eh, struct dp_vdev *vdev)
 #ifndef QCA_HOST_MODE_WIFI_DISABLED
 
 /**
+ * dp_rx_err_drop_3addr_mcast() - Check if feature drop_3ddr_mcast is enabled
+ *				  If so, drop the multicast frame.
+ * @vdev: datapath vdev
+ * @rx_tlv_hdr: TLV header
+ *
+ * Return: true if packet is to be dropped,
+ *	false, if packet is not dropped.
+ */
+static bool
+dp_rx_err_drop_3addr_mcast(struct dp_vdev *vdev, uint8_t *rx_tlv_hdr)
+{
+	struct dp_soc *soc = vdev->pdev->soc;
+
+	if (!vdev->drop_3addr_mcast)
+		return false;
+
+	if (vdev->opmode != wlan_op_mode_sta)
+		return false;
+
+	if (hal_rx_msdu_end_da_is_mcbc_get(soc->hal_soc, rx_tlv_hdr))
+		return true;
+
+	return false;
+}
+
+/**
  * dp_rx_err_is_pn_check_needed() - Check if the packet number check is needed
  *				for this frame received in REO error ring.
  * @soc: Datapath SOC handle
@@ -1277,6 +1303,11 @@ dp_rx_null_q_desc_handle(struct dp_soc *soc, qdf_nbuf_t nbuf,
 
 	dp_vdev_peer_stats_update_protocol_cnt(vdev, nbuf, NULL, 0, 1);
 
+	if (dp_rx_err_drop_3addr_mcast(vdev, rx_tlv_hdr)) {
+		DP_PEER_PER_PKT_STATS_INC(txrx_peer, rx.mcast_3addr_drop, 1);
+		goto drop_nbuf;
+	}
+
 	if (hal_rx_msdu_end_sa_is_valid_get(soc->hal_soc, rx_tlv_hdr)) {
 		sa_idx = hal_rx_msdu_end_sa_idx_get(soc->hal_soc, rx_tlv_hdr);
 
@@ -1305,7 +1336,6 @@ dp_rx_null_q_desc_handle(struct dp_soc *soc, qdf_nbuf_t nbuf,
 					      qdf_nbuf_len(nbuf));
 		goto drop_nbuf;
 	}
-
 
 	if (qdf_unlikely(txrx_peer->nawds_enabled &&
 			 hal_rx_msdu_end_da_is_mcbc_get(soc->hal_soc,

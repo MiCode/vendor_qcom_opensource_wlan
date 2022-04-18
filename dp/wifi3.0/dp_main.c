@@ -8897,7 +8897,8 @@ static QDF_STATUS dp_vdev_getstats(struct cdp_vdev *vdev_handle,
 			    vdev_stats->rx.multipass_rx_pkt_drop +
 			    vdev_stats->rx.peer_unauth_rx_pkt_drop +
 			    vdev_stats->rx.policy_check_drop +
-			    vdev_stats->rx.nawds_mcast_drop;
+			    vdev_stats->rx.nawds_mcast_drop +
+			    vdev_stats->rx.mcast_3addr_drop;
 
 	qdf_mem_free(vdev_stats);
 
@@ -8961,7 +8962,8 @@ static void dp_pdev_getstats(struct cdp_pdev *pdev_handle,
 		pdev->stats.rx.multipass_rx_pkt_drop +
 		pdev->stats.rx.peer_unauth_rx_pkt_drop +
 		pdev->stats.rx.policy_check_drop +
-		pdev->stats.rx.nawds_mcast_drop;
+		pdev->stats.rx.nawds_mcast_drop +
+		pdev->stats.rx.mcast_3addr_drop;
 }
 
 /**
@@ -10220,6 +10222,11 @@ dp_set_vdev_param(struct cdp_soc_t *cdp_soc, uint8_t vdev_id,
 		vdev->skip_bar_update_last_ts = 0;
 		break;
 #endif
+	case CDP_DROP_3ADDR_MCAST:
+		dp_info("vdev_id %d drop 3 addr mcast :%d", vdev_id,
+			val.cdp_drop_3addr_mcast);
+		vdev->drop_3addr_mcast = val.cdp_drop_3addr_mcast;
+		break;
 	default:
 		break;
 	}

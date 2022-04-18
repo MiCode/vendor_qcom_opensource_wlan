@@ -2939,7 +2939,7 @@ struct dp_vdev {
 #ifdef QCA_SUPPORT_WDS_EXTENDED
 	bool wds_ext_enabled;
 #endif /* QCA_SUPPORT_WDS_EXTENDED */
-
+	bool drop_3addr_mcast;
 #ifdef WLAN_VENDOR_SPECIFIC_BAR_UPDATE
 	bool skip_bar_update;
 	unsigned long skip_bar_update_last_ts;
@@ -3657,6 +3657,7 @@ struct dp_peer_per_pkt_rx_stats {
 #ifdef VDEV_PEER_PROTOCOL_COUNT
 	struct protocol_trace_count protocol_trace_cnt[CDP_TRACE_MAX];
 #endif
+	uint32_t mcast_3addr_drop;
 };
 
 /**

@@ -1383,6 +1383,7 @@ typedef union cdp_config_param_t {
 	bool cdp_psoc_param_vdev_stats_hw_offload;
 	bool cdp_pdev_param_undecoded_metadata_enable;
 	bool cdp_sawf_enabled;
+	bool cdp_drop_3addr_mcast;
 } cdp_config_param_type;
 
 /**
@@ -1500,6 +1501,7 @@ enum cdp_vdev_param_type {
 #endif
 	CDP_UPDATE_DSCP_TO_TID_MAP,
 	CDP_SET_MCAST_VDEV,
+	CDP_DROP_3ADDR_MCAST,
 };
 
 /*

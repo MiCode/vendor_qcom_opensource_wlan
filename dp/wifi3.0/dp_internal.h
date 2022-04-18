@@ -1598,6 +1598,7 @@ void dp_update_vdev_stats_on_peer_unmap(struct dp_vdev *vdev,
 		_tgtobj->rx.raw.num += _srcobj->rx.raw.num; \
 		_tgtobj->rx.raw.bytes += _srcobj->rx.raw.bytes; \
 		_tgtobj->rx.nawds_mcast_drop += _srcobj->rx.nawds_mcast_drop; \
+		_tgtobj->rx.mcast_3addr_drop += _srcobj->rx.mcast_3addr_drop; \
 		_tgtobj->rx.mec_drop.num += _srcobj->rx.mec_drop.num; \
 		_tgtobj->rx.mec_drop.bytes += _srcobj->rx.mec_drop.bytes; \
 		_tgtobj->rx.intra_bss.pkts.num += \

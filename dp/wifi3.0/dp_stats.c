@@ -6445,6 +6445,8 @@ void dp_print_peer_stats(struct dp_peer *peer,
 	DP_PRINT_STATS("NAWDS : ");
 	DP_PRINT_STATS("	Nawds multicast Drop Rx Packet = %d",
 		       peer_stats->rx.nawds_mcast_drop);
+	DP_PRINT_STATS(" 3address multicast Drop Rx Packet = %d",
+		       peer_stats->rx.mcast_3addr_drop);
 	DP_PRINT_STATS("SGI = 0.8us %d 0.4us %d 1.6us %d 3.2us %d",
 		       peer_stats->rx.sgi_count[0],
 		       peer_stats->rx.sgi_count[1],
@@ -7969,6 +7971,7 @@ void dp_update_pdev_stats(struct dp_pdev *tgtobj,
 	tgtobj->stats.rx.non_amsdu_cnt += srcobj->rx.non_amsdu_cnt;
 	tgtobj->stats.rx.amsdu_cnt += srcobj->rx.amsdu_cnt;
 	tgtobj->stats.rx.nawds_mcast_drop += srcobj->rx.nawds_mcast_drop;
+	tgtobj->stats.rx.mcast_3addr_drop += srcobj->rx.mcast_3addr_drop;
 	tgtobj->stats.rx.to_stack.num += srcobj->rx.to_stack.num;
 	tgtobj->stats.rx.to_stack.bytes += srcobj->rx.to_stack.bytes;
 
