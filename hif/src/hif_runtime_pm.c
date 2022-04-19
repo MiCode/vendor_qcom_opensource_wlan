@@ -304,6 +304,7 @@ static const struct file_operations hif_pci_runtime_pm_fops = {
 	.llseek         = seq_lseek,
 };
 
+#ifdef WLAN_OPEN_SOURCE
 /**
  * hif_runtime_pm_debugfs_create() - creates runtimepm debugfs entry
  * @scn: hif context
@@ -333,6 +334,13 @@ static void hif_runtime_pm_debugfs_remove(struct hif_softc *scn)
 
 	qdf_debugfs_remove_file(rpm_ctx->pm_dentry);
 }
+#else
+static inline void hif_runtime_pm_debugfs_remove(struct hif_softc *scn)
+{}
+
+static inline void hif_runtime_pm_debugfs_create(struct hif_softc *scn)
+{}
+#endif
 
 /**
  * hif_runtime_init() - Initialize Runtime PM
