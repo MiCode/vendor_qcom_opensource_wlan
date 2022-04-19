@@ -658,10 +658,10 @@ static void hal_reo_shared_qaddr_write_be(hal_soc_handle_t hal_soc_hdl,
 	else
 		reo_qref->receive_queue_number = 0;
 
-	hal_verbose_debug("hw_qdesc_paddr: %llx, tid: %d, reo_qref:%pK,"
+	hal_verbose_debug("hw_qdesc_paddr: %pK, tid: %d, reo_qref:%pK,"
 			  "rx_reo_queue_desc_addr_31_0: %x,"
 			  "rx_reo_queue_desc_addr_39_32: %x",
-			  hw_qdesc_paddr, tid, reo_qref,
+			  (void *)hw_qdesc_paddr, tid, reo_qref,
 			  reo_qref->rx_reo_queue_desc_addr_31_0,
 			  reo_qref->rx_reo_queue_desc_addr_39_32);
 }
@@ -719,12 +719,12 @@ static void hal_reo_shared_qaddr_setup_be(hal_soc_handle_t hal_soc_hdl)
 				REO_QUEUE_REF_NON_ML_TABLE_SIZE,
 				&hal->reo_qref.non_mlo_reo_qref_table_paddr);
 
-	hal_verbose_debug("MLO table start paddr:%llx,"
-			  "Non-MLO table start paddr:%llx,"
+	hal_verbose_debug("MLO table start paddr:%pK,"
+			  "Non-MLO table start paddr:%pK,"
 			  "MLO table start vaddr: %pK,"
 			  "Non MLO table start vaddr: %pK",
-			  hal->reo_qref.mlo_reo_qref_table_paddr,
-			  hal->reo_qref.non_mlo_reo_qref_table_paddr,
+			  (void *)hal->reo_qref.mlo_reo_qref_table_paddr,
+			  (void *)hal->reo_qref.non_mlo_reo_qref_table_paddr,
 			  hal->reo_qref.mlo_reo_qref_table_vaddr,
 			  hal->reo_qref.non_mlo_reo_qref_table_vaddr);
 }
