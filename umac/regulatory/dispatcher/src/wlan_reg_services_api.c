@@ -183,16 +183,6 @@ wlan_reg_get_6g_afc_mas_chan_list(struct wlan_objmgr_pdev *pdev,
 }
 
 qdf_export_symbol(wlan_reg_get_6g_afc_mas_chan_list);
-
-QDF_STATUS wlan_reg_psd_2_eirp(struct wlan_objmgr_pdev *pdev,
-			       int16_t psd,
-			       uint16_t ch_bw,
-			       int16_t *eirp)
-{
-	return reg_psd_2_eirp(pdev, psd, ch_bw, eirp);
-}
-
-qdf_export_symbol(wlan_reg_psd_2_eirp);
 #endif
 
 /**
@@ -1773,4 +1763,26 @@ qdf_freq_t wlan_reg_get_thresh_priority_freq(struct wlan_objmgr_pdev *pdev)
 {
 	return reg_get_thresh_priority_freq(pdev);
 }
+
+QDF_STATUS wlan_reg_psd_2_eirp(struct wlan_objmgr_pdev *pdev,
+			       int16_t psd,
+			       uint16_t ch_bw,
+			       int16_t *eirp)
+{
+	return reg_psd_2_eirp(pdev, psd, ch_bw, eirp);
+}
+
+qdf_export_symbol(wlan_reg_psd_2_eirp);
+
+enum reg_6g_ap_type
+wlan_reg_get_best_pwr_mode(struct wlan_objmgr_pdev *pdev, qdf_freq_t freq,
+			   uint16_t bw)
+{
+	return reg_get_best_pwr_mode(pdev, freq, bw);
+}
 #endif /* CONFIG_BAND_6GHZ */
+
+enum phy_ch_width wlan_reg_find_chwidth_from_bw(uint16_t bw)
+{
+	return reg_find_chwidth_from_bw(bw);
+}

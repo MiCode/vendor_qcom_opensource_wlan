@@ -148,6 +148,9 @@
 #define CHAN_ENUM_SIXG_2      INVALID_CHANNEL
 #endif
 
+/* The eirp power values are in 0.01dBm units */
+#define EIRP_PWR_SCALE 100
+
 extern const struct chan_map *channel_map;
 extern const struct chan_map channel_map_us[];
 extern const struct chan_map channel_map_eu[];
@@ -2268,6 +2271,20 @@ enum phy_ch_width reg_find_chwidth_from_bw(uint16_t bw);
  * @pdev: pdev pointer
  */
 qdf_freq_t reg_get_thresh_priority_freq(struct wlan_objmgr_pdev *pdev);
+
+/**
+ * reg_get_best_pwr_mode() - Get the AP's primary channel center frequency and
+ * AP's operating bandwidth to return the best power mode, which is calculated
+ * based on the maximum EIRP power among the 3 AP types, i.e, LPI, SP and VLP
+ * @pdev: Pointer to pdev
+ * @freq: Primary channel center frequency in mhz
+ * @bw: AP's operating bandwidth in mhz
+ *
+ * Return: Best power mode
+ */
+enum reg_6g_ap_type reg_get_best_pwr_mode(struct wlan_objmgr_pdev *pdev,
+					  qdf_freq_t freq,
+					  uint16_t bw);
 #endif /* CONFIG_BAND_6GHZ */
 
 /**

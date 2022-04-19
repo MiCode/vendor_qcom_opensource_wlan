@@ -744,21 +744,6 @@ wlan_reg_get_6g_afc_mas_chan_list(struct wlan_objmgr_pdev *pdev,
 				  struct regulatory_channel *chan_list);
 
 /**
- * wlan_reg_psd_2_eirp() - Calculate EIRP from PSD and bandwidth
- * channel list
- * @pdev: pdev pointer
- * @psd: Power Spectral Density in dBm/MHz
- * @ch_bw: Bandwidth of a channel in MHz (20/40/80/160/320 etc)
- * @eirp:  EIRP power  in dBm
- *
- * Return: QDF_STATUS
- */
-QDF_STATUS wlan_reg_psd_2_eirp(struct wlan_objmgr_pdev *pdev,
-			       int16_t psd,
-			       uint16_t ch_bw,
-			       int16_t *eirp);
-
-/**
  * wlan_reg_is_afc_power_event_received() - Checks if AFC power event is
  * received from the FW.
  *
@@ -2289,11 +2274,62 @@ QDF_STATUS wlan_reg_is_chwidth_supported(struct wlan_objmgr_pdev *pdev,
  * @pdev: pdev pointer
  */
 qdf_freq_t wlan_reg_get_thresh_priority_freq(struct wlan_objmgr_pdev *pdev);
+
+/**
+ * wlan_reg_psd_2_eirp() - Calculate EIRP from PSD and bandwidth
+ * channel list
+ * @pdev: pdev pointer
+ * @psd: Power Spectral Density in dBm/MHz
+ * @ch_bw: Bandwidth of a channel in MHz (20/40/80/160/320 etc)
+ * @eirp:  EIRP power  in dBm
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS wlan_reg_psd_2_eirp(struct wlan_objmgr_pdev *pdev,
+			       int16_t psd,
+			       uint16_t ch_bw,
+			       int16_t *eirp);
+
+/**
+ * wlan_reg_get_best_pwr_mode() - Get the best power mode based on input freq
+ * and bandwidth. The mode that provides the best EIRP is the best power mode.
+ * @pdev: Pointer to pdev
+ * @freq: Frequency in mhz
+ * @bw: Bandwidth in mhz
+ *
+ * Return: Best power mode
+ */
+enum reg_6g_ap_type
+wlan_reg_get_best_pwr_mode(struct wlan_objmgr_pdev *pdev, qdf_freq_t freq,
+			   uint16_t bw);
 #else
 static inline
 qdf_freq_t wlan_reg_get_thresh_priority_freq(struct wlan_objmgr_pdev *pdev)
 {
 	return 0;
 }
+
+static inline enum reg_6g_ap_type
+wlan_reg_get_best_pwr_mode(struct wlan_objmgr_pdev *pdev, qdf_freq_t freq,
+			   uint16_t bw)
+{
+	return REG_MAX_AP_TYPE;
+}
+
+static inline QDF_STATUS wlan_reg_psd_2_eirp(struct wlan_objmgr_pdev *pdev,
+					     int16_t psd,
+					     uint16_t ch_bw,
+					     int16_t *eirp)
+{
+	return QDF_STATUS_E_FAILURE;
+}
 #endif /* CONFIG_BAND_6GHZ */
+/**
+ * wlan_reg_find_chwidth_from_bw () - Gets channel width for given
+ * bandwidth
+ * @bw: Bandwidth
+ *
+ * Return: phy_ch_width
+ */
+enum phy_ch_width wlan_reg_find_chwidth_from_bw(uint16_t bw);
 #endif

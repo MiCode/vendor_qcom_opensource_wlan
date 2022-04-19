@@ -154,8 +154,35 @@ const char *reg_get_power_string(enum reg_6g_ap_type power_type);
  */
 QDF_STATUS
 reg_process_afc_event(struct afc_regulatory_info *afc_info);
+
+/**
+ * reg_get_subchannels_for_opclass() - Get the list of subchannels based on the
+ * the channel frequency index and opclass.
+ * @cfi: Channel frequency index
+ * @opclass: Operating class
+ * @subchannels: Pointer to list of subchannels
+ *
+ * Return: void
+ */
+uint8_t reg_get_subchannels_for_opclass(uint8_t cfi,
+					uint8_t opclass,
+					uint8_t *subchannels);
 #endif
 
+/**
+ * reg_psd_2_eirp() - Calculate EIRP from PSD and bandwidth
+ * channel list
+ * @pdev: pdev pointer
+ * @psd: Power Spectral Density in dBm/MHz
+ * @ch_bw: Bandwdith of a channel in MHz (20/40/80/160/320 etc)
+ * @eirp:  EIRP power  in dBm
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS reg_psd_2_eirp(struct wlan_objmgr_pdev *pdev,
+			  int16_t psd,
+			  uint16_t ch_bw,
+			  int16_t *eirp);
 #else /* CONFIG_BAND_6GHZ */
 static inline QDF_STATUS
 reg_get_6g_ap_master_chan_list(struct wlan_objmgr_pdev *pdev,
@@ -172,6 +199,22 @@ struct regulatory_channel *reg_get_reg_maschan_lst_frm_6g_pwr_mode(
 			uint16_t chan_idx)
 {
 	return NULL;
+}
+
+static inline uint8_t
+reg_get_subchannels_for_opclass(uint8_t cfi,
+				uint8_t opclass,
+				uint8_t *subchannels)
+{
+	return 0;
+}
+
+static inline QDF_STATUS reg_psd_2_eirp(struct wlan_objmgr_pdev *pdev,
+					int16_t psd,
+					uint16_t ch_bw,
+					int16_t *eirp)
+{
+	return QDF_STATUS_E_FAILURE;
 }
 #endif /* CONFIG_BAND_6GHZ */
 /**
@@ -231,21 +274,6 @@ QDF_STATUS reg_get_6g_afc_chan_list(struct wlan_objmgr_pdev *pdev,
 QDF_STATUS
 reg_get_6g_afc_mas_chan_list(struct wlan_objmgr_pdev *pdev,
 			     struct regulatory_channel *chan_list);
-
-/**
- * reg_psd_2_eirp() - Calculate EIRP from PSD and bandwidth
- * channel list
- * @pdev: pdev pointer
- * @psd: Power Spectral Density in dBm/MHz
- * @ch_bw: Bandwdith of a channel in MHz (20/40/80/160/320 etc)
- * @eirp:  EIRP power  in dBm
- *
- * Return: QDF_STATUS
- */
-QDF_STATUS reg_psd_2_eirp(struct wlan_objmgr_pdev *pdev,
-			  int16_t psd,
-			  uint16_t ch_bw,
-			  int16_t *eirp);
 #endif
 
 #ifdef CONFIG_REG_CLIENT

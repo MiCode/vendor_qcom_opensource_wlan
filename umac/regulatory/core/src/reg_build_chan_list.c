@@ -3700,9 +3700,9 @@ reg_fill_min_max_bw_for_afc_list(
  *
  * Return: void
  */
-static uint8_t reg_get_subchannels_for_opclass(uint8_t cfi,
-					       uint8_t opclass,
-					       uint8_t *subchannels)
+uint8_t reg_get_subchannels_for_opclass(uint8_t cfi,
+					uint8_t opclass,
+					uint8_t *subchannels)
 {
 	uint8_t nchans;
 
@@ -4460,7 +4460,9 @@ reg_get_6g_afc_mas_chan_list(struct wlan_objmgr_pdev *pdev,
 
 	return QDF_STATUS_SUCCESS;
 }
+#endif
 
+#ifdef CONFIG_BAND_6GHZ
 /**
  * struct bw_10log10_pair - The bandwidth and 10*log10(bandwidth) pair.
  * ten_l_len = trunc(10*log10(bw)).  'trunc' is truncation function.

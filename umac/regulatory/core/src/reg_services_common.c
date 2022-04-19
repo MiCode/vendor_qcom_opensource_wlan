@@ -8490,4 +8490,267 @@ qdf_freq_t reg_get_thresh_priority_freq(struct wlan_objmgr_pdev *pdev)
 
 	return pdev_priv_obj->reg_6g_thresh_priority_freq;
 }
+
+/**
+ * reg_get_eirp_for_non_sp() -  For the given power mode, using the bandwidth
+ * and psd(from master channel entry), calculate an EIRP value. The minimum
+ * of calculated EIRP and regulatory max EIRP is returned.
+ * @pdev: Pointer to pdev
+ * @freq: Frequency in mhz
+ * @bw: Bandwidth in mhz
+ * @ap_pwr_type: AP Power type
+ *
+ * Return: EIRP
+ */
+static uint8_t
+reg_get_eirp_for_non_sp(struct wlan_objmgr_pdev *pdev, qdf_freq_t freq,
+			uint16_t bw, enum reg_6g_ap_type ap_pwr_type)
+{
+	struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj;
+	bool is_psd;
+	struct regulatory_channel *master_chan_list;
+	uint16_t txpower = 0;
+
+	pdev_priv_obj = reg_get_pdev_obj(pdev);
+	if (!pdev_priv_obj) {
+		reg_err("pdev priv obj is NULL");
+		return 0;
+	}
+
+	if (!((ap_pwr_type == REG_INDOOR_AP) ||
+	      (ap_pwr_type == REG_VERY_LOW_POWER_AP))) {
+		reg_err("Only LPI and VLP are supported in this function ");
+		return 0;
+	}
+
+	master_chan_list = pdev_priv_obj->mas_chan_list_6g_ap[ap_pwr_type];
+	is_psd = reg_is_6g_psd_power(pdev);
+	reg_find_txpower_from_6g_list(freq, master_chan_list, &txpower);
+
+	if (is_psd) {
+		int16_t eirp, psd;
+
+		reg_get_6g_chan_psd_eirp_power(freq, master_chan_list, &psd);
+		reg_psd_2_eirp(pdev, psd, bw, &eirp);
+		return QDF_MIN(txpower, eirp);
+	}
+
+	return txpower;
+}
+
+#ifdef CONFIG_AFC_SUPPORT
+/**
+ * reg_find_eirp_in_afc_eirp_obj() - Get eirp power from the AFC eirp object
+ * based on the channel center frequency and operating class
+ * @pdev: Pointer to pdev
+ * @eirp_obj: Pointer to eirp_obj
+ * @freq: Frequency in mhz
+ * @op_class: Operating class
+ *
+ * Return: EIRP power
+ */
+static uint8_t reg_find_eirp_in_afc_eirp_obj(struct wlan_objmgr_pdev *pdev,
+					     struct chan_eirp_obj *eirp_obj,
+					     qdf_freq_t freq,
+					     uint8_t op_class)
+{
+	uint8_t k;
+	uint8_t subchannels[NUM_20_MHZ_CHAN_IN_320_MHZ_CHAN];
+	uint8_t nchans;
+
+	nchans = reg_get_subchannels_for_opclass(eirp_obj->cfi,
+						 op_class,
+						 subchannels);
+
+	for (k = 0; k < nchans; k++)
+		if (reg_chan_band_to_freq(pdev, subchannels[k],
+					  BIT(REG_BAND_6G)) == freq)
+			return eirp_obj->eirp_power / EIRP_PWR_SCALE;
+
+	return 0;
+}
+
+/**
+ * reg_find_eirp_in_afc_chan_obj() - Get eirp power from the AFC channel
+ * object based on the channel center frequency and operating class
+ * @pdev: Pointer to pdev
+ * @chan_obj: Pointer to chan_obj
+ * @freq: Frequency in mhz
+ * @op_class: Operating class
+ *
+ * Return: EIRP power
+ */
+static uint8_t reg_find_eirp_in_afc_chan_obj(struct wlan_objmgr_pdev *pdev,
+					     struct afc_chan_obj *chan_obj,
+					     qdf_freq_t freq,
+					     uint8_t op_class)
+{
+	uint8_t j;
+
+	if (chan_obj->global_opclass != op_class)
+		return 0;
+
+	for (j = 0; j < chan_obj->num_chans; j++) {
+		uint8_t afc_eirp;
+		struct chan_eirp_obj *eirp_obj = &chan_obj->chan_eirp_info[j];
+
+		afc_eirp = reg_find_eirp_in_afc_eirp_obj(pdev, eirp_obj,
+							 freq, op_class);
+
+		if (afc_eirp)
+			return afc_eirp;
+	}
+
+	return 0;
+}
+
+/**
+ * reg_get_sp_eirp() - For the given power mode, using the bandwidth, find the
+ * corresponding EIRP values from the afc power info array. The minimum of found
+ * EIRP and regulatory max EIRP is returned
+ * @pdev: Pointer to pdev
+ * @freq: Frequency in mhz
+ * @bw: Bandwidth in mhz
+ *
+ * Return: EIRP
+ */
+static uint8_t reg_get_sp_eirp(struct wlan_objmgr_pdev *pdev,
+			       qdf_freq_t freq,
+			       uint16_t bw)
+{
+	uint8_t i, op_class = 0, chan_num = 0, afc_eirp_pwr = 0;
+	struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj;
+	struct regulatory_channel *sp_ap_master_chan_list;
+	struct reg_fw_afc_power_event *power_info;
+	uint16_t reg_sp_eirp_pwr = 0;
+
+	pdev_priv_obj = reg_get_pdev_obj(pdev);
+
+	if (!IS_VALID_PDEV_REG_OBJ(pdev_priv_obj)) {
+		reg_err("reg pdev priv obj is NULL");
+		return 0;
+	}
+
+	if (!reg_is_afc_power_event_received(pdev))
+		return 0;
+
+	power_info = pdev_priv_obj->power_info;
+	if (!power_info) {
+		reg_err("power_info is NULL");
+		return 0;
+	}
+
+	reg_freq_width_to_chan_op_class(pdev,
+					freq,
+					bw,
+					true,
+					BIT(BEHAV_NONE),
+					&op_class,
+					&chan_num);
+	sp_ap_master_chan_list =
+		pdev_priv_obj->mas_chan_list_6g_ap[REG_STANDARD_POWER_AP];
+	reg_find_txpower_from_6g_list(freq, sp_ap_master_chan_list,
+				      &reg_sp_eirp_pwr);
+
+	if (!reg_sp_eirp_pwr)
+		return 0;
+
+	for (i = 0; i < power_info->num_chan_objs; i++) {
+		struct afc_chan_obj *chan_obj = &power_info->afc_chan_info[i];
+
+		afc_eirp_pwr = reg_find_eirp_in_afc_chan_obj(pdev,
+							     chan_obj,
+							     freq,
+							     op_class);
+		if (afc_eirp_pwr)
+			break;
+	}
+
+	if (afc_eirp_pwr)
+		return QDF_MIN(afc_eirp_pwr, reg_sp_eirp_pwr);
+
+	return 0;
+}
+#else
+static uint8_t reg_get_sp_eirp(struct wlan_objmgr_pdev *pdev,
+			       qdf_freq_t freq,
+			       uint16_t bw)
+{
+	struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj;
+	struct regulatory_channel *sp_ap_master_chan_list;
+	uint16_t reg_sp_eirp_pwr = 0;
+
+	pdev_priv_obj = reg_get_pdev_obj(pdev);
+
+	if (!IS_VALID_PDEV_REG_OBJ(pdev_priv_obj)) {
+		reg_err("reg pdev priv obj is NULL");
+		return 0;
+	}
+
+	sp_ap_master_chan_list =
+		pdev_priv_obj->mas_chan_list_6g_ap[REG_STANDARD_POWER_AP];
+	reg_find_txpower_from_6g_list(freq, sp_ap_master_chan_list,
+				      &reg_sp_eirp_pwr);
+
+	return reg_sp_eirp_pwr;
+}
+#endif
+
+/**
+ * reg_get_best_pwr_mode_from_eirp_list() - Get best power mode from the input
+ * EIRP list
+ * @eirp_list: EIRP list
+ * @size: Size of eirp list
+ *
+ * Return: Best power mode
+ */
+static enum reg_6g_ap_type
+reg_get_best_pwr_mode_from_eirp_list(uint8_t *eirp_list, uint8_t size)
+{
+	uint8_t max = 0, i;
+	enum reg_6g_ap_type best_pwr_mode = REG_INDOOR_AP;
+
+	for (i = 0; i < size; i++) {
+		if (eirp_list[i] > max) {
+			max = eirp_list[i];
+			best_pwr_mode = i;
+		}
+	}
+
+	return best_pwr_mode;
+}
+
+/**
+ * reg_get_eirp_pwr() - Get eirp power based on the AP power mode
+ * @pdev: Pointer to pdev
+ * @freq: Frequency in mhz
+ * @bw: Bandwidth in mhz
+ * @ap_pwr_type: AP power type
+ *
+ * Return: EIRP power
+ */
+static uint8_t reg_get_eirp_pwr(struct wlan_objmgr_pdev *pdev, qdf_freq_t freq,
+				uint16_t bw, enum reg_6g_ap_type ap_pwr_type)
+{
+	if (ap_pwr_type == REG_STANDARD_POWER_AP)
+		return reg_get_sp_eirp(pdev, freq, bw);
+
+	return reg_get_eirp_for_non_sp(pdev, freq, bw, ap_pwr_type);
+}
+
+enum reg_6g_ap_type reg_get_best_pwr_mode(struct wlan_objmgr_pdev *pdev,
+					  qdf_freq_t freq,
+					  uint16_t bw)
+{
+	uint8_t eirp_list[REG_MAX_SUPP_AP_TYPE + 1];
+	enum reg_6g_ap_type ap_pwr_type;
+
+	for (ap_pwr_type = REG_INDOOR_AP; ap_pwr_type <= REG_VERY_LOW_POWER_AP;
+	     ap_pwr_type++)
+		eirp_list[ap_pwr_type] =
+				reg_get_eirp_pwr(pdev, freq, bw, ap_pwr_type);
+
+	return reg_get_best_pwr_mode_from_eirp_list(eirp_list,
+						    REG_MAX_SUPP_AP_TYPE + 1);
+}
 #endif
