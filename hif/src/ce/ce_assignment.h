@@ -1580,7 +1580,7 @@ static struct CE_attr host_ce_config_wlan_qcn9224[] = {
 	/* Target CV prefetch */
 	{/*CE13*/ (CE_ATTR_FLAGS | CE_ATTR_DISABLE_INTR), 0, 0, 0, 0, NULL,},
 	/* target->host WMI logging, Direc-DMA */
-	{/*CE14*/ (CE_ATTR_FLAGS), 0, 0, 0, 0, NULL,},
+	{/*CE14*/ (CE_ATTR_FLAGS), 0, 0, 2048, 128, NULL,},
 	/* Reserved for customer use */
 	{/*CE15*/ (CE_ATTR_FLAGS | CE_ATTR_DISABLE_INTR), 0, 0, 0, 0, NULL,},
 };
