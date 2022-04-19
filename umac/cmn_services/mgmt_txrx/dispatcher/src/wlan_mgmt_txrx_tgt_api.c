@@ -791,6 +791,45 @@ mgmt_get_twt_action_subtype(uint8_t action_code)
 	return frm_type;
 }
 
+#ifdef WLAN_FEATURE_11BE
+/**
+ * mgmt_get_protected_eht_action_subtype() - gets protected EHT action subtype
+ * @action_code: action code
+ *
+ * This function returns the subtype for protected EHT action category.
+ *
+ * Return: mgmt frame type
+ */
+static enum mgmt_frame_type
+mgmt_get_protected_eht_action_subtype(uint8_t action_code)
+{
+	enum mgmt_frame_type frm_type;
+
+	switch (action_code) {
+	case EHT_T2LM_REQUEST:
+		frm_type = MGMT_ACTION_EHT_T2LM_REQUEST;
+		break;
+	case EHT_T2LM_RESPONSE:
+		frm_type = MGMT_ACTION_EHT_T2LM_RESPONSE;
+		break;
+	case EHT_T2LM_TEARDOWN:
+		frm_type = MGMT_ACTION_EHT_T2LM_TEARDOWN;
+		break;
+	default:
+		frm_type = MGMT_FRM_UNSPECIFIED;
+		break;
+	}
+
+	return frm_type;
+}
+#else
+static enum mgmt_frame_type
+mgmt_get_protected_eht_action_subtype(uint8_t action_code)
+{
+	return MGMT_FRM_UNSPECIFIED;
+}
+#endif /* WLAN_FEATURE_11BE */
+
 /**
  * mgmt_txrx_get_action_frm_subtype() - gets action frm subtype
  * @mpdu_data_ptr: pointer to mpdu data
@@ -880,6 +919,10 @@ mgmt_txrx_get_action_frm_subtype(uint8_t *mpdu_data_ptr)
 	case ACTION_CATEGORY_USIG:
 		frm_type =
 			mgmt_get_twt_action_subtype(action_hdr->action_code);
+		break;
+	case ACTION_CATEGORY_PROTECTED_EHT:
+		frm_type = mgmt_get_protected_eht_action_subtype(
+				action_hdr->action_code);
 		break;
 	default:
 		frm_type = MGMT_FRM_UNSPECIFIED;

@@ -596,6 +596,7 @@ enum element_ie {
  * @WLAN_EXTN_ELEMID_EHTOP: EHT Operation IE
  * @WLAN_EXTN_ELEMID_MULTI_LINK: Multi-Link IE
  * @WLAN_EXTN_ELEMID_EHTCAP: EHT Capabilities IE
+ * @WLAN_EXTN_ELEMID_T2LM: TID-to-link mapping IE
  */
 enum extn_element_ie {
 	WLAN_EXTN_ELEMID_HECAP       = 35,
@@ -615,6 +616,7 @@ enum extn_element_ie {
 #ifdef WLAN_FEATURE_11BE
 	WLAN_EXTN_ELEMID_EHTCAP      = 108,
 #endif
+	WLAN_EXTN_ELEMID_T2LM        = 109,
 };
 
 /**
@@ -2200,6 +2202,42 @@ struct wlan_ml_bv_linfo_perstaprof_stainfo_dtiminfo {
  */
 #endif /* WLAN_FEATURE_11BE_MLO */
 #endif /* WLAN_FEATURE_11BE */
+
+#ifdef WLAN_FEATURE_T2LM
+/**
+ * struct wlan_ie_tid_to_link_mapping - TID-to-link mapping IE
+ * @elem_id: T2LM IE
+ * @elem_len: T2LM IE len
+ * @elem_id_extn: T2LM extension id
+ * @data: Variable length data described below
+ */
+struct wlan_ie_tid_to_link_mapping {
+	uint8_t elem_id;
+	uint8_t elem_len;
+	uint8_t elem_id_extn;
+	uint8_t data[];
+} qdf_packed;
+
+/* The variable length data in wlan_ie_tid_to_link_mapping structure has the
+ * following fields.
+ * - TID-to-link mapping control ( 1 octet)
+ * - Link mapping presence indicator (0 or 1 octet)
+ * - Link mapping of TID 0(optional) to TID 7(optional). Each field has 0 or 2
+ *   octets.
+ */
+
+/* Definitions related TID-to-link mapping control*/
+/* Direction */
+#define WLAN_T2LM_CONTROL_DIRECTION_IDX                         0
+#define WLAN_T2LM_CONTROL_DIRECTION_BITS                        2
+/* Default link mapping */
+#define WLAN_T2LM_CONTROL_DEFAULT_LINK_MAPPING_IDX              2
+#define WLAN_T2LM_CONTROL_DEFAULT_LINK_MAPPING_BITS             1
+/* Bit3 to Bit7 are reserved*/
+/* Link mapping presence indicator */
+#define WLAN_T2LM_CONTROL_LINK_MAPPING_PRESENCE_INDICATOR_IDX   8
+#define WLAN_T2LM_CONTROL_LINK_MAPPING_PRESENCE_INDICATOR_BITS  8
+#endif /* WLAN_FEATURE_T2LM */
 
 /**
  * struct he_oper_6g_param: 6 Ghz params for HE

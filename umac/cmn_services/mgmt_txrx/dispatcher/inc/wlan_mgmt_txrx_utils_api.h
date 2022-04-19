@@ -125,6 +125,7 @@ enum mgmt_subtype {
  * @ACTION_CATEGORY_CDMG: CDMG Action frame
  * @ACTION_CATEGORY_CMMG: CMMG Action frame
  * @ACTION_CATEGORY_GLK: GLK Action frame
+ * @ACTION_CATEGORY_PROTECTED_EHT: Protected EHT Action frame
  * @ACTION_CATEGORY_VENDOR_SPECIFIC_PROTECTED: vendor specific protected
  *                                             action category
  * @ACTION_CATEGORY_VENDOR_SPECIFIC: vendor specific action category
@@ -160,6 +161,7 @@ enum mgmt_action_category {
 	ACTION_CATEGORY_CDMG = 27,
 	ACTION_CATEGORY_CMMG = 28,
 	ACTION_CATEGORY_GLK = 29,
+	ACTION_CATEGORY_PROTECTED_EHT = 37,
 	ACTION_CATEGORY_VENDOR_SPECIFIC_PROTECTED = 126,
 	ACTION_CATEGORY_VENDOR_SPECIFIC = 127,
 };
@@ -501,6 +503,18 @@ enum twt_actioncode {
 };
 
 /**
+ * enum eht_actioncode - Protected EHT action frames
+ * @EHT_T2LM_REQUEST: T2LM request action frame
+ * @EHT_T2LM_RESPONSE: T2LM response action frame
+ * @EHT_T2LM_TEARDOWN: T2LM teardown action frame
+ */
+enum eht_actioncode {
+	EHT_T2LM_REQUEST = 0,
+	EHT_T2LM_RESPONSE = 1,
+	EHT_T2LM_TEARDOWN = 2,
+};
+
+/**
  * struct action_frm_hdr - action frame header
  * @action_category: action category
  * @action_code: action code
@@ -635,6 +649,9 @@ struct action_frm_hdr {
  * @MGMT_ACTION_TWT_SETUP: TWT setup frame
  * @MGMT_ACTION_TWT_TEARDOWN: TWT teardown frame
  * @MGMT_ACTION_TWT_INFORMATION: TWT information frame
+ * @MGMT_ACTION_EHT_T2LM_REQUEST: T2LM request frame
+ * @MGMT_ACTION_EHT_T2LM_RESPONSE: T2LM response frame
+ * @MGMT_ACTION_EHT_T2LM_TEARDOWN: T2LM teardown frame
  * @MGMT_MAX_FRAME_TYPE:         max. mgmt frame types
  */
 enum mgmt_frame_type {
@@ -764,6 +781,9 @@ enum mgmt_frame_type {
 	MGMT_ACTION_TWT_SETUP,
 	MGMT_ACTION_TWT_TEARDOWN,
 	MGMT_ACTION_TWT_INFORMATION,
+	MGMT_ACTION_EHT_T2LM_REQUEST,
+	MGMT_ACTION_EHT_T2LM_RESPONSE,
+	MGMT_ACTION_EHT_T2LM_TEARDOWN,
 	MGMT_MAX_FRAME_TYPE,
 };
 
