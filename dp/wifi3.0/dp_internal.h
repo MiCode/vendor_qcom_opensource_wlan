@@ -1711,7 +1711,7 @@ void dp_update_vdev_stats_on_peer_unmap(struct dp_vdev *vdev,
 					_srcobj->tx.transmit_type[i].mpdu_tried; \
 		} \
 		for (i = 0; i < MAX_MU_GROUP_ID; i++) { \
-			_tgtobj->tx.mu_group_id[i] += _srcobj->tx.mu_group_id[i]; \
+			_tgtobj->tx.mu_group_id[i] = _srcobj->tx.mu_group_id[i]; \
 		} \
 		\
 		_tgtobj->rx.mpdu_cnt_fcs_ok += _srcobj->rx.mpdu_cnt_fcs_ok; \
