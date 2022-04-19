@@ -1594,7 +1594,23 @@ hal_rx_parse_receive_user_info(struct hal_soc *hal_soc, uint8_t *tlv,
 				(rx_usr_info->dl_ofdma_content_channel <<
 				 QDF_MON_STATUS_EHT_CONTENT_CH_INDEX_SHIFT);
 
-	ppdu_info->rx_status.reception_type = rx_usr_info->reception_type;
+	switch (rx_usr_info->reception_type) {
+	case HAL_RECEPTION_TYPE_SU:
+		ppdu_info->rx_status.reception_type = HAL_RX_TYPE_SU;
+		break;
+	case HAL_RECEPTION_TYPE_DL_MU_MIMO:
+	case HAL_RECEPTION_TYPE_UL_MU_MIMO:
+		ppdu_info->rx_status.reception_type = HAL_RX_TYPE_MU_MIMO;
+		break;
+	case HAL_RECEPTION_TYPE_DL_MU_OFMA:
+	case HAL_RECEPTION_TYPE_UL_MU_OFDMA:
+		ppdu_info->rx_status.reception_type = HAL_RX_TYPE_MU_OFDMA;
+		break;
+	case HAL_RECEPTION_TYPE_DL_MU_OFDMA_MIMO:
+	case HAL_RECEPTION_TYPE_UL_MU_OFDMA_MIMO:
+		ppdu_info->rx_status.reception_type = HAL_RX_TYPE_MU_OFDMA_MIMO;
+	}
+
 	ppdu_info->rx_status.is_stbc = rx_usr_info->stbc;
 	ppdu_info->rx_status.ldpc = rx_usr_info->ldpc;
 	ppdu_info->rx_status.dcm = rx_usr_info->sta_dcm;
@@ -1608,9 +1624,9 @@ hal_rx_parse_receive_user_info(struct hal_soc *hal_soc, uint8_t *tlv,
 		mon_rx_user_status->nss = ppdu_info->rx_status.nss;
 	}
 
-	if (!(rx_usr_info->reception_type == HAL_RX_TYPE_MU_MIMO ||
-	      rx_usr_info->reception_type == HAL_RX_TYPE_MU_OFDMA ||
-	      rx_usr_info->reception_type == HAL_RX_TYPE_MU_OFMDA_MIMO))
+	if (!(ppdu_info->rx_status.reception_type == HAL_RX_TYPE_MU_MIMO ||
+	      ppdu_info->rx_status.reception_type == HAL_RX_TYPE_MU_OFDMA ||
+	      ppdu_info->rx_status.reception_type == HAL_RX_TYPE_MU_OFDMA_MIMO))
 		return HAL_TLV_STATUS_PPDU_NOT_DONE;
 
 	/* RU allocation present only for OFDMA reception */
@@ -1726,7 +1742,8 @@ hal_rx_parse_receive_user_info(struct hal_soc *hal_soc, uint8_t *tlv,
 					QDF_MON_STATUS_EHT_RU_MRU_INDEX_SHIFT);
 	}
 
-	if (mon_rx_user_status) {
+	if (mon_rx_user_status && ru_index != HAL_EHT_RU_INVALID &&
+	    rtap_ru_size != IEEE80211_EHT_RU_INVALID) {
 		mon_rx_user_status->ofdma_ru_start_index = ru_index;
 		mon_rx_user_status->ofdma_ru_size = rtap_ru_size;
 		hal_rx_ul_ofdma_ru_size_to_width(rtap_ru_size, &ru_width);
@@ -2090,7 +2107,6 @@ hal_rx_status_get_tlv_info_generic_be(void *rx_tlv_hdr, void *ppduinfo,
 			break;
 		}
 		ppdu_info->rx_status.cck_flag = 1;
-		ppdu_info->rx_status.reception_type = HAL_RX_TYPE_SU;
 	break;
 	}
 
@@ -2139,7 +2155,6 @@ hal_rx_status_get_tlv_info_generic_be(void *rx_tlv_hdr, void *ppduinfo,
 			break;
 		}
 		ppdu_info->rx_status.ofdm_flag = 1;
-		ppdu_info->rx_status.reception_type = HAL_RX_TYPE_SU;
 	break;
 	}
 
@@ -2692,21 +2707,15 @@ hal_rx_status_get_tlv_info_generic_be(void *rx_tlv_hdr, void *ppduinfo,
 					       RECEPTION_TYPE);
 		switch (reception_type) {
 		case QDF_RECEPTION_TYPE_ULOFMDA:
-			ppdu_info->rx_status.reception_type =
-				HAL_RX_TYPE_MU_OFDMA;
 			ppdu_info->rx_status.ulofdma_flag = 1;
 			ppdu_info->rx_status.he_data1 =
 				QDF_MON_STATUS_HE_TRIG_FORMAT_TYPE;
 			break;
 		case QDF_RECEPTION_TYPE_ULMIMO:
-			ppdu_info->rx_status.reception_type =
-				HAL_RX_TYPE_MU_MIMO;
 			ppdu_info->rx_status.he_data1 =
 				QDF_MON_STATUS_HE_MU_FORMAT_TYPE;
 			break;
 		default:
-			ppdu_info->rx_status.reception_type =
-				HAL_RX_TYPE_SU;
 			break;
 		}
 		hal_rx_update_rssi_chain(ppdu_info, rssi_info_tlv);
