@@ -4667,6 +4667,11 @@ void dp_tx_comp_process_tx_status(struct dp_soc *soc,
 	dp_tx_update_connectivity_stats(soc, vdev, tx_desc, ts->status);
 	dp_tx_update_uplink_delay(soc, vdev, ts);
 
+	/* check tx complete notification */
+	if (qdf_nbuf_tx_notify_comp_get(nbuf))
+		dp_tx_notify_completion(soc, vdev, tx_desc,
+					nbuf, ts->status);
+
 	/* Update per-packet stats for mesh mode */
 	if (qdf_unlikely(vdev->mesh_vdev) &&
 			!(tx_desc->flags & DP_TX_DESC_FLAG_TO_FW))
@@ -4855,7 +4860,6 @@ dp_tx_comp_process_desc_list(struct dp_soc *soc,
 	struct hal_tx_completion_status ts;
 	struct dp_txrx_peer *txrx_peer = NULL;
 	uint16_t peer_id = DP_INVALID_PEER;
-	qdf_nbuf_t netbuf;
 	dp_txrx_ref_handle txrx_ref_handle = NULL;
 
 	desc = comp_head;
@@ -4907,12 +4911,6 @@ dp_tx_comp_process_desc_list(struct dp_soc *soc,
 
 		dp_tx_comp_process_tx_status(soc, desc, &ts, txrx_peer,
 					     ring_id);
-
-		netbuf = desc->nbuf;
-		/* check tx complete notification */
-		if (txrx_peer && qdf_nbuf_tx_notify_comp_get(netbuf))
-			dp_tx_notify_completion(soc, txrx_peer->vdev, desc,
-						netbuf, ts.status);
 
 		dp_tx_comp_process_desc(soc, desc, &ts, txrx_peer);
 
