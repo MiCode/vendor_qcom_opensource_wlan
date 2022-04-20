@@ -32,6 +32,8 @@
 #define DP_MON_DESC_MAGIC 0xdeadabcd
 #define DP_MON_MAX_STATUS_BUF 128
 #define DP_MON_QUEUE_DEPTH_MAX 16
+#define DP_MON_MSDU_LOGGING 0
+#define DP_MON_MPDU_LOGGING 1
 
 /**
  * struct dp_mon_filter_be - Monitor TLV filter

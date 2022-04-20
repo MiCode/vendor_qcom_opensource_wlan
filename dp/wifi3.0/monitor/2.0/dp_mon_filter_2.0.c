@@ -148,19 +148,19 @@ void dp_rx_mon_enable_mpdu_logging(uint32_t *msg_word,
 	if (!msg_word || !tlv_filter)
 		return;
 
-	if (tlv_filter->mgmt_mpdu_log) {
+	if (tlv_filter->mgmt_dma_length) {
 		HTT_RX_RING_SELECTION_CFG_PKT_TYPE_ENABLE_MSDU_MPDU_LOGGING_SET(*msg_word, 1);
-		HTT_RX_RING_SELECTION_CFG_DMA_MPDU_MGMT_SET(*msg_word, 1);
+		HTT_RX_RING_SELECTION_CFG_DMA_MPDU_MGMT_SET(*msg_word, tlv_filter->mgmt_mpdu_log);
 	}
 
-	if (tlv_filter->ctrl_mpdu_log) {
+	if (tlv_filter->ctrl_dma_length) {
 		HTT_RX_RING_SELECTION_CFG_PKT_TYPE_ENABLE_MSDU_MPDU_LOGGING_SET(*msg_word, 2);
-		HTT_RX_RING_SELECTION_CFG_DMA_MPDU_CTRL_SET(*msg_word, 1);
+		HTT_RX_RING_SELECTION_CFG_DMA_MPDU_CTRL_SET(*msg_word, tlv_filter->ctrl_mpdu_log);
 	}
 
-	if (tlv_filter->data_mpdu_log) {
+	if (tlv_filter->data_dma_length) {
 		HTT_RX_RING_SELECTION_CFG_PKT_TYPE_ENABLE_MSDU_MPDU_LOGGING_SET(*msg_word, 4);
-		HTT_RX_RING_SELECTION_CFG_DMA_MPDU_DATA_SET(*msg_word, 1);
+		HTT_RX_RING_SELECTION_CFG_DMA_MPDU_DATA_SET(*msg_word, tlv_filter->data_mpdu_log);
 	}
 }
 
@@ -171,6 +171,9 @@ dp_rx_mon_word_mask_subscribe(uint32_t *msg_word,
 	if (!msg_word || !tlv_filter)
 		return;
 
+	/* word 14 */
+	msg_word += 3;
+	*msg_word = 0;
 	HTT_RX_RING_SELECTION_CFG_RX_MPDU_START_WORD_MASK_SET(*msg_word,
 			tlv_filter->rx_mpdu_start_wmask);
 
@@ -178,12 +181,20 @@ dp_rx_mon_word_mask_subscribe(uint32_t *msg_word,
 	HTT_RX_RING_SELECTION_CFG_RX_MPDU_END_WORD_MASK_SET(*msg_word,
 			tlv_filter->rx_mpdu_end_wmask);
 #endif
+	/* word 15 */
 	msg_word++;
 	*msg_word = 0;
 	HTT_RX_RING_SELECTION_CFG_RX_MSDU_END_WORD_MASK_SET(*msg_word,
 			tlv_filter->rx_msdu_end_wmask);
-	HTT_RX_RING_SELECTION_CFG_ENABLE_RX_PKT_TLV_OFFSET_SET(*msg_word,
-			tlv_filter->rx_pkt_tlv_offset);
+
+	/* word 16 */
+	msg_word++;
+	*msg_word = 0;
+	if (tlv_filter->rx_pkt_tlv_offset) {
+		HTT_RX_RING_SELECTION_CFG_ENABLE_RX_PKT_TLV_OFFSET_SET(*msg_word, 1);
+		HTT_RX_RING_SELECTION_CFG_RX_PKT_TLV_OFFSET_SET(*msg_word,
+								tlv_filter->rx_pkt_tlv_offset);
+	}
 }
 
 static void
@@ -1075,9 +1086,10 @@ void dp_mon_filter_setup_enhanced_stats_2_0(struct dp_pdev *pdev)
 	rx_tlv_filter->tlv_filter.mo_mgmt_filter = 0;
 	rx_tlv_filter->tlv_filter.mo_ctrl_filter = 0;
 	rx_tlv_filter->tlv_filter.mo_data_filter = 0;
-	rx_tlv_filter->tlv_filter.ppdu_start_user_info = 1;
+	rx_tlv_filter->tlv_filter.ppdu_start_user_info = 0;
 	/* Enabled the filter */
 	rx_tlv_filter->valid = true;
+	mon_pdev->current_filter_mode = mode;
 
 	dp_mon_filter_show_filter(mon_pdev, mode, rx_tlv_filter);
 
@@ -1102,6 +1114,7 @@ void dp_mon_filter_reset_enhanced_stats_2_0(struct dp_pdev *pdev)
 	mon_pdev_be =
 		dp_get_be_mon_pdev_from_dp_mon_pdev(mon_pdev);
 
+	mon_pdev->current_filter_mode = mode;
 	mon_pdev_be->filter_be[mode][srng_type] = filter;
 }
 #endif /* QCA_ENHANCED_STATS_SUPPORT */
@@ -1216,16 +1229,27 @@ static void dp_mon_filter_set_mon_2_0(struct dp_mon_pdev *mon_pdev,
 	filter->tlv_filter.ppdu_end_user_stats = 1;
 	filter->tlv_filter.ppdu_end_user_stats_ext = 1;
 	filter->tlv_filter.ppdu_end_status_done = 1;
-	filter->tlv_filter.enable_fp = 1;
+	filter->tlv_filter.enable_fp =
+		(mon_pdev->mon_filter_mode & MON_FILTER_PASS) ? 1 : 0;
+	filter->tlv_filter.enable_mo =
+		(mon_pdev->mon_filter_mode & MON_FILTER_OTHER) ? 1 : 0;
+	filter->tlv_filter.fp_mgmt_filter = mon_pdev->fp_mgmt_filter;
+	filter->tlv_filter.fp_ctrl_filter = mon_pdev->fp_ctrl_filter;
+	filter->tlv_filter.fp_data_filter = mon_pdev->fp_data_filter;
+	filter->tlv_filter.mo_mgmt_filter = mon_pdev->mo_mgmt_filter;
+	filter->tlv_filter.mo_ctrl_filter = mon_pdev->mo_ctrl_filter;
+	filter->tlv_filter.mo_data_filter = mon_pdev->mo_data_filter;
 	filter->tlv_filter.enable_md = 0;
-	filter->tlv_filter.fp_mgmt_filter = FILTER_MGMT_ALL;
-	filter->tlv_filter.fp_ctrl_filter = FILTER_CTRL_ALL;
-	filter->tlv_filter.fp_data_filter = FILTER_DATA_ALL;
 	filter->tlv_filter.offset_valid = false;
-	filter->tlv_filter.rx_packet_offset = 8;
-	filter->tlv_filter.mgmt_dma_length = 3;
-	filter->tlv_filter.data_dma_length = 3;
-	filter->tlv_filter.ctrl_dma_length = 3;
+	filter->tlv_filter.mgmt_dma_length = DEFAULT_DMA_LENGTH;
+	filter->tlv_filter.data_dma_length = DEFAULT_DMA_LENGTH;
+	filter->tlv_filter.ctrl_dma_length = DEFAULT_DMA_LENGTH;
+	 /* compute offset size in QWORDS */
+	filter->tlv_filter.rx_pkt_tlv_offset = DP_RX_MON_PACKET_OFFSET / 8;
+	filter->tlv_filter.mgmt_mpdu_log = DP_MON_MSDU_LOGGING;
+	filter->tlv_filter.ctrl_mpdu_log = DP_MON_MSDU_LOGGING;
+	filter->tlv_filter.data_mpdu_log = DP_MON_MSDU_LOGGING;
+
 
 	if (mon_pdev->mon_filter_mode & MON_FILTER_OTHER) {
 		filter->tlv_filter.enable_mo = 1;
@@ -1267,10 +1291,10 @@ void dp_mon_filter_setup_rx_mon_mode_2_0(struct dp_pdev *pdev)
 	mon_pdev_be = dp_get_be_mon_pdev_from_dp_mon_pdev(mon_pdev);
 
 	rx_tlv_filter = &filter.rx_tlv_filter;
-	rx_tlv_filter->valid = false;
+	rx_tlv_filter->valid = true;
 
 	dp_mon_filter_set_mon_2_0(mon_pdev, rx_tlv_filter);
-	dp_mon_filter_show_filter(mon_pdev, mode, rx_tlv_filter);
+	dp_mon_filter_show_filter_be(mode, &filter);
 
 	mon_pdev->current_filter_mode = mode;
 	/* Store the above filter */
@@ -1375,6 +1399,18 @@ static void dp_rx_mon_filter_show_filter(struct dp_mon_filter_be *filter)
 			    rx_tlv_filter->rx_msdu_end_wmask);
 	DP_MON_FILTER_PRINT("rx_hdr_length: %d",
 			    rx_tlv_filter->rx_hdr_length);
+	DP_MON_FILTER_PRINT("mgmt_mpdu_log: 0x%x",
+			    rx_tlv_filter->mgmt_mpdu_log);
+	DP_MON_FILTER_PRINT("data_mpdu_log: 0x%x",
+			    rx_tlv_filter->data_mpdu_log);
+	DP_MON_FILTER_PRINT("ctrl_mpdu_log: 0x%x",
+			    rx_tlv_filter->ctrl_mpdu_log);
+	DP_MON_FILTER_PRINT("mgmt_dma_length: 0x%x",
+			    rx_tlv_filter->mgmt_dma_length);
+	DP_MON_FILTER_PRINT("data_dma_length: 0x%x",
+			    rx_tlv_filter->data_dma_length);
+	DP_MON_FILTER_PRINT("ctrl_dma_length: 0x%x",
+			    rx_tlv_filter->ctrl_dma_length);
 }
 
 static void dp_tx_mon_filter_show_filter(struct dp_mon_filter_be *filter)
@@ -2068,6 +2104,11 @@ dp_rx_mon_filter_h2t_setup(struct dp_soc *soc, struct dp_pdev *pdev,
 		    !tlv_filter->rx_hdr_length)
 			tlv_filter->rx_hdr_length =
 				src_tlv_filter->rx_hdr_length;
+
+		if (src_tlv_filter->rx_pkt_tlv_offset &&
+		    !tlv_filter->rx_pkt_tlv_offset)
+			tlv_filter->rx_pkt_tlv_offset =
+				src_tlv_filter->rx_pkt_tlv_offset;
 
 		dp_mon_filter_show_filter_be(current_mode, mon_filter);
 	}
