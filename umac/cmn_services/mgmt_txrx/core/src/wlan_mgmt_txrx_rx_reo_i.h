@@ -34,22 +34,16 @@
 #include <wlan_mgmt_txrx_rx_reo_public_structs.h>
 #include <wlan_objmgr_pdev_obj.h>
 #include <wlan_objmgr_psoc_obj.h>
+#include <wlan_mlo_mgr_public_structs.h>
 
 #define MGMT_RX_REO_LIST_MAX_SIZE             (100)
-#define MGMT_RX_REO_LIST_TIMEOUT_US           (1000 * USEC_PER_MSEC)
-#define MGMT_RX_REO_AGEOUT_TIMER_PERIOD_MS    (500)
+#define MGMT_RX_REO_LIST_TIMEOUT_US           (500 * USEC_PER_MSEC)
+#define MGMT_RX_REO_AGEOUT_TIMER_PERIOD_MS    (250)
 #define MGMT_RX_REO_STATUS_WAIT_FOR_FRAME_ON_OTHER_LINKS         (BIT(0))
 #define MGMT_RX_REO_STATUS_AGED_OUT                              (BIT(1))
 #define MGMT_RX_REO_STATUS_OLDER_THAN_LATEST_AGED_OUT_FRAME      (BIT(2))
 #define MGMT_RX_REO_STATUS_LIST_MAX_SIZE_EXCEEDED                (BIT(3))
 
-/**
- * TODO: Dummy macro for Maximum MLO links on the system
- * This is added only as a place holder for the time being.
- * Remove this once the actual one is implemented.
- */
-#define MGMT_RX_REO_MAX_LINKS (4)
-#define MGMT_RX_REO_INVALID_NUM_LINKS (-1)
 #define MGMT_RX_REO_INVALID_LINK_ID   (-1)
 
 /* Reason to release an entry from the reorder list */
@@ -99,6 +93,22 @@ struct mgmt_rx_reo_pdev_info {
 				[MGMT_RX_REO_SHARED_SNAPSHOT_MAX];
 	struct mgmt_rx_reo_filter filter;
 };
+
+/**
+ * mgmt_rx_reo_pdev_obj_open_notification() - pdev open handler for
+ * management rx-reorder module
+ * @pdev: pointer to pdev object
+ * @mgmt_txrx_pdev_ctx: pdev private object of mgmt txrx module
+ *
+ * This function gets called from object manager when pdev is being opened and
+ * creates management rx-reorder pdev context
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+mgmt_rx_reo_pdev_obj_open_notification
+		(struct wlan_objmgr_pdev *pdev,
+		 struct mgmt_txrx_priv_pdev_context *mgmt_txrx_pdev_ctx);
 
 /**
  * mgmt_rx_reo_pdev_obj_create_notification() - pdev create handler for
@@ -191,7 +201,7 @@ struct mgmt_rx_reo_list {
  * @total_count: Sum of entries in @per_link_count
  */
 struct mgmt_rx_reo_wait_count {
-	unsigned int per_link_count[MGMT_RX_REO_MAX_LINKS];
+	unsigned int per_link_count[MAX_MLO_LINKS];
 	unsigned long long int total_count;
 };
 
@@ -336,7 +346,7 @@ struct mgmt_rx_frame_fw {
  * @mgmt_pkt_ctr: Stores the last management packet counter for all the links
  */
 struct mgmt_rx_reo_sim_mac_hw {
-	uint16_t mgmt_pkt_ctr[MGMT_RX_REO_MAX_LINKS];
+	uint16_t mgmt_pkt_ctr[MAX_MLO_LINKS];
 };
 
 /**
@@ -347,11 +357,13 @@ struct mgmt_rx_reo_sim_mac_hw {
  * @num_mlo_links: Total number of MLO HW links. In case of simulation all the
  * pdevs are assumed to have MLO capability and number of MLO links is same as
  * the number of pdevs in the system.
+ * @valid_link_list: List of valid link id values
  */
 struct mgmt_rx_reo_sim_link_id_to_pdev_map {
-	struct wlan_objmgr_pdev *map[MGMT_RX_REO_MAX_LINKS];
+	struct wlan_objmgr_pdev *map[MAX_MLO_LINKS];
 	qdf_spinlock_t lock;
 	uint8_t num_mlo_links;
+	int8_t valid_link_list[MAX_MLO_LINKS];
 };
 
 /**
@@ -376,11 +388,11 @@ struct mgmt_rx_reo_mac_hw_simulator {
  * @link_id_to_pdev_map: link_id to pdev object map
  */
 struct mgmt_rx_reo_sim_context {
-	struct workqueue_struct *host_mgmt_frame_handler[MGMT_RX_REO_MAX_LINKS];
-	struct workqueue_struct *fw_mgmt_frame_handler[MGMT_RX_REO_MAX_LINKS];
+	struct workqueue_struct *host_mgmt_frame_handler[MAX_MLO_LINKS];
+	struct workqueue_struct *fw_mgmt_frame_handler[MAX_MLO_LINKS];
 	struct mgmt_rx_reo_master_frame_list master_frame_list;
 	struct mgmt_rx_reo_mac_hw_simulator mac_hw_sim;
-	struct mgmt_rx_reo_snapshot snapshot[MGMT_RX_REO_MAX_LINKS]
+	struct mgmt_rx_reo_snapshot snapshot[MAX_MLO_LINKS]
 					    [MGMT_RX_REO_SHARED_SNAPSHOT_MAX];
 	struct mgmt_rx_reo_sim_link_id_to_pdev_map link_id_to_pdev_map;
 };
@@ -488,13 +500,13 @@ struct reo_egress_debug_frame_info {
  */
 struct reo_ingress_frame_stats {
 	uint64_t ingress_count
-		[MGMT_RX_REO_MAX_LINKS][MGMT_RX_REO_FRAME_DESC_TYPE_MAX];
-	uint64_t queued_count[MGMT_RX_REO_MAX_LINKS];
-	uint64_t zero_wait_count_rx_count[MGMT_RX_REO_MAX_LINKS];
-	uint64_t immediate_delivery_count[MGMT_RX_REO_MAX_LINKS];
-	uint64_t stale_count[MGMT_RX_REO_MAX_LINKS]
+		[MAX_MLO_LINKS][MGMT_RX_REO_FRAME_DESC_TYPE_MAX];
+	uint64_t queued_count[MAX_MLO_LINKS];
+	uint64_t zero_wait_count_rx_count[MAX_MLO_LINKS];
+	uint64_t immediate_delivery_count[MAX_MLO_LINKS];
+	uint64_t stale_count[MAX_MLO_LINKS]
 			    [MGMT_RX_REO_FRAME_DESC_TYPE_MAX];
-	uint64_t error_count[MGMT_RX_REO_MAX_LINKS]
+	uint64_t error_count[MAX_MLO_LINKS]
 			    [MGMT_RX_REO_FRAME_DESC_TYPE_MAX];
 };
 
@@ -512,10 +524,10 @@ struct reo_ingress_frame_stats {
  * each link and release  reason.
  */
 struct reo_egress_frame_stats {
-	uint64_t delivery_attempts_count[MGMT_RX_REO_MAX_LINKS];
-	uint64_t delivery_success_count[MGMT_RX_REO_MAX_LINKS];
-	uint64_t premature_delivery_count[MGMT_RX_REO_MAX_LINKS];
-	uint64_t delivery_count[MGMT_RX_REO_MAX_LINKS]
+	uint64_t delivery_attempts_count[MAX_MLO_LINKS];
+	uint64_t delivery_success_count[MAX_MLO_LINKS];
+	uint64_t premature_delivery_count[MAX_MLO_LINKS];
+	uint64_t delivery_count[MAX_MLO_LINKS]
 			       [MGMT_RX_REO_RELEASE_REASON_MAX];
 };
 
@@ -573,7 +585,6 @@ struct reo_egress_debug_info {
  * disconnection. Hence it is required to serialize the delivery
  * of management frames to upper layers in the strict order of MLO
  * global time stamp.
- * @num_mlo_links: Number of MLO links on the system
  * @sim_context: Management rx-reorder simulation context
  * @ingress_frame_debug_info: Debug object to log incoming frames
  * @egress_frame_debug_info: Debug object to log outgoing frames
@@ -584,9 +595,7 @@ struct mgmt_rx_reo_context {
 	struct mgmt_rx_reo_list reo_list;
 	qdf_spinlock_t reo_algo_entry_lock;
 	qdf_spinlock_t frame_release_lock;
-#ifndef WLAN_MGMT_RX_REO_SIM_SUPPORT
-	uint8_t num_mlo_links;
-#else
+#ifdef WLAN_MGMT_RX_REO_SIM_SUPPORT
 	struct mgmt_rx_reo_sim_context sim_context;
 #endif /* WLAN_MGMT_RX_REO_SIM_SUPPORT */
 #ifdef WLAN_MGMT_RX_REO_DEBUG_SUPPORT
@@ -740,6 +749,30 @@ mgmt_rx_reo_deinit_context(void);
  */
 bool
 mgmt_rx_reo_is_simulation_in_progress(void);
+
+/**
+ * mgmt_rx_reo_print_ingress_frame_debug_info() - Helper API to print
+ * stats related to incoming management frames
+ *
+ * This API prints stats related to management frames entering management
+ * Rx reorder module.
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+mgmt_rx_reo_print_ingress_frame_debug_info(void);
+
+/**
+ * mgmt_rx_reo_print_egress_frame_debug_info() - Helper API to print
+ * stats related to outgoing management frames
+ *
+ * This API prints stats related to management frames exiting management
+ * Rx reorder module.
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+mgmt_rx_reo_print_egress_frame_debug_info(void);
 
 #ifdef WLAN_MGMT_RX_REO_SIM_SUPPORT
 /**
@@ -908,5 +941,20 @@ mgmt_rx_reo_list_max_size_exceeded(struct mgmt_rx_reo_list *reo_list)
 {
 	return (qdf_list_size(&reo_list->list) > reo_list->max_list_size);
 }
+
+/**
+ * mgmt_rx_reo_validate_mlo_hw_link_info() - Validate the MLO HW link info
+ * obtained from the global shared memory arena
+ * @psoc: Pointer to psoc object
+ *
+ * Validate the following MLO HW link related information extracted from
+ * management Rx reorder related TLVs in global shared memory arena.
+ *         1. Number of active MLO HW links
+ *         2. Valid MLO HW link bitmap
+ *
+ * Return: QDF_STATUS of operation
+ */
+QDF_STATUS
+mgmt_rx_reo_validate_mlo_hw_link_info(struct wlan_objmgr_psoc *psoc);
 #endif /* WLAN_MGMT_RX_REO_SUPPORT */
 #endif /* _WLAN_MGMT_TXRX_RX_REO_I_H */

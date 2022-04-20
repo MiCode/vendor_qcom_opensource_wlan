@@ -194,6 +194,26 @@ struct dp_rx_desc {
 	__dp_rx_buffers_replenish(soc, mac_id, rxdma_srng, rx_desc_pool, \
 				  num_buffers, desc_list, tail, __func__)
 
+#ifdef WLAN_SUPPORT_RX_FISA
+/**
+ * dp_rx_set_hdr_pad() - set l3 padding in nbuf cb
+ * @nbuf: pkt skb pointer
+ * @l3_padding: l3 padding
+ *
+ * Return: None
+ */
+static inline
+void dp_rx_set_hdr_pad(qdf_nbuf_t nbuf, uint32_t l3_padding)
+{
+	QDF_NBUF_CB_RX_PACKET_L3_HDR_PAD(nbuf) = l3_padding;
+}
+#else
+static inline
+void dp_rx_set_hdr_pad(qdf_nbuf_t nbuf, uint32_t l3_padding)
+{
+}
+#endif
+
 #ifdef DP_RX_SPECIAL_FRAME_NEED
 /**
  * dp_rx_is_special_frame() - check is RX frame special needed

@@ -343,6 +343,34 @@ struct mlme_ext_ops {
 };
 
 /**
+ * struct mlme_external_tx_ops - MLME external callbacks structure
+ * @peer_ops:             callback to invoke peer mlme ops from external module
+ * @vdev_ops:             callback to invoke vdev mlme ops from external module
+ * @pdev_ops:             callback to invoke pdev mlme ops from external module
+ * @scan_db_iterate:      callback to invoke scan database iterate
+ */
+enum wlan_mlme_peer_param;
+enum wlan_mlme_vdev_param;
+enum wlan_mlme_pdev_param;
+struct mlme_external_tx_ops {
+	QDF_STATUS (*peer_ops)(
+		struct wlan_objmgr_peer *peer,
+		enum wlan_mlme_peer_param type,
+		void *data, void *ret);
+	QDF_STATUS (*vdev_ops)(
+		struct wlan_objmgr_vdev *vdev,
+		enum wlan_mlme_vdev_param type,
+		void *data, void *ret);
+	QDF_STATUS (*pdev_ops)(
+		struct wlan_objmgr_pdev *pdev,
+		enum wlan_mlme_pdev_param type,
+		void *data, void *ret);
+	QDF_STATUS (*scan_db_iterate)(
+		struct wlan_objmgr_pdev *pdev,
+		scan_iterator_func handler, void *arg);
+};
+
+/**
  * mlme_psoc_ops_ext_hdl_create() - Alloc PSOC mlme ext handle
  * @psoc_mlme:  PSOC MLME comp object
  *

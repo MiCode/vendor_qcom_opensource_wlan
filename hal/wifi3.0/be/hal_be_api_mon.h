@@ -850,7 +850,7 @@ hal_tx_status_get_next_tlv(uint8_t *tx_tlv) {
 	tlv_tag = HAL_RX_GET_USER_TLV32_TYPE(tx_tlv);
 
 	return (uint8_t *)(((unsigned long)(tx_tlv + tlv_len +
-					    HAL_RX_TLV32_HDR_SIZE + 3)) & (~3));
+					    HAL_RX_TLV32_HDR_SIZE + 7)) & (~7));
 }
 
 /**
@@ -907,17 +907,19 @@ hal_txmon_status_get_num_users(hal_soc_handle_t hal_soc_hdl,
  * hal_txmon_status_free_buffer() - api to free status buffer
  * @hal_soc: HAL soc handle
  * @status_frag: qdf_frag_t buffer
+ * @end_offset: end offset within buffer that has valid data
  *
- * Return void
+ * Return status
  */
-static inline void
+static inline QDF_STATUS
 hal_txmon_status_free_buffer(hal_soc_handle_t hal_soc_hdl,
-			     qdf_frag_t status_frag)
+			     qdf_frag_t status_frag,
+			     uint32_t end_offset)
 {
 	struct hal_soc *hal_soc = (struct hal_soc *)hal_soc_hdl;
 
-	if (hal_soc->ops->hal_txmon_status_free_buffer)
-		hal_soc->ops->hal_txmon_status_free_buffer(status_frag);
+	return hal_soc->ops->hal_txmon_status_free_buffer(status_frag,
+							  end_offset);
 }
 
 /**
@@ -1213,6 +1215,7 @@ hal_rx_parse_eht_sig_mumimo_user_info(struct hal_soc *hal_soc, void *tlv,
 				QDF_MON_STATUS_EHT_USER_STA_ID_SHIFT);
 	ppdu_info->rx_status.eht_user_info[user_idx] |= (user_info->mcs <<
 				QDF_MON_STATUS_EHT_USER_MCS_SHIFT);
+	ppdu_info->rx_status.mcs = user_info->mcs;
 
 	ppdu_info->rx_status.eht_user_info[user_idx] |= (user_info->coding <<
 					QDF_MON_STATUS_EHT_USER_CODING_SHIFT);
@@ -1252,8 +1255,12 @@ hal_rx_parse_eht_sig_non_mumimo_user_info(struct hal_soc *hal_soc, void *tlv,
 				QDF_MON_STATUS_EHT_USER_STA_ID_SHIFT);
 	ppdu_info->rx_status.eht_user_info[user_idx] |= (user_info->mcs <<
 				QDF_MON_STATUS_EHT_USER_MCS_SHIFT);
+	ppdu_info->rx_status.mcs = user_info->mcs;
+
 	ppdu_info->rx_status.eht_user_info[user_idx] |= (user_info->nss <<
 					QDF_MON_STATUS_EHT_USER_NSS_SHIFT);
+	ppdu_info->rx_status.nss = user_info->nss + 1;
+
 	ppdu_info->rx_status.eht_user_info[user_idx] |=
 				(user_info->beamformed <<
 				QDF_MON_STATUS_EHT_USER_BEAMFORMING_SHIFT);
@@ -1361,14 +1368,16 @@ static inline uint32_t
 hal_rx_parse_eht_sig_non_ofdma(struct hal_soc *hal_soc, void *tlv,
 			       struct hal_rx_ppdu_info *ppdu_info)
 {
+	void *user_info = (void *)((uint8_t *)tlv + 4);
+
 	hal_rx_parse_usig_overflow(hal_soc, tlv, ppdu_info);
 	hal_rx_parse_non_ofdma_users(hal_soc, tlv, ppdu_info);
 
 	if (hal_rx_is_mu_mimo_user(hal_soc, ppdu_info))
-		hal_rx_parse_eht_sig_mumimo_user_info(hal_soc, tlv,
+		hal_rx_parse_eht_sig_mumimo_user_info(hal_soc, user_info,
 						      ppdu_info);
 	else
-		hal_rx_parse_eht_sig_non_mumimo_user_info(hal_soc, tlv,
+		hal_rx_parse_eht_sig_non_mumimo_user_info(hal_soc, user_info,
 							  ppdu_info);
 
 	return HAL_TLV_STATUS_PPDU_NOT_DONE;
@@ -1419,8 +1428,11 @@ hal_rx_parse_cmn_usr_info(struct hal_soc *hal_soc, uint8_t *tlv,
 
 	ppdu_info->rx_status.eht_data[0] |= (cmn_usr_info->cp_setting <<
 					     QDF_MON_STATUS_EHT_GI_SHIFT);
+	ppdu_info->rx_status.sgi = cmn_usr_info->cp_setting;
+
 	ppdu_info->rx_status.eht_data[0] |= (cmn_usr_info->ltf_size <<
 					     QDF_MON_STATUS_EHT_LTF_SHIFT);
+	ppdu_info->rx_status.ltf_size = cmn_usr_info->ltf_size;
 
 	return HAL_TLV_STATUS_PPDU_NOT_DONE;
 }
@@ -1498,6 +1510,10 @@ hal_rx_parse_receive_user_info(struct hal_soc *hal_soc, uint8_t *tlv,
 	ppdu_info->rx_status.eht_data[0] |=
 				(rx_usr_info->dl_ofdma_content_channel <<
 				 QDF_MON_STATUS_EHT_CONTENT_CH_INDEX_SHIFT);
+
+	ppdu_info->rx_status.reception_type = rx_usr_info->reception_type;
+	ppdu_info->rx_status.is_stbc = rx_usr_info->stbc;
+	ppdu_info->rx_status.ldpc = rx_usr_info->ldpc;
 
 	if (!(rx_usr_info->reception_type == HAL_RX_TYPE_MU_MIMO ||
 	      rx_usr_info->reception_type == HAL_RX_TYPE_MU_OFDMA ||

@@ -2943,11 +2943,10 @@ static int hif_ce_configure_legacyirq(struct hif_softc *scn)
 	struct HIF_CE_state *ce_sc = HIF_GET_CE_STATE(scn);
 	struct CE_attr *host_ce_conf = ce_sc->host_ce_config;
 	struct hif_pci_softc *pci_sc = HIF_GET_PCI_SOFTC(scn);
-	struct pci_dev *pdev = pci_sc->pdev;
 	int pci_slot;
 	qdf_device_t qdf_dev = scn->qdf_dev;
 
-	if (!pld_get_enable_intx(&pdev->dev))
+	if (!pld_get_enable_intx(scn->qdf_dev->dev))
 		return -EINVAL;
 
 	scn->bus_ops.hif_irq_disable = &hif_ce_srng_msi_irq_disable;
@@ -2961,11 +2960,11 @@ static int hif_ce_configure_legacyirq(struct hif_softc *scn)
 		if (host_ce_conf[ce_id].flags & CE_ATTR_INIT_ON_DEMAND)
 			continue;
 
-		ret = pfrm_get_irq(&pdev->dev,
+		ret = pfrm_get_irq(scn->qdf_dev->dev,
 				   (struct qdf_pfm_hndl *)qdf_dev->cnss_pdev,
 				   legacy_ic_irqname[ce_id], ce_id, &irq);
 		if (ret) {
-			dev_err(&pdev->dev, "get irq failed\n");
+			dev_err(scn->qdf_dev->dev, "get irq failed\n");
 			ret = -EFAULT;
 			goto skip;
 		}
@@ -3425,11 +3424,9 @@ int hif_pci_configure_grp_irq(struct hif_softc *scn,
 	int ret = 0;
 	int irq = 0;
 	int j;
-	struct hif_pci_softc *sc = HIF_GET_PCI_SOFTC(scn);
-	struct pci_dev *pdev = sc->pdev;
 	int pci_slot;
 
-	if (pld_get_enable_intx(&pdev->dev))
+	if (pld_get_enable_intx(scn->qdf_dev->dev))
 		return hif_grp_configure_legacyirq(scn, hif_ext_group);
 
 	hif_ext_group->irq_enable = &hif_exec_grp_irq_enable;

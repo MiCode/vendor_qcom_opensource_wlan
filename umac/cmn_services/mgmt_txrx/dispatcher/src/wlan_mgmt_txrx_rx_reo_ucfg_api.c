@@ -51,7 +51,7 @@ ucfg_wlan_mgmt_rx_reo_sim_stop(void)
 
 	if (wlan_mgmt_rx_reo_is_simulation_in_progress()) {
 		mgmt_rx_reo_debug("Stopping simulation");
-		status = wlan_mgmt_rx_reo_sim_start();
+		status = wlan_mgmt_rx_reo_sim_stop();
 		if (QDF_IS_STATUS_ERROR(status)) {
 			mgmt_rx_reo_err("Failed to stop rx reo sim");
 			return status;

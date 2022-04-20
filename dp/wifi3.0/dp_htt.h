@@ -159,6 +159,8 @@ void htt_htc_pkt_pool_free(struct htt_soc *soc);
 #define HTT_VDEV_STATS_TLV_TX_RETRY_BYTE_CNT_OFFSET   16
 #define HTT_VDEV_STATS_TLV_TX_DROP_BYTE_CNT_OFFSET    18
 #define HTT_VDEV_STATS_TLV_TX_AGE_OUT_BYTE_CNT_OFFSET 20
+#define HTT_VDEV_STATS_TLV_TX_TQM_BYPASS_PKT_CNT_OFFSET  22
+#define HTT_VDEV_STATS_TLV_TX_TQM_BYPASS_BYTE_CNT_OFFSET 24
 
 #define HTT_VDEV_STATS_GET_INDEX(index) \
 	HTT_VDEV_STATS_TLV_##index##_OFFSET
@@ -673,7 +675,6 @@ struct htt_rx_ring_tlv_filter {
 		 data_mpdu_log:1,
 		 enable:1;
 #endif
-	uint8_t rx_mon_global_en;
 };
 
 /**

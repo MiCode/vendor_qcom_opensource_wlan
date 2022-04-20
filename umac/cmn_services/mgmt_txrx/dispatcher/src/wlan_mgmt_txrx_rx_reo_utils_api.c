@@ -21,10 +21,12 @@
  */
 
 #include <wlan_mgmt_txrx_rx_reo_utils_api.h>
+#include <wlan_mgmt_txrx_rx_reo_tgt_api.h>
 #include "../../core/src/wlan_mgmt_txrx_rx_reo_i.h"
 #include <cfg_ucfg_api.h>
 #include <wlan_mgmt_txrx_tgt_api.h>
 #include<wlan_mgmt_txrx_rx_reo_tgt_api.h>
+#include <wlan_mlo_mgr_cmn.h>
 
 QDF_STATUS
 wlan_mgmt_rx_reo_deinit(void)
@@ -62,12 +64,21 @@ wlan_mgmt_rx_reo_get_snapshot_address(
  * @pdev: Pointer to pdev object
  *
  * Return: On success returns the MLO HW link id corresponding to the pdev
- * object. On failure returns -1.
+ * object. On failure returns -EINVAL
  */
 int8_t
 wlan_get_mlo_link_id_from_pdev(struct wlan_objmgr_pdev *pdev)
 {
-	return -EINVAL;
+	uint16_t hw_link_id;
+
+	hw_link_id = wlan_mlo_get_pdev_hw_link_id(pdev);
+
+	if (hw_link_id == INVALID_HW_LINK_ID) {
+		mgmt_rx_reo_err("Invalid HW link id for the pdev");
+		return -EINVAL;
+	}
+
+	return hw_link_id;
 }
 
 qdf_export_symbol(wlan_get_mlo_link_id_from_pdev);
@@ -85,7 +96,7 @@ struct wlan_objmgr_pdev *
 wlan_get_pdev_from_mlo_link_id(uint8_t mlo_link_id,
 			       wlan_objmgr_ref_dbgid refdbgid)
 {
-	return NULL;
+	return wlan_mlo_get_pdev_by_hw_link_id(mlo_link_id, refdbgid);
 }
 
 qdf_export_symbol(wlan_get_pdev_from_mlo_link_id);
@@ -155,6 +166,21 @@ qdf_export_symbol(wlan_get_pdev_from_mlo_link_id);
 #endif /* WLAN_MGMT_RX_REO_SIM_SUPPORT */
 
 QDF_STATUS
+wlan_mgmt_rx_reo_validate_mlo_hw_link_info(struct wlan_objmgr_psoc *psoc)
+{
+	return mgmt_rx_reo_validate_mlo_hw_link_info(psoc);
+}
+
+QDF_STATUS
+wlan_mgmt_rx_reo_pdev_obj_open_notification
+			(struct wlan_objmgr_pdev *pdev,
+			 struct mgmt_txrx_priv_pdev_context *mgmt_txrx_pdev_ctx)
+{
+	return mgmt_rx_reo_pdev_obj_open_notification(pdev,
+						      mgmt_txrx_pdev_ctx);
+}
+
+QDF_STATUS
 wlan_mgmt_rx_reo_pdev_obj_create_notification(
 			struct wlan_objmgr_pdev *pdev,
 			struct mgmt_txrx_priv_pdev_context *mgmt_txrx_pdev_ctx)
@@ -184,8 +210,11 @@ wlan_mgmt_rx_reo_is_feature_enabled_at_psoc(struct wlan_objmgr_psoc *psoc)
 	if (!cfg_get(psoc, CFG_MGMT_RX_REO_ENABLE))
 		return false;
 
-	return wlan_psoc_nif_feat_cap_get(psoc, WLAN_SOC_F_MGMT_RX_REO_CAPABLE);
+	return wlan_psoc_nif_fw_ext_cap_get(psoc,
+					    WLAN_SOC_F_MGMT_RX_REO_CAPABLE);
 }
+
+qdf_export_symbol(wlan_mgmt_rx_reo_is_feature_enabled_at_psoc);
 
 bool
 wlan_mgmt_rx_reo_is_feature_enabled_at_pdev(struct wlan_objmgr_pdev *pdev)
@@ -235,3 +264,28 @@ wlan_mgmt_rx_reo_is_simulation_in_progress(void)
 {
 	return mgmt_rx_reo_is_simulation_in_progress();
 }
+
+QDF_STATUS
+wlan_mgmt_rx_reo_print_ingress_frame_debug_info(void)
+{
+	return mgmt_rx_reo_print_ingress_frame_debug_info();
+}
+
+qdf_export_symbol(wlan_mgmt_rx_reo_print_ingress_frame_debug_info);
+
+QDF_STATUS
+wlan_mgmt_rx_reo_print_egress_frame_debug_info(void)
+{
+	return mgmt_rx_reo_print_egress_frame_debug_info();
+}
+
+qdf_export_symbol(wlan_mgmt_rx_reo_print_egress_frame_debug_info);
+
+QDF_STATUS
+wlan_mgmt_rx_reo_set_mlo_link_info(uint8_t num_mlo_links,
+				   uint16_t valid_link_bitmap)
+{
+	return mgmt_rx_reo_set_mlo_link_info(num_mlo_links, valid_link_bitmap);
+}
+
+qdf_export_symbol(wlan_mgmt_rx_reo_set_mlo_link_info);

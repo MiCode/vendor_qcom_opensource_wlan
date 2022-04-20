@@ -226,14 +226,37 @@ struct wlan_target_if_dcs_rx_ops {
 };
 #endif
 
+#ifdef WLAN_MLO_GLOBAL_SHMEM_SUPPORT
+/**
+ * struct wlan_lmac_if_global_shmem_local_ops - local ops function pointer
+ * table of local shared mem arena
+ * @implemented: Whether functions pointers are implemented
+ * @init_shmem_arena_ctx: Initialize shmem arena context
+ * @deinit_shmem_arena_ctx: De-initialize shmem arena context
+ * @get_crash_reason_address: Get the address of the crash reason associated
+ * with chip_id
+ * @get_no_of_chips_from_crash_info: Get the number of chips participated in the
+ * mlo from global shmem crash info
+ */
+struct wlan_lmac_if_global_shmem_local_ops {
+	bool implemented;
+
+	QDF_STATUS (*init_shmem_arena_ctx)(void *arena_vaddr,
+					   size_t arena_len);
+	QDF_STATUS (*deinit_shmem_arena_ctx)(void);
+	void *(*get_crash_reason_address)(uint8_t chip_id);
+	uint8_t (*get_no_of_chips_from_crash_info)(void);
+};
+#endif
+
 #ifdef WLAN_MGMT_RX_REO_SUPPORT
 /**
  * struct wlan_lmac_if_mgmt_rx_reo_low_level_ops - Low level function pointer
  * table of MGMT Rx REO module
  * @implemented: Whether functions pointers are implemented
- * @init_shmem_arena_ctx: Initialize shmem arena context
- * @deinit_shmem_arena_ctx: De-initialize shmem arena context
  * @get_num_links: Get number of links to be used by MGMT Rx REO module
+ * @get_valid_link_bitmap: Get valid link bitmap to be used by MGMT Rx
+ * REO module
  * @get_snapshot_address: Get address of an MGMT Rx REO snapshot
  * @snapshot_is_valid: Check if a snapshot is valid
  * @snapshot_get_mgmt_pkt_ctr: Get management packet counter from snapshot
@@ -244,10 +267,8 @@ struct wlan_target_if_dcs_rx_ops {
  */
 struct wlan_lmac_if_mgmt_rx_reo_low_level_ops {
 	bool implemented;
-	QDF_STATUS (*init_shmem_arena_ctx)(void *arena_vaddr,
-					   size_t arena_len);
-	QDF_STATUS (*deinit_shmem_arena_ctx)(void);
 	int (*get_num_links)(void);
+	uint16_t (*get_valid_link_bitmap)(void);
 	void* (*get_snapshot_address)(
 			uint8_t link_id,
 			enum mgmt_rx_reo_shared_snapshot_id snapshot_id);
@@ -263,12 +284,18 @@ struct wlan_lmac_if_mgmt_rx_reo_low_level_ops {
 /**
  * struct wlan_lmac_if_mgmt_txrx_tx_ops - structure of tx function
  * pointers for mgmt rx reo
+ * @get_num_active_hw_links: Get number of active MLO HW links
+ * @get_valid_hw_link_bitmap: Get valid MLO HW link bitmap
  * @read_mgmt_rx_reo_snapshot: Read rx-reorder snapshots
  * @get_mgmt_rx_reo_snapshot_address: Get rx-reorder snapshot address
  * @mgmt_rx_reo_filter_config:  Configure MGMT Rx REO filter
  * @low_level_ops:  Low level operations of MGMT Rx REO module
  */
 struct wlan_lmac_if_mgmt_rx_reo_tx_ops {
+	QDF_STATUS (*get_num_active_hw_links)(struct wlan_objmgr_psoc *psoc,
+					      int8_t *num_active_hw_links);
+	QDF_STATUS (*get_valid_hw_link_bitmap)(struct wlan_objmgr_psoc *psoc,
+					       uint16_t *valid_hw_link_bitmap);
 	QDF_STATUS (*read_mgmt_rx_reo_snapshot)
 			(struct wlan_objmgr_pdev *pdev,
 			 struct mgmt_rx_reo_snapshot *address,
@@ -845,9 +872,9 @@ struct wlan_lmac_if_iot_sim_tx_ops {
 /*
  * struct wlan_lmac_if_wifi_pos_tx_ops - structure of firmware tx function
  * pointers for wifi_pos component
- * @data_req_tx: function pointer to send wifi_pos req to firmware
  * @wifi_pos_register_events: function pointer to register wifi_pos events
  * @wifi_pos_deregister_events: function pointer to deregister wifi_pos events
+ * @data_req_tx: function pointer to send wifi_pos req to firmware
  * @wifi_pos_convert_pdev_id_host_to_target: function pointer to get target
  * pdev_id from host pdev_id.
  * @wifi_pos_convert_pdev_id_target_to_host: function pointer to get host
@@ -857,10 +884,10 @@ struct wlan_lmac_if_iot_sim_tx_ops {
  *                                    request buffer.
  */
 struct wlan_lmac_if_wifi_pos_tx_ops {
-	QDF_STATUS (*data_req_tx)(struct wlan_objmgr_pdev *pdev,
-				  struct oem_data_req *req);
 	QDF_STATUS (*wifi_pos_register_events)(struct wlan_objmgr_psoc *psoc);
 	QDF_STATUS (*wifi_pos_deregister_events)(struct wlan_objmgr_psoc *psoc);
+	QDF_STATUS (*data_req_tx)(struct wlan_objmgr_pdev *pdev,
+				  struct oem_data_req *req);
 	QDF_STATUS (*wifi_pos_convert_pdev_id_host_to_target)(
 			struct wlan_objmgr_psoc *psoc, uint32_t host_pdev_id,
 			uint32_t *target_pdev_id);
@@ -1306,6 +1333,9 @@ struct wlan_lmac_if_mlo_tx_ops {
 	QDF_STATUS (*unregister_events)(struct wlan_objmgr_psoc *psoc);
 	QDF_STATUS (*link_set_active)(struct wlan_objmgr_psoc *psoc,
 		struct mlo_link_set_active_param *param);
+#ifdef WLAN_MLO_GLOBAL_SHMEM_SUPPORT
+	struct wlan_lmac_if_global_shmem_local_ops shmem_local_ops;
+#endif
 };
 
 /**
@@ -2258,6 +2288,10 @@ struct wlan_lmac_if_rx_ops {
  */
 extern QDF_STATUS (*wlan_lmac_if_umac_tx_ops_register)
 				(struct wlan_lmac_if_tx_ops *tx_ops);
+
+/* Function pointer to call legacy crypto rxpn registration in OL */
+extern QDF_STATUS (*wlan_lmac_if_umac_crypto_rxpn_ops_register)
+				(struct wlan_lmac_if_rx_ops *rx_ops);
 #ifdef WLAN_FEATURE_SON
 /**
  * wlan_lmac_if_son_mod_register_rx_ops() - SON Module lmac_if rx_ops
@@ -2270,4 +2304,5 @@ extern QDF_STATUS (*wlan_lmac_if_umac_tx_ops_register)
  */
 void wlan_lmac_if_son_mod_register_rx_ops(struct wlan_lmac_if_rx_ops *rx_ops);
 #endif
+
 #endif /* _WLAN_LMAC_IF_DEF_H_ */

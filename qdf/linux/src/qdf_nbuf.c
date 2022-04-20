@@ -3308,6 +3308,7 @@ qdf_nbuf_unshare_debug(qdf_nbuf_t buf, const char *func_name,
 	qdf_frag_t p_frag;
 	uint32_t num_nr_frags;
 	uint32_t idx = 0;
+	qdf_nbuf_t ext_list, next;
 
 	if (is_initial_mem_debug_disabled)
 		return __qdf_nbuf_unshare(buf);
@@ -3315,6 +3316,9 @@ qdf_nbuf_unshare_debug(qdf_nbuf_t buf, const char *func_name,
 	/* Not a shared buffer, nothing to do */
 	if (!qdf_nbuf_is_cloned(buf))
 		return buf;
+
+	if (qdf_nbuf_get_users(buf) > 1)
+		goto unshare_buf;
 
 	/* Take care to delete the debug entries for frags */
 	num_nr_frags = qdf_nbuf_get_nr_frags(buf);
@@ -3329,24 +3333,36 @@ qdf_nbuf_unshare_debug(qdf_nbuf_t buf, const char *func_name,
 
 	qdf_net_buf_debug_delete_node(buf);
 
-	unshared_buf = __qdf_nbuf_unshare(buf);
-
-	if (qdf_likely(unshared_buf)) {
-		qdf_net_buf_debug_add_node(unshared_buf, 0,
-					   func_name, line_num);
-
-		/* Take care to add the debug entries for frags */
-		num_nr_frags = qdf_nbuf_get_nr_frags(unshared_buf);
-
+	 /* Take care of jumbo packet connected using frag_list and frags */
+	ext_list = qdf_nbuf_get_ext_list(buf);
+	while (ext_list) {
 		idx = 0;
+		next = qdf_nbuf_queue_next(ext_list);
+		num_nr_frags = qdf_nbuf_get_nr_frags(ext_list);
+
+		if (qdf_nbuf_get_users(ext_list) > 1) {
+			ext_list = next;
+			continue;
+		}
+
 		while (idx < num_nr_frags) {
-			p_frag = qdf_nbuf_get_frag_addr(unshared_buf, idx);
+			p_frag = qdf_nbuf_get_frag_addr(ext_list, idx);
 			if (qdf_likely(p_frag))
-				qdf_frag_debug_refcount_inc(p_frag, func_name,
+				qdf_frag_debug_refcount_dec(p_frag, func_name,
 							    line_num);
 			idx++;
 		}
+
+		qdf_net_buf_debug_delete_node(ext_list);
+		ext_list = next;
 	}
+
+unshare_buf:
+	unshared_buf = __qdf_nbuf_unshare(buf);
+
+	if (qdf_likely(unshared_buf))
+		qdf_net_buf_debug_add_node(unshared_buf, 0, func_name,
+					   line_num);
 
 	return unshared_buf;
 }

@@ -92,6 +92,7 @@
 #define CDP_DISCONNECT_STATS       25
 #define CDP_DP_RX_FISA_STATS	   26
 #define CDP_DP_SWLM_STATS	   27
+#define CDP_DP_TX_HW_LATENCY_STATS 28
 
 #define WME_AC_TO_TID(_ac) (       \
 		((_ac) == WME_AC_VO) ? 6 : \
@@ -2286,6 +2287,7 @@ struct cdp_tx_completion_msdu {
  * @mpdu_fcs_ok_bitmap - MPDU with fcs ok bitmap
  * @retries - number of retries
  * @rx_ratekpbs - rx rate in kbps
+ * @rix - rate index
  * @mpdu_retries - retries of mpdu in rx
  */
 struct cdp_rx_stats_ppdu_user {
@@ -2324,6 +2326,7 @@ struct cdp_rx_stats_ppdu_user {
 	uint32_t mpdu_err_byte_count;
 	uint32_t retries;
 	uint32_t rx_ratekbps;
+	uint32_t rix;
 	uint32_t mpdu_retries;
 };
 
@@ -2616,8 +2619,8 @@ struct cdp_monitor_filter {
  * @cfg_dp_enable_ip_tcp_udp_checksum_offload: get TX checksum config for others
  * @cfg_dp_tso_enable: get TSO enable config
  * @cfg_dp_lro_enable: get LRO enable config
- * @cfg_dp_gro_enable: get GRP enable config
- * @cfg_dp_force_gro_enable: get Force GRP enable config
+ * @cfg_dp_gro_enable: get GRO enable config
+ * @cfg_dp_force_gro_enable: get Force GRO enable config
  * @cfg_dp_tx_flow_start_queue_offset: get DP TX flow start queue offset
  * @cfg_dp_tx_flow_stop_queue_threshold: get DP TX flow stop queue threshold
  * @cfg_dp_ipa_uc_tx_buf_size: get IPA TX buf size config

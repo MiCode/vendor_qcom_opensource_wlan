@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -68,6 +69,33 @@ wlan_psoc_get_mgmt_rx_reo_txops(struct wlan_objmgr_psoc *psoc)
 
 	return &mgmt_txrx_tx_ops->mgmt_rx_reo_tx_ops;
 }
+
+/**
+ * tgt_mgmt_rx_reo_get_num_active_hw_links() - Get number of active MLO HW
+ * links
+ * @psoc: Pointer to psoc object
+ * @num_active_hw_links: pointer to number of active MLO HW links
+ *
+ * Get number of active MLO HW links from the MLO global shared memory arena.
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+tgt_mgmt_rx_reo_get_num_active_hw_links(struct wlan_objmgr_psoc *psoc,
+					int8_t *num_active_hw_links);
+
+/**
+ * tgt_mgmt_rx_reo_get_valid_hw_link_bitmap() - Get valid MLO HW link bitmap
+ * @psoc: Pointer to psoc object
+ * @valid_hw_link_bitmap: Pointer to valid MLO HW link bitmap
+ *
+ * Get valid MLO HW link bitmap from the MLO global shared memory arena.
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+tgt_mgmt_rx_reo_get_valid_hw_link_bitmap(struct wlan_objmgr_psoc *psoc,
+					 uint16_t *valid_hw_link_bitmap);
 
 /**
  * tgt_mgmt_rx_reo_read_snapshot() - Read management rx-reorder snapshot

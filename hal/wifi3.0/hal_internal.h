@@ -929,6 +929,7 @@ struct hal_hw_txrx_ops {
 					      uint32_t num_rings,
 					      uint32_t *remap1,
 					      uint32_t *remap2);
+	void (*hal_compute_reo_remap_ix0)(uint32_t *remap0);
 	uint32_t (*hal_rx_flow_setup_cmem_fse)(
 				struct hal_soc *soc, uint32_t cmem_ba,
 				uint32_t table_offset, uint8_t *rx_flow);
@@ -1060,7 +1061,8 @@ struct hal_hw_txrx_ops {
 					       qdf_frag_t status_frag);
 	uint32_t (*hal_txmon_status_get_num_users)(void *tx_tlv_hdr,
 						   uint8_t *num_users);
-	void (*hal_txmon_status_free_buffer)(qdf_frag_t status_frag);
+	QDF_STATUS (*hal_txmon_status_free_buffer)(qdf_frag_t status_frag,
+						   uint32_t end_offset);
 #endif /* QCA_MONITOR_2_0_SUPPORT */
 	void (*hal_reo_shared_qaddr_setup)(hal_soc_handle_t hal_soc_hdl);
 	void (*hal_reo_shared_qaddr_init)(hal_soc_handle_t hal_soc_hdl);

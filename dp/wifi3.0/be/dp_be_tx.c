@@ -272,7 +272,8 @@ void dp_tx_process_htt_completion_be(struct dp_soc *soc,
 
 		tid_stats = &pdev->stats.tid_stats.tid_tx_stats[ring_id][tid];
 
-		if (qdf_unlikely(pdev->delay_stats_flag))
+		if (qdf_unlikely(pdev->delay_stats_flag) ||
+		    qdf_unlikely(dp_is_vdev_tx_delay_stats_enabled(vdev)))
 			dp_tx_compute_delay(vdev, tx_desc, tid, ring_id);
 		if (tx_status < CDP_MAX_TX_HTT_STATUS)
 			tid_stats->htt_status_cnt[tx_status]++;
@@ -616,13 +617,7 @@ dp_tx_hw_enqueue_be(struct dp_soc *soc, struct dp_vdev *vdev,
 
 	dp_tx_set_min_rates_for_critical_frames(soc, hal_tx_desc_cached,
 						tx_desc->nbuf);
-
-	if (qdf_unlikely(vdev->pdev->delay_stats_flag) ||
-	    qdf_unlikely(wlan_cfg_is_peer_ext_stats_enabled(soc->wlan_cfg_ctx)) ||
-	    qdf_unlikely(soc->rdkstats_enabled) ||
-	    dp_tx_pkt_tracepoints_enabled())
-		tx_desc->timestamp = qdf_ktime_to_ms(qdf_ktime_real_get());
-
+	dp_tx_desc_set_ktimestamp(vdev, tx_desc);
 	dp_verbose_debug("length:%d , type = %d, dma_addr %llx, offset %d desc id %u",
 			 tx_desc->length,
 			 (tx_desc->flags & DP_TX_DESC_FLAG_FRAG),
@@ -652,11 +647,12 @@ dp_tx_hw_enqueue_be(struct dp_soc *soc, struct dp_vdev *vdev,
 	/* Sync cached descriptor with HW */
 	hal_tx_desc_sync(hal_tx_desc_cached, hal_tx_desc);
 
-	coalesce = dp_tx_attempt_coalescing(soc, vdev, tx_desc, tid, msdu_info);
+	coalesce = dp_tx_attempt_coalescing(soc, vdev, tx_desc, tid,
+					    msdu_info, ring_id);
 
 	DP_STATS_INC_PKT(vdev, tx_i.processed, 1, tx_desc->length);
 	DP_STATS_INC(soc, tx.tcl_enq[ring_id], 1);
-	dp_tx_update_stats(soc, tx_desc->nbuf);
+	dp_tx_update_stats(soc, tx_desc, ring_id);
 	status = QDF_STATUS_SUCCESS;
 
 	dp_tx_hw_desc_update_evt((uint8_t *)hal_tx_desc_cached,
@@ -705,7 +701,6 @@ void dp_tx_get_vdev_bank_config(struct dp_vdev_be *be_vdev,
 				union hal_tx_bank_config *bank_config)
 {
 	struct dp_vdev *vdev = &be_vdev->vdev;
-	struct dp_soc *soc = vdev->pdev->soc;
 
 	bank_config->epd = 0;
 
@@ -721,8 +716,8 @@ void dp_tx_get_vdev_bank_config(struct dp_vdev_be *be_vdev,
 	bank_config->src_buffer_swap = 0;
 	bank_config->link_meta_swap = 0;
 
-	if ((soc->sta_mode_search_policy == HAL_TX_ADDR_INDEX_SEARCH) &&
-	     vdev->opmode == wlan_op_mode_sta) {
+	if ((vdev->search_type == HAL_TX_ADDR_INDEX_SEARCH) &&
+	    vdev->opmode == wlan_op_mode_sta) {
 		bank_config->index_lookup_enable = 1;
 		bank_config->mcast_pkt_ctrl = HAL_TX_MCAST_CTRL_MEC_NOTIFY;
 		bank_config->addrx_en = 0;

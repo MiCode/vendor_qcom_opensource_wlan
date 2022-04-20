@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2017, 2019-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -78,4 +79,13 @@ int wifi_pos_oem_rsp_handler(struct wlan_objmgr_psoc *psoc,
  */
 struct wlan_lmac_if_wifi_pos_tx_ops *
 	wifi_pos_get_tx_ops(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * wifi_pos_get_rx_ops: api to get rx ops
+ * @psoc: pointer to psoc object
+ *
+ * Return: rx ops
+ */
+struct wlan_lmac_if_wifi_pos_rx_ops *
+	wifi_pos_get_rx_ops(struct wlan_objmgr_psoc *psoc);
 #endif

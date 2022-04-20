@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -156,6 +157,7 @@ extract_mlo_glb_rx_reo_per_link_info_tlv(
 	uint32_t tlv_len, tlv_tag;
 	int len;
 	uint8_t *fw_consumed;
+	int parsed_bytes;
 
 	qdf_assert_always(data);
 	qdf_assert_always(link_info);
@@ -175,25 +177,32 @@ extract_mlo_glb_rx_reo_per_link_info_tlv(
 	 * Get the pointer to the fw_consumed snapshot with in the TLV.
 	 * Note that snapshots are nested TLVs within link_sanpshot_info TLV.
 	 */
+	data += qdf_offsetof(mlo_glb_rx_reo_per_link_snapshot_info,
+			     fw_consumed);
 	fw_consumed = (uint8_t *)get_field_pointer_in_tlv(ptlv, fw_consumed,
 							  tlv_len);
 	remaining_len -= qdf_offsetof(mlo_glb_rx_reo_per_link_snapshot_info,
 				      fw_consumed);
+	parsed_bytes = qdf_offsetof(mlo_glb_rx_reo_per_link_snapshot_info,
+				    fw_consumed);
 
 	/* extract fw_consumed snapshot */
-	len = extract_mgmt_rx_reo_snapshot_tlv(fw_consumed, remaining_len,
+	len = extract_mgmt_rx_reo_snapshot_tlv(data, remaining_len,
 					       &link_info->fw_consumed);
 	validate_parsed_bytes_advance_data_pointer(len, data, remaining_len);
+	parsed_bytes += len;
 
 	/* extract fw_forwarded snapshot */
-	len = extract_mgmt_rx_reo_snapshot_tlv(fw_consumed, remaining_len,
+	len = extract_mgmt_rx_reo_snapshot_tlv(data, remaining_len,
 					       &link_info->fw_forwarded);
 	validate_parsed_bytes_advance_data_pointer(len, data, remaining_len);
+	parsed_bytes += len;
 
 	/* extract hw_forwarded snapshot */
-	len = extract_mgmt_rx_reo_snapshot_tlv(fw_consumed, remaining_len,
+	len = extract_mgmt_rx_reo_snapshot_tlv(data, remaining_len,
 					       &link_info->hw_forwarded);
 	validate_parsed_bytes_advance_data_pointer(len, data, remaining_len);
+	parsed_bytes += len;
 
 	/**
 	 * Return the length of link_sanpshot_info TLV itself as the snapshots
@@ -270,6 +279,95 @@ extract_mlo_glb_rx_reo_snapshot_info_tlv(
 	}
 
 	return tlv_len;
+}
+
+/**
+ * extract_mlo_glb_link_info_tlv() - extract lobal link info from shmem
+ * @data: Pointer to the first TLV in the arena
+ * @remaining_len: Length (in bytes) remaining in the arena from @data pointer
+ * @link_info: Pointer to which link info needs to be copied
+ *
+ * Return: On success, the number of bytes parsed. On failure, -1.
+ */
+static int
+extract_mlo_glb_link_info_tlv(uint8_t *data,
+			      size_t remaining_len,
+			      uint32_t *link_info)
+{
+	mlo_glb_link_info *ptlv;
+	uint32_t tlv_len, tlv_tag;
+
+	qdf_assert_always(data);
+	qdf_assert_always(link_info);
+
+	if (process_tlv_header(data, remaining_len,
+			       MLO_SHMEM_TLV_STRUCT_MLO_GLB_LINK_INFO,
+			       &tlv_len, &tlv_tag) != 0) {
+		return -EPERM;
+	}
+
+	ptlv = (mlo_glb_link_info *)data;
+
+	*link_info = get_field_value_in_tlv(ptlv, link_info, tlv_len);
+
+	return tlv_len;
+}
+
+/**
+ * process_mlo_glb_per_link_status_tlv() - process per link info
+ * @data: Pointer to the first TLV in the arena
+ * @remaining_len: Length (in bytes) remaining in the arena from @data pointer
+ *
+ * Return: On success, the number of bytes parsed. On failure, -1.
+ */
+static int
+process_mlo_glb_per_link_status_tlv(uint8_t *data, size_t remaining_len)
+{
+	uint32_t tlv_len, tlv_tag;
+
+	qdf_assert_always(data);
+
+	if (process_tlv_header(data, remaining_len,
+			       MLO_SHMEM_TLV_STRUCT_MLO_GLB_LINK,
+			       &tlv_len, &tlv_tag) != 0) {
+		return -EPERM;
+	}
+
+	return tlv_len;
+}
+
+/**
+ * parse_global_link_info() - parse lobal link info
+ * @data: Pointer to the first TLV in the arena
+ * @remaining_len: Length (in bytes) remaining in the arena from @data pointer
+ *
+ * Return: On success, the number of bytes parsed. On failure, -1.
+ */
+static int
+parse_global_link_info(uint8_t *data, size_t remaining_len)
+{
+	int parsed_bytes, len;
+	uint8_t link;
+	uint32_t link_info;
+	uint8_t num_links;
+
+	qdf_assert_always(data);
+
+	/* Extract MLO_SHMEM_TLV_STRUCT_MLO_GLB_LINK_INFO_TLV */
+	len = extract_mlo_glb_link_info_tlv(data, remaining_len, &link_info);
+	validate_parsed_bytes_advance_data_pointer(len, data, remaining_len);
+	parsed_bytes = len;
+
+	num_links = MLO_SHMEM_GLB_LINK_INFO_PARAM_NO_OF_LINKS_GET(link_info);
+
+	for (link = 0; link < num_links; link++) {
+		len = process_mlo_glb_per_link_status_tlv(data, remaining_len);
+		validate_parsed_bytes_advance_data_pointer(len, data,
+							   remaining_len);
+		parsed_bytes += len;
+	}
+
+	return parsed_bytes;
 }
 
 /**
@@ -366,6 +464,213 @@ extract_mlo_glb_rx_reo_snapshot_info(
 }
 
 /**
+ * mlo_glb_h_shmem_arena_get_no_of_chips_from_crash_info() - get the number of
+ * chips from crash info
+ *
+ * Return: number of chips participating in MLO from crash info shared by target
+ * in case of success, else returns 0
+ */
+uint8_t mlo_glb_h_shmem_arena_get_no_of_chips_from_crash_info(void)
+{
+	struct wlan_host_mlo_glb_h_shmem_arena_ctx *shmem_arena_ctx;
+
+	shmem_arena_ctx = get_shmem_arena_ctx();
+
+	if (!shmem_arena_ctx) {
+		target_if_err("mlo_glb_h_shmem_arena context is NULL");
+		return 0;
+	}
+
+	return shmem_arena_ctx->chip_crash_info.no_of_chips;
+}
+
+/**
+ * mlo_glb_h_shmem_arena_get_crash_reason_address() - get the address of crash
+ * reason associated with chip_id
+ *
+ * Return: Address of crash_reason field fron global shmem arena in case of
+ * success, else returns NULL
+ */
+void *mlo_glb_h_shmem_arena_get_crash_reason_address(uint8_t chip_id)
+{
+	struct wlan_host_mlo_glb_h_shmem_arena_ctx *shmem_arena_ctx;
+	struct wlan_host_mlo_glb_chip_crash_info *crash_info;
+	struct wlan_host_mlo_glb_per_chip_crash_info *per_chip_crash_info;
+	uint8_t chip;
+
+	shmem_arena_ctx = get_shmem_arena_ctx();
+	if (!shmem_arena_ctx) {
+		target_if_err("mlo_glb_h_shmem_arena context is NULL");
+		return NULL;
+	}
+
+	crash_info = &shmem_arena_ctx->chip_crash_info;
+
+	for (chip = 0; chip < crash_info->no_of_chips; chip++) {
+		per_chip_crash_info = &crash_info->per_chip_crash_info[chip];
+
+		if (chip_id == per_chip_crash_info->chip_id)
+			break;
+	}
+
+	if (chip == crash_info->no_of_chips) {
+		target_if_err("No crash info corressponding to chip %u",
+			      chip_id);
+		return NULL;
+	}
+
+	return per_chip_crash_info->crash_reason;
+}
+
+/**
+ * free_mlo_glb_per_chip_crash_info() - free per chip crash info
+ * @crash_info: Pointer to crash info
+ *
+ * Return: None
+ */
+static void free_mlo_glb_per_chip_crash_info(
+		struct wlan_host_mlo_glb_chip_crash_info *crash_info)
+{
+	if (crash_info) {
+		qdf_mem_free(crash_info->per_chip_crash_info);
+		crash_info->per_chip_crash_info = NULL;
+	}
+}
+
+/**
+ * extract_mlo_glb_per_chip_crash_info_tlv() - extract PER_CHIP_CRASH_INFO TLV
+ * @data: Pointer to start of the TLV
+ * @remaining_len: Length (in bytes) remaining in the arena from @data pointer
+ * @chip_id: Chip id to which the crash info tlv being extracted.
+ * @chip_crash_info: Pointer to the per chip crash info. This API will populate
+ * the crash_reason address & chip_id into chip_crash_info
+ */
+static int extract_mlo_glb_per_chip_crash_info_tlv(
+		uint8_t *data, size_t remaining_len, uint8_t chip_id,
+		struct wlan_host_mlo_glb_per_chip_crash_info *chip_crash_info)
+{
+	mlo_glb_per_chip_crash_info *ptlv;
+	uint32_t tlv_len, tlv_tag;
+	uint8_t *crash_reason;
+
+	qdf_assert_always(data);
+	qdf_assert_always(chip_crash_info);
+
+	/* process MLO_SHMEM_TLV_STRUCT_MLO_GLB_PER_CHIP_CRASH_INFO TLV */
+	if (process_tlv_header(data, remaining_len,
+			       MLO_SHMEM_TLV_STRUCT_MLO_GLB_PER_CHIP_CRASH_INFO,
+			       &tlv_len, &tlv_tag) != 0) {
+		return -EPERM;
+	}
+
+	ptlv = (mlo_glb_per_chip_crash_info *)data;
+
+	chip_crash_info->chip_id = chip_id;
+	crash_reason = (uint8_t *)get_field_pointer_in_tlv(
+			ptlv, crash_reason, tlv_len);
+	chip_crash_info->crash_reason = (void *)crash_reason;
+	return tlv_len;
+}
+
+/**
+ * extract_mlo_glb_chip_crash_info_tlv() - extract CHIP_CRASH_INFO TLV
+ * @data: Pointer to start of the TLV
+ * @remaining_len: Length (in bytes) remaining in the arena from @data pointer
+ * @crash_info: Pointer to the crash_info structure to which crash info fields
+ * are populated.
+ *
+ * Return: On success, the number of bytes parsed. On failure, -1.
+ */
+static int extract_mlo_glb_chip_crash_info_tlv(
+		uint8_t *data, size_t remaining_len,
+		struct wlan_host_mlo_glb_chip_crash_info *crash_info)
+{
+	mlo_glb_chip_crash_info *ptlv;
+	uint32_t tlv_len, tlv_tag;
+	uint32_t chip_info;
+	uint8_t chip_map;
+
+	qdf_assert_always(data);
+	qdf_assert_always(crash_info);
+
+	if (process_tlv_header(data, remaining_len,
+			       MLO_SHMEM_TLV_STRUCT_MLO_GLB_CHIP_CRASH_INFO,
+			       &tlv_len, &tlv_tag) != 0) {
+		return -EPERM;
+	}
+
+	ptlv = (mlo_glb_chip_crash_info *)data;
+	chip_info = get_field_value_in_tlv(ptlv, chip_info, tlv_len);
+	crash_info->no_of_chips =
+		MLO_SHMEM_CHIP_CRASH_INFO_PARAM_NO_OF_CHIPS_GET(chip_info);
+	chip_map =
+		MLO_SHMEM_CHIP_CRASH_INFO_PARAM_VALID_CHIP_BMAP_GET(chip_info);
+	qdf_mem_copy(crash_info->valid_chip_bmap,
+		     &chip_map,
+		     qdf_min(sizeof(crash_info->valid_chip_bmap),
+			     sizeof(chip_map)));
+
+	crash_info->per_chip_crash_info =
+		qdf_mem_malloc(sizeof(*crash_info->per_chip_crash_info) *
+			       crash_info->no_of_chips);
+
+	if (!crash_info->per_chip_crash_info) {
+		target_if_err("Couldn't allocate memory for crash info");
+		return -EPERM;
+	}
+
+	return tlv_len;
+}
+
+/**
+ * extract_mlo_glb_chip_crash_info() - extract the crash information from global
+ * shmem arena
+ * @data: Pointer to start of the TLV
+ * @remaining_len: Length (in bytes) remaining in the arena from @data pointer
+ * @crash_info: Pointer to the crash_info structure to which crash info fields
+ * are populated.
+ *
+ * Return: On success, the number of bytes parsed. On failure, -1.
+ */
+static int extract_mlo_glb_chip_crash_info(
+		uint8_t *data, size_t remaining_len,
+		struct wlan_host_mlo_glb_chip_crash_info *crash_info)
+{
+	int parsed_bytes, len;
+	int cur_chip_id;
+	qdf_bitmap(valid_chip_bmap, QDF_CHAR_BIT);
+	uint8_t chip;
+
+	qdf_assert_always(data);
+	qdf_assert_always(crash_info);
+
+	/* Extract MLO_SHMEM_TLV_STRUCT_MLO_GLB_CHIP_CRASH_INFO_TLV */
+	len = extract_mlo_glb_chip_crash_info_tlv(
+			data, remaining_len, crash_info);
+	validate_parsed_bytes_advance_data_pointer(len, data, remaining_len);
+
+	parsed_bytes = len;
+	qdf_mem_copy(valid_chip_bmap,
+		     crash_info->valid_chip_bmap,
+		     qdf_min(sizeof(valid_chip_bmap),
+			     sizeof(crash_info->valid_chip_bmap)));
+	/* Foreach valid chip_id */
+	for (chip = 0; chip < crash_info->no_of_chips; chip++) {
+		cur_chip_id = qdf_find_first_bit(valid_chip_bmap, QDF_CHAR_BIT);
+		qdf_clear_bit(cur_chip_id, valid_chip_bmap);
+		qdf_assert_always(cur_chip_id >= 0);
+		/* Extract per_chip_crash_info */
+		len = extract_mlo_glb_per_chip_crash_info_tlv(
+				data, remaining_len, cur_chip_id,
+				&crash_info->per_chip_crash_info[chip]);
+		validate_parsed_bytes_advance_data_pointer(
+				len, data, remaining_len);
+		parsed_bytes += len;
+	}
+	return parsed_bytes;
+}
+
+/**
  * extract_mlo_glb_h_shmem_tlv() - extract MLO_SHMEM_TLV_STRUCT_MLO_GLB_H_SHMEM
  * TLV
  * @data: Pointer to start of the TLV
@@ -418,7 +723,8 @@ static int parse_mlo_glb_h_shmem_arena(
 	uint8_t *data, size_t remaining_len,
 	struct wlan_host_mlo_glb_h_shmem_arena_ctx *shmem_arena_ctx)
 {
-	int parsed_bytes, len;
+	int parsed_bytes;
+	int len;
 
 	qdf_assert_always(data);
 	qdf_assert_always(shmem_arena_ctx);
@@ -426,10 +732,19 @@ static int parse_mlo_glb_h_shmem_arena(
 	len = extract_mlo_glb_h_shmem_tlv(data, remaining_len,
 					  &shmem_arena_ctx->shmem_params);
 	validate_parsed_bytes_advance_data_pointer(len, data, remaining_len);
-	parsed_bytes += len;
+	parsed_bytes = len;
 
 	len = extract_mlo_glb_rx_reo_snapshot_info(
 		data, remaining_len, &shmem_arena_ctx->rx_reo_snapshot_info);
+	validate_parsed_bytes_advance_data_pointer(len, data, remaining_len);
+	parsed_bytes += len;
+
+	len = parse_global_link_info(data, remaining_len);
+	validate_parsed_bytes_advance_data_pointer(len, data, remaining_len);
+	parsed_bytes += len;
+
+	len = extract_mlo_glb_chip_crash_info(
+			data, remaining_len, &shmem_arena_ctx->chip_crash_info);
 	validate_parsed_bytes_advance_data_pointer(len, data, remaining_len);
 	parsed_bytes += len;
 
@@ -455,6 +770,8 @@ QDF_STATUS mlo_glb_h_shmem_arena_ctx_init(void *arena_vaddr,
 					shmem_arena_ctx) < 0) {
 		free_mlo_glb_rx_reo_per_link_info(
 			&shmem_arena_ctx->rx_reo_snapshot_info);
+		free_mlo_glb_per_chip_crash_info(
+			&shmem_arena_ctx->chip_crash_info);
 		return QDF_STATUS_E_FAILURE;
 	}
 
@@ -486,12 +803,28 @@ QDF_STATUS mlo_glb_h_shmem_arena_ctx_deinit(void)
 
 	free_mlo_glb_rx_reo_per_link_info(
 		&shmem_arena_ctx->rx_reo_snapshot_info);
+	free_mlo_glb_per_chip_crash_info(
+		&shmem_arena_ctx->chip_crash_info);
 
 success:
 	return QDF_STATUS_SUCCESS;
 }
 
 qdf_export_symbol(mlo_glb_h_shmem_arena_ctx_deinit);
+
+#ifdef WLAN_MGMT_RX_REO_SUPPORT
+uint16_t mgmt_rx_reo_get_valid_link_bitmap(void)
+{
+	struct wlan_host_mlo_glb_h_shmem_arena_ctx *shmem_arena_ctx;
+
+	shmem_arena_ctx = get_shmem_arena_ctx();
+	if (!shmem_arena_ctx) {
+		target_if_err("mlo_glb_h_shmem_arena context is NULL");
+		return 0;
+	}
+
+	return shmem_arena_ctx->rx_reo_snapshot_info.valid_link_bmap;
+}
 
 int mgmt_rx_reo_get_num_links(void)
 {
@@ -556,3 +889,4 @@ void *mgmt_rx_reo_get_snapshot_address(
 
 	return NULL;
 }
+#endif /* WLAN_MGMT_RX_REO_SUPPORT */

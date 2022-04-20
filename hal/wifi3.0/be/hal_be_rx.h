@@ -372,6 +372,14 @@ static inline uintptr_t hal_rx_wbm_get_desc_va(void *hal_desc)
 	HAL_RX_BUF_COOKIE_GET(&((struct wbm_release_ring_rx *) \
 	wbm_desc)->released_buff_or_desc_addr_info)
 
+#define HAL_RX_WBM_COMP_BUF_ADDR_31_0_GET(wbm_desc) \
+	HAL_RX_GET(wbm_desc, WBM2SW_COMPLETION_RING_RX, BUFFER_PHYS_ADDR_31_0)
+
+#define HAL_RX_WBM_COMP_BUF_ADDR_39_32_GET(wbm_desc) \
+	HAL_RX_GET(wbm_desc, WBM2SW_COMPLETION_RING_RX, BUFFER_PHYS_ADDR_39_32)
+
+#define HAL_RX_WBM_COMP_BUF_COOKIE_GET(wbm_desc) \
+	HAL_RX_GET(wbm_desc, WBM2SW_COMPLETION_RING_RX, SW_BUFFER_COOKIE)
 /**
  * hal_rx_msdu_flags_get_be() - Get msdu flags from ring desc
  * @msdu_desc_info_hdl: msdu desc info handle

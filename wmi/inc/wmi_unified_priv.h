@@ -429,7 +429,7 @@ QDF_STATUS
 (*extract_roam_event)(wmi_unified_t wmi_handle, void *evt_buf, uint32_t len,
 		      struct roam_offload_roam_event *roam_event);
 QDF_STATUS
-(*extract_btm_bl_event)(wmi_unified_t wmi_handle,
+(*extract_btm_dl_event)(wmi_unified_t wmi_handle,
 			uint8_t *event, uint32_t data_len,
 			struct roam_denylist_event **dst_list);
 QDF_STATUS
@@ -1851,6 +1851,9 @@ QDF_STATUS (*extract_muedca_params_handler)(wmi_unified_t wmi_hdl,
 QDF_STATUS (*extract_mgmt_rx_params)(wmi_unified_t wmi_handle, void *evt_buf,
 	struct mgmt_rx_event_params *hdr, uint8_t **bufp);
 
+QDF_STATUS (*extract_frame_pn_params)(wmi_unified_t wmi_handle, void *evt_buf,
+				      struct frame_pn_params *pn_params);
+
 QDF_STATUS (*extract_vdev_stopped_param)(wmi_unified_t wmi_handle,
 		void *evt_buf, uint32_t *vdev_id);
 
@@ -2721,6 +2724,11 @@ QDF_STATUS (*send_pdev_get_pn_cmd)(wmi_unified_t wmi_handle,
 QDF_STATUS (*extract_get_pn_data)(wmi_unified_t wmi_handle,
 				  void *evt_buf,
 				  struct wmi_host_get_pn_event *param);
+QDF_STATUS (*send_pdev_get_rxpn_cmd)(wmi_unified_t wmi_handle,
+				     struct peer_request_rxpn_param *pn_params);
+QDF_STATUS (*extract_get_rxpn_data)(wmi_unified_t wmi_handle,
+				    void *evt_buf,
+				    struct wmi_host_get_rxpn_event *param);
 #ifdef FEATURE_ANI_LEVEL_REQUEST
 QDF_STATUS (*send_ani_level_cmd)(wmi_unified_t wmi_handle, uint32_t *freqs,
 				 uint8_t num_freqs);
@@ -2953,6 +2961,10 @@ QDF_STATUS
 (*peer_ppe_ds_param_send)(wmi_unified_t wmi_handle,
 			  struct peer_ppe_ds_param *param);
 #endif /* WLAN_SUPPORT_PPEDS */
+
+QDF_STATUS
+(*send_vdev_pn_mgmt_rxfilter_cmd)(wmi_unified_t wmi_handle,
+				  struct vdev_pn_mgmt_rxfilter_params *params);
 };
 
 /* Forward declartion for psoc*/

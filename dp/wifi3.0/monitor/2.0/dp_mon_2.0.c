@@ -892,9 +892,9 @@ void dp_pdev_mon_rings_deinit_2_0(struct dp_pdev *pdev)
 							 pdev->pdev_id);
 
 		dp_srng_deinit(soc, &soc->rxdma_mon_dst_ring[lmac_id],
-			       RXDMA_MONITOR_DST, 0);
+			       RXDMA_MONITOR_DST, pdev->pdev_id);
 		dp_srng_deinit(soc, &mon_soc_be->tx_mon_dst_ring[lmac_id],
-			       TX_MONITOR_DST, 0);
+			       TX_MONITOR_DST, pdev->pdev_id);
 	}
 }
 
@@ -911,13 +911,13 @@ QDF_STATUS dp_pdev_mon_rings_init_2_0(struct dp_pdev *pdev)
 							 pdev->pdev_id);
 
 		if (dp_srng_init(soc, &soc->rxdma_mon_dst_ring[lmac_id],
-				 RXDMA_MONITOR_DST, 0, lmac_id)) {
+				 RXDMA_MONITOR_DST, pdev->pdev_id, lmac_id)) {
 			dp_mon_err("%pK: " RNG_ERR "rxdma_mon_dst_ring", soc);
 			goto fail;
 		}
 
 		if (dp_srng_init(soc, &mon_soc_be->tx_mon_dst_ring[lmac_id],
-				 TX_MONITOR_DST, 0, lmac_id)) {
+				 TX_MONITOR_DST, pdev->pdev_id, lmac_id)) {
 			dp_mon_err("%pK: " RNG_ERR "tx_mon_dst_ring", soc);
 			goto fail;
 		}
@@ -1136,7 +1136,7 @@ dp_mon_register_feature_ops_2_0(struct dp_soc *soc)
 	mon_ops->mon_tx_capture_debugfs_init = NULL;
 	mon_ops->mon_tx_add_to_comp_queue = NULL;
 	mon_ops->mon_print_pdev_tx_capture_stats = NULL;
-	mon_ops->mon_config_enh_tx_capture = NULL;
+	mon_ops->mon_config_enh_tx_capture = dp_config_enh_tx_core_capture_2_0;
 	mon_ops->mon_tx_peer_filter = NULL;
 #endif
 #if defined(WDI_EVENT_ENABLE) &&\

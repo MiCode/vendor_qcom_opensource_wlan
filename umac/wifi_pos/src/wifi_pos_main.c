@@ -35,6 +35,7 @@
 #include "wlan_objmgr_pdev_obj.h"
 #include "wlan_objmgr_vdev_obj.h"
 #include "wlan_ptt_sock_svc.h"
+#include "target_if.h"
 
 #ifndef CNSS_GENL
 #include <wlan_objmgr_global_obj_i.h>
@@ -100,6 +101,25 @@ struct wlan_lmac_if_wifi_pos_tx_ops *
 	}
 
 	return &tx_ops->wifi_pos_tx_ops;
+}
+
+struct wlan_lmac_if_wifi_pos_rx_ops *
+	wifi_pos_get_rx_ops(struct wlan_objmgr_psoc *psoc)
+{
+	struct wlan_lmac_if_rx_ops *rx_ops;
+
+	if (!psoc) {
+		wifi_pos_err("psoc is null");
+		return NULL;
+	}
+
+	rx_ops = wlan_psoc_get_lmac_if_rxops(psoc);
+	if (!rx_ops) {
+		wifi_pos_err("rx_ops is NULL");
+		return NULL;
+	}
+
+	return &rx_ops->wifi_pos_rx_ops;
 }
 
 #ifdef CNSS_GENL

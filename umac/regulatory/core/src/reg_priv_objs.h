@@ -230,6 +230,8 @@ struct wlan_regulatory_psoc_priv_obj {
  * sent by the target
  * @is_reg_noaction_on_afc_pwr_evt: indicates whether regulatory needs to
  * take action when AFC Power event is received
+ * @reg_6g_thresh_priority_freq: All frequencies greater or equal will be given
+ * priority during channel selection by upper layer
  */
 struct wlan_regulatory_pdev_priv_obj {
 	struct regulatory_channel cur_chan_list[NUM_CHANNELS];
@@ -283,6 +285,7 @@ struct wlan_regulatory_pdev_priv_obj {
 	enum reg_6g_client_type reg_cur_6g_client_mobility_type;
 	bool reg_rnr_tpe_usable;
 	bool reg_unspecified_ap_usable;
+	qdf_freq_t reg_6g_thresh_priority_freq;
 #endif
 #ifdef CONFIG_HOST_FIND_CHAN
 	enum reg_phymode max_phymode;

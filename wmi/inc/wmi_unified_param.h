@@ -3871,6 +3871,18 @@ struct peer_request_pn_param {
 };
 
 /**
+ * struct peer_request_rxpn_param - Rx PN request params
+ * @vdev_id: vdev id
+ * @peer_macaddr: Peer mac address
+ * @keyix: key index
+ */
+struct peer_request_rxpn_param {
+	uint32_t vdev_id;
+	uint8_t peer_macaddr[QDF_MAC_ADDR_SIZE];
+	uint16_t keyix;
+};
+
+/**
  * struct rtt_meas_req_params - RTT measurement request params
  * @req_id: Request id
  * @vdev_id: vdev id
@@ -4927,6 +4939,7 @@ typedef enum {
 #ifdef WLAN_FEATURE_MCC_QUOTA
 	wmi_resmgr_chan_time_quota_changed_eventid,
 #endif
+	wmi_peer_rx_pn_response_event_id,
 	wmi_events_max,
 } wmi_conv_event_id;
 
@@ -5564,6 +5577,16 @@ typedef enum {
 	wmi_service_multi_peer_group_cmd_support,
 #ifdef WLAN_FEATURE_11BE
 	wmi_service_radar_found_chan_freq_eq_center_freq,
+#endif
+	wmi_service_pn_replay_check_support,
+#ifdef QCA_RSSI_DB2DBM
+	wmi_service_pdev_rssi_dbm_conv_event_support,
+#endif
+#ifdef WIFI_POS_CONVERGED
+	wmi_service_rtt_11az_mac_phy_sec_support,
+	wmi_service_rtt_11az_mac_sec_support,
+	wmi_service_rtt_11az_ntb_support,
+	wmi_service_rtt_11az_tb_support,
 #endif
 	wmi_services_max,
 } wmi_conv_service_ids;
@@ -7436,6 +7459,7 @@ enum wmi_host_fatal_condition_subtype_packet_log_config {
 #endif /* OL_ATH_SMART_LOGGING */
 
 #define GET_PN_MAX_LEN 16
+#define GET_RX_PN_MAX_LEN 8
 
 /**
  * struct wmi_host_get_pn_event - PN event params
@@ -7449,6 +7473,20 @@ struct wmi_host_get_pn_event {
 	uint8_t mac_addr[QDF_MAC_ADDR_SIZE];
 	uint32_t key_type;
 	uint8_t pn[GET_PN_MAX_LEN];
+};
+
+/**
+ * struct wmi_host_get_rxpn_event - Rx PN event params
+ * @vdev_id: vdev id
+ * @peer_macaddr: Peer mac address
+ * @keyix: key index
+ * @pn: pn value
+ */
+struct wmi_host_get_rxpn_event {
+	uint32_t vdev_id;
+	uint8_t mac_addr[QDF_MAC_ADDR_SIZE];
+	uint16_t keyix;
+	uint8_t pn[GET_RX_PN_MAX_LEN];
 };
 
 /**
@@ -7942,12 +7980,12 @@ struct wmi_roam_wtc_btm_trigger_data {
  *  @rssi_score:  AP RSSI score
  *  @total_score: Total score of the candidate AP.
  *  @etp:         Estimated throughput value of the AP in Mbps
- *  @bl_reason:   Denylist reason
- *  @bl_source:   Source of adding AP to BL
- *  @bl_timestamp:This timestamp indicates the time when AP added
+ *  @dl_reason:   Denylist reason
+ *  @dl_source:   Source of adding AP to DL
+ *  @dl_timestamp:This timestamp indicates the time when AP added
  *  to denylist.
- *  @bl_original_timeout: Original timeout value in milli seconds
- *  when AP added to BL
+ *  @dl_original_timeout: Original timeout value in milli seconds
+ *  when AP added to DL
  */
 struct wmi_roam_candidate_info {
 	uint32_t timestamp;
@@ -7960,10 +7998,10 @@ struct wmi_roam_candidate_info {
 	uint32_t rssi_score;
 	uint32_t total_score;
 	uint32_t etp;
-	uint32_t bl_reason;
-	uint32_t bl_source;
-	uint32_t bl_timestamp;
-	uint32_t bl_original_timeout;
+	uint32_t dl_reason;
+	uint32_t dl_source;
+	uint32_t dl_timestamp;
+	uint32_t dl_original_timeout;
 };
 
 /**
@@ -8559,4 +8597,14 @@ struct wmi_host_inst_rssi_stats_resp {
 	uint32_t vdev_id;
 };
 #endif
+
+/**
+ * struct vdev_pn_mgmt_rxfilter_params - Send PN mgmt RxFilter command params
+ * @vdev_id: vdev id
+ * @pn_rxfilter: Rx Filter
+ */
+struct vdev_pn_mgmt_rxfilter_params {
+	uint8_t vdev_id;
+	uint32_t pn_rxfilter;
+};
 #endif /* _WMI_UNIFIED_PARAM_H_ */

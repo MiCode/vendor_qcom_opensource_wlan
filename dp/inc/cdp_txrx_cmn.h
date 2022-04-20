@@ -242,6 +242,24 @@ cdp_vdev_detach(ol_txrx_soc_handle soc, uint8_t vdev_id,
 						       callback, cb_context);
 }
 
+#if defined(WLAN_FEATURE_11BE_MLO) && defined(WLAN_MLO_MULTI_CHIP)
+static inline void
+cdp_vdev_recovery_flush_peers(ol_txrx_soc_handle soc, uint8_t vdev_id)
+{
+	if (!soc || !soc->ops) {
+		dp_cdp_debug("Invalid Instance:");
+		QDF_BUG(0);
+		return;
+	}
+
+	if (!soc->ops->cmn_drv_ops ||
+	    !soc->ops->cmn_drv_ops->txrx_recovery_vdev_flush_peers)
+		return;
+
+	soc->ops->cmn_drv_ops->txrx_recovery_vdev_flush_peers(soc, vdev_id);
+}
+#endif
+
 static inline int
 cdp_pdev_attach_target(ol_txrx_soc_handle soc, uint8_t pdev_id)
 {

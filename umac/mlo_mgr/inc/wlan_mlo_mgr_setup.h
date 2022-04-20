@@ -19,6 +19,31 @@
 
 #ifdef WLAN_MLO_MULTI_CHIP
 /**
+ * mlo_is_ml_soc() - API to check if psoc belongs to ML group
+ * @psoc: Soc to be checked.
+ *
+ * Return: true if psoc found in ml soc_list, or else return false
+ */
+bool mlo_is_ml_soc(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * mlo_get_soc_list() - API to get the list of SOCs participating in MLO
+ * @soc_list: list where ML participating SOCs need to be populated
+ *
+ * Return: None
+ */
+void mlo_get_soc_list(struct wlan_objmgr_psoc **soc_list);
+
+/**
+ * mlo_cleanup_asserted_soc_setup_info() - API to cleanup the mlo setup info of
+ * asserted soc
+ * @psoc: Soc to be cleaned up
+ *
+ * Return: None
+ */
+void mlo_cleanup_asserted_soc_setup_info(struct wlan_objmgr_psoc *psoc);
+
+/**
  * mlo_setup_update_total_socs() - API to update total socs for mlo
  * @tot_socs: Total socs
  *
@@ -69,6 +94,16 @@ void mlo_link_setup_complete(struct wlan_objmgr_pdev *pdev);
 void mlo_link_teardown_complete(struct wlan_objmgr_pdev *pdev);
 
 /**
+ * mlo_setup_update_soc_down() - API to check and clear all links and bring
+ *                               back to initial state for the particular soc
+ *
+ * @pdev: Pointer to pdev object
+ *
+ * Return: None.
+ */
+void mlo_setup_update_soc_down(struct wlan_objmgr_psoc *psoc);
+
+/**
  * mlo_link_teardown_link() - API to trigger teardown
  * @psoc: Pointer to psoc object
  * @reason: Reason code for MLO tear down
@@ -77,4 +112,15 @@ void mlo_link_teardown_complete(struct wlan_objmgr_pdev *pdev);
  */
 QDF_STATUS mlo_link_teardown_link(struct wlan_objmgr_psoc *psoc,
 				  uint32_t reason);
+
+/**
+ * mlo_vdevs_check_single_soc() - API to check all the vaps in vdev list
+ *                                belong to single soc or not
+ * @wlan_vdev_list: List of all vdevs to check
+ * @vdev_count: Number of vdevs in the list
+ *
+ * Return: bool: True if belongs to single soc else false
+ */
+bool mlo_vdevs_check_single_soc(struct wlan_objmgr_vdev **wlan_vdev_list,
+				uint8_t vdev_count);
 #endif

@@ -427,6 +427,10 @@ static QDF_STATUS mlo_dev_ctx_deinit(struct wlan_objmgr_vdev *vdev)
 				}
 				qdf_mem_free(ml_dev->sta_ctx->connect_req);
 			}
+
+			if (ml_dev->sta_ctx->disconn_req)
+				qdf_mem_free(ml_dev->sta_ctx->disconn_req);
+
 			if (ml_dev->sta_ctx->assoc_rsp.ptr)
 				qdf_mem_free(ml_dev->sta_ctx->assoc_rsp.ptr);
 

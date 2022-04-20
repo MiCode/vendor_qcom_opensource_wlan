@@ -2251,6 +2251,17 @@ void hal_reo_setup_generic_li(struct hal_soc *soc, void *reoparams)
 	 * 7: NOT_USED.
 	 */
 	if (reo_params->rx_hash_enabled) {
+		if (reo_params->remap0)
+			HAL_REG_WRITE(soc,
+				      HWIO_REO_R0_DESTINATION_RING_CTRL_IX_0_ADDR(
+				      SEQ_WCSS_UMAC_REO_REG_OFFSET),
+				      reo_params->remap0);
+
+		hal_debug("HWIO_REO_R0_DESTINATION_RING_CTRL_IX_0_ADDR 0x%x",
+			  HAL_REG_READ(soc,
+				       HWIO_REO_R0_DESTINATION_RING_CTRL_IX_0_ADDR(
+				       SEQ_WCSS_UMAC_REO_REG_OFFSET)));
+
 		HAL_REG_WRITE(soc,
 			      HWIO_REO_R0_DESTINATION_RING_CTRL_IX_2_ADDR(
 			      SEQ_WCSS_UMAC_REO_REG_OFFSET),

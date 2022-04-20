@@ -761,7 +761,7 @@ QDF_STATUS wlan_mlo_peer_create(struct wlan_objmgr_vdev *vdev,
 		if (QDF_IS_STATUS_ERROR(status)) {
 			mlo_err("MLD ID %d ML Peer " QDF_MAC_ADDR_FMT " get link vdevs failed",
 				ml_dev->mld_id,
-				QDF_MAC_ADDR_REF(ml_peer->peer_mld_addr.bytes));
+				QDF_MAC_ADDR_REF(link_peer->mldaddr));
 			return QDF_STATUS_E_FAILURE;
 		}
 
@@ -779,7 +779,7 @@ QDF_STATUS wlan_mlo_peer_create(struct wlan_objmgr_vdev *vdev,
 				mlo_err("MLD ID %d ML Peer " QDF_MAC_ADDR_FMT " create not allowed on link vdev %d",
 					ml_dev->mld_id,
 					QDF_MAC_ADDR_REF
-						(ml_peer->peer_mld_addr.bytes),
+						(link_peer->mldaddr),
 					wlan_vdev_get_id(vdev_link));
 				return QDF_STATUS_E_INVAL;
 			}
@@ -794,7 +794,7 @@ QDF_STATUS wlan_mlo_peer_create(struct wlan_objmgr_vdev *vdev,
 				mlo_err("MLD ID %d ML Peer " QDF_MAC_ADDR_FMT " Max peer count reached on link vdev %d",
 					ml_dev->mld_id,
 					QDF_MAC_ADDR_REF
-						(ml_peer->peer_mld_addr.bytes),
+						(link_peer->mldaddr),
 					wlan_vdev_get_id(vdev_link));
 				return QDF_STATUS_E_RESOURCES;
 			}
@@ -813,7 +813,7 @@ QDF_STATUS wlan_mlo_peer_create(struct wlan_objmgr_vdev *vdev,
 		if (!ml_peer) {
 			mlo_err("MLD ID %d ML Peer " QDF_MAC_ADDR_FMT " mem alloc failed",
 				ml_dev->mld_id,
-				QDF_MAC_ADDR_REF(ml_peer->peer_mld_addr.bytes));
+				QDF_MAC_ADDR_REF(link_peer->mldaddr));
 			mlo_dev_release_link_vdevs(link_vdevs);
 			return QDF_STATUS_E_NOMEM;
 		}
@@ -865,12 +865,12 @@ QDF_STATUS wlan_mlo_peer_create(struct wlan_objmgr_vdev *vdev,
 		/* Attach MLO peer to ML Peer table */
 		status = mlo_dev_mlpeer_attach(ml_dev, ml_peer);
 		if (status != QDF_STATUS_SUCCESS) {
-			mlo_reset_link_peer(ml_peer, link_peer);
-			mlo_peer_free(ml_peer);
-			mlo_dev_release_link_vdevs(link_vdevs);
 			mlo_err("MLD ID %d ML Peer " QDF_MAC_ADDR_FMT " attach failed",
 				ml_dev->mld_id,
 				QDF_MAC_ADDR_REF(ml_peer->peer_mld_addr.bytes));
+			mlo_reset_link_peer(ml_peer, link_peer);
+			mlo_peer_free(ml_peer);
+			mlo_dev_release_link_vdevs(link_vdevs);
 			return status;
 		}
 	}

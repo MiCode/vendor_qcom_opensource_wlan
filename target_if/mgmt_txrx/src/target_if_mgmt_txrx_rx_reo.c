@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -141,6 +142,86 @@ target_if_mgmt_rx_reo_unregister_event_handlers(struct wlan_objmgr_psoc *psoc)
 		mgmt_rx_reo_err("Unregistering for MGMT Rx FW consumed event failed");
 
 	return status;
+}
+
+/**
+ * target_if_mgmt_rx_reo_get_num_active_hw_links() - Get number of active MLO HW
+ * links
+ * @psoc: Pointer to psoc object
+ * @num_active_hw_links: pointer to number of active MLO HW links
+ *
+ * Get number of active MLO HW links from the MLO global shared memory arena.
+ *
+ * Return: QDF_STATUS
+ */
+static QDF_STATUS
+target_if_mgmt_rx_reo_get_num_active_hw_links(struct wlan_objmgr_psoc *psoc,
+					      int8_t *num_active_hw_links)
+{
+	struct wlan_lmac_if_mgmt_rx_reo_low_level_ops *low_level_ops;
+
+	if (!psoc) {
+		mgmt_rx_reo_err("psoc is null");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	if (!num_active_hw_links) {
+		mgmt_rx_reo_err("Pointer to num_active_hw_links is null");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	low_level_ops = target_if_get_mgmt_rx_reo_low_level_ops(psoc);
+
+	if (!low_level_ops) {
+		mgmt_rx_reo_err("Low level ops of MGMT Rx REO is null");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	qdf_assert_always(low_level_ops->implemented);
+
+	*num_active_hw_links = low_level_ops->get_num_links();
+
+	return QDF_STATUS_SUCCESS;
+}
+
+/**
+ * target_if_mgmt_rx_reo_get_valid_hw_link_bitmap() - Get valid MLO HW link
+ * bitmap
+ * @psoc: Pointer to psoc object
+ * @valid_hw_link_bitmap: Pointer to valid MLO HW link bitmap
+ *
+ * Get valid MLO HW link bitmap from the MLO global shared memory arena.
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+target_if_mgmt_rx_reo_get_valid_hw_link_bitmap(struct wlan_objmgr_psoc *psoc,
+					       uint16_t *valid_hw_link_bitmap)
+{
+	struct wlan_lmac_if_mgmt_rx_reo_low_level_ops *low_level_ops;
+
+	if (!psoc) {
+		mgmt_rx_reo_err("psoc is null");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	if (!valid_hw_link_bitmap) {
+		mgmt_rx_reo_err("Pointer to valid_hw_link_bitmap is null");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	low_level_ops = target_if_get_mgmt_rx_reo_low_level_ops(psoc);
+
+	if (!low_level_ops) {
+		mgmt_rx_reo_err("Low level ops of MGMT Rx REO is null");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	qdf_assert_always(low_level_ops->implemented);
+
+	*valid_hw_link_bitmap = low_level_ops->get_valid_link_bitmap();
+
+	return QDF_STATUS_SUCCESS;
 }
 
 /**
@@ -381,6 +462,10 @@ target_if_mgmt_rx_reo_tx_ops_register(
 		return QDF_STATUS_E_FAILURE;
 	}
 	mgmt_rx_reo_tx_ops = &mgmt_txrx_tx_ops->mgmt_rx_reo_tx_ops;
+	mgmt_rx_reo_tx_ops->get_num_active_hw_links =
+				target_if_mgmt_rx_reo_get_num_active_hw_links;
+	mgmt_rx_reo_tx_ops->get_valid_hw_link_bitmap =
+				target_if_mgmt_rx_reo_get_valid_hw_link_bitmap;
 	mgmt_rx_reo_tx_ops->read_mgmt_rx_reo_snapshot =
 				target_if_mgmt_rx_reo_read_snapshot;
 	mgmt_rx_reo_tx_ops->get_mgmt_rx_reo_snapshot_address =

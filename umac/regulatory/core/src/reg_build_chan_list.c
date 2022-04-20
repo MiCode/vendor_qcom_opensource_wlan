@@ -774,6 +774,8 @@ static void reg_propagate_6g_mas_channel_list(
 	pdev_priv_obj->reg_6g_superid =
 		mas_chan_params->reg_6g_superid;
 	pdev_priv_obj->reg_cur_6g_ap_pwr_type = REG_INDOOR_AP;
+	pdev_priv_obj->reg_6g_thresh_priority_freq =
+				mas_chan_params->reg_6g_thresh_priority_freq;
 }
 #else
 static inline void reg_propagate_6g_mas_channel_list(
@@ -802,7 +804,6 @@ void reg_init_pdev_mas_chan_list(
 
 	pdev_priv_obj->def_region_domain = mas_chan_params->reg_dmn_pair;
 	pdev_priv_obj->def_country_code =  mas_chan_params->ctry_code;
-
 	qdf_mem_copy(pdev_priv_obj->default_country,
 		     mas_chan_params->default_country, REG_ALPHA2_LEN + 1);
 
@@ -1874,6 +1875,46 @@ static void reg_dis_chan_state_and_flags(enum channel_state *state,
 }
 
 /**
+ * reg_init_super_chan_entry() - Initialize the super channel list entry
+ * for an input channel index by disabling the state and chan flags.
+ * @pdev_priv_obj: Pointer to pdev_priv_obj
+ *
+ * Return: void
+ */
+static void reg_init_super_chan_entry(
+		struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj,
+		uint8_t chan_idx)
+{
+	enum supported_6g_pwr_types pwr_type;
+	struct super_chan_info *chan_info;
+
+	chan_info = &pdev_priv_obj->super_chan_list[chan_idx];
+
+	for (pwr_type = REG_AP_LPI; pwr_type <= REG_CLI_SUB_VLP;
+	     pwr_type++)
+		reg_dis_chan_state_and_flags(&chan_info->state_arr[pwr_type],
+					     &chan_info->chan_flags_arr
+					     [pwr_type]);
+}
+
+/**
+ * reg_init_pdev_super_chan_list() - Initialize the super channel list.
+ * @pdev_priv_obj: Pointer to pdev_priv_obj
+ *
+ * Return: void
+ */
+static void reg_init_pdev_super_chan_list(
+		struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj)
+{
+	uint8_t i;
+
+	qdf_mem_zero(pdev_priv_obj->super_chan_list, NUM_6GHZ_CHANNELS *
+		     sizeof(struct super_chan_info));
+	for (i = 0; i < NUM_6GHZ_CHANNELS; i++)
+		reg_init_super_chan_entry(pdev_priv_obj, i);
+}
+
+/**
  * reg_is_edge_chan_disable_needed() - Check if the 6G edge channels are
  * disabled
  * @psoc: Pointer to psoc
@@ -2219,10 +2260,10 @@ reg_assign_afc_chan_entry_to_mas_chan(
 static void reg_update_sup_ch_entry_for_mode(
 		struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj,
 		enum supported_6g_pwr_types supp_pwr_mode,
-		uint16_t chn_idx)
+		uint16_t chn_idx,
+		uint8_t *max_eirp_pwr)
 {
 	struct super_chan_info *super_chan_list;
-	uint8_t max_eirp_pwr = 0;
 	struct wlan_objmgr_pdev *pdev = pdev_priv_obj->pdev_ptr;
 	struct regulatory_channel *mas_chan;
 	struct regulatory_channel temp_reg_chan;
@@ -2272,7 +2313,7 @@ static void reg_update_sup_ch_entry_for_mode(
 					 chn_idx, supp_pwr_mode);
 	reg_fill_best_pwr_mode(pdev_priv_obj, super_chan_list, chn_idx,
 			       supp_pwr_mode, temp_reg_chan.tx_power,
-			       &max_eirp_pwr);
+			       max_eirp_pwr);
 	reg_accumulate_pwr_type(supp_pwr_mode, super_chan_list, chn_idx);
 }
 
@@ -2289,11 +2330,12 @@ reg_update_super_chan_entry(struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj,
 			    uint16_t chn_idx)
 {
 	enum supported_6g_pwr_types supp_pwr_mode;
+	uint8_t max_eirp_pwr = 0;
 
 	for (supp_pwr_mode = REG_AP_LPI; supp_pwr_mode <= REG_CLI_SUB_VLP;
 	     supp_pwr_mode++) {
 		reg_update_sup_ch_entry_for_mode(pdev_priv_obj, supp_pwr_mode,
-						 chn_idx);
+						 chn_idx, &max_eirp_pwr);
 	}
 }
 
@@ -2315,6 +2357,11 @@ reg_compute_super_chan_list(struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj)
 		reg_update_super_chan_entry(pdev_priv_obj, i);
 }
 #else /* CONFIG_BAND_6GHZ */
+static void reg_init_pdev_super_chan_list(
+			struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj)
+{
+}
+
 static inline void
 reg_compute_super_chan_list(struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj)
 {
@@ -2544,6 +2591,7 @@ void reg_propagate_mas_chan_list_to_pdev(struct wlan_objmgr_psoc *psoc,
 	reg_init_pdev_mas_chan_list(
 			pdev_priv_obj,
 			&psoc_priv_obj->mas_chan_params[phy_id]);
+	reg_init_pdev_super_chan_list(pdev_priv_obj);
 	psoc_reg_rules = &psoc_priv_obj->mas_chan_params[phy_id].reg_rules;
 	reg_save_reg_rules_to_pdev(psoc_reg_rules, pdev_priv_obj);
 	reg_modify_chan_list_for_japan(pdev);
@@ -2727,6 +2775,11 @@ QDF_STATUS reg_get_pwrmode_chan_list(struct wlan_objmgr_pdev *pdev,
 	}
 
 	pdev_priv_obj = reg_get_pdev_obj(pdev);
+
+	if (!IS_VALID_PDEV_REG_OBJ(pdev_priv_obj)) {
+		reg_err_rl("reg pdev priv obj is NULL");
+		return QDF_STATUS_E_INVAL;
+	}
 
 	/* Get the current channel list */
 	qdf_mem_copy(chan_list, pdev_priv_obj->cur_chan_list,
@@ -2950,6 +3003,8 @@ static void reg_store_regulatory_ext_info_to_socpriv(
 					regulat_info->rnr_tpe_usable;
 	soc_reg->mas_chan_params[phy_id].unspecified_ap_usable =
 					regulat_info->unspecified_ap_usable;
+	soc_reg->mas_chan_params[phy_id].reg_6g_thresh_priority_freq =
+				regulat_info->reg_6g_thresh_priority_freq;
 
 	for (i = 0; i < REG_CURRENT_MAX_AP_TYPE; i++) {
 		soc_reg->domain_code_6g_ap[i] =
@@ -3427,22 +3482,6 @@ QDF_STATUS reg_process_master_chan_list_ext(
 
 	return QDF_STATUS_SUCCESS;
 }
-
-#ifdef CONFIG_REG_CLIENT
-const char *reg_get_power_string(enum reg_6g_ap_type power_type)
-{
-	switch (power_type) {
-	case REG_INDOOR_AP:
-		return "LP";
-	case REG_STANDARD_POWER_AP:
-		return "SP";
-	case REG_VERY_LOW_POWER_AP:
-		return "VLP";
-	default:
-		return "INVALID";
-	}
-}
-#endif
 
 QDF_STATUS reg_get_6g_ap_master_chan_list(struct wlan_objmgr_pdev *pdev,
 					  enum reg_6g_ap_type ap_pwr_type,
@@ -4061,6 +4100,8 @@ reg_process_afc_power_event(struct afc_regulatory_info *afc_info)
 		return QDF_STATUS_E_FAILURE;
 	}
 
+	reg_init_pdev_super_chan_list(pdev_priv_obj);
+	reg_init_6g_master_chan(pdev_priv_obj->afc_chan_list, soc_reg);
 	/* Free the old power_info event if it was allocated */
 	if (pdev_priv_obj->power_info)
 		reg_free_afc_pwr_info(pdev_priv_obj);
@@ -4117,6 +4158,21 @@ reg_process_afc_event(struct afc_regulatory_info *afc_info)
 	}
 }
 #endif /* CONFIG_AFC_SUPPORT */
+#ifdef CONFIG_REG_CLIENT
+const char *reg_get_power_string(enum reg_6g_ap_type power_type)
+{
+	switch (power_type) {
+	case REG_INDOOR_AP:
+		return "LP";
+	case REG_STANDARD_POWER_AP:
+		return "SP";
+	case REG_VERY_LOW_POWER_AP:
+		return "VLP";
+	default:
+		return "INVALID";
+	}
+}
+#endif
 #endif /* CONFIG_BAND_6GHZ */
 
 QDF_STATUS reg_process_master_chan_list(

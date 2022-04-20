@@ -613,6 +613,11 @@ struct cdp_cmn_ops {
 #ifdef FEATURE_RUNTIME_PM
 	void (*set_rtpm_tput_policy)(struct cdp_soc_t *soc, bool val);
 #endif
+
+#if defined(WLAN_FEATURE_11BE_MLO) && defined(WLAN_MLO_MULTI_CHIP)
+	void (*txrx_recovery_vdev_flush_peers)(struct cdp_soc_t *soc,
+					       uint8_t vdev_id);
+#endif
 };
 
 struct cdp_ctrl_ops {
@@ -1089,6 +1094,14 @@ struct cdp_host_stats_ops {
 	(*get_pdev_tx_capture_stats)(struct cdp_soc_t *soc, uint8_t pdev_id,
 				     struct cdp_pdev_tx_capture_stats *stats);
 #endif /* WLAN_TX_PKT_CAPTURE_ENH */
+#ifdef HW_TX_DELAY_STATS_ENABLE
+	void
+	(*enable_disable_vdev_tx_delay_stats)(struct cdp_soc_t *soc,
+					      uint8_t vdev_id,
+					      uint8_t value);
+	uint8_t (*is_tx_delay_stats_enabled)(struct cdp_soc_t *soc_hdl,
+					     uint8_t vdev_id);
+#endif
 };
 
 struct cdp_wds_ops {
@@ -1327,6 +1340,10 @@ struct ol_if_ops {
 				   uint8_t add_or_sub, uint8_t ac);
 #endif
 	uint32_t (*dp_get_tx_inqueue)(ol_txrx_soc_handle soc);
+	QDF_STATUS(*dp_send_unit_test_cmd)(uint32_t vdev_id,
+					   uint32_t module_id,
+					   uint32_t arg_count, uint32_t *arg);
+
 };
 
 #ifdef DP_PEER_EXTENDED_API

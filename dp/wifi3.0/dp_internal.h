@@ -2068,16 +2068,17 @@ bool dp_check_pdev_exists(struct dp_soc *soc, struct dp_pdev *data);
 
 /**
  * dp_update_delay_stats() - Update delay statistics in structure
- *                              and fill min, max and avg delay
- * @pdev: pdev handle
+ *				and fill min, max and avg delay
+ * @tstats: tid tx stats
+ * @rstats: tid rx stats
  * @delay: delay in ms
  * @tid: tid value
  * @mode: type of tx delay mode
  * @ring id: ring number
- *
  * Return: none
  */
-void dp_update_delay_stats(struct dp_pdev *pdev, uint32_t delay,
+void dp_update_delay_stats(struct cdp_tid_tx_stats *tstats,
+			   struct cdp_tid_rx_stats *rstats, uint32_t delay,
 			   uint8_t tid, uint8_t mode, uint8_t ring_id);
 
 /**
@@ -3471,4 +3472,48 @@ dp_peer_get_tx_capture_stats(struct cdp_soc_t *soc_hdl,
 QDF_STATUS
 dp_pdev_get_tx_capture_stats(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
 			     struct cdp_pdev_tx_capture_stats *stats);
+
+#ifdef HW_TX_DELAY_STATS_ENABLE
+/*
+ * dp_is_vdev_tx_delay_stats_enabled(): Check if tx delay stats
+ *  is enabled for vdev
+ * @vdev: dp vdev
+ *
+ * Return: true if tx delay stats is enabled for vdev else false
+ */
+static inline uint8_t dp_is_vdev_tx_delay_stats_enabled(struct dp_vdev *vdev)
+{
+	return vdev->hw_tx_delay_stats_enabled;
+}
+
+/*
+ * dp_pdev_print_tx_delay_stats(): Print vdev tx delay stats
+ *  for pdev
+ * @soc: dp soc
+ *
+ * Return: None
+ */
+void dp_pdev_print_tx_delay_stats(struct dp_soc *soc);
+
+/**
+ * dp_pdev_clear_tx_delay_stats() - clear tx delay stats
+ * @soc: soc handle
+ *
+ * Return: None
+ */
+void dp_pdev_clear_tx_delay_stats(struct dp_soc *soc);
+#else
+static inline uint8_t dp_is_vdev_tx_delay_stats_enabled(struct dp_vdev *vdev)
+{
+	return 0;
+}
+
+static inline void dp_pdev_print_tx_delay_stats(struct dp_soc *soc)
+{
+}
+
+static inline void dp_pdev_clear_tx_delay_stats(struct dp_soc *soc)
+{
+}
+#endif
 #endif /* #ifndef _DP_INTERNAL_H_ */

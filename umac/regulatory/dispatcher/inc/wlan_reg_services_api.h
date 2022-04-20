@@ -384,6 +384,12 @@ QDF_STATUS wlan_reg_get_superchan_entry(
 	*p_sup_chan_entry = NULL;
 	return QDF_STATUS_E_NOSUPPORT;
 }
+
+static inline
+const char *wlan_reg_get_power_string(enum reg_6g_ap_type power_type)
+{
+	return "INVALID";
+}
 #endif /* CONFIG_BAND_6GHZ */
 
 /**
@@ -401,6 +407,29 @@ uint16_t
 wlan_reg_get_band_channel_list(struct wlan_objmgr_pdev *pdev,
 			       uint8_t band_mask,
 			       struct regulatory_channel *channel_list);
+
+#ifdef CONFIG_REG_6G_PWRMODE
+/**
+ * wlan_reg_get_band_channel_list_for_pwrmode() - Get channel list based on the
+ * band_mask and input 6G power mode.
+ * @pdev: pdev ptr
+ * @band_mask: Input bitmap with band set
+ * @channel_list: Pointer to Channel List
+ * @in_6g_pwr_type: 6g power type which decides 6G channel list lookup.
+ *
+ * Get the given channel list and number of channels from the current channel
+ * list based on input band bitmap.
+ *
+ * Return: Number of channels, else 0 to indicate error
+ */
+uint16_t
+wlan_reg_get_band_channel_list_for_pwrmode(struct wlan_objmgr_pdev *pdev,
+					   uint8_t band_mask,
+					   struct regulatory_channel
+					   *channel_list,
+					   enum supported_6g_pwr_types
+					   in_6g_pwr_type);
+#endif
 
 #ifdef CONFIG_REG_CLIENT
 /**
@@ -1412,6 +1441,8 @@ enum channel_state wlan_reg_get_channel_state_from_secondary_list_for_freq(
  * @ch_width: Channel width of type 'enum phy_ch_width'.
  * @band_center_320: Center frequency of 320MHZ channel.
  * @chan_list: Pointer to struct reg_channel_list to be filled (Output param).
+ * @treat_nol_chan_as_disabled: bool to treat nol channel as enabled or
+ * disabled. If set to true, nol chan is considered as disabled in chan search.
  *
  * Return: None
  */
@@ -1420,7 +1451,8 @@ void wlan_reg_fill_channel_list(struct wlan_objmgr_pdev *pdev,
 				qdf_freq_t sec_ch_2g_freq,
 				enum phy_ch_width ch_width,
 				qdf_freq_t band_center_320,
-				struct reg_channel_list *chan_list);
+				struct reg_channel_list *chan_list,
+				bool treat_nol_chan_as_disabled);
 
 /**
  * wlan_reg_is_punc_bitmap_valid() - is puncture bitmap valid or not
@@ -1452,6 +1484,8 @@ void wlan_reg_set_create_punc_bitmap(struct ch_params *ch_params,
  * @band_center_320: Center frequency of 320MHZ channel.
  * @chan_list: Pointer to struct reg_channel_list to be filled (Output param).
  * @in_6g_pwr_type: 6g power type which decides 6G channel list lookup.
+ * @treat_nol_chan_as_disabled: bool to treat nol channel as enabled or
+ * disabled. If set to true, nol chan is considered as disabled in chan search.
  *
  * Return: None
  */
@@ -1462,7 +1496,8 @@ void wlan_reg_fill_channel_list_for_pwrmode(
 				enum phy_ch_width ch_width,
 				qdf_freq_t band_center_320,
 				struct reg_channel_list *chan_list,
-				enum supported_6g_pwr_types in_6g_pwr_type);
+				enum supported_6g_pwr_types in_6g_pwr_type,
+				bool treat_nol_chan_as_disabled);
 #endif
 #else
 static inline void wlan_reg_set_create_punc_bitmap(struct ch_params *ch_params,
@@ -2187,14 +2222,14 @@ wlan_reg_set_ap_pwr_and_update_chan_list(struct wlan_objmgr_pdev *pdev,
 static inline enum supported_6g_pwr_types
 wlan_reg_get_best_6g_pwr_type(struct wlan_objmgr_pdev *pdev, qdf_freq_t freq)
 {
-	return REG_MAX_AP_TYPE;
+	return REG_INVALID_PWR_MODE;
 }
 
 static inline enum supported_6g_pwr_types
 wlan_reg_conv_6g_ap_type_to_supported_6g_pwr_types(enum reg_6g_ap_type
 						   ap_pwr_type)
 {
-	return REG_MAX_AP_TYPE;
+	return REG_INVALID_PWR_MODE;
 }
 
 static inline enum reg_6g_ap_type
@@ -2226,4 +2261,18 @@ bool wlan_reg_is_ext_tpc_supported(struct wlan_objmgr_psoc *psoc);
 QDF_STATUS wlan_reg_is_chwidth_supported(struct wlan_objmgr_pdev *pdev,
 					 enum phy_ch_width ch_width,
 					 bool *is_supported);
+
+#ifdef CONFIG_BAND_6GHZ
+/**
+ * wlan_reg_get_thresh_priority_freq() - Get the prioritized frequency value
+ * @pdev: pdev pointer
+ */
+qdf_freq_t wlan_reg_get_thresh_priority_freq(struct wlan_objmgr_pdev *pdev);
+#else
+static inline
+qdf_freq_t wlan_reg_get_thresh_priority_freq(struct wlan_objmgr_pdev *pdev)
+{
+	return 0;
+}
+#endif /* CONFIG_BAND_6GHZ */
 #endif

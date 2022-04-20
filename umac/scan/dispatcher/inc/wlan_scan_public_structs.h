@@ -125,6 +125,10 @@ typedef uint32_t wlan_scan_id;
  */
 #define LOW_SPAN_PASSIVE_DWELL_TIME 110
 
+/* Min & Max offset from TBTT, after which Scan can start */
+#define SCAN_START_OFFSET_MIN 26 /* msec */
+#define SCAN_START_OFFSET_MAX 90 /* msec */
+
 /* forward declaration */
 struct wlan_objmgr_vdev;
 struct wlan_objmgr_pdev;

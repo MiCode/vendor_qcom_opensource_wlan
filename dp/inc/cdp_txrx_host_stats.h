@@ -904,4 +904,55 @@ cdp_get_pdev_tx_capture_stats(ol_txrx_soc_handle soc, uint8_t pdev_id,
 								   stats);
 }
 #endif /* WLAN_TX_PKT_CAPTURE_ENH */
+
+#ifdef HW_TX_DELAY_STATS_ENABLE
+/**
+ * cdp_enable_disable_vdev_tx_delay_stats() - Start/Stop tx delay stats capture
+ * @soc: soc handle
+ * @vdev_id: vdev id
+ * @value: value to be set
+ *
+ * Return: None
+ */
+static inline void
+cdp_enable_disable_vdev_tx_delay_stats(ol_txrx_soc_handle soc, uint8_t vdev_id,
+				       uint8_t value)
+{
+	if (!soc || !soc->ops) {
+		dp_cdp_debug("Invalid Instance");
+		return;
+	}
+
+	if (!soc->ops->host_stats_ops ||
+	    !soc->ops->host_stats_ops->enable_disable_vdev_tx_delay_stats)
+		return;
+
+	soc->ops->host_stats_ops->enable_disable_vdev_tx_delay_stats(soc,
+								     vdev_id,
+								     value);
+}
+
+/**
+ * cdp_vdev_is_tx_delay_stats_enabled() - Check if the Tx delay stats
+ *  is enabled or not for the given vdev_id
+ * @soc: soc handle
+ * @vdev_id: vdev_id
+ *
+ * Returns: 1 if enabled, 0 if disabled
+ */
+static inline uint8_t
+cdp_vdev_is_tx_delay_stats_enabled(ol_txrx_soc_handle soc, uint8_t vdev_id)
+{
+	if (!soc || !soc->ops || !soc->ops->host_stats_ops) {
+		dp_cdp_debug("Invalid Instance:");
+		return 0;
+	}
+
+	if (soc->ops->host_stats_ops->is_tx_delay_stats_enabled)
+		return soc->ops->host_stats_ops->is_tx_delay_stats_enabled(soc,
+								     vdev_id);
+
+	return 0;
+}
+#endif
 #endif /* _CDP_TXRX_HOST_STATS_H_ */

@@ -1396,21 +1396,31 @@ void dp_vdev_peer_stats_update_protocol_cnt_tx(struct dp_vdev *vdev_hdl,
 /**
  * dp_tx_update_stats() - Update soc level tx stats
  * @soc: DP soc handle
- * @nbuf: packet being transmitted
+ * @tx_desc: TX descriptor reference
+ * @ring_id: TCL ring id
  *
  * Returns: none
  */
 void dp_tx_update_stats(struct dp_soc *soc,
-			qdf_nbuf_t nbuf)
+			struct dp_tx_desc_s *tx_desc,
+			uint8_t ring_id)
 {
-	DP_STATS_INC_PKT(soc, tx.egress, 1, qdf_nbuf_len(nbuf));
+	uint32_t stats_len = 0;
+
+	if (tx_desc->frm_type == dp_tx_frm_tso)
+		stats_len  = tx_desc->msdu_ext_desc->tso_desc->seg.total_len;
+	else
+		stats_len = qdf_nbuf_len(tx_desc->nbuf);
+
+	DP_STATS_INC_PKT(soc, tx.egress[ring_id], 1, stats_len);
 }
 
 int
 dp_tx_attempt_coalescing(struct dp_soc *soc, struct dp_vdev *vdev,
 			 struct dp_tx_desc_s *tx_desc,
 			 uint8_t tid,
-			 struct dp_tx_msdu_info_s *msdu_info)
+			 struct dp_tx_msdu_info_s *msdu_info,
+			 uint8_t ring_id)
 {
 	struct dp_swlm *swlm = &soc->swlm;
 	union swlm_data swlm_query_data;
@@ -1423,21 +1433,28 @@ dp_tx_attempt_coalescing(struct dp_soc *soc, struct dp_vdev *vdev,
 
 	tcl_data.nbuf = tx_desc->nbuf;
 	tcl_data.tid = tid;
+	tcl_data.ring_id = ring_id;
+	if (tx_desc->frm_type == dp_tx_frm_tso) {
+		tcl_data.pkt_len  =
+			tx_desc->msdu_ext_desc->tso_desc->seg.total_len;
+	} else {
+		tcl_data.pkt_len = qdf_nbuf_len(tx_desc->nbuf);
+	}
 	tcl_data.num_ll_connections = vdev->num_latency_critical_conn;
 	swlm_query_data.tcl_data = &tcl_data;
 
 	status = dp_swlm_tcl_pre_check(soc, &tcl_data);
 	if (QDF_IS_STATUS_ERROR(status)) {
-		dp_swlm_tcl_reset_session_data(soc);
-		DP_STATS_INC(swlm, tcl.coalesce_fail, 1);
+		dp_swlm_tcl_reset_session_data(soc, ring_id);
+		DP_STATS_INC(swlm, tcl[ring_id].coalesce_fail, 1);
 		return 0;
 	}
 
 	ret = dp_swlm_query_policy(soc, TCL_DATA, swlm_query_data);
 	if (ret) {
-		DP_STATS_INC(swlm, tcl.coalesce_success, 1);
+		DP_STATS_INC(swlm, tcl[ring_id].coalesce_success, 1);
 	} else {
-		DP_STATS_INC(swlm, tcl.coalesce_fail, 1);
+		DP_STATS_INC(swlm, tcl[ring_id].coalesce_fail, 1);
 	}
 
 	return ret;
@@ -2932,6 +2949,10 @@ void dp_tx_nawds_handler(struct dp_soc *soc, struct dp_vdev *vdev,
 
 		if (!txrx_peer->bss_peer && txrx_peer->nawds_enabled) {
 			peer_id = peer->peer_id;
+
+			if (!dp_peer_is_primary_link_peer(peer))
+				continue;
+
 			/* Multicast packets needs to be
 			 * dropped in case of intra bss forwarding
 			 */
@@ -3850,6 +3871,28 @@ static inline void dp_tx_update_peer_delay_stats(struct dp_txrx_peer *txrx_peer,
 }
 #endif
 
+#ifdef HW_TX_DELAY_STATS_ENABLE
+static inline
+void dp_update_tx_delay_stats(struct dp_vdev *vdev, uint32_t delay, uint8_t tid,
+			      uint8_t mode, uint8_t ring_id)
+{
+	struct cdp_tid_tx_stats *tstats =
+		&vdev->stats.tid_tx_stats[ring_id][tid];
+
+	dp_update_delay_stats(tstats, NULL, delay, tid, mode, ring_id);
+}
+#else
+static inline
+void dp_update_tx_delay_stats(struct dp_vdev *vdev, uint32_t delay, uint8_t tid,
+			      uint8_t mode, uint8_t ring_id)
+{
+	struct cdp_tid_tx_stats *tstats =
+		&vdev->pdev->stats.tid_stats.tid_tx_stats[ring_id][tid];
+
+	dp_update_delay_stats(tstats, NULL, delay, tid, mode, ring_id);
+}
+#endif
+
 /**
  * dp_tx_compute_delay() - Compute and fill in all timestamps
  *				to pass in correct fields
@@ -3866,28 +3909,38 @@ void dp_tx_compute_delay(struct dp_vdev *vdev, struct dp_tx_desc_s *tx_desc,
 	int64_t current_timestamp, timestamp_ingress, timestamp_hw_enqueue;
 	uint32_t sw_enqueue_delay, fwhw_transmit_delay, interframe_delay;
 
-	if (qdf_likely(!vdev->pdev->delay_stats_flag))
+	if (qdf_likely(!vdev->pdev->delay_stats_flag) &&
+	    qdf_likely(!dp_is_vdev_tx_delay_stats_enabled(vdev)))
 		return;
 
 	current_timestamp = qdf_ktime_to_ms(qdf_ktime_real_get());
-	timestamp_ingress = qdf_nbuf_get_timestamp(tx_desc->nbuf);
 	timestamp_hw_enqueue = tx_desc->timestamp;
-	sw_enqueue_delay = (uint32_t)(timestamp_hw_enqueue - timestamp_ingress);
 	fwhw_transmit_delay = (uint32_t)(current_timestamp -
 					 timestamp_hw_enqueue);
+
+	/*
+	 * Delay between packet enqueued to HW and Tx completion
+	 */
+	dp_update_tx_delay_stats(vdev, fwhw_transmit_delay, tid,
+				 CDP_DELAY_STATS_FW_HW_TRANSMIT, ring_id);
+
+	/*
+	 * For MCL, only enqueue to completion delay is required
+	 * so return if the vdev flag is enabled.
+	 */
+	if (dp_is_vdev_tx_delay_stats_enabled(vdev))
+		return;
+
+	timestamp_ingress = qdf_nbuf_get_timestamp(tx_desc->nbuf);
+	sw_enqueue_delay = (uint32_t)(timestamp_hw_enqueue - timestamp_ingress);
 	interframe_delay = (uint32_t)(timestamp_ingress -
 				      vdev->prev_tx_enq_tstamp);
 
 	/*
 	 * Delay in software enqueue
 	 */
-	dp_update_delay_stats(vdev->pdev, sw_enqueue_delay, tid,
-			      CDP_DELAY_STATS_SW_ENQ, ring_id);
-	/*
-	 * Delay between packet enqueued to HW and Tx completion
-	 */
-	dp_update_delay_stats(vdev->pdev, fwhw_transmit_delay, tid,
-			      CDP_DELAY_STATS_FW_HW_TRANSMIT, ring_id);
+	dp_update_tx_delay_stats(vdev, sw_enqueue_delay, tid,
+				 CDP_DELAY_STATS_SW_ENQ, ring_id);
 
 	/*
 	 * Update interframe delay stats calculated at hardstart receive point.
@@ -3896,8 +3949,8 @@ void dp_tx_compute_delay(struct dp_vdev *vdev, struct dp_tx_desc_s *tx_desc,
 	 * On the other side, this will help in avoiding extra per packet check
 	 * of !vdev->prev_tx_enq_tstamp.
 	 */
-	dp_update_delay_stats(vdev->pdev, interframe_delay, tid,
-			      CDP_DELAY_STATS_TX_INTERFRAME, ring_id);
+	dp_update_tx_delay_stats(vdev, interframe_delay, tid,
+				 CDP_DELAY_STATS_TX_INTERFRAME, ring_id);
 	vdev->prev_tx_enq_tstamp = timestamp_ingress;
 }
 
@@ -4030,7 +4083,8 @@ dp_tx_update_peer_stats(struct dp_tx_desc_s *tx_desc,
 	length = qdf_nbuf_len(tx_desc->nbuf);
 	DP_PEER_STATS_FLAT_INC_PKT(txrx_peer, comp_pkt, 1, length);
 
-	if (qdf_unlikely(pdev->delay_stats_flag))
+	if (qdf_unlikely(pdev->delay_stats_flag) ||
+	    qdf_unlikely(dp_is_vdev_tx_delay_stats_enabled(txrx_peer->vdev)))
 		dp_tx_compute_delay(txrx_peer->vdev, tx_desc, tid, ring_id);
 
 	if (ts->status < CDP_MAX_TX_TQM_STATUS) {
@@ -5110,6 +5164,8 @@ next_desc:
 	if (head_desc)
 		dp_tx_comp_process_desc_list(soc, head_desc, ring_id);
 
+	DP_STATS_INC(soc, tx.tx_comp[ring_id], count);
+
 	/*
 	 * If we are processing in near-full condition, there are 3 scenario
 	 * 1) Ring entries has reached critical state
@@ -5233,7 +5289,7 @@ void dp_tx_vdev_update_search_flags(struct dp_vdev *vdev)
 	else
 		vdev->hal_desc_addr_search_flags = HAL_TX_DESC_ADDRX_EN;
 
-	if (vdev->opmode == wlan_op_mode_sta)
+	if (vdev->opmode == wlan_op_mode_sta && !vdev->tdls_link_connected)
 		vdev->search_type = soc->sta_mode_search_policy;
 	else
 		vdev->search_type = HAL_TX_ADDR_SEARCH_DEFAULT;

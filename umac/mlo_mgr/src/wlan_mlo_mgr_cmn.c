@@ -25,6 +25,8 @@
 #endif
 #include "wlan_serialization_api.h"
 #include <target_if_mlo_mgr.h>
+#include <cdp_txrx_cmn.h>
+#include <wlan_cfg.h>
 
 void mlo_get_link_information(struct qdf_mac_addr *mld_addr,
 			      struct mlo_link_info *info)
@@ -276,6 +278,39 @@ uint8_t mlo_get_link_vdev_ix(struct wlan_mlo_dev_context *ml_dev,
 }
 
 #ifdef WLAN_MLO_MULTI_CHIP
+int8_t wlan_mlo_get_max_num_links(void)
+{
+	struct mlo_mgr_context *mlo_ctx;
+
+	mlo_ctx = wlan_objmgr_get_mlo_ctx();
+	if (!mlo_ctx)
+		return WLAN_MLO_INVALID_NUM_LINKS;
+
+	return mlo_ctx->setup_info.tot_socs * WLAN_MAX_MLO_LINKS_PER_SOC;
+}
+
+int8_t wlan_mlo_get_num_active_links(void)
+{
+	struct mlo_mgr_context *mlo_ctx;
+
+	mlo_ctx = wlan_objmgr_get_mlo_ctx();
+	if (!mlo_ctx)
+		return WLAN_MLO_INVALID_NUM_LINKS;
+
+	return mlo_ctx->setup_info.tot_links;
+}
+
+uint16_t wlan_mlo_get_valid_link_bitmap(void)
+{
+	struct mlo_mgr_context *mlo_ctx;
+
+	mlo_ctx = wlan_objmgr_get_mlo_ctx();
+	if (!mlo_ctx)
+		return 0;
+
+	return mlo_ctx->setup_info.valid_link_bitmap;
+}
+
 uint16_t wlan_mlo_get_pdev_hw_link_id(struct wlan_objmgr_pdev *pdev)
 {
 	struct wlan_objmgr_psoc *psoc;

@@ -21,6 +21,7 @@
 #include <qdf_nbuf_frag.h>
 #include <hal_be_api_mon.h>
 
+struct dp_mon_desc;
 /*
  * dp_tx_mon_buffers_alloc() - allocate tx monitor buffers
  * @soc: DP soc handle
@@ -74,18 +75,35 @@ void dp_tx_mon_buf_desc_pool_free(struct dp_soc *soc);
 QDF_STATUS
 dp_tx_mon_buf_desc_pool_alloc(struct dp_soc *soc);
 
-/*
- * dp_tx_mon_process_status_tlv() - process status tlv
- * @soc: dp soc handle
- * @pdev: dp pdev handle
- * @mon_ring_desc: monitor ring descriptor
- * @frag_addr: frag address
+/**
+ * dp_tx_mon_update_end_reason() - API to update end reason
  *
+ * @mon_pdev - DP_MON_PDEV handle
+ * @ppdu_id - ppdu_id
+ * @end_reason - monitor destiantion descriptor end reason
+ *
+ * Return: void
+ */
+void dp_tx_mon_update_end_reason(struct dp_mon_pdev *mon_pdev,
+				 int ppdu_id, int end_reason);
+
+/*
+ * dp_tx_mon_process_status_tlv() - API to processed TLV
+ * invoked from interrupt handler
+ *
+ * @soc - DP_SOC handle
+ * @pdev - DP_PDEV handle
+ * @mon_ring_desc - descriptor status info
+ * @addr - status buffer frag address
+ * @end_offset - end offset of buffer that has valid buffer
+ *
+ * Return: QDF_STATUS
  */
 QDF_STATUS dp_tx_mon_process_status_tlv(struct dp_soc *soc,
 					struct dp_pdev *pdev,
 					struct hal_mon_desc *mon_ring_desc,
-					qdf_dma_addr_t addr);
+					qdf_frag_t status_frag,
+					uint32_t end_offset);
 
 /*
  * dp_tx_mon_process_2_0() - tx monitor interrupt process
@@ -318,6 +336,18 @@ enum dp_tx_monitor_mode {
 	TX_MON_BE_PEER_FILTER,
 };
 
+/**
+ * dp_tx_monitor_framework_mode - tx monitor framework mode
+ * @TX_MON_BE_FRM_WRK_DISABLE: tx monitor frame work disable
+ * @TX_MON_BE_FRM_WRK_FULL_CAPTURE: tx monitor frame work full capture
+ * @TX_MON_BE_FRM_WRK_128B_CAPTURE: tx monitor frame work 128B capture
+ */
+enum dp_tx_monitor_framework_mode {
+	TX_MON_BE_FRM_WRK_DISABLE,
+	TX_MON_BE_FRM_WRK_FULL_CAPTURE,
+	TX_MON_BE_FRM_WRK_128B_CAPTURE,
+};
+
 #define TX_TAILQ_INSERT_TAIL(pdev, tx_ppdu_info)			\
 	do {								\
 		STAILQ_INSERT_TAIL(&pdev->tx_ppdu_info_list,		\
@@ -346,10 +376,12 @@ enum dp_tx_monitor_mode {
 #ifndef WLAN_TX_PKT_CAPTURE_ENH_BE
 /**
  * dp_pdev_tx_capture_be - info to store tx capture information in pdev
+ * @mode: tx monitor core framework current mode
  *
  * This is a dummy structure
  */
 struct dp_pdev_tx_capture_be {
+	uint32_t mode;
 };
 
 /**
@@ -515,4 +547,16 @@ QDF_STATUS dp_peer_set_tx_capture_enabled_2_0(struct dp_pdev *pdev_handle,
 					      uint8_t is_tx_pkt_cap_enable,
 					      uint8_t *peer_mac);
 #endif /* WLAN_TX_PKT_CAPTURE_ENH_BE */
+
+#if (defined(WIFI_MONITOR_SUPPORT) && !defined(WLAN_TX_PKT_CAPTURE_ENH_BE))
+/*
+ * dp_config_enh_tx_core_capture_2_0()- API to validate core framework
+ * @pdev_handle: DP_PDEV handle
+ * @val: user provided value
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS dp_config_enh_tx_core_capture_2_0(struct dp_pdev *pdev, uint8_t val);
+#endif
+
 #endif /* _DP_TX_MON_2_0_H_ */

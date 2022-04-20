@@ -73,12 +73,14 @@ struct vdev_mlme_obj;
  * @MLO_LINK_SETUP_DONE - MLO link SETUP exchange started
  * @MLO_LINK_READY - MLO link SETUP done and READY sent
  * @MLO_LINK_TEARDOWN - MLO teardown done.
+ * @MLO_LINK_UNINITIALIZED - MLO link in blank state
  */
 enum MLO_LINK_STATE {
 	MLO_LINK_SETUP_INIT,
 	MLO_LINK_SETUP_DONE,
 	MLO_LINK_READY,
-	MLO_LINK_TEARDOWN
+	MLO_LINK_TEARDOWN,
+	MLO_LINK_UNINITIALIZED,
 };
 
 /**
@@ -91,11 +93,12 @@ enum MLO_LINK_STATE {
  * @pdev_list[MAX_MLO_LINKS]: pdev pointers belonging to this group
  * @soc_list[MAX_MLO_CHIPS]: psoc pointers belonging to this group
  * @state[MAX_MLO_LINKS]: MLO link state
+ * @valid_link_bitmap: valid MLO link bitmap
  * @state_lock: lock to protect access to link state
  * @qdf_event_t: event for tearodwn completion
  */
 #define MAX_MLO_LINKS 6
-#define MAX_MLO_CHIPS 3
+#define MAX_MLO_CHIPS 5
 struct mlo_setup_info {
 	uint8_t ml_grp_id;
 	uint8_t tot_socs;
@@ -105,8 +108,19 @@ struct mlo_setup_info {
 	struct wlan_objmgr_pdev *pdev_list[MAX_MLO_LINKS];
 	struct wlan_objmgr_psoc *soc_list[MAX_MLO_CHIPS];
 	enum MLO_LINK_STATE state[MAX_MLO_LINKS];
+	uint16_t valid_link_bitmap;
 	qdf_spinlock_t state_lock;
 	qdf_event_t event;
+};
+
+/**
+ * struct mlo_state_params: MLO state params for pdev iteration
+ * @link_state_fail: Flag to check when pdev not in expected state
+ * @check_state: State on against which pdev is to be expected
+ */
+struct mlo_state_params {
+	bool link_state_fail;
+	enum MLO_LINK_STATE check_state;
 };
 
 #define MAX_MLO_GROUP 1
@@ -219,6 +233,7 @@ struct mlo_sta_quiet_status {
  * @copied_conn_req_lock: lock for the original connect request
  * @assoc_rsp: Raw assoc response frame
  * @mlo_csa_param: CSA request parameters for mlo sta
+ * @disconn_req: disconnect req params
  */
 struct wlan_mlo_sta {
 	qdf_bitmap(wlan_connect_req_links, WLAN_UMAC_MLO_MAX_VDEVS);
@@ -234,6 +249,7 @@ struct wlan_mlo_sta {
 	struct element_info assoc_rsp;
 	struct mlo_sta_quiet_status mlo_quiet_status[WLAN_UMAC_MLO_MAX_VDEVS];
 	struct mlo_sta_csa_params mlo_csa_param[WLAN_UMAC_MLO_MAX_VDEVS];
+	struct wlan_cm_disconnect_req *disconn_req;
 };
 
 /*
@@ -619,5 +635,19 @@ struct mlo_link_set_active_ctx {
 struct mlo_link_set_active_req {
 	struct mlo_link_set_active_ctx ctx;
 	struct mlo_link_set_active_param param;
+};
+
+/*
+ * enum mlo_chip_recovery_type - MLO chip recovery types
+ * @MLO_RECOVERY_MODE_0: CRASH_PARTNER_CHIPS & recover all chips
+ * @MLO_RECOVERY_MODE_1: Crash & recover asserted chip alone
+ * @MLO_RECOVERY_MODE_MAX: Max limit for recovery types
+ */
+enum mlo_chip_recovery_type {
+	MLO_RECOVERY_MODE_0 = 1,
+	MLO_RECOVERY_MODE_1 = 2,
+
+	/* Add new types above */
+	MLO_RECOVERY_MODE_MAX = 0xf
 };
 #endif

@@ -440,7 +440,8 @@ static int dp_htt_h2t_add_tcl_metadata_ver_v2(struct htt_soc *soc,
 static int dp_htt_h2t_add_tcl_metadata_ver(struct htt_soc *soc, qdf_nbuf_t *msg)
 {
 	/* Use tcl_metadata_v1 when NSS offload is enabled */
-	if (wlan_cfg_get_dp_soc_nss_cfg(soc->dp_soc->wlan_cfg_ctx))
+	if (wlan_cfg_get_dp_soc_nss_cfg(soc->dp_soc->wlan_cfg_ctx) ||
+	    soc->dp_soc->cdp_soc.ol_ops->get_con_mode() == QDF_GLOBAL_FTM_MODE)
 		return dp_htt_h2t_add_tcl_metadata_ver_v1(soc, msg);
 	else
 		return dp_htt_h2t_add_tcl_metadata_ver_v2(soc, msg);
@@ -1040,8 +1041,8 @@ int htt_h2t_rx_ring_cfg(struct htt_soc *htt_soc, int pdev_id,
 	*msg_word = 0;
 	HTT_H2T_MSG_TYPE_SET(*msg_word, HTT_H2T_MSG_TYPE_RX_RING_SELECTION_CFG);
 
-	if (htt_tlv_filter->rx_mon_global_en)
-		*msg_word  |= (1 << RXMON_GLOBAL_EN_SHIFT);
+	/* applicable only for post Li */
+	dp_rx_mon_enable(soc->dp_soc, msg_word, htt_tlv_filter);
 
 	/*
 	 * pdev_id is indexed from 0 whereas mac_id is indexed from 1
@@ -1051,7 +1052,8 @@ int htt_h2t_rx_ring_cfg(struct htt_soc *htt_soc, int pdev_id,
 	dp_get_target_pdev_id_for_host_pdev_id(soc->dp_soc, pdev_id);
 
 	if (htt_ring_type == HTT_SW_TO_SW_RING ||
-			htt_ring_type == HTT_SW_TO_HW_RING)
+			htt_ring_type == HTT_SW_TO_HW_RING ||
+			htt_ring_type == HTT_HW_TO_SW_RING)
 		HTT_RX_RING_SELECTION_CFG_PDEV_ID_SET(*msg_word,
 						      target_pdev_id);
 
@@ -1080,7 +1082,6 @@ int htt_h2t_rx_ring_cfg(struct htt_soc *htt_soc, int pdev_id,
 		ring_buf_size);
 
 	dp_mon_rx_packet_length_set(soc->dp_soc, msg_word, htt_tlv_filter);
-	dp_rx_mon_enable(soc->dp_soc, msg_word, htt_tlv_filter);
 
 	/* word 2 */
 	msg_word++;
@@ -2400,6 +2401,18 @@ static void dp_vdev_txrx_hw_stats_handler(struct htt_soc *soc,
 			tx_comp.bytes += byte_count;
 			tx_failed.bytes += byte_count;
 
+			/* Extract tqm bypass packet count from buffer */
+			tag_buf = tlv_buf_temp +
+				HTT_VDEV_STATS_GET_INDEX(TX_TQM_BYPASS_PKT_CNT);
+			pkt_count = HTT_VDEV_GET_STATS_U64(tag_buf);
+			tx_comp.num += pkt_count;
+
+			/* Extract tx bypass packet byte count from buffer */
+			tag_buf = tlv_buf_temp +
+				HTT_VDEV_STATS_GET_INDEX(TX_TQM_BYPASS_BYTE_CNT);
+			byte_count = HTT_VDEV_GET_STATS_U64(tag_buf);
+			tx_comp.bytes += byte_count;
+
 			DP_STATS_UPD(vdev, tx.comp_pkt.num, tx_comp.num);
 			DP_STATS_UPD(vdev, tx.comp_pkt.bytes, tx_comp.bytes);
 
@@ -2578,6 +2591,42 @@ dp_queue_mon_ring_stats(struct dp_pdev *pdev,
 }
 #endif
 
+#ifndef WLAN_DP_DISABLE_TCL_CMD_CRED_SRNG
+static inline QDF_STATUS
+dp_get_tcl_cmd_cred_ring_state_from_hal(struct dp_pdev *pdev,
+					struct dp_srng_ring_state *ring_state)
+{
+	return dp_get_srng_ring_state_from_hal(pdev->soc, pdev,
+					       &pdev->soc->tcl_cmd_credit_ring,
+					       TCL_CMD_CREDIT, ring_state);
+}
+#else
+static inline QDF_STATUS
+dp_get_tcl_cmd_cred_ring_state_from_hal(struct dp_pdev *pdev,
+					struct dp_srng_ring_state *ring_state)
+{
+	return QDF_STATUS_SUCCESS;
+}
+#endif
+
+#ifndef WLAN_DP_DISABLE_TCL_STATUS_SRNG
+static inline QDF_STATUS
+dp_get_tcl_status_ring_state_from_hal(struct dp_pdev *pdev,
+				      struct dp_srng_ring_state *ring_state)
+{
+	return dp_get_srng_ring_state_from_hal(pdev->soc, pdev,
+					       &pdev->soc->tcl_status_ring,
+					       TCL_STATUS, ring_state);
+}
+#else
+static inline QDF_STATUS
+dp_get_tcl_status_ring_state_from_hal(struct dp_pdev *pdev,
+				      struct dp_srng_ring_state *ring_state)
+{
+	return QDF_STATUS_SUCCESS;
+}
+#endif
+
 /**
  * dp_queue_srng_ring_stats(): Print pdev hal level ring stats
  * @pdev: DP_pdev handle
@@ -2646,21 +2695,13 @@ static void dp_queue_ring_stats(struct dp_pdev *pdev)
 	if (status == QDF_STATUS_SUCCESS)
 		qdf_assert_always(++j < DP_MAX_SRNGS);
 
-	status = dp_get_srng_ring_state_from_hal
-				(pdev->soc, pdev,
-				 &pdev->soc->tcl_cmd_credit_ring,
-				 TCL_CMD_CREDIT,
-				 &soc_srngs_state->ring_state[j]);
-
+	status = dp_get_tcl_cmd_cred_ring_state_from_hal
+				(pdev, &soc_srngs_state->ring_state[j]);
 	if (status == QDF_STATUS_SUCCESS)
 		qdf_assert_always(++j < DP_MAX_SRNGS);
 
-	status = dp_get_srng_ring_state_from_hal
-				(pdev->soc, pdev,
-				 &pdev->soc->tcl_status_ring,
-				 TCL_STATUS,
-				 &soc_srngs_state->ring_state[j]);
-
+	status = dp_get_tcl_status_ring_state_from_hal
+				(pdev, &soc_srngs_state->ring_state[j]);
 	if (status == QDF_STATUS_SUCCESS)
 		qdf_assert_always(++j < DP_MAX_SRNGS);
 

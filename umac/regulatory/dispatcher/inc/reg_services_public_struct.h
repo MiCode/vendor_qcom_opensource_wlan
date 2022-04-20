@@ -1167,6 +1167,8 @@ struct cur_reg_rule {
  * @max_bw_5g: maximum 5G bw
  * @num_2g_reg_rules: number 2G reg rules
  * @num_5g_reg_rules: number 5G  and 6G reg rules
+ * @reg_6g_thresh_priority_freq: All frequencies greater or equal will be given
+ * priority during channel selection by upper layer
  * @reg_rules_2g_ptr: ptr to 2G reg rules
  * @reg_rules_5g_ptr: ptr to 5G reg rules
  * @client_type: type of client
@@ -1201,6 +1203,7 @@ struct cur_regulatory_info {
 	uint32_t max_bw_5g;
 	uint32_t num_2g_reg_rules;
 	uint32_t num_5g_reg_rules;
+	qdf_freq_t reg_6g_thresh_priority_freq;
 	struct cur_reg_rule *reg_rules_2g_ptr;
 	struct cur_reg_rule *reg_rules_5g_ptr;
 	enum reg_6g_client_type client_type;
@@ -1539,6 +1542,8 @@ enum direction {
  * @rnr_tpe_usable: if RNR TPE octet is usable for country
  * @unspecified_ap_usable: if not set, AP usable for country
  * @max_bw_5g: Maximum 5g Bandwidth
+ * @reg_6g_thresh_priority_freq: All frequencies greater or equal will be given
+ * priority during channel selection by upper layer
  */
 struct mas_chan_params {
 	enum dfs_reg dfs_region;
@@ -1566,6 +1571,7 @@ struct mas_chan_params {
 	enum reg_6g_client_type client_type;
 	bool rnr_tpe_usable;
 	bool unspecified_ap_usable;
+	qdf_freq_t reg_6g_thresh_priority_freq;
 #endif
 	uint16_t max_bw_5g;
 };

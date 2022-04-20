@@ -288,7 +288,33 @@ void mlo_mlme_handle_sta_csa_param(struct wlan_objmgr_vdev *vdev,
 				   struct csa_offload_params *csa_param);
 
 #define INVALID_HW_LINK_ID 0xFFFF
+#define WLAN_MLO_INVALID_NUM_LINKS             (-1)
 #ifdef WLAN_MLO_MULTI_CHIP
+/**
+ * wlan_mlo_get_max_num_links() - Get the maximum number of MLO links
+ * possible in the system
+ *
+ * Return: Maximum number of MLO links in the system
+ */
+int8_t wlan_mlo_get_max_num_links(void);
+
+/**
+ * wlan_mlo_get_num_active_links() - Get the number of active MLO links
+ * in the system
+ *
+ * Return: Number of active MLO links in the system
+ */
+int8_t wlan_mlo_get_num_active_links(void);
+
+/**
+ * wlan_mlo_get_valid_link_bitmap() - Get the bitmap indicating the valid
+ * MLO links in the system. If bit position i is set, link with id i is
+ * valid.
+ *
+ * Return: Valid link bitmap
+ */
+uint16_t wlan_mlo_get_valid_link_bitmap(void);
+
 /**
  * wlan_mlo_get_pdev_hw_link_id() - Get hw_link_id of pdev
  * @pdev: pdev object
@@ -325,6 +351,24 @@ wlan_mlo_get_pdev_by_hw_link_id(uint16_t hw_link_id,
 				wlan_objmgr_ref_dbgid refdbgid);
 
 #else
+static inline int8_t
+wlan_mlo_get_max_num_links(void)
+{
+	return WLAN_MLO_INVALID_NUM_LINKS;
+}
+
+static inline int8_t
+wlan_mlo_get_num_active_links(void)
+{
+	return WLAN_MLO_INVALID_NUM_LINKS;
+}
+
+static inline uint16_t
+wlan_mlo_get_valid_link_bitmap(void)
+{
+	return 0;
+}
+
 static inline struct wlan_objmgr_pdev *
 wlan_mlo_get_pdev_by_hw_link_id(uint16_t hw_link_id,
 				wlan_objmgr_ref_dbgid refdbgid)

@@ -771,12 +771,14 @@ dp_send_completion_to_pkt_capture(struct dp_soc *soc,
 /**
  * dp_tx_update_stats() - Update soc level tx stats
  * @soc: DP soc handle
- * @nbuf: packet being transmitted
+ * @tx_desc: TX descriptor reference
+ * @ring_id: TCL ring id
  *
  * Returns: none
  */
 void dp_tx_update_stats(struct dp_soc *soc,
-			qdf_nbuf_t nbuf);
+			struct dp_tx_desc_s *tx_desc,
+			uint8_t ring_id);
 
 /**
  * dp_tx_attempt_coalescing() - Check and attempt TCL register write coalescing
@@ -784,6 +786,7 @@ void dp_tx_update_stats(struct dp_soc *soc,
  * @tx_desc: tx packet descriptor
  * @tid: TID for pkt transmission
  * @msdu_info: MSDU info of tx packet
+ * @ring_id: TCL ring id
  *
  * Returns: 1, if coalescing is to be done
  *	    0, if coalescing is not to be done
@@ -791,7 +794,9 @@ void dp_tx_update_stats(struct dp_soc *soc,
 int
 dp_tx_attempt_coalescing(struct dp_soc *soc, struct dp_vdev *vdev,
 			 struct dp_tx_desc_s *tx_desc,
-			 uint8_t tid, struct dp_tx_msdu_info_s *msdu_info);
+			 uint8_t tid,
+			 struct dp_tx_msdu_info_s *msdu_info,
+			 uint8_t ring_id);
 
 /**
  * dp_tx_ring_access_end() - HAL ring access end for data transmission
@@ -808,12 +813,15 @@ dp_tx_ring_access_end(struct dp_soc *soc, hal_ring_handle_t hal_ring_hdl,
 /**
  * dp_tx_update_stats() - Update soc level tx stats
  * @soc: DP soc handle
- * @nbuf: packet being transmitted
+ * @tx_desc: TX descriptor reference
+ * @ring_id: TCL ring id
  *
  * Returns: none
  */
 static inline void dp_tx_update_stats(struct dp_soc *soc,
-				      qdf_nbuf_t nbuf) { }
+				      struct dp_tx_desc_s *tx_desc,
+				      uint8_t ring_id){ }
+
 static inline void
 dp_tx_ring_access_end(struct dp_soc *soc, hal_ring_handle_t hal_ring_hdl,
 		      int coalesce)
@@ -825,7 +833,8 @@ static inline int
 dp_tx_attempt_coalescing(struct dp_soc *soc, struct dp_vdev *vdev,
 			 struct dp_tx_desc_s *tx_desc,
 			 uint8_t tid,
-			 struct dp_tx_msdu_info_s *msdu_info)
+			 struct dp_tx_msdu_info_s *msdu_info,
+			 uint8_t ring_id)
 {
 	return 0;
 }
@@ -998,4 +1007,41 @@ static inline bool dp_sawf_tag_valid_get(qdf_nbuf_t nbuf)
 }
 #endif
 
+#ifdef HW_TX_DELAY_STATS_ENABLE
+/**
+ * dp_tx_desc_set_ktimestamp() - set kernel timestamp in tx descriptor
+ * @vdev: DP vdev handle
+ * @tx_desc: tx descriptor
+ *
+ * Return: true when descriptor is timestamped, false otherwise
+ */
+static inline
+bool dp_tx_desc_set_ktimestamp(struct dp_vdev *vdev,
+			       struct dp_tx_desc_s *tx_desc)
+{
+	if (qdf_unlikely(vdev->pdev->delay_stats_flag) ||
+	    qdf_unlikely(vdev->pdev->soc->wlan_cfg_ctx->pext_stats_enabled) ||
+	    qdf_unlikely(dp_tx_pkt_tracepoints_enabled()) ||
+	    qdf_unlikely(vdev->pdev->soc->rdkstats_enabled) ||
+	    qdf_unlikely(dp_is_vdev_tx_delay_stats_enabled(vdev))) {
+		tx_desc->timestamp = qdf_ktime_to_ms(qdf_ktime_real_get());
+		return true;
+	}
+	return false;
+}
+#else
+static inline
+bool dp_tx_desc_set_ktimestamp(struct dp_vdev *vdev,
+			       struct dp_tx_desc_s *tx_desc)
+{
+	if (qdf_unlikely(vdev->pdev->delay_stats_flag) ||
+	    qdf_unlikely(vdev->pdev->soc->wlan_cfg_ctx->pext_stats_enabled) ||
+	    qdf_unlikely(dp_tx_pkt_tracepoints_enabled()) ||
+	    qdf_unlikely(vdev->pdev->soc->rdkstats_enabled)) {
+		tx_desc->timestamp = qdf_ktime_to_ms(qdf_ktime_real_get());
+		return true;
+	}
+	return false;
+}
+#endif
 #endif

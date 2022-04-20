@@ -1294,7 +1294,7 @@ cdp_dump_rx_flow_tag_stats(ol_txrx_soc_handle soc, uint8_t pdev_id,
 #endif /* WLAN_SUPPORT_RX_FLOW_TAG */
 
 /**
- * cdp_peer_flush_frags() - flush frags for peer
+ * cdp_txrx_peer_flush_frags() - flush frags for peer
  *
  * @soc - pointer to the soc
  * @vdev - the data virtual device object

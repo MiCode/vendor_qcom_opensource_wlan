@@ -132,12 +132,7 @@ void dp_pkt_add_timestamp(struct dp_vdev *vdev,
  */
 void dp_pkt_get_timestamp(uint64_t *time);
 #else
-static inline
-void dp_pkt_add_timestamp(struct dp_vdev *vdev,
-			  enum qdf_pkt_timestamp_index index, uint64_t time,
-			  qdf_nbuf_t nbuf)
-{
-}
+#define dp_pkt_add_timestamp(vdev, index, time, nbuf)
 
 static inline
 void dp_pkt_get_timestamp(uint64_t *time)

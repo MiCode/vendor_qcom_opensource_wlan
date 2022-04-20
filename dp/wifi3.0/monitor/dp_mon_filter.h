@@ -279,10 +279,16 @@ void dp_mon_filter_reset_rx_enh_capture(struct dp_pdev *pdev);
 #endif /* WLAN_RX_PKT_CAPTURE_ENH */
 
 /**
- * dp_mon_filter_setup_mon_mode() - Setup the Rx monitor mode filter
+ * dp_mon_filter_setup_mon_mode() - Setup the Rx and Tx monitor mode filter
  * @pdev: DP pdev handle
  */
 void dp_mon_filter_setup_mon_mode(struct dp_pdev *pdev);
+
+/**
+ * dp_mon_filter_setup_tx_mon_mode() - Setup the Tx monitor mode filter
+ * @pdev: DP pdev handle
+ */
+void dp_mon_filter_setup_tx_mon_mode(struct dp_pdev *pdev);
 
 /**
  * dp_mon_filter_reset_mon_mode() - Reset the Rx monitor mode filter
@@ -356,7 +362,7 @@ void dp_mon_filter_set_status_cbf(struct dp_pdev *pdev,
 				  struct dp_mon_filter *filter);
 
 /**
- * dp_mon_filter_update() - Setup the monitor filter setting for a srng
+ * dp_mon_filter_update() - Setup the RX & Tx monitor filter setting for a srng
  * type
  * @pdev: DP pdev handle
  *
@@ -439,6 +445,12 @@ void dp_mon_filter_set_status_cmn(struct dp_mon_pdev *mon_pdev,
 void dp_mon_filter_setup_mon_mode(struct dp_pdev *pdev);
 
 /**
+ * dp_mon_filter_setup_tx_mon_mode() - Setup the Tx monitor mode filter
+ * @pdev: DP pdev handle
+ */
+void dp_mon_filter_setup_tx_mon_mode(struct dp_pdev *pdev);
+
+/**
  * dp_mon_filter_reset_mon_mode() - Reset the Rx monitor mode filter
  * @pdev: DP pdev handle
  */
@@ -455,13 +467,13 @@ void dp_mon_filter_set_cbf_cmn(struct dp_pdev *pdev,
 			       struct dp_mon_filter *filter);
 
 /**
- * dp_mon_filter_update() - Setup the monitor filter setting for a srng
+ * dp_tx_mon_filter_update() - Setup the tx monitor filter setting for a srng
  * type
  * @pdev: DP pdev handle
  *
  * Return: QDF_STATUS
  */
-QDF_STATUS dp_mon_filter_update(struct dp_pdev *pdev);
+QDF_STATUS dp_tx_mon_filter_update(struct dp_pdev *pdev);
 
 /**
  * dp_mon_filter_dealloc() - Deallocate the filter objects to be stored in

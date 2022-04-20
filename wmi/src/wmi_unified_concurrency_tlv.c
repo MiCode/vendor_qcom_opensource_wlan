@@ -21,6 +21,9 @@
 #include <wmi.h>
 #include <wmi_unified_priv.h>
 #include <wmi_unified_concurrency_api.h>
+#ifdef WLAN_FEATURE_MCC_QUOTA
+#include <wlan_p2p_mcc_quota_public_struct.h>
+#endif
 
 /**
  * send_set_enable_disable_mcc_adaptive_scheduler_cmd_tlv() -enable/disable

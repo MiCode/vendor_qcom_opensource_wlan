@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2016-2018, 2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  *
  * Permission to use, copy, modify, and/or distribute this software for
@@ -49,6 +50,19 @@ QDF_STATUS wlan_lmac_if_umac_rx_ops_register
 QDF_STATUS wlan_lmac_if_set_umac_txops_registration_cb
 		(QDF_STATUS (*handler)(struct wlan_lmac_if_tx_ops *));
 
+/**
+ * wlan_lmac_if_set_umac_crypto_rxpn_ops_registration_cb() - crypto rxpn
+ * registration callback assignment
+ * @dev_type: Dev type can be either Direct attach or Offload
+ * @handler: handler to be called for LMAC crypto rxpn ops registration
+ *
+ * API to assign appropriate crypto rxpn registration callback handler
+ * based on the device type
+ *
+ * Return: QDF_STATUS_SUCCESS - in case of success
+ */
+QDF_STATUS wlan_lmac_if_set_umac_crypto_rxpn_ops_registration_cb
+		(QDF_STATUS (*handler)(struct wlan_lmac_if_rx_ops *));
 
 /**
  * wlan_lmac_if_get_mgmt_txrx_rx_ops() - retrieve the mgmt rx_ops

@@ -25,6 +25,31 @@
 #include "target_if_dp.h"
 #include <init_deinit_lmac.h>
 
+uint32_t target_if_get_active_mac_phy_number(struct wlan_objmgr_psoc *psoc)
+{
+	struct target_psoc_info *psoc_info = wlan_psoc_get_tgt_if_handle(psoc);
+	struct target_supported_modes *hw_modes;
+	uint32_t i, phy_bit_map, mac_phy_cnt, max_mac_phy_cnt = 0;
+
+	if (!psoc_info) {
+		target_if_err("invalid psoc info");
+		return 0;
+	}
+	hw_modes = &psoc_info->info.hw_modes;
+	for (i = 0; i < hw_modes->num_modes; i++) {
+		phy_bit_map = hw_modes->phy_bit_map[i];
+		mac_phy_cnt = 0;
+		while (phy_bit_map) {
+			mac_phy_cnt++;
+			phy_bit_map &= (phy_bit_map - 1);
+		}
+		if (mac_phy_cnt > max_mac_phy_cnt)
+			max_mac_phy_cnt = mac_phy_cnt;
+	}
+
+	return max_mac_phy_cnt;
+}
+
 void
 target_if_peer_set_default_routing(struct cdp_ctrl_objmgr_psoc *psoc,
 				   uint8_t pdev_id, uint8_t *peer_macaddr,

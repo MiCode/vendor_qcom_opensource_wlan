@@ -1227,7 +1227,7 @@ void reg_freq_to_chan_op_class(struct wlan_objmgr_pdev *pdev,
 	reg_set_channel_params_for_pwrmode(pdev, freq,
 					   0,
 					   &chan_params,
-					   REG_CURRENT_PWR_MODE);
+					   REG_CURRENT_PWR_MODE, true);
 
 	reg_freq_width_to_chan_op_class(pdev, freq,
 					reg_get_bw_value(chan_params.ch_width),
@@ -1552,7 +1552,7 @@ static bool reg_is_chan_supported(struct wlan_objmgr_pdev *pdev,
 			      0,
 			      ch_width,
 			      center_320,
-			      &chan_list);
+			      &chan_list, true);
 	ch_params = chan_list.chan_param[0];
 
 	if (ch_params.ch_width == ch_width)
@@ -1569,7 +1569,7 @@ static bool reg_is_chan_supported(struct wlan_objmgr_pdev *pdev,
 	struct ch_params ch_params;
 
 	ch_params.ch_width = ch_width;
-	reg_set_channel_params_for_freq(pdev, pri_freq, 0, &ch_params);
+	reg_set_channel_params_for_freq(pdev, pri_freq, 0, &ch_params, true);
 	if (ch_params.ch_width == ch_width)
 		return true;
 
