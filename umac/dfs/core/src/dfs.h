@@ -2156,10 +2156,19 @@ bool dfs_is_cac_required(struct wlan_dfs *dfs,
 			 bool is_vap_restart);
 
 /**
+ * dfs_send_dfs_events_for_chan() - Send CAC RESET events
+ * @dfs: Pointer to wlan_dfs structure.
+ * @chan: Pointer to dfs_channel structure.
+ * @event: WLAN_DFS_EVENTS values
+ */
+void dfs_send_dfs_events_for_chan(struct wlan_dfs *dfs,
+				  struct dfs_channel *chan,
+				  enum WLAN_DFS_EVENTS event);
+
+/**
  * dfs_cac_stop() - Clear the AP CAC timer.
  * @dfs: Pointer to wlan_dfs structure.
  */
-
 void dfs_cac_stop(struct wlan_dfs *dfs);
 
 /**
@@ -2259,6 +2268,13 @@ bool dfs_is_cac_required(struct wlan_dfs *dfs,
 
 static inline
 void dfs_cac_stop(struct wlan_dfs *dfs)
+{
+}
+
+static inline
+void dfs_send_dfs_events_for_chan(struct wlan_dfs *dfs,
+				  struct dfs_channel *chan,
+				  enum WLAN_DFS_EVENTS event)
 {
 }
 
