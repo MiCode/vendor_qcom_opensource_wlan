@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2017-2019 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -176,6 +176,8 @@ struct direct_buf_rx_module_debug {
  * @dbr_ring_cfg: Pointer to direct buf rx ring config struct
  * @dbr_buf_pool: Pointer to direct buf rx buffer pool struct
  * @dbr_rsp_handler: Pointer to direct buf rx response handler for the module
+ * @registered: Whether the module @mod_id has successfully registered for this
+ * @pdev_id @srng_id
  */
 struct direct_buf_rx_module_param {
 	enum DBR_MODULE mod_id;
@@ -187,6 +189,7 @@ struct direct_buf_rx_module_param {
 	struct direct_buf_rx_buf_info *dbr_buf_pool;
 	bool (*dbr_rsp_handler)(struct wlan_objmgr_pdev *pdev,
 				struct direct_buf_rx_data *dbr_data);
+	bool registered;
 };
 
 /**
