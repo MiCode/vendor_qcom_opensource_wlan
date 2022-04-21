@@ -46,6 +46,7 @@
 
 #define RX_BUFFER_RESERVATION   0
 #ifdef BE_PKTLOG_SUPPORT
+#define BUFFER_RESIDUE 1
 #define RX_MON_MIN_HEAD_ROOM   64
 #endif
 
