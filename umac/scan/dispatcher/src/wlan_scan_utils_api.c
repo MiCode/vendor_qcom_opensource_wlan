@@ -1693,6 +1693,11 @@ util_scan_add_hidden_ssid(struct wlan_objmgr_pdev *pdev, qdf_nbuf_t bcnbuf)
 				scm_debug("No enough tailroom");
 				return  QDF_STATUS_E_NOMEM;
 			}
+			/*
+			 * "qdf_nbuf_put_tail" might change the data pointer of
+			 * the skb. Therefore use the new data area.
+			 */
+			pbeacon = (qdf_nbuf_data(bcnbuf) + sizeof(*hdr));
 			/* length of the buffer to be copied */
 			tmplen = frame_len -
 				sizeof(*hdr) - ssid_ie_end_offset;
