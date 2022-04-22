@@ -1530,7 +1530,7 @@ uint8_t reg_freq_to_chan(struct wlan_objmgr_pdev *pdev,
 	enum supported_6g_pwr_types input_6g_pwr_mode = REG_AP_LPI;
 
 	if (freq == 0) {
-		reg_err_rl("Invalid freq %d", freq);
+		reg_debug_rl("Invalid freq %d", freq);
 		return 0;
 	}
 
