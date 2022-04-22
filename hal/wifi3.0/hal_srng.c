@@ -1540,6 +1540,18 @@ void *hal_srng_setup(void *hal_soc, int ring_type, int ring_num,
 		srng->num_entries) << 2);
 
 	srng->flags = ring_params->flags;
+
+	/* For cached descriptors flush and invalidate the memory*/
+	if (srng->flags & HAL_SRNG_CACHED_DESC) {
+		qdf_nbuf_dma_clean_range(
+				srng->ring_base_vaddr,
+				srng->ring_base_vaddr +
+				((srng->entry_size * srng->num_entries)));
+		qdf_nbuf_dma_inv_range(
+				srng->ring_base_vaddr,
+				srng->ring_base_vaddr +
+				((srng->entry_size * srng->num_entries)));
+	}
 #ifdef BIG_ENDIAN_HOST
 		/* TODO: See if we should we get these flags from caller */
 	srng->flags |= HAL_SRNG_DATA_TLV_SWAP;
