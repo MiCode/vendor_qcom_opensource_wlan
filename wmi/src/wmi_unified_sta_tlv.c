@@ -465,6 +465,29 @@ static QDF_STATUS send_nat_keepalive_en_cmd_tlv(wmi_unified_t wmi_handle, uint8_
 	return 0;
 }
 
+#ifdef MULTI_CLIENT_LL_SUPPORT
+/**
+ * fill_multi_client_ll_info - Fill multi client low latency info to wlm cmd
+ * @cmd: wlm config command
+ * @params: wlm params
+ *
+ * Return: none
+ */
+static void fill_multi_client_ll_info(wmi_wlm_config_cmd_fixed_param *cmd,
+				      struct wlm_latency_level_param *params)
+{
+		cmd->client_id_bitmask = params->client_id_bitmask;
+		WLM_FLAGS_SET_FORCE_DEFAULT_LATENCY(cmd->flags_ext,
+						    params->force_reset);
+}
+#else
+static inline void
+fill_multi_client_ll_info(wmi_wlm_config_cmd_fixed_param *cmd,
+			  struct wlm_latency_level_param *params)
+{
+}
+#endif
+
 static QDF_STATUS send_wlm_latency_level_cmd_tlv(wmi_unified_t wmi_handle,
 				struct wlm_latency_level_param *params)
 {
@@ -487,6 +510,8 @@ static QDF_STATUS send_wlm_latency_level_cmd_tlv(wmi_unified_t wmi_handle,
 	cmd->ul_latency = ll[params->wlm_latency_level];
 	cmd->dl_latency = ll[params->wlm_latency_level];
 	cmd->flags = params->wlm_latency_flags;
+	fill_multi_client_ll_info(cmd, params);
+
 	wmi_mtrace(WMI_WLM_CONFIG_CMDID, cmd->vdev_id, 0);
 	if (wmi_unified_cmd_send(wmi_handle, buf, len,
 				 WMI_WLM_CONFIG_CMDID)) {

@@ -18354,6 +18354,9 @@ static void populate_tlv_events_id(uint32_t *event_ids)
 	event_ids[wmi_pdev_rssi_dbm_conversion_params_info_eventid] =
 		WMI_PDEV_RSSI_DBM_CONVERSION_PARAMS_INFO_EVENTID;
 #endif
+#ifdef MULTI_CLIENT_LL_SUPPORT
+	event_ids[wmi_vdev_latency_event_id] = WMI_VDEV_LATENCY_LEVEL_EVENTID;
+#endif
 }
 
 #ifdef WLAN_FEATURE_LINK_LAYER_STATS
