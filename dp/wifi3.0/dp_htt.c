@@ -3167,6 +3167,33 @@ dp_htt_rx_addba_handler(struct dp_soc *soc, uint16_t peer_id,
 }
 
 /*
+ * dp_htt_ppdu_id_fmt_handler() - PPDU ID Format handler
+ * @htt_soc: HTT SOC handle
+ * @msg_word: Pointer to payload
+ *
+ * Return: None
+ */
+static void
+dp_htt_ppdu_id_fmt_handler(struct dp_soc *soc, uint32_t *msg_word)
+{
+	uint8_t msg_type, valid, bits, offset;
+
+	msg_type = HTT_T2H_MSG_TYPE_GET(*msg_word);
+
+	msg_word += HTT_PPDU_ID_FMT_IND_LINK_ID_OFFSET;
+	valid = HTT_PPDU_ID_FMT_IND_VALID_GET_BITS31_16(*msg_word);
+	bits = HTT_PPDU_ID_FMT_IND_BITS_GET_BITS31_16(*msg_word);
+	offset = HTT_PPDU_ID_FMT_IND_OFFSET_GET_BITS31_16(*msg_word);
+
+	dp_info("link_id: valid %u bits %u offset %u", valid, bits, offset);
+
+	if (valid) {
+		soc->link_id_offset = offset;
+		soc->link_id_bits = bits;
+	}
+}
+
+/*
  * dp_htt_t2h_msg_handler() - Generic Target to host Msg/event handler
  * @context:	Opaque context (HTT SOC handle)
  * @pkt:	HTC packet
@@ -3352,6 +3379,11 @@ static void dp_htt_t2h_msg_handler(void *context, HTC_PACKET *pkt)
 
 			dp_htt_rx_addba_handler(soc->dp_soc, peer_id,
 						tid, win_sz);
+			break;
+		}
+	case HTT_T2H_PPDU_ID_FMT_IND:
+		{
+			dp_htt_ppdu_id_fmt_handler(soc->dp_soc, msg_word);
 			break;
 		}
 	case HTT_T2H_MSG_TYPE_EXT_STATS_CONF:

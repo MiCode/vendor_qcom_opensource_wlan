@@ -2382,6 +2382,9 @@ struct dp_soc {
 #ifdef DP_UMAC_HW_RESET_SUPPORT
 	struct dp_soc_umac_reset_ctx umac_reset_ctx;
 #endif
+	/* PPDU to link_id mapping parameters */
+	uint8_t link_id_offset;
+	uint8_t link_id_bits;
 };
 
 #ifdef IPA_OFFLOAD
