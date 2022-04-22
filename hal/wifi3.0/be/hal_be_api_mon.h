@@ -1453,6 +1453,7 @@ hal_rx_parse_cmn_usr_info(struct hal_soc *hal_soc, uint8_t *tlv,
 	return HAL_TLV_STATUS_PPDU_NOT_DONE;
 }
 
+#ifdef WLAN_FEATURE_11BE
 static inline void
 hal_rx_ul_ofdma_ru_size_to_width(uint32_t ru_size,
 				 uint32_t *ru_width)
@@ -1515,6 +1516,14 @@ hal_rx_ul_ofdma_ru_size_to_width(uint32_t ru_size,
 	}
 	*ru_width = width;
 }
+#else
+static inline void
+hal_rx_ul_ofdma_ru_size_to_width(uint32_t ru_size,
+				 uint32_t *ru_width)
+{
+	*ru_width = 0;
+}
+#endif
 
 static inline enum ieee80211_eht_ru_size
 hal_rx_mon_hal_ru_size_to_ieee80211_ru_size(struct hal_soc *hal_soc,
