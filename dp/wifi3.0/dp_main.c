@@ -12753,23 +12753,25 @@ void dp_flush_ring_hptp(struct dp_soc *soc, hal_ring_handle_t hal_srng)
 #define DP_TX_COMP_MAX_LATENCY_MS 30000
 /**
  * dp_tx_comp_delay_check() - calculate time latency for tx completion per pkt
- * @timestamp - tx descriptor timestamp
+ * @tx_desc: tx descriptor
  *
  * Calculate time latency for tx completion per pkt and trigger self recovery
  * when the delay is more than threshold value.
  *
  * Return: True if delay is more than threshold
  */
-static bool dp_tx_comp_delay_check(uint64_t timestamp)
+static bool dp_tx_comp_delay_check(struct dp_tx_desc_s *tx_desc)
 {
-	uint64_t time_latency, current_time;
+	uint64_t time_latency, timestamp_tick = tx_desc->timestamp_tick;
+	qdf_ktime_t current_time = qdf_ktime_real_get();
+	qdf_ktime_t timestamp = tx_desc->timestamp;
 
 	if (!timestamp)
 		return false;
 
 	if (dp_tx_pkt_tracepoints_enabled()) {
-		current_time = qdf_ktime_to_ms(qdf_ktime_real_get());
-		time_latency = current_time - timestamp;
+		time_latency = qdf_ktime_to_ms(current_time) -
+				qdf_ktime_to_ms(timestamp);
 		if (time_latency >= DP_TX_COMP_MAX_LATENCY_MS) {
 			dp_err_rl("enqueued: %llu ms, current : %llu ms",
 				  timestamp, current_time);
@@ -12778,7 +12780,7 @@ static bool dp_tx_comp_delay_check(uint64_t timestamp)
 	} else {
 		current_time = qdf_system_ticks();
 		time_latency = qdf_system_ticks_to_msecs(current_time -
-							 timestamp);
+							 timestamp_tick);
 		if (time_latency >= DP_TX_COMP_MAX_LATENCY_MS) {
 			dp_err_rl("enqueued: %u ms, current : %u ms",
 				  qdf_system_ticks_to_msecs(timestamp),
@@ -12833,8 +12835,7 @@ static void dp_find_missing_tx_comp(struct dp_soc *soc)
 				continue;
 			} else if (tx_desc->magic ==
 				   DP_TX_MAGIC_PATTERN_INUSE) {
-				if (dp_tx_comp_delay_check(
-							tx_desc->timestamp)) {
+				if (dp_tx_comp_delay_check(tx_desc)) {
 					dp_err_rl("Tx completion not rcvd for id: %u",
 						  tx_desc->id);
 
@@ -14195,18 +14196,27 @@ static void dp_clear_cfr_dbg_stats(struct cdp_soc_t *soc_hdl,
  *
  * @delay: delay measured
  * @array: array used to index corresponding delay
+ * @delay_in_us: flag to indicate whether the delay in ms or us
  *
  * Return: index
  */
-static uint8_t dp_bucket_index(uint32_t delay, uint16_t *array)
+static uint8_t
+dp_bucket_index(uint32_t delay, uint16_t *array, bool delay_in_us)
 {
 	uint8_t i = CDP_DELAY_BUCKET_0;
+	uint32_t thr_low, thr_high;
 
 	for (; i < CDP_DELAY_BUCKET_MAX - 1; i++) {
-		if (delay >= array[i] && delay < array[i + 1])
+		thr_low = array[i];
+		thr_high = array[i + 1];
+
+		if (delay_in_us) {
+			thr_low = thr_low * USEC_PER_MSEC;
+			thr_high = thr_high * USEC_PER_MSEC;
+		}
+		if (delay >= thr_low && delay <= thr_high)
 			return i;
 	}
-
 	return (CDP_DELAY_BUCKET_MAX - 1);
 }
 
@@ -14245,12 +14255,15 @@ static uint16_t cdp_intfrm_delay[CDP_DELAY_BUCKET_MAX] = {
  * @tid: tid value
  * @mode: type of tx delay mode
  * @ring_id: ring number
+ * @delay_in_us: flag to indicate whether the delay in ms or us
+ *
  * Return: pointer to cdp_delay_stats structure
  */
 static struct cdp_delay_stats *
 dp_fill_delay_buckets(struct cdp_tid_tx_stats *tstats,
 		      struct cdp_tid_rx_stats *rstats, uint32_t delay,
-		      uint8_t tid, uint8_t mode, uint8_t ring_id)
+		      uint8_t tid, uint8_t mode, uint8_t ring_id,
+		      bool delay_in_us)
 {
 	uint8_t delay_index = 0;
 	struct cdp_delay_stats *stats = NULL;
@@ -14264,7 +14277,8 @@ dp_fill_delay_buckets(struct cdp_tid_tx_stats *tstats,
 		if (!tstats)
 			break;
 
-		delay_index = dp_bucket_index(delay, cdp_sw_enq_delay);
+		delay_index = dp_bucket_index(delay, cdp_sw_enq_delay,
+					      delay_in_us);
 		tstats->swq_delay.delay_bucket[delay_index]++;
 		stats = &tstats->swq_delay;
 		break;
@@ -14274,7 +14288,8 @@ dp_fill_delay_buckets(struct cdp_tid_tx_stats *tstats,
 		if (!tstats)
 			break;
 
-		delay_index = dp_bucket_index(delay, cdp_fw_to_hw_delay);
+		delay_index = dp_bucket_index(delay, cdp_fw_to_hw_delay,
+					      delay_in_us);
 		tstats->hwtx_delay.delay_bucket[delay_index]++;
 		stats = &tstats->hwtx_delay;
 		break;
@@ -14284,7 +14299,8 @@ dp_fill_delay_buckets(struct cdp_tid_tx_stats *tstats,
 		if (!tstats)
 			break;
 
-		delay_index = dp_bucket_index(delay, cdp_intfrm_delay);
+		delay_index = dp_bucket_index(delay, cdp_intfrm_delay,
+					      delay_in_us);
 		tstats->intfrm_delay.delay_bucket[delay_index]++;
 		stats = &tstats->intfrm_delay;
 		break;
@@ -14294,7 +14310,8 @@ dp_fill_delay_buckets(struct cdp_tid_tx_stats *tstats,
 		if (!rstats)
 			break;
 
-		delay_index = dp_bucket_index(delay, cdp_intfrm_delay);
+		delay_index = dp_bucket_index(delay, cdp_intfrm_delay,
+					      delay_in_us);
 		rstats->intfrm_delay.delay_bucket[delay_index]++;
 		stats = &rstats->intfrm_delay;
 		break;
@@ -14304,7 +14321,8 @@ dp_fill_delay_buckets(struct cdp_tid_tx_stats *tstats,
 		if (!rstats)
 			break;
 
-		delay_index = dp_bucket_index(delay, cdp_intfrm_delay);
+		delay_index = dp_bucket_index(delay, cdp_intfrm_delay,
+					      delay_in_us);
 		rstats->to_stack_delay.delay_bucket[delay_index]++;
 		stats = &rstats->to_stack_delay;
 		break;
@@ -14317,7 +14335,8 @@ dp_fill_delay_buckets(struct cdp_tid_tx_stats *tstats,
 
 void dp_update_delay_stats(struct cdp_tid_tx_stats *tstats,
 			   struct cdp_tid_rx_stats *rstats, uint32_t delay,
-			   uint8_t tid, uint8_t mode, uint8_t ring_id)
+			   uint8_t tid, uint8_t mode, uint8_t ring_id,
+			   bool delay_in_us)
 {
 	struct cdp_delay_stats *dstats = NULL;
 
@@ -14326,7 +14345,7 @@ void dp_update_delay_stats(struct cdp_tid_tx_stats *tstats,
 	 * Get the correct index to update delay bucket
 	 */
 	dstats = dp_fill_delay_buckets(tstats, rstats, delay, tid, mode,
-				       ring_id);
+				       ring_id, delay_in_us);
 	if (qdf_unlikely(!dstats))
 		return;
 

@@ -84,6 +84,14 @@ qdf_ktime_t qdf_ktime_add_ns(qdf_ktime_t ktime, int64_t ns);
 int64_t qdf_ktime_to_ms(qdf_ktime_t ktime);
 
 /**
+ * qdf_ktime_to_us - Convert the qdf_ktime_t object into microseconds
+ * @ktime: time as qdf_ktime_t object
+ *
+ * Return: qdf_ktime_t in microseconds
+ */
+int64_t qdf_ktime_to_us(qdf_ktime_t ktime);
+
+/**
  * qdf_ktime_to_ns - Convert the qdf_ktime_t object into nanoseconds
  * @ktime: time as qdf_ktime_t object
  *

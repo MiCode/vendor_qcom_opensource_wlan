@@ -563,6 +563,7 @@ struct dp_tx_desc_s {
 	uint16_t length;
 #ifdef DP_TX_TRACKING
 	uint32_t magic;
+	uint64_t timestamp_tick;
 #endif
 	uint16_t flags;
 	uint32_t id;
@@ -578,7 +579,7 @@ struct dp_tx_desc_s {
 	uint8_t pkt_offset;
 	uint8_t  pool_id;
 	struct dp_tx_ext_desc_elem_s *msdu_ext_desc;
-	uint64_t timestamp;
+	qdf_ktime_t timestamp;
 	struct hal_tx_desc_comp_s comp;
 };
 

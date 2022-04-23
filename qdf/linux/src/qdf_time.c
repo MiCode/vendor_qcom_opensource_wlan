@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -66,6 +67,13 @@ int64_t qdf_ktime_to_ms(qdf_ktime_t ktime)
 }
 
 qdf_export_symbol(qdf_ktime_to_ms);
+
+int64_t qdf_ktime_to_us(qdf_ktime_t ktime)
+{
+	return __qdf_time_ktime_to_us(ktime);
+}
+
+qdf_export_symbol(qdf_ktime_to_us);
 
 int64_t qdf_ktime_to_ns(qdf_ktime_t ktime)
 {

@@ -1624,7 +1624,7 @@ void dp_rx_compute_delay(struct dp_vdev *vdev, qdf_nbuf_t nbuf)
 		&vdev->pdev->stats.tid_stats.tid_rx_stats[ring_id][tid];
 
 	dp_update_delay_stats(NULL, rstats, to_stack, tid,
-			      CDP_DELAY_STATS_REAP_STACK, ring_id);
+			      CDP_DELAY_STATS_REAP_STACK, ring_id, false);
 	/*
 	 * Update interframe delay stats calculated at deliver_data_ol point.
 	 * Value of vdev->prev_rx_deliver_tstamp will be 0 for 1st frame, so
@@ -1633,7 +1633,7 @@ void dp_rx_compute_delay(struct dp_vdev *vdev, qdf_nbuf_t nbuf)
 	 * of vdev->prev_rx_deliver_tstamp.
 	 */
 	dp_update_delay_stats(NULL, rstats, interframe_delay, tid,
-			      CDP_DELAY_STATS_RX_INTERFRAME, ring_id);
+			      CDP_DELAY_STATS_RX_INTERFRAME, ring_id, false);
 	vdev->prev_rx_deliver_tstamp = current_ts;
 }
 
