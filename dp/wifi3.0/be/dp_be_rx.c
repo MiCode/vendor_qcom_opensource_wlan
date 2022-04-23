@@ -1100,6 +1100,18 @@ static inline void dp_rx_dummy_src_mac(qdf_nbuf_t nbuf)
 	eh->ether_shost[5] = 0x53;	/* S */
 }
 
+#ifdef QCA_SUPPORT_WDS_EXTENDED
+static inline bool dp_rx_mlo_igmp_wds_ext_handler(struct dp_txrx_peer *peer)
+{
+	return qdf_atomic_test_bit(WDS_EXT_PEER_INIT_BIT, &peer->wds_ext.init);
+}
+#else
+static inline bool dp_rx_mlo_igmp_wds_ext_handler(struct dp_txrx_peer *peer)
+{
+	return false;
+}
+#endif
+
 bool dp_rx_mlo_igmp_handler(struct dp_soc *soc,
 			    struct dp_vdev *vdev,
 			    struct dp_txrx_peer *peer,
@@ -1121,8 +1133,10 @@ bool dp_rx_mlo_igmp_handler(struct dp_soc *soc,
 	qdf_nbuf_set_next(nbuf, NULL);
 
 	if (vdev->mcast_enhancement_en || be_vdev->mcast_primary ||
-	    qdf_atomic_test_bit(WDS_EXT_PEER_INIT_BIT, &peer->wds_ext.init) ||
 	    peer->nawds_enabled)
+		goto send_pkt;
+
+	if (qdf_unlikely(dp_rx_mlo_igmp_wds_ext_handler(peer)))
 		goto send_pkt;
 
 	mcast_primary_vdev = dp_mlo_get_mcast_primary_vdev(be_soc, be_vdev,
