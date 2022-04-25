@@ -1086,7 +1086,7 @@ void dp_mon_filter_setup_enhanced_stats_2_0(struct dp_pdev *pdev)
 	rx_tlv_filter->tlv_filter.mo_mgmt_filter = 0;
 	rx_tlv_filter->tlv_filter.mo_ctrl_filter = 0;
 	rx_tlv_filter->tlv_filter.mo_data_filter = 0;
-	rx_tlv_filter->tlv_filter.ppdu_start_user_info = 0;
+	rx_tlv_filter->tlv_filter.ppdu_start_user_info = 1;
 	/* Enabled the filter */
 	rx_tlv_filter->valid = true;
 	mon_pdev->current_filter_mode = mode;
@@ -1229,6 +1229,7 @@ static void dp_mon_filter_set_mon_2_0(struct dp_mon_pdev *mon_pdev,
 	filter->tlv_filter.ppdu_end_user_stats = 1;
 	filter->tlv_filter.ppdu_end_user_stats_ext = 1;
 	filter->tlv_filter.ppdu_end_status_done = 1;
+	filter->tlv_filter.ppdu_start_user_info = 1;
 	filter->tlv_filter.enable_fp =
 		(mon_pdev->mon_filter_mode & MON_FILTER_PASS) ? 1 : 0;
 	filter->tlv_filter.enable_mo =
