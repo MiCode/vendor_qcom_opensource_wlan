@@ -1652,7 +1652,6 @@ static uint32_t hal_qcn9224_get_reo_qdesc_size(uint32_t ba_window_size, int tid)
 	/* Hardcode the ba_window_size to HAL_RX_MAX_BA_WINDOW for
 	 * NON_QOS_TID until HW issues are resolved.
 	 */
-#define HAL_RX_MAX_BA_WINDOW_BE 1024
 	if (tid != HAL_NON_QOS_TID)
 		ba_window_size = HAL_RX_MAX_BA_WINDOW_BE;
 

@@ -30,6 +30,8 @@
 #define HAL_RX_DA_IDX_PEER_ID_MASK    0x3fff
 #define HAL_RX_DA_IDX_ML_PEER_MASK    0x2000
 
+#define HAL_RX_MAX_BA_WINDOW_BE 1024
+
 /*
  * macro to set the cookie into the rxdma ring entry
  */

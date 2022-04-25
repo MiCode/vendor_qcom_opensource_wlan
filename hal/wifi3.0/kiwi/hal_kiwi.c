@@ -34,6 +34,7 @@
 #include "hal_rx_flow_info.h"
 #include "hal_be_api.h"
 #include "reo_destination_ring_with_pn.h"
+#include "rx_reo_queue_1k.h"
 
 #include <hal_be_rx.h>
 
@@ -1640,6 +1641,49 @@ static inline uint8_t hal_get_first_wow_wakeup_packet_kiwi(uint8_t *buf)
 }
 #endif
 
+/**
+ * hal_get_reo_qdesc_size_kiwi()- Get the reo queue descriptor size
+ *				  from the give Block-Ack window size
+ * Return: reo queue descriptor size
+ */
+static uint32_t hal_get_reo_qdesc_size_kiwi(uint32_t ba_window_size, int tid)
+{
+	/* Hardcode the ba_window_size to HAL_RX_MAX_BA_WINDOW for
+	 * NON_QOS_TID until HW issues are resolved.
+	 */
+	if (tid != HAL_NON_QOS_TID)
+		ba_window_size = HAL_RX_MAX_BA_WINDOW_BE;
+
+	/* Return descriptor size corresponding to window size of 2 since
+	 * we set ba_window_size to 2 while setting up REO descriptors as
+	 * a WAR to get 2k jump exception aggregates are received without
+	 * a BA session.
+	 */
+	if (ba_window_size <= 1) {
+		if (tid != HAL_NON_QOS_TID)
+			return sizeof(struct rx_reo_queue) +
+				sizeof(struct rx_reo_queue_ext);
+		else
+			return sizeof(struct rx_reo_queue);
+	}
+
+	if (ba_window_size <= 105)
+		return sizeof(struct rx_reo_queue) +
+			sizeof(struct rx_reo_queue_ext);
+
+	if (ba_window_size <= 210)
+		return sizeof(struct rx_reo_queue) +
+			(2 * sizeof(struct rx_reo_queue_ext));
+
+	if (ba_window_size <= 256)
+		return sizeof(struct rx_reo_queue) +
+			(3 * sizeof(struct rx_reo_queue_ext));
+
+	return sizeof(struct rx_reo_queue) +
+		(10 * sizeof(struct rx_reo_queue_ext)) +
+		sizeof(struct rx_reo_queue_1k);
+}
+
 static void hal_hw_txrx_ops_attach_kiwi(struct hal_soc *hal_soc)
 {
 	/* init and setup */
@@ -1651,6 +1695,8 @@ static void hal_hw_txrx_ops_attach_kiwi(struct hal_soc *hal_soc)
 						hal_reo_set_err_dst_remap_kiwi;
 	hal_soc->ops->hal_reo_enable_pn_in_dest =
 						hal_reo_enable_pn_in_dest_kiwi;
+	/* Overwrite the default BE ops */
+	hal_soc->ops->hal_get_reo_qdesc_size = hal_get_reo_qdesc_size_kiwi;
 
 	/* tx */
 	hal_soc->ops->hal_tx_set_dscp_tid_map = hal_tx_set_dscp_tid_map_kiwi;
