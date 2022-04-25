@@ -901,7 +901,8 @@ QDF_STATUS wlan_mlo_peer_create(struct wlan_objmgr_vdev *vdev,
 	 * assoc confirm from FW. For single link MLO connection, it is
 	 * OK to trigger assoc response from here.
 	 */
-	if (wlan_vdev_mlme_get_opmode(vdev) == QDF_SAP_MODE) {
+	if ((wlan_vdev_mlme_get_opmode(vdev) == QDF_SAP_MODE) &&
+	    (!wlan_mlo_peer_is_nawds(ml_peer))) {
 		if (ml_peer->max_links == ml_peer->link_peer_cnt) {
 			assoc_peer = ml_peer->peer_list[0].link_peer;
 			if (assoc_peer)
