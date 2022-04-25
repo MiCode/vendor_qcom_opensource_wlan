@@ -1938,9 +1938,22 @@ static inline qdf_nbuf_t qdf_nbuf_next(qdf_nbuf_t buf)
 
 #define QDF_NET_BUF_TRACK_MAX_SIZE    (1024)
 
+enum qdf_nbuf_event_type {
+	QDF_NBUF_ALLOC,
+	QDF_NBUF_ALLOC_CLONE,
+	QDF_NBUF_ALLOC_COPY,
+	QDF_NBUF_ALLOC_FAILURE,
+	QDF_NBUF_FREE,
+	QDF_NBUF_MAP,
+	QDF_NBUF_UNMAP,
+	QDF_NBUF_ALLOC_COPY_EXPAND,
+};
+
 void qdf_net_buf_debug_init(void);
 void qdf_net_buf_debug_exit(void);
 void qdf_net_buf_debug_clean(void);
+void qdf_nbuf_history_add(qdf_nbuf_t nbuf, const char *func, uint32_t line,
+			  enum qdf_nbuf_event_type type);
 void qdf_net_buf_debug_add_node(qdf_nbuf_t net_buf, size_t size,
 				const char *func_name, uint32_t line_num);
 /**
@@ -1997,8 +2010,8 @@ void qdf_net_buf_debug_release_skb(qdf_nbuf_t net_buf);
 
 /* nbuf allocation rouines */
 
-#define qdf_nbuf_alloc_simple(d, s) \
-	__qdf_nbuf_alloc_simple(d, s)
+#define qdf_nbuf_alloc_simple(d, s, r, a, p) \
+	__qdf_nbuf_alloc_simple(d, s, __func__, __LINE__)
 
 #define qdf_nbuf_alloc(d, s, r, a, p) \
 	qdf_nbuf_alloc_debug(d, s, r, a, p, __func__, __LINE__)
@@ -2025,14 +2038,16 @@ qdf_nbuf_t qdf_nbuf_alloc_debug(qdf_device_t osdev, qdf_size_t size,
 
 qdf_nbuf_t qdf_nbuf_alloc_no_recycler_debug(size_t size, int reserve, int align,
 					    const char *func, uint32_t line);
-
-#define qdf_nbuf_free_simple(d) \
-	__qdf_nbuf_free(d)
-
 #define qdf_nbuf_free(d) \
 	qdf_nbuf_free_debug(d, __func__, __LINE__)
 
 void qdf_nbuf_free_debug(qdf_nbuf_t nbuf, const char *func, uint32_t line);
+
+#define qdf_nbuf_free_simple(d) \
+	qdf_nbuf_free_debug_simple(d, __func__, __LINE__)
+
+void qdf_nbuf_free_debug_simple(qdf_nbuf_t nbuf, const char *func,
+				uint32_t line);
 
 #define qdf_nbuf_clone(buf)     \
 	qdf_nbuf_clone_debug(buf, __func__, __LINE__)
@@ -2136,8 +2151,9 @@ qdf_net_buf_debug_update_unmap_node(qdf_nbuf_t net_buf,
 }
 /* Nbuf allocation rouines */
 
-#define qdf_nbuf_alloc_simple(d, s) \
-	__qdf_nbuf_alloc_simple(d, s)
+#define qdf_nbuf_alloc_simple(osdev, size, reserve, align, prio) \
+	qdf_nbuf_alloc_fl(osdev, size, reserve, align, prio, \
+			  __func__, __LINE__)
 
 #define qdf_nbuf_alloc(osdev, size, reserve, align, prio) \
 	qdf_nbuf_alloc_fl(osdev, size, reserve, align, prio, \
@@ -2172,6 +2188,8 @@ qdf_nbuf_alloc_no_recycler_fl(size_t size, int reserve, int align,
 {
 	return __qdf_nbuf_alloc_no_recycler(size, reserve, align, func, line);
 }
+
+#define qdf_nbuf_free_simple(d) qdf_nbuf_free(d)
 
 static inline void qdf_nbuf_free(qdf_nbuf_t buf)
 {

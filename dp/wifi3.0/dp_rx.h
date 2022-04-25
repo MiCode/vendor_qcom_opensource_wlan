@@ -2368,7 +2368,9 @@ static inline
 qdf_nbuf_t dp_rx_nbuf_alloc(struct dp_soc *soc,
 			    struct rx_desc_pool *rx_desc_pool)
 {
-	return qdf_nbuf_alloc_simple(soc->osdev, rx_desc_pool->buf_size);
+	return qdf_nbuf_alloc_simple(soc->osdev, rx_desc_pool->buf_size,
+				     RX_BUFFER_RESERVATION,
+				     rx_desc_pool->buf_alignment, FALSE);
 }
 
 static inline
