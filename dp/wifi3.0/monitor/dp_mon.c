@@ -2517,13 +2517,13 @@ void dp_send_stats_event(struct dp_pdev *pdev, struct dp_peer *peer,
 }
 #endif
 
+#ifdef WLAN_FEATURE_11BE
 /*
  * dp_get_ru_index_frm_ru_tones() - get ru index
  * @ru_tones: ru tones
  *
  * Return: ru index
  */
-#ifdef WLAN_FEATURE_11BE
 static inline enum cdp_ru_index dp_get_ru_index_frm_ru_tones(uint16_t ru_tones)
 {
 	enum cdp_ru_index ru_index;
@@ -2584,6 +2584,72 @@ static inline enum cdp_ru_index dp_get_ru_index_frm_ru_tones(uint16_t ru_tones)
 
 	return ru_index;
 }
+
+/*
+ * dp_mon_get_ru_width_from_ru_size() - get ru_width from ru_size enum
+ * @ru_size: HTT ru_size enum
+ *
+ * Return: ru_width of uint32_t type
+ */
+static uint32_t dp_mon_get_ru_width_from_ru_size(uint16_t ru_size)
+{
+	uint32_t width = 0;
+
+	switch (ru_size) {
+	case HTT_PPDU_STATS_RU_26:
+		width = RU_26;
+		break;
+	case HTT_PPDU_STATS_RU_52:
+		width = RU_52;
+		break;
+	case HTT_PPDU_STATS_RU_52_26:
+		width = RU_52_26;
+		break;
+	case HTT_PPDU_STATS_RU_106:
+		width = RU_106;
+		break;
+	case HTT_PPDU_STATS_RU_106_26:
+		width = RU_106_26;
+		break;
+	case HTT_PPDU_STATS_RU_242:
+		width = RU_242;
+		break;
+	case HTT_PPDU_STATS_RU_484:
+		width = RU_484;
+		break;
+	case HTT_PPDU_STATS_RU_484_242:
+		width = RU_484_242;
+		break;
+	case HTT_PPDU_STATS_RU_996:
+		width = RU_996;
+		break;
+	case HTT_PPDU_STATS_RU_996_484:
+		width = RU_996_484;
+		break;
+	case HTT_PPDU_STATS_RU_996_484_242:
+		width = RU_996_484_242;
+		break;
+	case HTT_PPDU_STATS_RU_996x2:
+		width = RU_2X996;
+		break;
+	case HTT_PPDU_STATS_RU_996x2_484:
+		width = RU_2X996_484;
+		break;
+	case HTT_PPDU_STATS_RU_996x3:
+		width = RU_3X996;
+		break;
+	case HTT_PPDU_STATS_RU_996x3_484:
+		width = RU_3X996_484;
+		break;
+	case HTT_PPDU_STATS_RU_996x4:
+		width = RU_4X996;
+		break;
+	default:
+		dp_mon_debug("Unsupported ru_size: %d rcvd", ru_size);
+	}
+
+	return width;
+}
 #else
 static inline enum cdp_ru_index dp_get_ru_index_frm_ru_tones(uint16_t ru_tones)
 {
@@ -2614,6 +2680,36 @@ static inline enum cdp_ru_index dp_get_ru_index_frm_ru_tones(uint16_t ru_tones)
 	}
 
 	return ru_index;
+}
+
+static uint32_t dp_mon_get_ru_width_from_ru_size(uint16_t ru_size)
+{
+	uint32_t width = 0;
+
+	switch (ru_size) {
+	case HTT_PPDU_STATS_RU_26:
+		width = RU_26;
+		break;
+	case HTT_PPDU_STATS_RU_52:
+		width = RU_52;
+		break;
+	case HTT_PPDU_STATS_RU_106:
+		width = RU_106;
+		break;
+	case HTT_PPDU_STATS_RU_242:
+		width = RU_242;
+		break;
+	case HTT_PPDU_STATS_RU_484:
+		width = RU_484;
+		break;
+	case HTT_PPDU_STATS_RU_996:
+		width = RU_996;
+		break;
+	default:
+		dp_mon_debug("Unsupported ru_size: %d rcvd", ru_size);
+	}
+
+	return width;
 }
 #endif
 
@@ -2675,7 +2771,8 @@ dp_tx_stats_update(struct dp_pdev *pdev, struct dp_peer *peer,
 
 	if (ppdu->mu_group_id <= MAX_MU_GROUP_ID &&
 	    ppdu->ppdu_type != HTT_PPDU_STATS_PPDU_TYPE_SU) {
-		if (unlikely(!(ppdu->mu_group_id & (MAX_MU_GROUP_ID - 1))))
+		if (qdf_unlikely(ppdu->mu_group_id &&
+				 !(ppdu->mu_group_id & (MAX_MU_GROUP_ID - 1))))
 			QDF_TRACE(QDF_MODULE_ID_TXRX, QDF_TRACE_LEVEL_ERROR,
 				  "mu_group_id out of bound!!\n");
 		else
@@ -2873,6 +2970,7 @@ dp_process_ppdu_stats_common_tlv(struct dp_pdev *pdev,
 	break;
 	case HTT_STATS_FTYPE_SGEN_MU_BAR:
 	case HTT_STATS_FTYPE_SGEN_BAR:
+	case HTT_STATS_FTYPE_SGEN_BE_MU_BAR:
 		ppdu_desc->frame_type = CDP_PPDU_FTYPE_BAR;
 	break;
 	default:
@@ -3075,7 +3173,8 @@ dp_process_ppdu_stats_user_rate_tlv(struct dp_pdev *pdev,
 	uint8_t curr_user_index = 0;
 	struct dp_vdev *vdev;
 	uint32_t tlv_type = HTT_STATS_TLV_TAG_GET(*tag_buf);
-	uint8_t bw;
+	uint8_t bw, ru_format;
+	uint16_t ru_size;
 
 	ppdu_desc =
 		(struct cdp_tx_completion_ppdu *)qdf_nbuf_data(ppdu_info->nbuf);
@@ -3108,13 +3207,25 @@ dp_process_ppdu_stats_user_rate_tlv(struct dp_pdev *pdev,
 	ppdu_user_desc->mu_group_id =
 		HTT_PPDU_STATS_USER_RATE_TLV_MU_GROUPID_GET(*tag_buf);
 
+	ru_format = HTT_PPDU_STATS_USER_RATE_TLV_RU_FORMAT_GET(*tag_buf);
+
 	tag_buf += 1;
 
-	ppdu_user_desc->ru_start =
-		HTT_PPDU_STATS_USER_RATE_TLV_RU_START_GET(*tag_buf);
-	ppdu_user_desc->ru_tones =
-		(HTT_PPDU_STATS_USER_RATE_TLV_RU_END_GET(*tag_buf) -
-		HTT_PPDU_STATS_USER_RATE_TLV_RU_START_GET(*tag_buf)) + 1;
+	if (!ru_format) {
+		/* ru_format = 0: ru_end, ru_start */
+		ppdu_user_desc->ru_start =
+			HTT_PPDU_STATS_USER_RATE_TLV_RU_START_GET(*tag_buf);
+		ppdu_user_desc->ru_tones =
+			(HTT_PPDU_STATS_USER_RATE_TLV_RU_END_GET(*tag_buf) -
+			HTT_PPDU_STATS_USER_RATE_TLV_RU_START_GET(*tag_buf)) + 1;
+	} else if (ru_format == 1) {
+		/* ru_format = 1: ru_index, ru_size */
+		ru_size = HTT_PPDU_STATS_USER_RATE_TLV_RU_SIZE_GET(*tag_buf);
+		ppdu_user_desc->ru_tones =
+				dp_mon_get_ru_width_from_ru_size(ru_size);
+	} else {
+		dp_mon_debug("Unsupported ru_format: %d rcvd", ru_format);
+	}
 	ppdu_desc->usr_ru_tones_sum += ppdu_user_desc->ru_tones;
 
 	tag_buf += 2;
@@ -3147,6 +3258,10 @@ dp_process_ppdu_stats_user_rate_tlv(struct dp_pdev *pdev,
 	ppdu_user_desc->gi = HTT_PPDU_STATS_USER_RATE_TLV_GI_GET(*tag_buf);
 	ppdu_user_desc->dcm = HTT_PPDU_STATS_USER_RATE_TLV_DCM_GET(*tag_buf);
 	ppdu_user_desc->ldpc = HTT_PPDU_STATS_USER_RATE_TLV_LDPC_GET(*tag_buf);
+
+	tag_buf += 2;
+	ppdu_user_desc->punc_pattern_bitmap =
+		HTT_PPDU_STATS_USER_RATE_TLV_PUNC_PATTERN_BITMAP_GET(*tag_buf);
 }
 
 /*
@@ -4333,8 +4448,10 @@ struct ppdu_info *dp_get_ppdu_desc(struct dp_pdev *pdev, uint32_t ppdu_id,
 			 */
 			if ((tlv_type ==
 			     HTT_PPDU_STATS_USR_COMPLTN_ACK_BA_STATUS_TLV) &&
+			    ((ppdu_desc->htt_frame_type ==
+			     HTT_STATS_FTYPE_SGEN_MU_BAR) ||
 			    (ppdu_desc->htt_frame_type ==
-			     HTT_STATS_FTYPE_SGEN_MU_BAR))
+			     HTT_STATS_FTYPE_SGEN_BE_MU_BAR)))
 				return ppdu_info;
 
 			dp_tx_ppdu_desc_deliver(pdev, ppdu_info);
