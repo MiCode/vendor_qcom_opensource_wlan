@@ -356,6 +356,7 @@ typedef __qdf_nbuf_queue_t qdf_nbuf_queue_t;
  * @rssi_temp_offset: Temperature based rssi offset
  * @min_nf_dbm: min noise floor in active chains per channel
  * @xbar_config: 4 bytes, used for BB to RF Chain mapping
+ * @rssi_dbm_conv_support: Rssi dbm converstion support param
  */
 struct mon_rx_status {
 	uint64_t tsft;
@@ -481,6 +482,7 @@ struct mon_rx_status {
 	int32_t rssi_temp_offset;
 	int8_t min_nf_dbm;
 	uint32_t xbar_config;
+	bool rssi_dbm_conv_support;
 #endif
 };
 

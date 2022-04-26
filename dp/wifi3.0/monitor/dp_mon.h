@@ -780,7 +780,7 @@ struct dp_mon_ops {
 					 struct dp_vdev *vdev);
 	void (*mon_lite_mon_disable_rx)(struct dp_pdev *pdev);
 	void (*mon_rx_stats_update_rssi_dbm_params)
-		(struct dp_mon_pdev *mon_pdev);
+		(struct dp_soc *soc, struct dp_mon_pdev *mon_pdev);
 };
 
 struct dp_mon_soc {
@@ -3774,7 +3774,7 @@ dp_mon_rx_stats_update_rssi_dbm_params(struct dp_soc *soc,
 		dp_mon_debug("callback not registered");
 		return;
 	}
-	monitor_ops->mon_rx_stats_update_rssi_dbm_params(mon_pdev);
+	monitor_ops->mon_rx_stats_update_rssi_dbm_params(soc, mon_pdev);
 }
 
 #ifdef QCA_ENHANCED_STATS_SUPPORT

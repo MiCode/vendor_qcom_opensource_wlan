@@ -177,7 +177,8 @@ dp_rx_mon_handle_full_mon(struct dp_pdev *pdev,
  * @mon_pdev: monitor pdev
  */
 void
-dp_mon_rx_stats_update_rssi_dbm_params_2_0(struct dp_mon_pdev *mon_pdev);
+dp_mon_rx_stats_update_rssi_dbm_params_2_0(struct dp_soc *soc,
+					   struct dp_mon_pdev *mon_pdev);
 #else
 /**
  * dp_mon_rx_stats_update_rssi_dbm_params_2_0() - update rssi calibration
@@ -185,7 +186,8 @@ dp_mon_rx_stats_update_rssi_dbm_params_2_0(struct dp_mon_pdev *mon_pdev);
  * @mon_pdev: monitor pdev
  */
 static inline void
-dp_mon_rx_stats_update_rssi_dbm_params_2_0(struct dp_mon_pdev *mon_pdev)
+dp_mon_rx_stats_update_rssi_dbm_params_2_0(struct dp_soc *soc,
+					   struct dp_mon_pdev *mon_pdev)
 { }
 #endif
 #endif /* _DP_RX_MON_2_0_H_ */

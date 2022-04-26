@@ -1303,7 +1303,8 @@ dp_rx_mon_populate_ppdu_info_2_0(struct hal_rx_ppdu_info *hal_ppdu_info,
 #endif
 #ifdef QCA_RSSI_DB2DBM
 void
-dp_mon_rx_stats_update_rssi_dbm_params_2_0(struct dp_mon_pdev *mon_pdev)
+dp_mon_rx_stats_update_rssi_dbm_params_2_0(struct dp_soc *soc,
+					   struct dp_mon_pdev *mon_pdev)
 {
 	struct dp_mon_pdev_be *mon_pdev_be =
 				dp_get_be_mon_pdev_from_dp_mon_pdev(mon_pdev);
@@ -1317,5 +1318,7 @@ dp_mon_rx_stats_update_rssi_dbm_params_2_0(struct dp_mon_pdev *mon_pdev)
 		mon_pdev_be->min_nf_dbm;
 	mon_pdev->ppdu_info.rx_status.xbar_config =
 		mon_pdev_be->xbar_config;
+	mon_pdev->ppdu_info.rx_status.rssi_dbm_conv_support =
+		soc->features.rssi_dbm_conv_support;
 }
 #endif
