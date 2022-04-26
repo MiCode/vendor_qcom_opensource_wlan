@@ -2943,7 +2943,7 @@ static void dp_htt_mlo_peer_map_handler(struct htt_soc *soc,
 	struct dp_mlo_flow_override_info mlo_flow_info[DP_MLO_FLOW_INFO_MAX];
 	struct dp_mlo_link_info mlo_link_info[DP_MAX_MLO_LINKS];
 	MLO_PEER_MAP_TLV_TAG_ID tlv_type = 0xff;
-	uint32_t tlv_len = 0;
+	uint16_t tlv_len = 0;
 	int i = 0;
 
 	mlo_peer_id = HTT_RX_MLO_PEER_MAP_MLO_PEER_ID_GET(*msg_word);
@@ -3007,6 +3007,8 @@ static void dp_htt_mlo_peer_map_handler(struct htt_soc *soc,
 				HTT_RX_MLO_PEER_MAP_VDEV_ID_GET(
 							*(msg_word + 1));
 		}
+		/* Add header size to tlv length */
+		tlv_len = tlv_len + HTT_TLV_HDR_LEN;
 		msg_word = (uint32_t *)(((uint8_t *)msg_word) + tlv_len);
 		i++;
 	}
