@@ -916,7 +916,23 @@ dp_tx_hw_desc_update_evt(uint8_t *hal_tx_desc_cached,
 }
 #endif
 
-#if defined(WLAN_FEATURE_TSF_UPLINK_DELAY) || defined(CONFIG_SAWF)
+#if defined(WLAN_FEATURE_TSF_UPLINK_DELAY) || defined(QCA_PEER_EXT_STATS)
+/**
+ * dp_tx_compute_hw_delay_us() - Compute hardware Tx completion delay
+ * @ts: Tx completion status
+ * @delta_tsf: Difference between TSF clock and qtimer
+ * @delay_us: Delay in microseconds
+ *
+ * Return: QDF_STATUS_SUCCESS   : Success
+ *         QDF_STATUS_E_INVAL   : Tx completion status is invalid or
+ *                                delay_us is NULL
+ *         QDF_STATUS_E_FAILURE : Error in delay calculation
+ */
+QDF_STATUS
+dp_tx_compute_hw_delay_us(struct hal_tx_completion_status *ts,
+			  uint32_t delta_tsf,
+			  uint32_t *delay_us);
+
 /**
  * dp_set_delta_tsf() - Set delta_tsf to dp_soc structure
  * @soc_hdl: cdp soc pointer

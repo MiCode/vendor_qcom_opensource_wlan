@@ -4529,7 +4529,51 @@ void dp_tx_update_connectivity_stats(struct dp_soc *soc,
 }
 #endif
 
-#if defined(WLAN_FEATURE_TSF_UPLINK_DELAY) || defined(CONFIG_SAWF)
+#if defined(WLAN_FEATURE_TSF_UPLINK_DELAY) || defined(QCA_PEER_EXT_STATS)
+QDF_STATUS
+dp_tx_compute_hw_delay_us(struct hal_tx_completion_status *ts,
+			  uint32_t delta_tsf,
+			  uint32_t *delay_us)
+{
+	uint32_t buffer_ts;
+	uint32_t delay;
+
+	if (!delay_us)
+		return QDF_STATUS_E_INVAL;
+
+	/* Tx_rate_stats_info_valid is 0 and tsf is invalid then */
+	if (!ts->valid)
+		return QDF_STATUS_E_INVAL;
+
+	/* buffer_timestamp is in units of 1024 us and is [31:13] of
+	 * WBM_RELEASE_RING_4. After left shift 10 bits, it's
+	 * valid up to 29 bits.
+	 */
+	buffer_ts = ts->buffer_timestamp << 10;
+
+	delay = ts->tsf - buffer_ts - delta_tsf;
+	delay &= 0x1FFFFFFF; /* mask 29 BITS */
+	if (delay > 0x1000000) {
+		dp_info_rl("----------------------\n"
+			   "Tx completion status:\n"
+			   "----------------------\n"
+			   "release_src = %d\n"
+			   "ppdu_id = 0x%x\n"
+			   "release_reason = %d\n"
+			   "tsf = %u (0x%x)\n"
+			   "buffer_timestamp = %u (0x%x)\n"
+			   "delta_tsf = %u (0x%x)\n",
+			   ts->release_src, ts->ppdu_id, ts->status,
+			   ts->tsf, ts->tsf, ts->buffer_timestamp,
+			   ts->buffer_timestamp, delta_tsf, delta_tsf);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	*delay_us = delay;
+
+	return QDF_STATUS_SUCCESS;
+}
+
 void dp_set_delta_tsf(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
 		      uint32_t delta_tsf)
 {
@@ -4607,13 +4651,7 @@ QDF_STATUS dp_get_uplink_delay(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
 static void dp_tx_update_uplink_delay(struct dp_soc *soc, struct dp_vdev *vdev,
 				      struct hal_tx_completion_status *ts)
 {
-	uint32_t buffer_ts;
-	uint32_t delta_tsf;
 	uint32_t ul_delay;
-
-	/* Tx_rate_stats_info_valid is 0 and tsf is invalid then */
-	if (!ts->valid)
-		return;
 
 	if (qdf_unlikely(!vdev)) {
 		dp_info_rl("vdev is null or delete in progrss");
@@ -4623,31 +4661,10 @@ static void dp_tx_update_uplink_delay(struct dp_soc *soc, struct dp_vdev *vdev,
 	if (!qdf_atomic_read(&vdev->ul_delay_report))
 		return;
 
-	delta_tsf = vdev->delta_tsf;
-
-	/* buffer_timestamp is in units of 1024 us and is [31:13] of
-	 * WBM_RELEASE_RING_4. After left shift 10 bits, it's
-	 * valid up to 29 bits.
-	 */
-	buffer_ts = ts->buffer_timestamp << 10;
-
-	ul_delay = ts->tsf - buffer_ts - delta_tsf;
-	ul_delay &= 0x1FFFFFFF; /* mask 29 BITS */
-	if (ul_delay > 0x1000000) {
-		dp_info_rl("----------------------\n"
-			   "Tx completion status:\n"
-			   "----------------------\n"
-			   "release_src = %d\n"
-			   "ppdu_id = 0x%x\n"
-			   "release_reason = %d\n"
-			   "tsf = %u (0x%x)\n"
-			   "buffer_timestamp = %u (0x%x)\n"
-			   "delta_tsf = %u (0x%x)\n",
-			   ts->release_src, ts->ppdu_id, ts->status,
-			   ts->tsf, ts->tsf, ts->buffer_timestamp,
-			   ts->buffer_timestamp, delta_tsf, delta_tsf);
+	if (QDF_IS_STATUS_ERROR(dp_tx_compute_hw_delay_us(ts,
+							  vdev->delta_tsf,
+							  &ul_delay)))
 		return;
-	}
 
 	ul_delay /= 1000; /* in unit of ms */
 
