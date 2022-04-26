@@ -2121,7 +2121,7 @@ QDF_STATUS dp_ipa_setup(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
 			bool is_rm_enabled, uint32_t *tx_pipe_handle,
 			uint32_t *rx_pipe_handle, bool is_smmu_enabled,
 			qdf_ipa_sys_connect_params_t *sys_in, bool over_gsi,
-			qdf_ipa_wdi_hdl_t hdl)
+			qdf_ipa_wdi_hdl_t hdl, qdf_ipa_wdi_hdl_t id)
 {
 	struct dp_soc *soc = cdp_soc_t_to_dp_soc(soc_hdl);
 	struct dp_pdev *pdev =
@@ -2183,7 +2183,7 @@ QDF_STATUS dp_ipa_setup(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
 	 * Event Ring Doorbell PA: TCL Head Pointer Address
 	 */
 	if (is_smmu_enabled)
-		dp_ipa_wdi_tx_smmu_params(soc, ipa_res, tx_smmu, over_gsi, hdl);
+		dp_ipa_wdi_tx_smmu_params(soc, ipa_res, tx_smmu, over_gsi, id);
 	else
 		dp_ipa_wdi_tx_params(soc, ipa_res, tx, over_gsi);
 
@@ -2215,7 +2215,7 @@ QDF_STATUS dp_ipa_setup(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
 	 * Event Ring Doorbell PA: FW Head Pointer Address
 	 */
 	if (is_smmu_enabled)
-		dp_ipa_wdi_rx_smmu_params(soc, ipa_res, rx_smmu, over_gsi, hdl);
+		dp_ipa_wdi_rx_smmu_params(soc, ipa_res, rx_smmu, over_gsi, id);
 	else
 		dp_ipa_wdi_rx_params(soc, ipa_res, rx, over_gsi);
 

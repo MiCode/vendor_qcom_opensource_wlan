@@ -1832,7 +1832,8 @@ struct cdp_ipa_ops {
 				bool is_rm_enabled, uint32_t *tx_pipe_handle,
 				uint32_t *rx_pipe_handle, bool is_smmu_enabled,
 				qdf_ipa_sys_connect_params_t *sys_in,
-				bool over_gsi, qdf_ipa_wdi_hdl_t hdl);
+				bool over_gsi, qdf_ipa_wdi_hdl_t hdl,
+				qdf_ipa_wdi_hdl_t id);
 #else /* CONFIG_IPA_WDI_UNIFIED_API */
 	QDF_STATUS (*ipa_setup)(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
 				void *ipa_i2w_cb, void *ipa_w2i_cb,

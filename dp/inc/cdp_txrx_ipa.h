@@ -405,6 +405,7 @@ cdp_ipa_disable_autonomy(ol_txrx_soc_handle soc, uint8_t pdev_id)
  * @sys_in: parameters to setup sys pipe in mcc mode
  * @over_gsi: Is IPA using GSI
  * @hdl: IPA handle
+ * @id: IPA instance id
  *
  * Return: QDF_STATUS
  */
@@ -414,7 +415,7 @@ cdp_ipa_setup(ol_txrx_soc_handle soc, uint8_t pdev_id, void *ipa_i2w_cb,
 	      uint32_t ipa_desc_size, void *ipa_priv, bool is_rm_enabled,
 	      uint32_t *tx_pipe_handle, uint32_t *rx_pipe_handle,
 	      bool is_smmu_enabled, qdf_ipa_sys_connect_params_t *sys_in,
-	      bool over_gsi, qdf_ipa_wdi_hdl_t hdl)
+	      bool over_gsi, qdf_ipa_wdi_hdl_t hdl, qdf_ipa_wdi_hdl_t id)
 {
 	if (!soc || !soc->ops || !soc->ops->ipa_ops) {
 		QDF_TRACE(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_FATAL,
@@ -431,7 +432,7 @@ cdp_ipa_setup(ol_txrx_soc_handle soc, uint8_t pdev_id, void *ipa_i2w_cb,
 						    tx_pipe_handle,
 						    rx_pipe_handle,
 						    is_smmu_enabled,
-						    sys_in, over_gsi, hdl);
+						    sys_in, over_gsi, hdl, id);
 
 	return QDF_STATUS_SUCCESS;
 }
