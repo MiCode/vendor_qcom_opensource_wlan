@@ -13022,6 +13022,28 @@ static QDF_STATUS extract_scan_radio_cap_service_ready_ext2_tlv(
 	return QDF_STATUS_SUCCESS;
 }
 
+static QDF_STATUS extract_sw_cal_ver_ext2_tlv(wmi_unified_t wmi_handle,
+					      uint8_t *event,
+					      struct wmi_host_sw_cal_ver *cal)
+{
+	WMI_SERVICE_READY_EXT2_EVENTID_param_tlvs *param_buf;
+	wmi_sw_cal_ver_cap *fw_cap;
+
+	param_buf = (WMI_SERVICE_READY_EXT2_EVENTID_param_tlvs *)event;
+	if (!param_buf)
+		return QDF_STATUS_E_INVAL;
+
+	fw_cap = param_buf->sw_cal_ver_cap;
+	if (!fw_cap)
+		return QDF_STATUS_E_INVAL;
+
+	cal->bdf_cal_ver = fw_cap->bdf_cal_ver;
+	cal->ftm_cal_ver = fw_cap->ftm_cal_ver;
+	cal->status = fw_cap->status;
+
+	return QDF_STATUS_SUCCESS;
+}
+
 /**
  * wmi_tgt_thermal_level_to_host() - Convert target thermal level to host enum
  * @level: target thermal level from WMI_THERM_THROT_STATS_EVENTID event
@@ -17672,6 +17694,7 @@ struct wmi_ops tlv_ops =  {
 				extract_dbr_ring_cap_service_ready_ext2_tlv,
 	.extract_scan_radio_cap_service_ready_ext2 =
 				extract_scan_radio_cap_service_ready_ext2_tlv,
+	.extract_sw_cal_ver_ext2 = extract_sw_cal_ver_ext2_tlv,
 	.extract_sar_cap_service_ready_ext =
 				extract_sar_cap_service_ready_ext_tlv,
 	.extract_pdev_utf_event = extract_pdev_utf_event_tlv,

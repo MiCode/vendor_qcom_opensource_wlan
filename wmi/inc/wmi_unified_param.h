@@ -8648,4 +8648,16 @@ struct vdev_pn_mgmt_rxfilter_params {
 	uint8_t vdev_id;
 	uint32_t pn_rxfilter;
 };
+
+/**
+ * struct wmi_host_sw_cal_ver - BDF and FTM cal version data
+ * @bdf_cal_ver: SW cal version in BDF
+ * @ftm_cal_ver: SW cal version in factory data
+ * @status: status. 0 for success, non-zero if version is incorrect
+ */
+struct wmi_host_sw_cal_ver {
+	uint32_t bdf_cal_ver;
+	uint32_t ftm_cal_ver;
+	uint32_t status;
+};
 #endif /* _WMI_UNIFIED_PARAM_H_ */

@@ -3668,6 +3668,19 @@ QDF_STATUS wmi_extract_scan_radio_cap_service_ready_ext2(
 			struct wlan_psoc_host_scan_radio_caps *param);
 
 /**
+ * wmi_extract_sw_cal_ver_ext2: Extract sw cal version received through
+ *                              extended service ready2 event
+ * @wmi_handle: WMI handle
+ * @event: Event buffer
+ * @cal: Pointer to sw cal ver struct
+ *
+ * Return: QDF status of operation
+ */
+QDF_STATUS wmi_extract_sw_cal_ver_ext2(wmi_unified_t wmi_handle,
+				       uint8_t *event,
+				       struct wmi_host_sw_cal_ver *cal);
+
+/**
  * wmi_extract_spectral_scaling_params_service_ready_ext: Extract Spectral
  *                                             scaling params received through
  *                                             extended service ready event

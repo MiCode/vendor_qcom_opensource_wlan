@@ -2670,6 +2670,18 @@ QDF_STATUS wmi_extract_scan_radio_cap_service_ready_ext2(
 	return QDF_STATUS_E_FAILURE;
 }
 
+QDF_STATUS wmi_extract_sw_cal_ver_ext2(wmi_unified_t wmi_handle,
+				       uint8_t *event,
+				       struct wmi_host_sw_cal_ver *cal)
+{
+	if (wmi_handle->ops->extract_sw_cal_ver_ext2)
+		return wmi_handle->ops->extract_sw_cal_ver_ext2(wmi_handle,
+								event,
+								cal);
+
+	return QDF_STATUS_E_FAILURE;
+}
+
 #ifdef WLAN_CONV_SPECTRAL_ENABLE
 QDF_STATUS wmi_extract_pdev_sscan_fw_cmd_fixed_param(
 			wmi_unified_t wmi_handle,
