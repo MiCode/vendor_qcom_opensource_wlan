@@ -37,8 +37,6 @@
 
 #define CDP_LITE_MON_FILTER_ALL 0xFFFF
 
-#define CDP_LITE_MON_RX_PACKET_OFFSET 8
-
 /* This should align with nac mac type enumerations in ieee80211_ioctl.h */
 #define CDP_LITE_MON_PEER_MAC_TYPE_CLIENT 2
 

@@ -23,6 +23,7 @@
 
 #define DP_RX_MON_PACKET_OFFSET 8
 #define DP_RX_MON_RX_HDR_OFFSET 8
+#define DP_GET_NUM_QWORDS(num)	((num) >> 3)
 /*
  * dp_rx_mon_buffers_alloc() - allocate rx monitor buffers
  * @soc: DP soc handle

@@ -2346,8 +2346,9 @@ dp_mon_filter_setup_rx_lite_mon(struct dp_mon_pdev_be *be_mon_pdev)
 					       ctrl_len,
 					       data_len)) {
 		rx_tlv_filter->tlv_filter.packet = 1;
-		rx_tlv_filter->tlv_filter.rx_packet_offset =
-					CDP_LITE_MON_RX_PACKET_OFFSET;
+		/* get offset size in QWORDS */
+		rx_tlv_filter->tlv_filter.rx_pkt_tlv_offset =
+				DP_GET_NUM_QWORDS(DP_RX_MON_PACKET_OFFSET);
 		if (mgmt_len == CDP_LITE_MON_LEN_FULL)
 			rx_tlv_filter->tlv_filter.mgmt_dma_length =
 							DEFAULT_DMA_LENGTH;
