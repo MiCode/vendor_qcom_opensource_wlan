@@ -12864,7 +12864,7 @@ static QDF_STATUS extract_mac_phy_cap_service_ready_ext2_tlv(
 	param->hw_mode_id = mac_phy_caps->hw_mode_id;
 	param->phy_id = mac_phy_caps->phy_id;
 	param->pdev_id = wmi_handle->ops->convert_pdev_id_target_to_host(
-			wmi_handle, mac_phy_caps->pdev_id);
+			wmi_handle, WMI_PHY_GET_PDEV_ID(mac_phy_caps->pdev_id));
 	param->wireless_modes_ext = convert_wireless_modes_ext_tlv(
 			mac_phy_caps->wireless_modes_ext);
 
