@@ -1075,6 +1075,36 @@ typedef struct {
 	uint32_t mac_addr47to32;
 } wmi_host_mac_addr;
 
+#if defined(WLAN_FEATURE_11BE) && defined(WLAN_FEATURE_T2LM)
+/**
+ * struct wlan_host_t2lm_of_tids - TID-to-link mapping info
+ * @direction:  0 - Downlink, 1 - uplink 2 - Both uplink and downlink
+ * @default_link_mapping: value 1 indicates the default T2LM, where all the TIDs
+ *                        are mapped to all the links.
+ *                        value 0 indicates the preferred T2LM mapping
+ * @t2lm_provisioned_links: Indicates TID to link mapping of all the TIDS.
+ */
+struct wlan_host_t2lm_of_tids {
+	enum wlan_t2lm_direction direction;
+	bool default_link_mapping;
+	uint16_t t2lm_provisioned_links[T2LM_MAX_NUM_TIDS];
+};
+
+/**
+ * struct wmi_host_tid_to_link_map_params - TID-to-link mapping params
+ * @pdev_id: Pdev id
+ * @peer_macaddr: link peer macaddr
+ * @num_dir: number of directions for which T2LM info is available
+ * @t2lm_info: TID-to-link mapping info for the given directions
+ */
+struct wmi_host_tid_to_link_map_params {
+	uint8_t pdev_id;
+	uint8_t peer_macaddr[QDF_MAC_ADDR_SIZE];
+	uint8_t num_dir;
+	struct wlan_host_t2lm_of_tids t2lm_info[WLAN_T2LM_MAX_DIRECTION];
+};
+#endif /* defined(WLAN_FEATURE_11BE) && defined(WLAN_FEATURE_T2LM) */
+
 #ifdef WLAN_FEATURE_11BE_MLO
 /**
  * struct peer_assoc_mlo_params - MLO assoc params
@@ -1191,6 +1221,7 @@ struct peer_assoc_ml_partner_links {
  * @akm: AKM info
  * @peer_assoc_mlo_params mlo_params: MLO assoc params
  * @peer_assoc_ml_partner_links: MLO patner links
+ * @t2lm_params: TID-to-link mapping params
  */
 struct peer_assoc_params {
 	uint32_t vdev_id;
@@ -1277,6 +1308,9 @@ struct peer_assoc_params {
 #endif
 	uint8_t peer_dms_capable:1,
 		reserved:7;
+#if defined(WLAN_FEATURE_11BE) && defined(WLAN_FEATURE_T2LM)
+	struct wmi_host_tid_to_link_map_params t2lm_params;
+#endif
 };
 
 /**

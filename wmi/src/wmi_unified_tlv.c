@@ -2954,7 +2954,8 @@ static QDF_STATUS send_peer_assoc_cmd_tlv(wmi_unified_t wmi_handle,
 		(sizeof(wmi_he_rate_set) * param->peer_he_mcs_count
 		+ WMI_TLV_HDR_SIZE)
 		+ wmi_eht_peer_assoc_params_len(param) +
-		peer_assoc_mlo_params_size(param);
+		peer_assoc_mlo_params_size(param) +
+		peer_assoc_t2lm_params_size(param);
 
 	buf = wmi_buf_alloc(wmi_handle, len);
 	if (!buf)
@@ -3096,6 +3097,8 @@ static QDF_STATUS send_peer_assoc_cmd_tlv(wmi_unified_t wmi_handle,
 	buf_ptr = update_peer_flags_tlv_ehtinfo(cmd, param, buf_ptr);
 
 	buf_ptr = peer_assoc_add_ml_partner_links(buf_ptr, param);
+
+	buf_ptr = peer_assoc_add_tid_to_link_map(buf_ptr, param);
 
 	wmi_mtrace(WMI_PEER_ASSOC_CMDID, cmd->vdev_id, 0);
 	ret = wmi_unified_cmd_send(wmi_handle, buf, len,

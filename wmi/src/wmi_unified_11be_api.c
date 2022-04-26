@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -58,3 +58,15 @@ wmi_send_mlo_link_set_active_cmd(wmi_unified_t wmi,
 
 	return QDF_STATUS_E_FAILURE;
 }
+
+#if defined(WLAN_FEATURE_11BE) && defined(WLAN_FEATURE_T2LM)
+QDF_STATUS wmi_send_mlo_peer_tid_to_link_map_cmd(
+		wmi_unified_t wmi,
+		struct wmi_host_tid_to_link_map_params *params)
+{
+	if (wmi->ops->send_mlo_peer_tid_to_link_map)
+		return wmi->ops->send_mlo_peer_tid_to_link_map(wmi, params);
+
+	return QDF_STATUS_E_FAILURE;
+}
+#endif /* defined(WLAN_FEATURE_11BE) && defined(WLAN_FEATURE_T2LM) */
