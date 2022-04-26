@@ -8060,6 +8060,7 @@ void wmi_copy_resource_config(wmi_resource_config *resource_cfg,
 		resource_cfg->max_ndp_sessions =
 				tgt_res_cfg->max_ndp_sessions;
 	resource_cfg->max_ndi_interfaces = tgt_res_cfg->max_ndi;
+	resource_cfg->num_max_active_vdevs = tgt_res_cfg->num_max_active_vdevs;
 
 	if (tgt_res_cfg->atf_config)
 		WMI_RSRC_CFG_FLAG_ATF_CONFIG_ENABLE_SET(resource_cfg->flag1, 1);
@@ -11482,6 +11483,7 @@ static QDF_STATUS extract_ready_event_params_tlv(wmi_unified_t wmi_handle,
 	ev_param->max_ast_index = ev->max_ast_index;
 	ev_param->pktlog_defs_checksum = ev->pktlog_defs_checksum;
 	ev_param->agile_capability = 1;
+	ev_param->num_max_active_vdevs = ev->num_max_active_vdevs;
 
 	return QDF_STATUS_SUCCESS;
 }

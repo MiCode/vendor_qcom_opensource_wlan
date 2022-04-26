@@ -5840,6 +5840,8 @@ struct wmi_host_fw_abi_ver {
  * @afc_outdoor_support: AFC support outdoor deployment
  * @carrier_profile_config: Configuration for per-carrier profile
  * @reo_qdesc_shared_addr_table_enabled: Reo shared qref enhancement enabled
+ * @num_max_active_vdevs: number of max active virtual devices (VAPs) to
+ *  support
  */
 typedef struct {
 	uint32_t num_vdevs;
@@ -5964,6 +5966,7 @@ typedef struct {
 	uint32_t carrier_profile_config;
 	bool sawf;
 	bool reo_qdesc_shared_addr_table_enabled;
+	uint32_t num_max_active_vdevs;
 } target_resource_config;
 
 /**
@@ -7680,6 +7683,8 @@ struct coex_config_params {
  *                        and structs used within pktlog traces. This is sent
  *                        from the FW as part of FW ready event and needs
  *                        to be embedded in the pktlog buffer header as version.
+ * @num_max_active_vdevs: number of max active virtual devices (VAPs) to
+ *  support
  */
 struct wmi_host_ready_ev_param {
 	uint32_t status;
@@ -7690,6 +7695,7 @@ struct wmi_host_ready_ev_param {
 	bool agile_capability;
 	uint32_t max_ast_index;
 	uint32_t pktlog_defs_checksum;
+	uint32_t num_max_active_vdevs;
 };
 
 enum bcn_offload_control_param {

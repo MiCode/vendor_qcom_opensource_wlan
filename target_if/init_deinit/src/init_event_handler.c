@@ -762,6 +762,17 @@ static int init_deinit_ready_event_handler(ol_scn_t scn_handle,
 	else
 		info->wlan_res_cfg.agile_capability = ready_ev.agile_capability;
 
+	if (ready_ev.num_max_active_vdevs) {
+		if (ready_ev.num_max_active_vdevs <
+		    info->wlan_res_cfg.num_max_active_vdevs) {
+			target_if_err("unexpected num_max_active_vdevs fw %d host %d",
+				      ready_ev.num_max_active_vdevs,
+				      info->wlan_res_cfg.num_max_active_vdevs);
+			info->wlan_res_cfg.num_max_active_vdevs =
+					ready_ev.num_max_active_vdevs;
+		}
+	}
+
 	/* Indicate to the waiting thread that the ready
 	 * event was received
 	 */
