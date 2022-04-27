@@ -696,12 +696,6 @@ wlan_mgmt_rx_reo_algo_calculate_wait_count(
 			goto update_pending_frames;
 		}
 
-		/* No need wait for any frames on the same link */
-		if (link == in_frame_link) {
-			frames_pending = 0;
-			goto update_pending_frames;
-		}
-
 		pdev = wlan_get_pdev_from_mlo_link_id(link,
 						      WLAN_MGMT_RX_REO_ID);
 
@@ -719,36 +713,6 @@ wlan_mgmt_rx_reo_algo_calculate_wait_count(
 		mgmt_rx_reo_debug("link_id = %u HOST SS: valid = %u, ctr = %u, ts = %u",
 				  link, host_ss->valid, host_ss->mgmt_pkt_ctr,
 				  host_ss->global_timestamp);
-
-		/**
-		 * Ideally, the incoming frame has to wait for only those frames
-		 * (on other links) which meet all the below criterion.
-		 * 1. Frame's timestamp is less than incoming frame's
-		 * 2. Frame is supposed to be consumed by the Host
-		 * 3. Frame is not yet seen by the Host.
-		 * We may not be able to compute the exact optimal wait count
-		 * because HW/FW provides a limited assist.
-		 * This algorithm tries to get the best estimate of wait count
-		 * by not waiting for those frames where we have a conclusive
-		 * evidence that we don't have to wait for those frames.
-		 */
-
-		/**
-		 * If this link has already seen a frame whose timestamp is
-		 * greater than or equal to incoming frame's timestamp,
-		 * then no need to wait for any frames on this link.
-		 * If the totalt wait count becomes zero, then the policy on
-		 * whether to deliver such a frame to upper layers is handled
-		 * separately.
-		 */
-		if (host_ss->valid &&
-		    mgmt_rx_reo_compare_global_timestamps_gte(
-				host_ss->global_timestamp,
-				in_frame_params->global_timestamp)) {
-			frames_pending = 0;
-			wlan_objmgr_pdev_release_ref(pdev, WLAN_MGMT_RX_REO_ID);
-			goto update_pending_frames;
-		}
 
 		snapshot_id = 0;
 		/* Read all the shared snapshots */
@@ -806,6 +770,41 @@ wlan_mgmt_rx_reo_algo_calculate_wait_count(
 				  link, fw_consumed_ss->valid,
 				  fw_consumed_ss->mgmt_pkt_ctr,
 				  fw_consumed_ss->global_timestamp);
+
+		/* No need wait for any frames on the same link */
+		if (link == in_frame_link) {
+			frames_pending = 0;
+			goto update_pending_frames;
+		}
+
+		/**
+		 * Ideally, the incoming frame has to wait for only those frames
+		 * (on other links) which meet all the below criterion.
+		 * 1. Frame's timestamp is less than incoming frame's
+		 * 2. Frame is supposed to be consumed by the Host
+		 * 3. Frame is not yet seen by the Host.
+		 * We may not be able to compute the exact optimal wait count
+		 * because HW/FW provides a limited assist.
+		 * This algorithm tries to get the best estimate of wait count
+		 * by not waiting for those frames where we have a conclusive
+		 * evidence that we don't have to wait for those frames.
+		 */
+
+		/**
+		 * If this link has already seen a frame whose timestamp is
+		 * greater than or equal to incoming frame's timestamp,
+		 * then no need to wait for any frames on this link.
+		 * If the total wait count becomes zero, then the policy on
+		 * whether to deliver such a frame to upper layers is handled
+		 * separately.
+		 */
+		if (host_ss->valid &&
+		    mgmt_rx_reo_compare_global_timestamps_gte(
+				host_ss->global_timestamp,
+				in_frame_params->global_timestamp)) {
+			frames_pending = 0;
+			goto update_pending_frames;
+		}
 
 		/**
 		 * If MAC HW snapshot is invalid, the link has not started
