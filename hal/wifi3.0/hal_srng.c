@@ -1144,6 +1144,7 @@ extern void hal_detach(void *hal_soc)
 	struct hal_soc *hal = (struct hal_soc *)hal_soc;
 
 	hal_delayed_reg_write_deinit(hal);
+	hal_reo_shared_qaddr_detach((hal_soc_handle_t)hal);
 	qdf_mem_free(hal->ops);
 
 	qdf_mem_free_consistent(hal->qdf_dev, hal->qdf_dev->dev,
@@ -1153,8 +1154,6 @@ extern void hal_detach(void *hal_soc)
 		sizeof(*(hal->shadow_wrptr_mem_vaddr)) * HAL_MAX_LMAC_RINGS,
 		hal->shadow_wrptr_mem_vaddr, hal->shadow_wrptr_mem_paddr, 0);
 	qdf_minidump_remove(hal, sizeof(*hal), "hal_soc");
-
-	hal_reo_shared_qaddr_detach((hal_soc_handle_t)hal);
 
 	qdf_mem_free(hal);
 
