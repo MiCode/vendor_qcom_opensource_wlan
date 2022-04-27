@@ -100,6 +100,9 @@ struct mgmt_rx_reo_shared_snapshot {
  * @link_id: link ID for which FW consumed event is received
  * @mgmt_pkt_ctr: MGMT packet counter of the frame that is consumed
  * @global_timestamp: Global timestamp of the frame that is consumed
+ * @duration_us: duration in us
+ * @start_timestamp: start time stamp
+ * @end_timestamp: end time stamp
  */
 struct mgmt_rx_reo_params {
 	bool valid;
@@ -107,6 +110,9 @@ struct mgmt_rx_reo_params {
 	uint8_t link_id;
 	uint16_t mgmt_pkt_ctr;
 	uint32_t global_timestamp;
+	uint16_t duration_us;
+	uint32_t start_timestamp;
+	uint32_t end_timestamp;
 };
 
 /*

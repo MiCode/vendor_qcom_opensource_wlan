@@ -686,6 +686,52 @@ mgmt_rx_reo_get_global_ts(struct mgmt_rx_event_params *rx_params)
 }
 
 /**
+ * mgmt_rx_reo_get_start_ts() - Helper API to get start time stamp of the frame
+ * @rx_params: Management rx event params
+ *
+ * Return: start time stamp of the frame
+ */
+static inline uint32_t
+mgmt_rx_reo_get_start_ts(struct mgmt_rx_event_params *rx_params)
+{
+	qdf_assert_always(rx_params);
+	qdf_assert_always(rx_params->reo_params);
+
+	return rx_params->reo_params->start_timestamp;
+}
+
+/**
+ * mgmt_rx_reo_get_end_ts() - Helper API to get end time stamp of the frame
+ * @rx_params: Management rx event params
+ *
+ * Return: end time stamp of the frame
+ */
+static inline uint32_t
+mgmt_rx_reo_get_end_ts(struct mgmt_rx_event_params *rx_params)
+{
+	qdf_assert_always(rx_params);
+	qdf_assert_always(rx_params->reo_params);
+
+	return rx_params->reo_params->end_timestamp;
+}
+
+/**
+ * mgmt_rx_reo_get_duration_us() - Helper API to get the duration of the frame
+ * in us
+ * @rx_params: Management rx event params
+ *
+ * Return: Duration of the frame in us
+ */
+static inline uint32_t
+mgmt_rx_reo_get_duration_us(struct mgmt_rx_event_params *rx_params)
+{
+	qdf_assert_always(rx_params);
+	qdf_assert_always(rx_params->reo_params);
+
+	return rx_params->reo_params->duration_us;
+}
+
+/**
  * mgmt_rx_reo_get_pkt_counter() - Helper API to get packet counter
  * corresponding to the mgmt rx event
  * @rx_params: Management rx event params

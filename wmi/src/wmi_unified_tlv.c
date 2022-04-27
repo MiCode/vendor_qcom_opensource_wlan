@@ -11499,6 +11499,10 @@ extract_mgmt_rx_fw_consumed_tlv(wmi_unified_t wmi_handle,
 	params->global_timestamp = ev_hdr->global_timestamp;
 	params->mgmt_pkt_ctr = WMI_MGMT_RX_FW_CONSUMED_PARAM_MGMT_PKT_CTR_GET(
 				ev_hdr->mgmt_pkt_ctr_info);
+	params->duration_us = ev_hdr->rx_ppdu_duration_us;
+	params->start_timestamp = params->global_timestamp;
+	params->end_timestamp = params->start_timestamp +
+				params->duration_us;
 
 	return QDF_STATUS_SUCCESS;
 }
@@ -11550,6 +11554,10 @@ static QDF_STATUS extract_mgmt_rx_reo_params_tlv(wmi_unified_t wmi_handle,
 	reo_params->global_timestamp = reo_params_tlv->global_timestamp;
 	reo_params->mgmt_pkt_ctr = WMI_MGMT_RX_REO_PARAM_MGMT_PKT_CTR_GET(
 					reo_params_tlv->mgmt_pkt_ctr_link_info);
+	reo_params->duration_us = reo_params_tlv->rx_ppdu_duration_us;
+	reo_params->start_timestamp = reo_params->global_timestamp;
+	reo_params->end_timestamp = reo_params->start_timestamp +
+				    reo_params->duration_us;
 
 	return QDF_STATUS_SUCCESS;
 }
