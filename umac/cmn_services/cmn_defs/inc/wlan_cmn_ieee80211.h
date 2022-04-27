@@ -1960,34 +1960,32 @@ enum wlan_ml_variant {
 #define WLAN_ML_BV_CINFO_EMLCAP_SIZE                                2
 
 /* Definitions for sub-sub fields in EML Capabilities subfield in Basic variant
- * Multi-Link element Common Info field. Any unused bits are reserved.
+ * Multi-Link element Common Info field as per IEEE P802.11be/D1.5.
+ * Any unused bits are reserved.
  */
 /* EMLSR Support */
 #define WLAN_ML_BV_CINFO_EMLCAP_EMLSRSUPPORT_IDX                    0
 #define WLAN_ML_BV_CINFO_EMLCAP_EMLSRSUPPORT_BITS                   1
 /* EMLSR Delay */
-#define WLAN_ML_BV_CINFO_EMLCAP_EMLSRDELAY_IDX                      1
-#define WLAN_ML_BV_CINFO_EMLCAP_EMLSRDELAY_BITS                     3
+#define WLAN_ML_BV_CINFO_EMLCAP_EMLSR_PADDINGDELAY_IDX              1
+#define WLAN_ML_BV_CINFO_EMLCAP_EMLSR_PADDINGDELAY_BITS             3
+/* EMLSR Transition Delay */
+#define WLAN_ML_BV_CINFO_EMLCAP_EMLSRTRANSDELAY_IDX                 4
+#define WLAN_ML_BV_CINFO_EMLCAP_EMLSRTRANSDELAY_BITS                3
 /* EMLMR Support */
-#define WLAN_ML_BV_CINFO_EMLCAP_EMLMRSUPPORT_IDX                    4
+#define WLAN_ML_BV_CINFO_EMLCAP_EMLMRSUPPORT_IDX                    7
 #define WLAN_ML_BV_CINFO_EMLCAP_EMLMRSUPPORT_BITS                   1
 /* EMLMR Delay */
-#define WLAN_ML_BV_CINFO_EMLCAP_EMLMRDELAY_IDX                      5
+#define WLAN_ML_BV_CINFO_EMLCAP_EMLMRDELAY_IDX                      8
 #define WLAN_ML_BV_CINFO_EMLCAP_EMLMRDELAY_BITS                     3
 /* Transition Timeout */
-#define WLAN_ML_BV_CINFO_EMLCAP_TRANSTIMEOUT_IDX                    8
+#define WLAN_ML_BV_CINFO_EMLCAP_TRANSTIMEOUT_IDX                    11
 #define WLAN_ML_BV_CINFO_EMLCAP_TRANSTIMEOUT_BITS                   4
-/* EMLMR Rx NSS */
-#define WLAN_ML_BV_CINFO_EMLCAP_EMLMRRXNSS_IDX                      16
-#define WLAN_ML_BV_CINFO_EMLCAP_EMLMRRXNSS_BITS                     4
-/* EMLMR Tx NSS */
-#define WLAN_ML_BV_CINFO_EMLCAP_EMLMRTXNSS_IDX                      20
-#define WLAN_ML_BV_CINFO_EMLCAP_EMLMRTXNSS_BITS                     4
 
 /**
- * wlan_ml_bv_cinfo_emlcap_emlsrdelay - Encoding for EMLSR Delay sub-sub field
- * in EML Capabilities subfield in Basic variant Multi-Link element Common Info
- * field.
+ * wlan_ml_bv_cinfo_emlcap_emlsr_padding_delay - Encoding for EMLSR Padding
+ * Delay sub field in EML Capabilities subfield in Basic variant Multi-Link
+ * element Common Info field.
  * Note: In case of holes in the enumeration, scheme for invalid value
  * determination should be changed.
  * @WLAN_ML_BV_CINFO_EMLCAP_EMLSRDELAY_0US: EMLSR delay of 0 us
@@ -1998,13 +1996,41 @@ enum wlan_ml_variant {
  * @WLAN_ML_BV_CINFO_EMLCAP_EMLSRDELAY_INVALIDSTART: Start of invalid value
  * range
  */
-enum wlan_ml_bv_cinfo_emlcap_emlsrdelay {
+enum wlan_ml_bv_cinfo_emlcap_emlsr_padding_delay {
 	WLAN_ML_BV_CINFO_EMLCAP_EMLSRDELAY_0US = 0,
 	WLAN_ML_BV_CINFO_EMLCAP_EMLSRDELAY_32US = 1,
 	WLAN_ML_BV_CINFO_EMLCAP_EMLSRDELAY_64US = 2,
 	WLAN_ML_BV_CINFO_EMLCAP_EMLSRDELAY_128US = 3,
 	WLAN_ML_BV_CINFO_EMLCAP_EMLSRDELAY_256US = 4,
 	WLAN_ML_BV_CINFO_EMLCAP_EMLSRDELAY_INVALIDSTART,
+};
+
+/**
+ * wlan_ml_bv_cinfo_emlsr_transition_delay - Encoding for EMLSR
+ * Transition delay in EML Capabilities subfield in Basic variant
+ * Multi-Link element Common Info field.
+ * @WLAN_ML_BV_CINFO_EMLCAP_EMLSRTRANSDELAY_0US: EMLSR transition delay of 0 us
+ * @WLAN_ML_BV_CINFO_EMLCAP_EMLSRTRANSDELAY_16US: EMLSR transition delay of
+ * 16 us
+ * @WLAN_ML_BV_CINFO_EMLCAP_EMLSRTRANSDELAY_32US: EMLSR transition delay of
+ * 32 us
+ * @WLAN_ML_BV_CINFO_EMLCAP_EMLSRTRANSDELAY_64US: EMLSR transition delay of
+ * 64 us
+ * @WLAN_ML_BV_CINFO_EMLCAP_EMLSRTRANSDELAY_128US: EMLSR transition delay of
+ * 128 us
+ * @WLAN_ML_BV_CINFO_EMLCAP_EMLSRTRANSDELAY_256US: EMLSR transition delay of
+ * 256 us
+ * @WLAN_ML_BV_CINFO_EMLCAP_EMLSRTRANSDELAY_INVALIDSTART: Start of invalid
+ * value range
+ */
+enum wlan_ml_bv_cinfo_emlsr_transition_delay {
+	WLAN_ML_BV_CINFO_EMLCAP_EMLSRTRANSDELAY_0US = 0,
+	WLAN_ML_BV_CINFO_EMLCAP_EMLSRTRANSDELAY_16US = 1,
+	WLAN_ML_BV_CINFO_EMLCAP_EMLSRTRANSDELAY_32US = 2,
+	WLAN_ML_BV_CINFO_EMLCAP_EMLSRTRANSDELAY_64US = 3,
+	WLAN_ML_BV_CINFO_EMLCAP_EMLSRTRANSDELAY_128US = 4,
+	WLAN_ML_BV_CINFO_EMLCAP_EMLSRTRANSDELAY_256US = 5,
+	WLAN_ML_BV_CINFO_EMLCAP_EMLSRTRANSDELAY_INVALIDSTART,
 };
 
 /**
