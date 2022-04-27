@@ -4495,34 +4495,31 @@ wlan_mgmt_rx_reo_initialize_snapshot_params(
 	snapshot_params->global_timestamp = 0;
 }
 
-QDF_STATUS
-mgmt_rx_reo_pdev_obj_open_notification
-	(struct wlan_objmgr_pdev *pdev,
-	 struct mgmt_txrx_priv_pdev_context *mgmt_txrx_pdev_ctx)
+/**
+ * mgmt_rx_reo_initialize_snapshot_address() - Initialize management Rx reorder
+ * snapshot addresses for a given pdev
+ * @pdev: pointer to pdev object
+ *
+ * Return: QDF_STATUS
+ */
+static QDF_STATUS
+mgmt_rx_reo_initialize_snapshot_address(struct wlan_objmgr_pdev *pdev)
 {
-	QDF_STATUS status;
 	enum mgmt_rx_reo_shared_snapshot_id snapshot_id;
+	struct mgmt_rx_reo_pdev_info *mgmt_rx_reo_pdev_ctx;
+	QDF_STATUS status;
 
-	if (!pdev) {
-		mgmt_rx_reo_err("pdev is null");
+	mgmt_rx_reo_pdev_ctx = wlan_mgmt_rx_reo_get_priv_object(pdev);
+	if (!mgmt_rx_reo_pdev_ctx) {
+		mgmt_rx_reo_err("Mgmt Rx REO priv object is null");
 		return QDF_STATUS_E_NULL_VALUE;
 	}
-
-	if (!mgmt_txrx_pdev_ctx) {
-		mgmt_rx_reo_err("Management txrx pdev context is null");
-		return QDF_STATUS_E_NULL_VALUE;
-	}
-
-	if (!wlan_mgmt_rx_reo_is_feature_enabled_at_pdev(pdev))
-		return QDF_STATUS_SUCCESS;
 
 	snapshot_id = 0;
+
 	while (snapshot_id < MGMT_RX_REO_SHARED_SNAPSHOT_MAX) {
 		struct mgmt_rx_reo_snapshot_info *snapshot_info;
-		struct mgmt_rx_reo_pdev_info *mgmt_rx_reo_pdev_ctx;
 
-		mgmt_rx_reo_pdev_ctx =
-				mgmt_txrx_pdev_ctx->mgmt_rx_reo_pdev_ctx;
 		snapshot_info =
 			&mgmt_rx_reo_pdev_ctx->host_target_shared_snapshot_info
 			[snapshot_id];
@@ -4540,6 +4537,114 @@ mgmt_rx_reo_pdev_obj_open_notification
 	return QDF_STATUS_SUCCESS;
 }
 
+/**
+ * mgmt_rx_reo_initialize_snapshot_value() - Initialize management Rx reorder
+ * snapshot values for a given pdev
+ * @pdev: pointer to pdev object
+ *
+ * Return: QDF_STATUS
+ */
+static QDF_STATUS
+mgmt_rx_reo_initialize_snapshot_value(struct wlan_objmgr_pdev *pdev)
+{
+	enum mgmt_rx_reo_shared_snapshot_id snapshot_id;
+	struct mgmt_rx_reo_pdev_info *mgmt_rx_reo_pdev_ctx;
+
+	mgmt_rx_reo_pdev_ctx = wlan_mgmt_rx_reo_get_priv_object(pdev);
+	if (!mgmt_rx_reo_pdev_ctx) {
+		mgmt_rx_reo_err("Mgmt Rx REO priv object is null");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	snapshot_id = 0;
+	while (snapshot_id < MGMT_RX_REO_SHARED_SNAPSHOT_MAX) {
+		wlan_mgmt_rx_reo_initialize_snapshot_params
+			(&mgmt_rx_reo_pdev_ctx->last_valid_shared_snapshot
+			 [snapshot_id]);
+		snapshot_id++;
+	}
+
+	/* Initialize Host snapshot params */
+	wlan_mgmt_rx_reo_initialize_snapshot_params
+				(&mgmt_rx_reo_pdev_ctx->host_snapshot);
+
+	return QDF_STATUS_SUCCESS;
+}
+
+/**
+ * mgmt_rx_reo_initialize_snapshots() - Initialize management Rx reorder
+ * snapshot related data structures for a given pdev
+ * @pdev: pointer to pdev object
+ *
+ * Return: QDF_STATUS
+ */
+static QDF_STATUS
+mgmt_rx_reo_initialize_snapshots(struct wlan_objmgr_pdev *pdev)
+{
+	QDF_STATUS status;
+
+	status = mgmt_rx_reo_initialize_snapshot_value(pdev);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		mgmt_rx_reo_err("Failed to initialize snapshot value");
+		return status;
+	}
+
+	status = mgmt_rx_reo_initialize_snapshot_address(pdev);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		mgmt_rx_reo_err("Failed to initialize snapshot address");
+		return status;
+	}
+
+	return QDF_STATUS_SUCCESS;
+}
+
+/**
+ * mgmt_rx_reo_clear_snapshots() - Clear management Rx reorder snapshot related
+ * data structures for a given pdev
+ * @pdev: pointer to pdev object
+ *
+ * Return: QDF_STATUS
+ */
+static QDF_STATUS
+mgmt_rx_reo_clear_snapshots(struct wlan_objmgr_pdev *pdev)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS
+mgmt_rx_reo_attach(struct wlan_objmgr_pdev *pdev)
+{
+	QDF_STATUS status;
+
+	if (!wlan_mgmt_rx_reo_is_feature_enabled_at_pdev(pdev))
+		return QDF_STATUS_SUCCESS;
+
+	status = mgmt_rx_reo_initialize_snapshots(pdev);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		mgmt_rx_reo_err("Failed to initialize mgmt Rx REO snapshots");
+		return status;
+	}
+
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS
+mgmt_rx_reo_detach(struct wlan_objmgr_pdev *pdev)
+{
+	QDF_STATUS status;
+
+	if (!wlan_mgmt_rx_reo_is_feature_enabled_at_pdev(pdev))
+		return QDF_STATUS_SUCCESS;
+
+	status = mgmt_rx_reo_clear_snapshots(pdev);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		mgmt_rx_reo_err("Failed to clear mgmt Rx REO snapshots");
+		return status;
+	}
+
+	return QDF_STATUS_SUCCESS;
+}
+
 QDF_STATUS
 mgmt_rx_reo_pdev_obj_create_notification(
 	struct wlan_objmgr_pdev *pdev,
@@ -4547,7 +4652,6 @@ mgmt_rx_reo_pdev_obj_create_notification(
 {
 	QDF_STATUS status;
 	struct mgmt_rx_reo_pdev_info *mgmt_rx_reo_pdev_ctx = NULL;
-	enum mgmt_rx_reo_shared_snapshot_id snapshot_id;
 
 	if (!pdev) {
 		mgmt_rx_reo_err("pdev is null");
@@ -4572,18 +4676,6 @@ mgmt_rx_reo_pdev_obj_create_notification(
 		status = QDF_STATUS_E_NOMEM;
 		goto failure;
 	}
-
-	snapshot_id = 0;
-	while (snapshot_id < MGMT_RX_REO_SHARED_SNAPSHOT_MAX) {
-		wlan_mgmt_rx_reo_initialize_snapshot_params(
-				&mgmt_rx_reo_pdev_ctx->
-				last_valid_shared_snapshot[snapshot_id]);
-		snapshot_id++;
-	}
-
-	/* Initialize Host snapshot params */
-	wlan_mgmt_rx_reo_initialize_snapshot_params(&mgmt_rx_reo_pdev_ctx->
-						    host_snapshot);
 
 	mgmt_txrx_pdev_ctx->mgmt_rx_reo_pdev_ctx = mgmt_rx_reo_pdev_ctx;
 

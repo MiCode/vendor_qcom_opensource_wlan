@@ -172,15 +172,6 @@ wlan_mgmt_rx_reo_validate_mlo_link_info(struct wlan_objmgr_psoc *psoc)
 }
 
 QDF_STATUS
-wlan_mgmt_rx_reo_pdev_obj_open_notification
-			(struct wlan_objmgr_pdev *pdev,
-			 struct mgmt_txrx_priv_pdev_context *mgmt_txrx_pdev_ctx)
-{
-	return mgmt_rx_reo_pdev_obj_open_notification(pdev,
-						      mgmt_txrx_pdev_ctx);
-}
-
-QDF_STATUS
 wlan_mgmt_rx_reo_pdev_obj_create_notification(
 			struct wlan_objmgr_pdev *pdev,
 			struct mgmt_txrx_priv_pdev_context *mgmt_txrx_pdev_ctx)
@@ -197,6 +188,22 @@ wlan_mgmt_rx_reo_pdev_obj_destroy_notification(
 	return mgmt_rx_reo_pdev_obj_destroy_notification(pdev,
 							 mgmt_txrx_pdev_ctx);
 }
+
+QDF_STATUS
+wlan_mgmt_rx_reo_attach(struct wlan_objmgr_pdev *pdev)
+{
+	return mgmt_rx_reo_attach(pdev);
+}
+
+qdf_export_symbol(wlan_mgmt_rx_reo_attach);
+
+QDF_STATUS
+wlan_mgmt_rx_reo_detach(struct wlan_objmgr_pdev *pdev)
+{
+	return mgmt_rx_reo_detach(pdev);
+}
+
+qdf_export_symbol(wlan_mgmt_rx_reo_detach);
 
 #ifndef WLAN_MGMT_RX_REO_SIM_SUPPORT
 bool

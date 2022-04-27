@@ -833,30 +833,6 @@ QDF_STATUS wlan_mgmt_txrx_psoc_disable(struct wlan_objmgr_psoc *psoc)
 
 QDF_STATUS wlan_mgmt_txrx_pdev_open(struct wlan_objmgr_pdev *pdev)
 {
-	QDF_STATUS status;
-	struct mgmt_txrx_priv_pdev_context *mgmt_txrx_pdev_ctx;
-
-	if (!pdev) {
-		mgmt_txrx_err("pdev context is NULL");
-		return QDF_STATUS_E_INVAL;
-	}
-
-	mgmt_txrx_pdev_ctx = (struct mgmt_txrx_priv_pdev_context *)
-		wlan_objmgr_pdev_get_comp_private_obj(pdev,
-						      WLAN_UMAC_COMP_MGMT_TXRX);
-
-	if (!mgmt_txrx_pdev_ctx) {
-		mgmt_txrx_err("mgmt txrx context is NULL");
-		return QDF_STATUS_E_NULL_VALUE;
-	}
-
-	status = wlan_mgmt_rx_reo_pdev_obj_open_notification
-					(pdev, mgmt_txrx_pdev_ctx);
-	if (QDF_IS_STATUS_ERROR(status)) {
-		mgmt_txrx_err("Failed to execute pdev open for mgmt Rx REO");
-		return status;
-	}
-
 	return QDF_STATUS_SUCCESS;
 }
 

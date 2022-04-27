@@ -225,22 +225,6 @@ QDF_STATUS
 wlan_mgmt_rx_reo_validate_mlo_link_info(struct wlan_objmgr_psoc *psoc);
 
 /**
- * wlan_mgmt_rx_reo_pdev_obj_open_notification() - pdev open handler for
- * management rx-reorder module
- * @pdev: pointer to pdev object
- * @mgmt_txrx_pdev_ctx: pdev private object of mgmt txrx module
- *
- * This function gets called from object manager when pdev is being opened and
- * creates management rx-reorder pdev context
- *
- * Return: QDF_STATUS
- */
-QDF_STATUS
-wlan_mgmt_rx_reo_pdev_obj_open_notification
-		(struct wlan_objmgr_pdev *pdev,
-		 struct mgmt_txrx_priv_pdev_context *mgmt_txrx_pdev_ctx);
-
-/**
  * wlan_mgmt_rx_reo_pdev_obj_create_notification() - pdev create handler for
  * management rx-reorder module
  * @pdev: pointer to pdev object
@@ -271,6 +255,26 @@ QDF_STATUS
 wlan_mgmt_rx_reo_pdev_obj_destroy_notification(
 			struct wlan_objmgr_pdev *pdev,
 			struct mgmt_txrx_priv_pdev_context *mgmt_txrx_pdev_ctx);
+
+/**
+ * wlan_mgmt_rx_reo_attach() - Initializes the per pdev data structures related
+ * to management rx-reorder module
+ * @pdev: pointer to pdev object
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+wlan_mgmt_rx_reo_attach(struct wlan_objmgr_pdev *pdev);
+
+/**
+ * wlan_mgmt_rx_reo_detach() - Clears the per pdev data structures related to
+ * management rx-reorder module
+ * @pdev: pointer to pdev object
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+wlan_mgmt_rx_reo_detach(struct wlan_objmgr_pdev *pdev);
 
 /**
  * wlan_mgmt_rx_reo_is_feature_enabled_at_psoc() - Check if MGMT Rx REO feature
@@ -332,25 +336,6 @@ wlan_mgmt_rx_reo_validate_mlo_link_info(struct wlan_objmgr_psoc *psoc)
 }
 
 /**
- * wlan_mgmt_rx_reo_pdev_obj_open_notification() - pdev open handler for
- * management rx-reorder feature
- * @pdev: pointer to pdev object
- * @mgmt_txrx_pdev_ctx: pdev private object of mgmt txrx module
- *
- * This function gets called from object manager when pdev is being opened and
- * creates management rx-reorder pdev context
- *
- * Return: QDF_STATUS
- */
-static inline QDF_STATUS
-wlan_mgmt_rx_reo_pdev_obj_open_notification
-			(struct wlan_objmgr_pdev *pdev,
-			 struct mgmt_txrx_priv_pdev_context *mgmt_txrx_pdev_ctx)
-{
-	return QDF_STATUS_SUCCESS;
-}
-
-/**
  * wlan_mgmt_rx_reo_pdev_obj_create_notification() - pdev create handler for
  * management rx-reorder feature
  * @pdev: pointer to pdev object
@@ -384,6 +369,32 @@ static inline QDF_STATUS
 wlan_mgmt_rx_reo_pdev_obj_destroy_notification(
 			struct wlan_objmgr_pdev *pdev,
 			struct mgmt_txrx_priv_pdev_context *mgmt_txrx_pdev_ctx)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+/**
+ * wlan_mgmt_rx_reo_attach() - Initializes the per pdev data structures related
+ * to management rx-reorder module
+ * @pdev: pointer to pdev object
+ *
+ * Return: QDF_STATUS
+ */
+static inline QDF_STATUS
+wlan_mgmt_rx_reo_attach(struct wlan_objmgr_pdev *pdev)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+/**
+ * wlan_mgmt_rx_reo_detach() - Clears the per pdev data structures related to
+ * management rx-reorder module
+ * @pdev: pointer to pdev object
+ *
+ * Return: QDF_STATUS
+ */
+static inline QDF_STATUS
+wlan_mgmt_rx_reo_detach(struct wlan_objmgr_pdev *pdev)
 {
 	return QDF_STATUS_SUCCESS;
 }
