@@ -3558,7 +3558,10 @@ static void reg_disable_sp_entries_in_supr_chan_entry(
 	uint8_t num_sp_lists = QDF_ARRAY_SIZE(list_of_sp_lists);
 
 	for (j = 0; j < num_sp_lists; j++) {
-		uint8_t idx = list_of_sp_lists[j];
+		enum supported_6g_pwr_types  idx = list_of_sp_lists[j];
+
+		if (reg_is_supp_pwr_mode_invalid(idx))
+			continue;
 
 		reg_dis_chan_state_and_flags(&chan_info->state_arr[idx],
 					     &chan_info->chan_flags_arr[idx]);

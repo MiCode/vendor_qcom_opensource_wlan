@@ -1488,6 +1488,11 @@ reg_freq_to_chan_for_chlist(struct regulatory_channel *chan_list,
 {
 	uint32_t count;
 
+	if (num_chans == INVALID_CHANNEL) {
+		reg_err_rl("invalid num_chans");
+		return 0;
+	}
+
 	for (count = 0; count < num_chans; count++) {
 		if (chan_list[count].center_freq >= freq)
 			break;
@@ -1570,6 +1575,14 @@ reg_compute_chan_to_freq_for_chlist(struct regulatory_channel *chan_list,
 				    enum channel_enum max_chan_range)
 {
 	uint16_t count;
+
+	if (min_chan_range == INVALID_CHANNEL ||
+	    max_chan_range == INVALID_CHANNEL) {
+		reg_debug_rl("Invalid channel range: min_chan_range: 0x%X max_chan_range: 0x%X",
+			     min_chan_range,
+			     max_chan_range);
+		return 0;
+	}
 
 	for (count = min_chan_range; count <= max_chan_range; count++) {
 		if ((chan_list[count].state != CHANNEL_STATE_DISABLE) &&
@@ -7133,6 +7146,12 @@ reg_get_partial_afc_req_info(struct wlan_objmgr_pdev *pdev,
 	uint8_t **channel_lists;
 	QDF_STATUS status;
 	struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj;
+
+	if (!afc_req) {
+		reg_err("afc_req is NULL");
+		status = QDF_STATUS_E_INVAL;
+		return status;
+	}
 
 	temp_afc_req = NULL;
 	pdev_priv_obj = reg_get_pdev_obj(pdev);
