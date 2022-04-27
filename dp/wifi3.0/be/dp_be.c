@@ -1503,6 +1503,9 @@ static void dp_txrx_set_mlo_mcast_primary_vdev_param_be(
 		dp_mcast_mlo_iter_ptnr_soc(be_soc,
 					   dp_tx_mcast_mlo_reinject_routing_set,
 					   (void *)&be_vdev->mcast_primary);
+	} else {
+		hal_tx_vdev_mcast_ctrl_set(hal_soc, vdev_id,
+					   HAL_TX_MCAST_CTRL_DROP);
 	}
 }
 #else
