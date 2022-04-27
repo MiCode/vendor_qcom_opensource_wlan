@@ -169,12 +169,16 @@ enum mgmt_rx_reo_frame_descriptor_type {
 /**
  * struct mgmt_rx_reo_global_ts_info - This structure holds the global time
  * stamp information of a frame.
- * @global_ts: Global time stamp value
  * @valid: Indicates whether global time stamp is valid
+ * @global_ts: Global time stamp value
+ * @start_ts: Start time stamp value
+ * @end_ts: End time stamp value
  */
 struct mgmt_rx_reo_global_ts_info {
 	bool valid;
 	uint32_t global_ts;
+	uint32_t start_ts;
+	uint32_t end_ts;
 };
 
 /**
@@ -230,6 +234,8 @@ struct mgmt_rx_reo_wait_count {
  * @is_delivered: Indicates whether the frame is delivered successfully
  * @is_premature_delivery: Indicates whether the frame is delivered
  * prematurely
+ * @is_parallel_rx: Indicates that this frame is received in parallel to the
+ * last frame which is delivered to the upper layer.
  */
 struct mgmt_rx_reo_list_entry {
 	qdf_list_node_t node;
@@ -245,6 +251,7 @@ struct mgmt_rx_reo_list_entry {
 	uint8_t release_reason;
 	bool is_delivered;
 	bool is_premature_delivery;
+	bool is_parallel_rx;
 };
 
 #ifdef WLAN_MGMT_RX_REO_SIM_SUPPORT
@@ -637,6 +644,8 @@ struct mgmt_rx_reo_context {
  * updating the list based on this frame).
  * @list_insertion_pos: Position in the reorder list where this frame is going
  * to get inserted (Applicable for only host consumed frames)
+ * @is_parallel_rx: Indicates that this frame is received in parallel to the
+ * last frame which is delivered to the upper layer.
  */
 struct mgmt_rx_reo_frame_descriptor {
 	enum mgmt_rx_reo_frame_descriptor_type type;
@@ -652,6 +661,7 @@ struct mgmt_rx_reo_frame_descriptor {
 	struct mgmt_rx_reo_snapshot_params shared_snapshots
 			[MAX_MLO_LINKS][MGMT_RX_REO_SHARED_SNAPSHOT_MAX];
 	struct mgmt_rx_reo_snapshot_params host_snapshot[MAX_MLO_LINKS];
+	bool is_parallel_rx;
 };
 
 /**

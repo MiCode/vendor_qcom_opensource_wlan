@@ -109,25 +109,58 @@ mgmt_rx_reo_compare_global_timestamps_gte(uint32_t ts1, uint32_t ts2)
  * is stale
  * @ts_last_released_frame: pointer to global time stamp of the last frame
  * removed from the reorder list
- * @global_timestamp: global time stamp of the management frame
+ * @frame_desc: pointer to frame descriptor
  *
- * This API checks whether the management frame with global time stamp
- * @global_timestamp is stale. Any frame older than the last frame delivered to
- * upper layer is a stale frame. This could happen when we have to deliver
- * frames out of order due to time out or list size limit. The frames which
- * arrive late at host and with time stamp lesser than the last delivered frame
- * are stale frames and they need to be handled differently.
+ * This API checks whether the current management frame under processing is
+ * stale. Any frame older than the last frame delivered to upper layer is a
+ * stale frame. This could happen when we have to deliver frames out of order
+ * due to time out or list size limit. The frames which arrive late at host and
+ * with time stamp lesser than the last delivered frame are stale frames and
+ * they need to be handled differently.
  *
- * Return: true if the given management frame is stale.
+ * Return: QDF_STATUS. On success "is_stale" and "is_parallel_rx" members of
+ * @frame_desc will be filled with proper values.
  */
-static bool
+static QDF_STATUS
 mgmt_rx_reo_is_stale_frame(
 		struct mgmt_rx_reo_global_ts_info *ts_last_released_frame,
-		uint32_t global_timestamp)
+		struct mgmt_rx_reo_frame_descriptor *frame_desc)
 {
-	return ts_last_released_frame->valid &&
-	       !mgmt_rx_reo_compare_global_timestamps_gte(global_timestamp,
-					ts_last_released_frame->global_ts);
+	uint32_t cur_frame_start_ts;
+	uint32_t cur_frame_end_ts;
+
+	if (!ts_last_released_frame) {
+		mgmt_rx_reo_err("Last released frame time stamp info is null");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	if (!frame_desc) {
+		mgmt_rx_reo_err("Frame descriptor is null");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	frame_desc->is_stale = false;
+	frame_desc->is_parallel_rx = false;
+
+	if (!ts_last_released_frame->valid)
+		return QDF_STATUS_SUCCESS;
+
+	cur_frame_start_ts = mgmt_rx_reo_get_start_ts(frame_desc->rx_params);
+	cur_frame_end_ts = mgmt_rx_reo_get_end_ts(frame_desc->rx_params);
+
+	frame_desc->is_stale =
+		!mgmt_rx_reo_compare_global_timestamps_gte(cur_frame_start_ts,
+					ts_last_released_frame->start_ts);
+
+	if (mgmt_rx_reo_compare_global_timestamps_gte
+		(ts_last_released_frame->start_ts, cur_frame_start_ts) &&
+	    mgmt_rx_reo_compare_global_timestamps_gte
+		(cur_frame_end_ts, ts_last_released_frame->end_ts)) {
+		frame_desc->is_parallel_rx = true;
+		frame_desc->is_stale = false;
+	}
+
+	return QDF_STATUS_SUCCESS;
 }
 
 QDF_STATUS
@@ -1679,10 +1712,19 @@ mgmt_rx_reo_list_release_entries(struct mgmt_rx_reo_context *reo_context)
 		 */
 		entry_global_ts =
 			mgmt_rx_reo_get_global_ts(first_entry->rx_params);
+
 		if (!ts_last_released_frame->valid ||
 		    mgmt_rx_reo_compare_global_timestamps_gte(
 			entry_global_ts, ts_last_released_frame->global_ts)) {
+			struct mgmt_rx_event_params *params;
+
+			params = first_entry->rx_params;
+
 			ts_last_released_frame->global_ts = entry_global_ts;
+			ts_last_released_frame->start_ts =
+					mgmt_rx_reo_get_start_ts(params);
+			ts_last_released_frame->end_ts =
+					mgmt_rx_reo_get_end_ts(params);
 			ts_last_released_frame->valid = true;
 		} else {
 			/**
@@ -1690,7 +1732,7 @@ mgmt_rx_reo_list_release_entries(struct mgmt_rx_reo_context *reo_context)
 			 * the last frame released from the reorder list will be
 			 * discarded at the entry to reorder algorithm itself.
 			 */
-			qdf_assert_always(0);
+			qdf_assert_always(first_entry->is_parallel_rx);
 		}
 
 		qdf_spin_unlock_bh(&reo_list->list_lock);
@@ -1962,13 +2004,15 @@ mgmt_rx_reo_update_list(struct mgmt_rx_reo_list *reo_list,
 
 	frame_desc->list_size_rx = qdf_list_size(&reo_list->list);
 
-	frame_desc->is_stale = false;
-	if (mgmt_rx_reo_is_stale_frame(&reo_list->ts_last_released_frame,
-				       new_frame_global_ts)) {
-		frame_desc->is_stale = true;
-
-		status = mgmt_rx_reo_handle_stale_frame(reo_list, frame_desc);
+	status = mgmt_rx_reo_is_stale_frame(&reo_list->ts_last_released_frame,
+					    frame_desc);
+	if (QDF_IS_STATUS_ERROR(status))
 		goto exit_free_entry;
+
+	if (frame_desc->is_stale) {
+		status = mgmt_rx_reo_handle_stale_frame(reo_list, frame_desc);
+		if (QDF_IS_STATUS_ERROR(status))
+			goto exit_free_entry;
 	}
 
 	qdf_list_for_each(&reo_list->list, cur_entry, node) {
@@ -1997,7 +2041,11 @@ mgmt_rx_reo_update_list(struct mgmt_rx_reo_list *reo_list,
 			      ~MGMT_RX_REO_STATUS_WAIT_FOR_FRAME_ON_OTHER_LINKS;
 	}
 
-	if (frame_desc->type == MGMT_RX_REO_FRAME_DESC_HOST_CONSUMED_FRAME) {
+	if (frame_desc->is_stale)
+		qdf_assert_always(!list_insertion_pos);
+
+	if (frame_desc->type == MGMT_RX_REO_FRAME_DESC_HOST_CONSUMED_FRAME &&
+	    !frame_desc->is_stale) {
 		if (least_greater_entry_found) {
 			status = mgmt_rx_reo_update_wait_count(
 					&new_entry->wait_count,
@@ -2015,6 +2063,7 @@ mgmt_rx_reo_update_list(struct mgmt_rx_reo_list *reo_list,
 
 		new_entry->insertion_ts = qdf_get_log_timestamp();
 		new_entry->ingress_timestamp = frame_desc->ingress_timestamp;
+		new_entry->is_parallel_rx = frame_desc->is_parallel_rx;
 		frame_desc->list_insertion_pos = list_insertion_pos;
 
 		if (least_greater_entry_found)
@@ -2061,7 +2110,6 @@ mgmt_rx_reo_update_list(struct mgmt_rx_reo_list *reo_list,
 	}
 
 	status = QDF_STATUS_SUCCESS;
-	goto exit_release_list_lock;
 
 exit_free_entry:
 	/* Cleanup the entry if it is not queued */
@@ -2075,7 +2123,6 @@ exit_free_entry:
 		qdf_mem_free(new_entry);
 	}
 
-exit_release_list_lock:
 	qdf_spin_unlock_bh(&reo_list->list_lock);
 
 	if (!*is_queued)
