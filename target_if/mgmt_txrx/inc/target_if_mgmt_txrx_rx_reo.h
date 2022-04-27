@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -32,7 +33,8 @@
 
 #ifdef WLAN_MGMT_RX_REO_SUPPORT
 
-#define MGMT_RX_REO_SNAPSHOT_READ_RETRY_LIMIT (5)
+#define MGMT_RX_REO_SNAPSHOT_B2B_READ_SWAR_RETRY_LIMIT     (4)
+#define MGMT_RX_REO_SNAPSHOT_READ_RETRY_LIMIT              (5)
 
 /**
  * target_if_get_mgmt_rx_reo_low_level_ops() - Get low-level ops of management
