@@ -2303,6 +2303,101 @@ util_get_bvmlie_primary_linkid(uint8_t *mlieseq, qdf_size_t mlieseqlen,
 }
 
 QDF_STATUS
+util_get_bvmlie_mldcap(uint8_t *mlieseq, qdf_size_t mlieseqlen,
+		       bool *mldcapfound, uint16_t *mldcap)
+{
+	struct wlan_ie_multilink *mlie_fixed;
+	enum wlan_ml_variant variant;
+	uint16_t mlcontrol;
+	uint16_t presencebitmap;
+	uint8_t *commoninfo;
+	qdf_size_t commoninfolen;
+
+	if (!mlieseq || !mlieseqlen || !mldcapfound || !mldcap)
+		return QDF_STATUS_E_NULL_VALUE;
+
+	*mldcapfound = false;
+	*mldcap = 0;
+
+	if (mlieseqlen < sizeof(struct wlan_ie_multilink))
+		return QDF_STATUS_E_INVAL;
+
+	mlie_fixed = (struct wlan_ie_multilink *)mlieseq;
+
+	if (mlie_fixed->elem_id != WLAN_ELEMID_EXTN_ELEM ||
+	    mlie_fixed->elem_id_ext != WLAN_EXTN_ELEMID_MULTI_LINK)
+		return QDF_STATUS_E_INVAL;
+
+	mlcontrol = qdf_le16_to_cpu(mlie_fixed->mlcontrol);
+
+	variant = QDF_GET_BITS(mlcontrol, WLAN_ML_CTRL_TYPE_IDX,
+			       WLAN_ML_CTRL_TYPE_BITS);
+
+	if (variant != WLAN_ML_VARIANT_BASIC)
+		return QDF_STATUS_E_NOSUPPORT;
+
+	presencebitmap = QDF_GET_BITS(mlcontrol, WLAN_ML_CTRL_PBM_IDX,
+				      WLAN_ML_CTRL_PBM_BITS);
+
+	commoninfo = mlieseq + sizeof(struct wlan_ie_multilink);
+	commoninfolen = 0;
+
+	if (presencebitmap & WLAN_ML_BV_CTRL_PBM_MLDMACADDR_P) {
+		commoninfolen += QDF_MAC_ADDR_SIZE;
+
+		if ((sizeof(struct wlan_ie_multilink) + commoninfolen) >
+				mlieseqlen)
+			return QDF_STATUS_E_PROTO;
+	}
+
+	if (presencebitmap & WLAN_ML_BV_CTRL_PBM_LINKIDINFO_P) {
+		commoninfolen += WLAN_ML_BV_CINFO_LINKIDINFO_SIZE;
+
+		if ((sizeof(struct wlan_ie_multilink) + commoninfolen) >
+				mlieseqlen)
+			return QDF_STATUS_E_PROTO;
+	}
+
+	if (presencebitmap & WLAN_ML_BV_CTRL_PBM_BSSPARAMCHANGECNT_P) {
+		commoninfolen += WLAN_ML_BV_CINFO_BSSPARAMCHNGCNT_SIZE;
+
+		if ((sizeof(struct wlan_ie_multilink) + commoninfolen) >
+				mlieseqlen)
+			return QDF_STATUS_E_PROTO;
+	}
+
+	if (presencebitmap & WLAN_ML_BV_CTRL_PBM_MEDIUMSYNCDELAYINFO_P) {
+		commoninfolen += WLAN_ML_BV_CINFO_MEDMSYNCDELAYINFO_SIZE;
+
+		if ((sizeof(struct wlan_ie_multilink) + commoninfolen) >
+				mlieseqlen)
+			return QDF_STATUS_E_PROTO;
+	}
+
+	if (presencebitmap & WLAN_ML_BV_CTRL_PBM_EMLCAP_P) {
+		commoninfolen += WLAN_ML_BV_CINFO_EMLCAP_SIZE;
+
+		if ((sizeof(struct wlan_ie_multilink) + commoninfolen) >
+				mlieseqlen)
+			return QDF_STATUS_E_PROTO;
+	}
+
+	if (presencebitmap & WLAN_ML_BV_CTRL_PBM_MLDCAP_P) {
+		if ((sizeof(struct wlan_ie_multilink) + commoninfolen +
+					WLAN_ML_BV_CINFO_MLDCAP_SIZE) >
+				mlieseqlen)
+			return QDF_STATUS_E_PROTO;
+
+		*mldcap = *((uint16_t *)(commoninfo + commoninfolen));
+		commoninfolen += WLAN_ML_BV_CINFO_MLDCAP_SIZE;
+
+		*mldcapfound = true;
+	}
+
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS
 util_get_bvmlie_persta_partner_info(uint8_t *mlieseq,
 				    qdf_size_t mlieseqlen,
 				    struct mlo_partner_info *partner_info)
