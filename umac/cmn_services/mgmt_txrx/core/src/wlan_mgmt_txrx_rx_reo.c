@@ -1501,7 +1501,7 @@ mgmt_rx_reo_log_egress_frame_after_delivery(
  */
 static QDF_STATUS
 mgmt_rx_reo_print_egress_frame_info(struct mgmt_rx_reo_context *reo_ctx,
-				    uint16_t num_frames))
+				    uint16_t num_frames)
 {
 	struct reo_egress_debug_info *egress_frame_debug_info;
 	int start_index;
@@ -2389,11 +2389,17 @@ wlan_mgmt_rx_reo_update_host_snapshot(struct wlan_objmgr_pdev *pdev,
 
 	host_ss = &rx_reo_pdev_ctx->host_snapshot;
 
-	/* There should not be any holes in the packet counter */
-	qdf_assert_always(!host_ss->valid ||
-			  mgmt_rx_reo_subtract_pkt_ctrs(
+	/*
+	 * Under back pressure scenarios, FW may drop management Rx frame
+	 * WMI events. So holes in the management packet counter is expected.
+	 * Add a debug print to track the holes.
+	 */
+	if (!(mgmt_rx_reo_subtract_pkt_ctrs(reo_params->mgmt_pkt_ctr,
+					    host_ss->mgmt_pkt_ctr) == 1))
+		mgmt_rx_reo_debug("Pkt ctr gap: link=%u, prev=%u cur=%u ts =%u",
+				  reo_params->link_id, host_ss->mgmt_pkt_ctr,
 				  reo_params->mgmt_pkt_ctr,
-				  host_ss->mgmt_pkt_ctr) == 1);
+				  reo_params->global_timestamp);
 
 	host_ss->valid = true;
 	host_ss->global_timestamp = reo_params->global_timestamp;
@@ -2874,9 +2880,6 @@ wlan_mgmt_rx_reo_algo_entry(struct wlan_objmgr_pdev *pdev,
 {
 	struct mgmt_rx_reo_context *reo_ctx;
 	QDF_STATUS ret;
-	uint8_t frame_type;
-	uint8_t frame_subtype;
-	struct ieee80211_frame *wh;
 
 	if (!is_queued)
 		return QDF_STATUS_E_NULL_VALUE;
@@ -2983,15 +2986,12 @@ wlan_mgmt_rx_reo_algo_entry(struct wlan_objmgr_pdev *pdev,
 	 */
 	qdf_spin_lock(&reo_ctx->reo_algo_entry_lock);
 
-	if ((desc->type == MGMT_RX_REO_FRAME_DESC_HOST_CONSUMED_FRAME ||
-	     desc->type == MGMT_RX_REO_FRAME_DESC_FW_CONSUMED_FRAME) &&
-	    !desc->rx_params->reo_params->valid)
-		qdf_assert_always(0);
+	qdf_assert_always(desc->rx_params->reo_params->valid);
+	qdf_assert_always(desc->frame_type == IEEE80211_FC0_TYPE_MGT);
 
-	wh = (struct ieee80211_frame *)qdf_nbuf_data(desc->nbuf);
-	frame_type = wh->i_fc[0] & IEEE80211_FC0_TYPE_MASK;
-	frame_subtype = wh->i_fc[0] & IEEE80211_FC0_SUBTYPE_MASK;
-	qdf_assert_always(mgmt_type == IEEE80211_FC0_TYPE_MGT);
+	if (desc->type == MGMT_RX_REO_FRAME_DESC_HOST_CONSUMED_FRAME ||
+	    desc->type == MGMT_RX_REO_FRAME_DESC_FW_CONSUMED_FRAME)
+		qdf_assert_always(desc->rx_params->reo_params->duration_us);
 
 	/* Update the Host snapshot */
 	ret = wlan_mgmt_rx_reo_update_host_snapshot(

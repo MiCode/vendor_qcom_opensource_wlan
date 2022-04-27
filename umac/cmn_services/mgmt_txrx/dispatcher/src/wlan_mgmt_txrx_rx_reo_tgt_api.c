@@ -128,6 +128,8 @@ tgt_mgmt_rx_reo_enter_algo_without_buffer(
 	desc.ingress_timestamp = qdf_get_log_timestamp();
 	desc.list_size_rx = -1;
 	desc.list_insertion_pos = -1;
+	desc.frame_type = IEEE80211_FC0_TYPE_MGT;
+	desc.frame_subtype = 0xFF;
 
 	/** If REO is not required for this descriptor,
 	 *  no need to proceed further
@@ -282,6 +284,9 @@ QDF_STATUS tgt_mgmt_rx_reo_frame_handler(
 	wh = (struct ieee80211_frame *)qdf_nbuf_data(buf);
 	frame_type = wh->i_fc[0] & IEEE80211_FC0_TYPE_MASK;
 	frame_subtype = wh->i_fc[0] & IEEE80211_FC0_SUBTYPE_MASK;
+
+	desc.frame_type = frame_type;
+	desc.frame_subtype = frame_subtype;
 
 	/* If REO is not required for this frame, process it right away */
 	if (frame_type != IEEE80211_FC0_TYPE_MGT ||

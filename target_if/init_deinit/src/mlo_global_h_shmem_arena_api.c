@@ -94,7 +94,7 @@ static bool mgmt_rx_reo_snapshot_is_consistent(uint32_t snapshot_low,
 static uint32_t mgmt_rx_reo_snapshot_get_global_timestamp(
 	uint32_t snapshot_low, uint32_t snapshot_high, uint8_t snapshot_version)
 {
-	return MLO_SHMEM_MGMT_RX_REO_SNAPSHOT_GLOBAL_TIMESTAMP_GET_FROM_DWORDS
+	return MLO_SHMEM_MGMT_RX_REO_SNAPSHOT_GLOBAL_TIMESTAMP_GET
 		(snapshot_low, snapshot_high, snapshot_version);
 }
 

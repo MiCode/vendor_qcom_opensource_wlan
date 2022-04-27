@@ -630,6 +630,8 @@ struct mgmt_rx_reo_context {
  * struct mgmt_rx_reo_frame_descriptor - Frame Descriptor used to describe
  * a management frame in mgmt rx reo module.
  * @type: Frame descriptor type
+ * @frame_type: frame type
+ * @frame_subtype: frame subtype
  * @nbuf: nbuf corresponding to this frame
  * @rx_params: Management rx event parameters
  * @wait_count: Wait counts for the frame
@@ -653,6 +655,8 @@ struct mgmt_rx_reo_context {
  */
 struct mgmt_rx_reo_frame_descriptor {
 	enum mgmt_rx_reo_frame_descriptor_type type;
+	uint8_t frame_type;
+	uint8_t frame_subtype;
 	qdf_nbuf_t nbuf;
 	struct mgmt_rx_event_params *rx_params;
 	struct mgmt_rx_reo_wait_count wait_count;

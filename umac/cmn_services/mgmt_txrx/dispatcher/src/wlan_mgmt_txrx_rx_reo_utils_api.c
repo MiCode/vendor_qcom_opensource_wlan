@@ -234,6 +234,8 @@ wlan_mgmt_rx_reo_is_feature_enabled_at_pdev(struct wlan_objmgr_pdev *pdev)
 	return wlan_mgmt_rx_reo_is_feature_enabled_at_psoc(
 			wlan_pdev_get_psoc(pdev));
 }
+
+qdf_export_symbol(wlan_mgmt_rx_reo_is_feature_enabled_at_pdev);
 #else
 bool
 wlan_mgmt_rx_reo_is_feature_enabled_at_psoc(struct wlan_objmgr_psoc *psoc)
