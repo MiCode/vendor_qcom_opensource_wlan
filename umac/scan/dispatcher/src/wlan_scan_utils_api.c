@@ -885,12 +885,13 @@ util_scan_parse_rnr_ie(struct scan_cache_entry *scan_entry,
 		       struct ie_header *ie)
 {
 	uint32_t rnr_ie_len;
-	uint16_t tbtt_count, tbtt_length, i, fieldtype, idx = 0;
+	uint16_t tbtt_count, tbtt_length, i, fieldtype, idx;
 	uint8_t *data;
 	struct neighbor_ap_info_field *neighbor_ap_info;
 
 	rnr_ie_len = ie->ie_len;
 	data = (uint8_t *)ie + sizeof(struct ie_header);
+	idx = scan_entry->rnr.count;
 
 	while (data < ((uint8_t *)ie + rnr_ie_len + 2)) {
 		neighbor_ap_info = (struct neighbor_ap_info_field *)data;
