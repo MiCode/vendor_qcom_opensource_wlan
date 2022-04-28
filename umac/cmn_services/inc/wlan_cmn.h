@@ -348,6 +348,7 @@ enum wlan_umac_comp_id {
 	WLAN_UMAC_COMP_TWT                = 44,
 	WLAN_UMAC_COMP_PRE_CAC            = 45,
 	WLAN_COMP_DP                      = 46,
+	WLAN_COMP_TELEMETRY_AGENT         = 47,
 	WLAN_UMAC_COMP_ID_MAX,
 };
 
