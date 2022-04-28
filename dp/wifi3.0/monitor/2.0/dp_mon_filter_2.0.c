@@ -2404,6 +2404,7 @@ dp_mon_filter_setup_rx_lite_mon(struct dp_mon_pdev_be *be_mon_pdev)
 	rx_tlv_filter->tlv_filter.ppdu_end_user_stats = 1;
 	rx_tlv_filter->tlv_filter.ppdu_end_user_stats_ext = 1;
 	rx_tlv_filter->tlv_filter.ppdu_end_status_done = 1;
+	rx_tlv_filter->tlv_filter.ppdu_start_user_info = 1;
 
 	be_mon_pdev->mon_pdev.current_filter_mode = filter_mode;
 	be_mon_pdev->filter_be[filter_mode][srng_type] = filter;
