@@ -213,7 +213,7 @@ util_scan_get_phymode_11be(struct wlan_objmgr_pdev *pdev,
 		phymode = WLAN_PHYMODE_11BEA_EHT320;
 		break;
 	default:
-		scm_err("Invalid eht_ops width: %d", eht_ops->width);
+		scm_debug("Invalid eht_ops width: %d", eht_ops->width);
 		phymode = WLAN_PHYMODE_11BEA_EHT20;
 		break;
 	}
