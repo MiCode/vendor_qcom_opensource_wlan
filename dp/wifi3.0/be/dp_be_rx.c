@@ -1289,7 +1289,6 @@ dp_rx_intrabss_ucast_check_be(qdf_nbuf_t nbuf,
 	struct dp_txrx_peer *da_peer;
 	bool ret = false;
 	uint8_t dest_chip_id;
-	uint8_t soc_idx;
 	dp_txrx_ref_handle txrx_ref_handle = NULL;
 	struct dp_vdev_be *be_vdev =
 		dp_get_be_vdev_from_dp_vdev(ta_peer->vdev);
@@ -1303,21 +1302,39 @@ dp_rx_intrabss_ucast_check_be(qdf_nbuf_t nbuf,
 	qdf_assert_always(dest_chip_id <= (DP_MLO_MAX_DEST_CHIP_ID - 1));
 	da_peer_id = HAL_RX_PEER_ID_GET(msdu_metadata);
 
-	/* TA is MLD peer */
-	if (be_soc->mlo_enabled && ta_peer->mld_peer) {
+	/* use dest chip id when TA is MLD peer and DA is legacy */
+	if (be_soc->mlo_enabled &&
+	    ta_peer->mld_peer &&
+	    !(da_peer_id & HAL_RX_DA_IDX_ML_PEER_MASK)) {
 		/* validate chip_id, get a ref, and re-assign soc */
 		params->dest_soc =
 			dp_mlo_get_soc_ref_by_chip_id(be_soc->ml_ctxt,
 						      dest_chip_id);
 		if (!params->dest_soc)
 			return false;
-	}
 
-	da_peer = dp_txrx_peer_get_ref_by_id(params->dest_soc, da_peer_id,
-					     &txrx_ref_handle, DP_MOD_ID_RX);
-	if (!da_peer)
-		return false;
-	/* soc unref if needed */
+		da_peer = dp_txrx_peer_get_ref_by_id(params->dest_soc,
+						     da_peer_id,
+						     &txrx_ref_handle,
+						     DP_MOD_ID_RX);
+		if (!da_peer)
+			return false;
+
+		ret = true;
+	} else {
+		da_peer = dp_txrx_peer_get_ref_by_id(params->dest_soc,
+						     da_peer_id,
+						     &txrx_ref_handle,
+						     DP_MOD_ID_RX);
+		if (!da_peer)
+			return false;
+
+		params->dest_soc = da_peer->vdev->pdev->soc;
+		if (!params->dest_soc)
+			goto rel_da_peer;
+
+		ret = true;
+	}
 
 	params->tx_vdev_id = da_peer->vdev->vdev_id;
 
@@ -1339,20 +1356,15 @@ dp_rx_intrabss_ucast_check_be(qdf_nbuf_t nbuf,
 
 	/* MLO specific Intra-BSS check */
 	if (dp_rx_intrabss_fwd_mlo_allow(ta_peer, da_peer)) {
-		/* TA is legacy peer */
-		if (!ta_peer->mld_peer) {
-			params->dest_soc = da_peer->vdev->pdev->soc;
-			ret = true;
-			goto rel_da_peer;
-		}
-		/* index of soc in the array */
-		soc_idx = dest_chip_id << DP_MLO_DEST_CHIP_ID_SHIFT;
-		if (!(be_vdev->partner_vdev_list[soc_idx][0] ==
-		      params->tx_vdev_id) &&
-		    !(be_vdev->partner_vdev_list[soc_idx][1] ==
-		      params->tx_vdev_id)) {
-			/*dp_soc_unref_delete(soc);*/
-			goto rel_da_peer;
+		/* use dest chip id for legacy dest peer */
+		if (!(da_peer_id & HAL_RX_DA_IDX_ML_PEER_MASK)) {
+			if (!(be_vdev->partner_vdev_list[dest_chip_id][0] ==
+			      params->tx_vdev_id) &&
+			    !(be_vdev->partner_vdev_list[dest_chip_id][1] ==
+			      params->tx_vdev_id)) {
+				/*dp_soc_unref_delete(soc);*/
+				goto rel_da_peer;
+			}
 		}
 		ret = true;
 	}
