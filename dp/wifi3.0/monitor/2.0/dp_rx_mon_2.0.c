@@ -35,6 +35,114 @@
 #include "dp_lite_mon.h"
 #endif
 
+#define F_MASK 0xFFFF
+
+#ifdef QCA_TEST_MON_PF_TAGS_STATS
+
+/**
+ * dp_mon_rx_pf_update_stats() - update protocol flow tags stats
+ *
+ * @pdev: pdev
+ * @flow_idx: Protocol index for which the stats should be incremented
+ * @cce_metadata: Cached CCE metadata value received from MSDU_END TLV
+ *
+ * Return: void
+ */
+static void
+dp_rx_mon_pf_update_stats(struct dp_pdev *dp_pdev, uint32_t flow_idx,
+			  uint16_t cce_metadata)
+{
+	dp_mon_rx_update_rx_flow_tag_stats(pdev, flow_idx);
+	dp_mon_rx_update_rx_err_protocol_tag_stats(pdev, cce_metadata);
+	dp_mon_rx_update_rx_protocol_tag_stats(pdev, cce_metada,
+					       MAX_REO_DEST_RINGS);
+}
+
+#else
+static void
+dp_rx_mon_pf_update_stats(struct dp_pdev *dp_pdev, uint32_t flow_idx,
+			  uint16_t cce_metadata)
+{
+}
+#endif
+
+void
+dp_rx_mon_shift_pf_tag_in_headroom(qdf_nbuf_t nbuf, struct dp_soc *soc)
+{
+	if (qdf_unlikely(!soc)) {
+		dp_mon_err("Soc[%pK] Null. Can't update pftag to nbuf headroom",
+			   soc);
+		qdf_assert_always(0);
+	}
+
+	if (!wlan_cfg_is_rx_mon_protocol_flow_tag_enabled(soc->wlan_cfg_ctx))
+		return;
+
+	if (qdf_unlikely(!nbuf))
+		return;
+
+	if (qdf_unlikely(qdf_nbuf_headroom(nbuf) <
+			 (DP_RX_MON_TOT_PF_TAG_LEN * 2))) {
+		dp_mon_err("Headroom[%d] < 2 *DP_RX_MON_PF_TAG_TOT_LEN[%lu]",
+			   qdf_nbuf_headroom(nbuf), DP_RX_MON_TOT_PF_TAG_LEN);
+		return;
+	}
+
+	qdf_nbuf_push_head(nbuf, DP_RX_MON_TOT_PF_TAG_LEN);
+	qdf_mem_copy(qdf_nbuf_data(nbuf), qdf_nbuf_head(nbuf),
+		     DP_RX_MON_TOT_PF_TAG_LEN);
+	qdf_nbuf_pull_head(nbuf, DP_RX_MON_TOT_PF_TAG_LEN);
+}
+
+void
+dp_rx_mon_pf_tag_to_buf_headroom_2_0(void *nbuf,
+				     struct hal_rx_ppdu_info *ppdu_info,
+				     struct dp_pdev *pdev, struct dp_soc *soc)
+{
+	uint8_t *nbuf_head = NULL;
+	uint8_t user_id = ppdu_info->user_id;
+	struct hal_rx_mon_msdu_info *msdu_info = &ppdu_info->msdu[user_id];
+	uint16_t flow_id = ppdu_info->rx_msdu_info[user_id].flow_idx;
+	uint16_t cce_metadata = ppdu_info->rx_msdu_info[user_id].cce_metadata -
+				RX_PROTOCOL_TAG_START_OFFSET;
+	uint16_t protocol_tag = pdev->rx_proto_tag_map[cce_metadata].tag;
+	uint32_t flow_tag = ppdu_info->rx_msdu_info[user_id].fse_metadata &
+			    F_MASK;
+
+	if (qdf_unlikely(!soc)) {
+		dp_mon_err("Soc[%pK] Null. Can't update pftag to nbuf headroom",
+			   soc);
+		qdf_assert_always(0);
+	}
+
+	if (!wlan_cfg_is_rx_mon_protocol_flow_tag_enabled(soc->wlan_cfg_ctx))
+		return;
+
+	if (qdf_unlikely(!nbuf))
+		return;
+
+	/* Headroom must be double of PF_TAG_SIZE as we copy it 1stly to head */
+	if (qdf_unlikely(qdf_nbuf_headroom(nbuf) <
+			 (DP_RX_MON_TOT_PF_TAG_LEN * 2))) {
+		dp_mon_err("Headroom[%d] < 2 * DP_RX_MON_PF_TAG_TOT_LEN[%lu]",
+			   qdf_nbuf_headroom(nbuf), DP_RX_MON_TOT_PF_TAG_LEN);
+		return;
+	}
+
+	if (msdu_info->msdu_index >= QDF_NBUF_MAX_FRAGS) {
+		dp_mon_err("msdu_index causes overflow in headroom");
+		return;
+	}
+
+	dp_rx_mon_pf_update_stats(pdev, flow_id, cce_metadata);
+
+	nbuf_head = qdf_nbuf_head(nbuf);
+	nbuf_head += (msdu_info->msdu_index * DP_RX_MON_PF_TAG_SIZE);
+	*((uint16_t *)nbuf_head) = protocol_tag;
+	nbuf_head += sizeof(uint16_t);
+	*((uint16_t *)nbuf_head) = flow_tag;
+}
+
 /**
  * dp_rx_mon_free_ppdu_info () - Free PPDU info
  * @pdev: DP pdev
@@ -177,6 +285,9 @@ dp_rx_mon_process_ppdu_info(struct dp_pdev *pdev,
 					dp_mon_err("failed to update radiotap pdev: %pK",
 						   pdev);
 				}
+
+				dp_rx_mon_shift_pf_tag_in_headroom(mpdu,
+								   pdev->soc);
 
 				/* Deliver MPDU to osif layer */
 				status = dp_rx_mon_deliver_mpdu(mon_pdev,
@@ -897,6 +1008,8 @@ uint8_t dp_rx_mon_process_tlv_status(struct dp_pdev *pdev,
 		last_buf_info->reception_type = msdu_info->reception_type;
 		last_buf_info->msdu_len = msdu_info->msdu_len;
 
+		dp_rx_mon_pf_tag_to_buf_headroom_2_0(nbuf, ppdu_info, pdev,
+						     soc);
 		/* reset msdu info for next msdu for same user */
 		qdf_mem_zero(msdu_info, sizeof(msdu_info));
 

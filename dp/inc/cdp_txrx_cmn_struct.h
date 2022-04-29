@@ -2691,12 +2691,16 @@ struct cdp_flow_stats {
 /**
  * cdp_flow_stats - Per-Flow (5-tuple) statistics
  * @msdu_count: number of rx msdus matching this flow
+ * @mon_msdu_count: number of msdus matching this flow in mon path
  *
  * HW also includes msdu_byte_count and timestamp, which
  * are not currently tracked in SW.
  */
 struct cdp_flow_stats {
 	uint32_t msdu_count;
+#ifdef QCA_TEST_MON_PF_TAGS_STATS
+	uint32_t mon_msdu_count;
+#endif
 };
 #endif
 

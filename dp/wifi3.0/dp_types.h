@@ -2542,9 +2542,17 @@ struct rx_protocol_tag_map {
 	uint16_t tag;
 };
 
+/**
+ * rx_protocol_tag_stats - protocol statistics
+ * @tag_ctr: number of rx msdus matching this tag
+ * @mon_tag_ctr: number of msdus matching this tag in mon path
+ */
 #ifdef WLAN_SUPPORT_RX_TAG_STATISTICS
 struct rx_protocol_tag_stats {
 	uint32_t tag_ctr;
+#ifdef QCA_TEST_MON_PF_TAGS_STATS
+	uint32_t mon_tag_ctr;
+#endif
 };
 #endif /* WLAN_SUPPORT_RX_TAG_STATISTICS */
 
