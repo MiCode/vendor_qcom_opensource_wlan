@@ -36,6 +36,70 @@
 #endif
 
 /**
+ * dp_rx_mon_free_ppdu_info () - Free PPDU info
+ * @pdev: DP pdev
+ * @ppdu_info: PPDU info
+ *
+ * Return: Void
+ */
+static void
+dp_rx_mon_free_ppdu_info(struct dp_pdev *pdev,
+			 struct hal_rx_ppdu_info *ppdu_info)
+{
+	uint8_t user;
+
+	for (user = 0; user < ppdu_info->com_info.num_users; user++) {
+		uint16_t mpdu_count  = ppdu_info->mpdu_count[user];
+		uint16_t mpdu_idx;
+		qdf_nbuf_t mpdu;
+
+		for (mpdu_idx = 0; mpdu_idx < mpdu_count; mpdu_idx++) {
+			mpdu = (qdf_nbuf_t)ppdu_info->mpdu_q[user][mpdu_idx];
+
+			if (!mpdu)
+				continue;
+			qdf_nbuf_free(mpdu);
+		}
+	}
+}
+
+void dp_rx_mon_drain_wq(struct dp_pdev *pdev)
+{
+	struct dp_mon_pdev *mon_pdev;
+	struct hal_rx_ppdu_info *ppdu_info = NULL;
+	struct hal_rx_ppdu_info *temp_ppdu_info = NULL;
+	struct dp_mon_pdev_be *mon_pdev_be;
+
+	if (qdf_unlikely(!pdev)) {
+		dp_mon_debug("Pdev is NULL");
+		return;
+	}
+
+	mon_pdev = (struct dp_mon_pdev *)pdev->monitor_pdev;
+	if (qdf_unlikely(!mon_pdev)) {
+		dp_mon_debug("monitor pdev is NULL");
+		return;
+	}
+
+	mon_pdev_be = dp_get_be_mon_pdev_from_dp_mon_pdev(mon_pdev);
+
+	qdf_spin_lock_bh(&mon_pdev_be->rx_mon_wq_lock);
+	if (!TAILQ_EMPTY(&mon_pdev_be->rx_mon_queue)) {
+		TAILQ_FOREACH_SAFE(ppdu_info,
+				   &mon_pdev_be->rx_mon_queue,
+				   ppdu_list_elem,
+				   temp_ppdu_info) {
+			TAILQ_REMOVE(&mon_pdev_be->rx_mon_queue,
+				     ppdu_info, ppdu_list_elem);
+
+			dp_rx_mon_free_ppdu_info(pdev, ppdu_info);
+			qdf_mem_free(ppdu_info);
+		}
+	}
+	qdf_spin_unlock_bh(&mon_pdev_be->rx_mon_wq_lock);
+}
+
+/**
  * dp_rx_mon_deliver_mpdu() - Deliver MPDU to osif layer
  *
  * @mon_pdev: monitor pdev
@@ -613,8 +677,6 @@ uint8_t dp_rx_mon_process_tlv_status(struct dp_pdev *pdev,
 	uint8_t user_id = ppdu_info->user_id;
 	uint8_t mpdu_idx = ppdu_info->mpdu_count[user_id];
 	uint16_t num_frags;
-	uint8_t *data;
-	struct ieee80211_frame *qwh;
 	uint8_t num_buf_reaped = 0;
 
 	if (!mon_pdev->monitor_configured &&
@@ -656,8 +718,6 @@ uint8_t dp_rx_mon_process_tlv_status(struct dp_pdev *pdev,
 						     true);
 
 
-				data = (uint8_t *)qdf_nbuf_get_frag_addr(nbuf, 0);
-				qwh = (struct ieee80211_frame *)data;
 
 			} else {
 				dp_mon_err("num_frags exceeding MAX frags");
@@ -721,6 +781,18 @@ uint8_t dp_rx_mon_process_tlv_status(struct dp_pdev *pdev,
 		nbuf = ppdu_info->mpdu_q[user_id][mpdu_idx];
 
 		mpdu_info->full_pkt = true;
+		if (qdf_unlikely(!nbuf)) {
+			nbuf = qdf_nbuf_alloc(pdev->soc->osdev,
+					      DP_RX_MON_MAX_MONITOR_HEADER,
+					      DP_RX_MON_MAX_MONITOR_HEADER,
+					      4, FALSE);
+
+			if (!nbuf) {
+				dp_mon_err("nbuf allocation failed ...");
+				qdf_frag_free(addr);
+				return num_buf_reaped;
+			}
+		}
 
 		if (mpdu_info->decap_type == HAL_HW_RX_DECAP_FORMAT_RAW) {
 			if (mpdu_info->first_rx_hdr_rcvd) {

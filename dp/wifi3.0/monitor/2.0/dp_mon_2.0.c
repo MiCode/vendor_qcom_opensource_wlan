@@ -93,6 +93,7 @@ QDF_STATUS dp_mon_pdev_ext_deinit_2_0(struct dp_pdev *pdev)
 	if (!mon_pdev_be->rx_mon_workqueue)
 		return QDF_STATUS_E_FAILURE;
 
+	dp_rx_mon_drain_wq(pdev);
 	qdf_flush_workqueue(0, mon_pdev_be->rx_mon_workqueue);
 	qdf_destroy_workqueue(0, mon_pdev_be->rx_mon_workqueue);
 	qdf_flush_work(&mon_pdev_be->rx_mon_work);
@@ -430,7 +431,7 @@ void dp_vdev_set_monitor_mode_buf_rings_2_0(struct dp_pdev *pdev)
 	}
 
 	if (dp_rx_mon_buffers_alloc(soc,
-				    (rx_mon_max_entries - mon_soc_be->tx_mon_ring_fill_level))) {
+				    (rx_mon_max_entries - mon_soc_be->rx_mon_ring_fill_level))) {
 		dp_mon_err("%pK: Rx mon buffers allocation failed", soc);
 		return;
 	}

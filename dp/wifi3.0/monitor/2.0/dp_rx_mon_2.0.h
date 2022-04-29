@@ -191,4 +191,13 @@ dp_mon_rx_stats_update_rssi_dbm_params_2_0(struct dp_soc *soc,
 					   struct dp_mon_pdev *mon_pdev)
 { }
 #endif
+
+/**
+ * dp_rx_mon_drain_wq() - Drain monitor buffers from rxmon workqueue
+ *
+ * @pdev: DP pdev handle
+ *
+ * Return: Void
+ */
+void dp_rx_mon_drain_wq(struct dp_pdev *pdev);
 #endif /* _DP_RX_MON_2_0_H_ */

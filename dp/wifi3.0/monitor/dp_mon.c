@@ -5183,6 +5183,11 @@ QDF_STATUS dp_mon_pdev_deinit(struct dp_pdev *pdev)
 		return QDF_STATUS_SUCCESS;
 
 	dp_mon_filters_reset(pdev);
+
+	/* mon pdev extended deinit */
+	if (mon_ops->mon_pdev_ext_deinit)
+		mon_ops->mon_pdev_ext_deinit(pdev);
+
 	/* detach monitor function */
 	dp_monitor_tx_ppdu_stats_detach(pdev);
 
