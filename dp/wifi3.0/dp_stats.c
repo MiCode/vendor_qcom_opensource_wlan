@@ -6153,7 +6153,19 @@ static void dp_peer_print_reo_qref_table(struct dp_peer *peer)
 	uint32_t peer_idx;
 
 	hal = (struct hal_soc *)peer->vdev->pdev->soc->hal_soc;
+
+	if (!hal_reo_shared_qaddr_is_enable((hal_soc_handle_t)hal))
+		return;
+
 	peer_idx = (peer->peer_id * DP_MAX_TIDS);
+
+	if ((!hal->reo_qref.non_mlo_reo_qref_table_vaddr) ||
+	    (!hal->reo_qref.mlo_reo_qref_table_vaddr)) {
+		QDF_TRACE(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_ERROR,
+			  FL("REO shared table not allocated"));
+		return;
+	}
+
 	reo_qref_addr = &hal->reo_qref.non_mlo_reo_qref_table_vaddr[peer_idx];
 	mld_peer = DP_GET_MLD_PEER_FROM_PEER(peer);
 	if (mld_peer) {
