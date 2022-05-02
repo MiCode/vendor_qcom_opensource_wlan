@@ -2863,6 +2863,13 @@ static uint8_t *update_peer_flags_tlv_ehtinfo(
 		buf_ptr += sizeof(wmi_eht_rate_set);
 	}
 
+	wmi_debug("nss %d ru mask 0x%x",
+		  cmd->peer_eht_ppet.numss_m1, cmd->peer_eht_ppet.ru_mask);
+	for (i = 0; i <  WMI_MAX_NUM_SS; i++) {
+		wmi_debug("ppet idx %d ppet %x ",
+			  i, cmd->peer_eht_ppet.ppet16_ppet8_ru3_ru0[i]);
+	}
+
 	if ((param->eht_flag) && (param->peer_eht_mcs_count > 1) &&
 	    (param->peer_eht_rx_mcs_set[WMI_HOST_EHT_TXRX_MCS_NSS_IDX_160]
 	     == WMI_HOST_EHT_INVALID_MCSNSSMAP ||
