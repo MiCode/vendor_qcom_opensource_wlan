@@ -1404,6 +1404,9 @@ struct dp_ast_entry *dp_peer_ast_hash_find_soc(struct dp_soc *soc,
 	unsigned index;
 	struct dp_ast_entry *ase;
 
+	if (!soc->ast_hash.bins)
+		return NULL;
+
 	qdf_mem_copy(&local_mac_addr_aligned.raw[0],
 			ast_mac_addr, QDF_MAC_ADDR_SIZE);
 	mac_addr = &local_mac_addr_aligned;
