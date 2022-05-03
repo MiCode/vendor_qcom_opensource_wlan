@@ -1308,6 +1308,36 @@ cdp_tso_soc_detach(ol_txrx_soc_handle soc)
 }
 
 /**
+ * cdp_tid_update_ba_win_size() - Update the DP tid BA window size
+ * @soc: soc handle
+ * @peer_mac: mac address of peer handle
+ * @vdev_id: id of vdev handle
+ * @tid: tid
+ * @buffersize: BA window size
+ *
+ * Return: success/failure of tid update
+ */
+static inline QDF_STATUS
+cdp_tid_update_ba_win_size(ol_txrx_soc_handle soc,
+			   uint8_t *peer_mac, uint16_t vdev_id, uint8_t tid,
+			   uint16_t buffersize)
+{
+	if (!soc || !soc->ops) {
+		dp_cdp_debug("Invalid Instance:");
+		QDF_BUG(0);
+		return 0;
+	}
+
+	if (!soc->ops->cmn_drv_ops ||
+	    !soc->ops->cmn_drv_ops->tid_update_ba_win_size)
+		return 0;
+
+	return soc->ops->cmn_drv_ops->tid_update_ba_win_size(soc, peer_mac,
+							     vdev_id, tid,
+							     buffersize);
+}
+
+/**
  * cdp_addba_resp_tx_completion() - Indicate addba response tx
  * completion to dp to change tid state.
  * @soc: soc handle
