@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -487,6 +488,23 @@ typedef struct ipa_wlan_msg __qdf_ipa_wlan_msg_t;
 	(((struct ipa_wlan_msg *)(ipa_msg))->name)
 #define QDF_IPA_WLAN_MSG_MAC_ADDR(ipa_msg)	\
 	(((struct ipa_wlan_msg *)(ipa_msg))->mac_addr)
+
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0))
+#define QDF_IPA_WLAN_MSG_NETDEV_IF_ID(ipa_msg)	\
+	(((struct ipa_wlan_msg *)(ipa_msg))->if_index)
+#else
+/**
+ * ipa_wlan_msg_if_index - Netdev interface id
+ */
+struct ipa_wlan_msg_if_index {
+	char name[IPA_RESOURCE_NAME_MAX];
+	uint8_t mac_addr[IPA_MAC_ADDR_SIZE];
+	uint16_t if_index;
+};
+
+#define QDF_IPA_WLAN_MSG_NETDEV_IF_ID(ipa_msg)	\
+	(((struct ipa_wlan_msg_if_index *)(ipa_msg))->if_index)
+#endif
 
 typedef struct ipa_wlan_msg_ex __qdf_ipa_wlan_msg_ex_t;
 
