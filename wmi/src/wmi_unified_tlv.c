@@ -17190,6 +17190,9 @@ extract_vdev_tsf_report_event_tlv(wmi_unified_t wmi_handle, void *evt_buf,
 	param->mac_id_valid = evt->mac_id_valid;
 	param->wlan_global_tsf_low = evt->wlan_global_tsf_low;
 	param->wlan_global_tsf_high = evt->wlan_global_tsf_high;
+	param->tqm_timer_low = evt->tqm_timer_low;
+	param->tqm_timer_high = evt->tqm_timer_high;
+	param->use_tqm_timer = evt->use_tqm_timer;
 
 	return QDF_STATUS_SUCCESS;
 }

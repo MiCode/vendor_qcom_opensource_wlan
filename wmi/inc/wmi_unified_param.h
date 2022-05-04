@@ -4711,6 +4711,9 @@ struct wmi_host_tsf_event {
 	uint32_t mac_id_valid;
 	uint32_t wlan_global_tsf_low;
 	uint32_t wlan_global_tsf_high;
+	uint32_t tqm_timer_low;
+	uint32_t tqm_timer_high;
+	uint32_t use_tqm_timer;
 };
 
 #define WMI_EVENT_ID_INVALID 0
