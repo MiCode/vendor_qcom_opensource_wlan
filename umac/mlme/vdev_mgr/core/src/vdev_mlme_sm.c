@@ -2090,7 +2090,7 @@ struct wlan_sm_state_info sm_info[] = {
 		(uint8_t)WLAN_VDEV_S_UP,
 		(uint8_t)WLAN_SM_ENGINE_STATE_NONE,
 		false,
-		"UP-MLO-SYNC-WAIT",
+		"UP-MLO_SYNC_WAIT",
 		mlme_vdev_subst_mlo_sync_wait_entry,
 		mlme_vdev_subst_mlo_sync_wait_exit,
 		mlme_vdev_subst_mlo_sync_wait_event
@@ -2100,7 +2100,7 @@ struct wlan_sm_state_info sm_info[] = {
 		(uint8_t)WLAN_VDEV_S_UP,
 		(uint8_t)WLAN_SM_ENGINE_STATE_NONE,
 		false,
-		"UP-UP-ACTIVE",
+		"UP-UP_ACTIVE",
 		mlme_vdev_subst_up_active_entry,
 		mlme_vdev_subst_up_active_exit,
 		mlme_vdev_subst_up_active_event
