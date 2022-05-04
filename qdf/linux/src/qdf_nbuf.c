@@ -5881,7 +5881,7 @@ qdf_export_symbol(qdf_nbuf_remove_frag_debug);
  *
  * Return: qdf_nbuf_t
  */
-static inline qdf_nbuf_t qdf_get_nbuf_valid_frag(qdf_nbuf_t nbuf)
+qdf_nbuf_t qdf_get_nbuf_valid_frag(qdf_nbuf_t nbuf)
 {
 	qdf_nbuf_t last_nbuf;
 	uint32_t num_frags;
@@ -5892,10 +5892,10 @@ static inline qdf_nbuf_t qdf_get_nbuf_valid_frag(qdf_nbuf_t nbuf)
 	num_frags = qdf_nbuf_get_nr_frags(nbuf);
 
 	/* Check nbuf has enough memory to store frag memory */
-	if (num_frags <= QDF_NBUF_MAX_FRAGS)
+	if (num_frags < QDF_NBUF_MAX_FRAGS)
 		return nbuf;
 
-	if (num_frags > QDF_NBUF_MAX_FRAGS && !__qdf_nbuf_has_fraglist(nbuf))
+	if (!__qdf_nbuf_has_fraglist(nbuf))
 		return NULL;
 
 	last_nbuf = __qdf_nbuf_get_last_frag_list_nbuf(nbuf);
@@ -5908,6 +5908,8 @@ static inline qdf_nbuf_t qdf_get_nbuf_valid_frag(qdf_nbuf_t nbuf)
 
 	return NULL;
 }
+
+qdf_export_symbol(qdf_get_nbuf_valid_frag);
 
 /**
  * qdf_nbuf_add_frag_debug() - Add frag to nbuf

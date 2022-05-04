@@ -294,6 +294,7 @@ dp_rx_mon_handle_full_mon(struct dp_pdev *pdev,
 	qdf_nbuf_t head_msdu, msdu_cur;
 	void *frag_addr;
 	bool prev_msdu_end_received = false;
+	bool is_nbuf_head = true;
 
 	/***************************************************************************
 	 *********************** Non-raw packet ************************************
@@ -567,7 +568,12 @@ dp_rx_mon_handle_full_mon(struct dp_pdev *pdev,
 			/* reset tot_msdu_len */
 			tot_msdu_len = 0;
 		}
-		msdu_cur = NULL;
+		if (is_nbuf_head) {
+			msdu_cur = qdf_nbuf_get_ext_list(msdu_cur);
+			is_nbuf_head = false;
+		} else {
+			msdu_cur = qdf_nbuf_queue_next(msdu_cur);
+		}
 	}
 }
 
@@ -672,7 +678,7 @@ uint8_t dp_rx_mon_process_tlv_status(struct dp_pdev *pdev,
 {
 	struct dp_soc *soc  = pdev->soc;
 	struct dp_mon_pdev *mon_pdev = pdev->monitor_pdev;
-	qdf_nbuf_t nbuf;
+	qdf_nbuf_t nbuf, tmp_nbuf;
 	qdf_frag_t addr;
 	uint8_t user_id = ppdu_info->user_id;
 	uint8_t mpdu_idx = ppdu_info->mpdu_count[user_id];
@@ -736,10 +742,31 @@ uint8_t dp_rx_mon_process_tlv_status(struct dp_pdev *pdev,
 				break;
 
 			nbuf = ppdu_info->mpdu_q[user_id][mpdu_idx];
-			num_frags = qdf_nbuf_get_nr_frags(nbuf);
+			if (qdf_unlikely(!nbuf)) {
+				dp_mon_err("nbuf is NULL");
+				qdf_assert_always(0);
+			}
+
+			tmp_nbuf = qdf_get_nbuf_valid_frag(nbuf);
+
+			if (!tmp_nbuf) {
+				tmp_nbuf = qdf_nbuf_alloc(pdev->soc->osdev,
+							  DP_RX_MON_MAX_MONITOR_HEADER,
+							  DP_RX_MON_MAX_MONITOR_HEADER,
+							  4, FALSE);
+				if (qdf_unlikely(!tmp_nbuf)) {
+					dp_mon_err("nbuf is NULL");
+					qdf_assert_always(0);
+				}
+				/* add new skb to frag list */
+				qdf_nbuf_append_ext_list(nbuf, tmp_nbuf,
+							 qdf_nbuf_len(tmp_nbuf));
+			}
+
+			num_frags = qdf_nbuf_get_nr_frags(tmp_nbuf);
 			if (num_frags < QDF_NBUF_MAX_FRAGS) {
 				qdf_nbuf_add_rx_frag(status_frag,
-						     nbuf,
+						     tmp_nbuf,
 						     ppdu_info->data - (unsigned char *)status_frag + 4,
 						     ppdu_info->hdr_len - DP_RX_MON_RX_HDR_OFFSET,
 						     DP_MON_DATA_BUFFER_SIZE,
