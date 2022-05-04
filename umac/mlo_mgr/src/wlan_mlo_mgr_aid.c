@@ -36,16 +36,221 @@ static void mlo_peer_set_aid_bit(struct wlan_ml_vdev_aid_mgr *ml_aid_mgr,
 	}
 }
 
-static uint16_t wlan_mlo_peer_alloc_aid(
+static bool wlan_mlo_check_aid_free(struct wlan_ml_vdev_aid_mgr *ml_aid_mgr,
+				    uint16_t assoc_idx, bool skip_link,
+				    uint8_t link_ix)
+{
+	uint16_t j;
+	struct wlan_vdev_aid_mgr *vdev_aid_mgr;
+
+	for (j = 0; j < WLAN_UMAC_MLO_MAX_VDEVS; j++) {
+		if (skip_link && j == link_ix)
+			continue;
+
+		vdev_aid_mgr = ml_aid_mgr->aid_mgr[j];
+		if (vdev_aid_mgr &&
+		    qdf_test_bit(assoc_idx, vdev_aid_mgr->aid_bitmap))
+			break;
+
+		/* AID is free */
+		if (j == WLAN_UMAC_MLO_MAX_VDEVS - 1)
+			return true;
+	}
+
+	return false;
+}
+
+static bool wlan_mlo_aid_idx_check(uint16_t start_idx, uint16_t end_idx,
+				   uint16_t curr_idx)
+{
+	if (start_idx < end_idx)
+		return (curr_idx < end_idx);
+
+	return (curr_idx >= end_idx);
+}
+
+static int32_t wlan_mlo_aid_idx_update(uint16_t start_idx, uint16_t end_idx,
+				       uint16_t curr_idx)
+{
+	if (start_idx < end_idx)
+		return (curr_idx + 1);
+
+	if (curr_idx >= end_idx)
+		return ((int32_t)curr_idx - 1);
+
+	mlo_err("AID index is out of sync");
+	QDF_BUG(0);
+	return 0;
+}
+
+static uint16_t wlan_mlo_alloc_aid(struct wlan_ml_vdev_aid_mgr *ml_aid_mgr,
+				   uint16_t start_idx, uint16_t end_idx,
+				   uint8_t link_ix, bool is_mlo_peer)
+{
+	uint16_t assoc_id = (uint16_t)-1;
+	struct wlan_vdev_aid_mgr *vdev_aid_mgr;
+	uint16_t first_aid = 0;
+	uint16_t assoc_idx = start_idx;
+	int32_t signed_assoc_idx = assoc_idx;
+
+	while (wlan_mlo_aid_idx_check(start_idx, end_idx, assoc_idx)) {
+		if (qdf_test_bit(assoc_idx, ml_aid_mgr->aid_bitmap)) {
+			signed_assoc_idx = wlan_mlo_aid_idx_update(start_idx,
+								   end_idx,
+								   assoc_idx);
+			if (signed_assoc_idx < 0)
+				break;
+
+			assoc_idx = signed_assoc_idx;
+			continue;
+		}
+
+		if (is_mlo_peer) {
+			if (wlan_mlo_check_aid_free(ml_aid_mgr, assoc_idx,
+						    false, link_ix)) {
+				/* associd available */
+				mlo_peer_set_aid_bit(ml_aid_mgr, assoc_idx);
+				qdf_set_bit(assoc_idx, ml_aid_mgr->aid_bitmap);
+				assoc_id = assoc_idx + 1;
+				break;
+			}
+		} else {
+			vdev_aid_mgr = ml_aid_mgr->aid_mgr[link_ix];
+			if (!vdev_aid_mgr)
+				break;
+
+			if (qdf_test_bit(assoc_idx, vdev_aid_mgr->aid_bitmap)) {
+				signed_assoc_idx =
+					wlan_mlo_aid_idx_update(start_idx,
+								end_idx,
+								assoc_idx);
+				if (signed_assoc_idx < 0)
+					break;
+
+				assoc_idx = signed_assoc_idx;
+				continue;
+			}
+
+			if (!first_aid)
+				first_aid = assoc_idx + 1;
+
+			/* Check whether this bit used by other VDEV
+			 * Non-MLO peers
+			 */
+			if (!wlan_mlo_check_aid_free(ml_aid_mgr, assoc_idx,
+						     true, link_ix)) {
+				/* Assoc ID is used by other link, return this
+				 * aid to caller
+				 */
+				assoc_id = assoc_idx + 1;
+				vdev_aid_mgr = ml_aid_mgr->aid_mgr[link_ix];
+				qdf_set_bit(assoc_idx,
+					    vdev_aid_mgr->aid_bitmap);
+				first_aid = 0;
+				break;
+			}
+		}
+
+		signed_assoc_idx = wlan_mlo_aid_idx_update(start_idx,
+							   end_idx, assoc_idx);
+		if (signed_assoc_idx < 0)
+			break;
+		assoc_idx = signed_assoc_idx;
+	}
+
+	if ((!is_mlo_peer) && first_aid) {
+		vdev_aid_mgr = ml_aid_mgr->aid_mgr[link_ix];
+		qdf_set_bit(first_aid - 1, vdev_aid_mgr->aid_bitmap);
+		assoc_id = first_aid;
+	}
+
+	return assoc_id;
+}
+
+#ifdef WLAN_FEATURE_T2LM
+#define AID_NUM_BUCKET 3
+static uint16_t _wlan_mlo_peer_alloc_aid(
 		struct wlan_ml_vdev_aid_mgr *ml_aid_mgr,
-		bool is_mlo_peer,
+		bool is_mlo_peer, bool t2lm_peer,
 		uint8_t link_ix)
 {
 	uint16_t assoc_id = (uint16_t)-1;
-	uint16_t i, j;
-	struct wlan_vdev_aid_mgr *vdev_aid_mgr;
-	uint16_t first_aid = 0;
-	uint16_t start_aid;
+	uint16_t start_aid, aid_end1, aid_end2;
+
+	start_aid = ml_aid_mgr->start_aid;
+	aid_end1 = ml_aid_mgr->max_aid / AID_NUM_BUCKET;
+	aid_end2 = aid_end1 + aid_end1;
+
+	mlo_debug("Start = %d E1 = %d E2 = %d max = %d", start_aid, aid_end1,
+		  aid_end2, ml_aid_mgr->max_aid);
+	if ((start_aid > aid_end1) || (aid_end1 > aid_end2)) {
+		mlo_err("MAX AID configured incorrectly");
+		return assoc_id;
+	}
+	mlo_debug("T2LM peer = %d", t2lm_peer);
+
+	if (t2lm_peer) {
+		assoc_id = wlan_mlo_alloc_aid(ml_aid_mgr, aid_end1,
+					      aid_end2, link_ix,
+					      is_mlo_peer);
+
+		if (assoc_id != (uint16_t)-1)
+			return assoc_id;
+
+		assoc_id = wlan_mlo_alloc_aid(ml_aid_mgr, aid_end2,
+					      ml_aid_mgr->max_aid,
+					      link_ix, is_mlo_peer);
+
+		if (assoc_id != (uint16_t)-1)
+			return assoc_id;
+
+		assoc_id = wlan_mlo_alloc_aid(ml_aid_mgr, aid_end1,
+					      start_aid, link_ix,
+					      is_mlo_peer);
+	} else {
+		assoc_id = wlan_mlo_alloc_aid(ml_aid_mgr, start_aid,
+					      aid_end1, link_ix,
+					      is_mlo_peer);
+
+		if (assoc_id != (uint16_t)-1)
+			return assoc_id;
+
+		assoc_id = wlan_mlo_alloc_aid(ml_aid_mgr, aid_end2,
+					      ml_aid_mgr->max_aid,
+					      link_ix, is_mlo_peer);
+
+		if (assoc_id != (uint16_t)-1)
+			return assoc_id;
+
+		assoc_id = wlan_mlo_alloc_aid(ml_aid_mgr, aid_end2,
+					      aid_end1, link_ix,
+					      is_mlo_peer);
+	}
+
+	return assoc_id;
+}
+#else
+static uint16_t _wlan_mlo_peer_alloc_aid(
+		struct wlan_ml_vdev_aid_mgr *ml_aid_mgr,
+		bool is_mlo_peer, bool t2lm_peer,
+		uint8_t link_ix)
+{
+	uint16_t assoc_id = (uint16_t)-1;
+
+	assoc_id = wlan_mlo_alloc_aid(ml_aid_mgr, ml_aid_mgr->start_aid,
+				      ml_aid_mgr->max_aid,
+				      link_ix, is_mlo_peer);
+
+	return assoc_id;
+}
+#endif
+
+static uint16_t wlan_mlo_peer_alloc_aid(
+		struct wlan_ml_vdev_aid_mgr *ml_aid_mgr,
+		bool is_mlo_peer, bool t2lm_peer,
+		uint8_t link_ix)
+{
+	uint16_t assoc_id = (uint16_t)-1;
 	struct mlo_mgr_context *mlo_mgr_ctx = wlan_objmgr_get_mlo_ctx();
 
 	if (!mlo_mgr_ctx) {
@@ -60,71 +265,9 @@ static uint16_t wlan_mlo_peer_alloc_aid(
 	/* TODO check locking strategy */
 	ml_aid_lock_acquire(mlo_mgr_ctx);
 
-	start_aid = ml_aid_mgr->start_aid;
-	for (i = start_aid; i < ml_aid_mgr->max_aid; i++) {
-		if (qdf_test_bit(i, ml_aid_mgr->aid_bitmap))
-			continue;
-
-		if (is_mlo_peer) {
-			for (j = 0; j < WLAN_UMAC_MLO_MAX_VDEVS; j++) {
-				vdev_aid_mgr = ml_aid_mgr->aid_mgr[j];
-				if (vdev_aid_mgr &&
-				    qdf_test_bit(i, vdev_aid_mgr->aid_bitmap))
-					break;
-				/* AID is free */
-				if (j == WLAN_UMAC_MLO_MAX_VDEVS - 1) {
-					assoc_id = i + 1;
-					mlo_peer_set_aid_bit(ml_aid_mgr, i);
-				}
-			}
-
-			if (assoc_id == i + 1) {
-				qdf_set_bit(i, ml_aid_mgr->aid_bitmap);
-				break;
-			}
-		} else {
-			vdev_aid_mgr = ml_aid_mgr->aid_mgr[link_ix];
-			if (!vdev_aid_mgr)
-				break;
-
-			if (qdf_test_bit(i, vdev_aid_mgr->aid_bitmap))
-				continue;
-
-			if (!first_aid)
-				first_aid = i + 1;
-
-			for (j = 0; j < WLAN_UMAC_MLO_MAX_VDEVS; j++) {
-				if (j == link_ix)
-					continue;
-				/* Check whether this bit used by other VDEV
-				 * Non-MLO peers
-				 */
-				vdev_aid_mgr = ml_aid_mgr->aid_mgr[j];
-				if (vdev_aid_mgr &&
-				    qdf_test_bit(i, vdev_aid_mgr->aid_bitmap)) {
-					assoc_id = i + 1;
-					break;
-				}
-			}
-			/* Assoc ID is used by other link, return this aid
-			 * to caller
-			 */
-			if (assoc_id == i + 1) {
-				vdev_aid_mgr = ml_aid_mgr->aid_mgr[link_ix];
-				qdf_set_bit(i, vdev_aid_mgr->aid_bitmap);
-				first_aid = 0;
-				break;
-			}
-		}
-	}
-
-	if ((!is_mlo_peer) && first_aid) {
-		vdev_aid_mgr = ml_aid_mgr->aid_mgr[link_ix];
-		qdf_set_bit(first_aid - 1, vdev_aid_mgr->aid_bitmap);
-		assoc_id = first_aid;
-	}
-
-	if ((assoc_id == (uint16_t)-1) && (i == ml_aid_mgr->max_aid))
+	assoc_id = _wlan_mlo_peer_alloc_aid(ml_aid_mgr, is_mlo_peer,
+					    t2lm_peer, link_ix);
+	if (assoc_id == (uint16_t)-1)
 		mlo_err("MLO aid allocation failed (reached max)");
 
 	ml_aid_lock_release(mlo_mgr_ctx);
@@ -381,6 +524,22 @@ uint16_t wlan_mlme_get_aid_count(struct wlan_objmgr_vdev *vdev)
 	return aid_count;
 }
 
+#ifdef WLAN_FEATURE_T2LM
+static bool mlo_peer_t2lm_enabled(struct wlan_mlo_peer_context *ml_peer)
+{
+	if (ml_peer->t2lm_policy.t2lm_enable_val > WLAN_T2LM_NOT_SUPPORTED &&
+	    ml_peer->t2lm_policy.t2lm_enable_val < WLAN_T2LM_ENABLE_INVALID)
+		return true;
+
+	return false;
+}
+#else
+static bool mlo_peer_t2lm_enabled(struct wlan_mlo_peer_context *ml_peer)
+{
+	return false;
+}
+#endif
+
 QDF_STATUS mlo_peer_allocate_aid(
 		struct wlan_mlo_dev_context *ml_dev,
 		struct wlan_mlo_peer_context *ml_peer)
@@ -388,6 +547,7 @@ QDF_STATUS mlo_peer_allocate_aid(
 	uint16_t assoc_id = (uint16_t)-1;
 	struct wlan_ml_vdev_aid_mgr *ml_aid_mgr;
 	struct wlan_mlo_ap *ap_ctx;
+	bool t2lm_peer = false;
 
 	ap_ctx = ml_dev->ap_ctx;
 	if (!ap_ctx) {
@@ -401,7 +561,9 @@ QDF_STATUS mlo_peer_allocate_aid(
 		return QDF_STATUS_E_INVAL;
 	}
 
-	assoc_id = wlan_mlo_peer_alloc_aid(ml_aid_mgr, true, 0xff);
+	t2lm_peer = mlo_peer_t2lm_enabled(ml_peer);
+
+	assoc_id = wlan_mlo_peer_alloc_aid(ml_aid_mgr, true, t2lm_peer, 0xff);
 	if (assoc_id == (uint16_t)-1) {
 		mlo_err("MLD ID %d AID alloc failed", ml_dev->mld_id);
 		return QDF_STATUS_E_NOENT;
@@ -470,7 +632,7 @@ uint16_t mlo_get_aid(struct wlan_objmgr_vdev *vdev)
 	if (!ml_aid_mgr)
 		return assoc_id;
 
-	return wlan_mlo_peer_alloc_aid(ml_aid_mgr, true, 0xff);
+	return wlan_mlo_peer_alloc_aid(ml_aid_mgr, true, false, 0xff);
 }
 
 QDF_STATUS mlo_free_aid(struct wlan_objmgr_vdev *vdev, uint16_t assoc_id)
@@ -571,7 +733,7 @@ uint16_t mlme_get_aid(struct wlan_objmgr_vdev *vdev)
 
 	link_id = mlo_get_link_vdev_ix(ml_dev, vdev);
 
-	assoc_id = wlan_mlo_peer_alloc_aid(ml_aid_mgr, false, link_id);
+	assoc_id = wlan_mlo_peer_alloc_aid(ml_aid_mgr, false, false, link_id);
 
 	return assoc_id;
 }
