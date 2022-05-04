@@ -1199,6 +1199,11 @@ dp_rx_mon_process_status_tlv(struct dp_pdev *pdev)
 					 &desc_list, &tail);
 	}
 
+	ppdu_info->rx_status.tsft = ppdu_info->rx_status.tsft +
+				    pdev->timestamp.mlo_offset_lo_us +
+				    ((uint64_t)pdev->timestamp.mlo_offset_hi_us
+				    << 32);
+
 	return ppdu_info;
 }
 

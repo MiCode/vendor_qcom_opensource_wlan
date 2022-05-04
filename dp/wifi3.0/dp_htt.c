@@ -3096,6 +3096,13 @@ dp_rx_mlo_timestamp_ind_handler(struct dp_soc *soc,
 	pdev->timestamp.mlo_comp_timer =
 	HTT_T2H_MLO_TIMESTAMP_OFFSET_MLO_TIMESTAMP_COMP_PERIOD_US_GET(
 							*(msg_word + 7));
+
+	dp_htt_debug("tsf_lo=%d tsf_hi=%d, mlo_ofst_lo=%d, mlo_ofst_hi=%d\n",
+		     pdev->timestamp.sync_tstmp_lo_us,
+		     pdev->timestamp.sync_tstmp_hi_us,
+		     pdev->timestamp.mlo_offset_lo_us,
+		     pdev->timestamp.mlo_offset_hi_us);
+
 	qdf_spin_unlock_bh(&soc->htt_stats.lock);
 }
 #else
