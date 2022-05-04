@@ -17,7 +17,23 @@
  * DOC: contains MLO manager public file containing setup/teardown functionality
  */
 
+#ifndef _WLAN_MLO_MGR_SETUP_H_
+#define _WLAN_MLO_MGR_SETUP_H_
 #ifdef WLAN_MLO_MULTI_CHIP
+/**
+ * mlo_setup_init() - API to init setup info events
+ *
+ * Return: None
+ */
+void mlo_setup_init(void);
+
+/**
+ * mlo_setup_deinit() - API to deinit setup info events
+ *
+ * Return: None
+ */
+void mlo_setup_deinit(void);
+
 /**
  * mlo_is_ml_soc() - API to check if psoc belongs to ML group
  * @psoc: Soc to be checked.
@@ -123,4 +139,13 @@ QDF_STATUS mlo_link_teardown_link(struct wlan_objmgr_psoc *psoc,
  */
 bool mlo_vdevs_check_single_soc(struct wlan_objmgr_vdev **wlan_vdev_list,
 				uint8_t vdev_count);
-#endif
+#else
+static inline void mlo_setup_init(void)
+{
+}
+
+static inline void mlo_setup_deinit(void)
+{
+}
+#endif /* WLAN_MLO_MULTI_CHIP */
+#endif /* _WLAN_MLO_MGR_SETUP_H_ */

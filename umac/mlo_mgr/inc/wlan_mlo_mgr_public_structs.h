@@ -95,7 +95,7 @@ enum MLO_LINK_STATE {
  * @state[MAX_MLO_LINKS]: MLO link state
  * @valid_link_bitmap: valid MLO link bitmap
  * @state_lock: lock to protect access to link state
- * @qdf_event_t: event for tearodwn completion
+ * @qdf_event_t: event for teardown completion
  */
 #define MAX_MLO_LINKS 6
 #define MAX_MLO_CHIPS 5
