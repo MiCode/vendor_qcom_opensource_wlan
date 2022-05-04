@@ -1423,7 +1423,15 @@ mgmt_rx_reo_log_egress_frame_before_delivery(
 				mgmt_rx_reo_get_pkt_counter(entry->rx_params);
 	cur_frame_debug_info->global_timestamp =
 				mgmt_rx_reo_get_global_ts(entry->rx_params);
-	cur_frame_debug_info->wait_count = entry->wait_count;
+	cur_frame_debug_info->initial_wait_count = entry->initial_wait_count;
+	cur_frame_debug_info->final_wait_count = entry->wait_count;
+	qdf_mem_copy(cur_frame_debug_info->shared_snapshots,
+		     entry->shared_snapshots,
+		     qdf_min(sizeof(cur_frame_debug_info->shared_snapshots),
+			     sizeof(entry->shared_snapshots)));
+	qdf_mem_copy(cur_frame_debug_info->host_snapshot, entry->host_snapshot,
+		     qdf_min(sizeof(cur_frame_debug_info->host_snapshot),
+			     sizeof(entry->host_snapshot)));
 	cur_frame_debug_info->insertion_ts = entry->insertion_ts;
 	cur_frame_debug_info->ingress_timestamp = entry->ingress_timestamp;
 	cur_frame_debug_info->removal_ts =  entry->removal_ts;
@@ -1431,6 +1439,7 @@ mgmt_rx_reo_log_egress_frame_before_delivery(
 	cur_frame_debug_info->release_reason = entry->release_reason;
 	cur_frame_debug_info->is_premature_delivery =
 						entry->is_premature_delivery;
+	cur_frame_debug_info->cpu_id = qdf_get_smp_processor_id();
 
 	stats = &egress_frame_debug_info->stats;
 	link_id = cur_frame_debug_info->link_id;
@@ -1509,7 +1518,7 @@ mgmt_rx_reo_print_egress_frame_info(struct mgmt_rx_reo_context *reo_ctx,
 	uint16_t entry;
 	uint16_t num_valid_entries;
 	uint16_t num_entries_to_print;
-	char boarder[MGMT_RX_REO_EGRESS_FRAME_DEBUG_INFO_BOARDER_MAX_SIZE + 1] = {'\0'};
+	char *boarder;
 
 	if (!reo_ctx)
 		return QDF_STATUS_E_NULL_VALUE;
@@ -1551,24 +1560,35 @@ mgmt_rx_reo_print_egress_frame_info(struct mgmt_rx_reo_context *reo_ctx,
 	if (!num_entries_to_print)
 		return QDF_STATUS_SUCCESS;
 
+	boarder = qdf_mem_malloc
+		(MGMT_RX_REO_EGRESS_FRAME_DEBUG_INFO_BOARDER_MAX_SIZE + 1);
+	if (!boarder)
+		return QDF_STATUS_E_NOMEM;
+
 	qdf_mem_set(boarder,
 		    MGMT_RX_REO_EGRESS_FRAME_DEBUG_INFO_BOARDER_MAX_SIZE, '-');
 
 	mgmt_rx_reo_alert_no_fl("%s", boarder);
-	mgmt_rx_reo_alert_no_fl("|%3s|%4s|%5s|%10s|%10s|%10s|%10s|%10s|%5s|%7s|%5s|%4s|%69s|",
-				"No.", "Link", "SeqNo", "Global ts",
+	mgmt_rx_reo_alert_no_fl("|%3s|%5s|%4s|%5s|%10s|%11s|%11s|%11s|%11s|%5s|%7s|%5s|%4s|%69s|%69s|%94s|%94s|%94s|%94s|%94s|%94s|",
+				"No.", "CPU", "Link", "SeqNo", "Global ts",
 				"Ingress ts", "Insert. ts", "Removal ts",
 				"Egress ts", "E Dur", "W Dur", "Flags", "Rea.",
-				"Wait Count");
+				"Final wait count", "Initial wait count",
+				"Snapshot : link 0", "Snapshot : link 1",
+				"Snapshot : link 2", "Snapshot : link 3",
+				"Snapshot : link 4", "Snapshot : link 5");
 	mgmt_rx_reo_alert_no_fl("%s", boarder);
 
 	index = start_index;
-	for (entry = 0; entry < num_valid_entries; entry++) {
+	for (entry = 0; entry < num_entries_to_print; entry++) {
 		struct reo_egress_debug_frame_info *info;
 		char flags[MGMT_RX_REO_EGRESS_FRAME_DEBUG_INFO_FLAG_MAX_SIZE + 1] = {'\0'};
-		char wait_count[MGMT_RX_REO_EGRESS_FRAME_DEBUG_INFO_WAIT_COUNT_MAX_SIZE + 1] = {'\0'};
+		char final_wait_count[MGMT_RX_REO_EGRESS_FRAME_DEBUG_INFO_WAIT_COUNT_MAX_SIZE + 1] = {'\0'};
+		char initial_wait_count[MGMT_RX_REO_EGRESS_FRAME_DEBUG_INFO_WAIT_COUNT_MAX_SIZE + 1] = {'\0'};
+		char snapshots[MAX_MLO_LINKS][MGMT_RX_REO_EGRESS_FRAME_DEBUG_INFO_PER_LINK_SNAPSHOTS_MAX_SIZE + 1] = {'\0'};
 		char flag_premature_delivery = ' ';
 		char flag_error = ' ';
+		uint8_t link;
 
 		info = &reo_ctx->egress_frame_debug_info.frame_list[index];
 
@@ -1580,18 +1600,67 @@ mgmt_rx_reo_print_egress_frame_info(struct mgmt_rx_reo_context *reo_ctx,
 
 		snprintf(flags, sizeof(flags), "%c %c", flag_error,
 			 flag_premature_delivery);
-		snprintf(wait_count, sizeof(wait_count),
+		snprintf(initial_wait_count, sizeof(initial_wait_count),
 			 "%9llx(%8x, %8x, %8x, %8x, %8x, %8x)",
-			 info->wait_count.total_count,
-			 info->wait_count.per_link_count[0],
-			 info->wait_count.per_link_count[1],
-			 info->wait_count.per_link_count[2],
-			 info->wait_count.per_link_count[3],
-			 info->wait_count.per_link_count[4],
-			 info->wait_count.per_link_count[5]);
+			 info->initial_wait_count.total_count,
+			 info->initial_wait_count.per_link_count[0],
+			 info->initial_wait_count.per_link_count[1],
+			 info->initial_wait_count.per_link_count[2],
+			 info->initial_wait_count.per_link_count[3],
+			 info->initial_wait_count.per_link_count[4],
+			 info->initial_wait_count.per_link_count[5]);
+		snprintf(final_wait_count, sizeof(final_wait_count),
+			 "%9llx(%8x, %8x, %8x, %8x, %8x, %8x)",
+			 info->final_wait_count.total_count,
+			 info->final_wait_count.per_link_count[0],
+			 info->final_wait_count.per_link_count[1],
+			 info->final_wait_count.per_link_count[2],
+			 info->final_wait_count.per_link_count[3],
+			 info->final_wait_count.per_link_count[4],
+			 info->final_wait_count.per_link_count[5]);
 
-		mgmt_rx_reo_alert_no_fl("|%3u|%4u|%5u|%10u|%10llu|%10llu|%10llu|%10llu|%5llu|%7llu|%5s|%4x|%69s|",
-					entry, info->link_id,
+		for (link = 0; link < MAX_MLO_LINKS; link++) {
+			char mac_hw[MGMT_RX_REO_EGRESS_FRAME_DEBUG_INFO_SNAPSHOT_MAX_SIZE + 1] = {'\0'};
+			char fw_consumed[MGMT_RX_REO_EGRESS_FRAME_DEBUG_INFO_SNAPSHOT_MAX_SIZE + 1] = {'\0'};
+			char fw_forwaded[MGMT_RX_REO_EGRESS_FRAME_DEBUG_INFO_SNAPSHOT_MAX_SIZE + 1] = {'\0'};
+			char host[MGMT_RX_REO_EGRESS_FRAME_DEBUG_INFO_SNAPSHOT_MAX_SIZE + 1] = {'\0'};
+			struct mgmt_rx_reo_snapshot_params *mac_hw_ss;
+			struct mgmt_rx_reo_snapshot_params *fw_consumed_ss;
+			struct mgmt_rx_reo_snapshot_params *fw_forwarded_ss;
+			struct mgmt_rx_reo_snapshot_params *host_ss;
+
+			mac_hw_ss = &info->shared_snapshots
+				[link][MGMT_RX_REO_SHARED_SNAPSHOT_MAC_HW];
+			fw_consumed_ss = &info->shared_snapshots
+				[link][MGMT_RX_REO_SHARED_SNAPSHOT_FW_CONSUMED];
+			fw_forwarded_ss = &info->shared_snapshots
+				[link][MGMT_RX_REO_SHARED_SNAPSHOT_FW_FORWADED];
+			host_ss = &info->host_snapshot[link];
+
+			snprintf(mac_hw, sizeof(mac_hw), "(%1u, %5u, %10u)",
+				 mac_hw_ss->valid, mac_hw_ss->mgmt_pkt_ctr,
+				 mac_hw_ss->global_timestamp);
+			snprintf(fw_consumed, sizeof(fw_consumed),
+				 "(%1u, %5u, %10u)",
+				 fw_consumed_ss->valid,
+				 fw_consumed_ss->mgmt_pkt_ctr,
+				 fw_consumed_ss->global_timestamp);
+			snprintf(fw_forwaded, sizeof(fw_forwaded),
+				 "(%1u, %5u, %10u)",
+				 fw_forwarded_ss->valid,
+				 fw_forwarded_ss->mgmt_pkt_ctr,
+				 fw_forwarded_ss->global_timestamp);
+			snprintf(host, sizeof(host), "(%1u, %5u, %10u)",
+				 host_ss->valid,
+				 host_ss->mgmt_pkt_ctr,
+				 host_ss->global_timestamp);
+			snprintf(snapshots[link], sizeof(snapshots[link]),
+				 "%22s, %22s, %22s, %22s", mac_hw, fw_consumed,
+				 fw_forwaded, host);
+		}
+
+		mgmt_rx_reo_alert_no_fl("|%3u|%5d|%4u|%5u|%10u|%11llu|%11llu|%11llu|%11llu|%5llu|%7llu|%5s|%4x|%69s|%69s|%94s|%94s|%94s|%94s|%94s|%94s|",
+					entry, info->cpu_id, info->link_id,
 					info->mgmt_pkt_ctr,
 					info->global_timestamp,
 					info->ingress_timestamp,
@@ -1600,7 +1669,10 @@ mgmt_rx_reo_print_egress_frame_info(struct mgmt_rx_reo_context *reo_ctx,
 					info->egress_duration,
 					info->removal_ts - info->insertion_ts,
 					flags, info->release_reason,
-					wait_count);
+					final_wait_count, initial_wait_count,
+					snapshots[0], snapshots[1],
+					snapshots[2], snapshots[3],
+					snapshots[4], snapshots[5]);
 		mgmt_rx_reo_alert_no_fl("%s", boarder);
 
 		index++;
@@ -2058,6 +2130,13 @@ mgmt_rx_reo_prepare_list_entry(
 	list_entry->nbuf = frame_desc->nbuf;
 	list_entry->rx_params = frame_desc->rx_params;
 	list_entry->wait_count = frame_desc->wait_count;
+	list_entry->initial_wait_count = frame_desc->wait_count;
+	qdf_mem_copy(list_entry->shared_snapshots, frame_desc->shared_snapshots,
+		     qdf_min(sizeof(list_entry->shared_snapshots),
+			     sizeof(frame_desc->shared_snapshots)));
+	qdf_mem_copy(list_entry->host_snapshot, frame_desc->host_snapshot,
+		     qdf_min(sizeof(list_entry->host_snapshot),
+			     sizeof(frame_desc->host_snapshot)));
 	list_entry->status = 0;
 	if (list_entry->wait_count.total_count)
 		list_entry->status |=
@@ -2596,7 +2675,15 @@ mgmt_rx_reo_log_ingress_frame(struct mgmt_rx_reo_context *reo_ctx,
 				mgmt_rx_reo_get_pkt_counter(desc->rx_params);
 	cur_frame_debug_info->global_timestamp =
 				mgmt_rx_reo_get_global_ts(desc->rx_params);
-	cur_frame_debug_info->type = desc->type;
+	cur_frame_debug_info->start_timestamp =
+				mgmt_rx_reo_get_start_ts(desc->rx_params);
+	cur_frame_debug_info->end_timestamp =
+				mgmt_rx_reo_get_end_ts(desc->rx_params);
+	cur_frame_debug_info->duration_us =
+				mgmt_rx_reo_get_duration_us(desc->rx_params);
+	cur_frame_debug_info->desc_type = desc->type;
+	cur_frame_debug_info->frame_type = desc->frame_type;
+	cur_frame_debug_info->frame_subtype = desc->frame_subtype;
 	cur_frame_debug_info->wait_count = desc->wait_count;
 	qdf_mem_copy(cur_frame_debug_info->shared_snapshots,
 		     desc->shared_snapshots,
@@ -2607,6 +2694,7 @@ mgmt_rx_reo_log_ingress_frame(struct mgmt_rx_reo_context *reo_ctx,
 			     sizeof(desc->host_snapshot)));
 	cur_frame_debug_info->is_queued = is_queued;
 	cur_frame_debug_info->is_stale = desc->is_stale;
+	cur_frame_debug_info->is_parallel_rx = desc->is_parallel_rx;
 	cur_frame_debug_info->zero_wait_count_rx = desc->zero_wait_count_rx;
 	cur_frame_debug_info->immediate_delivery = desc->immediate_delivery;
 	cur_frame_debug_info->is_error = is_error;
@@ -2617,6 +2705,7 @@ mgmt_rx_reo_log_ingress_frame(struct mgmt_rx_reo_context *reo_ctx,
 			qdf_get_log_timestamp() - desc->ingress_timestamp;
 	cur_frame_debug_info->list_size_rx = desc->list_size_rx;
 	cur_frame_debug_info->list_insertion_pos = desc->list_insertion_pos;
+	cur_frame_debug_info->cpu_id = qdf_get_smp_processor_id();
 
 	ingress_frame_debug_info->next_index++;
 	ingress_frame_debug_info->next_index %=
@@ -2661,7 +2750,7 @@ mgmt_rx_reo_print_ingress_frame_info(struct mgmt_rx_reo_context *reo_ctx,
 	uint16_t entry;
 	uint16_t num_valid_entries;
 	uint16_t num_entries_to_print;
-	char boarder[MGMT_RX_REO_INGRESS_FRAME_DEBUG_INFO_BOARDER_MAX_SIZE + 1] = {'\0'};
+	char *boarder;
 
 	if (!reo_ctx)
 		return QDF_STATUS_E_NULL_VALUE;
@@ -2703,17 +2792,24 @@ mgmt_rx_reo_print_ingress_frame_info(struct mgmt_rx_reo_context *reo_ctx,
 	if (!num_entries_to_print)
 		return QDF_STATUS_SUCCESS;
 
+	boarder = qdf_mem_malloc
+		(MGMT_RX_REO_INGRESS_FRAME_DEBUG_INFO_BOARDER_MAX_SIZE + 1);
+	if (!boarder)
+		return QDF_STATUS_E_NOMEM;
+
 	qdf_mem_set(boarder,
 		    MGMT_RX_REO_INGRESS_FRAME_DEBUG_INFO_BOARDER_MAX_SIZE, '-');
 
 	mgmt_rx_reo_alert_no_fl("%s", boarder);
-	mgmt_rx_reo_alert_no_fl("|%5s|%4s|%4s|%5s|%10s|%10s|%11s|%9s|%11s|%4s|%3s|%69s|%94s|%94s|%94s|%94s|%94s|%94s|",
-				"Index", "Type", "Link", "SeqNo", "Global ts",
-				"Last ts", "Ingress ts", "Flags", "Ingress Dur",
-				"Size", "Pos", "Wait Count",
-				"Snapshot : link 0", "Snapshot : link 1",
-				"Snapshot : link 2", "Snapshot : link 3",
-				"Snapshot : link 4", "Snapshot : link 5");
+	mgmt_rx_reo_alert_no_fl("|%5s|%5s|%6s|%6s|%9s|%4s|%5s|%10s|%10s|%10s|%5s|%10s|%11s|%11s|%11s|%4s|%3s|%69s|%94s|%94s|%94s|%94s|%94s|%94s|",
+				"Index", "CPU", "D.type", "F.type", "F.subtype",
+				"Link", "SeqNo", "Global ts",
+				"Start ts", "End ts", "Dur", "Last ts",
+				"Ingress ts", "Flags", "Ingress Dur", "Size",
+				"Pos", "Wait Count", "Snapshot : link 0",
+				"Snapshot : link 1", "Snapshot : link 2",
+				"Snapshot : link 3", "Snapshot : link 4",
+				"Snapshot : link 5");
 	mgmt_rx_reo_alert_no_fl("%s", boarder);
 
 	index = start_index;
@@ -2724,6 +2820,7 @@ mgmt_rx_reo_print_ingress_frame_info(struct mgmt_rx_reo_context *reo_ctx,
 		char snapshots[MAX_MLO_LINKS][MGMT_RX_REO_INGRESS_FRAME_DEBUG_INFO_PER_LINK_SNAPSHOTS_MAX_SIZE + 1] = {'\0'};
 		char flag_queued = ' ';
 		char flag_stale = ' ';
+		char flag_parallel_rx = ' ';
 		char flag_error = ' ';
 		char flag_zero_wait_count_rx = ' ';
 		char flag_immediate_delivery = ' ';
@@ -2742,6 +2839,9 @@ mgmt_rx_reo_print_ingress_frame_info(struct mgmt_rx_reo_context *reo_ctx,
 		if (info->is_stale)
 			flag_stale = 'S';
 
+		if (info->is_parallel_rx)
+			flag_parallel_rx = 'P';
+
 		if (info->is_error)
 			flag_error = 'E';
 
@@ -2751,9 +2851,9 @@ mgmt_rx_reo_print_ingress_frame_info(struct mgmt_rx_reo_context *reo_ctx,
 		if (info->immediate_delivery)
 			flag_immediate_delivery = 'I';
 
-		snprintf(flags, sizeof(flags), "%c %c %c %c %c", flag_error,
-			 flag_stale, flag_queued, flag_zero_wait_count_rx,
-			 flag_immediate_delivery);
+		snprintf(flags, sizeof(flags), "%c %c %c %c %c %c", flag_error,
+			 flag_stale, flag_parallel_rx, flag_queued,
+			 flag_zero_wait_count_rx, flag_immediate_delivery);
 		snprintf(wait_count, sizeof(wait_count),
 			 "%9llx(%8x, %8x, %8x, %8x, %8x, %8x)",
 			 info->wait_count.total_count,
@@ -2804,10 +2904,15 @@ mgmt_rx_reo_print_ingress_frame_info(struct mgmt_rx_reo_context *reo_ctx,
 				 fw_forwaded, host);
 		}
 
-		mgmt_rx_reo_alert_no_fl("|%5u|%4u|%4u|%5u|%10u|%10lld|%11llu|%9s|%11llu|%4d|%3d|%69s|%70s|%70s|%70s|%70s|%70s|%70s|",
-					entry, info->type, info->link_id,
+		mgmt_rx_reo_alert_no_fl("|%5u|%5d|%6u|%6x|%9x|%4u|%5u|%10u|%10u|%10u|%5u|%10lld|%11llu|%11s|%11llu|%4d|%3d|%69s|%70s|%70s|%70s|%70s|%70s|%70s|",
+					entry, info->cpu_id, info->desc_type,
+					info->frame_type, info->frame_subtype,
+					info->link_id,
 					info->mgmt_pkt_ctr,
 					info->global_timestamp,
+					info->start_timestamp,
+					info->end_timestamp,
+					info->duration_us,
 					ts_last_released_frame,
 					info->ingress_timestamp, flags,
 					info->ingress_duration,
