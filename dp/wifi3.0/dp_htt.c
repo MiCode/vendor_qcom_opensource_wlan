@@ -549,6 +549,13 @@ int htt_srng_setup(struct htt_soc *soc, int mac_id,
 		    (lmac_id * HAL_MAX_RINGS_PER_LMAC))) {
 			htt_ring_id = HTT_HOST2_TO_FW_RXBUF_RING;
 			htt_ring_type = HTT_SW_TO_SW_RING;
+#ifdef IPA_WDI3_RX_TWO_PIPES
+		} else if (srng_params.ring_id ==
+		    (HAL_SRNG_WMAC1_SW2RXDMA0_BUF3 +
+		    (lmac_id * HAL_MAX_RINGS_PER_LMAC))) {
+			htt_ring_id = HTT_HOST3_TO_FW_RXBUF_RING;
+			htt_ring_type = HTT_SW_TO_SW_RING;
+#endif
 #endif
 #else
 		if (srng_params.ring_id ==

@@ -35,6 +35,9 @@
 
 #define IPA_RX_REFILL_BUF_RING_IDX	2
 
+#define IPA_ALT_REO_DEST_RING_IDX	2
+#define IPA_RX_ALT_REFILL_BUF_RING_IDX	3
+
 /* Adding delay before disabling ipa pipes if any Tx Completions are pending */
 #define TX_COMP_DRAIN_WAIT_MS	50
 #define TX_COMP_DRAIN_WAIT_TIMEOUT_MS	100
@@ -65,6 +68,14 @@ struct dp_ipa_uc_tx_hdr {
 } __packed;
 
 /**
+ * struct dp_ipa_uc_tx_hdr - full tx header registered to IPA hardware
+ * @eth:     ether II header
+ */
+struct dp_ipa_uc_tx_vlan_hdr {
+	struct vlan_ethhdr eth;
+} __packed;
+
+/**
  * struct dp_ipa_uc_rx_hdr - full rx header registered to IPA hardware
  * @eth:     ether II header
  */
@@ -73,11 +84,13 @@ struct dp_ipa_uc_rx_hdr {
 } __packed;
 
 #define DP_IPA_UC_WLAN_TX_HDR_LEN      sizeof(struct dp_ipa_uc_tx_hdr)
+#define DP_IPA_UC_WLAN_TX_VLAN_HDR_LEN sizeof(struct dp_ipa_uc_tx_vlan_hdr)
 #define DP_IPA_UC_WLAN_RX_HDR_LEN      sizeof(struct dp_ipa_uc_rx_hdr)
 /* 28 <bytes of rx_msdu_end_tlv> + 16 <bytes of attn tlv> +
  * 52 <bytes of rx_mpdu_start_tlv> + <L2 Header>
  */
 #define DP_IPA_UC_WLAN_RX_HDR_LEN_AST  110
+#define DP_IPA_UC_WLAN_RX_HDR_LEN_AST_VLAN 114
 #define DP_IPA_UC_WLAN_HDR_DES_MAC_OFFSET	0
 
 #define DP_IPA_HDL_INVALID	0xFF
