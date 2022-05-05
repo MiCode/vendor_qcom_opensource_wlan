@@ -232,6 +232,7 @@ struct wlan_regulatory_psoc_priv_obj {
  * take action when AFC Power event is received
  * @reg_6g_thresh_priority_freq: All frequencies greater or equal will be given
  * priority during channel selection by upper layer
+ * @reg_afc_dev_deployment_type: AFC device deployment type from BDF
  */
 struct wlan_regulatory_pdev_priv_obj {
 	struct regulatory_channel cur_chan_list[NUM_CHANNELS];
@@ -305,6 +306,7 @@ struct wlan_regulatory_pdev_priv_obj {
 	struct regulatory_channel mas_chan_list_6g_afc[NUM_6GHZ_CHANNELS];
 	struct reg_fw_afc_power_event *power_info;
 	bool is_reg_noaction_on_afc_pwr_evt;
+	enum reg_afc_dev_deploy_type reg_afc_dev_deployment_type;
 #endif
 };
 
