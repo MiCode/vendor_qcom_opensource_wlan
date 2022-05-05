@@ -318,8 +318,7 @@ int target_if_infra_cp_stats_event_handler(ol_scn_t scn, uint8_t *data,
 }
 #endif /* WLAN_SUPPORT_INFRA_CTRL_PATH_STATS */
 
-#if defined(WLAN_SUPPORT_INFRA_CTRL_PATH_STATS) && defined(WLAN_SUPPORT_TWT) && \
-	defined(WLAN_TWT_CONV_SUPPORTED)
+#if defined(WLAN_SUPPORT_TWT) && defined(WLAN_TWT_CONV_SUPPORTED)
 static int
 target_if_twt_session_params_event_handler(ol_scn_t scn,
 					   uint8_t *evt_buf,
@@ -331,14 +330,12 @@ target_if_twt_session_params_event_handler(ol_scn_t scn,
 	struct twt_session_stats_info twt_params;
 	struct twt_session_stats_event_param params = {0};
 	struct peer_cp_stats *peer_cp_stats;
-	uint32_t expected_len;
 	int i;
 	QDF_STATUS status;
 	uint32_t ev;
 	cdp_config_param_type val = {0};
 	ol_txrx_soc_handle soc_txrx_handle;
 	struct wlan_lmac_if_rx_ops *rx_ops;
-	wmi_pdev_twt_session_stats_event_fixed_param stats_param;
 
 	TARGET_IF_ENTER();
 
@@ -375,18 +372,9 @@ target_if_twt_session_params_event_handler(ol_scn_t scn,
 		return qdf_status_to_os_return(status);
 	}
 
-	if (params.num_sessions > TWT_PEER_MAX_SESSIONS) {
+	if (params.num_sessions > WLAN_MAX_TWT_SESSIONS_PER_PEER) {
 		target_if_err("Number of twt sessions exceeded, num:%d max:%d",
-			      params.num_sessions, TWT_PEER_MAX_SESSIONS);
-		return -EINVAL;
-	}
-	expected_len = (sizeof(wmi_pdev_twt_session_stats_event_fixed_param) +
-			sizeof(stats_param.tlv_header) + (params.num_sessions *
-			sizeof(wmi_twt_session_stats_info)));
-
-	if (evt_data_len < expected_len) {
-		target_if_err("Got invalid len of data from FW %d expected %d",
-			      evt_data_len, expected_len);
+			      params.num_sessions, WLAN_MAX_TWT_SESSIONS_PER_PEER);
 		return -EINVAL;
 	}
 
@@ -466,9 +454,45 @@ static void
 target_if_cp_stats_unregister_twt_session_event(struct wmi_unified *wmi_handle)
 {
 }
-#endif /*WLAN_SUPPORT_INFRA_CTRL_PATH_STATS && WLAN_SUPPORT_TWT && WLAN_TWT_CONV_SUPPORTED*/
+#endif /*  WLAN_SUPPORT_TWT && WLAN_TWT_CONV_SUPPORTED*/
 
 #ifdef WLAN_SUPPORT_INFRA_CTRL_PATH_STATS
+static QDF_STATUS
+target_if_cp_stats_infra_register_event_handler(struct wlan_objmgr_psoc *psoc,
+						struct wmi_unified *wmi_handle)
+{
+	QDF_STATUS ret_val;
+
+	if (!psoc) {
+		cp_stats_err("PSOC is NULL!");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	if (!wmi_handle) {
+		cp_stats_err("wmi_handle is null");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	ret_val = wmi_unified_register_event_handler(wmi_handle,
+						     wmi_pdev_cp_fwstats_eventid,
+						     target_if_infra_cp_stats_event_handler,
+						     WMI_RX_WORK_CTX);
+	if (QDF_IS_STATUS_ERROR(ret_val)) {
+		cp_stats_err("Failed to register for pdev_cp_fwstats_event");
+		return ret_val;
+	}
+
+	return QDF_STATUS_SUCCESS;
+}
+#else
+static QDF_STATUS
+target_if_cp_stats_infra_register_event_handler(struct wlan_objmgr_psoc *psoc,
+						struct wmi_unified *wmi_handle)
+{
+	return QDF_STATUS_SUCCESS;
+}
+#endif /* WLAN_SUPPORT_INFRA_CTRL_PATH_STATS */
+
 static QDF_STATUS
 target_if_cp_stats_register_event_handler(struct wlan_objmgr_psoc *psoc)
 {
@@ -486,10 +510,8 @@ target_if_cp_stats_register_event_handler(struct wlan_objmgr_psoc *psoc)
 		return QDF_STATUS_E_INVAL;
 	}
 
-	ret_val = wmi_unified_register_event_handler(wmi_handle,
-			    wmi_pdev_cp_fwstats_eventid,
-			    target_if_infra_cp_stats_event_handler,
-			    WMI_RX_WORK_CTX);
+	ret_val = target_if_cp_stats_infra_register_event_handler(psoc,
+								  wmi_handle);
 	if (QDF_IS_STATUS_ERROR(ret_val)) {
 		cp_stats_err("Failed to register for pdev_cp_fwstats_event");
 		return ret_val;
@@ -525,29 +547,6 @@ target_if_cp_stats_unregister_event_handler(struct wlan_objmgr_psoc *psoc)
 	target_if_cp_stats_unregister_twt_session_event(wmi_handle);
 	return QDF_STATUS_SUCCESS;
 }
-#else
-static QDF_STATUS
-target_if_cp_stats_register_event_handler(struct wlan_objmgr_psoc *psoc)
-{
-	if (!psoc) {
-		cp_stats_err("PSOC is NULL!");
-		return QDF_STATUS_E_INVAL;
-	}
-
-	return QDF_STATUS_SUCCESS;
-}
-
-static QDF_STATUS
-target_if_cp_stats_unregister_event_handler(struct wlan_objmgr_psoc *psoc)
-{
-	if (!psoc) {
-		cp_stats_err("PSOC is NULL!");
-		return QDF_STATUS_E_INVAL;
-	}
-
-	return QDF_STATUS_SUCCESS;
-}
-#endif /* WLAN_SUPPORT_INFRA_CTRL_PATH_STATS */
 
 #ifdef WLAN_SUPPORT_INFRA_CTRL_PATH_STATS
 /**
