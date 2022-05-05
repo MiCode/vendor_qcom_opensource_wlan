@@ -5350,6 +5350,7 @@ typedef enum {
 	wmi_vdev_param_set_default_ll_config,
 	wmi_vdev_param_set_multi_client_ll_feature_config,
 #endif
+	wmi_vdev_param_set_traffic_config,
 } wmi_conv_vdev_param_id;
 
 /**

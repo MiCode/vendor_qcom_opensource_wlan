@@ -573,6 +573,8 @@ static const uint32_t vdev_param_tlv[] = {
 	[wmi_vdev_param_set_multi_client_ll_feature_config] =
 			WMI_VDEV_PARAM_MULTI_CLIENT_LL_FEATURE_CONFIGURATION,
 #endif
+	[wmi_vdev_param_set_traffic_config] =
+			WMI_VDEV_PARAM_VDEV_TRAFFIC_CONFIG,
 };
 #endif
 
