@@ -2304,38 +2304,38 @@ dp_mon_filter_setup_rx_lite_mon(struct dp_mon_pdev_be *be_mon_pdev)
 	if (config->rx_config.fp_enabled) {
 		rx_tlv_filter->tlv_filter.enable_fp = 1;
 		rx_tlv_filter->tlv_filter.fp_mgmt_filter =
-			config->rx_config.mgmt_filter[CDP_LITE_MON_MODE_FP];
+			config->rx_config.mgmt_filter[DP_MON_FRM_FILTER_MODE_FP];
 		rx_tlv_filter->tlv_filter.fp_ctrl_filter =
-			config->rx_config.ctrl_filter[CDP_LITE_MON_MODE_FP];
+			config->rx_config.ctrl_filter[DP_MON_FRM_FILTER_MODE_FP];
 		rx_tlv_filter->tlv_filter.fp_data_filter =
-			config->rx_config.data_filter[CDP_LITE_MON_MODE_FP];
+			config->rx_config.data_filter[DP_MON_FRM_FILTER_MODE_FP];
 	}
 
 	/* configure md filters if enabled */
 	if (config->rx_config.md_enabled) {
 		rx_tlv_filter->tlv_filter.enable_md = 1;
 		rx_tlv_filter->tlv_filter.md_mgmt_filter =
-			config->rx_config.mgmt_filter[CDP_LITE_MON_MODE_MD];
+			config->rx_config.mgmt_filter[DP_MON_FRM_FILTER_MODE_MD];
 		rx_tlv_filter->tlv_filter.md_ctrl_filter =
-			config->rx_config.ctrl_filter[CDP_LITE_MON_MODE_MD];
+			config->rx_config.ctrl_filter[DP_MON_FRM_FILTER_MODE_MD];
 		rx_tlv_filter->tlv_filter.md_data_filter =
-			config->rx_config.data_filter[CDP_LITE_MON_MODE_MD];
+			config->rx_config.data_filter[DP_MON_FRM_FILTER_MODE_MD];
 	}
 
 	/* configure mo filters if enabled */
 	if (config->rx_config.mo_enabled) {
 		rx_tlv_filter->tlv_filter.enable_mo = 1;
 		rx_tlv_filter->tlv_filter.mo_mgmt_filter =
-			config->rx_config.mgmt_filter[CDP_LITE_MON_MODE_MO];
+			config->rx_config.mgmt_filter[DP_MON_FRM_FILTER_MODE_MO];
 		rx_tlv_filter->tlv_filter.mo_ctrl_filter =
-			config->rx_config.ctrl_filter[CDP_LITE_MON_MODE_MO];
+			config->rx_config.ctrl_filter[DP_MON_FRM_FILTER_MODE_MO];
 		rx_tlv_filter->tlv_filter.mo_data_filter =
-			config->rx_config.data_filter[CDP_LITE_MON_MODE_MO];
+			config->rx_config.data_filter[DP_MON_FRM_FILTER_MODE_MO];
 	}
 
-	mgmt_len = config->rx_config.len[CDP_LITE_MON_FRM_TYPE_MGMT];
-	ctrl_len = config->rx_config.len[CDP_LITE_MON_FRM_TYPE_CTRL];
-	data_len = config->rx_config.len[CDP_LITE_MON_FRM_TYPE_DATA];
+	mgmt_len = config->rx_config.len[WLAN_FC0_TYPE_MGMT];
+	ctrl_len = config->rx_config.len[WLAN_FC0_TYPE_CTRL];
+	data_len = config->rx_config.len[WLAN_FC0_TYPE_DATA];
 	/* if full len is configured for any of the types, subscribe
 	 * for full dma length else set it to min dma length(fw sets
 	 * full length by default) to avoid unnecessary dma since we

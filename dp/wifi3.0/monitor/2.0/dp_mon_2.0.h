@@ -35,6 +35,30 @@
 #define DP_MON_MSDU_LOGGING 0
 #define DP_MON_MPDU_LOGGING 1
 
+/* monitor frame filter modes */
+enum dp_mon_frm_filter_mode {
+	/* mode filter pass */
+	DP_MON_FRM_FILTER_MODE_FP = 0,
+	/* mode monitor direct */
+	DP_MON_FRM_FILTER_MODE_MD = 1,
+	/* mode monitor other */
+	DP_MON_FRM_FILTER_MODE_MO = 2,
+	/* mode filter pass monitor other */
+	DP_MON_FRM_FILTER_MODE_FP_MO = 3,
+};
+
+/* mpdu filter categories */
+enum dp_mpdu_filter_category {
+	/* category filter pass */
+	DP_MPDU_FILTER_CATEGORY_FP = 0,
+	/* category monitor direct */
+	DP_MPDU_FILTER_CATEGORY_MD = 1,
+	/* category monitor other */
+	DP_MPDU_FILTER_CATEGORY_MO = 2,
+	/* category filter pass monitor override */
+	DP_MPDU_FILTER_CATEGORY_FP_MO = 3,
+};
+
 /**
  * struct dp_mon_filter_be - Monitor TLV filter
  * @rx_tlv_filter: Rx MON TLV filter
