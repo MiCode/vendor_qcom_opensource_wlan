@@ -2616,9 +2616,8 @@ cdp_rx_get_pending(ol_txrx_soc_handle soc)
 		return 0;
 }
 
-#ifdef QCA_SUPPORT_WDS_EXTENDED
 static inline uint16_t
-cdp_wds_ext_get_peer_id(ol_txrx_soc_handle soc, uint8_t vdev_id, uint8_t *mac)
+cdp_get_peer_id(ol_txrx_soc_handle soc, uint8_t vdev_id, uint8_t *mac)
 {
 	if (!soc || !soc->ops) {
 		dp_cdp_debug("Invalid Instance");
@@ -2627,13 +2626,14 @@ cdp_wds_ext_get_peer_id(ol_txrx_soc_handle soc, uint8_t vdev_id, uint8_t *mac)
 	}
 
 	if (!soc->ops->cmn_drv_ops ||
-	    !soc->ops->cmn_drv_ops->get_wds_ext_peer_id)
+	    !soc->ops->cmn_drv_ops->get_peer_id)
 		return 0;
 
-	return soc->ops->cmn_drv_ops->get_wds_ext_peer_id
+	return soc->ops->cmn_drv_ops->get_peer_id
 			(soc, vdev_id, mac);
 }
 
+#ifdef QCA_SUPPORT_WDS_EXTENDED
 static inline QDF_STATUS
 cdp_wds_ext_set_peer_rx(ol_txrx_soc_handle soc, uint8_t vdev_id,
 			uint8_t *mac, ol_txrx_rx_fp rx,

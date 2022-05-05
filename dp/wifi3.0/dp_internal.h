@@ -3174,12 +3174,8 @@ static inline QDF_STATUS dp_soc_swlm_detach(struct dp_soc *soc)
 }
 #endif /* !WLAN_DP_FEATURE_SW_LATENCY_MGR */
 
-#ifdef QCA_SUPPORT_WDS_EXTENDED
 /**
- * dp_wds_ext_get_peer_id(): function to get peer id by mac
- * This API is called from control path when wds extended
- * device is created, hence it also updates wds extended
- * peer state to up, which will be referred in rx processing.
+ * dp_get_peer_id(): function to get peer id by mac
  * @soc: Datapath soc handle
  * @vdev_id: vdev id
  * @mac: Peer mac address
@@ -3187,10 +3183,9 @@ static inline QDF_STATUS dp_soc_swlm_detach(struct dp_soc *soc)
  * return: valid peer id on success
  *         HTT_INVALID_PEER on failure
  */
-uint16_t dp_wds_ext_get_peer_id(ol_txrx_soc_handle soc,
-				uint8_t vdev_id,
-				uint8_t *mac);
+uint16_t dp_get_peer_id(ol_txrx_soc_handle soc, uint8_t vdev_id, uint8_t *mac);
 
+#ifdef QCA_SUPPORT_WDS_EXTENDED
 /**
  * dp_wds_ext_set_peer_state(): function to set peer state
  * @soc: Datapath soc handle
