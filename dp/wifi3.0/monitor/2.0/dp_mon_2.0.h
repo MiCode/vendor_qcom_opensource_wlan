@@ -282,19 +282,19 @@ QDF_STATUS dp_mon_buffers_replenish(struct dp_soc *dp_soc,
 				union dp_mon_desc_list_elem_t **tail);
 
 /**
- * dp_mon_filter_show_filter_be() - Show the set filters
- * @mode: The filter modes
- * @tlv_filter: tlv filter
- */
-void dp_mon_filter_show_filter_be(enum dp_mon_filter_mode mode,
-				  struct dp_mon_filter_be *filter);
-
-/**
  * dp_mon_filter_show_tx_filter_be() - Show the set filters
  * @mode: The filter modes
  * @tlv_filter: tlv filter
  */
 void dp_mon_filter_show_tx_filter_be(enum dp_mon_filter_mode mode,
+				     struct dp_mon_filter_be *filter);
+
+/**
+ * dp_mon_filter_show_rx_filter_be() - Show the set filters
+ * @mode: The filter modes
+ * @tlv_filter: tlv filter
+ */
+void dp_mon_filter_show_rx_filter_be(enum dp_mon_filter_mode mode,
 				     struct dp_mon_filter_be *filter);
 
 /**

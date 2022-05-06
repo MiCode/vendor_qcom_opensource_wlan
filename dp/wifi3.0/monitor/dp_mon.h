@@ -1066,7 +1066,6 @@ struct  dp_mon_pdev {
 	bool reset_scan_spcl_vap_stats_enable;
 #endif
 	bool is_tlv_hdr_64_bit;
-	enum dp_mon_filter_mode current_filter_mode;
 
 	/* Invalid monitor peer to account for stats in mcopy mode */
 	struct dp_mon_peer *invalid_mon_peer;
@@ -4012,6 +4011,11 @@ dp_monitor_lite_mon_disable_rx(struct dp_pdev *pdev)
 #ifndef QCA_SUPPORT_LITE_MONITOR
 static inline void
 dp_lite_mon_disable_rx(struct dp_pdev *pdev)
+{
+}
+
+static inline void
+dp_lite_mon_disable_tx(struct dp_pdev *pdev)
 {
 }
 

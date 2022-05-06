@@ -335,5 +335,21 @@ QDF_STATUS dp_mon_filter_alloc_2_0(struct dp_pdev *pdev);
 void dp_mon_filter_reset_rx_lite_mon(struct dp_mon_pdev_be *be_mon_pdev);
 
 void dp_mon_filter_setup_rx_lite_mon(struct dp_mon_pdev_be *be_mon_pdev);
+
+/**
+ * dp_mon_filter_reset_tx_lite_mon() - Reset tx lite monitor filter
+ * @be_mon_pdev: physical mon device handle
+ *
+ * Return: Null
+ */
+void dp_mon_filter_reset_tx_lite_mon(struct dp_mon_pdev_be *be_mon_pdev);
+
+/**
+ * dp_mon_filter_setup_tx_lite_mon() - Setup tx lite monitor filter
+ * @be_mon_pdev: physical mon device handle
+ *
+ * Return: Null
+ */
+void dp_mon_filter_setup_tx_lite_mon(struct dp_mon_pdev_be *be_mon_pdev);
 #endif
 #endif /* _DP_MON_FILTER_2_0_H_ */
