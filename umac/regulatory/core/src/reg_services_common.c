@@ -8628,7 +8628,7 @@ reg_get_eirp_for_non_sp(struct wlan_objmgr_pdev *pdev, qdf_freq_t freq,
 	reg_find_txpower_from_6g_list(freq, master_chan_list, &txpower);
 
 	if (is_psd) {
-		int16_t eirp, psd;
+		int16_t eirp = 0, psd = 0;
 
 		reg_get_6g_chan_psd_eirp_power(freq, master_chan_list, &psd);
 		reg_psd_2_eirp(pdev, psd, bw, &eirp);
