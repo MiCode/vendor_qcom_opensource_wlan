@@ -160,6 +160,20 @@ wmi_unified_peer_flush_tids_send(wmi_unified_t wmi_handle,
 	return QDF_STATUS_E_FAILURE;
 }
 
+#ifdef WLAN_FEATURE_PEER_TXQ_FLUSH_CONF
+QDF_STATUS
+wmi_unified_peer_txq_flush_config_send(wmi_unified_t wmi_handle,
+				       struct peer_txq_flush_config_params *pr)
+{
+	struct wmi_ops *ops = wmi_handle->ops;
+
+	if (ops->send_peer_txq_flush_config_cmd)
+		return ops->send_peer_txq_flush_config_cmd(wmi_handle, pr);
+
+	return QDF_STATUS_E_FAILURE;
+}
+#endif
+
 QDF_STATUS wmi_unified_peer_delete_send(wmi_unified_t wmi_handle,
 					uint8_t peer_addr[QDF_MAC_ADDR_SIZE],
 					struct peer_delete_cmd_params *param)

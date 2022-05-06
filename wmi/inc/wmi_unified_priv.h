@@ -3017,6 +3017,11 @@ QDF_STATUS
 (*extract_pdev_telemetry_stats)(
 		wmi_unified_t wmi_handle, void *evt_buf,
 		struct wmi_host_pdev_telemetry_stats *pdev_stats);
+#ifdef WLAN_FEATURE_PEER_TXQ_FLUSH_CONF
+QDF_STATUS
+(*send_peer_txq_flush_config_cmd)(wmi_unified_t wmi_handle,
+				  struct peer_txq_flush_config_params *param);
+#endif
 };
 
 /* Forward declartion for psoc*/
