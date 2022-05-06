@@ -427,32 +427,28 @@ dp_mlo_mcast_init(struct dp_soc *soc, struct dp_vdev *vdev)
 
 	be_vdev->mcast_primary = false;
 	be_vdev->seq_num = 0;
-	if (vdev->mlo_vdev)
-		hal_tx_vdev_mcast_ctrl_set(vdev->pdev->soc->hal_soc,
-					   vdev->vdev_id,
-					   HAL_TX_MCAST_CTRL_DROP);
+	dp_tx_mcast_mlo_reinject_routing_set(soc,
+					     (void *)&be_vdev->mcast_primary);
+	if (vdev->opmode == wlan_op_mode_ap) {
+		if (vdev->mlo_vdev)
+			hal_tx_vdev_mcast_ctrl_set(vdev->pdev->soc->hal_soc,
+						   vdev->vdev_id,
+						   HAL_TX_MCAST_CTRL_DROP);
+		else
+			hal_tx_vdev_mcast_ctrl_set(vdev->pdev->soc->hal_soc,
+						   vdev->vdev_id,
+						   HAL_TX_MCAST_CTRL_FW_EXCEPTION);
+	}
 }
 
 static inline void
 dp_mlo_mcast_deinit(struct dp_soc *soc, struct dp_vdev *vdev)
 {
 	struct dp_vdev_be *be_vdev = dp_get_be_vdev_from_dp_vdev(vdev);
-	struct dp_soc_be *be_soc = dp_get_be_soc_from_dp_soc(
-						be_vdev->vdev.pdev->soc);
 
 	be_vdev->seq_num = 0;
-	if (vdev->mlo_vdev) {
-		hal_tx_vdev_mcast_ctrl_set(vdev->pdev->soc->hal_soc,
-					   vdev->vdev_id,
-					   HAL_TX_MCAST_CTRL_FW_EXCEPTION);
-		vdev->mlo_vdev = false;
-	}
-	if (be_vdev->mcast_primary) {
-		be_vdev->mcast_primary = false;
-		dp_mcast_mlo_iter_ptnr_soc(be_soc,
-					   dp_tx_mcast_mlo_reinject_routing_set,
-					   (void *)&be_vdev->mcast_primary);
-	}
+	be_vdev->mcast_primary = false;
+	vdev->mlo_vdev = false;
 }
 #else
 static inline void
@@ -650,9 +646,7 @@ static QDF_STATUS dp_vdev_attach_be(struct dp_soc *soc, struct dp_vdev *vdev)
 						   HAL_TX_MCAST_CTRL_MEC_NOTIFY);
 	}
 
-	if (vdev->opmode == wlan_op_mode_ap)
-		dp_mlo_mcast_init(soc, vdev);
-
+	dp_mlo_mcast_init(soc, vdev);
 	dp_mlo_init_ptnr_list(vdev);
 
 	return QDF_STATUS_SUCCESS;
