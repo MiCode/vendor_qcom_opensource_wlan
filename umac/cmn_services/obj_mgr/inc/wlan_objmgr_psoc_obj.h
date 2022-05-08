@@ -244,6 +244,8 @@
 #define WLAN_ROAM_STATS_FRAME_INFO_PER_CANDIDATE  0x00000008
 /* multi client feature flags support */
 #define WLAN_SOC_WLM_MULTI_CLIENT_LL_SUPPORT      0x00000010
+/* vendor handoff control feature support */
+#define WLAN_SOC_VENDOR_HANDOFF_CONTROL           0x00000020
 
 /* PSOC op flags */
 

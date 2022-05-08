@@ -156,6 +156,31 @@ init_deinit_update_multi_client_ll_caps(struct wmi_unified *wmi_handle,
 {}
 #endif
 
+#ifdef WLAN_VENDOR_HANDOFF_CONTROL
+/**
+ * init_deinit_update_vendor_handoff_control_caps() - Update vendor handoff
+ * control service capability bit
+ * @wmi_handle: wmi hanle
+ * @psoc: psoc commom object
+ *
+ * Return: none
+ */
+static void
+init_deinit_update_vendor_handoff_control_caps(struct wmi_unified *wmi_handle,
+					       struct wlan_objmgr_psoc *psoc)
+{
+	if (wmi_service_enabled(wmi_handle,
+			wmi_service_configure_vendor_handoff_control_support))
+		wlan_psoc_nif_fw_ext2_cap_set(psoc,
+					      WLAN_SOC_VENDOR_HANDOFF_CONTROL);
+}
+#else
+static inline void
+init_deinit_update_vendor_handoff_control_caps(struct wmi_unified *wmi_handle,
+					       struct wlan_objmgr_psoc *psoc)
+{}
+#endif
+
 static int init_deinit_service_ready_event_handler(ol_scn_t scn_handle,
 							uint8_t *event,
 							uint32_t data_len)
@@ -368,6 +393,8 @@ static int init_deinit_service_ready_event_handler(ol_scn_t scn_handle,
 	init_deinit_update_rssi_dbm_conv_support(wmi_handle, psoc);
 
 	init_deinit_update_multi_client_ll_caps(wmi_handle, psoc);
+
+	init_deinit_update_vendor_handoff_control_caps(wmi_handle, psoc);
 
 	if (wmi_service_enabled(wmi_handle, wmi_service_ext_msg)) {
 		target_if_debug("Wait for EXT message");

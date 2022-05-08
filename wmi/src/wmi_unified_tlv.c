@@ -19438,6 +19438,10 @@ static void populate_tlv_service(uint32_t *wmi_service)
 	wmi_service[wmi_service_configure_multi_client_ll_support] =
 				WMI_SERVICE_MULTI_CLIENT_LL_SUPPORT;
 #endif
+#ifdef WLAN_VENDOR_HANDOFF_CONTROL
+	wmi_service[wmi_service_configure_vendor_handoff_control_support] =
+				WMI_SERVICE_FW_INI_PARSE_SUPPORT;
+#endif
 }
 
 /**
