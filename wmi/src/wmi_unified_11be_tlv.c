@@ -214,6 +214,8 @@ uint8_t *peer_assoc_add_mlo_params(uint8_t *buf_ptr,
 					   req->mlo_params.mlo_logical_link_index_valid);
 	WMI_MLO_FLAGS_SET_PEER_ID_VALID(mlo_params->mlo_flags.mlo_flags,
 					req->mlo_params.mlo_peer_id_valid);
+	mlo_params->mlo_flags.mlo_force_link_inactive =
+			req->mlo_params.mlo_force_link_inactive;
 
 	WMI_CHAR_ARRAY_TO_MAC_ADDR(req->mlo_params.mld_mac,
 				   &mlo_params->mld_macaddr);
