@@ -2467,9 +2467,26 @@ static void dp_sawf_msduq_map(struct htt_soc *soc, uint32_t *msg_word,
 {
 	dp_htt_sawf_msduq_map(soc, msg_word, htt_t2h_msg);
 }
+
+/*
+ * dp_sawf_mpdu_stats_handler() - HTT message handler for MPDU stats
+ * @soc: soc handle.
+ * @htt_t2h_msg: HTT message nbuf
+ *
+ * @return: void
+ */
+static void dp_sawf_mpdu_stats_handler(struct htt_soc *soc,
+				       qdf_nbuf_t htt_t2h_msg)
+{
+	dp_sawf_htt_mpdu_stats_handler(soc, htt_t2h_msg);
+}
 #else
 static void dp_sawf_msduq_map(struct htt_soc *soc, uint32_t *msg_word,
 			      qdf_nbuf_t htt_t2h_msg)
+{}
+
+static void dp_sawf_mpdu_stats_handler(struct htt_soc *soc,
+				       qdf_nbuf_t htt_t2h_msg)
 {}
 #endif
 
@@ -3525,6 +3542,11 @@ static void dp_htt_t2h_msg_handler(void *context, HTC_PACKET *pkt)
 	case HTT_T2H_SAWF_MSDUQ_INFO_IND:
 	{
 		dp_sawf_msduq_map(soc, msg_word, htt_t2h_msg);
+		break;
+	}
+	case HTT_T2H_MSG_TYPE_STREAMING_STATS_IND:
+	{
+		dp_sawf_mpdu_stats_handler(soc, htt_t2h_msg);
 		break;
 	}
 
