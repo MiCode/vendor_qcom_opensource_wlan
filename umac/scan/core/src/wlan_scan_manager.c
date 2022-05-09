@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2017-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1731,6 +1731,9 @@ void scm_disable_obss_pdev_scan(struct wlan_objmgr_psoc *psoc,
 	struct wlan_scan_obj *scan_obj;
 	struct scan_vdev_obj *scan_vdev_obj;
 	QDF_STATUS status;
+	struct wlan_objmgr_pdev_objmgr *pdev_objmgr;
+	qdf_list_t *vdev_list;
+	uint16_t index = 0;
 
 	scan_obj = wlan_psoc_get_scan_obj(psoc);
 	if (!scan_obj) {
@@ -1739,20 +1742,31 @@ void scm_disable_obss_pdev_scan(struct wlan_objmgr_psoc *psoc,
 	}
 
 	if (scan_obj->obss_scan_offload) {
-		vdev = wlan_objmgr_pdev_get_first_vdev(pdev, WLAN_SCAN_ID);
-		if (!vdev)
-			return;
+		pdev_objmgr = &pdev->pdev_objmgr;
 
-		scan_vdev_obj = wlan_get_vdev_scan_obj(vdev);
-		if (!scan_vdev_obj) {
-			scm_err("null scan_vdev_obj");
-			wlan_objmgr_vdev_release_ref(vdev, WLAN_SCAN_ID);
-			return;
+		wlan_pdev_obj_lock(pdev);
+		vdev_list = &pdev_objmgr->wlan_vdev_list;
+		/* Get first vdev */
+		vdev = wlan_pdev_vdev_list_peek_head(vdev_list);
+
+		while (vdev) {
+			scm_debug("wlan_vdev_list[%d]: %pK", index, vdev);
+
+			scan_vdev_obj = wlan_get_vdev_scan_obj(vdev);
+			if (!scan_vdev_obj) {
+				scm_err("null scan_vdev_obj");
+				goto next;
+			}
+
+			status = tgt_scan_obss_disable(vdev);
+			if (QDF_IS_STATUS_ERROR(status))
+				scm_err("disable obss scan failed");
+next:
+			index++;
+			/* get next vdev */
+			vdev = wlan_vdev_get_next_vdev_of_pdev(vdev_list,
+							       vdev);
 		}
-
-		status = tgt_scan_obss_disable(vdev);
-		if (QDF_IS_STATUS_ERROR(status))
-			scm_err("disable obss scan failed");
-		wlan_objmgr_vdev_release_ref(vdev, WLAN_SCAN_ID);
+		wlan_pdev_obj_unlock(pdev);
 	}
 }
