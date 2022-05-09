@@ -4861,7 +4861,7 @@ dp_tx_mcast_reinject_handler(struct dp_soc *soc, struct dp_tx_desc_s *desc)
 			return false;
 
 		vdev = dp_vdev_get_ref_by_id(soc, desc->vdev_id,
-					     DP_MOD_ID_TX_COMP);
+					     DP_MOD_ID_REINJECT);
 
 		if (qdf_unlikely(!vdev)) {
 			dp_tx_comp_info_rl("Unable to get vdev ref  %d",
@@ -4872,7 +4872,7 @@ dp_tx_mcast_reinject_handler(struct dp_soc *soc, struct dp_tx_desc_s *desc)
 				 qdf_nbuf_len(desc->nbuf));
 		soc->arch_ops.dp_tx_mcast_handler(soc, vdev, desc->nbuf);
 		dp_tx_desc_release(desc, desc->pool_id);
-		dp_vdev_unref_delete(soc, vdev, DP_MOD_ID_TX_COMP);
+		dp_vdev_unref_delete(soc, vdev, DP_MOD_ID_REINJECT);
 		return true;
 	}
 

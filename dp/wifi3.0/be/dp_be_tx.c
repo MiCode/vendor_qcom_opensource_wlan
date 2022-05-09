@@ -491,7 +491,7 @@ void dp_tx_mlo_mcast_handler_be(struct dp_soc *soc,
 	/* send frame on partner vdevs */
 	dp_mcast_mlo_iter_ptnr_vdev(be_soc, be_vdev,
 				    dp_tx_mlo_mcast_pkt_send,
-				    nbuf, DP_MOD_ID_TX);
+				    nbuf, DP_MOD_ID_REINJECT);
 
 	/* send frame on mcast primary vdev */
 	dp_tx_mlo_mcast_pkt_send(be_vdev, vdev, nbuf);
