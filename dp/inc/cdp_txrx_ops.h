@@ -2007,6 +2007,10 @@ struct cdp_sawf_ops {
 				       uint32_t svc_id, uint8_t *mac,
 				       void *data);
 	QDF_STATUS
+	(*sawf_mpdu_stats_req)(struct cdp_soc_t *soc, uint8_t enable);
+	QDF_STATUS
+	(*sawf_mpdu_details_stats_req)(struct cdp_soc_t *soc, uint8_t enable);
+	QDF_STATUS
 	(*txrx_sawf_set_mov_avg_params)(uint32_t num_pkt, uint32_t num_win);
 	QDF_STATUS
 	(*txrx_sawf_set_sla_params)(uint32_t num_pkt, uint32_t time_secs);
