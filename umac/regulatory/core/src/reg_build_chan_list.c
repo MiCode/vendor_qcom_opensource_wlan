@@ -1890,7 +1890,7 @@ static void reg_init_super_chan_entry(
 
 	chan_info = &pdev_priv_obj->super_chan_list[chan_idx];
 
-	for (pwr_type = REG_AP_LPI; pwr_type <= REG_CLI_SUB_VLP;
+	for (pwr_type = REG_CURRENT_PWR_MODE; pwr_type <= REG_CLI_SUB_VLP;
 	     pwr_type++)
 		reg_dis_chan_state_and_flags(&chan_info->state_arr[pwr_type],
 					     &chan_info->chan_flags_arr
