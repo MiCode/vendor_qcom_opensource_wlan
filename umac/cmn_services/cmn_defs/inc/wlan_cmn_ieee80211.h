@@ -343,6 +343,9 @@
 #define WLAN_HE_6GHZ_CHWIDTH_80           2 /* 80MHz Oper Ch width */
 #define WLAN_HE_6GHZ_CHWIDTH_160_80_80    3 /* 160/80+80 MHz Oper Ch width */
 
+#define WLAN_HE_NON_SRG_PD_SR_DISALLOWED 0x02
+#define WLAN_HE_NON_SRG_OFFSET_PRESENT 0x04
+
 #ifdef WLAN_FEATURE_11BE
 #define WLAN_EHT_CHWIDTH_20           0 /* 20MHz Oper Ch width */
 #define WLAN_EHT_CHWIDTH_40           1 /* 40MHz Oper Ch width */
