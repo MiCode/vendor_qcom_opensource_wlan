@@ -2006,6 +2006,12 @@ struct cdp_sawf_ops {
 	(*txrx_get_peer_sawf_tx_stats)(struct cdp_soc_t *soc,
 				       uint32_t svc_id, uint8_t *mac,
 				       void *data);
+	QDF_STATUS
+	(*txrx_sawf_set_mov_avg_params)(uint32_t num_pkt, uint32_t num_win);
+	QDF_STATUS
+	(*txrx_sawf_set_sla_params)(uint32_t num_pkt, uint32_t time_secs);
+	QDF_STATUS
+	(*txrx_sawf_init_telemtery_params)(void);
 #endif
 };
 #endif

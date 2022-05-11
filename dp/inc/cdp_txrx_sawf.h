@@ -127,6 +127,80 @@ cdp_get_peer_sawf_tx_stats(ol_txrx_soc_handle soc, uint32_t svc_id,
 	return soc->ops->sawf_ops->txrx_get_peer_sawf_tx_stats(soc, svc_id,
 							       mac, data);
 }
+
+/**
+ * cdp_sawf_set_mov_avg_params - Set moving average pararms
+ * @num_pkt: No of packets per window to calucalte moving average
+ * @num_win: No of windows to calucalte moving average
+ *
+ * Return: QDF_STATUS
+ */
+static inline QDF_STATUS
+cdp_sawf_set_mov_avg_params(ol_txrx_soc_handle soc,
+			    uint32_t num_pkt,
+			    uint32_t num_win)
+{
+	if (!soc || !soc->ops) {
+		dp_cdp_debug("Invalid Instance");
+		QDF_BUG(0);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	if (!soc->ops->sawf_ops ||
+	    !soc->ops->sawf_ops->txrx_get_peer_sawf_tx_stats)
+		return QDF_STATUS_E_FAILURE;
+
+	return soc->ops->sawf_ops->txrx_sawf_set_mov_avg_params(num_pkt,
+								num_win);
+}
+
+/**
+ * cdp_sawf_set_sla_params - Set SLA pararms
+ * @num_pkt: No of packets to detect SLA breach
+ * @time_secs: Time ins secs to detect breach
+ *
+ * Return: QDF_STATUS
+ */
+static inline QDF_STATUS
+cdp_sawf_set_sla_params(ol_txrx_soc_handle soc,
+			uint32_t num_pkt,
+			uint32_t time_secs)
+{
+	if (!soc || !soc->ops) {
+		dp_cdp_debug("Invalid Instance");
+		QDF_BUG(0);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	if (!soc->ops->sawf_ops ||
+	    !soc->ops->sawf_ops->txrx_get_peer_sawf_tx_stats)
+		return QDF_STATUS_E_FAILURE;
+
+	return soc->ops->sawf_ops->txrx_sawf_set_sla_params(num_pkt,
+							    time_secs);
+}
+
+/**
+ * cdp_sawf_init_telemetry_param - Initialize telemetry pararms
+ *
+ * Return: none
+ */
+static inline QDF_STATUS
+cdp_sawf_init_telemtery_params(ol_txrx_soc_handle soc)
+{
+	if (!soc || !soc->ops) {
+		dp_cdp_debug("Invalid Instance");
+		QDF_BUG(0);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	if (!soc->ops->sawf_ops ||
+	    !soc->ops->sawf_ops->txrx_get_peer_sawf_tx_stats)
+		return QDF_STATUS_E_FAILURE;
+
+	return soc->ops->sawf_ops->txrx_sawf_init_telemtery_params();
+}
+
 #else
 static inline QDF_STATUS
 cdp_get_peer_sawf_delay_stats(ol_txrx_soc_handle soc, uint32_t svc_id,

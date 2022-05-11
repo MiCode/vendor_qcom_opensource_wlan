@@ -12718,6 +12718,9 @@ static struct cdp_sawf_ops dp_ops_sawf = {
 #ifdef CONFIG_SAWF
 	.txrx_get_peer_sawf_delay_stats = dp_sawf_get_peer_delay_stats,
 	.txrx_get_peer_sawf_tx_stats = dp_sawf_get_peer_tx_stats,
+	.txrx_sawf_set_mov_avg_params = dp_sawf_set_mov_avg_params,
+	.txrx_sawf_set_sla_params = dp_sawf_set_sla_params,
+	.txrx_sawf_init_telemtery_params = dp_sawf_init_telemetry_params,
 #endif
 };
 #endif
