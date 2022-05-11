@@ -26,13 +26,18 @@
 #include "hal_tx.h"
 #include <hal_api_mon.h>
 
+static uint16_t hal_get_rx_max_ba_window_li(int tid)
+{
+	return HAL_RX_BA_WINDOW_256;
+}
+
 static uint32_t hal_get_reo_qdesc_size_li(uint32_t ba_window_size, int tid)
 {
 	/* Hardcode the ba_window_size to HAL_RX_MAX_BA_WINDOW for
 	 * NON_QOS_TID until HW issues are resolved.
 	 */
 	if (tid != HAL_NON_QOS_TID)
-		ba_window_size = HAL_RX_MAX_BA_WINDOW;
+		ba_window_size = hal_get_rx_max_ba_window_li(tid);
 
 	/* Return descriptor size corresponding to window size of 2 since
 	 * we set ba_window_size to 2 while setting up REO descriptors as
@@ -1176,6 +1181,8 @@ static uint8_t hal_get_idle_link_bm_id_li(uint8_t chip_id)
 void hal_hw_txrx_default_ops_attach_li(struct hal_soc *hal_soc)
 {
 	hal_soc->ops->hal_get_reo_qdesc_size = hal_get_reo_qdesc_size_li;
+	hal_soc->ops->hal_get_rx_max_ba_window =
+					hal_get_rx_max_ba_window_li;
 	hal_soc->ops->hal_set_link_desc_addr = hal_set_link_desc_addr_li;
 	hal_soc->ops->hal_tx_init_data_ring = hal_tx_init_data_ring_li;
 	hal_soc->ops->hal_get_ba_aging_timeout = hal_get_ba_aging_timeout_li;

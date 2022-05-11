@@ -946,6 +946,7 @@ struct hal_hw_txrx_ops {
 							   uint32_t *reo_destination_indication);
 	uint8_t (*hal_tx_get_num_tcl_banks)(void);
 	uint32_t (*hal_get_reo_qdesc_size)(uint32_t ba_window_size, int tid);
+	uint16_t (*hal_get_rx_max_ba_window)(int tid);
 
 	void (*hal_set_link_desc_addr)(void *desc, uint32_t cookie,
 				       qdf_dma_addr_t link_desc_paddr,

@@ -2427,7 +2427,8 @@ enum hal_pn_type {
 	HAL_PN_WAPI_UNEVEN,
 };
 
-#define HAL_RX_MAX_BA_WINDOW 256
+#define HAL_RX_BA_WINDOW_256 256
+#define HAL_RX_BA_WINDOW_1024 1024
 
 /**
  * hal_get_reo_qdesc_align - Get start address alignment for reo

@@ -1642,6 +1642,11 @@ static void hal_reo_setup_9224(struct hal_soc *soc, void *reoparams)
 	hal_reo_shared_qaddr_init((hal_soc_handle_t)soc);
 }
 
+static uint16_t hal_get_rx_max_ba_window_qcn9224(int tid)
+{
+	return HAL_RX_BA_WINDOW_1024;
+}
+
 /**
  * hal_qcn9224_get_reo_qdesc_size()- Get the reo queue descriptor size
  *			  from the give Block-Ack window size
@@ -1653,7 +1658,7 @@ static uint32_t hal_qcn9224_get_reo_qdesc_size(uint32_t ba_window_size, int tid)
 	 * NON_QOS_TID until HW issues are resolved.
 	 */
 	if (tid != HAL_NON_QOS_TID)
-		ba_window_size = HAL_RX_MAX_BA_WINDOW_BE;
+		ba_window_size = hal_get_rx_max_ba_window_qcn9224(tid);
 
 	/* Return descriptor size corresponding to window size of 2 since
 	 * we set ba_window_size to 2 while setting up REO descriptors as
@@ -1933,6 +1938,8 @@ static void hal_hw_txrx_ops_attach_qcn9224(struct hal_soc *hal_soc)
 	hal_soc->ops->hal_reo_shared_qaddr_cache_clear = hal_reo_shared_qaddr_cache_clear_be;
 #endif
 	/* Overwrite the default BE ops */
+	hal_soc->ops->hal_get_rx_max_ba_window =
+					hal_get_rx_max_ba_window_qcn9224;
 	hal_soc->ops->hal_get_reo_qdesc_size = hal_qcn9224_get_reo_qdesc_size;
 	/* TX MONITOR */
 #ifdef QCA_MONITOR_2_0_SUPPORT

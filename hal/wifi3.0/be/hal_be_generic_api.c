@@ -163,13 +163,18 @@ void hal_set_link_desc_addr_be(void *desc, uint32_t cookie,
 			   cookie);
 }
 
+static uint16_t hal_get_rx_max_ba_window_be(int tid)
+{
+	return  HAL_RX_BA_WINDOW_256;
+}
+
 static uint32_t hal_get_reo_qdesc_size_be(uint32_t ba_window_size, int tid)
 {
 	/* Hardcode the ba_window_size to HAL_RX_MAX_BA_WINDOW for
 	 * NON_QOS_TID until HW issues are resolved.
 	 */
 	if (tid != HAL_NON_QOS_TID)
-		ba_window_size = HAL_RX_MAX_BA_WINDOW;
+		ba_window_size = hal_get_rx_max_ba_window_be(tid);
 
 	/* Return descriptor size corresponding to window size of 2 since
 	 * we set ba_window_size to 2 while setting up REO descriptors as
@@ -1045,6 +1050,7 @@ hal_rx_wbm_rel_buf_paddr_get_be(hal_ring_desc_t rx_desc,
 void hal_hw_txrx_default_ops_attach_be(struct hal_soc *hal_soc)
 {
 	hal_soc->ops->hal_get_reo_qdesc_size = hal_get_reo_qdesc_size_be;
+	hal_soc->ops->hal_get_rx_max_ba_window = hal_get_rx_max_ba_window_be;
 	hal_soc->ops->hal_set_link_desc_addr = hal_set_link_desc_addr_be;
 	hal_soc->ops->hal_tx_init_data_ring = hal_tx_init_data_ring_be;
 	hal_soc->ops->hal_get_ba_aging_timeout = hal_get_ba_aging_timeout_be;

@@ -4293,15 +4293,23 @@ static void dp_check_ba_buffersize(struct dp_peer *peer,
 				   uint16_t buffersize)
 {
 	struct dp_rx_tid *rx_tid = NULL;
+	struct dp_soc *soc = peer->vdev->pdev->soc;
+	uint16_t max_ba_window;
+
+	max_ba_window = hal_get_rx_max_ba_window(soc->hal_soc, tid);
+	dp_info("Input buffersize %d, max dp allowed %d",
+		buffersize, max_ba_window);
+	/* Adjust BA window size, restrict it to max DP allowed */
+	buffersize = QDF_MIN(buffersize, max_ba_window);
 
 	dp_info(QDF_MAC_ADDR_FMT" per_tid_basize_max_tid %d tid %d buffersize %d hw_buffer_size %d",
 		peer->mac_addr.raw,
-		peer->vdev->pdev->soc->per_tid_basize_max_tid, tid, buffersize,
+		soc->per_tid_basize_max_tid, tid, buffersize,
 		peer->hw_buffer_size);
 
 	rx_tid = &peer->rx_tid[tid];
-	if (peer->vdev->pdev->soc->per_tid_basize_max_tid &&
-	    tid < peer->vdev->pdev->soc->per_tid_basize_max_tid) {
+	if (soc->per_tid_basize_max_tid &&
+	    tid < soc->per_tid_basize_max_tid) {
 		rx_tid->ba_win_size = buffersize;
 		goto out;
 	} else {
