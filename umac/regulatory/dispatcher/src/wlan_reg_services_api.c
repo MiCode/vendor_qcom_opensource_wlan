@@ -1755,6 +1755,7 @@ wlan_reg_get_afc_dev_deploy_type(struct wlan_objmgr_pdev *pdev,
 	return reg_get_afc_dev_deploy_type(pdev, afc_dev_type);
 }
 
+qdf_export_symbol(wlan_reg_get_afc_dev_deploy_type);
 #endif /* CONFIG_AFC_SUPPORT */
 
 QDF_STATUS wlan_reg_is_chwidth_supported(struct wlan_objmgr_pdev *pdev,

@@ -53,6 +53,17 @@ void reg_init_pdev_mas_chan_list(
 		struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj,
 		struct mas_chan_params *mas_chan_params);
 
+/*
+ * reg_set_ap_pwr_type() - Set the AP power type.
+ * @pdev_priv_obj: pdev private object
+ *
+ * Set the AP power type as per AFC device deployment if AFC is available.
+ * Otherwise set it to indoor by default.
+ *
+ * Return: None
+ */
+void reg_set_ap_pwr_type(struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj);
+
 #ifdef CONFIG_REG_CLIENT
 /**
  * reg_save_reg_rules_to_pdev() - Save psoc reg-rules to pdev.

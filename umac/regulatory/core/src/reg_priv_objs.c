@@ -240,7 +240,7 @@ reg_init_def_client_type(struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj)
 static void
 reg_init_6g_vars(struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj)
 {
-	pdev_priv_obj->reg_cur_6g_ap_pwr_type = REG_INDOOR_AP;
+	reg_set_ap_pwr_type(pdev_priv_obj);
 	pdev_priv_obj->reg_rnr_tpe_usable = false;
 	pdev_priv_obj->reg_unspecified_ap_usable = false;
 	reg_init_def_client_type(pdev_priv_obj);
