@@ -2538,6 +2538,7 @@ qdf_nbuf_t dp_tx_send_msdu_multiple(struct dp_vdev *vdev, qdf_nbuf_t nbuf,
 				 */
 				qdf_nbuf_free(msdu_info->u.sg_info
 					      .curr_seg->nbuf);
+				dp_tx_desc_release(tx_desc, tx_q->desc_pool_id);
 				if (msdu_info->u.sg_info.curr_seg->next) {
 					msdu_info->u.sg_info.curr_seg =
 						msdu_info->u.sg_info
@@ -2547,7 +2548,6 @@ qdf_nbuf_t dp_tx_send_msdu_multiple(struct dp_vdev *vdev, qdf_nbuf_t nbuf,
 				} else
 					break;
 				i++;
-				dp_tx_desc_release(tx_desc, tx_q->desc_pool_id);
 				continue;
 			}
 
