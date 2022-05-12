@@ -1301,7 +1301,7 @@ static struct CE_attr host_ce_config_wlan_qca6390[] = {
 	/* host->target WMI */
 	{ /* CE3 */ CE_ATTR_FLAGS, 0, 32, 2048, 0, NULL,},
 	/* host->target HTT */
-	{ /* CE4 */ (CE_ATTR_FLAGS | CE_ATTR_DISABLE_INTR), 0,
+	{ /* CE4 */ CE4_COMP_HTT_HTC, 0,
 		CE_HTT_H2T_MSG_SRC_NENTRIES_QCA6390, 256, 0, NULL,},
 	/* target -> host PKTLOG */
 #ifdef REMOVE_PKT_LOG
@@ -1417,7 +1417,7 @@ static struct CE_attr host_ce_config_wlan_qca6750[] = {
 	/* host->target WMI */
 	{ /* CE3 */ CE_ATTR_FLAGS, 0, 32, 3520, 0, NULL,},
 	/* host->target HTT */
-	{ /* CE4 */ (CE_ATTR_FLAGS | CE_ATTR_DISABLE_INTR), 0,
+	{ /* CE4 */ CE4_COMP_HTT_HTC, 0,
 		CE_HTT_H2T_MSG_SRC_NENTRIES, 256, 0, NULL,},
 	/* target -> host PKTLOG */
 	{ /* CE5 */ (CE_ATTR_FLAGS | CE_ATTR_DISABLE_INTR), 0, 0, 2048, 512,
@@ -1477,7 +1477,7 @@ static struct CE_attr host_ce_config_wlan_kiwi[] = {
 	/* host->target WMI */
 	{ /* CE3 */ CE_ATTR_FLAGS, 0, 32, 3520, 0, NULL,},
 	/* host->target HTT */
-	{ /* CE4 */ (CE_ATTR_FLAGS | CE_ATTR_DISABLE_INTR), 0,
+	{ /* CE4 */ CE4_COMP_HTT_HTC, 0,
 		256, 256, 0, NULL,},
 #ifdef FEATURE_PKTLOG
 	/* target -> host PKTLOG */
