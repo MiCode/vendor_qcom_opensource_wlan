@@ -1169,6 +1169,50 @@ dp_rx_mon_process_status_tlv(struct dp_pdev *pdev)
 	return ppdu_info;
 }
 
+/**
+ * dp_rx_mon_update_peer_id() - Update sw_peer_id with link peer_id
+ *
+ * @pdev: DP pdev handle
+ * @ppdu_info: HAL PPDU Info buffer
+ *
+ * Return: none
+ */
+#ifdef WLAN_FEATURE_11BE_MLO
+#define DP_PEER_ID_MASK 0x3FFF
+static inline
+void dp_rx_mon_update_peer_id(struct dp_pdev *pdev,
+			      struct hal_rx_ppdu_info *ppdu_info)
+{
+	uint32_t i;
+	uint16_t peer_id;
+	struct dp_soc *soc = pdev->soc;
+	uint32_t num_users = ppdu_info->com_info.num_users;
+
+	for (i = 0; i < num_users; i++) {
+		peer_id = ppdu_info->rx_user_status[i].sw_peer_id;
+		if (peer_id == HTT_INVALID_PEER)
+			continue;
+		/*
+		+---------------------------------------------------------------------+
+		| 15 | 14 | 13 | 12 | 11 | 10 | 9 | 8 | 7 | 6 | 5 | 4 | 3 | 2 | 1 | 0 |
+		+---------------------------------------------------------------------+
+		| CHIP ID | ML |                     PEER ID                          |
+		+---------------------------------------------------------------------+
+		*/
+		peer_id &= DP_PEER_ID_MASK;
+		peer_id = dp_get_link_peer_id_by_lmac_id(soc, peer_id,
+							 pdev->lmac_id);
+		ppdu_info->rx_user_status[i].sw_peer_id = peer_id;
+	}
+}
+#else
+static inline
+void dp_rx_mon_update_peer_id(struct dp_pdev *pdev,
+			      struct hal_rx_ppdu_info *ppdu_info)
+{
+}
+#endif
+
 static inline uint32_t
 dp_rx_mon_srng_process_2_0(struct dp_soc *soc, struct dp_intr *int_ctx,
 			   uint32_t mac_id, uint32_t quota)
@@ -1285,6 +1329,9 @@ dp_rx_mon_srng_process_2_0(struct dp_soc *soc, struct dp_intr *int_ctx,
 		mon_pdev->rx_mon_stats.status_ppdu_done++;
 
 		ppdu_info = dp_rx_mon_process_status_tlv(pdev);
+
+		if (ppdu_info)
+			dp_rx_mon_update_peer_id(pdev, ppdu_info);
 
 		/* Call enhanced stats update API */
 		if (mon_pdev->enhanced_stats_en && ppdu_info)
