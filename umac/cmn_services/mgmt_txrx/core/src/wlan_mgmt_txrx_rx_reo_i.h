@@ -1019,11 +1019,11 @@ static inline bool is_mgmt_rx_reo_required(
 			struct mgmt_rx_reo_frame_descriptor *desc)
 {
 	/**
-	 * NOTE: Implementing a simple policy based on INI and WMI serive bit
-	 * for now. Finer policies like checking whether this pdev has
-	 * any MLO VAPs or checking the frame type can be implemented later.
+	 * NOTE: Implementing a simple policy based on INI, WMI serive bit
+	 * and the number of MLO vdevs in the given pdev.
 	 */
-	return wlan_mgmt_rx_reo_is_feature_enabled_at_pdev(pdev);
+	return wlan_mgmt_rx_reo_is_feature_enabled_at_pdev(pdev) &&
+	       wlan_pdev_get_mlo_vdev_count(pdev);
 }
 
 /**
