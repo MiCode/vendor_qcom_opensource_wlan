@@ -680,6 +680,42 @@ reg_modify_chan_list_for_japan(struct wlan_objmgr_pdev *pdev)
 }
 #endif
 
+#ifdef CONFIG_AFC_SUPPORT
+/**
+ * reg_modify_chan_list_for_outdoor() - Set the channel flag for the
+ * enabled SP channels as REGULATORY_CHAN_AFC_NOT_DONE.
+ * @pdev_priv_obj: Regulatory pdev private object.
+ *
+ * Return: void
+ */
+static void
+reg_modify_chan_list_for_outdoor(struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj)
+{
+	struct regulatory_channel *sp_chan_list;
+	int i;
+
+	sp_chan_list =  pdev_priv_obj->mas_chan_list_6g_ap[REG_STANDARD_POWER_AP];
+	if (pdev_priv_obj->reg_afc_dev_deployment_type != AFC_DEPLOYMENT_OUTDOOR)
+		return;
+
+	if (pdev_priv_obj->is_6g_afc_power_event_received)
+		return;
+
+	if (!pdev_priv_obj->is_6g_channel_list_populated)
+		return;
+
+	for (i = 0; i < NUM_6GHZ_CHANNELS; i++) {
+		if (sp_chan_list[i].state == CHANNEL_STATE_ENABLE)
+			sp_chan_list[i].chan_flags |= REGULATORY_CHAN_AFC_NOT_DONE;
+	}
+}
+#else
+static inline void
+reg_modify_chan_list_for_outdoor(struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj)
+{
+}
+#endif
+
 /**
  * reg_modify_chan_list_for_freq_range() - Modify channel list for the given low
  * and high frequency range.
@@ -1431,6 +1467,21 @@ reg_intersect_6g_afc_chan_list(struct wlan_regulatory_pdev_priv_obj
 			afc_chan_list[i].psd_eirp =
 				QDF_MIN((int16_t)sp_chan_list[i].psd_eirp,
 					(int16_t)afc_mas_chan_list[i].psd_eirp);
+			 afc_chan_list[i].chan_flags &=
+				 ~REGULATORY_CHAN_AFC_NOT_DONE;
+		} else if ((pdev_priv_obj->reg_afc_dev_deployment_type ==
+			    AFC_DEPLOYMENT_OUTDOOR) &&
+			   (sp_chan_list[i].chan_flags &
+			    REGULATORY_CHAN_AFC_NOT_DONE)) {
+			/* This is for the SP channels supported by
+			 * regulatory list that are mot supported by AFC i.e.
+			 * SP channel list - AFC Channel list.
+			 */
+			afc_chan_list[i].tx_power = sp_chan_list[i].tx_power;
+			afc_chan_list[i].psd_eirp = sp_chan_list[i].psd_eirp;
+			afc_chan_list[i].chan_flags &= ~REGULATORY_CHAN_DISABLED;
+			afc_chan_list[i].chan_flags |= REGULATORY_CHAN_AFC_NOT_DONE;
+			afc_chan_list[i].state = CHANNEL_STATE_ENABLE;
 		}
 	}
 }
@@ -1961,8 +2012,7 @@ reg_set_flag_afc_not_done(uint32_t *chan_flags, bool is_set)
  */
 static void
 reg_update_6g_chan_for_outdoor(struct wlan_regulatory_pdev_priv_obj *pdev_priv,
-			       struct super_chan_info *chan_info,
-			       uint16_t chan_idx)
+			       struct super_chan_info *chan_info)
 {
 	uint32_t *p_chan_flags;
 
@@ -1990,8 +2040,7 @@ reg_set_flag_afc_not_done(uint32_t *chan_flags, bool is_set)
 
 static inline void
 reg_update_6g_chan_for_outdoor(struct wlan_regulatory_pdev_priv_obj *pdev_priv,
-			       struct super_chan_info *chan_info,
-			       uint16_t chan_idx)
+			       struct super_chan_info *chan_info)
 {
 }
 
@@ -2371,8 +2420,7 @@ static void reg_update_sup_ch_entry_for_mode(
 	reg_dis_6g_edge_chan_in_enh_chan(pdev, &super_chan_list[chn_idx],
 					 chn_idx, supp_pwr_mode);
 	reg_update_6g_chan_for_outdoor(pdev_priv_obj,
-				       &super_chan_list[chn_idx],
-				       chn_idx);
+				       &super_chan_list[chn_idx]);
 
 	reg_fill_best_pwr_mode(pdev_priv_obj, super_chan_list, chn_idx,
 			       supp_pwr_mode, temp_reg_chan.tx_power,
@@ -2653,6 +2701,7 @@ void reg_propagate_mas_chan_list_to_pdev(struct wlan_objmgr_psoc *psoc,
 
 	reg_update_max_phymode_chwidth_for_pdev(pdev);
 	reg_update_channel_ranges(pdev);
+	reg_modify_chan_list_for_outdoor(pdev_priv_obj);
 	reg_compute_pdev_current_chan_list(pdev_priv_obj);
 
 	if (reg_tx_ops->fill_umac_legacy_chanlist) {
@@ -3574,12 +3623,18 @@ static void reg_disable_afc_mas_chan_list_channels(
 
 	for (chan_idx = 0; chan_idx < NUM_6GHZ_CHANNELS; chan_idx++) {
 		if (afc_mas_chan_list[chan_idx].state == CHANNEL_STATE_ENABLE) {
-			afc_mas_chan_list[chan_idx].state =
-							CHANNEL_STATE_DISABLE;
-			afc_mas_chan_list[chan_idx].chan_flags |=
-						REGULATORY_CHAN_DISABLED;
-			afc_mas_chan_list[chan_idx].psd_eirp = 0;
-			afc_mas_chan_list[chan_idx].tx_power = 0;
+			if (pdev_priv_obj->reg_afc_dev_deployment_type ==
+			    AFC_DEPLOYMENT_OUTDOOR) {
+				afc_mas_chan_list[chan_idx].chan_flags |=
+						REGULATORY_CHAN_AFC_NOT_DONE;
+			} else {
+				afc_mas_chan_list[chan_idx].state =
+						CHANNEL_STATE_DISABLE;
+				afc_mas_chan_list[chan_idx].chan_flags |=
+					REGULATORY_CHAN_DISABLED;
+				afc_mas_chan_list[chan_idx].psd_eirp = 0;
+				afc_mas_chan_list[chan_idx].tx_power = 0;
+			}
 		}
 	}
 
