@@ -581,7 +581,7 @@ uint8_t *peer_assoc_add_tid_to_link_map(uint8_t *buf_ptr,
 	for (dir = 0; dir < t2lm_params->num_dir; dir++) {
 		wmi_debug("Add T2LM TLV for peer: " QDF_MAC_ADDR_FMT " direction:%d",
 				QDF_MAC_ADDR_REF(t2lm_params->peer_macaddr),
-				dir);
+				t2lm_params->t2lm_info[dir].direction);
 		for (tid_num = 0; tid_num < T2LM_MAX_NUM_TIDS; tid_num++) {
 			cmd = (wmi_peer_assoc_tid_to_link_map *)buf_ptr;
 			peer_assoc_populate_t2lm_tlv(
@@ -641,7 +641,8 @@ QDF_STATUS send_mlo_peer_tid_to_link_map_cmd_tlv(
 
 	for (dir = 0; dir < params->num_dir; dir++) {
 		wmi_debug("Add T2LM TLV for peer: " QDF_MAC_ADDR_FMT " direction:%d",
-				QDF_MAC_ADDR_REF(params->peer_macaddr), dir);
+				QDF_MAC_ADDR_REF(params->peer_macaddr),
+				params->t2lm_info[dir].direction);
 
 		for (tid_num = 0; tid_num < T2LM_MAX_NUM_TIDS; tid_num++) {
 			t2lm = (wmi_tid_to_link_map *)buf_ptr;
