@@ -275,17 +275,25 @@ wlan_mgmt_rx_reo_is_simulation_in_progress(void)
 }
 
 QDF_STATUS
-wlan_mgmt_rx_reo_print_ingress_frame_debug_info(void)
+wlan_mgmt_rx_reo_print_ingress_frame_stats(void)
 {
-	return mgmt_rx_reo_print_ingress_frame_debug_info();
+	return mgmt_rx_reo_print_ingress_frame_stats();
 }
-
-qdf_export_symbol(wlan_mgmt_rx_reo_print_ingress_frame_debug_info);
 
 QDF_STATUS
-wlan_mgmt_rx_reo_print_egress_frame_debug_info(void)
+wlan_mgmt_rx_reo_print_ingress_frame_info(uint16_t num_frames)
 {
-	return mgmt_rx_reo_print_egress_frame_debug_info();
+	return mgmt_rx_reo_print_ingress_frame_info(num_frames);
 }
 
-qdf_export_symbol(wlan_mgmt_rx_reo_print_egress_frame_debug_info);
+QDF_STATUS
+wlan_mgmt_rx_reo_print_egress_frame_stats(void)
+{
+	return mgmt_rx_reo_print_egress_frame_stats();
+}
+
+QDF_STATUS
+wlan_mgmt_rx_reo_print_egress_frame_info(uint16_t num_frames)
+{
+	return mgmt_rx_reo_print_egress_frame_info(num_frames);
+}

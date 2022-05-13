@@ -865,7 +865,7 @@ bool
 mgmt_rx_reo_is_simulation_in_progress(void);
 
 /**
- * mgmt_rx_reo_print_ingress_frame_debug_info() - Helper API to print
+ * mgmt_rx_reo_print_ingress_frame_stats() - Helper API to print
  * stats related to incoming management frames
  *
  * This API prints stats related to management frames entering management
@@ -874,10 +874,22 @@ mgmt_rx_reo_is_simulation_in_progress(void);
  * Return: QDF_STATUS
  */
 QDF_STATUS
-mgmt_rx_reo_print_ingress_frame_debug_info(void);
+mgmt_rx_reo_print_ingress_frame_stats(void);
 
 /**
- * mgmt_rx_reo_print_egress_frame_debug_info() - Helper API to print
+ * mgmt_rx_reo_print_ingress_frame_info() - Print the debug information
+ * about the latest frames entered the reorder module
+ * @num_frames: Number of frames for which the debug information is to be
+ * printed. If @num_frames is 0, then debug information about all the frames
+ * in the ring buffer will be  printed.
+ *
+ * Return: QDF_STATUS of operation
+ */
+QDF_STATUS
+mgmt_rx_reo_print_ingress_frame_info(uint16_t num_frames);
+
+/**
+ * mgmt_rx_reo_print_egress_frame_stats() - Helper API to print
  * stats related to outgoing management frames
  *
  * This API prints stats related to management frames exiting management
@@ -886,7 +898,19 @@ mgmt_rx_reo_print_ingress_frame_debug_info(void);
  * Return: QDF_STATUS
  */
 QDF_STATUS
-mgmt_rx_reo_print_egress_frame_debug_info(void);
+mgmt_rx_reo_print_egress_frame_stats(void);
+
+/**
+ * mgmt_rx_reo_print_egress_frame_info() - Print the debug information
+ * about the latest frames leaving the reorder module
+ * @num_frames: Number of frames for which the debug information is to be
+ * printed. If @num_frames is 0, then debug information about all the frames
+ * in the ring buffer will be  printed.
+ *
+ * Return: QDF_STATUS of operation
+ */
+QDF_STATUS
+mgmt_rx_reo_print_egress_frame_info(uint16_t num_frames);
 
 #ifdef WLAN_MGMT_RX_REO_SIM_SUPPORT
 /**
