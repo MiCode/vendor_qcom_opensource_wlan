@@ -1728,6 +1728,13 @@ bool wlan_reg_is_afc_power_event_received(struct wlan_objmgr_pdev *pdev)
 
 qdf_export_symbol(wlan_reg_is_afc_power_event_received);
 
+bool wlan_reg_is_afc_done(struct wlan_objmgr_pdev *pdev, qdf_freq_t freq)
+{
+	return reg_is_afc_done(pdev, freq);
+}
+
+qdf_export_symbol(wlan_reg_is_afc_done);
+
 QDF_STATUS wlan_reg_get_afc_req_id(struct wlan_objmgr_pdev *pdev,
 				   uint64_t *req_id)
 {

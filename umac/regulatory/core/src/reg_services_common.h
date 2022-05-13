@@ -2170,6 +2170,16 @@ QDF_STATUS reg_send_afc_cmd(struct wlan_objmgr_pdev *pdev,
 bool reg_is_afc_power_event_received(struct wlan_objmgr_pdev *pdev);
 
 /**
+ * reg_is_afc_done() - Check is AFC response has been received enabling
+ * the given frequency.
+ * @pdev: pdev ptr
+ * @freq: given frequency
+ *
+ * Return: True if frequency is enabled, false otherwise
+ */
+bool reg_is_afc_done(struct wlan_objmgr_pdev *pdev, qdf_freq_t freq);
+
+/**
  * reg_get_afc_req_id() - Get the AFC request ID
  * @pdev: pdev pointer
  * @req_id: Pointer to request id

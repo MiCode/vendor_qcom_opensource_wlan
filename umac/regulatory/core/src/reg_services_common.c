@@ -8215,6 +8215,22 @@ bool reg_is_afc_power_event_received(struct wlan_objmgr_pdev *pdev)
 	return pdev_priv_obj->is_6g_afc_power_event_received;
 }
 
+bool reg_is_afc_done(struct wlan_objmgr_pdev *pdev, qdf_freq_t freq)
+{
+	struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj;
+	uint32_t chan_flags;
+
+	pdev_priv_obj = reg_get_pdev_obj(pdev);
+	if (!IS_VALID_PDEV_REG_OBJ(pdev_priv_obj)) {
+		reg_err("pdev reg component is NULL");
+		return false;
+	}
+
+	chan_flags = reg_get_channel_flags_for_freq(pdev, freq);
+
+	return !(chan_flags & REGULATORY_CHAN_AFC_NOT_DONE);
+}
+
 QDF_STATUS reg_get_afc_req_id(struct wlan_objmgr_pdev *pdev, uint64_t *req_id)
 {
 	struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj;
