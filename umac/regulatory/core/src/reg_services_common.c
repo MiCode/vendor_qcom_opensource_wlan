@@ -1488,7 +1488,7 @@ reg_freq_to_chan_for_chlist(struct regulatory_channel *chan_list,
 {
 	uint32_t count;
 
-	if (num_chans == INVALID_CHANNEL) {
+	if (num_chans > NUM_CHANNELS) {
 		reg_err_rl("invalid num_chans");
 		return 0;
 	}
