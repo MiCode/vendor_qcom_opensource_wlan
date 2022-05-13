@@ -354,7 +354,7 @@ static void wlan_lmac_if_register_afc_handlers(
 	rx_ops->reg_rx_ops.reg_get_afc_dev_type = tgt_reg_get_afc_dev_type;
 }
 #else
-static void wlan_lmac_if_register_afc_handlers(
+static inline void wlan_lmac_if_register_afc_handlers(
 					struct wlan_lmac_if_rx_ops *rx_ops)
 {
 }
@@ -366,7 +366,7 @@ static inline void wlan_lmac_if_register_master_list_ext_handler(
 {
 }
 
-static void wlan_lmac_if_register_afc_event_handler(
+static inline void wlan_lmac_if_register_afc_handlers(
 					struct wlan_lmac_if_rx_ops *rx_ops)
 {
 }
