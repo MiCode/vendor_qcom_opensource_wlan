@@ -411,6 +411,8 @@ enum cdp_mon_phyrx_abort_reason_code {
  * @dest_ppdu_drop: Number of ppdu dropped from monitor destination ring
  * @mon_link_desc_invalid: msdu link desc invalid count
  * @mon_rx_desc_invalid: rx_desc invalid count
+ * @mpdu_ppdu_id_mismatch_drop: mpdu's ppdu id did not match destination
+ *  ring ppdu id
  * @rx_undecoded_count: Received undecoded frame count
  * @rx_undecoded_error: Rx undecoded errors
  */
@@ -444,6 +446,7 @@ struct cdp_pdev_mon_stats {
 	uint32_t mon_link_desc_invalid;
 	uint32_t mon_rx_desc_invalid;
 	uint32_t mon_nbuf_sanity_err;
+	uint32_t mpdu_ppdu_id_mismatch_drop;
 #ifdef QCA_UNDECODED_METADATA_SUPPORT
 	uint32_t rx_undecoded_count;
 	uint32_t rx_undecoded_error[CDP_PHYRX_ERR_MAX];
