@@ -1560,13 +1560,7 @@ mgmt_rx_reo_debug_print_egress_frame_info(struct mgmt_rx_reo_context *reo_ctx,
 	if (!num_entries_to_print)
 		return QDF_STATUS_SUCCESS;
 
-	boarder = qdf_mem_malloc
-		(MGMT_RX_REO_EGRESS_FRAME_DEBUG_INFO_BOARDER_MAX_SIZE + 1);
-	if (!boarder)
-		return QDF_STATUS_E_NOMEM;
-
-	qdf_mem_set(boarder,
-		    MGMT_RX_REO_EGRESS_FRAME_DEBUG_INFO_BOARDER_MAX_SIZE, '-');
+	boarder = egress_frame_debug_info->boarder;
 
 	mgmt_rx_reo_alert_no_fl("%s", boarder);
 	mgmt_rx_reo_alert_no_fl("|%3s|%5s|%4s|%5s|%10s|%11s|%11s|%11s|%11s|%5s|%7s|%5s|%4s|%69s|%69s|%94s|%94s|%94s|%94s|%94s|%94s|",
@@ -2792,13 +2786,7 @@ mgmt_rx_reo_debug_print_ingress_frame_info(struct mgmt_rx_reo_context *reo_ctx,
 	if (!num_entries_to_print)
 		return QDF_STATUS_SUCCESS;
 
-	boarder = qdf_mem_malloc
-		(MGMT_RX_REO_INGRESS_FRAME_DEBUG_INFO_BOARDER_MAX_SIZE + 1);
-	if (!boarder)
-		return QDF_STATUS_E_NOMEM;
-
-	qdf_mem_set(boarder,
-		    MGMT_RX_REO_INGRESS_FRAME_DEBUG_INFO_BOARDER_MAX_SIZE, '-');
+	boarder = ingress_frame_debug_info->boarder;
 
 	mgmt_rx_reo_alert_no_fl("%s", boarder);
 	mgmt_rx_reo_alert_no_fl("|%5s|%5s|%6s|%6s|%9s|%4s|%5s|%10s|%10s|%10s|%5s|%10s|%11s|%11s|%11s|%4s|%3s|%69s|%94s|%94s|%94s|%94s|%94s|%94s|",
@@ -4754,6 +4742,11 @@ mgmt_rx_reo_init_context(void)
 
 	qdf_timer_mod(&reo_context->reo_list.ageout_timer,
 		      MGMT_RX_REO_AGEOUT_TIMER_PERIOD_MS);
+
+	qdf_mem_set(reo_context->ingress_frame_debug_info.boarder,
+		    MGMT_RX_REO_INGRESS_FRAME_DEBUG_INFO_BOARDER_MAX_SIZE, '-');
+	qdf_mem_set(reo_context->egress_frame_debug_info.boarder,
+		    MGMT_RX_REO_EGRESS_FRAME_DEBUG_INFO_BOARDER_MAX_SIZE, '-');
 
 	return QDF_STATUS_SUCCESS;
 

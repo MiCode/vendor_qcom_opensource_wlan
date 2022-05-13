@@ -595,6 +595,7 @@ struct reo_egress_frame_stats {
  * @wrap_aroud: Flag to indicate whether wrap around occurred when logging
  * debug information to @frame_list
  * @stats: Stats related to incoming frames
+ * @boarder: boarder string
  */
 struct reo_ingress_debug_info {
 	struct reo_ingress_debug_frame_info
@@ -602,6 +603,7 @@ struct reo_ingress_debug_info {
 	int next_index;
 	bool wrap_aroud;
 	struct reo_ingress_frame_stats stats;
+	char boarder[MGMT_RX_REO_INGRESS_FRAME_DEBUG_INFO_BOARDER_MAX_SIZE + 1];
 };
 
 /**
@@ -612,6 +614,7 @@ struct reo_ingress_debug_info {
  * @wrap_aroud: Flag to indicate whether wrap around occurred when logging
  * debug information to @frame_list
  * @stats: Stats related to outgoing frames
+ * @boarder: boarder string
  */
 struct reo_egress_debug_info {
 	struct reo_egress_debug_frame_info
@@ -619,6 +622,7 @@ struct reo_egress_debug_info {
 	int next_index;
 	bool wrap_aroud;
 	struct reo_egress_frame_stats stats;
+	char boarder[MGMT_RX_REO_EGRESS_FRAME_DEBUG_INFO_BOARDER_MAX_SIZE + 1];
 };
 #endif /* WLAN_MGMT_RX_REO_DEBUG_SUPPORT */
 
