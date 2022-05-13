@@ -50,7 +50,7 @@ bool mlo_ap_vdev_attach(struct wlan_objmgr_vdev *vdev,
 	wlan_vdev_set_link_id(vdev, link_id);
 	wlan_vdev_mlme_set_mlo_vdev(vdev);
 
-	/**
+	/*
 	 * every link will trigger mlo_ap_vdev_attach,
 	 * and they should provide the same vdev_count.
 	 */
@@ -65,7 +65,7 @@ bool mlo_ap_vdev_attach(struct wlan_objmgr_vdev *vdev,
 
 	if (cdp_update_mlo_ptnr_list(wlan_psoc_get_dp_handle(psoc),
 				pr_vdev_ids, WLAN_UMAC_MLO_MAX_VDEVS,
-				wlan_vdev_get_id(vdev) != QDF_STATUS_SUCCESS)) {
+				wlan_vdev_get_id(vdev)) != QDF_STATUS_SUCCESS) {
 		mlo_debug("Failed to add vdev to partner vdev list, vdev id:%d",
 			 wlan_vdev_get_id(vdev));
 	}
@@ -88,7 +88,7 @@ bool mlo_ap_vdev_attach(struct wlan_objmgr_vdev *vdev,
 	wlan_vdev_set_link_id(vdev, link_id);
 	wlan_vdev_mlme_set_mlo_vdev(vdev);
 
-	/**
+	/*
 	 * every link will trigger mlo_ap_vdev_attach,
 	 * and they should provide the same vdev_count.
 	 */
