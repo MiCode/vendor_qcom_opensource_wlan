@@ -232,6 +232,24 @@ struct mlo_bcn_templ_partner_links {
 	uint8_t num_links;
 	struct ml_bcn_partner_info partner_info[WLAN_UMAC_MLO_MAX_VDEVS];
 };
+
+/**
+ * struct mlo_bcn_tmpl_ml_info - Impacted link critical update information
+ * @hw_link_id: Unique hw link id across SoCs
+ * CU vdev map for the Critical update category-1 (Inclusion of CU IES)
+ * @cu_vdev_map_cat1_lo: bits 31:0 to represent vdev ids 0 to 31
+ * @cu_vdev_map_cat1_hi: bits 63:32 to represent vdev ids 32 to 63
+ * CU vdev map for the Critical update category-2 (modification of CU IES)
+ * @cu_vdev_map_cat2_lo: bits 31:0 to represent vdev ids 0 to 31
+ * @cu_vdev_map_cat2_hi: bits 63:32 to represent vdev ids 32 to 63
+ */
+struct mlo_bcn_tmpl_ml_info {
+	uint32_t hw_link_id;
+	uint32_t cu_vdev_map_cat1_lo;
+	uint32_t cu_vdev_map_cat1_hi;
+	uint32_t cu_vdev_map_cat2_lo;
+	uint32_t cu_vdev_map_cat2_hi;
+};
 #endif
 
 /**
@@ -255,6 +273,7 @@ struct mlo_bcn_templ_partner_links {
  * @enable_bigtk: enable bigtk or not
  * @frm: beacon template parameter
  * @mlo_partner: Partner link information
+ * @cu_ml_info: Impacted link critical update information
  */
 struct beacon_tmpl_params {
 	uint8_t vdev_id;
@@ -272,6 +291,7 @@ struct beacon_tmpl_params {
 	uint8_t *frm;
 #ifdef WLAN_FEATURE_11BE_MLO
 	struct mlo_bcn_templ_partner_links mlo_partner;
+	struct mlo_bcn_tmpl_ml_info cu_ml_info;
 #endif
 };
 

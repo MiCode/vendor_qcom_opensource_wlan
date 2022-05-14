@@ -207,6 +207,24 @@
 #define WLAN_VDEV_OP_BLOCK_TX_TRAFFIC       0x00020000
   /* for mbo functionality */
 #define WLAN_VDEV_OP_MBO                    0x00040000
+/* VDEV Critical update category-1
+ * Inclusion of Critical Update IES flag
+ * This includes: CSA, ECSA, Quiet
+ * Quiet channel, Max Ch Switch Time IEs.
+ */
+#define WLAN_VDEV_OP_CU_CAT1                0x00080000
+/* VDEV Critical update category-2
+ * Modification of Critical Update IES flag
+ * This includes: DSSS Param, HT Operation element
+ * VHT Operation element, HE Operation element
+ * EHT Operation element, MU EDCA Param, EDCA param
+ * UORA Param, BSS Color Change Announcement element
+ * Spatial Reuse Param Set element
+ * Operating Mode Notification element
+ * Wide Bandwidth Channel Switch element
+ * Broadcast TWT element
+ */
+#define WLAN_VDEV_OP_CU_CAT2                0x00100000
 
  /* CAPABILITY: IBSS available */
 #define WLAN_VDEV_C_IBSS                    0x00000001

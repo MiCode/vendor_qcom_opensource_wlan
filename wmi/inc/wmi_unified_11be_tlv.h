@@ -77,6 +77,25 @@ size_t bcn_tmpl_mlo_param_size(struct beacon_tmpl_params *param);
  */
 uint8_t *bcn_tmpl_add_ml_partner_links(uint8_t *buf_ptr,
 				       struct beacon_tmpl_params *param);
+
+/**
+ * bcn_tmpl_ml_info_size() - Get ML info size in beacon template
+ * @param: Pointer to beacon template param
+ *
+ * Return: size of ML info in beacon template
+ */
+size_t bcn_tmpl_ml_info_size(struct beacon_tmpl_params *param);
+
+/**
+ * bcn_tmpl_add_ml_info - Add MLO info to update Critical Update info in
+ *                                 beacon template command
+ * @buf_ptr: pointer to beacon cmd buffer.
+ * @param: pointer to beacon template params
+ *
+ * Return: pointer to new offset of cmd buffer
+ */
+uint8_t *bcn_tmpl_add_ml_info(uint8_t *buf_ptr,
+			      struct beacon_tmpl_params *param);
 /**
  *  peer_create_add_mlo_params() - Add MLO params in peer create cmd
  *  @buf_ptr: pointer to peer create cmd buffer.
@@ -196,6 +215,18 @@ static size_t bcn_tmpl_mlo_param_size(struct beacon_tmpl_params *param)
 
 static uint8_t *bcn_tmpl_add_ml_partner_links(uint8_t *buf_ptr,
 					      struct beacon_tmpl_params *param)
+{
+	WMITLV_SET_HDR(buf_ptr, WMITLV_TAG_ARRAY_STRUC, 0);
+	return buf_ptr + WMI_TLV_HDR_SIZE;
+}
+
+static size_t bcn_tmpl_ml_info_size(struct beacon_tmpl_params *param)
+{
+	return WMI_TLV_HDR_SIZE;
+}
+
+static uint8_t *bcn_tmpl_add_ml_info(uint8_t *buf_ptr,
+				     struct beacon_tmpl_params *param)
 {
 	WMITLV_SET_HDR(buf_ptr, WMITLV_TAG_ARRAY_STRUC, 0);
 	return buf_ptr + WMI_TLV_HDR_SIZE;
