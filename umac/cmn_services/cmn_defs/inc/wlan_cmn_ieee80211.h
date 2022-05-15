@@ -2283,6 +2283,9 @@ struct wlan_ml_bv_linfo_perstaprof_stainfo_dtiminfo {
 /* BSS Parameters Change Count */
 #define WLAN_RNR_NBRAPINFO_TBTTINFO_MLDPARAMS_BSSPARAMCHANGECNT_IDX      12
 #define WLAN_RNR_NBRAPINFO_TBTTINFO_MLDPARAMS_BSSPARAMCHANGECNT_BITS     8
+/* All Updates Included */
+#define WLAN_RNR_NBRAPINFO_TBTTINFO_MLDPARAMS_ALLUPDATESINC_IDX          20
+#define WLAN_RNR_NBRAPINFO_TBTTINFO_MLDPARAMS_ALLUPDATESINC_BITS         1
 
 /*
  * End of definitions related to MLO specific aspects of Reduced Neighbor Report
