@@ -205,6 +205,12 @@ wlan_mgmt_rx_reo_detach(struct wlan_objmgr_pdev *pdev)
 
 qdf_export_symbol(wlan_mgmt_rx_reo_detach);
 
+uint16_t
+wlan_mgmt_rx_reo_get_pkt_ctr_delta_thresh(struct wlan_objmgr_psoc *psoc)
+{
+	return cfg_get(psoc, CFG_MGMT_RX_REO_PKT_CTR_DELTA_THRESH);
+}
+
 #ifndef WLAN_MGMT_RX_REO_SIM_SUPPORT
 bool
 wlan_mgmt_rx_reo_is_feature_enabled_at_psoc(struct wlan_objmgr_psoc *psoc)

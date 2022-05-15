@@ -693,6 +693,7 @@ struct mgmt_rx_reo_context {
  * @host_snapshot: host snapshot
  * @is_parallel_rx: Indicates that this frame is received in parallel to the
  * last frame which is delivered to the upper layer.
+ * @pkt_ctr_delta: Packet counter delta of the current and last frame
  */
 struct mgmt_rx_reo_frame_descriptor {
 	enum mgmt_rx_reo_frame_descriptor_type type;
@@ -711,6 +712,7 @@ struct mgmt_rx_reo_frame_descriptor {
 			[MAX_MLO_LINKS][MGMT_RX_REO_SHARED_SNAPSHOT_MAX];
 	struct mgmt_rx_reo_snapshot_params host_snapshot[MAX_MLO_LINKS];
 	bool is_parallel_rx;
+	int pkt_ctr_delta;
 };
 
 /**

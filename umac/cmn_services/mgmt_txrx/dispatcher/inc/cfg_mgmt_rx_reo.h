@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -45,8 +46,35 @@
 	CFG_INI_BOOL("mgmt_rx_reo_enable", false, \
 			"Enable MGMT Rx REO feature")
 
+/*
+ * <ini>
+ * mgmt_rx_reo_pkt_ctr_delta_thresh - Packet counter delta threshold
+ * @Min: 0
+ * @Max: 0xFFFF
+ * @Default: 0
+ *
+ * This ini is used to configure the maximum allowed delta between subsequent
+ * management frames of a given link. Configurations are as follows:
+ * 0 - No restrictions in the delta value
+ * >= 1 - Assert the system if the delta between the packet counter values of
+ * subsequent frames of a given link crosses this value.
+ *
+ * Related: None
+ *
+ * Supported Feature: MGMT Rx REO
+ *
+ * Usage: External
+ *
+ * </ini>
+ */
+#define CFG_MGMT_RX_REO_PKT_CTR_DELTA_THRESH CFG_INI_UINT(\
+		"mgmt_rx_reo_pkt_ctr_delta_thresh",\
+		0, 0xFFFF, 0,\
+		CFG_VALUE_OR_DEFAULT, "Packet counter delta threshold")
+
 #define CFG_MGMT_RX_REO_ALL \
-	CFG(CFG_MGMT_RX_REO_ENABLE)
+	CFG(CFG_MGMT_RX_REO_ENABLE) \
+	CFG(CFG_MGMT_RX_REO_PKT_CTR_DELTA_THRESH)
 #else
 
 #define CFG_MGMT_RX_REO_ALL

@@ -297,6 +297,16 @@ bool
 wlan_mgmt_rx_reo_is_feature_enabled_at_pdev(struct wlan_objmgr_pdev *pdev);
 
 /**
+ * wlan_mgmt_rx_reo_get_pkt_ctr_delta_thresh() - Get the packet counter delta
+ * threshold value
+ * @psoc: pointer to psoc object
+ *
+ * Return: Packet counter delta threshold value
+ */
+uint16_t
+wlan_mgmt_rx_reo_get_pkt_ctr_delta_thresh(struct wlan_objmgr_psoc *psoc);
+
+/**
  * wlan_mgmt_rx_reo_is_simulation_in_progress() - API to check whether
  * simulation is in progress
  *
