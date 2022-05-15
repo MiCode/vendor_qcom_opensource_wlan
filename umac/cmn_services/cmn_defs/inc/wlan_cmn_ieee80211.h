@@ -1806,6 +1806,9 @@ struct wlan_ie_ehtops {
 #ifdef WLAN_FEATURE_11BE_MLO
 #define WLAN_MLO_MAX_VDEVS 2
 
+/* Size in octets of the BSS Parameters Change Count (sub)field */
+#define WLAN_ML_BSSPARAMCHNGCNT_SIZE                    1
+
 /**
  * struct wlan_ie_multilink - Fixed fields in Multi-Link IE
  * @elem_id: Element ID
@@ -1858,11 +1861,14 @@ struct wlan_ml_probe_req {
  * variants.
  */
 
-/* Below fields and subfields have been transitioned to D1.4, and rest will
- * be checked and transitioned to D1.4 separately.
- * 1. Presence bitmap subfield.
- * 2. Common info length subfield of common info field.
- * 3. STA info length subfield in STA Info field.
+/* The below fields and subfields have been transitioned to D1.5, and the rest
+ * will be checked and transitioned to D1.5 separately:
+ * 1. Presence bitmap subfield in the Multi-Link Control field.
+ * 2. Common Info Length subfield of Common Info field.
+ * 3. STA Control field in Per-STA Profile subelement in Basic variant
+ *    Multi-Link element Link Info field.
+ * 4. STA Info Length subfield in STA Info field in Per-STA Profile subelement
+ *    in Basic variant Multi-Link element Link Info field.
  */
 
 /* Size in octets of Multi-Link element Control field */
@@ -1932,11 +1938,6 @@ enum wlan_ml_variant {
 /* Link ID */
 #define WLAN_ML_BV_CINFO_LINKIDINFO_LINKID_IDX                      0
 #define WLAN_ML_BV_CINFO_LINKIDINFO_LINKID_BITS                     4
-
-/* Size in octets of BSS Parameters Change Count subfield in Basic variant
- * Multi-Link element Common Info field.
- */
-#define WLAN_ML_BV_CINFO_BSSPARAMCHNGCNT_SIZE                       1
 
 /* Size in octets of Medium Synchronization Delay Information subfield in Basic
  * variant Multi-Link element Common Info field.
@@ -2124,7 +2125,7 @@ enum wlan_ml_bv_cinfo_emlcap_transtimeout {
 	(WLAN_ML_BV_CINFO_LENGTH_SIZE + \
 	 QDF_MAC_ADDR_SIZE + \
 	 WLAN_ML_BV_CINFO_LINKIDINFO_SIZE + \
-	 WLAN_ML_BV_CINFO_BSSPARAMCHNGCNT_SIZE + \
+	 WLAN_ML_BSSPARAMCHNGCNT_SIZE + \
 	 WLAN_ML_BV_CINFO_MEDMSYNCDELAYINFO_SIZE + \
 	 WLAN_ML_BV_CINFO_EMLCAP_SIZE + \
 	 WLAN_ML_BV_CINFO_MLDCAP_SIZE)
@@ -2200,6 +2201,9 @@ struct wlan_ml_bv_linfo_perstaprof {
 /* NSTR Bitmap Size */
 #define WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_NSTRBMSZ_IDX            9
 #define WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_NSTRBMSZ_BITS           1
+/* BSS Parameters Change Count Present */
+#define WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_BSSPARAMCHNGCNTP_IDX    10
+#define WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_BSSPARAMCHNGCNTP_BITS   1
 
 /* Definitions for subfields in STA Info field of Per-STA Profile subelement
  * in Basic variant Multi-Link element Link Info field.
@@ -2251,7 +2255,8 @@ struct wlan_ml_bv_linfo_perstaprof_stainfo_dtiminfo {
 	 QDF_MAC_ADDR_SIZE + \
 	 WLAN_BEACONINTERVAL_LEN + \
 	 sizeof(struct wlan_ml_bv_linfo_perstaprof_stainfo_dtiminfo) + \
-	 WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_NSTRBMSZ_MAX)
+	 WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_NSTRBMSZ_MAX + \
+	 WLAN_ML_BSSPARAMCHNGCNT_SIZE)
 
 /* End of definitions related to Basic variant Multi-Link element Link Info
  * field.

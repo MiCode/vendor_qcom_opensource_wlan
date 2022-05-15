@@ -1869,7 +1869,7 @@ static uint8_t util_get_link_info_offset(uint8_t *ml_ie)
 
 	/* Check if BSS parameter change count is present */
 	if (presencebm & WLAN_ML_BV_CTRL_PBM_BSSPARAMCHANGECNT_P)
-		parsed_ie_len += WLAN_ML_BV_CINFO_BSSPARAMCHNGCNT_SIZE;
+		parsed_ie_len += WLAN_ML_BSSPARAMCHNGCNT_SIZE;
 
 	/* Check if Medium Sync Delay Info is present */
 	if (presencebm & WLAN_ML_BV_CTRL_PBM_MEDIUMSYNCDELAYINFO_P)

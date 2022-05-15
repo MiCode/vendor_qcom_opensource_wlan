@@ -157,15 +157,15 @@ util_parse_multi_link_ctrl(uint8_t *mlieseqpayload,
 	if (presence_bm & WLAN_ML_BV_CTRL_PBM_BSSPARAMCHANGECNT_P) {
 		if (mlieseqpayloadlen <
 				(parsed_payload_len +
-				 WLAN_ML_BV_CINFO_BSSPARAMCHNGCNT_SIZE)) {
+				 WLAN_ML_BSSPARAMCHNGCNT_SIZE)) {
 			mlo_err_rl("ML seq payload len %zu insufficient for BSS parameter change count size %u after parsed payload len %zu.",
 				   mlieseqpayloadlen,
-				   WLAN_ML_BV_CINFO_BSSPARAMCHNGCNT_SIZE,
+				   WLAN_ML_BSSPARAMCHNGCNT_SIZE,
 				   parsed_payload_len);
 			return QDF_STATUS_E_PROTO;
 		}
 
-		parsed_payload_len += WLAN_ML_BV_CINFO_BSSPARAMCHNGCNT_SIZE;
+		parsed_payload_len += WLAN_ML_BSSPARAMCHNGCNT_SIZE;
 	}
 
 	/* Check if Medium Sync Delay Info is present */
@@ -423,6 +423,23 @@ util_parse_bvmlie_perstaprofile_stactrl(uint8_t *subelempayload,
 			mlo_err_rl("Invalid NSTR Bitmap size %u", nstrbmsz);
 			return QDF_STATUS_E_PROTO;
 		}
+	}
+
+	/* Check BSS Parameters Change Count Present bit */
+	if (QDF_GET_BITS(stacontrol,
+			 WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_BSSPARAMCHNGCNTP_IDX,
+			 WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_BSSPARAMCHNGCNTP_BITS)) {
+		if (subelempayloadlen <
+				(parsed_payload_len +
+				 WLAN_ML_BSSPARAMCHNGCNT_SIZE)) {
+			mlo_err_rl("Length of subelement payload %zu octets not sufficient to contain BSS Parameters Change Count of size %u octets after parsed payload length of %zu octets.",
+				   subelempayloadlen,
+				   WLAN_ML_BSSPARAMCHNGCNT_SIZE,
+				   parsed_payload_len);
+			return QDF_STATUS_E_PROTO;
+		}
+
+		parsed_payload_len += WLAN_ML_BSSPARAMCHNGCNT_SIZE;
 	}
 
 	/* Note: Some implementation versions of hostapd/wpa_supplicant may
@@ -2358,7 +2375,7 @@ util_get_bvmlie_eml_cap(uint8_t *mlieseq, qdf_size_t mlieseqlen,
 	if (presencebitmap & WLAN_ML_BV_CTRL_PBM_LINKIDINFO_P)
 		eml_cap_offset += WLAN_ML_BV_CINFO_LINKIDINFO_SIZE;
 	if (presencebitmap & WLAN_ML_BV_CTRL_PBM_BSSPARAMCHANGECNT_P)
-		eml_cap_offset += WLAN_ML_BV_CINFO_BSSPARAMCHNGCNT_SIZE;
+		eml_cap_offset += WLAN_ML_BSSPARAMCHNGCNT_SIZE;
 	if (presencebitmap & WLAN_ML_BV_CTRL_PBM_MEDIUMSYNCDELAYINFO_P)
 		eml_cap_offset += WLAN_ML_BV_CINFO_MEDMSYNCDELAYINFO_SIZE;
 
@@ -2569,7 +2586,7 @@ util_get_bvmlie_mldcap(uint8_t *mlieseq, qdf_size_t mlieseqlen,
 	}
 
 	if (presencebitmap & WLAN_ML_BV_CTRL_PBM_BSSPARAMCHANGECNT_P) {
-		commoninfolen += WLAN_ML_BV_CINFO_BSSPARAMCHNGCNT_SIZE;
+		commoninfolen += WLAN_ML_BSSPARAMCHNGCNT_SIZE;
 
 		if ((sizeof(struct wlan_ie_multilink) + commoninfolen) >
 				mlieseqlen)
