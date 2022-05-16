@@ -40,6 +40,7 @@
 #define DP_HTT_HIGH_WM_HIT_COUNT_LEN  HTT_STATS_HIGH_WM_BINS
 #define DP_HTT_TX_MCS_LEN  HTT_TX_PDEV_STATS_NUM_MCS_COUNTERS
 #define DP_HTT_TX_MCS_EXT_LEN  HTT_TX_PDEV_STATS_NUM_EXTRA_MCS_COUNTERS
+#define DP_HTT_TX_MCS_EXT2_LEN  HTT_TX_PDEV_STATS_NUM_EXTRA2_MCS_COUNTERS
 #define DP_HTT_TX_SU_MCS_LEN  HTT_TX_PDEV_STATS_NUM_MCS_COUNTERS
 #define DP_HTT_TX_SU_MCS_EXT_LEN  HTT_TX_PDEV_STATS_NUM_EXTRA_MCS_COUNTERS
 #define DP_HTT_TX_MU_MCS_LEN  HTT_TX_PDEV_STATS_NUM_MCS_COUNTERS
@@ -52,6 +53,7 @@
 #define DP_HTT_RX_MCS_LEN  HTT_RX_PDEV_STATS_NUM_MCS_COUNTERS
 #define DP_HTT_RX_MCS_EXT_LEN  HTT_RX_PDEV_STATS_NUM_EXTRA_MCS_COUNTERS
 #define DP_HTT_RX_PDEV_MCS_LEN_EXT HTT_RX_PDEV_STATS_NUM_MCS_COUNTERS_EXT
+#define DP_HTT_RX_PDEV_MCS_LEN_EXT2 HTT_RX_PDEV_STATS_NUM_EXTRA2_MCS_COUNTERS
 #define DP_HTT_RX_NSS_LEN  HTT_RX_PDEV_STATS_NUM_SPATIAL_STREAMS
 #define DP_HTT_RX_DCM_LEN  HTT_RX_PDEV_STATS_NUM_DCM_COUNTERS
 #define DP_HTT_RX_BW_LEN  HTT_RX_PDEV_STATS_NUM_BW_COUNTERS
@@ -2868,6 +2870,14 @@ static void dp_print_tx_pdev_rate_stats_tlv(uint32_t *tag_buf)
 				" %u:%u,", i + DP_HTT_TX_MCS_LEN,
 				dp_stats_buf->tx_mcs_ext[i]);
 	}
+
+	for (i = 0; i <  DP_HTT_TX_MCS_EXT2_LEN; i++) {
+		index += qdf_snprint(&str_buf[index],
+				DP_MAX_STRING_LEN - index,
+				" %u:%u,", i + DP_HTT_TX_MCS_LEN +
+				DP_HTT_TX_MCS_EXT_LEN,
+				dp_stats_buf->tx_mcs_ext_2[i]);
+	}
 	DP_PRINT_STATS("tx_mcs = %s ", str_buf);
 
 	index = 0;
@@ -2907,6 +2917,8 @@ static void dp_print_tx_pdev_rate_stats_tlv(uint32_t *tag_buf)
 				" %u:%u,", i, dp_stats_buf->tx_bw[i]);
 	}
 	DP_PRINT_STATS("tx_bw = %s ", str_buf);
+
+	DP_PRINT_STATS("tx_bw_320mhz = %u ", dp_stats_buf->tx_bw_320mhz);
 
 	index = 0;
 	qdf_mem_zero(str_buf, DP_MAX_STRING_LEN);
@@ -2963,7 +2975,17 @@ static void dp_print_tx_pdev_rate_stats_tlv(uint32_t *tag_buf)
 				DP_MAX_STRING_LEN - index,
 				" %u:%u,", i, dp_stats_buf->tx_dcm[i]);
 	}
-	DP_PRINT_STATS("tx_dcm = %s\n", str_buf);
+	DP_PRINT_STATS("tx_dcm = %s", str_buf);
+
+	index = 0;
+	qdf_mem_zero(str_buf, DP_MAX_STRING_LEN);
+	for (i = 0; i <  HTT_TX_PDEV_STATS_NUM_PUNCTURED_MODE_COUNTERS; i++) {
+		index += qdf_snprint(&str_buf[index],
+				DP_MAX_STRING_LEN - index,
+				" %u:%u,", i,
+				dp_stats_buf->tx_su_punctured_mode[i]);
+	}
+	DP_PRINT_STATS("tx_su_punctured_mode = %s\n", str_buf);
 
 	DP_PRINT_STATS("rts_success = %u",
 		       dp_stats_buf->rts_success);
@@ -3203,6 +3225,13 @@ static void dp_print_rx_pdev_rate_ext_stats_tlv(struct dp_pdev *pdev,
 				DP_MAX_STRING_LEN - index,
 				" %u:%u,", i, dp_stats_buf->rx_mcs_ext[i]);
 	}
+
+	for (i = 0; i <  DP_HTT_RX_PDEV_MCS_LEN_EXT2; i++) {
+		index += qdf_snprint(&str_buf[index],
+				DP_MAX_STRING_LEN - index,
+				" %u:%u,", i + DP_HTT_RX_PDEV_MCS_LEN_EXT,
+				 dp_stats_buf->rx_mcs_ext_2[i]);
+	}
 	DP_PRINT_STATS("rx_mcs_ext = %s ", str_buf);
 
 	index = 0;
@@ -3280,6 +3309,25 @@ static void dp_print_rx_pdev_rate_ext_stats_tlv(struct dp_pdev *pdev,
 	}
 	DP_PRINT_STATS("rx_11ax_dl_ofdma_mcs_ext = %s ", str_buf);
 
+	index = 0;
+	qdf_mem_zero(str_buf, DP_MAX_STRING_LEN);
+	for (i = 0; i < HTT_RX_PDEV_STATS_NUM_BW_EXT2_COUNTERS; i++) {
+		index += qdf_snprint(&str_buf[index],
+		DP_MAX_STRING_LEN - index,
+		" %u:%u,", i,
+		dp_stats_buf->rx_bw_ext[i]);
+	}
+	DP_PRINT_STATS("rx_bw_ext = %s ", str_buf);
+
+	index = 0;
+	qdf_mem_zero(str_buf, DP_MAX_STRING_LEN);
+	for (i = 0; i < HTT_RX_PDEV_STATS_NUM_PUNCTURED_MODE_COUNTERS; i++) {
+		index += qdf_snprint(&str_buf[index],
+		DP_MAX_STRING_LEN - index,
+		" %u:%u,", i,
+		dp_stats_buf->rx_su_punctured_mode[i]);
+	}
+	DP_PRINT_STATS("rx_su_punctured_mode = %s ", str_buf);
 
 fail1:
 	for (i = 0; i < HTT_RX_PDEV_STATS_NUM_GI_COUNTERS; i++) {
