@@ -5722,6 +5722,7 @@ static QDF_STATUS dp_pdev_detach_wifi3(struct cdp_soc_t *psoc, uint8_t pdev_id,
 				       int force)
 {
 	struct dp_pdev *pdev;
+	struct dp_soc *soc = (struct dp_soc *)psoc;
 
 	pdev = dp_get_pdev_from_soc_pdev_id_wifi3((struct dp_soc *)psoc,
 						  pdev_id);
@@ -5731,6 +5732,8 @@ static QDF_STATUS dp_pdev_detach_wifi3(struct cdp_soc_t *psoc, uint8_t pdev_id,
 			    (struct dp_soc *)psoc, pdev_id);
 		return QDF_STATUS_E_FAILURE;
 	}
+
+	soc->arch_ops.txrx_pdev_detach(pdev);
 
 	dp_pdev_detach((struct cdp_pdev *)pdev, force);
 	return QDF_STATUS_SUCCESS;

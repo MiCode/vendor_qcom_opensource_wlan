@@ -38,6 +38,7 @@
  * @mld_peer_hash: peer hash table for ML peers
  *           Associated peer with this MAC address)
  * @mld_peer_hash_lock: lock to protect mld_peer_hash
+ * @link_to_pdev_map: link to pdev mapping
  */
 struct dp_mlo_ctxt {
 	struct cdp_ctrl_mlo_mgr *ctrl_ctxt;
@@ -53,6 +54,8 @@ struct dp_mlo_ctxt {
 	qdf_spinlock_t mld_peer_hash_lock;
 	uint32_t toeplitz_hash_ipv4[LRO_IPV4_SEED_ARR_SZ];
 	uint32_t toeplitz_hash_ipv6[LRO_IPV6_SEED_ARR_SZ];
+	struct dp_pdev_be *link_to_pdev_map[WLAN_MAX_MLO_CHIPS *
+		WLAN_MAX_MLO_LINKS_PER_SOC];
 };
 
 /**
@@ -110,4 +113,42 @@ dp_mlo_get_soc_ref_by_chip_id(struct dp_mlo_ctxt *ml_ctxt, uint8_t chip_id);
  */
 void dp_mlo_get_rx_hash_key(struct dp_soc *soc,
 			    struct cdp_lro_hash_config *lro_hash);
+
+/**
+ * dp_mlo_update_link_to_pdev_map : map link-id to pdev mapping
+ * @soc: DP SOC
+ * @pdev: DP PDEV
+ *
+ * Return: none
+ */
+void dp_mlo_update_link_to_pdev_map(struct dp_soc *soc, struct dp_pdev *pdev);
+
+/**
+ * dp_mlo_update_link_to_pdev_unmap : unmap link-id to pdev mapping
+ * @soc: DP SOC
+ * @pdev: DP PDEV
+ *
+ * Return: none
+ */
+void dp_mlo_update_link_to_pdev_unmap(struct dp_soc *soc, struct dp_pdev *pdev);
+
+/**
+ * dp_mlo_get_delta_tsf2_wrt_mlo_offset() - Get delta between mlo timestamp
+ *                                          offset and delta tsf2
+ * @soc: DP SOC
+ * @hw_link_id: link id
+ *
+ * Return: int32_t
+ */
+int32_t dp_mlo_get_delta_tsf2_wrt_mlo_offset(struct dp_soc *soc,
+					     uint8_t hw_link_id);
+
+/**
+ * dp_mlo_get_delta_tqm_wrt_mlo_offset() - Get delta between mlo timestamp
+ *                                         offset and delta tqm
+ * @soc: DP SOC
+ *
+ * Return: int32_t
+ */
+int32_t dp_mlo_get_delta_tqm_wrt_mlo_offset(struct dp_soc *soc);
 #endif /* __DP_MLO_H */

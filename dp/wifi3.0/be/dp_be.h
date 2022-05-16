@@ -223,6 +223,8 @@ struct dp_ppe_vp_profile {
  * @mlo_enabled: Flag to indicate MLO is enabled or not
  * @mlo_chip_id: MLO chip_id
  * @ml_ctxt: pointer to global ml_context
+ * @delta_tqm: delta_tqm
+ * @mlo_tstamp_offset: mlo timestamp offset
  * @mld_peer_hash: peer hash table for ML peers
  *           Associated peer with this MAC address)
  * @mld_peer_hash_lock: lock to protect mld_peer_hash
@@ -259,6 +261,8 @@ struct dp_soc_be {
 	uint8_t mlo_enabled;
 	uint8_t mlo_chip_id;
 	struct dp_mlo_ctxt *ml_ctxt;
+	uint64_t delta_tqm;
+	uint64_t mlo_tstamp_offset;
 #else
 	/* Protect mld peer hash table */
 	DP_MUTEX_TYPE mld_peer_hash_lock;
@@ -280,11 +284,13 @@ struct dp_soc_be {
  * @pdev: dp pdev structure
  * @monitor_pdev_be: BE specific monitor object
  * @mlo_link_id: MLO link id for PDEV
+ * @delta_tsf2: delta_tsf2
  */
 struct dp_pdev_be {
 	struct dp_pdev pdev;
 #ifdef WLAN_MLO_MULTI_CHIP
 	uint8_t mlo_link_id;
+	uint64_t delta_tsf2;
 #endif
 };
 
@@ -768,6 +774,16 @@ void dp_soc_mlo_fill_params(struct dp_soc *soc,
 static inline
 void dp_pdev_mlo_fill_params(struct dp_pdev *pdev,
 			     struct cdp_pdev_attach_params *params)
+{
+}
+
+static inline
+void dp_mlo_update_link_to_pdev_map(struct dp_soc *soc, struct dp_pdev *pdev)
+{
+}
+
+static inline
+void dp_mlo_update_link_to_pdev_unmap(struct dp_soc *soc, struct dp_pdev *pdev)
 {
 }
 #endif

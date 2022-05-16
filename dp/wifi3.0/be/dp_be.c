@@ -687,11 +687,15 @@ static QDF_STATUS dp_pdev_attach_be(struct dp_pdev *pdev,
 				    struct cdp_pdev_attach_params *params)
 {
 	dp_pdev_mlo_fill_params(pdev, params);
+	dp_mlo_update_link_to_pdev_map(pdev->soc, pdev);
+
 	return QDF_STATUS_SUCCESS;
 }
 
 static QDF_STATUS dp_pdev_detach_be(struct dp_pdev *pdev)
 {
+	dp_mlo_update_link_to_pdev_unmap(pdev->soc, pdev);
+
 	return QDF_STATUS_SUCCESS;
 }
 

@@ -141,6 +141,9 @@ enum cdp_peer_txq_flush_policy {
  * @mlo_soc_setup: setup DP mlo for SOC
  * @mlo_soc_teardown: teardown DP mlo for SOC
  * @mlo_setup_complete: indication to DP that all SOCs mlo is setup
+ * @mlo_update_delta_tsf2: update delta tsf2 for link
+ * @mlo_update_delta_tqm: update delta tqm for SOC
+ * @mlo_update_mlo_ts_offset: update MLO timestamp offset for SOC
  */
 #if defined(WLAN_FEATURE_11BE_MLO) && defined(WLAN_MLO_MULTI_CHIP)
 struct cdp_mlo_ops {
@@ -152,6 +155,13 @@ struct cdp_mlo_ops {
 					   int8_t *vdev_ids, uint8_t num_vdevs,
 					   uint8_t vdev_id);
 	void (*mlo_setup_complete)(struct cdp_mlo_ctxt *mlo_ctxt);
+	void (*mlo_update_delta_tsf2)(struct cdp_soc_t *soc_hdl,
+				      uint8_t pdev_id,
+				      uint64_t delta_tsf2);
+	void (*mlo_update_delta_tqm)(struct cdp_soc_t *soc_hdl,
+				     uint64_t delta_tqm);
+	void (*mlo_update_mlo_ts_offset)(struct cdp_soc_t *soc_hdl,
+					 uint64_t offset);
 };
 #endif
 
