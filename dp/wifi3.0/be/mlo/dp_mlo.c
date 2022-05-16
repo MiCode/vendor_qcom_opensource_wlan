@@ -142,12 +142,14 @@ static QDF_STATUS dp_partner_soc_rx_hw_cc_init(struct dp_mlo_ctxt *mlo_ctxt,
 	struct dp_soc *partner_soc;
 	struct dp_soc_be *be_partner_soc;
 	uint8_t pool_id;
-	QDF_STATUS qdf_status;
+	QDF_STATUS qdf_status = QDF_STATUS_SUCCESS;
 
 	for (i = 0; i < WLAN_MAX_MLO_CHIPS; i++) {
 		partner_soc = dp_mlo_get_soc_ref_by_chip_id(mlo_ctxt, i);
-		if (!partner_soc)
+		if (!partner_soc) {
+			dp_err("partner_soc is NULL");
 			continue;
+		}
 
 		be_partner_soc = dp_get_be_soc_from_dp_soc(partner_soc);
 
