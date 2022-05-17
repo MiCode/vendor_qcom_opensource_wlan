@@ -493,12 +493,15 @@ void dp_monitor_reap_timer_deinit(struct dp_soc *soc)
 }
 
 static inline
-void dp_monitor_reap_timer_start(struct dp_soc *soc)
+bool dp_monitor_reap_timer_start(struct dp_soc *soc,
+				 enum cdp_mon_reap_source source)
 {
+	return false;
 }
 
 static inline
-bool dp_monitor_reap_timer_stop(struct dp_soc *soc)
+bool dp_monitor_reap_timer_stop(struct dp_soc *soc,
+				enum cdp_mon_reap_source source)
 {
 	return false;
 }

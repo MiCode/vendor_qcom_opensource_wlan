@@ -564,10 +564,13 @@ static void dp_mon_reap_timer_init(struct dp_soc *soc)
 {
 	struct dp_mon_soc *mon_soc = soc->monitor_soc;
 
-        qdf_timer_init(soc->osdev, &mon_soc->mon_reap_timer,
-                       dp_mon_reap_timer_handler, (void *)soc,
-                       QDF_TIMER_TYPE_WAKE_APPS);
-        mon_soc->reap_timer_init = 1;
+	qdf_spinlock_create(&mon_soc->reap_timer_lock);
+	qdf_timer_init(soc->osdev, &mon_soc->mon_reap_timer,
+		       dp_mon_reap_timer_handler, (void *)soc,
+		       QDF_TIMER_TYPE_WAKE_APPS);
+	qdf_mem_zero(mon_soc->mon_reap_src_bitmap,
+		     sizeof(mon_soc->mon_reap_src_bitmap));
+	mon_soc->reap_timer_init = 1;
 }
 #else
 static void dp_mon_reap_timer_init(struct dp_soc *soc)
@@ -579,29 +582,81 @@ static void dp_mon_reap_timer_deinit(struct dp_soc *soc)
 {
 	struct dp_mon_soc *mon_soc = soc->monitor_soc;
         if (mon_soc->reap_timer_init) {
-                qdf_timer_free(&mon_soc->mon_reap_timer);
-                mon_soc->reap_timer_init = 0;
+		mon_soc->reap_timer_init = 0;
+		qdf_timer_free(&mon_soc->mon_reap_timer);
+		qdf_spinlock_destroy(&mon_soc->reap_timer_lock);
         }
 }
 
-static void dp_mon_reap_timer_start(struct dp_soc *soc)
+/**
+ * dp_mon_reap_timer_start() - start reap timer of monitor status ring
+ * @soc: point to soc
+ * @source: trigger source
+ *
+ * If the source is CDP_MON_REAP_SOURCE_ANY, skip bit set, and start timer
+ * if any bit has been set in the bitmap; while for the other sources, set
+ * the bit and start timer if the bitmap is empty before that.
+ *
+ * Return: true if timer-start is performed, false otherwise.
+ */
+static bool
+dp_mon_reap_timer_start(struct dp_soc *soc, enum cdp_mon_reap_source source)
 {
 	struct dp_mon_soc *mon_soc = soc->monitor_soc;
-        if (mon_soc->reap_timer_init) {
-                qdf_timer_mod(&mon_soc->mon_reap_timer, DP_INTR_POLL_TIMER_MS);
-        }
+	bool do_start;
 
+	if (!mon_soc->reap_timer_init)
+		return false;
+
+	qdf_spin_lock_bh(&mon_soc->reap_timer_lock);
+	do_start = qdf_bitmap_empty(mon_soc->mon_reap_src_bitmap,
+				    CDP_MON_REAP_SOURCE_NUM);
+	if (source == CDP_MON_REAP_SOURCE_ANY)
+		do_start = !do_start;
+	else
+		qdf_set_bit(source, mon_soc->mon_reap_src_bitmap);
+	qdf_spin_unlock_bh(&mon_soc->reap_timer_lock);
+
+	if (do_start)
+		qdf_timer_mod(&mon_soc->mon_reap_timer, DP_INTR_POLL_TIMER_MS);
+
+	return do_start;
 }
 
-static bool dp_mon_reap_timer_stop(struct dp_soc *soc)
+/**
+ * dp_mon_reap_timer_stop() - stop reap timer of monitor status ring
+ * @soc: point to soc
+ * @source: trigger source
+ *
+ * If the source is CDP_MON_REAP_SOURCE_ANY, skip bit clear, and stop timer
+ * if any bit has been set in the bitmap; while for the other sources, clear
+ * the bit and stop the timer if the bitmap is empty after that.
+ *
+ * Return: true if timer-stop is performed, false otherwise.
+ */
+static bool
+dp_mon_reap_timer_stop(struct dp_soc *soc, enum cdp_mon_reap_source source)
 {
 	struct dp_mon_soc *mon_soc = soc->monitor_soc;
-        if (mon_soc->reap_timer_init) {
-                qdf_timer_sync_cancel(&mon_soc->mon_reap_timer);
-                return true;
-        }
+	bool do_stop;
 
-        return false;
+	if (!mon_soc->reap_timer_init)
+		return false;
+
+	qdf_spin_lock_bh(&mon_soc->reap_timer_lock);
+	if (source != CDP_MON_REAP_SOURCE_ANY)
+		qdf_clear_bit(source, mon_soc->mon_reap_src_bitmap);
+
+	do_stop = qdf_bitmap_empty(mon_soc->mon_reap_src_bitmap,
+				   CDP_MON_REAP_SOURCE_NUM);
+	if (source == CDP_MON_REAP_SOURCE_ANY)
+		do_stop = !do_stop;
+	qdf_spin_unlock_bh(&mon_soc->reap_timer_lock);
+
+	if (do_stop)
+		qdf_timer_sync_cancel(&mon_soc->mon_reap_timer);
+
+	return do_stop;
 }
 
 static void dp_mon_vdev_timer_init(struct dp_soc *soc)

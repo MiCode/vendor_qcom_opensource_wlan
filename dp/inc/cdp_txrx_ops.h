@@ -969,9 +969,9 @@ struct cdp_mon_ops {
 					 struct cdp_pdev_mon_stats *stats);
 
 	/* Configure monitor status srng reap timer */
-	 void (*txrx_enable_mon_reap_timer)(struct cdp_soc_t *soc_hdl,
-					    uint8_t pdev_id,
-					    bool enable);
+	bool (*txrx_enable_mon_reap_timer)(struct cdp_soc_t *soc_hdl,
+					   enum cdp_mon_reap_source source,
+					   bool enable);
 
 #ifdef QCA_SUPPORT_LITE_MONITOR
 	/* set lite monitor config */

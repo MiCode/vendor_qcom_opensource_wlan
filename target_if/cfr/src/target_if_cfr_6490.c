@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -101,7 +102,7 @@ target_if_cfr_subscribe_ppdu_desc(struct wlan_objmgr_pdev *pdev,
 	g_cfr_subscribe.callback = target_cfr_callback;
 	g_cfr_subscribe.context = pdev;
 	cdp_set_cfr_rcc(soc, 0, is_subscribe);
-	cdp_enable_mon_reap_timer(soc, 0, is_subscribe);
+	cdp_enable_mon_reap_timer(soc, CDP_MON_REAP_SOURCE_CFR, is_subscribe);
 	if (is_subscribe) {
 		if (cdp_wdi_event_sub(soc, 0, &g_cfr_subscribe,
 				      WDI_EVENT_RX_PPDU_DESC)) {

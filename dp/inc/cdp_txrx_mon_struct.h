@@ -545,4 +545,23 @@ struct cdp_rssi_db2dbm_param_dp {
 	struct cdp_rssi_temp_off_param_dp temp_off_param;
 	struct cdp_rssi_dbm_conv_param_dp rssi_dbm_param;
 };
+
+/*
+ * enum cdp_mon_reap_source: trigger source of the reap timer of
+ * monitor status ring
+ * @CDP_MON_REAP_SOURCE_PKTLOG: pktlog
+ * @CDP_MON_REAP_SOURCE_CFR: CFR
+ * @CDP_MON_REAP_SOURCE_EMESH: easy mesh
+ * @CDP_MON_REAP_SOURCE_NUM: total number of the sources
+ * @CDP_MON_REAP_SOURCE_ANY: any of the sources
+ */
+enum cdp_mon_reap_source {
+	CDP_MON_REAP_SOURCE_PKTLOG,
+	CDP_MON_REAP_SOURCE_CFR,
+	CDP_MON_REAP_SOURCE_EMESH,
+
+	/* keep last */
+	CDP_MON_REAP_SOURCE_NUM,
+	CDP_MON_REAP_SOURCE_ANY,
+};
 #endif
