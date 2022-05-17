@@ -26,6 +26,7 @@
 #include <wlan_cmn.h>
 #include <reg_services_public_struct.h>
 #include <wlan_objmgr_psoc_obj.h>
+#include <wlan_objmgr_pdev_obj.h>
 #include "reg_priv_objs.h"
 #include "reg_utils.h"
 #include "reg_db.h"
@@ -1096,6 +1097,35 @@ reg_find_opclass_absent_in_ctry_opclss_tables(struct wlan_objmgr_pdev *pdev,
 	}
 }
 
+static bool
+reg_is_country_opclass_global(struct wlan_objmgr_pdev *pdev)
+{
+	struct wlan_lmac_if_reg_tx_ops *reg_tx_ops;
+	struct wlan_objmgr_psoc *psoc;
+	uint8_t opclass_tbl_idx;
+
+	psoc = wlan_pdev_get_psoc(pdev);
+	if (!psoc) {
+		reg_err("psoc is NULL");
+		return false;
+	}
+
+	reg_tx_ops = reg_get_psoc_tx_ops(psoc);
+	if (!reg_tx_ops) {
+		reg_err("reg_tx_ops is NULL");
+		return false;
+	}
+
+	if (reg_tx_ops->get_opclass_tbl_idx) {
+		reg_tx_ops->get_opclass_tbl_idx(pdev, &opclass_tbl_idx);
+
+		if (opclass_tbl_idx == OP_CLASS_GLOBAL)
+			return true;
+	}
+
+	return false;
+}
+
 void reg_freq_width_to_chan_op_class_auto(struct wlan_objmgr_pdev *pdev,
 					  qdf_freq_t freq,
 					  uint16_t chan_width,
@@ -1111,7 +1141,7 @@ void reg_freq_width_to_chan_op_class_auto(struct wlan_objmgr_pdev *pdev,
 	} else if (reg_is_5dot9_ghz_freq(pdev, freq)) {
 		global_tbl_lookup = true;
 	} else {
-		global_tbl_lookup = false;
+		global_tbl_lookup = reg_is_country_opclass_global(pdev);
 	}
 
 	*op_class = 0;

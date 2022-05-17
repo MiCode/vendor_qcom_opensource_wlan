@@ -1184,6 +1184,8 @@ QDF_STATUS target_if_register_regulatory_tx_ops(
 
 	reg_ops->set_tpc_power = tgt_if_regulatory_set_tpc_power;
 
+	reg_ops->get_opclass_tbl_idx = NULL;
+
 	tgt_if_register_afc_callback(reg_ops);
 
 	reg_ops->is_chip_11be = tgt_if_reg_is_chip_11be_cap;
