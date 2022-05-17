@@ -533,6 +533,18 @@ struct set_neighbour_rx_params {
 };
 
 /**
+ * struct set_tx_peer_filter - Set tx peer filter
+ * @vdev_id: vdev id
+ * @idx: index of param
+ * @action: action
+ */
+struct set_tx_peer_filter {
+	uint8_t vdev_id;
+	uint32_t idx;
+	uint32_t action;
+};
+
+/**
  * struct vdev_scan_nac_rssi_params - NAC_RSSI cmd parameter
  * @vdev_id: vdev id
  * @bssid_addr: BSSID address

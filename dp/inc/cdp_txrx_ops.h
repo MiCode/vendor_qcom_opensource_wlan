@@ -59,6 +59,20 @@ enum cdp_nac_param_cmd {
 	CDP_NAC_PARAM_LIST,
 };
 
+/**
+ * enum cdp_tx_filter_action - TX peer filtering action
+ * @CDP_TX_FILTER_ACTION_ADD: add peer
+ * @CDP_TX_FILTER_ACTION_DEL: delete peer
+ *
+ * whether add or delete
+ */
+enum cdp_tx_filter_action {
+	/* add peer mac address*/
+	CDP_TX_FILTER_ACTION_ADD = 1,
+	/* delete peer mac address */
+	CDP_TX_FILTER_ACTION_DEL,
+};
+
 #define CDP_DELBA_INTERVAL_MS 3000
 /**
  * enum cdp_delba_rcode - CDP reason code for sending DELBA
@@ -1404,6 +1418,10 @@ struct ol_if_ops {
 				    uint8_t vdev_id,
 				    enum cdp_nac_param_cmd cmd,
 				    uint8_t *peer_mac);
+	int (*config_lite_mon_tx_peer)(struct cdp_ctrl_objmgr_psoc *psoc,
+				       uint8_t pdev_id, uint8_t vdev_id,
+				       enum cdp_tx_filter_action cmd,
+				       uint8_t *peer_mac);
 #endif
 };
 

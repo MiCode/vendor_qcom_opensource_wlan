@@ -155,6 +155,20 @@ wmi_unified_vdev_config_ratemask_cmd_send(struct wmi_unified *wmi_handle,
 	return QDF_STATUS_E_FAILURE;
 }
 
+QDF_STATUS
+wmi_unified_peer_filter_set_tx_cmd_send(struct wmi_unified *wmi_handle,
+					uint8_t macaddr[],
+					struct set_tx_peer_filter *param)
+{
+	struct wmi_ops *ops = wmi_handle->ops;
+
+	if (ops->send_peer_filter_set_tx_cmd)
+		return ops->send_peer_filter_set_tx_cmd(wmi_handle, macaddr,
+							param);
+
+	return QDF_STATUS_E_FAILURE;
+}
+
 QDF_STATUS wmi_unified_vdev_set_neighbour_rx_cmd_send(
 				struct wmi_unified *wmi_handle,
 				uint8_t macaddr[QDF_MAC_ADDR_SIZE],
