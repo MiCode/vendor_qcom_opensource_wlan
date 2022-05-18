@@ -460,6 +460,7 @@ QDF_STATUS mlo_connect(struct wlan_objmgr_vdev *vdev,
 		} else {
 			mlo_err("Failed to allocate orig connect req");
 			copied_conn_req_lock_release(sta_ctx);
+			mlo_dev_lock_release(mlo_dev_ctx);
 			return QDF_STATUS_E_NOMEM;
 		}
 
@@ -1236,6 +1237,8 @@ void mlo_sta_link_disconn_notify(struct wlan_objmgr_vdev *vdev,
 	if (mlo_is_mld_disconnected(vdev)) {
 		if (sta_ctx->connect_req) {
 			assoc_vdev = mlo_get_assoc_link_vdev(mlo_dev_ctx);
+			if (!assoc_vdev)
+				return;
 			mlo_sta_link_handle_pending_connect(assoc_vdev);
 		}
 	}
