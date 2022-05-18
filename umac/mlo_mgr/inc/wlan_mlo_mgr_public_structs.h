@@ -628,6 +628,17 @@ struct mlo_partner_info {
 };
 
 /*
+ * struct mlo_probereq_info – mlo probe req link info
+ * @num_links: no. of link info in probe req
+ * @link_id: target link id of APs
+ */
+struct mlo_probereq_info {
+	uint8_t mlid;
+	uint8_t num_links;
+	uint8_t link_id[WLAN_UMAC_MLO_MAX_VDEVS];
+};
+
+/*
  * struct mlo_tgt_link_info – ML target link info
  * @vdev_id: link peer vdev id
  * @hw_mld_link_id: HW link id

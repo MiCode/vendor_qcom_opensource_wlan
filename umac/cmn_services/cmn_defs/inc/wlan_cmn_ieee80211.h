@@ -2269,6 +2269,80 @@ struct wlan_ml_bv_linfo_perstaprof_stainfo_dtiminfo {
 
 /* End of definitions related to Basic variant Multi-Link element. */
 
+/* Definitions related to Probe Req Multi-Link element Link Info field */
+
+/* Probe Req variant Multi-Link element Link Info field contains zero or more
+ * subelements.
+ */
+
+/**
+ *  enum wlan_ml_prv_linfo_subelementid - IDs for subelements in Probe Req
+ *  Multi-Link element Link Info field.
+ *  @WLAN_ML_PRV_LINFO_SUBELEMID_PERSTAPROFILE: Per-STA Profile
+ */
+enum wlan_ml_prv_linfo_subelementid {
+	WLAN_ML_PRV_LINFO_SUBELEMID_PERSTAPROFILE  = 0,
+	WLAN_ML_PRV_LINFO_SUBELEMID_FRAGMENT = 254,
+};
+
+/**
+ * struct wlan_ml_prv_linfo_perstaprof - Fixed fields of Per-STA Profile
+ * subelement in Probe Request variant Multi-Link element Link Info field
+ * @subelem_id: Subelement ID
+ * @subelem_len: Subelement length
+ * @stacontrol: STA Control
+ */
+struct wlan_ml_prv_linfo_perstaprof {
+	uint8_t subelem_id;
+	uint8_t subelem_len;
+	uint16_t stacontrol;
+} qdf_packed;
+
+/* The above fixed fields may be followed by:
+ * STA Profile (variable size)
+ */
+
+/* Size in octets of STA Control field of Per-STA Profile subelement in Basic
+ * variant Multi-Link element Link Info field.
+ */
+#define WLAN_ML_PRV_LINFO_PERSTAPROF_STACTRL_SIZE                   2
+
+/* Definitions for subfields in STA Control field of Per-STA Profile subelement
+ * in Probe Req variant Multi-Link element Link Info field. Any unused bits are
+ * reserved.
+ */
+/* Link ID */
+#define WLAN_ML_PRV_LINFO_PERSTAPROF_STACTRL_LINKID_IDX              0
+#define WLAN_ML_PRV_LINFO_PERSTAPROF_STACTRL_LINKID_BITS             4
+/* Complete Profile */
+#define WLAN_ML_PRV_LINFO_PERSTAPROF_STACTRL_CMPLTPROF_IDX           4
+#define WLAN_ML_PRV_LINFO_PERSTAPROF_STACTRL_CMPLTPROF_BITS          1
+
+/* Definitions for bits in the Presence Bitmap subfield in Probe Req variant
+ * Multi-Link element Control field. Any unused bits are reserved.
+ */
+/* MLD ID Present */
+#define WLAN_ML_PRV_CTRL_PBM_MLDID_P               ((uint16_t)BIT(0))
+/* Size in octets of Common Info Length subfield of Common Info field in
+ * Probe Req variant Multi-Link element.
+ */
+/* Common Info Length  */
+#define WLAN_ML_PRV_CINFO_LENGTH_SIZE                               1
+
+/* Size in octets of MLD ID subfield in Probe Req variant Multi-Link
+ * element Common Info field.
+ */
+#define WLAN_ML_PRV_CINFO_MLDID_SIZE                                1
+
+/* Max value in octets of Common Info Length subfield of Common Info field in
+ * Probe Req variant Multi-Link element
+ */
+#define WLAN_ML_PRV_CINFO_LENGTH_MAX \
+	(WLAN_ML_PRV_CINFO_LENGTH_SIZE + \
+	 WLAN_ML_PRV_CINFO_MLDID_SIZE)
+
+/* End of definitions related to Probe Request variant Multi-Link element. */
+
 /*
  * Definitions related to MLO specific aspects of Reduced Neighbor Report
  * element.
