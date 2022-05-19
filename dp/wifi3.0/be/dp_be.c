@@ -1667,6 +1667,22 @@ static QDF_STATUS dp_peer_map_attach_be(struct dp_soc *soc)
 	return QDF_STATUS_SUCCESS;
 }
 
+static struct dp_peer *dp_find_peer_by_destmac_be(struct dp_soc *soc,
+						  uint8_t *dest_mac,
+						  uint8_t vdev_id)
+{
+	struct dp_peer *peer = NULL;
+
+	peer = dp_peer_find_hash_find(soc, dest_mac, 0,
+				      vdev_id, DP_MOD_ID_SAWF);
+	if (!peer) {
+		qdf_err("Invalid peer");
+		return NULL;
+	}
+
+	return peer;
+}
+
 #ifdef WLAN_FEATURE_11BE_MLO
 #ifdef WLAN_MCAST_MLO
 static inline void
@@ -1749,5 +1765,6 @@ void dp_initialize_arch_ops_be(struct dp_arch_ops *arch_ops)
 	arch_ops->dp_peer_rx_reorder_queue_setup =
 					dp_peer_rx_reorder_queue_setup_be;
 	arch_ops->txrx_print_peer_stats = dp_print_peer_txrx_stats_be;
+	arch_ops->dp_find_peer_by_destmac = dp_find_peer_by_destmac_be;
 	dp_init_near_full_arch_ops_be(arch_ops);
 }
