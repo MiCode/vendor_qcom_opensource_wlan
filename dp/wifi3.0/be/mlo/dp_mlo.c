@@ -326,6 +326,8 @@ void dp_clr_mlo_ptnr_list(struct dp_soc *soc, struct dp_vdev *vdev)
 				continue;
 
 			pr_soc = dp_mlo_get_soc_ref_by_chip_id(dp_mlo, i);
+			if (!pr_soc)
+				continue;
 			pr_soc_be = dp_get_be_soc_from_dp_soc(pr_soc);
 			pr_vdev = dp_vdev_get_ref_by_id(pr_soc,
 						vdev_be->partner_vdev_list[i][j],
