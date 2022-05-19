@@ -2390,4 +2390,41 @@ reg_get_ch_state_based_on_nol_flag(struct wlan_objmgr_pdev *pdev,
 				   enum supported_6g_pwr_types
 				   in_6g_pwr_mode,
 				   bool treat_nol_chan_as_disabled);
+
+/**
+ * reg_get_min_max_bw_cur_chan_list() - Given a frequency index, find out the
+ * min/max bw of the channel.
+ *
+ * @pdev: pdev pointer.
+ * @freq_idx: input frequency index.
+ * @in_6g_pwr_mode: Input 6g power type.
+ * @min_bw: Min bandwidth.
+ * @max_bw: Max bandwidth
+ *
+ * Return: true/false.
+ */
+QDF_STATUS reg_get_min_max_bw_cur_chan_list(struct wlan_objmgr_pdev *pdev,
+					    enum channel_enum freq_idx,
+					    enum supported_6g_pwr_types
+					    in_6g_pwr_mode,
+					    uint16_t *min_bw,
+					    uint16_t *max_bw);
+
+/**
+ * reg_get_chan_state() - Given a frequency index, find out the
+ * state of the channel.
+ *
+ * @pdev: pdev pointer.
+ * @freq_idx: input frequency index.
+ * @in_6g_pwr_mode: Input 6g power type
+ * @treat_nol_chan_as_disabled: Bool to treat NOL channels as
+ * disabled/enabled.
+ *
+ * Return: Channel state.
+ */
+enum channel_state reg_get_chan_state(struct wlan_objmgr_pdev *pdev,
+				      enum channel_enum freq_idx,
+				      enum supported_6g_pwr_types
+				      in_6g_pwr_mode,
+				      bool treat_nol_chan_as_disabled);
 #endif

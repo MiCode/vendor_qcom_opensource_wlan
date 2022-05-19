@@ -183,6 +183,24 @@ QDF_STATUS reg_psd_2_eirp(struct wlan_objmgr_pdev *pdev,
 			  int16_t psd,
 			  uint16_t ch_bw,
 			  int16_t *eirp);
+
+/**
+ * reg_is_supp_pwr_mode_invalid - Indicates if the given 6G power mode is
+ * one of the valid power modes enumerated by enum supported_6g_pwr_types
+ * from REG_AP_LPI to REG_CLI_SUB_VLP.
+ *
+ * Note: REG_BEST_PWR_MODE and REG_CURRENT_PWR_MODE are not valid 6G power
+ * modes.
+ *
+ * Return: True for any valid power mode from REG_AP_LPI tp REG_CLI_SUB_VLP.
+ * False otherwise.
+ */
+static inline bool
+reg_is_supp_pwr_mode_invalid(enum supported_6g_pwr_types supp_pwr_mode)
+{
+	return (supp_pwr_mode < REG_AP_LPI || supp_pwr_mode > REG_CLI_SUB_VLP);
+}
+
 #else /* CONFIG_BAND_6GHZ */
 static inline QDF_STATUS
 reg_get_6g_ap_master_chan_list(struct wlan_objmgr_pdev *pdev,
@@ -215,6 +233,12 @@ static inline QDF_STATUS reg_psd_2_eirp(struct wlan_objmgr_pdev *pdev,
 					int16_t *eirp)
 {
 	return QDF_STATUS_E_FAILURE;
+}
+
+static inline bool
+reg_is_supp_pwr_mode_invalid(enum supported_6g_pwr_types supp_pwr_mode)
+{
+	return true;
 }
 #endif /* CONFIG_BAND_6GHZ */
 /**
