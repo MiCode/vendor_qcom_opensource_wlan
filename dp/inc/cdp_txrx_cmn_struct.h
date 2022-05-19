@@ -1383,6 +1383,7 @@ typedef union cdp_config_param_t {
 	bool cdp_psoc_param_vdev_stats_hw_offload;
 	bool cdp_pdev_param_undecoded_metadata_enable;
 	bool cdp_sawf_enabled;
+	bool cdp_drop_3addr_mcast;
 } cdp_config_param_type;
 
 /**
@@ -1500,6 +1501,7 @@ enum cdp_vdev_param_type {
 #endif
 	CDP_UPDATE_DSCP_TO_TID_MAP,
 	CDP_SET_MCAST_VDEV,
+	CDP_DROP_3ADDR_MCAST,
 };
 
 /*
@@ -1862,6 +1864,8 @@ struct cdp_delayed_tx_completion_ppdu_user {
  * @peer_last_delayed_ba: flag to indicate peer last delayed ba
  * @phy_tx_time_us: Phy TX duration for the User
  * @mpdu_bytes: accumulated bytes per mpdu for mem limit feature
+ * @punc_mode: puncutured mode to indicate punctured bw
+ * @punc_pattern_bitmap: bitmap indicating punctured pattern
  */
 struct cdp_tx_completion_ppdu_user {
 	uint32_t completion_status:8,
@@ -1965,6 +1969,8 @@ struct cdp_tx_completion_ppdu_user {
 
 	uint16_t phy_tx_time_us;
 	uint32_t mpdu_bytes;
+	uint8_t punc_mode;
+	uint16_t punc_pattern_bitmap;
 };
 
 /**
@@ -2175,23 +2181,23 @@ struct cdp_tx_completion_ppdu {
 /**
  * struct cdp_dev_stats - Network device stats structure
  * @tx_packets: Tx total packets transmitted
- * @tx_bytes  : Tx total bytes transmitted
  * @tx_errors : Tx error due to FW tx failure, Ring failure DMA etc
  * @tx_dropped: Tx dropped is same as tx errors as above
  * @rx_packets: Rx total packets transmitted
- * @rx_bytes  : Rx total bytes transmitted
  * @rx_errors : Rx erros
  * @rx_dropped: Rx dropped stats
+ * @tx_bytes  : Tx total bytes transmitted
+ * @rx_bytes  : Rx total bytes transmitted
  */
 struct cdp_dev_stats {
 	uint32_t tx_packets;
-	uint32_t tx_bytes;
 	uint32_t tx_errors;
 	uint32_t tx_dropped;
 	uint32_t rx_packets;
-	uint32_t rx_bytes;
 	uint32_t rx_errors;
 	uint32_t rx_dropped;
+	uint64_t tx_bytes;
+	uint64_t rx_bytes;
 };
 
 /**
@@ -2377,7 +2383,7 @@ struct cdp_rx_stats_ppdu_user {
  * @user: per user stats in MU-user case
  * @nf: noise floor
  * @per_chain_rssi: rssi per antenna
- * @punc_bw: puncered bw
+ * @punc_bw: punctured bw
  * @phyrx_abort: rx aborted undecoded frame indication
  * @phyrx_abort_reason: abort reason defined in phyrx_abort_request_info
  * @l_sig_length: L SIG A length

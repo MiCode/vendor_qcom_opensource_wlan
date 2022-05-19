@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2018-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -24,6 +24,20 @@
 #include "wlan_ipa_main.h"
 #include "cfg_ucfg_api.h"
 #include "qdf_module.h"
+
+void ucfg_ipa_set_pld_enable(bool flag)
+{
+	ipa_set_pld_enable(flag);
+}
+
+qdf_export_symbol(ucfg_ipa_set_pld_enable);
+
+bool ucfg_ipa_get_pld_enable(void)
+{
+	return ipa_get_pld_enable();
+}
+
+qdf_export_symbol(ucfg_ipa_get_pld_enable);
 
 bool ucfg_ipa_is_present(void)
 {

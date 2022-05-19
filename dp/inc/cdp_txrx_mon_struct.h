@@ -25,6 +25,90 @@
 
 #ifndef _CDP_TXRX_MON_STRUCT_H_
 #define _CDP_TXRX_MON_STRUCT_H_
+
+#ifdef QCA_SUPPORT_LITE_MONITOR
+
+#define CDP_LITE_MON_PEER_MAX 16
+
+#define CDP_LITE_MON_LEN_64B 0x40
+#define CDP_LITE_MON_LEN_128B 0x80
+#define CDP_LITE_MON_LEN_256B 0x100
+#define CDP_LITE_MON_LEN_FULL 0xFFFF
+
+#define CDP_LITE_MON_FILTER_ALL 0xFFFF
+
+/* This should align with nac mac type enumerations in ieee80211_ioctl.h */
+#define CDP_LITE_MON_PEER_MAC_TYPE_CLIENT 2
+
+/* lite mon filter modes */
+enum cdp_lite_mon_filter_mode {
+	/* mode filter pass */
+	CDP_LITE_MON_MODE_FP = 0,
+	/* mode monitor direct */
+	CDP_LITE_MON_MODE_MD = 1,
+	/* mode monitor other */
+	CDP_LITE_MON_MODE_MO = 2,
+	/* mode filter pass monitor other */
+	CDP_LITE_MON_MODE_FP_MO = 3,
+	/* max filter modes */
+	CDP_LITE_MON_MODE_MAX = 4,
+};
+
+/* lite mon frame levels */
+enum cdp_lite_mon_level {
+	/* level invalid */
+	CDP_LITE_MON_LEVEL_INVALID = 0,
+	/* level msdu */
+	CDP_LITE_MON_LEVEL_MSDU = 1,
+	/* level mpdu */
+	CDP_LITE_MON_LEVEL_MPDU = 2,
+	/* level ppdu */
+	CDP_LITE_MON_LEVEL_PPDU = 3,
+};
+
+/* lite mon frame types */
+enum cdp_lite_mon_frm_type {
+	/* frm type mgmt */
+	CDP_LITE_MON_FRM_TYPE_MGMT = 0,
+	/* frm type ctrl */
+	CDP_LITE_MON_FRM_TYPE_CTRL = 1,
+	/* frm type data */
+	CDP_LITE_MON_FRM_TYPE_DATA = 2,
+	/* max frame types */
+	CDP_LITE_MON_FRM_TYPE_MAX = 3,
+};
+
+/* lite mon peer action */
+enum cdp_lite_mon_peer_action {
+	/* peer add */
+	CDP_LITE_MON_PEER_ADD = 0,
+	/* peer remove */
+	CDP_LITE_MON_PEER_REMOVE = 1,
+};
+
+/* lite mon peer types */
+enum cdp_lite_mon_peer_type {
+	/* associated peer */
+	CDP_LITE_MON_PEER_TYPE_ASSOCIATED = 0,
+	/* non associated peer */
+	CDP_LITE_MON_PEER_TYPE_NON_ASSOCIATED = 1,
+	/* max peer types */
+	CDP_LITE_MON_PEER_TYPE_MAX = 2,
+};
+
+/* lite mon config direction */
+enum cdp_lite_mon_direction {
+	/* lite mon config direction rx */
+	CDP_LITE_MON_DIRECTION_RX = 1,
+	/* lite mon config direction tx */
+	CDP_LITE_MON_DIRECTION_TX = 2,
+};
+#endif
+/* Same as MAX_20MHZ_SEGMENTS */
+#define CDP_MAX_20MHZ_SEGS 16
+/* Same as MAX_ANTENNA_EIGHT */
+#define CDP_MAX_NUM_ANTENNA 8
+
 /* XXX not really a mode; there are really multiple PHY's */
 enum cdp_mon_phymode {
 	/* autoselect */
@@ -109,6 +193,17 @@ enum CMN_BW_TYPES {
 #endif
 	CMN_BW_CNT,
 	CMN_BW_IDLE = 0xFF, /*default BW state */
+};
+
+enum cdp_punctured_modes {
+	NO_PUNCTURE,
+#ifdef WLAN_FEATURE_11BE
+	PUNCTURED_20MHZ,
+	PUNCTURED_40MHZ,
+	PUNCTURED_80MHZ,
+	PUNCTURED_120MHZ,
+#endif
+	PUNCTURED_MODE_CNT,
 };
 
 struct cdp_mon_status {
@@ -353,5 +448,121 @@ struct cdp_pdev_mon_stats {
 	uint32_t rx_undecoded_count;
 	uint32_t rx_undecoded_error[CDP_PHYRX_ERR_MAX];
 #endif
+};
+
+#ifdef QCA_SUPPORT_LITE_MONITOR
+/**
+ * cdp_lite_mon_filter_config - lite mon set/get filter config
+ * @direction: direction tx/rx
+ * @disable: disables lite mon
+ * @level: MSDU/MPDU/PPDU levels
+ * @metadata: meta information to be added
+ * @mgmt_filter: mgmt filter for modes fp,md,mo
+ * @ctrl_filter: ctrl filter for modes fp,md,mo
+ * @data_filter: data filter for modes fp,md,mo
+ * @len: mgmt/ctrl/data frame lens
+ * @debug: debug options
+ * @vdev_id: output vdev id
+ */
+struct cdp_lite_mon_filter_config {
+	uint8_t direction;
+	uint8_t disable;
+	uint8_t level;
+	uint8_t metadata;
+	uint16_t mgmt_filter[CDP_LITE_MON_MODE_MAX];
+	uint16_t ctrl_filter[CDP_LITE_MON_MODE_MAX];
+	uint16_t data_filter[CDP_LITE_MON_MODE_MAX];
+	uint16_t len[CDP_LITE_MON_FRM_TYPE_MAX];
+	uint8_t debug;
+	uint8_t vdev_id;
+};
+
+/**
+ * cdp_lite_mon_peer_config - lite mon set peer config
+ * @direction: direction tx/rx
+ * @action: add/del
+ * @type: assoc/non-assoc
+ * @vdev_id: peer vdev id
+ * @mac: peer mac
+ */
+struct cdp_lite_mon_peer_config {
+	uint8_t direction;
+	uint8_t action;
+	uint8_t type;
+	uint8_t vdev_id;
+	uint8_t mac[QDF_MAC_ADDR_SIZE];
+};
+
+/**
+ * cdp_lite_mon_peer_info - lite mon get peer config
+ * @direction: direction tx/rx
+ * @type: assoc/non-assoc
+ * @count: no of peers
+ * @mac: peer macs
+ */
+struct cdp_lite_mon_peer_info {
+	uint8_t direction;
+	uint8_t type;
+	uint8_t count;
+	uint8_t mac[CDP_LITE_MON_PEER_MAX][QDF_MAC_ADDR_SIZE];
+};
+#endif
+/* channel operating width */
+enum cdp_channel_width {
+	CHAN_WIDTH_20 = 0,
+	CHAN_WIDTH_40,
+	CHAN_WIDTH_80,
+	CHAN_WIDTH_160,
+	CHAN_WIDTH_80P80,
+	CHAN_WIDTH_5,
+	CHAN_WIDTH_10,
+	CHAN_WIDTH_165,
+	CHAN_WIDTH_160P160,
+	CHAN_WIDTH_320,
+
+	CHAN_WIDTH_MAX,
+};
+
+/* struct cdp_rssi_temp_off_param_dp
+ * @rssi_temp_offset: Temperature based rssi offset , send every 30 secs
+ */
+
+struct cdp_rssi_temp_off_param_dp {
+	int32_t rssi_temp_offset;
+};
+
+/*
+ * struct cdp_rssi_dbm_conv_param_dp
+ * @curr_bw: Current bandwidth
+ * @curr_rx_chainmask: Current rx chainmask
+ * @xbar_config: 4 bytes, used for BB to RF Chain mapping
+ * @xlna_bypass_offset: Low noise amplifier bypass offset
+ * @xlna_bypass_threshold: Low noise amplifier bypass threshold
+ * @nfHwDbm: HW noise floor in dBm per chain, per 20MHz subband
+ */
+struct cdp_rssi_dbm_conv_param_dp {
+	uint32_t curr_bw;
+	uint32_t curr_rx_chainmask;
+	uint32_t xbar_config;
+	int32_t xlna_bypass_offset;
+	int32_t xlna_bypass_threshold;
+	int8_t nf_hw_dbm[CDP_MAX_NUM_ANTENNA][CDP_MAX_20MHZ_SEGS];
+};
+
+/*
+ * struct cdp_rssi_db2dbm_param_dp
+ * @pdev_id: pdev_id
+ * @rssi_temp_off_present: to check temp offset values present or not
+ * @rssi_dbm_info_present: to check rssi dbm converstion parameters
+ *						   present or not
+ * @temp_off_param: cdp_rssi_temp_off_param_dp structure value
+ * @rssi_dbm_param: cdp_rssi_dbm_conv_param_dp staructure value
+ */
+struct cdp_rssi_db2dbm_param_dp {
+	uint32_t pdev_id;
+	bool rssi_temp_off_present;
+	bool rssi_dbm_info_present;
+	struct cdp_rssi_temp_off_param_dp temp_off_param;
+	struct cdp_rssi_dbm_conv_param_dp rssi_dbm_param;
 };
 #endif

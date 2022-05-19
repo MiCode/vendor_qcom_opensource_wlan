@@ -148,6 +148,9 @@
 #define CHAN_ENUM_SIXG_2      INVALID_CHANNEL
 #endif
 
+/* The eirp power values are in 0.01dBm units */
+#define EIRP_PWR_SCALE 100
+
 extern const struct chan_map *channel_map;
 extern const struct chan_map channel_map_us[];
 extern const struct chan_map channel_map_eu[];
@@ -1570,7 +1573,40 @@ reg_unregister_afc_power_event_callback(struct wlan_objmgr_pdev *pdev,
  */
 QDF_STATUS reg_send_afc_power_event(struct wlan_objmgr_pdev *pdev,
 				    struct reg_fw_afc_power_event *power_info);
-#endif
+
+/**
+ * reg_get_afc_dev_deploy_type() - Get AFC device deployment type
+ * @pdev: Pointer to pdev
+ * @reg_afc_dev_type: Pointer to afc device deployment type
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+reg_get_afc_dev_deploy_type(struct wlan_objmgr_pdev *pdev,
+			    enum reg_afc_dev_deploy_type *reg_afc_dev_type);
+
+/**
+ * reg_set_afc_soc_dev_deploy_type() - Set AFC soc device deployment type
+ * @pdev: Pointer to psoc
+ * @reg_afc_dev_type: afc device deployment type
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+reg_set_afc_soc_dev_type(struct wlan_objmgr_psoc *psoc,
+			 enum reg_afc_dev_deploy_type reg_afc_dev_type);
+
+/**
+ * reg_get_afc_soc_dev_deploy_type() - Get AFC soc device deployment type
+ * @pdev: Pointer to psoc
+ * @reg_afc_dev_type: Pointer to afc device deployment type
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+reg_get_afc_soc_dev_type(struct wlan_objmgr_psoc *psoc,
+			 enum reg_afc_dev_deploy_type *reg_afc_dev_type);
+#endif /* CONFIG_AFC_SUPPORT */
 
 /**
  * reg_get_cur_6g_client_type() - Get the current 6G regulatory client Type.
@@ -2268,6 +2304,20 @@ enum phy_ch_width reg_find_chwidth_from_bw(uint16_t bw);
  * @pdev: pdev pointer
  */
 qdf_freq_t reg_get_thresh_priority_freq(struct wlan_objmgr_pdev *pdev);
+
+/**
+ * reg_get_best_pwr_mode() - Get the AP's primary channel center frequency and
+ * AP's operating bandwidth to return the best power mode, which is calculated
+ * based on the maximum EIRP power among the 3 AP types, i.e, LPI, SP and VLP
+ * @pdev: Pointer to pdev
+ * @freq: Primary channel center frequency in mhz
+ * @bw: AP's operating bandwidth in mhz
+ *
+ * Return: Best power mode
+ */
+enum reg_6g_ap_type reg_get_best_pwr_mode(struct wlan_objmgr_pdev *pdev,
+					  qdf_freq_t freq,
+					  uint16_t bw);
 #endif /* CONFIG_BAND_6GHZ */
 
 /**

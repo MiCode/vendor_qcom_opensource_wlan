@@ -419,6 +419,48 @@ static QDF_STATUS dp_soc_detach_be(struct dp_soc *soc)
 }
 
 #ifdef WLAN_MLO_MULTI_CHIP
+#ifdef WLAN_MCAST_MLO
+static inline void
+dp_mlo_mcast_init(struct dp_soc *soc, struct dp_vdev *vdev)
+{
+	struct dp_vdev_be *be_vdev = dp_get_be_vdev_from_dp_vdev(vdev);
+
+	be_vdev->mcast_primary = false;
+	be_vdev->seq_num = 0;
+	dp_tx_mcast_mlo_reinject_routing_set(soc,
+					     (void *)&be_vdev->mcast_primary);
+	if (vdev->opmode == wlan_op_mode_ap) {
+		if (vdev->mlo_vdev)
+			hal_tx_vdev_mcast_ctrl_set(vdev->pdev->soc->hal_soc,
+						   vdev->vdev_id,
+						   HAL_TX_MCAST_CTRL_DROP);
+		else
+			hal_tx_vdev_mcast_ctrl_set(vdev->pdev->soc->hal_soc,
+						   vdev->vdev_id,
+						   HAL_TX_MCAST_CTRL_FW_EXCEPTION);
+	}
+}
+
+static inline void
+dp_mlo_mcast_deinit(struct dp_soc *soc, struct dp_vdev *vdev)
+{
+	struct dp_vdev_be *be_vdev = dp_get_be_vdev_from_dp_vdev(vdev);
+
+	be_vdev->seq_num = 0;
+	be_vdev->mcast_primary = false;
+	vdev->mlo_vdev = false;
+}
+#else
+static inline void
+dp_mlo_mcast_init(struct dp_soc *soc, struct dp_vdev *vdev)
+{
+}
+
+static inline void
+dp_mlo_mcast_deinit(struct dp_soc *soc, struct dp_vdev *vdev)
+{
+}
+#endif
 static void dp_mlo_init_ptnr_list(struct dp_vdev *vdev)
 {
 	struct dp_vdev_be *be_vdev = dp_get_be_vdev_from_dp_vdev(vdev);
@@ -428,6 +470,16 @@ static void dp_mlo_init_ptnr_list(struct dp_vdev *vdev)
 		    CDP_INVALID_VDEV_ID);
 }
 #else
+static inline void
+dp_mlo_mcast_init(struct dp_soc *soc, struct dp_vdev *vdev)
+{
+}
+
+static inline void
+dp_mlo_mcast_deinit(struct dp_soc *soc, struct dp_vdev *vdev)
+{
+}
+
 static void dp_mlo_init_ptnr_list(struct dp_vdev *vdev)
 {
 }
@@ -594,6 +646,7 @@ static QDF_STATUS dp_vdev_attach_be(struct dp_soc *soc, struct dp_vdev *vdev)
 						   HAL_TX_MCAST_CTRL_MEC_NOTIFY);
 	}
 
+	dp_mlo_mcast_init(soc, vdev);
 	dp_mlo_init_ptnr_list(vdev);
 
 	return QDF_STATUS_SUCCESS;
@@ -606,6 +659,9 @@ static QDF_STATUS dp_vdev_detach_be(struct dp_soc *soc, struct dp_vdev *vdev)
 
 	if (vdev->opmode == wlan_op_mode_monitor)
 		return QDF_STATUS_SUCCESS;
+
+	if (vdev->opmode == wlan_op_mode_ap)
+		dp_mlo_mcast_deinit(soc, vdev);
 
 	dp_tx_put_bank_profile(be_soc, be_vdev);
 	dp_clr_mlo_ptnr_list(soc, vdev);
@@ -1293,11 +1349,13 @@ static struct dp_peer *
 dp_mlo_peer_find_hash_find_be(struct dp_soc *soc,
 			      uint8_t *peer_mac_addr,
 			      int mac_addr_is_aligned,
-			      enum dp_mod_id mod_id)
+			      enum dp_mod_id mod_id,
+			      uint8_t vdev_id)
 {
 	union dp_align_mac_addr local_mac_addr_aligned, *mac_addr;
 	uint32_t index;
 	struct dp_peer *peer;
+	struct dp_vdev *vdev;
 	dp_mld_peer_hash_obj_t mld_hash_obj;
 
 	mld_hash_obj = dp_mlo_get_peer_hash_obj(soc);
@@ -1316,22 +1374,43 @@ dp_mlo_peer_find_hash_find_be(struct dp_soc *soc,
 		mac_addr = &local_mac_addr_aligned;
 	}
 
+	if (vdev_id != DP_VDEV_ALL) {
+		vdev = dp_vdev_get_ref_by_id(soc, vdev_id, mod_id);
+		if (!vdev) {
+			dp_err("vdev is null\n");
+			return NULL;
+		}
+	} else {
+		vdev = NULL;
+	}
 	/* search mld peer table if no link peer for given mac address */
 	index = dp_mlo_peer_find_hash_index(mld_hash_obj, mac_addr);
 	qdf_spin_lock_bh(&mld_hash_obj->mld_peer_hash_lock);
 	TAILQ_FOREACH(peer, &mld_hash_obj->mld_peer_hash.bins[index],
 		      hash_list_elem) {
-		/* do not check vdev ID for MLD peer */
 		if (dp_peer_find_mac_addr_cmp(mac_addr, &peer->mac_addr) == 0) {
-			/* take peer reference before returning */
-			if (dp_peer_get_ref(NULL, peer, mod_id) !=
+			if ((vdev_id == DP_VDEV_ALL) || (
+				dp_peer_find_mac_addr_cmp(
+						&peer->vdev->mld_mac_addr,
+						&vdev->mld_mac_addr) == 0)) {
+				/* take peer reference before returning */
+				if (dp_peer_get_ref(NULL, peer, mod_id) !=
 						QDF_STATUS_SUCCESS)
-				peer = NULL;
+					peer = NULL;
 
-			qdf_spin_unlock_bh(&mld_hash_obj->mld_peer_hash_lock);
-			return peer;
+				if (vdev)
+					dp_vdev_unref_delete(soc, vdev, mod_id);
+
+				qdf_spin_unlock_bh(
+					&mld_hash_obj->mld_peer_hash_lock);
+				return peer;
+			}
 		}
 	}
+
+	if (vdev)
+		dp_vdev_unref_delete(soc, vdev, mod_id);
+
 	qdf_spin_unlock_bh(&mld_hash_obj->mld_peer_hash_lock);
 
 	return NULL; /* failure */
@@ -1403,7 +1482,25 @@ static void dp_txrx_set_mlo_mcast_primary_vdev_param_be(
 					struct dp_vdev_be *be_vdev,
 					cdp_config_param_type val)
 {
+	struct dp_soc_be *be_soc = dp_get_be_soc_from_dp_soc(
+						be_vdev->vdev.pdev->soc);
+	hal_soc_handle_t hal_soc = be_vdev->vdev.pdev->soc->hal_soc;
+	uint8_t vdev_id = be_vdev->vdev.vdev_id;
+
 	be_vdev->mcast_primary = val.cdp_vdev_param_mcast_vdev;
+
+	if (be_vdev->mcast_primary) {
+		hal_tx_vdev_mcast_ctrl_set(hal_soc, vdev_id,
+					   HAL_TX_MCAST_CTRL_NO_SPECIAL);
+		hal_tx_vdev_mcast_ctrl_set(hal_soc, vdev_id + 128,
+					   HAL_TX_MCAST_CTRL_FW_EXCEPTION);
+		dp_mcast_mlo_iter_ptnr_soc(be_soc,
+					   dp_tx_mcast_mlo_reinject_routing_set,
+					   (void *)&be_vdev->mcast_primary);
+	} else {
+		hal_tx_vdev_mcast_ctrl_set(hal_soc, vdev_id,
+					   HAL_TX_MCAST_CTRL_DROP);
+	}
 }
 #else
 static void dp_txrx_set_mlo_mcast_primary_vdev_param_be(
@@ -1570,6 +1667,40 @@ static QDF_STATUS dp_peer_map_attach_be(struct dp_soc *soc)
 	return QDF_STATUS_SUCCESS;
 }
 
+#ifdef WLAN_FEATURE_11BE_MLO
+#ifdef WLAN_MCAST_MLO
+static inline void
+dp_initialize_arch_ops_be_mcast_mlo(struct dp_arch_ops *arch_ops)
+{
+	arch_ops->dp_tx_mcast_handler = dp_tx_mlo_mcast_handler_be;
+	arch_ops->dp_rx_mcast_handler = dp_rx_mlo_igmp_handler;
+}
+#else /* WLAN_MCAST_MLO */
+static inline void
+dp_initialize_arch_ops_be_mcast_mlo(struct dp_arch_ops *arch_ops)
+{
+}
+#endif /* WLAN_MCAST_MLO */
+
+static inline void
+dp_initialize_arch_ops_be_mlo(struct dp_arch_ops *arch_ops)
+{
+	dp_initialize_arch_ops_be_mcast_mlo(arch_ops);
+	arch_ops->mlo_peer_find_hash_detach =
+	dp_mlo_peer_find_hash_detach_wrapper;
+	arch_ops->mlo_peer_find_hash_attach =
+	dp_mlo_peer_find_hash_attach_wrapper;
+	arch_ops->mlo_peer_find_hash_add = dp_mlo_peer_find_hash_add_be;
+	arch_ops->mlo_peer_find_hash_remove = dp_mlo_peer_find_hash_remove_be;
+	arch_ops->mlo_peer_find_hash_find = dp_mlo_peer_find_hash_find_be;
+}
+#else /* WLAN_FEATURE_11BE_MLO */
+static inline void
+dp_initialize_arch_ops_be_mlo(struct dp_arch_ops *arch_ops)
+{
+}
+#endif /* WLAN_FEATURE_11BE_MLO */
+
 void dp_initialize_arch_ops_be(struct dp_arch_ops *arch_ops)
 {
 #ifndef QCA_HOST_MODE_WIFI_DISABLED
@@ -1614,20 +1745,7 @@ void dp_initialize_arch_ops_be(struct dp_arch_ops *arch_ops)
 	arch_ops->peer_get_reo_hash = dp_peer_get_reo_hash_be;
 	arch_ops->reo_remap_config = dp_reo_remap_config_be;
 	arch_ops->txrx_set_vdev_param = dp_txrx_set_vdev_param_be;
-
-#ifdef WLAN_FEATURE_11BE_MLO
-#ifdef WLAN_MCAST_MLO
-	arch_ops->dp_tx_mcast_handler = dp_tx_mlo_mcast_handler_be;
-	arch_ops->dp_rx_mcast_handler = dp_rx_mlo_igmp_handler;
-#endif
-	arch_ops->mlo_peer_find_hash_detach =
-		dp_mlo_peer_find_hash_detach_wrapper;
-	arch_ops->mlo_peer_find_hash_attach =
-		dp_mlo_peer_find_hash_attach_wrapper;
-	arch_ops->mlo_peer_find_hash_add = dp_mlo_peer_find_hash_add_be;
-	arch_ops->mlo_peer_find_hash_remove = dp_mlo_peer_find_hash_remove_be;
-	arch_ops->mlo_peer_find_hash_find = dp_mlo_peer_find_hash_find_be;
-#endif
+	dp_initialize_arch_ops_be_mlo(arch_ops);
 	arch_ops->dp_peer_rx_reorder_queue_setup =
 					dp_peer_rx_reorder_queue_setup_be;
 	arch_ops->txrx_print_peer_stats = dp_print_peer_txrx_stats_be;

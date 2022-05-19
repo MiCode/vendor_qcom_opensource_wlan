@@ -2103,6 +2103,15 @@ int dp_tx_frame_is_drop(struct dp_vdev *vdev, uint8_t *srcmac, uint8_t *dstmac)
 #define DP_MLO_VDEV_ID_OFFSET 0x80
 
 static inline void
+dp_tx_bypass_reinjection(struct dp_soc *soc, struct dp_tx_desc_s *tx_desc)
+{
+	if (!(tx_desc->flags & DP_TX_DESC_FLAG_TO_FW)) {
+		tx_desc->flags |= DP_TX_DESC_FLAG_TO_FW;
+		qdf_atomic_inc(&soc->num_tx_exception);
+	}
+}
+
+static inline void
 dp_tx_update_mcast_param(uint16_t peer_id,
 			 uint16_t *htt_tcl_metadata,
 			 struct dp_vdev *vdev,
@@ -2122,6 +2131,11 @@ dp_tx_update_mcast_param(uint16_t peer_id,
 	}
 }
 #else
+static inline void
+dp_tx_bypass_reinjection(struct dp_soc *soc, struct dp_tx_desc_s *tx_desc)
+{
+}
+
 static inline void
 dp_tx_update_mcast_param(uint16_t peer_id,
 			 uint16_t *htt_tcl_metadata,
@@ -2179,6 +2193,7 @@ dp_tx_send_msdu_single(struct dp_vdev *vdev, qdf_nbuf_t nbuf,
 					    DP_TCL_METADATA_TYPE_PEER_BASED);
 		DP_TX_TCL_METADATA_PEER_ID_SET(htt_tcl_metadata,
 					       peer_id);
+		dp_tx_bypass_reinjection(soc, tx_desc);
 	} else
 		htt_tcl_metadata = vdev->htt_tcl_metadata;
 
@@ -2956,7 +2971,7 @@ void dp_tx_nawds_handler(struct dp_soc *soc, struct dp_vdev *vdev,
 			/* Multicast packets needs to be
 			 * dropped in case of intra bss forwarding
 			 */
-			if (sa_peer_id == peer->peer_id) {
+			if (sa_peer_id == txrx_peer->peer_id) {
 				dp_tx_debug("multicast packet");
 				DP_PEER_PER_PKT_STATS_INC(txrx_peer,
 							  tx.nawds_mcast_drop,
@@ -3567,6 +3582,45 @@ int dp_tx_proxy_arp(struct dp_vdev *vdev, qdf_nbuf_t nbuf)
 }
 #endif
 
+#if defined(WLAN_FEATURE_11BE_MLO) && defined(WLAN_MLO_MULTI_CHIP)
+#ifdef WLAN_MCAST_MLO
+static bool
+dp_tx_reinject_mlo_hdl(struct dp_soc *soc, struct dp_vdev *vdev,
+		       struct dp_tx_desc_s *tx_desc,
+		       qdf_nbuf_t nbuf,
+		       uint8_t reinject_reason)
+{
+	if (reinject_reason == HTT_TX_FW2WBM_REINJECT_REASON_MLO_MCAST) {
+		if (soc->arch_ops.dp_tx_mcast_handler)
+			soc->arch_ops.dp_tx_mcast_handler(soc, vdev, nbuf);
+
+		dp_tx_desc_release(tx_desc, tx_desc->pool_id);
+		return true;
+	}
+
+	return false;
+}
+#else /* WLAN_MCAST_MLO */
+static inline bool
+dp_tx_reinject_mlo_hdl(struct dp_soc *soc, struct dp_vdev *vdev,
+		       struct dp_tx_desc_s *tx_desc,
+		       qdf_nbuf_t nbuf,
+		       uint8_t reinject_reason)
+{
+	return false;
+}
+#endif /* WLAN_MCAST_MLO */
+#else
+static inline bool
+dp_tx_reinject_mlo_hdl(struct dp_soc *soc, struct dp_vdev *vdev,
+		       struct dp_tx_desc_s *tx_desc,
+		       qdf_nbuf_t nbuf,
+		       uint8_t reinject_reason)
+{
+	return false;
+}
+#endif
+
 /**
  * dp_tx_reinject_handler() - Tx Reinject Handler
  * @soc: datapath soc handle
@@ -3606,17 +3660,8 @@ void dp_tx_reinject_handler(struct dp_soc *soc,
 	DP_STATS_INC_PKT(vdev, tx_i.reinject_pkts, 1,
 			qdf_nbuf_len(tx_desc->nbuf));
 
-#if defined(WLAN_FEATURE_11BE_MLO) && defined(WLAN_MLO_MULTI_CHIP)
-#ifdef WLAN_MCAST_MLO
-	if (reinject_reason == HTT_TX_FW2WBM_REINJECT_REASON_MLO_MCAST) {
-		if (soc->arch_ops.dp_tx_mcast_handler)
-			soc->arch_ops.dp_tx_mcast_handler(soc, vdev, nbuf);
-
-		dp_tx_desc_release(tx_desc, tx_desc->pool_id);
+	if (dp_tx_reinject_mlo_hdl(soc, vdev, tx_desc, nbuf, reinject_reason))
 		return;
-	}
-#endif
-#endif
 
 #ifdef WDS_VENDOR_EXTENSION
 	if (qdf_unlikely(vdev->tx_encap_type != htt_cmn_pkt_type_raw)) {
@@ -4239,17 +4284,13 @@ static inline void dp_tx_notify_completion(struct dp_soc *soc,
 
 	qdf_assert(tx_desc);
 
-	dp_tx_flow_pool_lock(soc, tx_desc);
-
 	if (!vdev ||
 	    !vdev->osif_vdev) {
-		dp_tx_flow_pool_unlock(soc, tx_desc);
 		return;
 	}
 
 	osif_dev = vdev->osif_vdev;
 	tx_compl_cbk = vdev->tx_comp;
-	dp_tx_flow_pool_unlock(soc, tx_desc);
 
 	if (status == HAL_TX_TQM_RR_FRAME_ACKED)
 		flag |= BIT(QDF_TX_RX_STATUS_OK);
@@ -4300,8 +4341,8 @@ static inline void dp_tx_sojourn_stats_process(struct dp_pdev *pdev,
 
 	link_peer_soc = primary_link_peer->vdev->pdev->soc;
 	sojourn_stats->cookie = (void *)
-			dp_monitor_peer_get_rdkstats_ctx(link_peer_soc,
-							 primary_link_peer);
+			dp_monitor_peer_get_peerstats_ctx(link_peer_soc,
+							  primary_link_peer);
 
 	delta_ms = qdf_ktime_to_ms(qdf_ktime_real_get()) -
 				txdesc_ts;
@@ -4671,6 +4712,11 @@ void dp_tx_comp_process_tx_status(struct dp_soc *soc,
 	dp_tx_update_connectivity_stats(soc, vdev, tx_desc, ts->status);
 	dp_tx_update_uplink_delay(soc, vdev, ts);
 
+	/* check tx complete notification */
+	if (qdf_nbuf_tx_notify_comp_get(nbuf))
+		dp_tx_notify_completion(soc, vdev, tx_desc,
+					nbuf, ts->status);
+
 	/* Update per-packet stats for mesh mode */
 	if (qdf_unlikely(vdev->mesh_vdev) &&
 			!(tx_desc->flags & DP_TX_DESC_FLAG_TO_FW))
@@ -4710,7 +4756,7 @@ void dp_tx_comp_process_tx_status(struct dp_soc *soc,
 				     ts, ts->tid);
 
 #ifdef QCA_SUPPORT_RDK_STATS
-	if (soc->rdkstats_enabled)
+	if (soc->peerstats_enabled)
 		dp_tx_sojourn_stats_process(vdev->pdev, txrx_peer, ts->tid,
 					    tx_desc->timestamp,
 					    ts->ppdu_id);
@@ -4797,6 +4843,50 @@ void dp_tx_prefetch_next_nbuf_data(struct dp_tx_desc_s *next)
 #endif
 
 /**
+ * dp_tx_mcast_reinject_handler() - Tx reinjected multicast packets handler
+ * @soc: core txrx main context
+ * @desc: software descriptor
+ *
+ * Return: true when packet is reinjected
+ */
+#if defined(WLAN_FEATURE_11BE_MLO) && defined(WLAN_MLO_MULTI_CHIP) && \
+	defined(WLAN_MCAST_MLO)
+static inline bool
+dp_tx_mcast_reinject_handler(struct dp_soc *soc, struct dp_tx_desc_s *desc)
+{
+	struct dp_vdev *vdev = NULL;
+
+	if (desc->tx_status == HAL_TX_TQM_RR_MULTICAST_DROP) {
+		if (!soc->arch_ops.dp_tx_mcast_handler)
+			return false;
+
+		vdev = dp_vdev_get_ref_by_id(soc, desc->vdev_id,
+					     DP_MOD_ID_TX_COMP);
+
+		if (qdf_unlikely(!vdev)) {
+			dp_tx_comp_info_rl("Unable to get vdev ref  %d",
+					   desc->id);
+			return false;
+		}
+		DP_STATS_INC_PKT(vdev, tx_i.reinject_pkts, 1,
+				 qdf_nbuf_len(desc->nbuf));
+		soc->arch_ops.dp_tx_mcast_handler(soc, vdev, desc->nbuf);
+		dp_tx_desc_release(desc, desc->pool_id);
+		dp_vdev_unref_delete(soc, vdev, DP_MOD_ID_TX_COMP);
+		return true;
+	}
+
+	return false;
+}
+#else
+static inline bool
+dp_tx_mcast_reinject_handler(struct dp_soc *soc, struct dp_tx_desc_s *desc)
+{
+	return false;
+}
+#endif
+
+/**
  * dp_tx_comp_process_desc_list() - Tx complete software descriptor handler
  * @soc: core txrx main context
  * @comp_head: software descriptor head pointer
@@ -4816,7 +4906,6 @@ dp_tx_comp_process_desc_list(struct dp_soc *soc,
 	struct hal_tx_completion_status ts;
 	struct dp_txrx_peer *txrx_peer = NULL;
 	uint16_t peer_id = DP_INVALID_PEER;
-	qdf_nbuf_t netbuf;
 	dp_txrx_ref_handle txrx_ref_handle = NULL;
 
 	desc = comp_head;
@@ -4836,6 +4925,10 @@ dp_tx_comp_process_desc_list(struct dp_soc *soc,
 							   DP_MOD_ID_TX_COMP);
 		}
 
+		if (dp_tx_mcast_reinject_handler(soc, desc)) {
+			desc = next;
+			continue;
+		}
 		if (qdf_likely(desc->flags & DP_TX_DESC_FLAG_SIMPLE)) {
 			struct dp_pdev *pdev = desc->pdev;
 
@@ -4859,16 +4952,11 @@ dp_tx_comp_process_desc_list(struct dp_soc *soc,
 			desc = next;
 			continue;
 		}
+
 		hal_tx_comp_get_status(&desc->comp, &ts, soc->hal_soc);
 
 		dp_tx_comp_process_tx_status(soc, desc, &ts, txrx_peer,
 					     ring_id);
-
-		netbuf = desc->nbuf;
-		/* check tx complete notification */
-		if (txrx_peer && qdf_nbuf_tx_notify_comp_get(netbuf))
-			dp_tx_notify_completion(soc, txrx_peer->vdev, desc,
-						netbuf, ts.status);
 
 		dp_tx_comp_process_desc(soc, desc, &ts, txrx_peer);
 

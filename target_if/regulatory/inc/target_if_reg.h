@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2017-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  *
  * Permission to use, copy, modify, and/or distribute this software for
@@ -128,6 +129,36 @@ target_if_reg_set_lower_6g_edge_ch_info(struct wlan_objmgr_psoc *psoc)
 
 static inline QDF_STATUS
 target_if_reg_set_disable_upper_6g_edge_ch_info(struct wlan_objmgr_psoc *psoc)
+{
+	return QDF_STATUS_E_FAILURE;
+}
+#endif
+
+#if defined(CONFIG_AFC_SUPPORT)
+/**
+ * target_if_reg_set_afc_dev_type() - set afc device deployment type
+ * @psoc: psoc pointer
+ * @tgt_hdl: target handle
+ *
+ * Return: Success or Failure
+ */
+QDF_STATUS
+target_if_reg_set_afc_dev_type(struct wlan_objmgr_psoc *psoc,
+			       struct target_psoc_info *tgt_hdl);
+
+/**
+ * target_if_reg_get_afc_device_type() - get afc device deployment type
+ * @psoc: psoc pointer
+ * @reg_afc_dev_type:
+ * Return: Success or Failure
+ */
+QDF_STATUS
+target_if_reg_get_afc_dev_type(struct wlan_objmgr_psoc *psoc,
+			       enum reg_afc_dev_deploy_type *reg_afc_dev_type);
+#else
+static inline QDF_STATUS
+target_if_reg_set_afc_dev_type(struct wlan_objmgr_psoc *psoc,
+			       struct target_psoc_info *tgt_hdl)
 {
 	return QDF_STATUS_E_FAILURE;
 }

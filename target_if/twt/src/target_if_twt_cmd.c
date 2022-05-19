@@ -29,21 +29,32 @@ target_if_twt_enable_req(struct wlan_objmgr_psoc *psoc,
 {
 	QDF_STATUS ret;
 	struct wmi_unified *wmi_handle;
+	struct wlan_objmgr_pdev *pdev;
 
 	if (!psoc) {
 		target_if_err("null psoc");
 		return QDF_STATUS_E_FAILURE;
 	}
 
-	wmi_handle = get_wmi_unified_hdl_from_psoc(psoc);
+	pdev = wlan_objmgr_get_pdev_by_id(psoc, req->pdev_id,
+					  WLAN_TWT_ID);
+	if (!pdev) {
+		target_if_err("null pdev");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	wmi_handle = get_wmi_unified_hdl_from_pdev(pdev);
 	if (!wmi_handle) {
 		target_if_err("null wmi handle");
+		wlan_objmgr_pdev_release_ref(pdev, WLAN_TWT_ID);
 		return QDF_STATUS_E_FAILURE;
 	}
 
 	ret = wmi_unified_twt_enable_cmd(wmi_handle, req);
 	if (QDF_IS_STATUS_ERROR(ret))
 		target_if_err("Failed to enable TWT(ret=%d)", ret);
+
+	wlan_objmgr_pdev_release_ref(pdev, WLAN_TWT_ID);
 
 	return ret;
 }
@@ -54,21 +65,32 @@ target_if_twt_disable_req(struct wlan_objmgr_psoc *psoc,
 {
 	QDF_STATUS ret;
 	struct wmi_unified *wmi_handle;
+	struct wlan_objmgr_pdev *pdev;
 
 	if (!psoc) {
 		target_if_err("null psoc");
 		return QDF_STATUS_E_FAILURE;
 	}
 
-	wmi_handle = get_wmi_unified_hdl_from_psoc(psoc);
+	pdev = wlan_objmgr_get_pdev_by_id(psoc, req->pdev_id,
+					  WLAN_TWT_ID);
+	if (!pdev) {
+		target_if_err("null pdev");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	wmi_handle = get_wmi_unified_hdl_from_pdev(pdev);
 	if (!wmi_handle) {
 		target_if_err("null wmi handle");
+		wlan_objmgr_pdev_release_ref(pdev, WLAN_TWT_ID);
 		return QDF_STATUS_E_FAILURE;
 	}
 
 	ret = wmi_unified_twt_disable_cmd(wmi_handle, req);
 	if (QDF_IS_STATUS_ERROR(ret))
 		target_if_err("Failed to disable TWT(ret=%d)", ret);
+
+	wlan_objmgr_pdev_release_ref(pdev, WLAN_TWT_ID);
 
 	return ret;
 }

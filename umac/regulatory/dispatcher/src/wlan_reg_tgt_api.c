@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2017-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  *
  * Permission to use, copy, modify, and/or distribute this software for
@@ -144,5 +145,21 @@ tgt_reg_set_disable_upper_6g_edge_ch_supp(struct wlan_objmgr_psoc *psoc,
 					  bool val)
 {
 	return reg_set_disable_upper_6g_edge_ch_supp(psoc, val);
+}
+#endif
+
+#ifdef CONFIG_AFC_SUPPORT
+QDF_STATUS tgt_reg_set_afc_dev_type(struct wlan_objmgr_psoc *psoc,
+				    enum reg_afc_dev_deploy_type
+				    reg_afc_dev_type)
+{
+	return reg_set_afc_soc_dev_type(psoc, reg_afc_dev_type);
+}
+
+QDF_STATUS tgt_reg_get_afc_dev_type(struct wlan_objmgr_psoc *psoc,
+				    enum reg_afc_dev_deploy_type
+				    *reg_afc_dev_type)
+{
+	return reg_get_afc_soc_dev_type(psoc, reg_afc_dev_type);
 }
 #endif

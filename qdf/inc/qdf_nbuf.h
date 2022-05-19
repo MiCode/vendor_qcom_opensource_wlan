@@ -169,8 +169,9 @@
 #define QDF_NBUF_TX_PKT_HIF                  7
 #define QDF_NBUF_TX_PKT_CE                   8
 #define QDF_NBUF_TX_PKT_FREE                 9
-#define QDF_NBUF_TX_PKT_STATE_MAX            10
-#define QDF_NBUF_TX_PKT_LI_DP                11
+#define QDF_NBUF_TX_PKT_LI_DP                10
+#define QDF_NBUF_TX_PKT_DP                   11
+#define QDF_NBUF_TX_PKT_STATE_MAX            12
 
 /* nbuf allocations only come from one domain */
 #define QDF_DEBUG_NBUF_DOMAIN		     0
@@ -325,7 +326,7 @@ typedef __qdf_nbuf_queue_t qdf_nbuf_queue_t;
  * @ba_bitmap: 256 bit block ack bitmap
  * @add_rtap_ext2: add radiotap extension2
  * @mpdu_retry_cnt: Rx mpdu retry count
- * @punctured_bw: puntured bw
+ * @punctured_pattern: punctured pattern (0 means the band is punctured)
  * @rx_user_status: pointer to mon_rx_user_status, when set update
  * radiotap header will use userinfo from this structure.
  * @usig_common: U-SIG property of received frame
@@ -349,6 +350,13 @@ typedef __qdf_nbuf_queue_t qdf_nbuf_queue_t;
  * @aggregation: Indicate A-MPDU format
  * @ht_stbc: Indicate stbc
  * @ht_crc: ht crc
+ * @dcm: dcm
+ * @xlna_bypass_offset: Low noise amplifier bypass offset
+ * @xlna_bypass_threshold: Low noise amplifier bypass threshold
+ * @rssi_temp_offset: Temperature based rssi offset
+ * @min_nf_dbm: min noise floor in active chains per channel
+ * @xbar_config: 4 bytes, used for BB to RF Chain mapping
+ * @rssi_dbm_conv_support: Rssi dbm converstion support param
  */
 struct mon_rx_status {
 	uint64_t tsft;
@@ -441,7 +449,7 @@ struct mon_rx_status {
 	bool add_rtap_ext2;
 	uint32_t mpdu_retry_cnt;
 #ifdef WLAN_FEATURE_11BE
-	uint8_t punctured_bw;
+	uint16_t punctured_pattern;
 #endif
 	struct mon_rx_user_status *rx_user_status;
 	uint32_t usig_common;
@@ -466,6 +474,15 @@ struct mon_rx_status {
 		aggregation:1,
 		ht_stbc:2,
 		ht_crc:8;
+#endif
+	uint8_t  dcm;
+#ifdef QCA_RSSI_DB2DBM
+	int32_t xlna_bypass_offset;
+	int32_t xlna_bypass_threshold;
+	int32_t rssi_temp_offset;
+	int8_t min_nf_dbm;
+	uint32_t xbar_config;
+	bool rssi_dbm_conv_support;
 #endif
 };
 
@@ -522,6 +539,7 @@ struct mon_rx_status {
  * @ba_control: Block ack control
  * @ba_bitmap: 256 bit block ack bitmap
  * @tid: QoS traffic tid number
+ * @filter_category: mpdu filter category
  * @mpdu_q: user mpdu_queue used for monitor
  */
 struct mon_rx_user_status {
@@ -581,6 +599,7 @@ struct mon_rx_user_status {
 	uint32_t ba_bitmap[32];
 	uint32_t ba_bitmap_sz;
 	uint16_t aid;
+	uint8_t filter_category;
 	qdf_nbuf_queue_t mpdu_q;
 };
 
@@ -2210,6 +2229,32 @@ static inline qdf_nbuf_t qdf_nbuf_unshare(qdf_nbuf_t buf)
 #endif /* NBUF_MEMORY_DEBUG */
 
 /**
+ * qdf_nbuf_kfree() - Free nbuf using kfree
+ * @buf: Pointer to network buffer
+ *
+ * This function is called to free the skb on failure cases
+ *
+ * Return: None
+ */
+static inline void qdf_nbuf_kfree(qdf_nbuf_t buf)
+{
+	__qdf_nbuf_kfree(buf);
+}
+
+/**
+ * qdf_nbuf_dev_kfree() - Free nbuf using dev based os call
+ * @buf: Pointer to network buffer
+ *
+ * This function is called to free the skb on failure cases
+ *
+ * Return: None
+ */
+static inline void qdf_nbuf_dev_kfree(qdf_nbuf_t buf)
+{
+	__qdf_nbuf_dev_kfree(buf);
+}
+
+/**
  * qdf_nbuf_copy_expand_fraglist() - copy and expand nbuf and
  * get reference of the fraglist.
  * @buf: Network buf instance
@@ -2536,6 +2581,43 @@ static inline unsigned long qdf_nbuf_get_dev_scratch(qdf_nbuf_t buf)
 static inline void qdf_nbuf_set_dev_scratch(qdf_nbuf_t buf, unsigned long value)
 {
 	__qdf_nbuf_set_dev_scratch(buf, value);
+}
+
+/**
+ * qdf_nbuf_set_dev() - set dev in network buffer
+ * @buf: Pointer to network buffer
+ * @dev: netdev to be set in network buffer
+ *
+ * Return: void
+ */
+static inline
+void qdf_nbuf_set_dev(qdf_nbuf_t nbuf, qdf_netdev_t dev)
+{
+	__qdf_nbuf_set_dev(nbuf, dev);
+}
+
+/**
+ * qdf_nbuf_get_dev_mtu() - get dev mtu in n/w buffer
+ * @buf: Pointer to network buffer
+ *
+ * Return: dev mtu value in nbuf
+ */
+static inline
+unsigned int qdf_nbuf_get_dev_mtu(qdf_nbuf_t nbuf)
+{
+	return __qdf_nbuf_get_dev_mtu(nbuf);
+}
+
+/**
+ * qdf_nbuf_set_protocol_eth_tye_trans() - set protocol using eth trans os API
+ * @buf: Pointer to network buffer
+ *
+ * Return: None
+ */
+static inline
+void qdf_nbuf_set_protocol_eth_tye_trans(qdf_nbuf_t nbuf)
+{
+	__qdf_nbuf_set_protocol_eth_type_trans(nbuf);
 }
 
 /**
@@ -3783,6 +3865,62 @@ bool qdf_nbuf_is_bcast_pkt(qdf_nbuf_t buf)
 }
 
 /**
+ * qdf_nbuf_pkt_type_is_mcast() - check if skb pkt type is mcast
+ * @buf: Network buffer
+ *
+ * Return: TRUE if skb pkt type is mcast
+ *         FALSE if not
+ */
+static inline
+bool qdf_nbuf_pkt_type_is_mcast(qdf_nbuf_t buf)
+{
+	return __qdf_nbuf_pkt_type_is_mcast(buf);
+}
+
+/**
+ * qdf_nbuf_pkt_type_is_bcast() - check if skb pkt type is bcast
+ * @buf: Network buffer
+ *
+ * Return: TRUE if skb pkt type is mcast
+ *         FALSE if not
+ */
+static inline
+bool qdf_nbuf_pkt_type_is_bcast(qdf_nbuf_t buf)
+{
+	return __qdf_nbuf_pkt_type_is_bcast(buf);
+}
+
+/**
+ * qdf_nbuf_is_mcast_replay() - check if it is multicast replay packet.
+ * @buf: Network buffer
+ *
+ * This func. checks whether packet is multicast replay packet or not.
+ *
+ * Return: TRUE if it is multicast packet
+ *         FALSE if not
+ */
+static inline
+bool qdf_nbuf_is_mcast_replay(qdf_nbuf_t buf)
+{
+	return __qdf_nbuf_is_mcast_replay(buf);
+}
+
+/**
+ * qdf_nbuf_is_arp_local() - check if it is local or no local arp
+ * @buf: Network buffer
+ *
+ * This func. checks whether packet is local or no local arp.
+ *
+ * Return: TRUE if it is broadcast packet
+ *         FALSE if not
+ */
+static inline
+bool qdf_nbuf_is_arp_local(qdf_nbuf_t buf)
+{
+	return __qdf_nbuf_is_arp_local(buf);
+}
+
+/**
  * qdf_nbuf_reset_num_frags() - decrement the number of fragments
  * @buf: Network buffer
  *
@@ -3877,6 +4015,29 @@ static inline uint32_t qdf_nbuf_get_tso_num_seg(qdf_nbuf_t nbuf)
 static inline uint16_t qdf_nbuf_get_gso_segs(qdf_nbuf_t nbuf)
 {
 	return __qdf_nbuf_get_gso_segs(nbuf);
+}
+
+/**
+ * qdf_nbuf_get_gso_size() - Return the number of gso size in
+ * nbuf
+ * @nbuf: Network buffer
+ *
+ * Return: number of gso segments in nbuf
+ */
+static inline unsigned int qdf_nbuf_get_gso_size(qdf_nbuf_t nbuf)
+{
+	return __qdf_nbuf_get_gso_size(nbuf);
+}
+
+/**
+ * qdf_nbuf_set_gso_size() - Set the gso size in nbuf
+ * @skb: Pointer to network buffer
+ *
+ * Return: Return the number of gso segments
+ */
+static inline void  qdf_nbuf_set_gso_size(qdf_nbuf_t nbuf, unsigned int val)
+{
+	__qdf_nbuf_set_gso_size(nbuf, val);
 }
 
 /**
@@ -4052,6 +4213,17 @@ static inline uint32_t qdf_nbuf_tcp_seq(qdf_nbuf_t buf)
 static inline qdf_size_t qdf_nbuf_l2l3l4_hdr_len(qdf_nbuf_t buf)
 {
 	return __qdf_nbuf_l2l3l4_hdr_len(buf);
+}
+
+/**
+ * qdf_nbuf_get_tcp_hdr_len() - return TCP header length of the skb
+ * @skb: sk buff
+ *
+ * Return: size of TCP header length
+ */
+static inline size_t qdf_nbuf_get_tcp_hdr_len(qdf_nbuf_t nbuf)
+{
+	return __qdf_nbuf_get_tcp_hdr_len(nbuf);
 }
 
 static inline bool qdf_nbuf_is_nonlinear(qdf_nbuf_t buf)
@@ -4319,6 +4491,27 @@ QDF_STATUS qdf_nbuf_move_frag_page_offset_debug(qdf_nbuf_t nbuf, uint8_t idx,
 						int offset, const char *func,
 						uint32_t line);
 
+#define qdf_nbuf_remove_frag(n, i, t) \
+	qdf_nbuf_remove_frag_debug(n, i, t, __func__, __LINE__)
+
+/**
+ * qdf_nbuf_remove_frag_debug - Remove frag from nbuf
+ * @nbuf: nbuf where frag will be removed
+ * @idx: frag index
+ * @truesize: truesize of frag
+ * @func: Caller function name
+ * @line:  Caller function line no.
+ *
+ * Return: QDF_STATUS
+ *
+ */
+QDF_STATUS
+qdf_nbuf_remove_frag_debug(qdf_nbuf_t nbuf,
+			   uint16_t idx,
+			   uint16_t truesize,
+			   const char *func,
+			   uint32_t line);
+
 #define qdf_nbuf_add_rx_frag(f, b, o, l, s, r) \
 	qdf_nbuf_add_rx_frag_debug(f, b, o, l, s, r, __func__, __LINE__)
 
@@ -4414,6 +4607,22 @@ static inline QDF_STATUS qdf_nbuf_move_frag_page_offset(qdf_nbuf_t nbuf,
 							int offset)
 {
 	return __qdf_nbuf_move_frag_page_offset(nbuf, idx, offset);
+}
+
+/**
+ * qdf_nbuf_remove_frag() - Remove frag from nbuf
+ *
+ * @nbuf: nbuf pointer
+ * @idx: idx at which frag need to be removed
+ * @truesize: truesize of frag
+ *
+ * Return: void
+ */
+static inline void qdf_nbuf_remove_frag(qdf_nbuf_t nbuf,
+					uint16_t idx,
+					uint16_t truesize)
+{
+	return __qdf_nbuf_remove_frag(nbuf, idx, truesize);
 }
 
 /**
@@ -4661,4 +4870,12 @@ static inline void qdf_set_smmu_fault_state(bool smmu_fault_state)
  * Return: void
  */
 void qdf_nbuf_stop_replenish_timer(void);
+/**
+ * qdf_get_nbuf_valid_frag() - Get nbuf to store frag
+ * @nbuf: qdf_nbuf_t master nbuf
+ *
+ * Return: qdf_nbuf_t
+ */
+qdf_nbuf_t qdf_get_nbuf_valid_frag(qdf_nbuf_t nbuf);
+
 #endif /* _QDF_NBUF_H */

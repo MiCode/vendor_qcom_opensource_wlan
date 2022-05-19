@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -32,10 +33,13 @@
  * @index_6 = 6_7 ms
  * @index_7 = 7_8 ms
  * @index_8 = 8_9 ms
- * @index_8 = 9+ ms
+ * @index_9 = 9_10 ms
+ * @index_10 = 10_11 ms
+ * @index_11 = 11_12 ms
+ * @index_12 = 12+ ms
  */
 static uint16_t dp_hist_sw_enq_dbucket[CDP_HIST_BUCKET_MAX] = {
-	0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+	0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
 
 /*
  * cdp_hist_fw2hw_dbucket: HW enqueue to Completion Delay
@@ -48,10 +52,13 @@ static uint16_t dp_hist_sw_enq_dbucket[CDP_HIST_BUCKET_MAX] = {
  * @index_6 = 60_70 ms
  * @index_7 = 70_80 ms
  * @index_8 = 80_90 ms
- * @index_9 = 90+ ms
+ * @index_9 = 90_100 ms
+ * @index_10 = 100_250 ms
+ * @index_11 = 250_500 ms
+ * @index_12 = 500+ ms
  */
 static uint16_t dp_hist_fw2hw_dbucket[CDP_HIST_BUCKET_MAX] = {
-	0, 10, 20, 30, 40, 50, 60, 70, 80, 90};
+	0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 250, 500};
 
 /*
  * dp_hist_reap2stack_bucket: Reap to stack bucket
@@ -64,10 +71,13 @@ static uint16_t dp_hist_fw2hw_dbucket[CDP_HIST_BUCKET_MAX] = {
  * @index_6 = 30_35 ms
  * @index_7 = 35_40 ms
  * @index_8 = 40_45 ms
- * @index_9 = 45+ ms
+ * @index_9 = 46_50 ms
+ * @index_10 = 51_55 ms
+ * @index_11 = 56_60 ms
+ * @index_12 = 60+ ms
  */
 static uint16_t dp_hist_reap2stack_bucket[CDP_HIST_BUCKET_MAX] = {
-	0, 5, 10, 15, 20, 25, 30, 35, 40, 45};
+	0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60};
 
 /*
  * dp_hist_find_bucket_idx: Find the bucket index
@@ -159,8 +169,7 @@ void dp_hist_update_stats(struct cdp_hist_stats *hist_stats, int value)
 	if (qdf_unlikely(!hist_stats->avg))
 		hist_stats->avg = value;
 	else
-		hist_stats->avg = hist_stats->avg +
-			((value - hist_stats->avg) >> HIST_AVG_WEIGHT_DENOM);
+		hist_stats->avg = (hist_stats->avg + value) / 2;
 }
 
 /*
@@ -193,14 +202,26 @@ void dp_copy_hist_stats(struct cdp_hist_stats *src_hist_stats,
 void dp_accumulate_hist_stats(struct cdp_hist_stats *src_hist_stats,
 			      struct cdp_hist_stats *dst_hist_stats)
 {
-	uint8_t index;
+	uint8_t index, hist_stats_valid = 0;
 
-	for (index = 0; index < CDP_HIST_BUCKET_MAX; index++)
+	for (index = 0; index < CDP_HIST_BUCKET_MAX; index++) {
 		dst_hist_stats->hist.freq[index] +=
 			src_hist_stats->hist.freq[index];
-	dst_hist_stats->min = QDF_MIN(src_hist_stats->min, dst_hist_stats->min);
-	dst_hist_stats->max = QDF_MAX(src_hist_stats->max, dst_hist_stats->max);
-	dst_hist_stats->avg = (src_hist_stats->avg + dst_hist_stats->avg) >> 1;
+		if (src_hist_stats->hist.freq[index])
+			hist_stats_valid = 1;
+	}
+	/*
+	 * If at least one hist-bucket has non-zero count,
+	 * proceed with the detailed calculation.
+	 */
+	if (hist_stats_valid) {
+		dst_hist_stats->min = QDF_MIN(src_hist_stats->min,
+					      dst_hist_stats->min);
+		dst_hist_stats->max = QDF_MAX(src_hist_stats->max,
+					      dst_hist_stats->max);
+		dst_hist_stats->avg = (src_hist_stats->avg +
+				       dst_hist_stats->avg) >> 1;
+	}
 }
 
 /*
@@ -212,5 +233,6 @@ void dp_hist_init(struct cdp_hist_stats *hist_stats,
 		  enum cdp_hist_types hist_type)
 {
 	qdf_mem_zero(hist_stats, sizeof(*hist_stats));
+	hist_stats->min =  INT_MAX;
 	hist_stats->hist.hist_type = hist_type;
 }

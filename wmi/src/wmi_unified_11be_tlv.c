@@ -251,6 +251,36 @@ uint8_t *peer_assoc_add_ml_partner_links(uint8_t *buf_ptr,
 		sizeof(wmi_peer_assoc_mlo_partner_link_params));
 }
 
+size_t peer_delete_mlo_params_size(struct peer_delete_cmd_params *req)
+{
+	if (!req->hw_link_id_bitmap)
+		return WMI_TLV_HDR_SIZE;
+
+	return sizeof(wmi_peer_delete_mlo_params) + WMI_TLV_HDR_SIZE;
+}
+
+uint8_t *peer_delete_add_mlo_params(uint8_t *buf_ptr,
+				    struct peer_delete_cmd_params *req)
+{
+	wmi_peer_delete_mlo_params *mlo_params;
+
+	if (!req->hw_link_id_bitmap) {
+		WMITLV_SET_HDR(buf_ptr, WMITLV_TAG_ARRAY_STRUC, 0);
+		return buf_ptr + WMI_TLV_HDR_SIZE;
+	}
+
+	WMITLV_SET_HDR(buf_ptr, WMITLV_TAG_ARRAY_STRUC,
+		       sizeof(wmi_peer_delete_mlo_params));
+	buf_ptr += sizeof(uint32_t);
+
+	mlo_params = (wmi_peer_delete_mlo_params *)buf_ptr;
+	WMITLV_SET_HDR(&mlo_params->tlv_header,
+		       WMITLV_TAG_STRUC_wmi_peer_delete_mlo_params,
+		       WMITLV_GET_STRUCT_TLVLEN(wmi_peer_delete_mlo_params));
+	mlo_params->mlo_hw_link_id_bitmap = req->hw_link_id_bitmap;
+	return buf_ptr + sizeof(wmi_peer_delete_mlo_params);
+}
+
 /**
  * force_mode_host_to_fw() - translate force mode for MLO link set active
  *  command
@@ -493,6 +523,187 @@ extract_mlo_link_set_active_resp_tlv(wmi_unified_t wmi_handle, void *evt_buf,
 	return QDF_STATUS_SUCCESS;
 }
 
+#if defined(WLAN_FEATURE_11BE) && defined(WLAN_FEATURE_T2LM)
+size_t peer_assoc_t2lm_params_size(struct peer_assoc_params *req)
+{
+	size_t peer_assoc_t2lm_size = WMI_TLV_HDR_SIZE +
+		(req->t2lm_params.num_dir * T2LM_MAX_NUM_TIDS *
+		 (sizeof(wmi_peer_assoc_tid_to_link_map)));
+
+	return peer_assoc_t2lm_size;
+}
+
+void peer_assoc_populate_t2lm_tlv(wmi_peer_assoc_tid_to_link_map *cmd,
+				  struct wlan_host_t2lm_of_tids *t2lm,
+				  uint8_t tid_num)
+{
+	WMITLV_SET_HDR(&cmd->tlv_header,
+		       WMITLV_TAG_STRUC_wmi_peer_assoc_tid_to_link_map,
+		       WMITLV_GET_STRUCT_TLVLEN(
+				   wmi_peer_assoc_tid_to_link_map));
+
+	/* Populate TID number */
+	WMI_TID_TO_LINK_MAP_TID_NUM_SET(cmd->tid_to_link_map_info, tid_num);
+
+	/* Populate the direction */
+	WMI_TID_TO_LINK_MAP_DIR_SET(cmd->tid_to_link_map_info,
+				    t2lm->direction);
+
+	/* Populate the default link mapping value */
+	WMI_TID_TO_LINK_MAP_DEFAULT_MAPPING_SET(
+			cmd->tid_to_link_map_info,
+			t2lm->default_link_mapping);
+
+	/* Populate the T2LM provisioned links for the corresponding TID
+	 * number.
+	 */
+	WMI_TID_TO_LINK_MAP_LINK_MASK_SET(
+			cmd->tid_to_link_map_info,
+			t2lm->t2lm_provisioned_links[tid_num]);
+
+	wmi_debug("Add T2LM TLV: tid_to_link_map_info:%x",
+		  cmd->tid_to_link_map_info);
+}
+
+uint8_t *peer_assoc_add_tid_to_link_map(uint8_t *buf_ptr,
+					struct peer_assoc_params *req)
+{
+	struct wmi_host_tid_to_link_map_params *t2lm_params = &req->t2lm_params;
+	wmi_peer_assoc_tid_to_link_map *cmd;
+	uint8_t dir = 0;
+	uint8_t tid_num = 0;
+
+	WMITLV_SET_HDR(buf_ptr, WMITLV_TAG_ARRAY_STRUC,
+		       (req->t2lm_params.num_dir * T2LM_MAX_NUM_TIDS *
+		       sizeof(wmi_peer_assoc_tid_to_link_map)));
+	buf_ptr += sizeof(uint32_t);
+
+	for (dir = 0; dir < t2lm_params->num_dir; dir++) {
+		wmi_debug("Add T2LM TLV for peer: " QDF_MAC_ADDR_FMT " direction:%d",
+				QDF_MAC_ADDR_REF(t2lm_params->peer_macaddr),
+				dir);
+		for (tid_num = 0; tid_num < T2LM_MAX_NUM_TIDS; tid_num++) {
+			cmd = (wmi_peer_assoc_tid_to_link_map *)buf_ptr;
+			peer_assoc_populate_t2lm_tlv(
+					cmd, &t2lm_params->t2lm_info[dir],
+					tid_num);
+			buf_ptr += sizeof(wmi_peer_assoc_tid_to_link_map);
+		}
+	}
+
+	return buf_ptr;
+}
+
+QDF_STATUS send_mlo_peer_tid_to_link_map_cmd_tlv(
+		wmi_unified_t wmi_handle,
+		struct wmi_host_tid_to_link_map_params *params)
+{
+	wmi_peer_tid_to_link_map_fixed_param *cmd;
+	wmi_tid_to_link_map *t2lm;
+	wmi_buf_t buf;
+	uint8_t *buf_ptr;
+	QDF_STATUS ret = QDF_STATUS_SUCCESS;
+	uint32_t buf_len = 0;
+	uint8_t dir = 0;
+	uint8_t tid_num = 0;
+
+	buf_len = sizeof(wmi_peer_tid_to_link_map_fixed_param) +
+		WMI_TLV_HDR_SIZE + (params->num_dir * T2LM_MAX_NUM_TIDS *
+		 sizeof(wmi_tid_to_link_map));
+
+	buf = wmi_buf_alloc(wmi_handle, buf_len);
+	if (!buf) {
+		wmi_err("wmi buf alloc failed for mlo_peer_mac: "
+				QDF_MAC_ADDR_FMT,
+				QDF_MAC_ADDR_REF(params->peer_macaddr));
+		return QDF_STATUS_E_NOMEM;
+	}
+
+	buf_ptr = (uint8_t *)wmi_buf_data(buf);
+	cmd = (wmi_peer_tid_to_link_map_fixed_param *)buf_ptr;
+
+	WMITLV_SET_HDR(&cmd->tlv_header,
+		       WMITLV_TAG_STRUC_wmi_peer_tid_to_link_map_fixed_param,
+		       WMITLV_GET_STRUCT_TLVLEN(
+			   wmi_peer_tid_to_link_map_fixed_param));
+
+	cmd->pdev_id = wmi_handle->ops->convert_pdev_id_host_to_target(
+			wmi_handle, params->pdev_id);
+
+	WMI_CHAR_ARRAY_TO_MAC_ADDR(params->peer_macaddr, &cmd->link_macaddr);
+
+	buf_ptr += sizeof(wmi_peer_tid_to_link_map_fixed_param);
+
+	WMITLV_SET_HDR(buf_ptr, WMITLV_TAG_ARRAY_STRUC,
+		       (params->num_dir * T2LM_MAX_NUM_TIDS *
+		       sizeof(wmi_tid_to_link_map)));
+	buf_ptr += sizeof(uint32_t);
+
+	for (dir = 0; dir < params->num_dir; dir++) {
+		wmi_debug("Add T2LM TLV for peer: " QDF_MAC_ADDR_FMT " direction:%d",
+				QDF_MAC_ADDR_REF(params->peer_macaddr), dir);
+
+		for (tid_num = 0; tid_num < T2LM_MAX_NUM_TIDS; tid_num++) {
+			t2lm = (wmi_tid_to_link_map *)buf_ptr;
+
+			WMITLV_SET_HDR(&t2lm->tlv_header,
+				       WMITLV_TAG_STRUC_wmi_tid_to_link_map,
+				       WMITLV_GET_STRUCT_TLVLEN(
+					   wmi_tid_to_link_map));
+
+			/* Populate TID number */
+			WMI_TID_TO_LINK_MAP_TID_NUM_SET(
+					t2lm->tid_to_link_map_info, tid_num);
+
+			/* Populate the direction */
+			WMI_TID_TO_LINK_MAP_DIR_SET(
+					t2lm->tid_to_link_map_info,
+					params->t2lm_info[dir].direction);
+
+			/* Populate the default link mapping value */
+			WMI_TID_TO_LINK_MAP_DEFAULT_MAPPING_SET(
+					t2lm->tid_to_link_map_info,
+					params->t2lm_info[dir].default_link_mapping);
+
+			/* Populate the T2LM provisioned links for the
+			 * corresponding TID number.
+			 */
+			WMI_TID_TO_LINK_MAP_LINK_MASK_SET(
+					t2lm->tid_to_link_map_info,
+					params->t2lm_info[dir].t2lm_provisioned_links[tid_num]);
+
+			buf_ptr += sizeof(wmi_tid_to_link_map);
+
+			wmi_debug("Add T2LM TLV: tid_to_link_map_info:%x",
+				  t2lm->tid_to_link_map_info);
+		}
+	}
+
+	wmi_mtrace(WMI_MLO_PEER_TID_TO_LINK_MAP_CMDID, cmd->pdev_id, 0);
+	ret = wmi_unified_cmd_send(wmi_handle, buf, buf_len,
+				   WMI_MLO_PEER_TID_TO_LINK_MAP_CMDID);
+	if (ret) {
+		wmi_err("Failed to send T2LM command to FW: %d mlo_peer_mac: " QDF_MAC_ADDR_FMT,
+				ret, QDF_MAC_ADDR_REF(params->peer_macaddr));
+		wmi_buf_free(buf);
+	}
+
+	return ret;
+}
+#else
+size_t peer_assoc_t2lm_params_size(struct peer_assoc_params *req)
+{
+	return WMI_TLV_HDR_SIZE;
+}
+
+uint8_t *peer_assoc_add_tid_to_link_map(uint8_t *buf_ptr,
+					       struct peer_assoc_params *req)
+{
+	WMITLV_SET_HDR(buf_ptr, WMITLV_TAG_ARRAY_STRUC, 0);
+	return buf_ptr + WMI_TLV_HDR_SIZE;
+}
+#endif /* defined(WLAN_FEATURE_11BE) && defined(WLAN_FEATURE_T2LM) */
+
 #ifdef WLAN_MLO_MULTI_CHIP
 QDF_STATUS mlo_setup_cmd_send_tlv(struct wmi_unified *wmi_handle,
 				  struct wmi_mlo_setup_params *param)
@@ -698,4 +909,8 @@ void wmi_11be_attach_tlv(wmi_unified_t wmi_handle)
 		extract_mlo_link_set_active_resp_tlv;
 	ops->send_mlo_link_set_active_cmd =
 		send_mlo_link_set_active_cmd_tlv;
+#if defined(WLAN_FEATURE_11BE) && defined(WLAN_FEATURE_T2LM)
+	ops->send_mlo_peer_tid_to_link_map =
+		send_mlo_peer_tid_to_link_map_cmd_tlv;
+#endif /* defined(WLAN_FEATURE_11BE) && defined(WLAN_FEATURE_T2LM) */
 }

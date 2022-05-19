@@ -32,6 +32,71 @@
 #include "wlan_objmgr_psoc_obj.h"
 #include "wlan_lmac_if_def.h"
 
+struct wlan_lmac_if_wifi_pos_rx_ops *
+wifi_pos_get_rx_ops(struct wlan_objmgr_psoc *psoc)
+{
+	struct wlan_lmac_if_rx_ops *rx_ops;
+
+	if (!psoc) {
+		wifi_pos_err("psoc is null");
+		return NULL;
+	}
+
+	rx_ops = wlan_psoc_get_lmac_if_rxops(psoc);
+	if (!rx_ops) {
+		wifi_pos_err("rx_ops is NULL");
+		return NULL;
+	}
+
+	return &rx_ops->wifi_pos_rx_ops;
+}
+
+struct wifi_pos_legacy_ops *
+wifi_pos_get_legacy_ops(struct wlan_objmgr_psoc *psoc)
+{
+	struct wifi_pos_psoc_priv_obj *wifi_pos_obj =
+			wifi_pos_get_psoc_priv_obj(psoc);
+
+	if (!wifi_pos_obj)
+		return NULL;
+
+	return wifi_pos_obj->legacy_ops;
+}
+
+QDF_STATUS
+wifi_pos_set_legacy_ops(struct wlan_objmgr_psoc *psoc,
+			struct wifi_pos_legacy_ops *legacy_ops)
+{
+	struct wifi_pos_psoc_priv_obj *wifi_pos_obj =
+			wifi_pos_get_psoc_priv_obj(psoc);
+
+	if (!wifi_pos_obj)
+		return QDF_STATUS_E_FAILURE;
+
+	wifi_pos_obj->legacy_ops = legacy_ops;
+
+	return QDF_STATUS_SUCCESS;
+}
+
+struct wlan_lmac_if_wifi_pos_tx_ops *
+wifi_pos_get_tx_ops(struct wlan_objmgr_psoc *psoc)
+{
+	struct wlan_lmac_if_tx_ops *tx_ops;
+
+	if (!psoc) {
+		wifi_pos_err("psoc is null");
+		return NULL;
+	}
+
+	tx_ops = wlan_psoc_get_lmac_if_txops(psoc);
+	if (!tx_ops) {
+		wifi_pos_err("tx_ops is NULL");
+		return NULL;
+	}
+
+	return &tx_ops->wifi_pos_tx_ops;
+}
+
 QDF_STATUS wifi_pos_init(void)
 {
 	QDF_STATUS status;
@@ -57,7 +122,43 @@ QDF_STATUS wifi_pos_init(void)
 	if (QDF_IS_STATUS_ERROR(status)) {
 		wifi_pos_err("register_psoc_destroy_handler failed, status: %d",
 			     status);
+		goto fail_psoc_destroy_handler;
 	}
+
+	status = wlan_objmgr_register_vdev_create_handler(
+			WLAN_UMAC_COMP_WIFI_POS,
+			wifi_pos_vdev_created_notification, NULL);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		wifi_pos_err("register_vdev_create_handler failed, status: %d",
+			     status);
+		goto fail_vdev_create_handler;
+	}
+
+	status = wlan_objmgr_register_vdev_destroy_handler(
+			WLAN_UMAC_COMP_WIFI_POS,
+			wifi_pos_vdev_destroyed_notification, NULL);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		wifi_pos_err("register_vdev_destroy_handler failed, status: %d",
+			     status);
+		goto fail_vdev_destroy_handler;
+	}
+
+	return status;
+
+fail_vdev_destroy_handler:
+	wlan_objmgr_unregister_vdev_create_handler(
+			WLAN_UMAC_COMP_WIFI_POS,
+			wifi_pos_vdev_created_notification, NULL);
+
+fail_vdev_create_handler:
+	wlan_objmgr_unregister_psoc_destroy_handler(
+			WLAN_UMAC_COMP_WIFI_POS,
+			wifi_pos_psoc_obj_destroyed_notification, NULL);
+
+fail_psoc_destroy_handler:
+	wlan_objmgr_unregister_psoc_create_handler(
+			WLAN_UMAC_COMP_WIFI_POS,
+			wifi_pos_psoc_obj_created_notification, NULL);
 
 	return status;
 }
@@ -65,6 +166,20 @@ QDF_STATUS wifi_pos_init(void)
 QDF_STATUS wifi_pos_deinit(void)
 {
 	QDF_STATUS status;
+
+	status = wlan_objmgr_unregister_vdev_destroy_handler(
+				WLAN_UMAC_COMP_WIFI_POS,
+				wifi_pos_vdev_destroyed_notification, NULL);
+	if (QDF_IS_STATUS_ERROR(status))
+		wifi_pos_err("unregister_vdev_destroy_handler failed, status: %d",
+			     status);
+
+	status = wlan_objmgr_unregister_vdev_create_handler(
+				WLAN_UMAC_COMP_WIFI_POS,
+				wifi_pos_vdev_created_notification, NULL);
+	if (QDF_IS_STATUS_ERROR(status))
+		wifi_pos_err("unregister_vdev_create_handler failed, status: %d",
+			     status);
 
 	/* deregister psoc create handler functions. */
 	status = wlan_objmgr_unregister_psoc_create_handler(

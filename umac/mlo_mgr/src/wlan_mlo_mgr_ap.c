@@ -184,7 +184,7 @@ static bool mlo_is_ap_vdev_up_allowed(struct wlan_objmgr_vdev *vdev)
 
 	mlo_dev_lock_acquire(dev_ctx);
 	for (i = 0; i < QDF_ARRAY_SIZE(dev_ctx->wlan_vdev_list); i++) {
-		if (QDF_IS_STATUS_SUCCESS(
+		if (dev_ctx->wlan_vdev_list[i] && QDF_IS_STATUS_SUCCESS(
 		    mlo_ap_vdev_is_start_resp_rcvd(dev_ctx->wlan_vdev_list[i])))
 			vdev_count++;
 	}

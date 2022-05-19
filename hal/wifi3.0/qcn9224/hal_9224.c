@@ -1931,6 +1931,7 @@ static void hal_hw_txrx_ops_attach_qcn9224(struct hal_soc *hal_soc)
 	hal_soc->ops->hal_reo_shared_qaddr_init = hal_reo_shared_qaddr_init_be;
 	hal_soc->ops->hal_reo_shared_qaddr_detach = hal_reo_shared_qaddr_detach_be;
 	hal_soc->ops->hal_reo_shared_qaddr_write = hal_reo_shared_qaddr_write_be;
+	hal_soc->ops->hal_reo_shared_qaddr_cache_clear = hal_reo_shared_qaddr_cache_clear_be;
 #endif
 	/* Overwrite the default BE ops */
 	hal_soc->ops->hal_get_reo_qdesc_size = hal_qcn9224_get_reo_qdesc_size;

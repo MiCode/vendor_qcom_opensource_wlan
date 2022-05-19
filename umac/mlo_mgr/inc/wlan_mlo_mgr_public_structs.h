@@ -95,7 +95,7 @@ enum MLO_LINK_STATE {
  * @state[MAX_MLO_LINKS]: MLO link state
  * @valid_link_bitmap: valid MLO link bitmap
  * @state_lock: lock to protect access to link state
- * @qdf_event_t: event for tearodwn completion
+ * @qdf_event_t: event for teardown completion
  */
 #define MAX_MLO_LINKS 6
 #define MAX_MLO_CHIPS 5
@@ -383,6 +383,166 @@ struct mlpeer_auth_params {
 	void *rs;
 };
 
+#ifdef WLAN_FEATURE_T2LM
+
+/**
+ * enum wlan_t2lm_direction - Indicates the direction for which TID-to-link
+ * mapping is available.
+ * @WLAN_T2LM_DL_DIRECTION: Downlink
+ * @WLAN_T2LM_UL_DIRECTION: Uplink
+ * @WLAN_T2LM_BIDI_DIRECTION: Both downlink and uplink
+ * @WLAN_T2LM_MAX_DIRECTION: Max direction, this is used only internally
+ * @WLAN_T2LM_INVALID_DIRECTION: Invalid, this is used only internally to check
+ * if the mapping present in wlan_t2lm_of_tids structure is valid or not.
+ */
+enum wlan_t2lm_direction {
+	WLAN_T2LM_DL_DIRECTION,
+	WLAN_T2LM_UL_DIRECTION,
+	WLAN_T2LM_BIDI_DIRECTION,
+	WLAN_T2LM_MAX_DIRECTION,
+	WLAN_T2LM_INVALID_DIRECTION,
+};
+
+/* Total 8 TIDs are supported, TID 0 to TID 7 */
+#define T2LM_MAX_NUM_TIDS 8
+
+/**
+ * enum wlan_t2lm_category - T2LM category
+ *
+ * @WLAN_T2LM_CATEGORY_NONE: none
+ * @WLAN_T2LM_CATEGORY_REQUEST: T2LM request
+ * @WLAN_T2LM_CATEGORY_RESPONSE: T2LM response
+ * @WLAN_T2LM_CATEGORY_TEARDOWN: T2LM teardown
+ * @WLAN_T2LM_CATEGORY_INVALID: Invalid
+ */
+enum wlan_t2lm_category {
+	WLAN_T2LM_CATEGORY_NONE = 0,
+	WLAN_T2LM_CATEGORY_REQUEST = 1,
+	WLAN_T2LM_CATEGORY_RESPONSE = 2,
+	WLAN_T2LM_CATEGORY_TEARDOWN = 3,
+	WLAN_T2LM_CATEGORY_INVALID,
+};
+
+/**
+ * enum wlan_t2lm_tx_status - Status code applicable for the T2LM frames
+ * transmitted by the current peer.
+ *
+ * @WLAN_T2LM_TX_STATUS_NONE: Status code is not applicable
+ * @WLAN_T2LM_TX_STATUS_SUCCESS: AP/STA successfully transmitted the T2LM frame
+ * @WLAN_T2LM_TX_STATUS_FAILURE: Tx failure received from the FW.
+ * @WLAN_T2LM_TX_STATUS_RX_TIMEOUT: T2LM response frame not received from the
+ *                              peer for the transmitted T2LM request frame.
+ * @WLAN_T2LM_TX_STATUS_INVALID: Invalid status code
+ */
+enum wlan_t2lm_tx_status {
+	WLAN_T2LM_TX_STATUS_NONE = 0,
+	WLAN_T2LM_TX_STATUS_SUCCESS = 1,
+	WLAN_T2LM_TX_STATUS_FAILURE = 2,
+	WLAN_T2LM_TX_STATUS_RX_TIMEOUT = 3,
+	WLAN_T2LM_TX_STATUS_INVALID,
+};
+
+/**
+ * enum wlan_t2lm_resp_frm_type - T2LM status corresponds to T2LM response frame
+ *
+ * @WLAN_T2LM_RESP_TYPE_SUCCESS: T2LM mapping provided in the T2LM request is
+ *                       accepted either by the AP or STA
+ * @WLAN_T2LM_RESP_TYPE_DENIED_TID_TO_LINK_MAPPING: T2LM Request denied because
+ *                       the requested TID-to-link mapping is unacceptable.
+ * @WLAN_T2LM_RESP_TYPE_PREFERRED_TID_TO_LINK_MAPPING: T2LM Request rejected and
+ *                       preferred TID-to-link mapping is suggested.
+ * @WLAN_T2LM_RESP_TYPE_INVALID: Status code is not applicable.
+ */
+enum wlan_t2lm_resp_frm_type {
+	WLAN_T2LM_RESP_TYPE_SUCCESS = 0,
+	WLAN_T2LM_RESP_TYPE_DENIED_TID_TO_LINK_MAPPING = 133,
+	WLAN_T2LM_RESP_TYPE_PREFERRED_TID_TO_LINK_MAPPING = 134,
+	WLAN_T2LM_RESP_TYPE_INVALID,
+};
+
+/**
+ * enum wlan_t2lm_enable - TID-to-link negotiation supported by the mlo peer
+ *
+ * @WLAN_T2LM_NOT_SUPPORTED: T2LM is not supported by the MLD
+ * @WLAN_MAP_EACH_TID_TO_SAME_OR_DIFFERENET_LINK_SET: MLD supports the mapping
+ *             of each TID to the same or different link set (Disjoint mapping).
+ * @WLAN_MAP_ALL_TIDS_TO_SAME_LINK_SET: MLD only supports the mapping of all
+ *             TIDs to the same link set.
+ * @WLAN_T2LM_ENABLE_INVALID: invalid
+ */
+enum wlan_t2lm_enable {
+	WLAN_T2LM_NOT_SUPPORTED = 0,
+	WLAN_MAP_EACH_TID_TO_SAME_OR_DIFFERENET_LINK_SET = 1,
+	WLAN_MAP_ALL_TIDS_TO_SAME_LINK_SET = 2,
+	WLAN_T2LM_ENABLE_INVALID,
+};
+
+/**
+ * struct wlan_t2lm_of_tids - TID-to-Link mapping information for the frames
+ * transmitted on the uplink, downlink and bidirectional.
+ *
+ * @is_homogeneous_mapping: The t2lm_provisioned_links is homogeneous mapping
+ * @direction:  0 - Downlink, 1 - uplink 2 - Both uplink and downlink
+ * @default_link_mapping: value 1 indicates the default T2LM, where all the TIDs
+ *                        are mapped to all the links.
+ *                        value 0 indicates the preferred T2LM mapping
+ * @t2lm_provisioned_links: Indicates TID to link mapping of all the TIDS.
+ */
+struct wlan_t2lm_of_tids {
+	bool is_homogeneous_mapping;
+	enum wlan_t2lm_direction direction;
+	bool default_link_mapping;
+	uint16_t t2lm_provisioned_links[T2LM_MAX_NUM_TIDS];
+};
+
+/**
+ * struct wlan_prev_t2lm_negotiated_info - Previous successful T2LM negotiation
+ * is saved here.
+ *
+ * @dialog_token: Save the dialog token used in T2LM request and response frame.
+ * @t2lm_info: Provides the TID to LINK mapping information
+ */
+struct wlan_prev_t2lm_negotiated_info {
+	uint16_t dialog_token;
+	struct wlan_t2lm_of_tids t2lm_info[WLAN_T2LM_MAX_DIRECTION];
+};
+
+/**
+ * struct wlan_t2lm_onging_negotiation_info - Current ongoing T2LM negotiation
+ * (information about transmitted T2LM request/response frame)
+ *
+ * @category: T2LM category as T2LM request frame
+ * @dialog_token: Save the dialog token used in T2LM request and response frame.
+ * @t2lm_info: Provides the TID-to-link mapping info for UL/DL/BiDi
+ * @t2lm_tx_status: Status code corresponds to the transmitted T2LM frames
+ * @t2lm_resp_type: T2LM status corresponds to T2LM response frame.
+ */
+struct wlan_t2lm_onging_negotiation_info {
+	enum wlan_t2lm_category category;
+	uint8_t dialog_token;
+	struct wlan_t2lm_of_tids t2lm_info[WLAN_T2LM_MAX_DIRECTION];
+	enum wlan_t2lm_tx_status t2lm_tx_status;
+	enum wlan_t2lm_resp_frm_type t2lm_resp_type;
+};
+
+/**
+ * struct wlan_mlo_peer_t2lm_policy - TID-to-link mapping information
+ *
+ * @self_gen_dialog_token: self generated dialog token used to send T2LM request
+ *                         frame;
+ * @t2lm_enable_val: TID-to-link enable value supported by this peer.
+ * @t2lm_negotiated_info: Previous successful T2LM negotiation is saved here.
+ * @ongoing_tid_to_link_mapping: This has the ongoing TID-to-link mapping info
+ *                               transmitted by this peer to the connected peer.
+ */
+struct wlan_mlo_peer_t2lm_policy {
+	uint8_t self_gen_dialog_token;
+	enum wlan_t2lm_enable t2lm_enable_val;
+	struct wlan_prev_t2lm_negotiated_info t2lm_negotiated_info;
+	struct wlan_t2lm_onging_negotiation_info ongoing_tid_to_link_mapping;
+};
+#endif /* WLAN_FEATURE_T2LM */
+
 /*
  * struct wlan_mlo_peer_context - MLO peer context
  *
@@ -402,6 +562,7 @@ struct mlpeer_auth_params {
  * @is_nawds_ml_peer: flag to indicate if ml_peer is NAWDS configured
  * @nawds_config: eack link peer's NAWDS configuration
  * @pending_auth: Holds pending auth request
+ * @t2lm_policy: TID-to-link mapping information
  */
 struct wlan_mlo_peer_context {
 	qdf_list_node_t peer_node;
@@ -428,6 +589,9 @@ struct wlan_mlo_peer_context {
 #endif
 #ifdef UMAC_MLO_AUTH_DEFER
 	struct mlpeer_auth_params *pending_auth[MAX_MLO_LINK_PEERS];
+#endif
+#ifdef WLAN_FEATURE_T2LM
+	struct wlan_mlo_peer_t2lm_policy t2lm_policy;
 #endif
 };
 

@@ -2627,7 +2627,8 @@ static void wmi_control_rx(void *ctx, HTC_PACKET *htc_packet)
 	wmi_process_control_rx(wmi_handle, evt_buf);
 }
 
-#if defined(WLAN_FEATURE_WMI_DIAG_OVER_CE7)
+#if defined(WLAN_FEATURE_WMI_DIAG_OVER_CE7) || \
+	defined(WLAN_DIAG_AND_DBR_OVER_SEPARATE_CE)
 /**
  * wmi_control_diag_rx() - process diag fw events callbacks
  * @ctx: handle to wmi
@@ -2653,27 +2654,6 @@ static void wmi_control_diag_rx(void *ctx, HTC_PACKET *htc_packet)
 
 	wmi_process_control_rx(wmi_handle, evt_buf);
 }
-
-#elif defined(WLAN_DIAG_AND_DBR_OVER_SEPARATE_CE)
-static void wmi_control_diag_rx(void *ctx, HTC_PACKET *htc_packet)
-{
-	struct wmi_soc *soc = (struct wmi_soc *)ctx;
-	struct wmi_unified *wmi_handle;
-	wmi_buf_t evt_buf;
-
-	evt_buf = (wmi_buf_t)htc_packet->pPktContext;
-
-	wmi_handle = wmi_get_pdev_ep(soc, htc_packet->Endpoint);
-
-	if (!wmi_handle) {
-		wmi_err("unable to get wmi_handle for diag event end point id:%d", htc_packet->Endpoint);
-		qdf_nbuf_free(evt_buf);
-		return;
-	}
-
-	wmi_process_control_rx(wmi_handle, evt_buf);
-}
-
 #endif
 
 #ifdef WLAN_FEATURE_WMI_SEND_RECV_QMI

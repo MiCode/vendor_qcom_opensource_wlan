@@ -520,7 +520,7 @@ struct dp_peer *dp_peer_find_hash_find(struct dp_soc *soc,
 	if (soc->arch_ops.mlo_peer_find_hash_find)
 		return soc->arch_ops.mlo_peer_find_hash_find(soc, peer_mac_addr,
 							     mac_addr_is_aligned,
-							     mod_id);
+							     mod_id, vdev_id);
 	return NULL;
 }
 
@@ -1403,6 +1403,9 @@ struct dp_ast_entry *dp_peer_ast_hash_find_soc(struct dp_soc *soc,
 	union dp_align_mac_addr local_mac_addr_aligned, *mac_addr;
 	unsigned index;
 	struct dp_ast_entry *ase;
+
+	if (!soc->ast_hash.bins)
+		return NULL;
 
 	qdf_mem_copy(&local_mac_addr_aligned.raw[0],
 			ast_mac_addr, QDF_MAC_ADDR_SIZE);
@@ -2709,13 +2712,15 @@ static inline uint16_t dp_gen_ml_peer_id(struct dp_soc *soc,
 QDF_STATUS
 dp_rx_mlo_peer_map_handler(struct dp_soc *soc, uint16_t peer_id,
 			   uint8_t *peer_mac_addr,
-			   struct dp_mlo_flow_override_info *mlo_flow_info)
+			   struct dp_mlo_flow_override_info *mlo_flow_info,
+			   struct dp_mlo_link_info *mlo_link_info)
 {
 	struct dp_peer *peer = NULL;
 	uint16_t hw_peer_id = mlo_flow_info[0].ast_idx;
 	uint16_t ast_hash = mlo_flow_info[0].cache_set_num;
-	uint8_t vdev_id = DP_VDEV_ALL;
+	uint8_t vdev_id = 0;
 	uint8_t is_wds = 0;
+	int i;
 	uint16_t ml_peer_id = dp_gen_ml_peer_id(soc, peer_id);
 	enum cdp_txrx_ast_entry_type type = CDP_TXRX_AST_TYPE_STATIC;
 	QDF_STATUS err = QDF_STATUS_SUCCESS;
@@ -2724,6 +2729,16 @@ dp_rx_mlo_peer_map_handler(struct dp_soc *soc, uint16_t peer_id,
 	dp_info("mlo_peer_map_event (soc:%pK): peer_id %d ml_peer_id %d, peer_mac "QDF_MAC_ADDR_FMT,
 		soc, peer_id, ml_peer_id,
 		QDF_MAC_ADDR_REF(peer_mac_addr));
+
+	/* Get corresponding vdev ID for the peer based
+	 * on chip ID obtained from mlo peer_map event
+	 */
+	for (i = 0; i < DP_MAX_MLO_LINKS; i++) {
+		if (mlo_link_info[i].peer_chip_id == dp_mlo_get_chip_id(soc)) {
+			vdev_id = mlo_link_info[i].vdev_id;
+			break;
+		}
+	}
 
 	peer = dp_peer_find_add_id(soc, peer_mac_addr, ml_peer_id,
 				   hw_peer_id, vdev_id);
@@ -2813,6 +2828,7 @@ dp_rx_peer_map_handler(struct dp_soc *soc, uint16_t peer_id,
 		       uint8_t is_wds)
 {
 	struct dp_peer *peer = NULL;
+	struct dp_vdev *vdev = NULL;
 	enum cdp_txrx_ast_entry_type type = CDP_TXRX_AST_TYPE_STATIC;
 	QDF_STATUS err = QDF_STATUS_SUCCESS;
 
@@ -2852,19 +2868,23 @@ dp_rx_peer_map_handler(struct dp_soc *soc, uint16_t peer_id,
 					   hw_peer_id, vdev_id);
 
 		if (peer) {
-			if (wlan_op_mode_sta == peer->vdev->opmode &&
-			    qdf_mem_cmp(peer->mac_addr.raw,
-					peer->vdev->mac_addr.raw,
-					QDF_MAC_ADDR_SIZE) != 0) {
-				dp_peer_info("%pK: STA vdev bss_peer!!!!", soc);
-				peer->bss_peer = 1;
-				if (peer->txrx_peer)
-					peer->txrx_peer->bss_peer = 1;
-			}
+			vdev = peer->vdev;
+			/* Only check for STA Vdev and peer is not for TDLS */
+			if (wlan_op_mode_sta == vdev->opmode &&
+			    !peer->is_tdls_peer) {
+				if (qdf_mem_cmp(peer->mac_addr.raw,
+						vdev->mac_addr.raw,
+						QDF_MAC_ADDR_SIZE) != 0) {
+					dp_info("%pK: STA vdev bss_peer", soc);
+					peer->bss_peer = 1;
+					if (peer->txrx_peer)
+						peer->txrx_peer->bss_peer = 1;
+				}
 
-			if (peer->vdev->opmode == wlan_op_mode_sta) {
-				peer->vdev->bss_ast_hash = ast_hash;
-				peer->vdev->bss_ast_idx = hw_peer_id;
+				dp_info("bss ast_hash 0x%x, ast_index 0x%x",
+					ast_hash, hw_peer_id);
+				vdev->bss_ast_hash = ast_hash;
+				vdev->bss_ast_idx = hw_peer_id;
 			}
 
 			/* Add ast entry incase self ast entry is
@@ -5382,6 +5402,27 @@ bool dp_find_peer_exist(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
 	}
 
 	return false;
+}
+
+void dp_set_peer_as_tdls_peer(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
+			      uint8_t *peer_mac, bool val)
+{
+	struct dp_soc *soc = cdp_soc_t_to_dp_soc(soc_hdl);
+	struct dp_peer *peer = NULL;
+
+	peer = dp_peer_find_hash_find(soc, peer_mac, 0, vdev_id,
+				      DP_MOD_ID_CDP);
+	if (!peer) {
+		dp_err("Failed to find peer for:" QDF_MAC_ADDR_FMT,
+		       QDF_MAC_ADDR_REF(peer_mac));
+		return;
+	}
+
+	dp_info("Set tdls flag %d for peer:" QDF_MAC_ADDR_FMT,
+		val, QDF_MAC_ADDR_REF(peer_mac));
+	peer->is_tdls_peer = val;
+
+	dp_peer_unref_delete(peer, DP_MOD_ID_CDP);
 }
 #endif
 

@@ -113,6 +113,21 @@ static void vdev_mgr_reset_vdev_stats_id(struct wlan_objmgr_vdev *vdev,
 {}
 #endif /* QCA_VDEV_STATS_HW_OFFLOAD_SUPPORT */
 
+#ifdef WLAN_FEATURE_11BE_MLO
+static inline void
+vdev_mgr_param_mld_mac_addr_copy(struct wlan_objmgr_vdev *vdev,
+				 struct vdev_create_params *param)
+{
+	WLAN_ADDR_COPY(param->mlo_mac, wlan_vdev_mlme_get_mldaddr(vdev));
+}
+#else /* WLAN_FEATURE_11BE_MLO */
+static inline void
+vdev_mgr_param_mld_mac_addr_copy(struct wlan_objmgr_vdev *vdev,
+				 struct vdev_create_params *param)
+{
+}
+#endif /* WLAN_FEATURE_11BE_MLO */
+
 static QDF_STATUS vdev_mgr_create_param_update(
 					struct vdev_mlme_obj *mlme_obj,
 					struct vdev_create_params *param)
@@ -147,9 +162,7 @@ static QDF_STATUS vdev_mgr_create_param_update(
 	vdev_mgr_alloc_vdev_stats_id(vdev, param);
 	param->vdev_stats_id_valid =
 	((param->vdev_stats_id != CDP_INVALID_VDEV_STATS_ID) ? true : false);
-#ifdef WLAN_FEATURE_11BE_MLO
-	WLAN_ADDR_COPY(param->mlo_mac, wlan_vdev_mlme_get_mldaddr(vdev));
-#endif
+	vdev_mgr_param_mld_mac_addr_copy(vdev, param);
 
 	return QDF_STATUS_SUCCESS;
 }
@@ -209,12 +222,12 @@ vdev_mgr_start_param_update_11be(struct vdev_mlme_obj *mlme_obj,
 				 struct wlan_channel *des_chan)
 {
 	param->eht_ops = mlme_obj->proto.eht_ops_info.eht_ops;
-	param->channel.puncture_pattern = ~des_chan->puncture_bitmap;
+	param->channel.puncture_bitmap = des_chan->puncture_bitmap;
 }
 
 static inline void
-vdev_mgr_set_cur_chan_punc_pattern(struct wlan_channel *des_chan,
-				   uint16_t *puncture_bitmap)
+vdev_mgr_set_cur_chan_punc_bitmap(struct wlan_channel *des_chan,
+				  uint16_t *puncture_bitmap)
 {
 	*puncture_bitmap = des_chan->puncture_bitmap;
 }
@@ -227,8 +240,8 @@ vdev_mgr_start_param_update_11be(struct vdev_mlme_obj *mlme_obj,
 }
 
 static inline void
-vdev_mgr_set_cur_chan_punc_pattern(struct wlan_channel *des_chan,
-				   uint16_t *puncture_bitmap)
+vdev_mgr_set_cur_chan_punc_bitmap(struct wlan_channel *des_chan,
+				  uint16_t *puncture_bitmap)
 {
 	*puncture_bitmap = 0;
 }
@@ -379,7 +392,7 @@ static QDF_STATUS vdev_mgr_start_param_update(
 	op_mode = wlan_vdev_mlme_get_opmode(vdev);
 	if (vdev_mgr_is_opmode_sap_or_p2p_go(op_mode) &&
 	    vdev_mgr_is_49G_5G_chan_freq(des_chan->ch_freq)) {
-		vdev_mgr_set_cur_chan_punc_pattern(des_chan, &puncture_bitmap);
+		vdev_mgr_set_cur_chan_punc_bitmap(des_chan, &puncture_bitmap);
 		tgt_dfs_set_current_channel_for_freq(pdev, des_chan->ch_freq,
 						     des_chan->ch_flags,
 						     des_chan->ch_flagext,

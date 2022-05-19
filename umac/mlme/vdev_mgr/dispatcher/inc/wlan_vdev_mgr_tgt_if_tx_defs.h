@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2019-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -333,7 +333,7 @@ struct fils_discovery_tmpl_params {
  * @maxreqpower: Max regulatory power
  * @antennamac: Max antenna
  * @reg_class_id: Regulatory class id.
- * @puncture_pattern: 11be static puncture pattern
+ * @puncture_bitmap: 11be static puncture bitmap
  */
 struct mlme_channel_param {
 	uint8_t chan_id;
@@ -357,7 +357,7 @@ struct mlme_channel_param {
 	uint8_t  antennamax;
 	uint8_t  reg_class_id;
 #ifdef WLAN_FEATURE_11BE
-	uint16_t puncture_pattern;
+	uint16_t puncture_bitmap;
 #endif
 };
 
@@ -421,6 +421,17 @@ struct peer_flush_params {
 	uint32_t peer_tid_bitmap;
 	uint8_t vdev_id;
 	uint8_t peer_mac[QDF_MAC_ADDR_SIZE];
+};
+
+/**
+ * struct peer_delete_params - peer delete cmd parameter
+ * @vdev_id: vdev id
+ * @mlo_logical_link_id_bitmap: logical link id bitmap for peers
+ * not getting created
+ */
+struct peer_delete_cmd_params {
+	uint8_t vdev_id;
+	uint32_t hw_link_id_bitmap;
 };
 
 /* Default FILS DISCOVERY/probe response sent in period of 20TU */

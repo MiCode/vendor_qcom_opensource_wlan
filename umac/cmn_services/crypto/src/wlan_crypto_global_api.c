@@ -1363,14 +1363,20 @@ QDF_STATUS wlan_crypto_getkey(struct wlan_objmgr_vdev *vdev,
 		req_key->keylen = key->keylen;
 		req_key->keyix = key->keyix;
 		req_key->flags = key->flags;
-		cipher_table = (struct wlan_crypto_cipher *)key->cipher_table;
 
-		if (!cipher_table) {
-			status = QDF_STATUS_SUCCESS;
-			goto err;
+		if (is_igtk(req_key->keyix) || is_bigtk(req_key->keyix)) {
+			req_key->type = key->cipher_type;
+		} else {
+			cipher_table = key->cipher_table;
+
+			if (!cipher_table) {
+				status = QDF_STATUS_SUCCESS;
+				goto err;
+			}
+
+			req_key->type = cipher_table->cipher;
 		}
 
-		req_key->type = cipher_table->cipher;
 		if (req_key->type == WLAN_CRYPTO_CIPHER_WAPI_SMS4) {
 			qdf_mem_copy((uint8_t *)(&req_key->txiv),
 					(uint8_t *)(key->txiv),
@@ -4669,6 +4675,43 @@ void wlan_crypto_set_sae_single_pmk_bss_cap(struct wlan_objmgr_vdev *vdev,
 					single_pmk_capable_bss;
 	}
 }
+
+void
+wlan_crypto_set_sae_single_pmk_info(struct wlan_objmgr_vdev *vdev,
+				    struct wlan_crypto_pmksa *roam_sync_pmksa)
+{
+	struct wlan_crypto_params *crypto_params;
+	struct wlan_crypto_comp_priv *crypto_priv;
+	int i;
+
+	crypto_priv = (struct wlan_crypto_comp_priv *)
+					wlan_get_vdev_crypto_obj(vdev);
+
+	if (!crypto_priv) {
+		crypto_err("crypto_priv NULL");
+		return;
+	}
+
+	crypto_params = &crypto_priv->crypto_params;
+
+	for (i = 0; i < WLAN_CRYPTO_MAX_PMKID; i++) {
+		if (!crypto_params->pmksa[i])
+			continue;
+		if (qdf_is_macaddr_equal(&roam_sync_pmksa->bssid,
+					 &crypto_params->pmksa[i]->bssid) &&
+		    roam_sync_pmksa->single_pmk_supported &&
+		    roam_sync_pmksa->pmk_len) {
+			crypto_params->pmksa[i]->single_pmk_supported =
+					roam_sync_pmksa->single_pmk_supported;
+			crypto_params->pmksa[i]->pmk_len =
+						roam_sync_pmksa->pmk_len;
+			qdf_mem_copy(crypto_params->pmksa[i]->pmk,
+				     roam_sync_pmksa->pmk,
+				     roam_sync_pmksa->pmk_len);
+		}
+	}
+}
+
 #endif
 
 void wlan_crypto_reset_vdev_params(struct wlan_objmgr_vdev *vdev)

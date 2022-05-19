@@ -327,6 +327,8 @@ uint16_t wlan_mlo_get_pdev_hw_link_id(struct wlan_objmgr_pdev *pdev)
 	return hw_link_id;
 }
 
+qdf_export_symbol(wlan_mlo_get_pdev_hw_link_id);
+
 static void wlan_pdev_hw_link_iterator(struct wlan_objmgr_psoc *psoc,
 				       void *obj, void *arg)
 {
@@ -371,6 +373,8 @@ wlan_mlo_get_pdev_by_hw_link_id(uint16_t hw_link_id,
 
 	return itr.pdev;
 }
+
+qdf_export_symbol(wlan_mlo_get_pdev_by_hw_link_id);
 #endif /*WLAN_MLO_MULTI_CHIP*/
 
 void mlo_get_ml_vdev_list(struct wlan_objmgr_vdev *vdev,
@@ -565,7 +569,6 @@ QDF_STATUS mlo_ser_set_link_req(struct mlo_link_set_active_req *req)
 	struct wlan_serialization_command cmd = {0, };
 	enum wlan_serialization_status ser_cmd_status;
 	QDF_STATUS status;
-	void *umac_cmd;
 	struct wlan_objmgr_vdev *vdev;
 
 	if (!req)
@@ -579,13 +582,6 @@ QDF_STATUS mlo_ser_set_link_req(struct mlo_link_set_active_req *req)
 		return status;
 	}
 
-	umac_cmd = qdf_mem_malloc(sizeof(*req));
-	if (!umac_cmd) {
-		status = QDF_STATUS_E_NOMEM;
-		goto out;
-	}
-	qdf_mem_copy(umac_cmd, req, sizeof(*req));
-
 	cmd.cmd_type = WLAN_SER_CMD_SET_MLO_LINK;
 	cmd.cmd_id = 0;
 	cmd.cmd_cb = mlo_ser_set_link_cb;
@@ -594,7 +590,7 @@ QDF_STATUS mlo_ser_set_link_req(struct mlo_link_set_active_req *req)
 	cmd.cmd_timeout_duration = MLO_SER_CMD_TIMEOUT_MS;
 	cmd.vdev = vdev;
 	cmd.is_blocking = true;
-	cmd.umac_cmd = umac_cmd;
+	cmd.umac_cmd = (void *)req;
 
 	ser_cmd_status = wlan_serialization_request(&cmd);
 	switch (ser_cmd_status) {
@@ -610,12 +606,9 @@ QDF_STATUS mlo_ser_set_link_req(struct mlo_link_set_active_req *req)
 		status = QDF_STATUS_E_FAILURE;
 	}
 
-out:
 	if (QDF_IS_STATUS_SUCCESS(status))
 		return status;
 
-	if (umac_cmd)
-		qdf_mem_free(umac_cmd);
 	wlan_objmgr_vdev_release_ref(vdev, WLAN_MLO_MGR_ID);
 
 	return status;

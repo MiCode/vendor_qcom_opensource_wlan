@@ -618,6 +618,33 @@ hal_txmon_status_parse_tlv_generic_be(void *data_ppdu_info,
 #endif /* QCA_MONITOR_2_0_SUPPORT */
 
 #ifdef REO_SHARED_QREF_TABLE_EN
+static void hal_reo_shared_qaddr_cache_clear_be(hal_soc_handle_t hal_soc_hdl)
+{
+	struct hal_soc *hal = (struct hal_soc *)hal_soc_hdl;
+	uint32_t reg_val = 0;
+
+	/* Set Qdesc clear bit to erase REO internal storage for Qdesc pointers
+	 * of 37 peer/tids
+	 */
+	reg_val = HAL_REG_READ(hal, HWIO_REO_R0_QDESC_ADDR_READ_ADDR(REO_REG_REG_BASE));
+	reg_val |= HAL_SM(HWIO_REO_R0_QDESC_ADDR_READ, CLEAR_QDESC_ARRAY, 1);
+	HAL_REG_WRITE(hal,
+		      HWIO_REO_R0_QDESC_ADDR_READ_ADDR(REO_REG_REG_BASE),
+		      reg_val);
+
+	/* Clear Qdesc clear bit to erase REO internal storage for Qdesc pointers
+	 * of 37 peer/tids
+	 */
+	reg_val &= ~(HAL_SM(HWIO_REO_R0_QDESC_ADDR_READ, CLEAR_QDESC_ARRAY, 1));
+	HAL_REG_WRITE(hal,
+		      HWIO_REO_R0_QDESC_ADDR_READ_ADDR(REO_REG_REG_BASE),
+		      reg_val);
+
+	hal_verbose_debug("hal_soc: %pK :Setting CLEAR_DESC_ARRAY field of"
+			  "WCSS_UMAC_REO_R0_QDESC_ADDR_READ and resetting back"
+			  "to erase stale entries in reo storage: regval:%x", hal, reg_val);
+}
+
 /* hal_reo_shared_qaddr_write(): Write REO tid queue addr
  * LUT shared by SW and HW at the index given by peer id
  * and tid.
@@ -658,10 +685,11 @@ static void hal_reo_shared_qaddr_write_be(hal_soc_handle_t hal_soc_hdl,
 	else
 		reo_qref->receive_queue_number = 0;
 
-	hal_verbose_debug("hw_qdesc_paddr: %llx, tid: %d, reo_qref:%pK,"
+	hal_reo_shared_qaddr_cache_clear_be(hal_soc_hdl);
+	hal_verbose_debug("hw_qdesc_paddr: %pK, tid: %d, reo_qref:%pK,"
 			  "rx_reo_queue_desc_addr_31_0: %x,"
 			  "rx_reo_queue_desc_addr_39_32: %x",
-			  hw_qdesc_paddr, tid, reo_qref,
+			  (void *)hw_qdesc_paddr, tid, reo_qref,
 			  reo_qref->rx_reo_queue_desc_addr_31_0,
 			  reo_qref->rx_reo_queue_desc_addr_39_32);
 }
@@ -692,12 +720,12 @@ static void hal_reo_shared_qaddr_setup_be(hal_soc_handle_t hal_soc_hdl)
 				REO_QUEUE_REF_NON_ML_TABLE_SIZE,
 				&hal->reo_qref.non_mlo_reo_qref_table_paddr);
 
-	hal_verbose_debug("MLO table start paddr:%llx,"
-			  "Non-MLO table start paddr:%llx,"
+	hal_verbose_debug("MLO table start paddr:%pK,"
+			  "Non-MLO table start paddr:%pK,"
 			  "MLO table start vaddr: %pK,"
 			  "Non MLO table start vaddr: %pK",
-			  hal->reo_qref.mlo_reo_qref_table_paddr,
-			  hal->reo_qref.non_mlo_reo_qref_table_paddr,
+			  (void *)hal->reo_qref.mlo_reo_qref_table_paddr,
+			  (void *)hal->reo_qref.non_mlo_reo_qref_table_paddr,
 			  hal->reo_qref.mlo_reo_qref_table_vaddr,
 			  hal->reo_qref.non_mlo_reo_qref_table_vaddr);
 }

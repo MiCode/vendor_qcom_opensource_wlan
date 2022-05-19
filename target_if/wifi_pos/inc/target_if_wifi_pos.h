@@ -54,7 +54,7 @@ QDF_STATUS target_if_wifi_pos_get_indirect_data(
 			struct wmi_host_oem_indirect_data *indirect,
 			struct oem_data_rsp *rsp, uint32_t *cookie);
 /**
- * target_if_wifi_pos_replenish_ring() - Replenish the DMA ring
+ * target_if_wifi_pos_replenish_ring() - Replenish the CFR DMA ring
  * @priv: Pointer to Wifi Pos psoc private object
  * @ring_idx: Ring Index
  * @vaddr: Virtual address

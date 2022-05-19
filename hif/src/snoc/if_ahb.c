@@ -747,12 +747,46 @@ bool hif_ahb_needs_bmi(struct hif_softc *scn)
 	return !ce_srng_based(scn);
 }
 
+/**
+ * hif_display_ahb_irq_regs() - prints the host interrupt enable (IE) regs
+ * @scn: hif context
+ *
+ * Return: None
+ */
+
+void hif_display_ahb_irq_regs(struct hif_softc *scn)
+{
+	uint32_t regval;
+	void *mem = scn->mem_ce ? scn->mem_ce : scn->mem;
+	struct hif_target_info *tgt_info = &scn->target_info;
+
+	if (scn->per_ce_irq) {
+		regval = hif_read32_mb(scn, mem + HOST_IE_ADDRESS);
+		hif_nofl_err("IRQ enable register value 0x%08x", regval);
+
+		regval = hif_read32_mb(scn, mem + HOST_IE_ADDRESS_2);
+		hif_nofl_err("IRQ enable register 2 value 0x%08x", regval);
+
+		if (tgt_info->target_type == TARGET_TYPE_QCA8074 ||
+		    tgt_info->target_type == TARGET_TYPE_QCA8074V2 ||
+		    tgt_info->target_type == TARGET_TYPE_QCA9574 ||
+		    tgt_info->target_type == TARGET_TYPE_QCA5018 ||
+		    tgt_info->target_type == TARGET_TYPE_QCA6018) {
+			regval = hif_read32_mb(scn, mem +
+					       HOST_IE_ADDRESS_3);
+			hif_nofl_err("IRQ enable register 3 value 0x%08x",
+				     regval);
+		}
+	}
+}
+
 void hif_ahb_display_stats(struct hif_softc *scn)
 {
 	if (!scn) {
 		hif_err("hif_scn null");
 		return;
 	}
+	hif_display_ahb_irq_regs(scn);
 	hif_display_ce_stats(scn);
 }
 

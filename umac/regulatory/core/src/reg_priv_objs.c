@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2014-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -270,6 +271,14 @@ reg_init_afc_vars(struct wlan_objmgr_psoc *psoc,
 	pdev_priv_obj->is_reg_noaction_on_afc_pwr_evt =
 			cfg_get(psoc, CFG_OL_AFC_REG_NO_ACTION);
 }
+
+static inline void
+reg_set_pdev_afc_dev_type(struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj,
+			  struct wlan_regulatory_psoc_priv_obj *psoc_priv_obj)
+{
+	pdev_priv_obj->reg_afc_dev_deployment_type =
+		psoc_priv_obj->reg_afc_dev_type;
+}
 #else
 static inline void
 reg_create_afc_cb_spinlock(struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj)
@@ -284,6 +293,12 @@ reg_destroy_afc_cb_spinlock(struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj)
 static void
 reg_init_afc_vars(struct wlan_objmgr_psoc *psoc,
 		  struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj)
+{
+}
+
+static inline void
+reg_set_pdev_afc_dev_type(struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj,
+			  struct wlan_regulatory_psoc_priv_obj *psoc_priv_obj)
 {
 }
 #endif
@@ -330,6 +345,9 @@ QDF_STATUS wlan_regulatory_pdev_obj_created_notification(
 	pdev_priv_obj->band_capability = psoc_priv_obj->band_capability;
 	pdev_priv_obj->indoor_chan_enabled =
 		psoc_priv_obj->indoor_chan_enabled;
+
+	reg_set_pdev_afc_dev_type(pdev_priv_obj, psoc_priv_obj);
+
 	pdev_priv_obj->en_chan_144 = true;
 	reg_reset_unii_5g_bitmap(pdev_priv_obj);
 

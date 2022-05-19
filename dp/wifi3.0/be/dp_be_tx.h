@@ -181,6 +181,15 @@ void dp_tx_mlo_mcast_handler_be(struct dp_soc *soc,
 void dp_tx_mlo_mcast_pkt_send(struct dp_vdev_be *be_vdev,
 			      struct dp_vdev *ptnr_vdev,
 			      void *arg);
+
+/**
+ * dp_tx_mcast_mlo_reinject_routing_set() - mlo mcast reinject routing handler
+ * @be_vdev: Handle to DP be_vdev structure
+ * @cmd: cmd to set TQM/FW based reinjection
+ *
+ * Return: None
+ */
+void dp_tx_mcast_mlo_reinject_routing_set(struct dp_soc *soc, void *arg);
 #endif
 #endif
 #endif

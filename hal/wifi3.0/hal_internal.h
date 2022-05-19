@@ -1074,6 +1074,7 @@ struct hal_hw_txrx_ops {
 #ifdef WLAN_FEATURE_MARK_FIRST_WAKEUP_PACKET
 	uint8_t (*hal_get_first_wow_wakeup_packet)(uint8_t *buf);
 #endif
+	void (*hal_reo_shared_qaddr_cache_clear)(hal_soc_handle_t hal_soc_hdl);
 };
 
 /**

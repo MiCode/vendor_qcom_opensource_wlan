@@ -384,6 +384,13 @@ struct wmi_wq_dbg_info {
 };
 
 struct wmi_ops {
+#if defined(CONN_MGR_ADV_FEATURE) && \
+	    (defined(WLAN_FEATURE_HOST_ROAM) || \
+		     defined(WLAN_FEATURE_ROAM_OFFLOAD))
+QDF_STATUS
+(*extract_roam_event)(wmi_unified_t wmi_handle, void *evt_buf, uint32_t len,
+		      struct roam_offload_roam_event *roam_event);
+#endif
 #ifdef WLAN_FEATURE_ROAM_OFFLOAD
 QDF_STATUS
 (*extract_roam_btm_response_stats)(wmi_unified_t wmi_handle, void *evt_buf,
@@ -425,9 +432,6 @@ QDF_STATUS
 				 uint32_t len,
 				 struct roam_synch_frame_ind *frame_ptr);
 
-QDF_STATUS
-(*extract_roam_event)(wmi_unified_t wmi_handle, void *evt_buf, uint32_t len,
-		      struct roam_offload_roam_event *roam_event);
 QDF_STATUS
 (*extract_btm_dl_event)(wmi_unified_t wmi_handle,
 			uint8_t *event, uint32_t data_len,
@@ -490,8 +494,8 @@ QDF_STATUS (*send_peer_flush_tids_cmd)(wmi_unified_t wmi,
 					 struct peer_flush_params *param);
 
 QDF_STATUS (*send_peer_delete_cmd)(wmi_unified_t wmi,
-				    uint8_t peer_addr[QDF_MAC_ADDR_SIZE],
-				    uint8_t vdev_id);
+				   uint8_t peer_addr[QDF_MAC_ADDR_SIZE],
+				   struct peer_delete_cmd_params *param);
 
 QDF_STATUS (*send_peer_delete_all_cmd)(
 				wmi_unified_t wmi,
@@ -1387,6 +1391,12 @@ QDF_STATUS (*extract_offchan_data_tx_compl_param)(wmi_unified_t wmi_handle,
 QDF_STATUS (*extract_pdev_tpc_config_ev_param)(wmi_unified_t wmi_handle,
 		void *evt_buf, wmi_host_pdev_tpc_config_event *param);
 
+#ifdef QCA_RSSI_DB2DBM
+QDF_STATUS (*extract_pdev_rssi_dbm_conv_ev_param)(wmi_unified_t wmi_handle,
+						  void *evt_buf,
+						  struct rssi_db2dbm_param *param);
+#endif
+
 QDF_STATUS (*extract_peer_sta_kickout_ev)(wmi_unified_t wmi_handle,
 		void *evt_buf, wmi_host_peer_sta_kickout_event *ev);
 
@@ -2140,6 +2150,10 @@ QDF_STATUS (*extract_scan_radio_cap_service_ready_ext2)(
 			uint8_t *evt_buf, uint8_t idx,
 			struct wlan_psoc_host_scan_radio_caps *param);
 
+QDF_STATUS (*extract_sw_cal_ver_ext2)(wmi_unified_t wmi_handle,
+				      uint8_t *event,
+				      struct wmi_host_sw_cal_ver *cal);
+
 QDF_STATUS (*extract_scaling_params_service_ready_ext)(
 			wmi_unified_t wmi_handle,
 			uint8_t *evt_buf, uint8_t idx,
@@ -2690,6 +2704,18 @@ QDF_STATUS (*extract_oem_response_param)
 		 struct wmi_oem_response_param *oem_resp_param);
 #endif /* WIFI_POS_CONVERGED */
 
+#if defined(WIFI_POS_CONVERGED) && defined(WLAN_FEATURE_RTT_11AZ_SUPPORT)
+QDF_STATUS (*extract_pasn_peer_create_req_event)
+			(wmi_unified_t wmi_handle,
+			 void *evt_buf,
+			 struct wifi_pos_pasn_peer_data *dst);
+
+QDF_STATUS (*extract_pasn_peer_delete_req_event)
+			(wmi_unified_t wmi_handle,
+			 void *evt_buf,
+			 struct wifi_pos_pasn_peer_data *dst);
+#endif
+
 QDF_STATUS (*extract_hw_mode_resp_event)(wmi_unified_t wmi_handle,
 					 void *evt_buf, uint32_t *cmd_status);
 
@@ -2965,6 +2991,18 @@ QDF_STATUS
 QDF_STATUS
 (*send_vdev_pn_mgmt_rxfilter_cmd)(wmi_unified_t wmi_handle,
 				  struct vdev_pn_mgmt_rxfilter_params *params);
+
+#if defined(WLAN_FEATURE_11BE) && defined(WLAN_FEATURE_T2LM)
+QDF_STATUS (*send_mlo_peer_tid_to_link_map)(
+		wmi_unified_t wmi_handle,
+		struct wmi_host_tid_to_link_map_params *params);
+#endif /* defined(WLAN_FEATURE_11BE) && defined(WLAN_FEATURE_T2LM) */
+
+QDF_STATUS
+(*extract_pktlog_decode_info_event)(wmi_unified_t wmi_handle, void *evt_buf,
+				    uint8_t *pdev_id, uint8_t *software_image,
+				    uint8_t *chip_info,
+				    uint32_t *pktlog_json_version);
 };
 
 /* Forward declartion for psoc*/

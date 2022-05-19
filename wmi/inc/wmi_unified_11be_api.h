@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -53,4 +53,16 @@ QDF_STATUS
 wmi_send_mlo_link_set_active_cmd(wmi_unified_t wmi_handle,
 				 struct mlo_link_set_active_param *param);
 #endif /*WLAN_FEATURE_11BE_MLO*/
+
+#if defined(WLAN_FEATURE_11BE) && defined(WLAN_FEATURE_T2LM)
+/**
+ * wmi_send_mlo_peer_tid_to_link_map_cmd() - send TID-to-link mapping command
+ * @wmi: WMI handle for this pdev
+ * @params: Pointer to TID-to-link mapping params
+ */
+QDF_STATUS wmi_send_mlo_peer_tid_to_link_map_cmd(
+		wmi_unified_t wmi,
+		struct wmi_host_tid_to_link_map_params *params);
+#endif /* defined(WLAN_FEATURE_11BE) && defined(WLAN_FEATURE_T2LM) */
+
 #endif /*_WMI_UNIFIED_11BE_API_H_*/

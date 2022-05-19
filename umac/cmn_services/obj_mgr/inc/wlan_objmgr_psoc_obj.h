@@ -239,6 +239,11 @@
 #define WLAN_RTT_11AZ_MAC_SEC_SUPPORT    0x00000002
 /* 11AZ Secure ranging PHY Security support */
 #define WLAN_RTT_11AZ_MAC_PHY_SEC_SUPPORT 0x00000004
+/* multi client feature flags support */
+#define WLAN_SOC_WLM_MULTI_CLIENT_LL_SUPPORT      0x00000008
+
+/* Roam Frame info stats - per candidate frames support */
+#define WLAN_ROAM_STATS_FRAME_INFO_PER_CANDIDATE  0x00000008
 
 /* PSOC op flags */
 

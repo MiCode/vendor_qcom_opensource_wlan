@@ -118,6 +118,41 @@ uint8_t *peer_assoc_add_mlo_params(uint8_t *buf_ptr,
  */
 uint8_t *peer_assoc_add_ml_partner_links(uint8_t *buf_ptr,
 					 struct peer_assoc_params *req);
+/**
+ * peer_assoc_t2lm_params_size() - Get T2LM param size in peer assoc
+ * @req: pointer to peer create request param
+ *
+ *  Return: size of ML params in peer create cmd
+ */
+size_t peer_assoc_t2lm_params_size(struct peer_assoc_params *req);
+/**
+ *  peer_assoc_add_tid_to_link_map() - Add TID-to-link mapping in peer assoc cmd
+ *  @buf_ptr: pointer to peer assoc cmd buffer.
+ *  @req: pointer to peer assoc request param
+ *
+ *  Return: pointer to new offset of cmd buffer
+ */
+uint8_t *peer_assoc_add_tid_to_link_map(uint8_t *buf_ptr,
+					struct peer_assoc_params *req);
+
+/**
+ *  peer_delete_mlo_params_size() - Get MLO params size in pdev delete
+ *  @req: peer delete request params
+ *
+ *  Return: size of MLO params in vdev start
+ */
+size_t peer_delete_mlo_params_size(struct peer_delete_cmd_params *req);
+
+/**
+ *  peer_delete_add_mlo_params() - Add MLO params in peer delete cmd
+ *  @buf_ptr: pointer to peer delete cmd  buffer.
+ *  @req: ponter to peer delete request param
+ *
+ *  Return: pointer to new offset of cmd buffer
+ */
+uint8_t *peer_delete_add_mlo_params(uint8_t *buf_ptr,
+				    struct peer_delete_cmd_params *req);
+
 /** wmi_11be_tlv_attach_tlv - Attach 11be relaated callbacks
  *  @wmi_handle: WMI handle
  */
@@ -196,6 +231,30 @@ static uint8_t *peer_assoc_add_mlo_params(uint8_t *buf_ptr,
 
 static uint8_t *peer_assoc_add_ml_partner_links(uint8_t *buf_ptr,
 						struct peer_assoc_params *req)
+{
+	WMITLV_SET_HDR(buf_ptr, WMITLV_TAG_ARRAY_STRUC, 0);
+	return buf_ptr + WMI_TLV_HDR_SIZE;
+}
+
+static size_t peer_assoc_t2lm_params_size(struct peer_assoc_params *req)
+{
+	return WMI_TLV_HDR_SIZE;
+}
+
+static uint8_t *peer_assoc_add_tid_to_link_map(uint8_t *buf_ptr,
+					       struct peer_assoc_params *req)
+{
+	WMITLV_SET_HDR(buf_ptr, WMITLV_TAG_ARRAY_STRUC, 0);
+	return buf_ptr + WMI_TLV_HDR_SIZE;
+}
+
+static size_t peer_delete_mlo_params_size(struct peer_delete_cmd_params *req)
+{
+	return WMI_TLV_HDR_SIZE;
+}
+
+static uint8_t *peer_delete_add_mlo_params(uint8_t *buf_ptr,
+					   struct peer_delete_cmd_params *req)
 {
 	WMITLV_SET_HDR(buf_ptr, WMITLV_TAG_ARRAY_STRUC, 0);
 	return buf_ptr + WMI_TLV_HDR_SIZE;

@@ -293,6 +293,8 @@
  * @WLAN_UMAC_COMP_MBSS:          MBSS Framework
  * @WLAN_UMAC_COMP_WIFI_RADAR:    WIFI RADAR component
  * @WLAN_UMAC_COMP_TWT:           Target Wake Time (TWT) Component
+ * @WLAN_UMAC_COMP_PRE_CAC:       PRE CAC component
+ * @WLAN_COMP_DP:                 DP component
  * @WLAN_UMAC_COMP_ID_MAX:        Maximum components in UMAC
  *
  * This id is static.
@@ -344,6 +346,8 @@ enum wlan_umac_comp_id {
 	WLAN_UMAC_COMP_MBSS               = 42,
 	WLAN_UMAC_COMP_WIFI_RADAR         = 43,
 	WLAN_UMAC_COMP_TWT                = 44,
+	WLAN_UMAC_COMP_PRE_CAC            = 45,
+	WLAN_COMP_DP                      = 46,
 	WLAN_UMAC_COMP_ID_MAX,
 };
 
@@ -617,6 +621,7 @@ enum wifi_traffic_ac {
  * @WLAN_PEER_IBSS:     IBSS Peer
  * @WLAN_PEER_NDP:      NDP Peer
  * @WLAN_PEER_MLO_TEMP: MLO Peer Temp (host only node)
+ * @WLAN_PEER_RTT_PASN: Ranging PASN peer
  */
 enum wlan_peer_type {
 	WLAN_PEER_SELF     = 1,
@@ -630,6 +635,7 @@ enum wlan_peer_type {
 	WLAN_PEER_IBSS     = 9,
 	WLAN_PEER_NDP      = 10,
 	WLAN_PEER_MLO_TEMP = 11,
+	WLAN_PEER_RTT_PASN = 12,
 };
 
 /**
@@ -698,7 +704,7 @@ struct wlan_ssid {
 
 #ifdef WLAN_FEATURE_11BE
 #define PSOC_HOST_MAX_EHT_MAC_SIZE 1
-#define PSOC_HOST_MAX_EHT_PHY_SIZE 2
+#define PSOC_HOST_MAX_EHT_PHY_SIZE 3
 #define PSOC_HOST_EHT_MCS_NSS_MAP_2G_SIZE 2
 #define PSOC_HOST_EHT_MCS_NSS_MAP_5G_SIZE 4
 #endif

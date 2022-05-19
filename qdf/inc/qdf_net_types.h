@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2014-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -534,6 +535,11 @@ static inline int32_t qdf_csum_ipv6(const in6_addr_t *saddr,
 				    wsum_t sum)
 {
 	return (int32_t)__qdf_csum_ipv6(saddr, daddr, len, proto, sum);
+}
+
+static inline char *qdf_netdev_get_devname(qdf_netdev_t dev)
+{
+	return __qdf_netdev_get_devname(dev);
 }
 
 typedef struct {

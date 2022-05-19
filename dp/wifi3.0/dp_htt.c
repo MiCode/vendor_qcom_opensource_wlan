@@ -1082,6 +1082,7 @@ int htt_h2t_rx_ring_cfg(struct htt_soc *htt_soc, int pdev_id,
 		ring_buf_size);
 
 	dp_mon_rx_packet_length_set(soc->dp_soc, msg_word, htt_tlv_filter);
+	dp_mon_rx_hdr_length_set(soc->dp_soc, msg_word, htt_tlv_filter);
 
 	/* word 2 */
 	msg_word++;
@@ -1608,6 +1609,8 @@ int htt_h2t_rx_ring_cfg(struct htt_soc *htt_soc, int pdev_id,
 		htt_tlv_filter->ppdu_end_user_stats_ext);
 	htt_rx_ring_tlv_filter_in_enable_set(tlv_filter, PPDU_END_STATUS_DONE,
 		htt_tlv_filter->ppdu_end_status_done);
+	htt_rx_ring_tlv_filter_in_enable_set(tlv_filter, PPDU_START_USER_INFO,
+		htt_tlv_filter->ppdu_start_user_info);
 	/* RESERVED bit maps to header_per_msdu in htt_tlv_filter*/
 	 htt_rx_ring_tlv_filter_in_enable_set(tlv_filter, RESERVED,
 		 htt_tlv_filter->header_per_msdu);
@@ -2938,6 +2941,10 @@ static void dp_htt_mlo_peer_map_handler(struct htt_soc *soc,
 	uint16_t mlo_peer_id;
 	uint8_t num_links;
 	struct dp_mlo_flow_override_info mlo_flow_info[DP_MLO_FLOW_INFO_MAX];
+	struct dp_mlo_link_info mlo_link_info[DP_MAX_MLO_LINKS];
+	MLO_PEER_MAP_TLV_TAG_ID tlv_type = 0xff;
+	uint16_t tlv_len = 0;
+	int i = 0;
 
 	mlo_peer_id = HTT_RX_MLO_PEER_MAP_MLO_PEER_ID_GET(*msg_word);
 	num_links =
@@ -2979,9 +2986,36 @@ static void dp_htt_mlo_peer_map_handler(struct htt_soc *soc,
 	mlo_flow_info[2].cache_set_num =
 	HTT_RX_MLO_PEER_MAP_CACHE_SET_NUM_AST_INDEX_GET(*(msg_word + 3));
 
+	msg_word = msg_word + 8;
+	while (msg_word && (i < DP_MAX_MLO_LINKS)) {
+		mlo_link_info[i].peer_chip_id = 0xFF;
+		mlo_link_info[i].vdev_id = 0xFF;
+
+		tlv_type = HTT_RX_MLO_PEER_MAP_TLV_TAG_GET(*msg_word);
+		tlv_len = HTT_RX_MLO_PEER_MAP_TLV_LENGTH_GET(*msg_word);
+
+		if (tlv_len == 0) {
+			dp_err("TLV Length is 0");
+			break;
+		}
+
+		if (tlv_type == MLO_PEER_MAP_TLV_STRUCT_SOC_VDEV_PEER_IDS) {
+			mlo_link_info[i].peer_chip_id =
+				HTT_RX_MLO_PEER_MAP_CHIP_ID_GET(
+							*(msg_word + 1));
+			mlo_link_info[i].vdev_id =
+				HTT_RX_MLO_PEER_MAP_VDEV_ID_GET(
+							*(msg_word + 1));
+		}
+		/* Add header size to tlv length */
+		tlv_len = tlv_len + HTT_TLV_HDR_LEN;
+		msg_word = (uint32_t *)(((uint8_t *)msg_word) + tlv_len);
+		i++;
+	}
+
 	dp_rx_mlo_peer_map_handler(soc->dp_soc, mlo_peer_id,
 				   mlo_peer_mac_addr,
-				   mlo_flow_info);
+				   mlo_flow_info, mlo_link_info);
 }
 
 static void dp_htt_mlo_peer_unmap_handler(struct htt_soc *soc,
@@ -3120,7 +3154,7 @@ static void dp_htt_t2h_msg_handler(void *context, HTC_PACKET *pkt)
 				(u_int8_t *) (msg_word+1),
 				&mac_addr_deswizzle_buf[0]);
 			QDF_TRACE(QDF_MODULE_ID_TXRX,
-				QDF_TRACE_LEVEL_INFO,
+				QDF_TRACE_LEVEL_DEBUG,
 				"HTT_T2H_MSG_TYPE_PEER_MAP msg for peer id %d vdev id %d n",
 				peer_id, vdev_id);
 
@@ -3330,7 +3364,7 @@ static void dp_htt_t2h_msg_handler(void *context, HTC_PACKET *pkt)
 			HTT_RX_PEER_MAP_V2_TID_VALID_HI_PRI_GET(*(msg_word + 5));
 
 			QDF_TRACE(QDF_MODULE_ID_TXRX,
-				  QDF_TRACE_LEVEL_INFO,
+				  QDF_TRACE_LEVEL_DEBUG,
 				  "HTT_T2H_MSG_TYPE_PEER_MAP msg for peer id %d vdev id %d n",
 				  peer_id, vdev_id);
 

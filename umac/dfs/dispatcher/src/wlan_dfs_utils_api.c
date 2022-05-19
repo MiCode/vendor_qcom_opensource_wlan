@@ -1054,7 +1054,7 @@ void utils_dfs_init_nol(struct wlan_objmgr_pdev *pdev)
 		dfs_info(dfs, WLAN_DEBUG_DFS_ALWAYS, "nol channels in pld");
 		DFS_PRINT_NOL_LOCKED(dfs);
 	} else {
-		dfs_err(dfs, WLAN_DEBUG_DFS_ALWAYS,  "no nol in pld");
+		dfs_debug(dfs, WLAN_DEBUG_DFS_ALWAYS,  "no nol in pld");
 	}
 	qdf_mem_free(dfs_nolinfo);
 }

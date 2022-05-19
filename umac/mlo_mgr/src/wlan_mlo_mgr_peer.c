@@ -745,6 +745,7 @@ QDF_STATUS wlan_mlo_peer_create(struct wlan_objmgr_vdev *vdev,
 	struct wlan_objmgr_vdev *vdev_link;
 	QDF_STATUS status;
 	uint16_t i;
+	struct wlan_objmgr_peer *assoc_peer;
 
 	/* get ML VDEV from VDEV */
 	ml_dev = vdev->mlo_dev_ctx;
@@ -894,6 +895,21 @@ QDF_STATUS wlan_mlo_peer_create(struct wlan_objmgr_vdev *vdev,
 		 ml_dev->mld_id,
 		 QDF_MAC_ADDR_REF(ml_peer->peer_mld_addr.bytes),
 		 ml_peer);
+
+	/*
+	 * wlan_mlo_peer_create() is trigggered after getting peer
+	 * assoc confirm from FW. For single link MLO connection, it is
+	 * OK to trigger assoc response from here.
+	 */
+	if ((wlan_vdev_mlme_get_opmode(vdev) == QDF_SAP_MODE) &&
+	    (!wlan_mlo_peer_is_nawds(ml_peer))) {
+		if (ml_peer->max_links == ml_peer->link_peer_cnt) {
+			assoc_peer = ml_peer->peer_list[0].link_peer;
+			if (assoc_peer)
+				mlo_mlme_peer_assoc_resp(assoc_peer);
+		}
+	}
+
 	return QDF_STATUS_SUCCESS;
 }
 

@@ -30,6 +30,7 @@
 #include "wmi_unified_api.h"
 #include "wmi_unified_priv.h"
 #include "wmi_unified_param.h"
+#include <target_type.h>
 
 #define TGT_WMI_PDEV_ID_SOC	0	/* WMI SOC ID */
 
@@ -2773,5 +2774,33 @@ QDF_STATUS target_if_mlo_ready(struct wlan_objmgr_pdev **pdev,
 QDF_STATUS target_if_mlo_teardown_req(struct wlan_objmgr_pdev **pdev,
 				      uint8_t num_pdevs, uint32_t reason);
 #endif /*WLAN_FEATURE_11BE_MLO && WLAN_MLO_MULTI_CHIP*/
+
+#ifdef REO_SHARED_QREF_TABLE_EN
+static inline void target_if_set_reo_shared_qref_feature(struct wlan_objmgr_psoc *psoc,
+							 struct tgt_info *info)
+{
+	struct target_psoc_info *tgt_hdl;
+
+	tgt_hdl = wlan_psoc_get_tgt_if_handle(psoc);
+	if (!tgt_hdl) {
+		target_if_err("target_psoc_info is null");
+		info->wlan_res_cfg.reo_qdesc_shared_addr_table_enabled = false;
+		return;
+	}
+
+	if (target_psoc_get_target_type(tgt_hdl) == TARGET_TYPE_QCN9224)
+		info->wlan_res_cfg.reo_qdesc_shared_addr_table_enabled = true;
+	else
+		info->wlan_res_cfg.reo_qdesc_shared_addr_table_enabled = false;
+
+}
+
+#else
+static inline void target_if_set_reo_shared_qref_feature(struct wlan_objmgr_psoc *psoc,
+							 struct tgt_info *info)
+{
+	info->wlan_res_cfg.reo_qdesc_shared_addr_table_enabled = false;
+}
+#endif
 
 #endif

@@ -41,6 +41,7 @@
 #include <reg_services_public_struct.h>
 
 #include "wlan_crypto_global_def.h"
+#include "wifi_pos_public_struct.h"
 
 #ifdef WLAN_CFR_ENABLE
 #include "wlan_cfr_utils_api.h"
@@ -258,6 +259,7 @@ struct wlan_lmac_if_global_shmem_local_ops {
  * @get_valid_link_bitmap: Get valid link bitmap to be used by MGMT Rx
  * REO module
  * @get_snapshot_address: Get address of an MGMT Rx REO snapshot
+ * @get_snapshot_version: Get version of MGMT Rx REO snapshot
  * @snapshot_is_valid: Check if a snapshot is valid
  * @snapshot_get_mgmt_pkt_ctr: Get management packet counter from snapshot
  * @snapshot_get_redundant_mgmt_pkt_ctr: Get redundant management packet counter
@@ -269,16 +271,22 @@ struct wlan_lmac_if_mgmt_rx_reo_low_level_ops {
 	bool implemented;
 	int (*get_num_links)(void);
 	uint16_t (*get_valid_link_bitmap)(void);
-	void* (*get_snapshot_address)(
-			uint8_t link_id,
-			enum mgmt_rx_reo_shared_snapshot_id snapshot_id);
-	bool (*snapshot_is_valid)(uint32_t snapshot_low);
-	uint16_t (*snapshot_get_mgmt_pkt_ctr)(uint32_t snapshot_low);
+	void* (*get_snapshot_address)
+			(uint8_t link_id,
+			 enum mgmt_rx_reo_shared_snapshot_id snapshot_id);
+	int8_t (*get_snapshot_version)
+			(enum mgmt_rx_reo_shared_snapshot_id snapshot_id);
+	bool (*snapshot_is_valid)(uint32_t snapshot_low,
+				  uint8_t snapshot_version);
+	uint16_t (*snapshot_get_mgmt_pkt_ctr)(uint32_t snapshot_low,
+					      uint8_t snapshot_version);
 	uint16_t (*snapshot_get_redundant_mgmt_pkt_ctr)(uint32_t snapshot_high);
-	bool (*snapshot_is_consistent)(uint16_t mgmt_pkt_ctr,
-				       uint16_t redundant_mgmt_pkt_ctr);
+	bool (*snapshot_is_consistent)(uint32_t snapshot_low,
+				       uint32_t snapshot_high,
+				       uint8_t snapshot_version);
 	uint32_t (*snapshot_get_global_timestamp)(uint32_t snapshot_low,
-						  uint32_t snapshot_high);
+						  uint32_t snapshot_high,
+						  uint8_t snapshot_version);
 };
 
 /**
@@ -287,7 +295,7 @@ struct wlan_lmac_if_mgmt_rx_reo_low_level_ops {
  * @get_num_active_hw_links: Get number of active MLO HW links
  * @get_valid_hw_link_bitmap: Get valid MLO HW link bitmap
  * @read_mgmt_rx_reo_snapshot: Read rx-reorder snapshots
- * @get_mgmt_rx_reo_snapshot_address: Get rx-reorder snapshot address
+ * @get_mgmt_rx_reo_snapshot_info: Get rx-reorder snapshot info
  * @mgmt_rx_reo_filter_config:  Configure MGMT Rx REO filter
  * @low_level_ops:  Low level operations of MGMT Rx REO module
  */
@@ -298,13 +306,13 @@ struct wlan_lmac_if_mgmt_rx_reo_tx_ops {
 					       uint16_t *valid_hw_link_bitmap);
 	QDF_STATUS (*read_mgmt_rx_reo_snapshot)
 			(struct wlan_objmgr_pdev *pdev,
-			 struct mgmt_rx_reo_snapshot *address,
+			 struct mgmt_rx_reo_snapshot_info *snapshot_info,
 			 enum mgmt_rx_reo_shared_snapshot_id id,
 			 struct mgmt_rx_reo_snapshot_params *value);
-	QDF_STATUS (*get_mgmt_rx_reo_snapshot_address)
+	QDF_STATUS (*get_mgmt_rx_reo_snapshot_info)
 			(struct wlan_objmgr_pdev *pdev,
 			 enum mgmt_rx_reo_shared_snapshot_id id,
-			 struct mgmt_rx_reo_snapshot **address);
+			 struct mgmt_rx_reo_snapshot_info *snapshot_info);
 	QDF_STATUS (*mgmt_rx_reo_filter_config)(
 					struct wlan_objmgr_pdev *pdev,
 					struct mgmt_rx_reo_filter *filter);
@@ -1298,8 +1306,6 @@ struct wlan_lmac_if_son_tx_ops {
  * config_get: route son config from cfg80211
  * config_ext_set_get: route extended configs from cfg80211
  */
-struct wiphy;
-struct wireless_dev;
 struct wlan_lmac_if_son_rx_ops {
 	int (*deliver_event)(struct wlan_objmgr_vdev *vdev,
 			     struct wlan_objmgr_peer *peer,
@@ -1310,14 +1316,12 @@ struct wlan_lmac_if_son_rx_ops {
 				  int subtype, u_int8_t *frame,
 				  u_int16_t frame_len,
 				  void *meta_data);
-	int (*config_set)(struct wiphy *wiphy,
-			  struct wireless_dev *wdev,
+	int (*config_set)(struct wlan_objmgr_vdev *vdev,
 			  void *params);
-	int (*config_get)(struct wiphy *wiphy,
-			  struct wireless_dev *wdev,
+	int (*config_get)(struct wlan_objmgr_vdev *vdev,
 			  void *params);
-	int (*config_ext_set_get)(struct net_device *dev,
-				  void *req,
+	int (*config_ext_set_get)(struct wlan_objmgr_vdev *vdev,
+				  void *params,
 				  void *wri);
 };
 
@@ -1360,6 +1364,7 @@ struct wlan_lmac_if_mlo_rx_ops {
  * @pause_req: function pointer to send TWT pause dialog command to FW
  * @resume_req: function pointer to send TWT resume dialog command to FW
  * @nudge_req: function pointer to send TWT nudge dialog command to FW
+ * @set_ac_param: function pointer to send TWT access category param to FW
  * @register_events: function pointer to register events from FW
  * @deregister_events: function pointer to deregister events from FW
  */
@@ -1378,6 +1383,8 @@ struct wlan_lmac_if_twt_tx_ops {
 				 struct twt_resume_dialog_cmd_param *params);
 	QDF_STATUS (*nudge_req)(struct wlan_objmgr_psoc *psoc,
 				 struct twt_nudge_dialog_cmd_param *params);
+	QDF_STATUS (*set_ac_param)(struct wlan_objmgr_psoc *psoc,
+				   enum twt_traffic_ac twt_ac, uint8_t mac_id);
 	QDF_STATUS (*register_events)(struct wlan_objmgr_psoc *psoc);
 	QDF_STATUS (*deregister_events)(struct wlan_objmgr_psoc *psoc);
 };
@@ -1624,6 +1631,17 @@ struct wlan_lmac_if_reg_rx_ops {
 	QDF_STATUS
 	(*reg_set_disable_upper_6g_edge_ch_supp)(struct wlan_objmgr_psoc *psoc,
 						 bool val);
+#endif
+
+#ifdef CONFIG_AFC_SUPPORT
+	QDF_STATUS
+	(*reg_set_afc_dev_type)(struct wlan_objmgr_psoc *psoc,
+				enum reg_afc_dev_deploy_type
+				reg_afc_dev_type);
+	QDF_STATUS
+	(*reg_get_afc_dev_type)(struct wlan_objmgr_psoc *psoc,
+				enum reg_afc_dev_deploy_type
+				*reg_afc_dev_type);
 #endif
 };
 
@@ -1876,10 +1894,29 @@ struct wlan_lmac_if_iot_sim_rx_ops {
  * struct wlan_lmac_if_wifi_pos_rx_ops - structure of rx function
  * pointers for wifi_pos component
  * @oem_rsp_event_rx: callback for WMI_OEM_RESPONSE_EVENTID
+ * @wifi_pos_ranging_peer_create_cb: Function pointer to handle PASN peer create
+ * request
+ * @wifi_pos_ranging_peer_create_rsp_cb: Function pointer to handle peer create
+ * confirm event for PASN Peer.
+ * @wifi_pos_ranging_peer_delete_cb: Ranging peer delete handle function
+ * pointer.
  */
 struct wlan_lmac_if_wifi_pos_rx_ops {
 	int (*oem_rsp_event_rx)(struct wlan_objmgr_psoc *psoc,
 				struct oem_data_rsp *oem_rsp);
+	QDF_STATUS (*wifi_pos_ranging_peer_create_cb)
+			(struct wlan_objmgr_psoc *psoc,
+			 struct wlan_pasn_request *req,
+			 uint8_t vdev_id,
+			 uint8_t total_entries);
+	QDF_STATUS (*wifi_pos_ranging_peer_create_rsp_cb)
+			(struct wlan_objmgr_psoc *psoc, uint8_t vdev_id,
+			 struct qdf_mac_addr *peer_mac,
+			 uint8_t status);
+	QDF_STATUS (*wifi_pos_ranging_peer_delete_cb)
+			(struct wlan_objmgr_psoc *psoc,
+			 struct wlan_pasn_request *info,
+			 uint8_t vdev_id, uint8_t num_peers);
 };
 #endif
 

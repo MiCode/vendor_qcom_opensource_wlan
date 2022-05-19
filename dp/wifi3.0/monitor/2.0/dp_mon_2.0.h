@@ -32,6 +32,8 @@
 #define DP_MON_DESC_MAGIC 0xdeadabcd
 #define DP_MON_MAX_STATUS_BUF 128
 #define DP_MON_QUEUE_DEPTH_MAX 16
+#define DP_MON_MSDU_LOGGING 0
+#define DP_MON_MPDU_LOGGING 1
 
 /**
  * struct dp_mon_filter_be - Monitor TLV filter
@@ -114,6 +116,11 @@ struct dp_mon_desc_pool {
  * @rx_mon_queue_depth: RxMON queue depth
  * @desc_count: reaped status desc count
  * @status: reaped status buffer per ppdu
+ * @rssi_temp_offset: Temperature based rssi offset
+ * @xlna_bypass_offset: Low noise amplifier bypass offset
+ * @xlna_bypass_threshold: Low noise amplifier bypass threshold
+ * @xbar_config: 3 Bytes of xbar_config are used for RF to BB mapping
+ * @min_nf_dbm: min noise floor in active chains per channel
  */
 struct dp_mon_pdev_be {
 	struct dp_mon_pdev mon_pdev;
@@ -130,6 +137,19 @@ struct dp_mon_pdev_be {
 	uint16_t rx_mon_queue_depth;
 	uint16_t desc_count;
 	struct dp_mon_desc *status[DP_MON_MAX_STATUS_BUF];
+#ifdef QCA_SUPPORT_LITE_MONITOR
+	struct dp_lite_mon_rx_config *lite_mon_rx_config;
+	struct dp_lite_mon_tx_config *lite_mon_tx_config;
+#endif
+	void *prev_rxmon_desc;
+	uint32_t prev_rxmon_cookie;
+#ifdef QCA_RSSI_DB2DBM
+	int32_t rssi_temp_offset;
+	int32_t xlna_bypass_offset;
+	int32_t xlna_bypass_threshold;
+	uint32_t xbar_config;
+	int8_t min_nf_dbm;
+#endif
 };
 
 /**
@@ -252,6 +272,16 @@ void dp_mon_filter_show_filter_be(enum dp_mon_filter_mode mode,
  */
 void dp_mon_filter_show_tx_filter_be(enum dp_mon_filter_mode mode,
 				     struct dp_mon_filter_be *filter);
+
+#ifdef QCA_ENHANCED_STATS_SUPPORT
+/**
+ * dp_mon_get_puncture_type() - Get puncture type
+ * @puncture_pattern: puncture bitmap
+ * @bw: Bandwidth
+ */
+enum cdp_punctured_modes
+dp_mon_get_puncture_type(uint16_t puncture_pattern, uint8_t bw);
+#endif
 
 /*
  * dp_mon_desc_get() - get monitor sw descriptor

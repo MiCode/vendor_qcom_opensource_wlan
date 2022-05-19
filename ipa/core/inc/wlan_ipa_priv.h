@@ -79,6 +79,7 @@
 
 #ifdef QCA_IPA_LL_TX_FLOW_CONTROL
 #define WLAN_IPA_MAX_BANDWIDTH              4800
+#define WLAN_IPA_MAX_BANDWIDTH_2G           1400
 #else
 #define WLAN_IPA_MAX_BANDWIDTH              800
 #endif

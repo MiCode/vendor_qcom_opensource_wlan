@@ -114,6 +114,48 @@ init_deinit_update_wifi_pos_caps(struct wmi_unified *wmi_handle,
 {}
 #endif
 
+#ifdef WLAN_FEATURE_ROAM_OFFLOAD
+static void
+init_deinit_update_roam_stats_cap(struct wmi_unified *wmi_handle,
+				  struct wlan_objmgr_psoc *psoc)
+{
+	if (wmi_service_enabled(wmi_handle,
+				wmi_service_roam_stats_per_candidate_frame_info))
+		wlan_psoc_nif_fw_ext2_cap_set(
+			psoc, WLAN_ROAM_STATS_FRAME_INFO_PER_CANDIDATE);
+}
+#else
+static inline void
+init_deinit_update_roam_stats_cap(struct wmi_unified *wmi_handle,
+				  struct wlan_objmgr_psoc *psoc)
+{}
+#endif
+
+#ifdef MULTI_CLIENT_LL_SUPPORT
+/**
+ * init_deinit_update_multi_client_ll_caps() - Update multi client service
+ * capability bit
+ * @wmi_handle: wmi hanle
+ * @psoc: psoc commom object
+ *
+ * Return: none
+ */
+static void
+init_deinit_update_multi_client_ll_caps(struct wmi_unified *wmi_handle,
+					struct wlan_objmgr_psoc *psoc)
+{
+	if (wmi_service_enabled(wmi_handle,
+				wmi_service_configure_multi_client_ll_support))
+		wlan_psoc_nif_fw_ext2_cap_set(psoc,
+					WLAN_SOC_WLM_MULTI_CLIENT_LL_SUPPORT);
+}
+#else
+static inline void
+init_deinit_update_multi_client_ll_caps(struct wmi_unified *wmi_handle,
+					struct wlan_objmgr_psoc *psoc)
+{}
+#endif
+
 static int init_deinit_service_ready_event_handler(ol_scn_t scn_handle,
 							uint8_t *event,
 							uint32_t data_len)
@@ -264,6 +306,8 @@ static int init_deinit_service_ready_event_handler(ol_scn_t scn_handle,
 		wlan_psoc_nif_fw_ext_cap_set(psoc,
 					     WLAN_SOC_CEXT_CSA_TX_OFFLOAD);
 
+	init_deinit_update_roam_stats_cap(wmi_handle, psoc);
+
 	init_deinit_update_wifi_pos_caps(wmi_handle, psoc);
 
 	/* override derived value, if it exceeds max peer count */
@@ -322,6 +366,8 @@ static int init_deinit_service_ready_event_handler(ol_scn_t scn_handle,
 				  DP_SOC_PARAM_MULTI_PEER_GRP_CMD_SUPPORT, 1);
 
 	init_deinit_update_rssi_dbm_conv_support(wmi_handle, psoc);
+
+	init_deinit_update_multi_client_ll_caps(wmi_handle, psoc);
 
 	if (wmi_service_enabled(wmi_handle, wmi_service_ext_msg)) {
 		target_if_debug("Wait for EXT message");
@@ -436,6 +482,8 @@ static int init_deinit_service_ext2_ready_event_handler(ol_scn_t scn_handle,
 	target_if_reg_set_lower_6g_edge_ch_info(psoc);
 
 	target_if_reg_set_disable_upper_6g_edge_ch_info(psoc);
+
+	target_if_reg_set_afc_dev_type(psoc, tgt_hdl);
 
 	/* send init command */
 	init_deinit_set_send_init_cmd(psoc, tgt_hdl);

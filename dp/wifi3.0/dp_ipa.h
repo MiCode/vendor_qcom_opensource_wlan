@@ -204,6 +204,7 @@ QDF_STATUS dp_ipa_disable_autonomy(struct cdp_soc_t *soc_hdl, uint8_t pdev_id);
  * @is_smmu_enabled: Is SMMU enabled or not
  * @sys_in: parameters to setup sys pipe in mcc mode
  * @hdl: IPA handle
+ * @id: IPA instance id
  *
  * Return: QDF_STATUS
  */
@@ -215,7 +216,8 @@ QDF_STATUS dp_ipa_setup(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
 			uint32_t *rx_pipe_handle,
 			bool is_smmu_enabled,
 			qdf_ipa_sys_connect_params_t *sys_in, bool over_gsi,
-			qdf_ipa_wdi_hdl_t hdl);
+			qdf_ipa_wdi_hdl_t hdl,
+			qdf_ipa_wdi_hdl_t id);
 #else /* CONFIG_IPA_WDI_UNIFIED_API */
 /**
  * dp_ipa_setup() - Setup and connect IPA pipes

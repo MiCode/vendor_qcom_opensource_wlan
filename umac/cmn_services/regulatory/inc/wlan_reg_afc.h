@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -100,7 +101,8 @@ struct wlan_afc_num_opclasses {
  *      <variable-size> struct wlan_afc_opclass_obj obj[0];
  *      <variable-size> struct wlan_afc_opclass_obj obj[1];
  *      ....
- *      <variable-size>  struct wlan_afc_opclass_obj obj[opclass_list_size-1];
+ *      <variable-size> struct wlan_afc_opclass_obj obj[opclass_list_size-1];
+ *      <fixed-size>    struct wlan_afc_location afc_location;
  * };
  *
  * struct wlan_afc_host_partial_request - Structure to send AFC request info
@@ -110,6 +112,41 @@ struct wlan_afc_num_opclasses {
 struct wlan_afc_host_partial_request {
 	struct wlan_afc_host_req_fixed_params fixed_params;
 	/* Other structures to follow. See the layout in the comment above */
+} qdf_packed;
+
+/**
+ * enum reg_afc_dev_deploy_type - Deployment type of AP
+ *
+ * @AFC_DEPLOYMENT_UNKNOWN: Unknown
+ * @AFC_DEPLOYMENT_INDOOR: Located Indoor
+ * @AFC_DEPLOYMENT_OUTDOOR: Located Outdoor
+ */
+enum reg_afc_dev_deploy_type {
+	AFC_DEPLOYMENT_UNKNOWN = 0,
+	AFC_DEPLOYMENT_INDOOR  = 1,
+	AFC_DEPLOYMENT_OUTDOOR = 2,
+};
+
+/**
+ * enum afc_object_type - AFC Request object types
+ *
+ * @AFC_OBJ_LOCATION: Location object
+ */
+enum afc_object_type {
+	AFC_OBJ_LOCATION = 1
+};
+
+/**
+ * struct wlan_afc_location - Structure for afc location info.
+ *
+ * @afc_elem_type: AFC element type of enum afc_object_type
+ * @afc_elem_len: AFC element length
+ * @deployment_type: Deployment type of enum reg_afc_dev_deploy_type
+ */
+struct wlan_afc_location {
+	uint32_t afc_elem_type;
+	uint32_t afc_elem_len;
+	uint32_t deployment_type;
 } qdf_packed;
 
 /**

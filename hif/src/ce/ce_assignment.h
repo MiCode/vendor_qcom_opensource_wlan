@@ -1483,7 +1483,11 @@ static struct CE_attr host_ce_config_wlan_kiwi[] = {
 	/* target -> host PKTLOG */
 	{ /* CE5 */ CE_ATTR_FLAGS, 0, 0, 2048, 512, NULL,},
 #else
+#ifdef FEATURE_XPAN
+	{ /* CE5 */ CE_ATTR_FLAGS, 0, 0, 256, 32, NULL,},
+#else
 	{ /* CE5 */ CE_ATTR_FLAGS, 0, 0, 2048, 0, NULL,},
+#endif
 #endif
 	/* Target autonomous HIF_memcpy */
 	{ /* CE6 */ CE_ATTR_FLAGS, 0, 0, 0, 0, NULL,},
@@ -1516,7 +1520,11 @@ static struct CE_pipe_config target_ce_config_wlan_kiwi[] = {
 	/* Target -> host PKTLOG */
 	{ /* CE5 */ 5, PIPEDIR_IN,  32, 2048, CE_ATTR_FLAGS, 0,},
 #else
+#ifdef FEATURE_XPAN
+	{ /* CE5 */ 5, PIPEDIR_IN,  16, 256, CE_ATTR_FLAGS, 0,},
+#else
 	{ /* CE5 */ 5, PIPEDIR_IN,  0, 2048, CE_ATTR_FLAGS, 0,},
+#endif
 #endif
 
 	/* Reserved for target autonomous HIF_memcpy */
@@ -1572,7 +1580,7 @@ static struct CE_attr host_ce_config_wlan_qcn9224[] = {
 	/* Target CV prefetch */
 	{/*CE13*/ (CE_ATTR_FLAGS | CE_ATTR_DISABLE_INTR), 0, 0, 0, 0, NULL,},
 	/* target->host WMI logging, Direc-DMA */
-	{/*CE14*/ (CE_ATTR_FLAGS), 0, 0, 0, 0, NULL,},
+	{/*CE14*/ (CE_ATTR_FLAGS), 0, 0, 2048, 128, NULL,},
 	/* Reserved for customer use */
 	{/*CE15*/ (CE_ATTR_FLAGS | CE_ATTR_DISABLE_INTR), 0, 0, 0, 0, NULL,},
 };

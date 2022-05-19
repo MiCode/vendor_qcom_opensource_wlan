@@ -147,11 +147,7 @@ static void ipa_register_ready_cb(void *user_data)
 	struct wlan_objmgr_psoc *psoc;
 	qdf_device_t qdf_dev;
 	qdf_ipa_wdi_capabilities_out_params_t out_param;
-	uint8_t obj_id;
 	uint8_t pdev_id;
-	uint8_t pdev_count;
-	uint8_t instances_supported = 0;
-	uint8_t instances_processed = 0;
 
 	if (!ipa_config_is_enabled()) {
 		ipa_info("IPA config is disabled");
@@ -185,71 +181,50 @@ static void ipa_register_ready_cb(void *user_data)
 
 	/* Make call to get num_instances supported by IPA */
 	qdf_ipa_wdi_get_capabilities(&out_param);
-	instances_supported =
-		QDF_IPA_WDI_CAPABILITIES_OUT_PARAMS_NUM_INSTANCES(&out_param);
-	ipa_info("Max instances supported by IPA is %d", instances_supported);
 
-	for (obj_id = 0; obj_id < WLAN_OBJMGR_MAX_DEVICES; obj_id++) {
-		/* Get Psoc from global umac obj */
-		psoc = g_umac_glb_obj->psoc[obj_id];
-		if (!psoc)
-			continue;
+	ipa_obj = (struct wlan_ipa_priv *)user_data;
 
-		pdev_count = psoc->soc_objmgr.wlan_pdev_count;
-		for (pdev_id = 0; pdev_id < pdev_count &&
-		     instances_processed < instances_supported &&
-		     instances_processed < g_instances_added;
-		     pdev_id++, instances_processed++) {
-			pdev = wlan_objmgr_get_pdev_by_id(psoc, pdev_id,
-							  WLAN_IPA_ID);
-
-			if (!pdev) {
-				qdf_err("Pdev is NULL for pdev_id[%d]", pdev_id);
-				continue;
-			}
-
-			/* Get IPA obj from pdev obj */
-			ipa_obj = ipa_pdev_get_priv_obj(pdev);
-
-			if (!ipa_obj) {
-				ipa_err("ipa_obj is NULL for pdev_id[%d]",
-					pdev_id);
-				wlan_objmgr_pdev_release_ref(pdev, WLAN_IPA_ID);
-				continue;
-			}
-
-			if (ipa_obj->handle_initialized) {
-				ipa_info("ipa_obj hdl is true for pdev_id %d", pdev_id);
-				wlan_objmgr_pdev_release_ref(pdev, WLAN_IPA_ID);
-				continue;
-			}
-			/* Update instace_id for current pdev */
-			ipa_obj->instance_id = instances_processed;
-			qdf_dev = wlan_psoc_get_qdf_dev(psoc);
-			if (!qdf_dev) {
-				ipa_err("QDF device context is NULL");
-				wlan_objmgr_pdev_release_ref(pdev, WLAN_IPA_ID);
-				continue;
-			}
-
-			status = ipa_obj_setup(ipa_obj);
-			if (QDF_IS_STATUS_ERROR(status)) {
-				ipa_err("Failed to setup ipa component");
-				wlan_objmgr_pdev_component_obj_detach(pdev, WLAN_UMAC_COMP_IPA,
-								      ipa_obj);
-				qdf_mem_free(ipa_obj);
-				wlan_objmgr_pdev_release_ref(pdev, WLAN_IPA_ID);
-				continue;
-			}
-			if (ucfg_ipa_uc_ol_init(pdev, qdf_dev)) {
-				ipa_err("IPA ucfg_ipa_uc_ol_init failed");
-				wlan_objmgr_pdev_release_ref(pdev, WLAN_IPA_ID);
-				continue;
-			}
-			ipa_obj->handle_initialized = true;
-			wlan_objmgr_pdev_release_ref(pdev, WLAN_IPA_ID);
-		}
+	pdev = ipa_priv_obj_get_pdev(ipa_obj);
+	if (!pdev) {
+		qdf_err("Pdev is NULL for");
+		goto out;
 	}
+
+	pdev_id = pdev->pdev_objmgr.wlan_pdev_id;
+	psoc = wlan_pdev_get_psoc(pdev);
+	if (!psoc) {
+		qdf_err("Psoc is NULL for pdev_id %d", pdev_id);
+		goto out;
+	}
+
+	if (ipa_obj->handle_initialized) {
+		ipa_info("ipa_obj hdl is true for pdev_id %d", pdev_id);
+		goto out;
+	}
+
+	/* Update instace_id for current pdev */
+	ipa_obj->instance_id = psoc->soc_objmgr.psoc_id;
+
+	qdf_dev = wlan_psoc_get_qdf_dev(psoc);
+	if (!qdf_dev) {
+		ipa_err("QDF device context is NULL");
+		goto out;
+	}
+
+	status = ipa_obj_setup(ipa_obj);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		ipa_err("Failed to setup ipa component");
+		wlan_objmgr_pdev_component_obj_detach(pdev, WLAN_UMAC_COMP_IPA,
+						      ipa_obj);
+		qdf_mem_free(ipa_obj);
+		goto out;
+	}
+	if (ucfg_ipa_uc_ol_init(pdev, qdf_dev)) {
+		ipa_err("IPA ucfg_ipa_uc_ol_init failed");
+		goto out;
+	}
+
+	ipa_obj->handle_initialized = true;
 out:
 	ipa_init_deinit_unlock();
 }

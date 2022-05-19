@@ -3154,6 +3154,7 @@ target_if_spectral_len_adj_swar_init(struct spectral_fft_bin_len_adj_swar *swar,
 	    target_type == TARGET_TYPE_QCA5018 ||
 	    target_type == TARGET_TYPE_QCN9000 ||
 	    target_type == TARGET_TYPE_QCA6490 ||
+	    target_type == TARGET_TYPE_QCN9224 ||
 	    target_type == TARGET_TYPE_KIWI) {
 		swar->inband_fftbin_size_adj = 1;
 		swar->null_fftbin_adj = 1;
@@ -3162,8 +3163,7 @@ target_if_spectral_len_adj_swar_init(struct spectral_fft_bin_len_adj_swar *swar,
 		swar->null_fftbin_adj = 0;
 	}
 
-	if (target_type == TARGET_TYPE_QCA8074V2 ||
-	    target_type == TARGET_TYPE_QCA9574)
+	if (target_type == TARGET_TYPE_QCA8074V2)
 		swar->packmode_fftbin_size_adj = 1;
 	else
 		swar->packmode_fftbin_size_adj = 0;
@@ -3197,6 +3197,7 @@ target_if_spectral_report_params_init(
 	    target_type == TARGET_TYPE_QCA5018 ||
 	    target_type == TARGET_TYPE_QCA6750 ||
 	    target_type == TARGET_TYPE_QCA6490 ||
+	    target_type == TARGET_TYPE_QCN9224 ||
 	    target_type == TARGET_TYPE_KIWI) {
 		rparams->version = SPECTRAL_REPORT_FORMAT_VERSION_2;
 		rparams->num_spectral_detectors =
@@ -3234,6 +3235,7 @@ target_if_spectral_report_params_init(
 						SPECTRAL_SCAN_MODE_NORMAL;
 	if (target_type == TARGET_TYPE_QCN9000 ||
 	    target_type == TARGET_TYPE_QCN6122 ||
+	    target_type == TARGET_TYPE_QCN9224 ||
 	    target_type == TARGET_TYPE_QCA6490 ||
 	    target_type == TARGET_TYPE_KIWI) {
 		rparams->detid_mode_table[SPECTRAL_DETECTOR_ID_1] =
@@ -3657,6 +3659,7 @@ target_if_pdev_spectral_init(struct wlan_objmgr_pdev *pdev)
 	    target_type == TARGET_TYPE_QCA6490 ||
 	    target_type == TARGET_TYPE_QCN9000 ||
 	    target_type == TARGET_TYPE_QCA6750 ||
+	    target_type == TARGET_TYPE_QCN9224 ||
 	    target_type == TARGET_TYPE_KIWI)
 		spectral->direct_dma_support = true;
 
@@ -3676,6 +3679,7 @@ target_if_pdev_spectral_init(struct wlan_objmgr_pdev *pdev)
 	    (target_type == TARGET_TYPE_QCA6290) ||
 	    (target_type == TARGET_TYPE_QCA6390) ||
 	    (target_type == TARGET_TYPE_QCA6490) ||
+	    (target_type == TARGET_TYPE_QCN9224) ||
 	    (target_type == TARGET_TYPE_QCA6750) ||
 	    (target_type == TARGET_TYPE_KIWI)) {
 		spectral->spectral_gen = SPECTRAL_GEN3;
@@ -4289,6 +4293,7 @@ target_if_spectral_is_valid_80p80_freq(struct wlan_objmgr_pdev *pdev,
 	enum channel_state chan_state1;
 	enum channel_state chan_state2;
 	struct wlan_objmgr_psoc *psoc;
+	struct ch_params temp_params = {0};
 
 	qdf_assert_always(pdev);
 	psoc = wlan_pdev_get_psoc(pdev);
@@ -4318,19 +4323,21 @@ target_if_spectral_is_valid_80p80_freq(struct wlan_objmgr_pdev *pdev,
 	    ch_params.mhz_freq_seg1 != cfreq2)
 		return false;
 
+	temp_params.ch_width = CH_WIDTH_80MHZ;
 	chan_state1 = wlan_reg_get_5g_bonded_channel_state_for_pwrmode(
 				pdev,
 				ch_params.mhz_freq_seg0 - FREQ_OFFSET_10MHZ,
-				CH_WIDTH_80MHZ,
+				&temp_params,
 				REG_CURRENT_PWR_MODE);
 	if ((chan_state1 == CHANNEL_STATE_DISABLE) ||
 	    (chan_state1 == CHANNEL_STATE_INVALID))
 		return false;
 
+	temp_params.ch_width = CH_WIDTH_80MHZ;
 	chan_state2 = wlan_reg_get_5g_bonded_channel_state_for_pwrmode(
 				pdev,
 				ch_params.mhz_freq_seg1 - FREQ_OFFSET_10MHZ,
-				CH_WIDTH_80MHZ,
+				&temp_params,
 				REG_CURRENT_PWR_MODE);
 	if ((chan_state2 == CHANNEL_STATE_DISABLE) ||
 	    (chan_state2 == CHANNEL_STATE_INVALID))

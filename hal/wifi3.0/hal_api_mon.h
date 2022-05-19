@@ -277,6 +277,8 @@ struct hal_rx_mon_msdu_info {
  * @overflow_err: overflow error
  * @decrypt_err: decrypt error
  * @mpdu_start_received: MPDU start received
+ * @full_pkt: Full MPDU received
+ * @first_rx_hdr_rcvd: First rx_hdr received
  */
 struct hal_rx_mon_mpdu_info {
 	uint8_t decap_type;
@@ -285,6 +287,8 @@ struct hal_rx_mon_mpdu_info {
 	bool overflow_err;
 	bool decrypt_err;
 	bool mpdu_start_received;
+	bool full_pkt;
+	bool first_rx_hdr_rcvd;
 };
 
 /**
@@ -575,6 +579,26 @@ enum {
 	HAL_RX_TYPE_MU_MIMO,
 	HAL_RX_TYPE_MU_OFDMA,
 	HAL_RX_TYPE_MU_OFDMA_MIMO,
+};
+
+/*
+ * enum
+ * @HAL_RECEPTION_TYPE_SU: Basic SU reception
+ * @HAL_RECEPTION_TYPE_DL_MU_MIMO: DL MU_MIMO reception
+ * @HAL_RECEPTION_TYPE_DL_MU_OFMA: DL MU_OFMA reception
+ * @HAL_RECEPTION_TYPE_DL_MU_OFDMA_MIMO: DL MU_OFDMA_MIMO reception
+ * @HAL_RECEPTION_TYPE_UL_MU_MIMO: UL MU_MIMO reception
+ * @HAL_RECEPTION_TYPE_UL_MU_OFDMA: UL MU_OFMA reception
+ * @HAL_RECEPTION_TYPE_UL_MU_OFDMA_MIMO: UL MU_OFDMA_MIMO reception
+ */
+enum {
+	HAL_RECEPTION_TYPE_SU,
+	HAL_RECEPTION_TYPE_DL_MU_MIMO,
+	HAL_RECEPTION_TYPE_DL_MU_OFMA,
+	HAL_RECEPTION_TYPE_DL_MU_OFDMA_MIMO,
+	HAL_RECEPTION_TYPE_UL_MU_MIMO,
+	HAL_RECEPTION_TYPE_UL_MU_OFDMA,
+	HAL_RECEPTION_TYPE_UL_MU_OFDMA_MIMO
 };
 
 /**
@@ -1141,11 +1165,6 @@ enum ieee80211_eht_ru_size {
 				 (HAL_EHT_RU_996x3 << HAL_RU_SHIFT(HAL_80_2, 0)) |	\
 				 (HAL_EHT_RU_484 << HAL_RU_SHIFT(HAL_80_3, 0)))
 
-/* EHT Reception Type */
-#define HAL_RX_TYPE_MU_MIMO		1
-#define HAL_RX_TYPE_MU_OFDMA		2
-#define HAL_RX_TYPE_MU_OFMDA_MIMO	3
-
 #define HAL_RX_MON_MAX_AGGR_SIZE	128
 
 /**
@@ -1233,8 +1252,10 @@ struct hal_rx_ppdu_info {
 	struct hal_rx_mon_mpdu_info mpdu_info[HAL_MAX_UL_MU_USERS];
 	 /* placeholder to hold packet buffer info */
 	struct hal_mon_packet_info packet_info;
+#ifdef QCA_MONITOR_2_0_SUPPORT
 	 /* per user per MPDU queue */
 	qdf_nbuf_t mpdu_q[HAL_MAX_UL_MU_USERS][HAL_RX_MAX_MPDU];
+#endif
 	 /* ppdu info list element */
 	TAILQ_ENTRY(hal_rx_ppdu_info) ppdu_list_elem;
 };

@@ -405,7 +405,8 @@ mlo_validate_disconn_req(struct wlan_objmgr_vdev *vdev,
 			continue;
 
 		if (wlan_cm_is_vdev_connecting(mlo_dev->wlan_vdev_list[i])) {
-			if (!wlan_vdev_mlme_is_mlo_link_vdev(vdev))
+			if (!wlan_vdev_mlme_is_mlo_link_vdev(
+						mlo_dev->wlan_vdev_list[i]))
 				return QDF_STATUS_SUCCESS;
 
 			if (!sta_ctx->disconn_req)

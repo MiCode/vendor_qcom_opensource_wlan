@@ -200,6 +200,9 @@ static void htc_cleanup(HTC_TARGET *target)
 		qdf_mem_free(pPacket);
 	}
 #endif
+	HTC_INFO("%s: Non flow ctrl enabled endpoints nbuf map: %d, unamp: %d",
+		 __func__, target->nbuf_nfc_map_count,
+		 target->nbuf_nfc_unmap_count);
 
 	htc_flush_endpoint_txlookupQ(target, ENDPOINT_0, true);
 

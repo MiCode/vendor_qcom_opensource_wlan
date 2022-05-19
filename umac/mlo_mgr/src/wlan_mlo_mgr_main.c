@@ -25,6 +25,7 @@
 #include "wlan_mlo_mgr_main.h"
 #include <wlan_mlo_mgr_ap.h>
 #include <wlan_mlo_mgr_peer.h>
+#include <wlan_mlo_mgr_setup.h>
 #include <wlan_cm_public_struct.h>
 #include "wlan_mlo_mgr_msgq.h"
 #include <target_if_mlo_mgr.h>
@@ -39,6 +40,7 @@ static void mlo_global_ctx_deinit(void)
 	if (qdf_list_empty(&mlo_mgr_ctx->ml_dev_list))
 		mlo_err("ML dev list is not empty");
 
+	mlo_setup_deinit();
 	mlo_msgq_free();
 	ml_peerid_lock_destroy(mlo_mgr_ctx);
 	ml_link_lock_destroy(mlo_mgr_ctx);
@@ -74,6 +76,7 @@ static void mlo_global_ctx_init(void)
 	ml_aid_lock_create(mlo_mgr_ctx);
 	mlo_mgr_ctx->mlo_is_force_primary_umac = 0;
 	mlo_msgq_init();
+	mlo_setup_init();
 }
 
 QDF_STATUS wlan_mlo_mgr_psoc_enable(struct wlan_objmgr_psoc *psoc)

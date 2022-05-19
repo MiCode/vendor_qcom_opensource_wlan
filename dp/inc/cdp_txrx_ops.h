@@ -566,9 +566,9 @@ struct cdp_cmn_ops {
 	QDF_STATUS (*txrx_peer_flush_rate_stats)(struct cdp_soc_t *soc,
 						 uint8_t pdev_id,
 						 void *buf);
-	void* (*txrx_peer_get_rdkstats_ctx)(struct cdp_soc_t *soc,
-					    uint8_t vdev_id,
-					    uint8_t *mac_addr);
+	void* (*txrx_peer_get_peerstats_ctx)(struct cdp_soc_t *soc,
+					     uint8_t vdev_id,
+					     uint8_t *mac_addr);
 
 	QDF_STATUS (*txrx_flush_rate_stats_request)(struct cdp_soc_t *soc,
 						    uint8_t pdev_id);
@@ -930,6 +930,46 @@ struct cdp_mon_ops {
 	 void (*txrx_enable_mon_reap_timer)(struct cdp_soc_t *soc_hdl,
 					    uint8_t pdev_id,
 					    bool enable);
+
+#ifdef QCA_SUPPORT_LITE_MONITOR
+	/* set lite monitor config */
+	QDF_STATUS
+	(*txrx_set_lite_mon_config)(
+			struct cdp_soc_t *soc,
+			struct cdp_lite_mon_filter_config *mon_config,
+			uint8_t pdev_id);
+
+	/* get lite monitor config */
+	QDF_STATUS
+	(*txrx_get_lite_mon_config)(
+			struct cdp_soc_t *soc,
+			struct cdp_lite_mon_filter_config *mon_config,
+			uint8_t pdev_id);
+
+	/* set lite monitor peer config */
+	QDF_STATUS
+	(*txrx_set_lite_mon_peer_config)(
+			struct cdp_soc_t *soc,
+			struct cdp_lite_mon_peer_config *peer_config,
+			uint8_t pdev_id);
+
+	/* get lite monitor peer list */
+	QDF_STATUS
+	(*txrx_get_lite_mon_peer_config)(
+			struct cdp_soc_t *soc,
+			struct cdp_lite_mon_peer_info *info,
+			uint8_t pdev_id);
+
+	/* get lite monitor enable/disable status */
+	int
+	(*txrx_is_lite_mon_enabled)(struct cdp_soc_t *soc,
+				    uint8_t pdev_id,
+				    uint8_t direction);
+#endif
+	/*To set RSSI dbm converstion params in monitor pdev */
+	QDF_STATUS (*txrx_set_mon_pdev_params_rssi_dbm_conv)
+		(struct cdp_soc_t *soc,
+		 struct cdp_rssi_db2dbm_param_dp *params);
 };
 
 struct cdp_host_stats_ops {
@@ -1344,6 +1384,13 @@ struct ol_if_ops {
 					   uint32_t module_id,
 					   uint32_t arg_count, uint32_t *arg);
 
+#ifdef QCA_SUPPORT_LITE_MONITOR
+	int (*config_lite_mon_peer)(struct cdp_ctrl_objmgr_psoc *psoc,
+				    uint8_t pdev_id,
+				    uint8_t vdev_id,
+				    enum cdp_nac_param_cmd cmd,
+				    uint8_t *peer_mac);
+#endif
 };
 
 #ifdef DP_PEER_EXTENDED_API
@@ -1785,7 +1832,8 @@ struct cdp_ipa_ops {
 				bool is_rm_enabled, uint32_t *tx_pipe_handle,
 				uint32_t *rx_pipe_handle, bool is_smmu_enabled,
 				qdf_ipa_sys_connect_params_t *sys_in,
-				bool over_gsi, qdf_ipa_wdi_hdl_t hdl);
+				bool over_gsi, qdf_ipa_wdi_hdl_t hdl,
+				qdf_ipa_wdi_hdl_t id);
 #else /* CONFIG_IPA_WDI_UNIFIED_API */
 	QDF_STATUS (*ipa_setup)(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
 				void *ipa_i2w_cb, void *ipa_w2i_cb,

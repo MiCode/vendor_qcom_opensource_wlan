@@ -55,6 +55,7 @@
 #ifndef REMOVE_PKT_LOG
 #include <pktlog.h>
 #endif
+#include <dp_umac_reset.h>
 
 //#include "dp_tx.h"
 
@@ -91,7 +92,7 @@
 #define DP_PDEV_MAX_VDEVS 17
 #endif
 
-#define MAX_TXDESC_POOLS 4
+#define MAX_TXDESC_POOLS 6
 #define MAX_RXDESC_POOLS 4
 
 #define EXCEPTION_DEST_RING_ID 0
@@ -1803,7 +1804,8 @@ struct dp_arch_ops {
 	struct dp_peer *(*mlo_peer_find_hash_find)(struct dp_soc *soc,
 						   uint8_t *peer_mac_addr,
 						   int mac_addr_is_aligned,
-						   enum dp_mod_id mod_id);
+						   enum dp_mod_id mod_id,
+						   uint8_t vdev_id);
 #endif
 	void (*txrx_print_peer_stats)(struct cdp_peer_stats *peer_stats,
 				      enum peer_stats_type stats_type);
@@ -1819,10 +1821,12 @@ struct dp_arch_ops {
  * @pn_in_reo_dest: PN provided by hardware in the REO destination ring.
  * @dmac_cmn_src_rxbuf_ring_enabled: Flag to indicate DMAC mode common Rx
  *				     buffer source rings
+ * @rssi_dbm_conv_support: Rssi dbm converstion support param.
  */
 struct dp_soc_features {
 	uint8_t pn_in_reo_dest:1,
 		dmac_cmn_src_rxbuf_ring_enabled:1;
+	bool rssi_dbm_conv_support;
 };
 
 enum sysfs_printing_mode {
@@ -2212,10 +2216,10 @@ struct dp_soc {
 	uint8_t da_war_enabled;
 	/* number of active ast entries */
 	uint32_t num_ast_entries;
-	/* rdk rate statistics context at soc level*/
+	/* peer extended rate statistics context at soc level*/
 	struct cdp_soc_rate_stats_ctx *rate_stats_ctx;
-	/* rdk rate statistics control flag */
-	bool rdkstats_enabled;
+	/* peer extended rate statistics control flag */
+	bool peerstats_enabled;
 
 	/* 8021p PCP-TID map values */
 	uint8_t pcp_tid_map[PCP_TID_MAP_MAX];
@@ -2361,6 +2365,10 @@ struct dp_soc {
 
 	unsigned long vdev_stats_id_map;
 	bool txmon_hw_support;
+
+#ifdef DP_UMAC_HW_RESET_SUPPORT
+	struct dp_soc_umac_reset_ctx umac_reset_ctx;
+#endif
 };
 
 #ifdef IPA_OFFLOAD
@@ -2931,7 +2939,7 @@ struct dp_vdev {
 #ifdef QCA_SUPPORT_WDS_EXTENDED
 	bool wds_ext_enabled;
 #endif /* QCA_SUPPORT_WDS_EXTENDED */
-
+	bool drop_3addr_mcast;
 #ifdef WLAN_VENDOR_SPECIFIC_BAR_UPDATE
 	bool skip_bar_update;
 	unsigned long skip_bar_update_last_ts;
@@ -2996,6 +3004,9 @@ struct dp_vdev {
 #ifdef WLAN_FEATURE_11BE_MLO
 	/* MLO MAC address corresponding to vdev */
 	union dp_align_mac_addr mld_mac_addr;
+#if defined(WLAN_MLO_MULTI_CHIP) && defined(WLAN_MCAST_MLO)
+	bool mlo_vdev;
+#endif
 #endif
 
 	/* node in the pdev's list of vdevs */
@@ -3303,6 +3314,16 @@ struct dp_mlo_flow_override_info {
 	uint8_t cache_set_num;
 };
 
+/**
+ * struct dp_mlo_link_info - Link info
+ * @peer_chip_id: Peer Chip ID
+ * @vdev_id: Vdev ID
+ */
+struct dp_mlo_link_info {
+	uint8_t peer_chip_id;
+	uint8_t vdev_id;
+};
+
 #ifdef WLAN_SUPPORT_MSCS
 /*MSCS Procedure based macros */
 #define IEEE80211_MSCS_MAX_ELEM_SIZE    5
@@ -3487,7 +3508,7 @@ struct dp_peer_per_pkt_tx_stats {
  * @tx_ppdus: ppdus in tx
  * @tx_mpdus_success: mpdus successful in tx
  * @tx_mpdus_tried: mpdus tried in tx
- * @tx_rate: Tx Rate
+ * @tx_rate: Tx Rate in kbps
  * @last_tx_rate: Last tx rate for unicast packets
  * @last_tx_rate_mcs: Tx rate mcs for unicast packets
  * @mcast_last_tx_rate: Last tx rate for multicast packets
@@ -3521,6 +3542,7 @@ struct dp_peer_per_pkt_tx_stats {
  * @mpdu_success_with_retries: mpdu retry count in case of successful tx
  * @su_be_ppdu_cnt: SU Tx packet count for 11BE
  * @mu_be_ppdu_cnt[TXRX_TYPE_MU_MAX]: MU Tx packet count for 11BE
+ * @punc_bw[MAX_PUNCTURED_MODE]: MSDU count for punctured bw
  */
 struct dp_peer_extd_tx_stats {
 	uint32_t stbc;
@@ -3569,6 +3591,7 @@ struct dp_peer_extd_tx_stats {
 #ifdef WLAN_FEATURE_11BE
 	struct cdp_pkt_type su_be_ppdu_cnt;
 	struct cdp_pkt_type mu_be_ppdu_cnt[TXRX_TYPE_MU_MAX];
+	uint32_t punc_bw[MAX_PUNCTURED_MODE];
 #endif
 };
 
@@ -3634,6 +3657,7 @@ struct dp_peer_per_pkt_rx_stats {
 #ifdef VDEV_PEER_PROTOCOL_COUNT
 	struct protocol_trace_count protocol_trace_cnt[CDP_TRACE_MAX];
 #endif
+	uint32_t mcast_3addr_drop;
 };
 
 /**
@@ -3681,6 +3705,7 @@ struct dp_peer_per_pkt_rx_stats {
  * @mpdu_retry_cnt: retries of mpdu in rx
  * @su_be_ppdu_cnt: SU Rx packet count for BE
  * @mu_be_ppdu_cnt[TXRX_TYPE_MU_MAX]: MU rx packet count for BE
+ * @punc_bw[MAX_PUNCTURED_MODE]: MSDU count for punctured bw
  */
 struct dp_peer_extd_rx_stats {
 	struct cdp_pkt_type pkt_type[DOT11_MAX];
@@ -3724,6 +3749,7 @@ struct dp_peer_extd_rx_stats {
 #ifdef WLAN_FEATURE_11BE
 	struct cdp_pkt_type su_be_ppdu_cnt;
 	struct cdp_pkt_type mu_be_ppdu_cnt[TXRX_TYPE_MU_MAX];
+	uint32_t punc_bw[MAX_PUNCTURED_MODE];
 #endif
 };
 
@@ -3862,7 +3888,8 @@ struct dp_peer {
 		authorize:1, /* Set when authorized */
 		valid:1, /* valid bit */
 		delete_in_progress:1, /* Indicate kickout sent */
-		sta_self_peer:1; /* Indicate STA self peer */
+		sta_self_peer:1, /* Indicate STA self peer */
+		is_tdls_peer:1; /* Indicate TDLS peer */
 
 #ifdef WLAN_FEATURE_11BE_MLO
 	uint8_t first_link:1, /* first link peer for MLO */

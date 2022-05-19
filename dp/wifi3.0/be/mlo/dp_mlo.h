@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -27,8 +27,6 @@
 
 /* Max number of chips supported */
 #define DP_MLO_MAX_DEST_CHIP_ID 3
-/* shift value to index into the array, used instead of mult by 2 */
-#define DP_MLO_DEST_CHIP_ID_SHIFT 1
 
 /*
  * dp_mlo_ctxt

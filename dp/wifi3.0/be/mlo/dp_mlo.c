@@ -540,6 +540,25 @@ dp_rx_replensih_soc_get(struct dp_soc *soc, uint8_t reo_ring_num)
 }
 
 #ifdef WLAN_MCAST_MLO
+void dp_mcast_mlo_iter_ptnr_soc(struct dp_soc_be *be_soc,
+				dp_ptnr_soc_iter_func func,
+				void *arg)
+{
+	int i = 0;
+	struct dp_mlo_ctxt *dp_mlo = be_soc->ml_ctxt;
+
+	for (i = 0; i < WLAN_MAX_MLO_CHIPS ; i++) {
+		struct dp_soc *ptnr_soc =
+				dp_mlo_get_soc_ref_by_chip_id(dp_mlo, i);
+
+		if (!ptnr_soc)
+			continue;
+		(*func)(ptnr_soc, arg);
+	}
+}
+
+qdf_export_symbol(dp_mcast_mlo_iter_ptnr_soc);
+
 void dp_mcast_mlo_iter_ptnr_vdev(struct dp_soc_be *be_soc,
 				 struct dp_vdev_be *be_vdev,
 				 dp_ptnr_vdev_iter_func func,

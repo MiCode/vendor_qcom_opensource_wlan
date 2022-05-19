@@ -76,4 +76,62 @@ int wifi_pos_oem_meas_rpt_ev_handler(ol_scn_t scn, uint8_t *buf,
  */
 int wifi_pos_oem_err_rpt_ev_handler(ol_scn_t scn, uint8_t *buf,
 				    uint32_t len);
+
+#if defined(WIFI_POS_CONVERGED) && defined(WLAN_FEATURE_RTT_11AZ_SUPPORT)
+/**
+ * target_if_wifi_pos_pasn_peer_create_ev_handler() - Handle
+ * wmi_rtt_pasn_peer_create_req_eventid event from firmware
+ * @scn: scn handle
+ * @buf: event buffer
+ * @len: event buffer length
+ *
+ * Return: zero if success, non-zero status on failure
+ */
+int target_if_wifi_pos_pasn_peer_create_ev_handler(ol_scn_t scn,
+						   uint8_t *buf,
+						   uint32_t len);
+
+/**
+ * target_if_wifi_pos_pasn_peer_delete_ev_handler() - Handle
+ * wmi_rtt_pasn_peer_delete_eventid event from firmware
+ * @scn: scn handle
+ * @buf: event buffer
+ * @len: event buffer length
+ *
+ * Return: zero if success, non-zero status on failure
+ */
+int target_if_wifi_pos_pasn_peer_delete_ev_handler(ol_scn_t scn,
+						   uint8_t *buf,
+						   uint32_t len);
+
+/**
+ * target_if_wifi_pos_register_rx_ops() - Register wifi pos module target_if
+ * RX ops
+ * @rx_ops: RX ops pointer
+ *
+ * Return: None
+ */
+void target_if_wifi_pos_register_rx_ops(struct wlan_lmac_if_rx_ops *rx_ops);
+
+#else
+static inline
+int target_if_wifi_pos_pasn_peer_create_ev_handler(ol_scn_t scn,
+						   uint8_t *buf,
+						   uint32_t len)
+{
+	return 0;
+}
+
+static inline
+int target_if_wifi_pos_pasn_peer_delete_ev_handler(ol_scn_t scn,
+						   uint8_t *buf,
+						   uint32_t len)
+{
+	return 0;
+}
+
+static inline
+void target_if_wifi_pos_register_rx_ops(struct wlan_lmac_if_rx_ops *rx_ops)
+{}
+#endif /* WIFI_POS_CONVERGED && WLAN_FEATURE_RTT_11AZ_SUPPORT */
 #endif /* _WIFI_POS_TGT_IF_RX_OPS_H_ */

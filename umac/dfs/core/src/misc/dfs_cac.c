@@ -261,15 +261,36 @@ void dfs_cancel_cac_timer(struct wlan_dfs *dfs)
 	dfs_clear_cac_started_chan(dfs);
 }
 
+void dfs_send_dfs_events_for_chan(struct wlan_dfs *dfs,
+				  struct dfs_channel *chan,
+				  enum WLAN_DFS_EVENTS event)
+{
+	uint8_t nchannels, i;
+	qdf_freq_t freq_list[MAX_20MHZ_SUBCHANS];
+
+	nchannels =
+		dfs_get_bonding_channel_without_seg_info_for_freq(chan,
+								  freq_list);
+	for (i = 0; i < nchannels; i++)
+		utils_dfs_deliver_event(dfs->dfs_pdev_obj,
+					freq_list[i],
+					event);
+}
+
 void dfs_cac_stop(struct wlan_dfs *dfs)
 {
 	uint32_t phyerr;
+	struct dfs_channel *chan;
 
+	chan = &dfs->dfs_cac_started_chan;
 	dfs_get_debug_info(dfs, (void *)&phyerr);
 	dfs_debug(dfs, WLAN_DEBUG_DFS,
 		"Stopping CAC Timer %d procphyerr 0x%08x",
 		 dfs->dfs_curchan->dfs_ch_freq, phyerr);
 	qdf_hrtimer_cancel(&dfs->dfs_cac_timer);
+
+	dfs_send_dfs_events_for_chan(dfs, chan, WLAN_EV_CAC_RESET);
+
 	if (dfs->dfs_cac_timer_running)
 		dfs->dfs_cac_aborted = 1;
 	dfs_clear_cac_started_chan(dfs);

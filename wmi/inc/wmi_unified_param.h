@@ -32,6 +32,8 @@
 #ifdef WLAN_CONV_SPECTRAL_ENABLE
 #include <wlan_spectral_public_structs.h>
 #endif /* WLAN_CONV_SPECTRAL_ENABLE */
+
+#include "wifi_pos_public_struct.h"
 #include <wlan_vdev_mgr_tgt_if_tx_defs.h>
 #include <wlan_vdev_mgr_tgt_if_rx_defs.h>
 #include <reg_services_public_struct.h>
@@ -752,6 +754,18 @@ struct oem_data {
 };
 #endif
 
+#ifdef MULTI_CLIENT_LL_SUPPORT
+/**
+ * struct latency_level_data - latency data received in the event from the FW
+ * @vdev_id: The latency level for specified vdev_id
+ * @latency_level: latency level honoured by FW
+ */
+struct latency_level_data {
+	uint8_t vdev_id;
+	uint32_t latency_level;
+};
+#endif
+
 /**
  * enum nss_chains_band_info - Band info for dynamic nss, chains change feature
  * @NSS_CHAINS_BAND_2GHZ: 2.4Ghz band
@@ -1029,7 +1043,7 @@ typedef struct {
 #define WMI_HOST_HE_TXRX_MCS_NSS_IDX_80_80 2
 
 #ifdef WLAN_FEATURE_11BE
-#define WMI_HOST_MAX_EHTCAP_PHY_SIZE	2
+#define WMI_HOST_MAX_EHTCAP_PHY_SIZE	3
 #define WMI_HOST_MAX_EHTCAP_MAC_SIZE	1
 #define WMI_HOST_EHTCAP_MAC_WORD1	0
 #define WMI_HOST_EHTCAP_MAC_WORD2	1
@@ -1062,6 +1076,36 @@ typedef struct {
 	uint32_t mac_addr31to0;
 	uint32_t mac_addr47to32;
 } wmi_host_mac_addr;
+
+#if defined(WLAN_FEATURE_11BE) && defined(WLAN_FEATURE_T2LM)
+/**
+ * struct wlan_host_t2lm_of_tids - TID-to-link mapping info
+ * @direction:  0 - Downlink, 1 - uplink 2 - Both uplink and downlink
+ * @default_link_mapping: value 1 indicates the default T2LM, where all the TIDs
+ *                        are mapped to all the links.
+ *                        value 0 indicates the preferred T2LM mapping
+ * @t2lm_provisioned_links: Indicates TID to link mapping of all the TIDS.
+ */
+struct wlan_host_t2lm_of_tids {
+	enum wlan_t2lm_direction direction;
+	bool default_link_mapping;
+	uint16_t t2lm_provisioned_links[T2LM_MAX_NUM_TIDS];
+};
+
+/**
+ * struct wmi_host_tid_to_link_map_params - TID-to-link mapping params
+ * @pdev_id: Pdev id
+ * @peer_macaddr: link peer macaddr
+ * @num_dir: number of directions for which T2LM info is available
+ * @t2lm_info: TID-to-link mapping info for the given directions
+ */
+struct wmi_host_tid_to_link_map_params {
+	uint8_t pdev_id;
+	uint8_t peer_macaddr[QDF_MAC_ADDR_SIZE];
+	uint8_t num_dir;
+	struct wlan_host_t2lm_of_tids t2lm_info[WLAN_T2LM_MAX_DIRECTION];
+};
+#endif /* defined(WLAN_FEATURE_11BE) && defined(WLAN_FEATURE_T2LM) */
 
 #ifdef WLAN_FEATURE_11BE_MLO
 /**
@@ -1173,11 +1217,13 @@ struct peer_assoc_ml_partner_links {
  * @peer_eht_rx_mcs_set: Peer EHT RX MCS MAP
  * @peer_eht_tx_mcs_set: Peer EHT TX MCS MAP
  * @peer_eht_ppet: Peer EHT PPET info
+ * @puncture_bitmap: 11be static puncture bitmap
  * @peer_ppet: Peer HE PPET info
  * @peer_bss_max_idle_option: Peer BSS Max Idle option update
  * @akm: AKM info
  * @peer_assoc_mlo_params mlo_params: MLO assoc params
  * @peer_assoc_ml_partner_links: MLO patner links
+ * @t2lm_params: TID-to-link mapping params
  */
 struct peer_assoc_params {
 	uint32_t vdev_id;
@@ -1251,8 +1297,8 @@ struct peer_assoc_params {
 	uint32_t peer_eht_mcs_count;
 	uint32_t peer_eht_rx_mcs_set[WMI_HOST_MAX_EHT_RATE_SET];
 	uint32_t peer_eht_tx_mcs_set[WMI_HOST_MAX_EHT_RATE_SET];
-	uint16_t puncture_pattern;
 	struct wmi_host_ppe_threshold peer_eht_ppet;
+	uint16_t puncture_bitmap;
 #endif
 	struct wmi_host_ppe_threshold peer_ppet;
 	u_int8_t peer_bsscolor_rept_info;
@@ -1264,6 +1310,9 @@ struct peer_assoc_params {
 #endif
 	uint8_t peer_dms_capable:1,
 		reserved:7;
+#if defined(WLAN_FEATURE_11BE) && defined(WLAN_FEATURE_T2LM)
+	struct wmi_host_tid_to_link_map_params t2lm_params;
+#endif
 };
 
 /**
@@ -2809,6 +2858,8 @@ struct set_fwtest_params {
  * @WFA_CONFIG_OCV: configure OCI
  * @WFA_CONFIG_SA_QUERY: configure driver/firmware to ignore SAquery timeout
  * @WFA_FILS_DISCV_FRAMES: FD frames TX enable disable config
+ * @WFA_IGNORE_H2E_RSNXE: configure driver/firmware to ignore H2E_RSNXE in case
+ *                        of 6g connection
  */
 enum wfa_test_cmds {
 	WFA_CONFIG_RXNE,
@@ -2816,6 +2867,7 @@ enum wfa_test_cmds {
 	WFA_CONFIG_OCV,
 	WFA_CONFIG_SA_QUERY,
 	WFA_FILS_DISCV_FRAMES,
+	WFA_IGNORE_H2E_RSNXE,
 };
 
 /**
@@ -4600,12 +4652,12 @@ struct ftm_time_sync_start_stop_params {
 /**
  * struct wlan_time_sync_qtime_pair- Get wlan time sync qtime pair value
  * @vdev_id: vdev id
- * @qtime_master: qtimer value of master
- * @qtime_slave: qtimer value of slave
+ * @qtime_initiator: qtimer value of initiator
+ * @qtime_target: qtimer value of target
  */
 struct wlan_time_sync_qtime_pair {
-	uint64_t qtime_master;
-	uint64_t qtime_slave;
+	uint64_t qtime_initiator;
+	uint64_t qtime_target;
 };
 
 /**
@@ -4902,7 +4954,7 @@ typedef enum {
 	wmi_roam_pmkid_request_event_id,
 #ifdef FEATURE_WLAN_TIME_SYNC_FTM
 	wmi_wlan_time_sync_ftm_start_stop_event_id,
-	wmi_wlan_time_sync_q_master_slave_offset_eventid,
+	wmi_wlan_time_sync_q_initiator_target_offset_eventid,
 #endif
 	wmi_roam_scan_chan_list_id,
 	wmi_muedca_params_config_eventid,
@@ -4940,6 +4992,17 @@ typedef enum {
 	wmi_resmgr_chan_time_quota_changed_eventid,
 #endif
 	wmi_peer_rx_pn_response_event_id,
+	wmi_extract_pktlog_decode_info_eventid,
+#ifdef QCA_RSSI_DB2DBM
+	wmi_pdev_rssi_dbm_conversion_params_info_eventid,
+#endif
+#ifdef MULTI_CLIENT_LL_SUPPORT
+	wmi_vdev_latency_event_id,
+#endif
+#if defined(WIFI_POS_CONVERGED) && defined(WLAN_FEATURE_RTT_11AZ_SUPPORT)
+	wmi_rtt_pasn_peer_create_req_eventid,
+	wmi_rtt_pasn_peer_delete_eventid,
+#endif
 	wmi_events_max,
 } wmi_conv_event_id;
 
@@ -5275,6 +5338,18 @@ typedef enum {
 	wmi_vdev_param_set_eht_range_ext,
 	wmi_vdev_param_set_non_data_eht_range_ext,
 #endif
+#ifdef MULTI_CLIENT_LL_SUPPORT
+	wmi_vdev_param_set_normal_latency_flags_config,
+	wmi_vdev_param_set_xr_latency_flags_config,
+	wmi_vdev_param_set_low_latency_flags_config,
+	wmi_vdev_param_set_ultra_low_latency_flags_config,
+	wmi_vdev_param_set_normal_latency_ul_dl_config,
+	wmi_vdev_param_set_xr_latency_ul_dl_config,
+	wmi_vdev_param_set_low_latency_ul_dl_config,
+	wmi_vdev_param_set_ultra_low_latency_ul_dl_config,
+	wmi_vdev_param_set_default_ll_config,
+	wmi_vdev_param_set_multi_client_ll_feature_config,
+#endif
 } wmi_conv_vdev_param_id;
 
 /**
@@ -5588,6 +5663,13 @@ typedef enum {
 	wmi_service_rtt_11az_ntb_support,
 	wmi_service_rtt_11az_tb_support,
 #endif
+	wmi_service_pktlog_decode_info_support,
+#ifdef WLAN_FEATURE_ROAM_OFFLOAD
+	wmi_service_roam_stats_per_candidate_frame_info,
+#endif
+#ifdef MULTI_CLIENT_LL_SUPPORT
+	wmi_service_configure_multi_client_ll_support,
+#endif
 	wmi_services_max,
 } wmi_conv_service_ids;
 #define WMI_SERVICE_UNAVAILABLE 0xFFFF
@@ -5745,7 +5827,10 @@ struct wmi_host_fw_abi_ver {
  *                                       inclusive of SP power mode.
  * @afc_timer_check_disable: Disables AFC Timer related checks in FW
  * @afc_req_id_check_disable: Disables AFC Request ID check in FW
+ * @afc_indoor_support: AFC support indoor deployment
+ * @afc_outdoor_support: AFC support outdoor deployment
  * @carrier_profile_config: Configuration for per-carrier profile
+ * @reo_qdesc_shared_addr_table_enabled: Reo shared qref enhancement enabled
  */
 typedef struct {
 	uint32_t num_vdevs;
@@ -5865,8 +5950,11 @@ typedef struct {
 	bool is_6ghz_sp_pwrmode_supp_enabled;
 	bool afc_timer_check_disable;
 	bool afc_req_id_check_disable;
+	bool afc_indoor_support;
+	bool afc_outdoor_support;
 	uint32_t carrier_profile_config;
 	bool sawf;
+	bool reo_qdesc_shared_addr_table_enabled;
 } target_resource_config;
 
 /**
@@ -7867,7 +7955,7 @@ struct wmi_roam_scan_stats_res {
 #define MAX_ROAM_SCAN_CHAN       38
 #define MAX_ROAM_SCAN_STATS_TLV  5
 #define WLAN_MAX_BTM_CANDIDATE   8
-#define WLAN_ROAM_MAX_FRAME_INFO 6
+#define WLAN_ROAM_MAX_FRAME_INFO (MAX_ROAM_CANDIDATE_AP * 6)
 /**
  * struct btm_req_candidate_info  - BTM request candidate
  * info
@@ -8294,6 +8382,20 @@ struct wmi_oem_response_param {
 };
 
 /**
+ * struct wifi_pos_11az_peer_delete_data  - Wifi pos 11az ranging peer delete
+ * data. This structure is used to copy the peer related info from PASN
+ * events and pass it to wifi pos module
+ * @vdev_id: vdev id
+ * @num_peers: Total number of peers to be deleted
+ * @peer_info: PASN peer entry details
+ */
+struct wifi_pos_pasn_peer_data {
+	uint8_t vdev_id;
+	uint8_t num_peers;
+	struct wlan_pasn_request peer_info[WLAN_MAX_11AZ_PEERS];
+};
+
+/**
  * struct mws_coex_state - Modem Wireless Subsystem(MWS) coex info
  * @vdev_id : vdev id
  * @coex_scheme_bitmap: LTE-WLAN coexistence scheme bitmap
@@ -8606,5 +8708,17 @@ struct wmi_host_inst_rssi_stats_resp {
 struct vdev_pn_mgmt_rxfilter_params {
 	uint8_t vdev_id;
 	uint32_t pn_rxfilter;
+};
+
+/**
+ * struct wmi_host_sw_cal_ver - BDF and FTM cal version data
+ * @bdf_cal_ver: SW cal version in BDF
+ * @ftm_cal_ver: SW cal version in factory data
+ * @status: status. 0 for success, non-zero if version is incorrect
+ */
+struct wmi_host_sw_cal_ver {
+	uint32_t bdf_cal_ver;
+	uint32_t ftm_cal_ver;
+	uint32_t status;
 };
 #endif /* _WMI_UNIFIED_PARAM_H_ */

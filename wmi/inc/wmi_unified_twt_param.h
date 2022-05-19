@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2018-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -586,6 +587,7 @@ struct wmi_twt_pause_dialog_complete_event_param {
  * request/response frame
  * @WMI_HOST_NUDGE_TWT_STATUS_UNKNOWN_ERROR: nudge TWT dialog failed with an
  * unknown reason
+ * @WMI_HOST_NUDGE_TWT_STATUS_ALREADY_PAUSED: TWT dialog already in paused state
  * @WMI_HOST_NUDGE_TWT_STATUS_CHAN_SW_IN_PROGRESS: Channel switch in progress
  * @WMI_HOST_NUDGE_TWT_STATUS_ROAM_IN_PROGRESS: Roaming in progress
  * @WMI_HOST_NUDGE_TWT_STATUS_SCAN_IN_PROGRESS: Scan is in progress
@@ -598,6 +600,7 @@ enum WMI_HOST_NUDGE_TWT_STATUS {
 	WMI_HOST_NUDGE_TWT_STATUS_NO_RESOURCE,
 	WMI_HOST_NUDGE_TWT_STATUS_NO_ACK,
 	WMI_HOST_NUDGE_TWT_STATUS_UNKNOWN_ERROR,
+	WMI_HOST_NUDGE_TWT_STATUS_ALREADY_PAUSED,
 	WMI_HOST_NUDGE_TWT_STATUS_CHAN_SW_IN_PROGRESS,
 	WMI_HOST_NUDGE_TWT_STATUS_ROAM_IN_PROGRESS,
 	WMI_HOST_NUDGE_TWT_STATUS_SCAN_IN_PROGRESS,

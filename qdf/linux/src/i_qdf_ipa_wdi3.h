@@ -36,6 +36,7 @@
  */
 typedef enum ipa_wdi_version __qdf_ipa_wdi_version_t;
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0))
 /**
  * __qdf_ipa_wdi_hdl_t - IPA WDI hdl
  */
@@ -55,6 +56,55 @@ int __qdf_ipa_wdi_get_capabilities(__qdf_ipa_wdi_capabilities_out_params_t *out)
 {
 	return ipa_wdi_get_capabilities(out);
 }
+#else
+/**
+ * __qdf_ipa_wdi_hdl_t - IPA WDI hdl
+ */
+typedef unsigned int  __qdf_ipa_wdi_hdl_t;
+
+/**
+ * ipa_wdi_capabilities_out_params - IPA WDI capabilities out params
+ */
+struct ipa_wdi_capabilities_out_params {
+	uint8_t num_of_instances;
+};
+
+/**
+ * __qdf_ipa_wdi_capabilities_out_params_t - IPA WDI capabilities output params
+ */
+typedef struct ipa_wdi_capabilities_out_params \
+		__qdf_ipa_wdi_capabilities_out_params_t;
+
+#define __QDF_IPA_WDI_CAPABILITIES_OUT_PARAMS_NUM_INSTANCES(out_params)	\
+	(((struct ipa_wdi_capabilities_out_params *)(out_params))->num_of_instances)
+
+static inline
+int __qdf_ipa_wdi_get_capabilities(__qdf_ipa_wdi_capabilities_out_params_t *out)
+{
+	out->num_of_instances = 1;
+	return 1;
+}
+
+/**
+ * ipa_wdi_init_in_params_inst - IPA WDI init in params instance id
+ */
+struct ipa_wdi_init_in_params_inst {
+	uint8_t inst_id;
+};
+
+#define __QDF_IPA_WDI_INIT_IN_PARAMS_INSTANCE_ID(in_params)	\
+	(((struct ipa_wdi_init_in_params_inst *)(in_params))->inst_id)
+
+/**
+ * ipa_wdi_init_out_params_inst - IPA WDI init out params IPA handle
+ */
+struct ipa_wdi_init_out_params_inst {
+	uint8_t hdl;
+};
+
+#define __QDF_IPA_WDI_INIT_OUT_PARAMS_HANDLE(out_params)	\
+	(((struct ipa_wdi_init_out_params_inst *)(out_params))->hdl)
+#endif
 
 /**
  * __qdf_ipa_wdi_init_in_params_t - wdi init input parameters
@@ -69,8 +119,11 @@ typedef struct ipa_wdi_init_in_params __qdf_ipa_wdi_init_in_params_t;
 	(((struct ipa_wdi_init_in_params *)(in_params))->priv)
 #define __QDF_IPA_WDI_INIT_IN_PARAMS_WDI_NOTIFY(in_params)	\
 	(((struct ipa_wdi_init_in_params *)(in_params))->wdi_notify)
+
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0))
 #define __QDF_IPA_WDI_INIT_IN_PARAMS_INSTANCE_ID(in_params)	\
 	(((struct ipa_wdi_init_in_params *)(in_params))->inst_id)
+#endif
 
 /**
  * __qdf_ipa_wdi_init_out_params_t - wdi init output parameters
@@ -81,8 +134,11 @@ typedef struct ipa_wdi_init_out_params __qdf_ipa_wdi_init_out_params_t;
 	(((struct ipa_wdi_init_out_params *)(out_params))->is_uC_ready)
 #define __QDF_IPA_WDI_INIT_OUT_PARAMS_IS_SMMU_ENABLED(out_params)	\
 	(((struct ipa_wdi_init_out_params *)(out_params))->is_smmu_enabled)
+
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0))
 #define __QDF_IPA_WDI_INIT_OUT_PARAMS_HANDLE(out_params)	\
 	(((struct ipa_wdi_init_out_params *)(out_params))->hdl)
+#endif
 
 #if (defined(IPA_WDI3_GSI)) || (defined(IPA_WDI2_GSI))
 #define QDF_IPA_WDI_INIT_OUT_PARAMS_IS_OVER_GSI(out_params)	\
@@ -286,6 +342,7 @@ typedef struct ipa_wdi_perf_profile  __qdf_ipa_wdi_perf_profile_t;
 #define __QDF_IPA_WDI_PERF_PROFILE_MAX_SUPPORTED_BW_MBPS(profile)	\
 	(((struct ipa_wdi_perf_profile *)(profile))->max_supported_bw_mbps)
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0))
 /**
  * __qdf_ipa_wdi_init - Client should call this function to
  * init WDI IPA offload data path
@@ -445,6 +502,168 @@ static inline int __qdf_ipa_wdi_release_smmu_mapping(__qdf_ipa_wdi_hdl_t hdl,
 {
 	return ipa_wdi_release_smmu_mapping_per_inst(hdl, num_buffers, info);
 }
+#else
+/**
+ * __qdf_ipa_wdi_init - Client should call this function to
+ * init WDI IPA offload data path
+ *
+ * Note: Should not be called from atomic context and only
+ * after checking IPA readiness using ipa_register_ipa_ready_cb()
+ *
+ * @Return 0 on success, negative on failure
+ */
+static inline int __qdf_ipa_wdi_init(struct ipa_wdi_init_in_params *in,
+		 struct ipa_wdi_init_out_params *out)
+{
+	return ipa_wdi_init(in, out);
+}
+
+/**
+ * __qdf_ipa_wdi_cleanup - Client should call this function to
+ * clean up WDI IPA offload data path
+ * @hdl: IPA handle
+ *
+ * @Return 0 on success, negative on failure
+ */
+static inline int __qdf_ipa_wdi_cleanup(__qdf_ipa_wdi_hdl_t hdl)
+{
+	return ipa_wdi_cleanup();
+}
+
+/**
+ * __qdf_ipa_wdi_reg_intf - Client should call this function to
+ * init WDI IPA offload data path
+ *
+ * Note: Should not be called from atomic context and only
+ * after checking IPA readiness using ipa_register_ipa_ready_cb()
+ *
+ * @Return 0 on success, negative on failure
+ */
+static inline int __qdf_ipa_wdi_reg_intf(
+	struct ipa_wdi_reg_intf_in_params *in)
+{
+	return ipa_wdi_reg_intf(in);
+}
+
+/**
+ * __qdf_ipa_wdi_dereg_intf - Client Driver should call this
+ * function to deregister before unload and after disconnect
+ * @hdl: IPA handle
+ *
+ * @Return 0 on success, negative on failure
+ */
+static inline int __qdf_ipa_wdi_dereg_intf(const char *netdev_name,
+					   __qdf_ipa_wdi_hdl_t hdl)
+{
+	return ipa_wdi_dereg_intf(netdev_name);
+}
+
+/**
+ * __qdf_ipa_wdi_conn_pipes - Client should call this
+ * function to connect pipes
+ * @in:	[in] input parameters from client
+ * @out: [out] output params to client
+ *
+ * Note: Should not be called from atomic context and only
+ * after checking IPA readiness using ipa_register_ipa_ready_cb()
+ *
+ * @Return 0 on success, negative on failure
+ */
+static inline int __qdf_ipa_wdi_conn_pipes(struct ipa_wdi_conn_in_params *in,
+			struct ipa_wdi_conn_out_params *out)
+{
+	return ipa_wdi_conn_pipes(in, out);
+}
+
+/**
+ * __qdf_ipa_wdi_disconn_pipes() - Client should call this
+ *		function to disconnect pipes
+ * @hdl: IPA handle
+ *
+ * Note: Should not be called from atomic context
+ *
+ * Returns: 0 on success, negative on failure
+ */
+static inline int __qdf_ipa_wdi_disconn_pipes(__qdf_ipa_wdi_hdl_t hdl)
+{
+	return ipa_wdi_disconn_pipes();
+}
+
+/**
+ * __qdf_ipa_wdi_enable_pipes() - Client should call this
+ *		function to enable IPA offload data path
+ * @hdl: IPA handle
+ *
+ * Note: Should not be called from atomic context
+ *
+ * Returns: 0 on success, negative on failure
+ */
+static inline int __qdf_ipa_wdi_enable_pipes(__qdf_ipa_wdi_hdl_t hdl)
+{
+	return ipa_wdi_enable_pipes();
+}
+
+/**
+ * __qdf_ipa_wdi_disable_pipes() - Client should call this
+ *		function to disable IPA offload data path
+ * @hdl: IPA handle
+ *
+ * Note: Should not be called from atomic context
+ *
+ * Returns: 0 on success, negative on failure
+ */
+static inline int __qdf_ipa_wdi_disable_pipes(__qdf_ipa_wdi_hdl_t hdl)
+{
+	return ipa_wdi_disable_pipes();
+}
+
+/**
+ * __qdf_ipa_wdi_set_perf_profile() - Client should call this function to
+ *		set IPA clock bandwidth based on data rates
+ * @hdl: IPA handle
+ * @profile: [in] BandWidth profile to use
+ *
+ * Returns: 0 on success, negative on failure
+ */
+static inline int __qdf_ipa_wdi_set_perf_profile(__qdf_ipa_wdi_hdl_t hdl,
+						 struct ipa_wdi_perf_profile *profile)
+{
+	return ipa_wdi_set_perf_profile(profile);
+}
+
+/**
+ * __qdf_ipa_wdi_create_smmu_mapping() - Client should call this function to
+ *		create smmu mapping
+ * @hdl: IPA handle
+ * @num_buffers: [in] number of buffers
+ * @info: [in] wdi buffer info
+ *
+ * Returns: 0 on success, negative on failure
+ */
+static inline int __qdf_ipa_wdi_create_smmu_mapping(__qdf_ipa_wdi_hdl_t hdl,
+						    u32 num_buffers,
+						    struct ipa_wdi_buffer_info *info)
+{
+	return ipa_wdi_create_smmu_mapping(num_buffers, info);
+}
+
+/**
+ * __qdf_ipa_wdi_release_smmu_mapping() - Client should call this function to
+ *		release smmu mapping
+ * @hdl: IPA handle
+ * @num_buffers: [in] number of buffers
+ * @info: [in] wdi buffer info
+ *
+ * Returns: 0 on success, negative on failure
+ */
+static inline int __qdf_ipa_wdi_release_smmu_mapping(__qdf_ipa_wdi_hdl_t hdl,
+						     u32 num_buffers,
+						     struct ipa_wdi_buffer_info *info)
+{
+	return ipa_wdi_release_smmu_mapping(num_buffers, info);
+}
+
+#endif
 
 #ifdef WDI3_STATS_UPDATE
 /**

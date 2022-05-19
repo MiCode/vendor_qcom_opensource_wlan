@@ -343,6 +343,24 @@ struct wlan_lmac_if_rx_ops;
 void wifi_pos_register_rx_ops(struct wlan_lmac_if_rx_ops *rx_ops);
 
 /**
+ * wifi_pos_get_tx_ops: api to get tx ops
+ * @psoc: pointer to psoc object
+ *
+ * Return: tx ops
+ */
+struct wlan_lmac_if_wifi_pos_tx_ops *
+wifi_pos_get_tx_ops(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * wifi_pos_get_rx_ops: api to get rx ops
+ * @psoc: pointer to psoc object
+ *
+ * Return: rx ops
+ */
+struct wlan_lmac_if_wifi_pos_rx_ops *
+wifi_pos_get_rx_ops(struct wlan_objmgr_psoc *psoc);
+
+/**
  * ucfg_wifi_pos_get_ftm_cap: API to get fine timing measurement caps
  * @psoc: psoc object
  *
@@ -402,6 +420,25 @@ bool wifi_pos_is_app_registered(struct wlan_objmgr_psoc *psoc);
  */
 struct wlan_objmgr_psoc *wifi_pos_get_psoc(void);
 
+/**
+ * wifi_pos_get_legacy_ops() - Get wifi pos legacy ops
+ * @psoc: PSOC pointer
+ *
+ * Return: Pointer to legacy ops
+ */
+struct wifi_pos_legacy_ops *
+wifi_pos_get_legacy_ops(struct wlan_objmgr_psoc *psoc);
+
+/**
+ * wifi_pos_set_legacy_ops() - Set Wifi Pos legacy ops
+ * @psoc: PSOC pointer
+ * @legacy_ops: Legacy ops
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+wifi_pos_set_legacy_ops(struct wlan_objmgr_psoc *psoc,
+			struct wifi_pos_legacy_ops *legacy_ops);
 #else
 static inline QDF_STATUS wifi_pos_init(void)
 {

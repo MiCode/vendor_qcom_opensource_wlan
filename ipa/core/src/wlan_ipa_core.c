@@ -544,7 +544,9 @@ wlan_ipa_wdi_setup(struct wlan_ipa_priv *ipa_ctx,
 				   &ipa_ctx->tx_pipe_handle,
 				   &ipa_ctx->rx_pipe_handle,
 				   wlan_ipa_wdi_is_smmu_enabled(ipa_ctx, osdev),
-				   sys_in, ipa_ctx->over_gsi, ipa_ctx->hdl);
+				   sys_in, ipa_ctx->over_gsi,
+				   ipa_ctx->hdl,
+				   (qdf_ipa_wdi_hdl_t)ipa_ctx->instance_id);
 
 	qdf_mem_free(sys_in);
 
@@ -3837,7 +3839,6 @@ QDF_STATUS wlan_ipa_cleanup(struct wlan_ipa_priv *ipa_ctx)
 
 	if (!ipa_cb_is_ready())
 		return QDF_STATUS_SUCCESS;
-
 	qdf_event_destroy(&ipa_ctx->ipa_resource_comp);
 	if (!wlan_ipa_uc_is_enabled(ipa_ctx->config))
 		wlan_ipa_teardown_sys_pipe(ipa_ctx);

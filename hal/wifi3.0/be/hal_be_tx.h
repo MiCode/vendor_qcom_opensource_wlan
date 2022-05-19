@@ -83,6 +83,16 @@ enum hal_tx_notify_frame_type {
 	TX_SEMI_HARD_NOTIFY_E = 3
 };
 
+/**
+ * enum hal_tx_mcast_mlo_reinject_notify
+ * @HAL_TX_MCAST_MLO_REINJECT_FW_NOTIFY: MLO Mcast reinject routed to FW
+ * @HAL_TX_MCAST_MLO_REINJECT_TQM_NOTIFY: MLO Mcast reinject routed to TQM
+ */
+enum hal_tx_mcast_mlo_reinject_notify {
+	HAL_TX_MCAST_MLO_REINJECT_FW_NOTIFY = 0,
+	HAL_TX_MCAST_MLO_REINJECT_TQM_NOTIFY,
+};
+
 /*---------------------------------------------------------------------------
  * Structures
  * ---------------------------------------------------------------------------
@@ -938,6 +948,45 @@ hal_tx_vdev_mismatch_routing_set(hal_soc_handle_t hal_soc_hdl,
 static inline void
 hal_tx_vdev_mismatch_routing_set(hal_soc_handle_t hal_soc_hdl,
 				 enum hal_tx_vdev_mismatch_notify config)
+{
+}
+#endif
+
+/**
+ * hal_tx_mcast_mlo_reinject_routing_set - set MLO multicast reinject routing
+ * @hal_soc: HAL SoC context
+ * @config: HAL_TX_MCAST_MLO_REINJECT_FW_NOTIFY - route via FW
+ *          HAL_TX_MCAST_MLO_REINJECT_TQM_NOTIFY - route via TQM
+ *
+ * Return: void
+ */
+#if defined(HWIO_TCL_R0_CMN_CONFIG_MCAST_CMN_PN_SN_MLO_REINJECT_ENABLE_BMSK) && \
+	defined(WLAN_MCAST_MLO)
+static inline void
+hal_tx_mcast_mlo_reinject_routing_set(
+				hal_soc_handle_t hal_soc_hdl,
+				enum hal_tx_mcast_mlo_reinject_notify config)
+{
+	struct hal_soc *hal_soc = (struct hal_soc *)hal_soc_hdl;
+	uint32_t reg_addr, reg_val = 0;
+	uint32_t val = 0;
+
+	reg_addr = HWIO_TCL_R0_CMN_CONFIG_ADDR(MAC_TCL_REG_REG_BASE);
+	val = HAL_REG_READ(hal_soc, reg_addr);
+
+	/* reset the corresponding bits in register */
+	val &= (~(HWIO_TCL_R0_CMN_CONFIG_MCAST_CMN_PN_SN_MLO_REINJECT_ENABLE_BMSK));
+
+	/* set config value */
+	reg_val = val | (config << HWIO_TCL_R0_CMN_CONFIG_MCAST_CMN_PN_SN_MLO_REINJECT_ENABLE_SHFT);
+
+	HAL_REG_WRITE(hal_soc, reg_addr, reg_val);
+}
+#else
+static inline void
+hal_tx_mcast_mlo_reinject_routing_set(
+				hal_soc_handle_t hal_soc_hdl,
+				enum hal_tx_mcast_mlo_reinject_notify config)
 {
 }
 #endif

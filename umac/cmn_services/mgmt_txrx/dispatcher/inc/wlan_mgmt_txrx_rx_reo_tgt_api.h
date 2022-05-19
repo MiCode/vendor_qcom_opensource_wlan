@@ -100,7 +100,7 @@ tgt_mgmt_rx_reo_get_valid_hw_link_bitmap(struct wlan_objmgr_psoc *psoc,
 /**
  * tgt_mgmt_rx_reo_read_snapshot() - Read management rx-reorder snapshot
  * @pdev: Pointer to pdev object
- * @address: Snapshot address
+ * @snapshot_info: Snapshot info
  * @id: Snapshot ID
  * @value: Pointer to the snapshot value where the snapshot
  * should be written
@@ -112,7 +112,7 @@ tgt_mgmt_rx_reo_get_valid_hw_link_bitmap(struct wlan_objmgr_psoc *psoc,
 QDF_STATUS
 tgt_mgmt_rx_reo_read_snapshot(
 			struct wlan_objmgr_pdev *pdev,
-			struct mgmt_rx_reo_snapshot *address,
+			struct mgmt_rx_reo_snapshot_info *snapshot_info,
 			enum mgmt_rx_reo_shared_snapshot_id id,
 			struct mgmt_rx_reo_snapshot_params *value);
 
@@ -139,20 +139,19 @@ QDF_STATUS tgt_mgmt_rx_reo_filter_config(struct wlan_objmgr_pdev *pdev,
 					 struct mgmt_rx_reo_filter *filter);
 
 /**
- * tgt_mgmt_rx_reo_get_snapshot_address() - Get management rx-reorder
- * snapshot address(virtual address) in host memory
+ * tgt_mgmt_rx_reo_get_snapshot_info() - Get information regarding management
+ * rx-reorder snapshot
  * @pdev: Pointer to pdev object
  * @id: Snapshot ID
- * @snapshot_address: Pointer to snapshot address where the address
- * needs to be written
+ * @snapshot_info: Pointer to snapshot info
  *
  * Return: QDF_STATUS
  */
 QDF_STATUS
-tgt_mgmt_rx_reo_get_snapshot_address(
-			struct wlan_objmgr_pdev *pdev,
-			enum mgmt_rx_reo_shared_snapshot_id id,
-			struct mgmt_rx_reo_snapshot **address);
+tgt_mgmt_rx_reo_get_snapshot_info
+			(struct wlan_objmgr_pdev *pdev,
+			 enum mgmt_rx_reo_shared_snapshot_id id,
+			 struct mgmt_rx_reo_snapshot_info *snapshot_info);
 
 /**
  * tgt_mgmt_rx_reo_frame_handler() - REO handler for management Rx frames.

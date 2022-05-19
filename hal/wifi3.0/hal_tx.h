@@ -857,7 +857,7 @@ static inline void hal_tx_update_pcp_tid_map(hal_soc_handle_t hal_soc_hdl,
 {
 	struct hal_soc *hal_soc = (struct hal_soc *)hal_soc_hdl;
 
-	hal_soc->ops->hal_tx_update_pcp_tid_map(hal_soc, tid, tid);
+	hal_soc->ops->hal_tx_update_pcp_tid_map(hal_soc, pcp, tid);
 }
 
 /**

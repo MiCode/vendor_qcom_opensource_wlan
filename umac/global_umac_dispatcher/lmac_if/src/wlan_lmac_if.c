@@ -87,6 +87,8 @@
 #include <wlan_p2p_mcc_quota_tgt_api.h>
 #endif
 
+#include "target_if.h"
+
 /* Function pointer for OL/WMA specific UMAC tx_ops
  * registration.
  */
@@ -309,11 +311,24 @@ wlan_lmac_if_crypto_rx_ops_register(struct wlan_lmac_if_rx_ops *rx_ops)
 		wlan_lmac_if_umac_crypto_rxpn_ops_register(rx_ops);
 }
 
+#if defined(WIFI_POS_CONVERGED) && defined(WLAN_FEATURE_RTT_11AZ_SUPPORT)
+static void
+wlan_lmac_if_wifi_pos_rx_ops(struct wlan_lmac_if_rx_ops *rx_ops)
+{
+	target_if_wifi_pos_register_rx_ops(rx_ops);
+}
+#else
+static inline void
+wlan_lmac_if_wifi_pos_rx_ops(struct wlan_lmac_if_rx_ops *rx_ops)
+{}
+#endif
+
 #ifdef WIFI_POS_CONVERGED
-static void wlan_lmac_if_umac_rx_ops_register_wifi_pos(
-				struct wlan_lmac_if_rx_ops *rx_ops)
+static void
+wlan_lmac_if_umac_rx_ops_register_wifi_pos(struct wlan_lmac_if_rx_ops *rx_ops)
 {
 	wifi_pos_register_rx_ops(rx_ops);
+	wlan_lmac_if_wifi_pos_rx_ops(rx_ops);
 }
 #else
 static void wlan_lmac_if_umac_rx_ops_register_wifi_pos(
@@ -331,13 +346,15 @@ static void wlan_lmac_if_register_master_list_ext_handler(
 }
 
 #ifdef CONFIG_AFC_SUPPORT
-static void wlan_lmac_if_register_afc_event_handler(
+static void wlan_lmac_if_register_afc_handlers(
 					struct wlan_lmac_if_rx_ops *rx_ops)
 {
 	rx_ops->reg_rx_ops.afc_event_handler = tgt_reg_process_afc_event;
+	rx_ops->reg_rx_ops.reg_set_afc_dev_type = tgt_reg_set_afc_dev_type;
+	rx_ops->reg_rx_ops.reg_get_afc_dev_type = tgt_reg_get_afc_dev_type;
 }
 #else
-static void wlan_lmac_if_register_afc_event_handler(
+static void wlan_lmac_if_register_afc_handlers(
 					struct wlan_lmac_if_rx_ops *rx_ops)
 {
 }
@@ -465,7 +482,7 @@ static void wlan_lmac_if_umac_reg_rx_ops_register(
 
 	wlan_lmac_if_register_6g_edge_chan_supp(rx_ops);
 
-	wlan_lmac_if_register_afc_event_handler(rx_ops);
+	wlan_lmac_if_register_afc_handlers(rx_ops);
 }
 
 #ifdef CONVERGED_P2P_ENABLE

@@ -50,12 +50,12 @@ QDF_STATUS wlan_mgmt_txrx_process_rx_frame(
 }
 
 QDF_STATUS
-wlan_mgmt_rx_reo_get_snapshot_address(
-			struct wlan_objmgr_pdev *pdev,
-			enum mgmt_rx_reo_shared_snapshot_id id,
-			struct mgmt_rx_reo_snapshot **address)
+wlan_mgmt_rx_reo_get_snapshot_info
+			(struct wlan_objmgr_pdev *pdev,
+			 enum mgmt_rx_reo_shared_snapshot_id id,
+			 struct mgmt_rx_reo_snapshot_info *snapshot_info)
 {
-	return tgt_mgmt_rx_reo_get_snapshot_address(pdev, id, address);
+	return tgt_mgmt_rx_reo_get_snapshot_info(pdev, id, snapshot_info);
 }
 
 /**
@@ -122,12 +122,12 @@ QDF_STATUS wlan_mgmt_txrx_process_rx_frame(
 }
 
 QDF_STATUS
-wlan_mgmt_rx_reo_get_snapshot_address(
-			struct wlan_objmgr_pdev *pdev,
-			enum mgmt_rx_reo_shared_snapshot_id id,
-			struct mgmt_rx_reo_snapshot **address)
+wlan_mgmt_rx_reo_get_snapshot_info
+			(struct wlan_objmgr_pdev *pdev,
+			 enum mgmt_rx_reo_shared_snapshot_id id,
+			 struct mgmt_rx_reo_snapshot_info *snapshot_info)
 {
-	return mgmt_rx_reo_sim_get_snapshot_address(pdev, id, address);
+	return mgmt_rx_reo_sim_get_snapshot_info(pdev, id, snapshot_info);
 }
 
 /**
@@ -166,18 +166,9 @@ qdf_export_symbol(wlan_get_pdev_from_mlo_link_id);
 #endif /* WLAN_MGMT_RX_REO_SIM_SUPPORT */
 
 QDF_STATUS
-wlan_mgmt_rx_reo_validate_mlo_hw_link_info(struct wlan_objmgr_psoc *psoc)
+wlan_mgmt_rx_reo_validate_mlo_link_info(struct wlan_objmgr_psoc *psoc)
 {
-	return mgmt_rx_reo_validate_mlo_hw_link_info(psoc);
-}
-
-QDF_STATUS
-wlan_mgmt_rx_reo_pdev_obj_open_notification
-			(struct wlan_objmgr_pdev *pdev,
-			 struct mgmt_txrx_priv_pdev_context *mgmt_txrx_pdev_ctx)
-{
-	return mgmt_rx_reo_pdev_obj_open_notification(pdev,
-						      mgmt_txrx_pdev_ctx);
+	return mgmt_rx_reo_validate_mlo_link_info(psoc);
 }
 
 QDF_STATUS
@@ -197,6 +188,22 @@ wlan_mgmt_rx_reo_pdev_obj_destroy_notification(
 	return mgmt_rx_reo_pdev_obj_destroy_notification(pdev,
 							 mgmt_txrx_pdev_ctx);
 }
+
+QDF_STATUS
+wlan_mgmt_rx_reo_attach(struct wlan_objmgr_pdev *pdev)
+{
+	return mgmt_rx_reo_attach(pdev);
+}
+
+qdf_export_symbol(wlan_mgmt_rx_reo_attach);
+
+QDF_STATUS
+wlan_mgmt_rx_reo_detach(struct wlan_objmgr_pdev *pdev)
+{
+	return mgmt_rx_reo_detach(pdev);
+}
+
+qdf_export_symbol(wlan_mgmt_rx_reo_detach);
 
 #ifndef WLAN_MGMT_RX_REO_SIM_SUPPORT
 bool
@@ -227,6 +234,8 @@ wlan_mgmt_rx_reo_is_feature_enabled_at_pdev(struct wlan_objmgr_pdev *pdev)
 	return wlan_mgmt_rx_reo_is_feature_enabled_at_psoc(
 			wlan_pdev_get_psoc(pdev));
 }
+
+qdf_export_symbol(wlan_mgmt_rx_reo_is_feature_enabled_at_pdev);
 #else
 bool
 wlan_mgmt_rx_reo_is_feature_enabled_at_psoc(struct wlan_objmgr_psoc *psoc)
@@ -280,12 +289,3 @@ wlan_mgmt_rx_reo_print_egress_frame_debug_info(void)
 }
 
 qdf_export_symbol(wlan_mgmt_rx_reo_print_egress_frame_debug_info);
-
-QDF_STATUS
-wlan_mgmt_rx_reo_set_mlo_link_info(uint8_t num_mlo_links,
-				   uint16_t valid_link_bitmap)
-{
-	return mgmt_rx_reo_set_mlo_link_info(num_mlo_links, valid_link_bitmap);
-}
-
-qdf_export_symbol(wlan_mgmt_rx_reo_set_mlo_link_info);

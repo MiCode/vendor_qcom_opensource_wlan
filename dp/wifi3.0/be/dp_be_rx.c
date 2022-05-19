@@ -1087,18 +1087,38 @@ struct dp_rx_desc *dp_rx_desc_cookie_2_va_be(struct dp_soc *soc,
 
 #if defined(WLAN_FEATURE_11BE_MLO)
 #if defined(WLAN_MLO_MULTI_CHIP) && defined(WLAN_MCAST_MLO)
-static inline void dp_rx_dummy_src_mac(qdf_nbuf_t nbuf)
+#define DP_RANDOM_MAC_ID_BIT_MASK	0xC0
+#define DP_RANDOM_MAC_OFFSET	1
+#define DP_MAC_LOCAL_ADMBIT_MASK	0x2
+#define DP_MAC_LOCAL_ADMBIT_OFFSET	0
+static inline void dp_rx_dummy_src_mac(struct dp_vdev *vdev,
+				       qdf_nbuf_t nbuf)
 {
+	uint8_t random_mac[QDF_MAC_ADDR_SIZE] = {0};
 	qdf_ether_header_t *eh =
 			(qdf_ether_header_t *)qdf_nbuf_data(nbuf);
 
-	eh->ether_shost[0] = 0x4d;	/* M */
-	eh->ether_shost[1] = 0x4c;	/* L */
-	eh->ether_shost[2] = 0x4d;	/* M */
-	eh->ether_shost[3] = 0x43;	/* C */
-	eh->ether_shost[4] = 0x41;	/* A */
-	eh->ether_shost[5] = 0x53;	/* S */
+	qdf_mem_copy(random_mac, &vdev->mld_mac_addr.raw[0], QDF_MAC_ADDR_SIZE);
+	random_mac[DP_MAC_LOCAL_ADMBIT_OFFSET] =
+					random_mac[DP_MAC_LOCAL_ADMBIT_OFFSET] |
+					DP_MAC_LOCAL_ADMBIT_MASK;
+	random_mac[DP_RANDOM_MAC_OFFSET] =
+		random_mac[DP_RANDOM_MAC_OFFSET] ^ DP_RANDOM_MAC_ID_BIT_MASK;
+
+	qdf_mem_copy(&eh->ether_shost[0], random_mac,  QDF_MAC_ADDR_SIZE);
 }
+
+#ifdef QCA_SUPPORT_WDS_EXTENDED
+static inline bool dp_rx_mlo_igmp_wds_ext_handler(struct dp_txrx_peer *peer)
+{
+	return qdf_atomic_test_bit(WDS_EXT_PEER_INIT_BIT, &peer->wds_ext.init);
+}
+#else
+static inline bool dp_rx_mlo_igmp_wds_ext_handler(struct dp_txrx_peer *peer)
+{
+	return false;
+}
+#endif
 
 bool dp_rx_mlo_igmp_handler(struct dp_soc *soc,
 			    struct dp_vdev *vdev,
@@ -1109,11 +1129,22 @@ bool dp_rx_mlo_igmp_handler(struct dp_soc *soc,
 	struct dp_vdev_be *be_vdev = dp_get_be_vdev_from_dp_vdev(vdev);
 	struct dp_soc_be *be_soc = dp_get_be_soc_from_dp_soc(soc);
 
-	if (!(qdf_nbuf_is_ipv4_igmp_pkt(buf) ||
-	      qdf_nbuf_is_ipv6_igmp_pkt(buf)))
+	if (!(qdf_nbuf_is_ipv4_igmp_pkt(nbuf) ||
+	      qdf_nbuf_is_ipv6_igmp_pkt(nbuf)))
 		return false;
+	/*
+	 * In the case of ME6, Backhaul WDS, NAWDS
+	 * send the igmp pkt on the same link where it received,
+	 * as these features will use peer based tcl metadata
+	 */
 
-	if (vdev->mcast_enhancement_en || be_vdev->mcast_primary)
+	qdf_nbuf_set_next(nbuf, NULL);
+
+	if (vdev->mcast_enhancement_en || be_vdev->mcast_primary ||
+	    peer->nawds_enabled)
+		goto send_pkt;
+
+	if (qdf_unlikely(dp_rx_mlo_igmp_wds_ext_handler(peer)))
 		goto send_pkt;
 
 	mcast_primary_vdev = dp_mlo_get_mcast_primary_vdev(be_soc, be_vdev,
@@ -1122,7 +1153,7 @@ bool dp_rx_mlo_igmp_handler(struct dp_soc *soc,
 		dp_rx_debug("Non mlo vdev");
 		goto send_pkt;
 	}
-	dp_rx_dummy_src_mac(nbuf);
+	dp_rx_dummy_src_mac(vdev, nbuf);
 	dp_rx_deliver_to_stack(mcast_primary_vdev->pdev->soc,
 			       mcast_primary_vdev,
 			       peer,
@@ -1143,7 +1174,7 @@ send_pkt:
 #else
 bool dp_rx_mlo_igmp_handler(struct dp_soc *soc,
 			    struct dp_vdev *vdev,
-			    struct dp_peer *peer,
+			    struct dp_txrx_peer *peer,
 			    qdf_nbuf_t nbuf)
 {
 	return false;
@@ -1258,7 +1289,6 @@ dp_rx_intrabss_ucast_check_be(qdf_nbuf_t nbuf,
 	struct dp_txrx_peer *da_peer;
 	bool ret = false;
 	uint8_t dest_chip_id;
-	uint8_t soc_idx;
 	dp_txrx_ref_handle txrx_ref_handle = NULL;
 	struct dp_vdev_be *be_vdev =
 		dp_get_be_vdev_from_dp_vdev(ta_peer->vdev);
@@ -1270,23 +1300,41 @@ dp_rx_intrabss_ucast_check_be(qdf_nbuf_t nbuf,
 
 	dest_chip_id = HAL_RX_DEST_CHIP_ID_GET(msdu_metadata);
 	qdf_assert_always(dest_chip_id <= (DP_MLO_MAX_DEST_CHIP_ID - 1));
+	da_peer_id = HAL_RX_PEER_ID_GET(msdu_metadata);
 
-	if (be_soc->mlo_enabled) {
+	/* use dest chip id when TA is MLD peer and DA is legacy */
+	if (be_soc->mlo_enabled &&
+	    ta_peer->mld_peer &&
+	    !(da_peer_id & HAL_RX_DA_IDX_ML_PEER_MASK)) {
 		/* validate chip_id, get a ref, and re-assign soc */
 		params->dest_soc =
 			dp_mlo_get_soc_ref_by_chip_id(be_soc->ml_ctxt,
 						      dest_chip_id);
 		if (!params->dest_soc)
 			return false;
-	}
 
-	da_peer_id = dp_rx_peer_metadata_peer_id_get_be(params->dest_soc,
-							msdu_metadata->da_idx);
-	da_peer = dp_txrx_peer_get_ref_by_id(params->dest_soc, da_peer_id,
-					     &txrx_ref_handle, DP_MOD_ID_RX);
-	if (!da_peer)
-		return false;
-	/* soc unref if needed */
+		da_peer = dp_txrx_peer_get_ref_by_id(params->dest_soc,
+						     da_peer_id,
+						     &txrx_ref_handle,
+						     DP_MOD_ID_RX);
+		if (!da_peer)
+			return false;
+
+		ret = true;
+	} else {
+		da_peer = dp_txrx_peer_get_ref_by_id(params->dest_soc,
+						     da_peer_id,
+						     &txrx_ref_handle,
+						     DP_MOD_ID_RX);
+		if (!da_peer)
+			return false;
+
+		params->dest_soc = da_peer->vdev->pdev->soc;
+		if (!params->dest_soc)
+			goto rel_da_peer;
+
+		ret = true;
+	}
 
 	params->tx_vdev_id = da_peer->vdev->vdev_id;
 
@@ -1308,14 +1356,15 @@ dp_rx_intrabss_ucast_check_be(qdf_nbuf_t nbuf,
 
 	/* MLO specific Intra-BSS check */
 	if (dp_rx_intrabss_fwd_mlo_allow(ta_peer, da_peer)) {
-		/* index of soc in the array */
-		soc_idx = dest_chip_id << DP_MLO_DEST_CHIP_ID_SHIFT;
-		if (!(be_vdev->partner_vdev_list[soc_idx][0] ==
-		      params->tx_vdev_id) &&
-		    !(be_vdev->partner_vdev_list[soc_idx][1] ==
-		      params->tx_vdev_id)) {
-			/*dp_soc_unref_delete(soc);*/
-			goto rel_da_peer;
+		/* use dest chip id for legacy dest peer */
+		if (!(da_peer_id & HAL_RX_DA_IDX_ML_PEER_MASK)) {
+			if (!(be_vdev->partner_vdev_list[dest_chip_id][0] ==
+			      params->tx_vdev_id) &&
+			    !(be_vdev->partner_vdev_list[dest_chip_id][1] ==
+			      params->tx_vdev_id)) {
+				/*dp_soc_unref_delete(soc);*/
+				goto rel_da_peer;
+			}
 		}
 		ret = true;
 	}

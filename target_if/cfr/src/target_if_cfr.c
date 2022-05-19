@@ -242,7 +242,7 @@ void target_if_cfr_fill_header(struct csi_cfr_header *hdr,
 		hdr->cmn.cfr_metadata_version = CFR_META_VERSION_8;
 		hdr->cmn.chip_type = CFR_CAPTURE_RADIO_HKV2;
 	} else if (target_type == TARGET_TYPE_QCA9574) {
-		hdr->cmn.cfr_metadata_version = CFR_META_VERSION_6;
+		hdr->cmn.cfr_metadata_version = CFR_META_VERSION_8;
 		hdr->cmn.chip_type = CFR_CAPTURE_RADIO_ALDER;
 	} else {
 		if (target_type == TARGET_TYPE_QCN9000)

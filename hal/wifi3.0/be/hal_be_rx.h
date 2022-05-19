@@ -27,6 +27,9 @@
 #define HAL_RX_DA_IDX_CHIP_ID_OFFSET    14
 #define HAL_RX_DA_IDX_CHIP_ID_MASK      0x3
 
+#define HAL_RX_DA_IDX_PEER_ID_MASK    0x3fff
+#define HAL_RX_DA_IDX_ML_PEER_MASK    0x2000
+
 /*
  * macro to set the cookie into the rxdma ring entry
  */
@@ -213,6 +216,10 @@
 #define HAL_RX_DEST_CHIP_ID_GET(msdu_metadata) \
 	(((msdu_metadata)->da_idx >> HAL_RX_DA_IDX_CHIP_ID_OFFSET) &	\
 	 HAL_RX_DA_IDX_CHIP_ID_MASK)
+
+#define HAL_RX_PEER_ID_GET(msdu_metadata) \
+	(((msdu_metadata)->da_idx) & HAL_RX_DA_IDX_PEER_ID_MASK)
+
 /**
  * enum hal_be_rx_wbm_error_source: Indicates which module initiated the
  * release of this buffer or descriptor

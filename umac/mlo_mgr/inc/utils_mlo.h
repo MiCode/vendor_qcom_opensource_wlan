@@ -152,19 +152,14 @@ util_get_mlie_variant(uint8_t *mlieseq, qdf_size_t mlieseqlen,
  * fragment sequence
  * @mlieseqlen: Total length of the Multi-Link element or Multi-Link element
  * fragment sequence
- * @mldmacaddrfound: Pointer to the location where a boolean status should be
- * updated indicating whether the MLD MAC address was found or not. This should
- * be ignored by the caller if the function returns error.
  * @linkid: Pointer to the location where the MLD MAC address should be updated.
- * This should be ignored by the caller if the function returns error, or if the
- * function indicates that the MLD MAC address was not found.
+ * This should be ignored by the caller if the function returns error.
  *
  * Return: QDF_STATUS_SUCCESS in the case of success, QDF_STATUS value giving
  * the reason for error in the case of failure
  */
 QDF_STATUS
 util_get_bvmlie_mldmacaddr(uint8_t *mlieseq, qdf_size_t mlieseqlen,
-			   bool *mldmacaddrfound,
 			   struct qdf_mac_addr *mldmacaddr);
 
 /**
@@ -193,6 +188,33 @@ util_get_bvmlie_mldmacaddr(uint8_t *mlieseq, qdf_size_t mlieseqlen,
 QDF_STATUS
 util_get_bvmlie_primary_linkid(uint8_t *mlieseq, qdf_size_t mlieseqlen,
 			       bool *linkidfound, uint8_t *linkid);
+
+/**
+ * util_get_bvmlie_mldcap - Get the MLD capabilities from a given Basic
+ * variant Multi-Link element or element fragment sequence, of the AP that
+ * transmits the Multi-Link element/element fragment sequence or the
+ * nontransmitted BSSID in the same multiple BSSID set as the AP that transmits
+ * the Multi-Link element/element fragment sequence and that is affiliated with
+ * the MLD that is described in the Multi-Link element.
+ *
+ * @mlieseq: Starting address of the Multi-Link element or Multi-Link element
+ * fragment sequence
+ * @mlieseqlen: Total length of the Multi-Link element or Multi-Link element
+ * fragment sequence
+ * @mldcapfound: Pointer to the location where a boolean status should be
+ * updated indicating whether the MLD capabilities was found or not. This should
+ * be ignored by the caller if the function returns error.
+ * @mldcap: Pointer to the location where the value of the MLD capabilities
+ * should be updated. This should be ignored by the caller if the function
+ * returns error, or if the function indicates that the MLD capabilities was not
+ * found.
+ *
+ * Return: QDF_STATUS_SUCCESS in the case of success, QDF_STATUS value giving
+ * the reason for error in the case of failure
+ */
+QDF_STATUS
+util_get_bvmlie_mldcap(uint8_t *mlieseq, qdf_size_t mlieseqlen,
+		       bool *mldcapfound, uint16_t *mldcap);
 
 /**
  * util_get_bvmlie_persta_partner_info() - Get per-STA partner link information

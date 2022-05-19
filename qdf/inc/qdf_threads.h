@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2014-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -197,4 +198,15 @@ bool qdf_cpumask_empty(const qdf_cpu_mask *srcp);
  */
 void qdf_cpumask_copy(qdf_cpu_mask *dstp,
 		      const qdf_cpu_mask *srcp);
+
+/**
+ * qdf_cpumask_or - set *dstp = *src1p | *src2p
+ * @dstp: the cpumask result
+ * @src1p: the first input
+ * @src2p: the second input
+ *
+ * Return: None
+ */
+void qdf_cpumask_or(qdf_cpu_mask *dstp, qdf_cpu_mask *src1p,
+		    qdf_cpu_mask *src2p);
 #endif /* __QDF_THREADS_H */

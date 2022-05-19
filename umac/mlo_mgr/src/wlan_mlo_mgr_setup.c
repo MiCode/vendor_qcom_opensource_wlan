@@ -22,6 +22,7 @@
 #include "wlan_lmac_if_def.h"
 #include <cdp_txrx_mlo.h>
 #endif
+#include <wlan_mgmt_txrx_rx_reo_utils_api.h>
 
 #ifdef WLAN_MLO_MULTI_CHIP
 bool mlo_is_ml_soc(struct wlan_objmgr_psoc *psoc)
@@ -146,6 +147,33 @@ bool mlo_vdevs_check_single_soc(struct wlan_objmgr_vdev **wlan_vdev_list,
 
 qdf_export_symbol(mlo_vdevs_check_single_soc);
 
+void mlo_setup_init(void)
+{
+	struct mlo_mgr_context *mlo_ctx = wlan_objmgr_get_mlo_ctx();
+
+	if (!mlo_ctx)
+		return;
+
+	if (qdf_event_create(&mlo_ctx->setup_info.event) !=
+						QDF_STATUS_SUCCESS) {
+		mlo_err("Unable to create teardown event");
+	}
+}
+
+qdf_export_symbol(mlo_setup_init);
+
+void mlo_setup_deinit(void)
+{
+	struct mlo_mgr_context *mlo_ctx = wlan_objmgr_get_mlo_ctx();
+
+	if (!mlo_ctx)
+		return;
+
+	qdf_event_destroy(&mlo_ctx->setup_info.event);
+}
+
+qdf_export_symbol(mlo_setup_deinit);
+
 void mlo_setup_update_num_links(struct wlan_objmgr_psoc *psoc,
 				uint8_t num_links)
 {
@@ -201,6 +229,7 @@ void mlo_setup_link_ready(struct wlan_objmgr_pdev *pdev)
 {
 	struct mlo_mgr_context *mlo_ctx = wlan_objmgr_get_mlo_ctx();
 	uint8_t link_idx;
+	uint16_t link_id;
 
 	if (!mlo_ctx || !mlo_ctx->setup_info.tot_links)
 		return;
@@ -222,6 +251,14 @@ void mlo_setup_link_ready(struct wlan_objmgr_pdev *pdev)
 	mlo_ctx->setup_info.pdev_list[link_idx] = pdev;
 	mlo_ctx->setup_info.state[link_idx] = MLO_LINK_SETUP_INIT;
 	mlo_ctx->setup_info.num_links++;
+
+	link_id = wlan_mlo_get_pdev_hw_link_id(pdev);
+	if (link_id == INVALID_HW_LINK_ID) {
+		qdf_err("Invalid HW link id for the pdev");
+		return;
+	}
+	mlo_ctx->setup_info.valid_link_bitmap |= (1 << link_id);
+
 	qdf_debug("pdev updated to mld link %d num_links %d",
 		  link_idx, mlo_ctx->setup_info.num_links);
 
@@ -231,9 +268,17 @@ void mlo_setup_link_ready(struct wlan_objmgr_pdev *pdev)
 	    mlo_ctx->setup_info.num_soc == mlo_ctx->setup_info.tot_socs) {
 		struct wlan_objmgr_psoc *psoc;
 		struct wlan_lmac_if_tx_ops *tx_ops;
+		QDF_STATUS status;
 
 		psoc = wlan_pdev_get_psoc(pdev);
 		tx_ops = wlan_psoc_get_lmac_if_txops(psoc);
+
+		status = wlan_mgmt_rx_reo_validate_mlo_link_info(psoc);
+		if (QDF_IS_STATUS_ERROR(status)) {
+			mlo_err("Failed to validate MLO HW link info");
+			qdf_assert_always(0);
+		}
+
 		qdf_debug("Trigger MLO Setup request");
 		if (tx_ops && tx_ops->mops.target_if_mlo_setup_req) {
 			tx_ops->mops.target_if_mlo_setup_req(
@@ -290,6 +335,8 @@ static void mlo_setup_link_down(struct wlan_objmgr_psoc *psoc,
 	struct wlan_objmgr_pdev *pdev;
 	uint8_t link_idx;
 	struct mlo_mgr_context *mlo_ctx = wlan_objmgr_get_mlo_ctx();
+	uint16_t link_id;
+
 	pdev = (struct wlan_objmgr_pdev *)obj;
 
 	if (mlo_find_pdev_idx(pdev, &link_idx) != QDF_STATUS_SUCCESS) {
@@ -300,6 +347,14 @@ static void mlo_setup_link_down(struct wlan_objmgr_psoc *psoc,
 	mlo_ctx->setup_info.pdev_list[link_idx] = NULL;
 	mlo_ctx->setup_info.state[link_idx] = MLO_LINK_UNINITIALIZED;
 	mlo_ctx->setup_info.num_links--;
+
+	link_id = wlan_mlo_get_pdev_hw_link_id(pdev);
+	if (link_id == INVALID_HW_LINK_ID) {
+		qdf_err("Invalid HW link id for the pdev");
+		return;
+	}
+	mlo_ctx->setup_info.valid_link_bitmap &= ~(1 << link_id);
+
 	qdf_debug("link down link_idx %d num_links %d",
 		  link_idx, mlo_ctx->setup_info.num_links);
 }
@@ -444,9 +499,6 @@ QDF_STATUS mlo_link_teardown_link(struct wlan_objmgr_psoc *psoc,
 	if (!mlo_check_all_pdev_state(psoc, MLO_LINK_TEARDOWN))
 		return QDF_STATUS_SUCCESS;
 
-	if (qdf_event_create(&mlo_ctx->setup_info.event) != QDF_STATUS_SUCCESS)
-		return QDF_STATUS_E_FAULT;
-
 	tx_ops = wlan_psoc_get_lmac_if_txops(psoc);
 	/* Trigger MLO teardown */
 	if (tx_ops && tx_ops->mops.target_if_mlo_teardown_req) {
@@ -456,14 +508,13 @@ QDF_STATUS mlo_link_teardown_link(struct wlan_objmgr_psoc *psoc,
 				reason);
 	}
 
-	status = qdf_wait_for_event_completion(&mlo_ctx->setup_info.event,
-					       MLO_MGR_TEARDOWN_TIMEOUT);
+	status = qdf_wait_for_event_completion(
+			&mlo_ctx->setup_info.event,
+			MLO_MGR_TEARDOWN_TIMEOUT);
 	if (status != QDF_STATUS_SUCCESS) {
 		qdf_info("Teardown timeout");
 		mlo_force_teardown();
 	}
-
-	qdf_event_destroy(&mlo_ctx->setup_info.event);
 
 	return status;
 }

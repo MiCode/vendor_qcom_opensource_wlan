@@ -1756,6 +1756,8 @@ QDF_STATUS target_if_direct_buf_rx_module_register(
 		if (QDF_IS_STATUS_ERROR(status))
 			direct_buf_rx_err("init dbr ring fail, srng_id %d, status %d",
 					  srng_id, status);
+		else
+			mod_param->registered = true;
 	}
 
 	return status;
@@ -2332,6 +2334,13 @@ QDF_STATUS target_if_deinit_dbr_ring(struct wlan_objmgr_pdev *pdev,
 	}
 	direct_buf_rx_debug("mod_param %pK, dbr_ring_cap %pK",
 			    mod_param, mod_param->dbr_ring_cap);
+
+	if (!mod_param->registered) {
+		direct_buf_rx_err("module(%d) srng(%d) was not registered",
+				  mod_id, srng_id);
+		return QDF_STATUS_SUCCESS;
+	}
+
 	target_if_dbr_deinit_srng(pdev, mod_param);
 	if (mod_param->dbr_ring_cap)
 		qdf_mem_free(mod_param->dbr_ring_cap);
@@ -2339,6 +2348,8 @@ QDF_STATUS target_if_deinit_dbr_ring(struct wlan_objmgr_pdev *pdev,
 	if (mod_param->dbr_ring_cfg)
 		qdf_mem_free(mod_param->dbr_ring_cfg);
 	mod_param->dbr_ring_cfg = NULL;
+
+	mod_param->registered = false;
 
 	return QDF_STATUS_SUCCESS;
 }

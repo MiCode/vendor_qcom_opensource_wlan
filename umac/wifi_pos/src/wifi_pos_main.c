@@ -84,44 +84,6 @@ static bool wifi_pos_get_tlv_support(struct wlan_objmgr_psoc *psoc)
 	return true;
 }
 
-struct wlan_lmac_if_wifi_pos_tx_ops *
-	wifi_pos_get_tx_ops(struct wlan_objmgr_psoc *psoc)
-{
-	struct wlan_lmac_if_tx_ops *tx_ops;
-
-	if (!psoc) {
-		wifi_pos_err("psoc is null");
-		return NULL;
-	}
-
-	tx_ops = wlan_psoc_get_lmac_if_txops(psoc);
-	if (!tx_ops) {
-		wifi_pos_err("tx_ops is NULL");
-		return NULL;
-	}
-
-	return &tx_ops->wifi_pos_tx_ops;
-}
-
-struct wlan_lmac_if_wifi_pos_rx_ops *
-	wifi_pos_get_rx_ops(struct wlan_objmgr_psoc *psoc)
-{
-	struct wlan_lmac_if_rx_ops *rx_ops;
-
-	if (!psoc) {
-		wifi_pos_err("psoc is null");
-		return NULL;
-	}
-
-	rx_ops = wlan_psoc_get_lmac_if_rxops(psoc);
-	if (!rx_ops) {
-		wifi_pos_err("rx_ops is NULL");
-		return NULL;
-	}
-
-	return &rx_ops->wifi_pos_rx_ops;
-}
-
 #ifdef CNSS_GENL
 static uint8_t *
 wifi_pos_prepare_reg_resp(uint32_t *rsp_len,
@@ -1027,6 +989,80 @@ QDF_STATUS  wifi_pos_psoc_obj_destroyed_notification(
 	wifi_pos_debug("wifi_pos_obj deleted with status %d", status);
 	qdf_spinlock_destroy(&wifi_pos_obj->wifi_pos_lock);
 	qdf_mem_free(wifi_pos_obj);
+
+	return status;
+}
+
+static void
+wifi_pos_init_11az_context(struct wifi_pos_vdev_priv_obj *vdev_pos_obj)
+{
+	struct wifi_pos_11az_context *pasn_context;
+	uint8_t i;
+
+	pasn_context = &vdev_pos_obj->pasn_context;
+	for (i = 0; i < WLAN_MAX_11AZ_PEERS; i++) {
+		qdf_set_macaddr_broadcast(
+				&pasn_context->secure_peer_list[i].peer_mac);
+		qdf_set_macaddr_broadcast(
+				&pasn_context->secure_peer_list[i].self_mac);
+		pasn_context->secure_peer_list[i].force_self_mac_usage = false;
+		pasn_context->secure_peer_list[i].control_flags = 0;
+		qdf_set_macaddr_broadcast(
+				&pasn_context->unsecure_peer_list[i].peer_mac);
+		qdf_set_macaddr_broadcast(&pasn_context->failed_peer_list[i]);
+	}
+
+	pasn_context->num_secure_peers = 0;
+	pasn_context->num_unsecure_peers = 0;
+	pasn_context->num_failed_peers = 0;
+}
+
+QDF_STATUS
+wifi_pos_vdev_created_notification(struct wlan_objmgr_vdev *vdev,
+				   void *arg_list)
+{
+	struct wifi_pos_vdev_priv_obj *vdev_pos_obj;
+	QDF_STATUS status = QDF_STATUS_E_FAILURE;
+
+	vdev_pos_obj = qdf_mem_malloc(sizeof(*vdev_pos_obj));
+	if (!vdev_pos_obj)
+		return QDF_STATUS_E_NOMEM;
+
+	status = wlan_objmgr_vdev_component_obj_attach(vdev,
+						       WLAN_UMAC_COMP_WIFI_POS,
+						       vdev_pos_obj,
+						       QDF_STATUS_SUCCESS);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		qdf_mem_free(vdev_pos_obj);
+		wifi_pos_err("Wifi pos vdev attach failed");
+		return status;
+	}
+
+	wifi_pos_init_11az_context(vdev_pos_obj);
+
+	return status;
+}
+
+QDF_STATUS
+wifi_pos_vdev_destroyed_notification(struct wlan_objmgr_vdev *vdev,
+				     void *arg_list)
+{
+	struct wifi_pos_vdev_priv_obj *vdev_pos_obj;
+	QDF_STATUS status = QDF_STATUS_E_FAILURE;
+
+	vdev_pos_obj = wifi_pos_get_vdev_priv_obj(vdev);
+	if (!vdev_pos_obj) {
+		wifi_pos_err("Wifi pos vdev priv obj is null");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	status = wlan_objmgr_vdev_component_obj_detach(vdev,
+						       WLAN_UMAC_COMP_WIFI_POS,
+						       vdev_pos_obj);
+	if (QDF_IS_STATUS_ERROR(status))
+		wifi_pos_err("Detach vdev private obj failed");
+
+	qdf_mem_free(vdev_pos_obj);
 
 	return status;
 }

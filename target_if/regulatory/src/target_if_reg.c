@@ -1030,6 +1030,56 @@ tgt_if_regulatory_is_upper_6g_edge_ch_disabled(struct wlan_objmgr_psoc *psoc)
 }
 #endif
 
+#if defined(CONFIG_AFC_SUPPORT)
+QDF_STATUS
+target_if_reg_set_afc_dev_type(struct wlan_objmgr_psoc *psoc,
+			       struct target_psoc_info *tgt_hdl)
+{
+	struct wlan_lmac_if_reg_rx_ops *reg_rx_ops;
+	struct tgt_info *info;
+
+	if (!tgt_hdl) {
+		target_if_err("target_psoc_info is null");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	reg_rx_ops = target_if_regulatory_get_rx_ops(psoc);
+	if (!reg_rx_ops) {
+		target_if_err("reg_rx_ops is NULL");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	info = (&tgt_hdl->info);
+
+	if (reg_rx_ops->reg_set_afc_dev_type)
+		reg_rx_ops->reg_set_afc_dev_type(
+			psoc,
+			info->service_ext2_param.afc_dev_type);
+
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS
+target_if_reg_get_afc_dev_type(struct wlan_objmgr_psoc *psoc,
+			       enum reg_afc_dev_deploy_type *reg_afc_dev_type)
+{
+	struct wlan_lmac_if_reg_rx_ops *reg_rx_ops;
+
+	reg_rx_ops = target_if_regulatory_get_rx_ops(psoc);
+	if (!reg_rx_ops) {
+		target_if_err("reg_rx_ops is NULL");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	if (reg_rx_ops->reg_get_afc_dev_type)
+		reg_rx_ops->reg_get_afc_dev_type(
+			psoc,
+			reg_afc_dev_type);
+
+	return QDF_STATUS_SUCCESS;
+}
+#endif
+
 /**
  * tgt_if_reg_is_chip_11be_cap() - Finds out if the hardware is capable
  * of 11BE. The capability bit is read from mac_phy_cap populated by the

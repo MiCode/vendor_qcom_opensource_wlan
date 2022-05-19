@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2017-2019 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -109,3 +109,16 @@ struct wifi_pos_psoc_priv_obj *wifi_pos_get_psoc_priv_obj(
 }
 
 qdf_export_symbol(wifi_pos_get_psoc_priv_obj);
+
+struct wifi_pos_vdev_priv_obj *
+wifi_pos_get_vdev_priv_obj(struct wlan_objmgr_vdev *vdev)
+{
+	struct wifi_pos_vdev_priv_obj *vdev_obj;
+
+	vdev_obj = wlan_objmgr_vdev_get_comp_private_obj(
+					vdev, WLAN_UMAC_COMP_WIFI_POS);
+
+	return vdev_obj;
+}
+
+qdf_export_symbol(wifi_pos_get_vdev_priv_obj);

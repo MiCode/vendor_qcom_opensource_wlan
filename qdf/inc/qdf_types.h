@@ -175,6 +175,16 @@ typedef __qdf_cpu_mask qdf_cpu_mask;
 typedef __qdf_netdev_t qdf_netdev_t;
 
 /**
+ * pointer to napi struct
+ */
+typedef __qdf_napi_struct qdf_napi_struct;
+
+/**
+ * pointer to net dev stats
+ */
+typedef __qdf_net_dev_stats qdf_net_dev_stats;
+
+/**
  * struct qdf_dma_map_info - Information inside a DMA map.
  * @nsegs: total number mapped segments
  * struct __dma_segs - Information of physical address.
@@ -422,6 +432,8 @@ typedef bool (*qdf_irqlocked_func_t)(void *);
  * @QDF_MODULE_ID_AFC: AFC module ID
  * @QDF_MODULE_ID_WIFI_RADAR: WIFI RADAR module ID
  * @QDF_MODULE_ID_TWT: TWT module ID
+ * @QDF_MODULE_ID_WLAN_PRE_CAC: WLAN PRE CAC module ID
+ * @QDF_MODULE_ID_T2LM: T2LM module ID
  * @QDF_MODULE_ID_ANY: anything
  * @QDF_MODULE_ID_MAX: Max place holder module ID
  *
@@ -580,6 +592,9 @@ typedef enum {
 	QDF_MODULE_ID_AFC,
 	QDF_MODULE_ID_WIFI_RADAR,
 	QDF_MODULE_ID_TWT,
+	QDF_MODULE_ID_DP_UMAC_RESET,
+	QDF_MODULE_ID_WLAN_PRE_CAC,
+	QDF_MODULE_ID_T2LM,
 	QDF_MODULE_ID_ANY,
 	QDF_MODULE_ID_MAX,
 } QDF_MODULE_ID;

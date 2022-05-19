@@ -178,7 +178,7 @@ void dp_flush_monitor_rings(struct dp_soc *soc)
 	hal_soc_handle_t hal_soc = soc->hal_soc;
 	uint32_t lmac_id;
 	uint32_t hp, tp;
-	uint8_t dp_intr_id;
+	int dp_intr_id;
 	int budget;
 	void *mon_dst_srng;
 	struct dp_mon_pdev *mon_pdev = pdev->monitor_pdev;
@@ -198,6 +198,9 @@ void dp_flush_monitor_rings(struct dp_soc *soc)
 		return;
 
 	dp_intr_id = soc->mon_intr_id_lmac_map[lmac_id];
+	if (qdf_unlikely(dp_intr_id == DP_MON_INVALID_LMAC_ID))
+		return;
+
 	mon_dst_srng = dp_rxdma_get_mon_dst_ring(pdev, lmac_id);
 
 	/* reap full ring */
@@ -874,9 +877,8 @@ dp_set_bpr_enable_1_0(struct dp_pdev *pdev, int val)
 }
 #endif
 
-#if defined(WDI_EVENT_ENABLE) &&\
-	(defined(QCA_ENHANCED_STATS_SUPPORT) || !defined(REMOVE_PKT_LOG))
-#ifndef WLAN_TX_PKT_CAPTURE_ENH
+#ifdef QCA_ENHANCED_STATS_SUPPORT
+#if defined(WDI_EVENT_ENABLE) && !defined(WLAN_TX_PKT_CAPTURE_ENH)
 /**
  * dp_ppdu_desc_notify_1_0 - Notify upper layer for PPDU indication via WDI
  *
@@ -939,6 +941,19 @@ static bool dp_ppdu_stats_feat_enable_check_1_0(struct dp_pdev *pdev)
 		return false;
 	else
 		return true;
+}
+
+/**
+ * dp_mon_tx_stats_update_1_0 - Update Tx stats from HTT PPDU completion path
+ *
+ * @monitor: Monitor peer
+ * @ppdu: Tx PPDU user completion info
+ */
+void
+dp_mon_tx_stats_update_1_0(struct dp_mon_peer *mon_peer,
+			   struct cdp_tx_completion_ppdu_user *ppdu)
+{
+	ppdu->punc_mode = NO_PUNCTURE;
 }
 #endif
 
@@ -1037,14 +1052,6 @@ dp_mon_register_feature_ops_1_0(struct dp_soc *soc)
 #if defined(WDI_EVENT_ENABLE) &&\
 	(defined(QCA_ENHANCED_STATS_SUPPORT) || !defined(REMOVE_PKT_LOG))
 	mon_ops->mon_ppdu_stats_ind_handler = dp_ppdu_stats_ind_handler;
-#ifndef WLAN_TX_PKT_CAPTURE_ENH
-	mon_ops->mon_ppdu_desc_deliver = dp_ppdu_desc_deliver;
-	mon_ops->mon_ppdu_desc_notify = dp_ppdu_desc_notify_1_0;
-#else
-	mon_ops->mon_ppdu_desc_deliver = dp_ppdu_desc_deliver_1_0;
-#endif
-	mon_ops->mon_ppdu_stats_feat_enable_check =
-				dp_ppdu_stats_feat_enable_check_1_0;
 #endif
 #ifdef WLAN_RX_PKT_CAPTURE_ENH
 	mon_ops->mon_config_enh_rx_capture = dp_config_enh_rx_capture;
@@ -1077,9 +1084,17 @@ dp_mon_register_feature_ops_1_0(struct dp_soc *soc)
 				dp_mon_tx_enable_enhanced_stats_1_0;
 	mon_ops->mon_tx_disable_enhanced_stats =
 				dp_mon_tx_disable_enhanced_stats_1_0;
-#ifdef WLAN_FEATURE_11BE
-	mon_ops->mon_tx_stats_update = NULL;
+	mon_ops->mon_ppdu_stats_feat_enable_check =
+				dp_ppdu_stats_feat_enable_check_1_0;
+#ifndef WLAN_TX_PKT_CAPTURE_ENH
+	mon_ops->mon_ppdu_desc_deliver = dp_ppdu_desc_deliver;
+#ifdef WDI_EVENT_ENABLE
+	mon_ops->mon_ppdu_desc_notify = dp_ppdu_desc_notify_1_0;
 #endif
+#else
+	mon_ops->mon_ppdu_desc_deliver = dp_ppdu_desc_deliver_1_0;
+#endif
+	mon_ops->mon_tx_stats_update = dp_mon_tx_stats_update_1_0;
 #endif
 #if defined(ATH_SUPPORT_NAC_RSSI) || defined(ATH_SUPPORT_NAC)
 	mon_ops->mon_filter_setup_smart_monitor =
@@ -1113,6 +1128,7 @@ dp_mon_register_feature_ops_1_0(struct dp_soc *soc)
 #if defined(DP_CON_MON) && !defined(REMOVE_PKT_LOG)
 	mon_ops->mon_pktlogmod_exit = dp_pktlogmod_exit;
 #endif
+	mon_ops->rx_hdr_length_set = NULL;
 	mon_ops->rx_packet_length_set = NULL;
 	mon_ops->rx_mon_enable = NULL;
 	mon_ops->rx_wmask_subscribe = NULL;
@@ -1135,6 +1151,7 @@ dp_mon_register_feature_ops_1_0(struct dp_soc *soc)
 	mon_ops->mon_filter_reset_undecoded_metadata_capture =
 		dp_mon_filter_reset_undecoded_metadata_capture_1_0;
 #endif
+	mon_ops->mon_rx_stats_update_rssi_dbm_params = NULL;
 }
 
 struct dp_mon_ops monitor_ops_1_0 = {
@@ -1149,7 +1166,7 @@ struct dp_mon_ops monitor_ops_1_0 = {
 	.mon_vdev_detach = dp_mon_vdev_detach,
 	.mon_peer_attach = dp_mon_peer_attach,
 	.mon_peer_detach = dp_mon_peer_detach,
-	.mon_peer_get_rdkstats_ctx = dp_mon_peer_get_rdkstats_ctx,
+	.mon_peer_get_peerstats_ctx = dp_mon_peer_get_peerstats_ctx,
 	.mon_peer_reset_stats = dp_mon_peer_reset_stats,
 	.mon_peer_get_stats = dp_mon_peer_get_stats,
 	.mon_invalid_peer_update_pdev_stats =
@@ -1211,6 +1228,10 @@ struct dp_mon_ops monitor_ops_1_0 = {
 	.mon_tx_ppdu_stats_detach = NULL,
 	.mon_peer_tx_capture_filter_check = NULL,
 #endif
+	.mon_lite_mon_alloc = NULL,
+	.mon_lite_mon_dealloc = NULL,
+	.mon_lite_mon_vdev_delete = NULL,
+	.mon_lite_mon_disable_rx = NULL,
 };
 
 struct cdp_mon_ops dp_ops_mon_1_0 = {
@@ -1222,6 +1243,13 @@ struct cdp_mon_ops dp_ops_mon_1_0 = {
 	.soc_config_full_mon_mode = dp_soc_config_full_mon_mode,
 	.get_mon_pdev_rx_stats = dp_pdev_get_rx_mon_stats,
 	.txrx_enable_mon_reap_timer = dp_enable_mon_reap_timer,
+#ifdef QCA_SUPPORT_LITE_MONITOR
+	.txrx_set_lite_mon_config = NULL,
+	.txrx_get_lite_mon_config = NULL,
+	.txrx_set_lite_mon_peer_config = NULL,
+	.txrx_get_lite_mon_peer_config = NULL,
+	.txrx_is_lite_mon_enabled = NULL,
+#endif
 };
 
 #ifdef QCA_MONITOR_OPS_PER_SOC_SUPPORT

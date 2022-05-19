@@ -25,6 +25,21 @@
 #define DMA_LENGTH_128B 2
 #define DMA_LENGTH_256B 4
 
+/* rx hdr tlv dma lengths */
+enum dp_rx_hdr_dma_length {
+	/* default dma length(128B) */
+	DEFAULT_RX_HDR_DMA_LENGTH = 0,
+	/* dma length 64 bytes */
+	RX_HDR_DMA_LENGTH_64B = 1,
+	/* dma length 128 bytes */
+	RX_HDR_DMA_LENGTH_128B = 2,
+	/* dma length 256 bytes */
+	RX_HDR_DMA_LENGTH_256B = 3,
+};
+
+/* fwd declarations */
+struct dp_mon_pdev_be;
+
 /**
  * dp_rx_mon_enable_set() - Setup rx monitor feature
  * @msg_word: msg word
@@ -33,6 +48,15 @@
 void
 dp_rx_mon_enable_set(uint32_t *msg_word,
 		     struct htt_rx_ring_tlv_filter *tlv_filter);
+
+/**
+ * dp_rx_mon_hdr_length_set() - Setup rx monitor hdr tlv length
+ * @msg_word: msg word
+ * @htt_tlv_filter: rx ring filter configuration
+ */
+void
+dp_rx_mon_hdr_length_set(uint32_t *msg_word,
+			 struct htt_rx_ring_tlv_filter *tlv_filter);
 
 /**
  * dp_rx_mon_packet_length_set() - Setup rx monitor per packet type length
@@ -131,30 +155,6 @@ dp_mon_filter_setup_mcopy_mode_2_0(struct dp_pdev *pdev)
 
 static inline void
 dp_mon_filter_reset_mcopy_mode_2_0(struct dp_pdev *pdev)
-{
-}
-#endif
-
-#if defined(ATH_SUPPORT_NAC_RSSI) || defined(ATH_SUPPORT_NAC)
-/**
- * dp_mon_filter_setup_smart_monitor() - Setup the smart monitor mode filter
- * @pdev: DP pdev handle
- */
-void dp_mon_filter_setup_smart_monitor_2_0(struct dp_pdev *pdev);
-
-/**
- * dp_mon_filter_reset_smart_monitor() - Reset the smart monitor mode filter
- * @pdev: DP pdev handle
- */
-void dp_mon_filter_reset_smart_monitor_2_0(struct dp_pdev *pdev);
-#else
-static inline void
-dp_mon_filter_setup_smart_monitor_2_0(struct dp_pdev *pdev)
-{
-}
-
-static inline void
-dp_mon_filter_reset_smart_monitor_2_0(struct dp_pdev *pdev)
 {
 }
 #endif
@@ -331,4 +331,9 @@ void dp_mon_filter_dealloc_2_0(struct dp_pdev *pdev);
  */
 QDF_STATUS dp_mon_filter_alloc_2_0(struct dp_pdev *pdev);
 
+#ifdef QCA_SUPPORT_LITE_MONITOR
+void dp_mon_filter_reset_rx_lite_mon(struct dp_mon_pdev_be *be_mon_pdev);
+
+void dp_mon_filter_setup_rx_lite_mon(struct dp_mon_pdev_be *be_mon_pdev);
+#endif
 #endif /* _DP_MON_FILTER_2_0_H_ */

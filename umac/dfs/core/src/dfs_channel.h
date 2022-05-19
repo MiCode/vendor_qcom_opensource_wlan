@@ -1,6 +1,7 @@
 /*
  * Copyright (c) 2016-2018,2020-2021 The Linux Foundation. All rights reserved.
  * Copyright (c) 2008 Atheros Communications, Inc.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -795,10 +796,10 @@
 /* if channel has been checked for DFS */
 #define WLAN_CHAN_DFS_CLEAR        0x0008
 
-/* DFS radar history for slave device(STA mode) */
+/* DFS radar history for client device(STA mode) */
 #define WLAN_CHAN_HISTORY_RADAR    0x0100
 
-/* DFS CAC valid for  slave device(STA mode) */
+/* DFS CAC valid for  client device(STA mode) */
 #define WLAN_CHAN_CAC_VALID        0x0200
 
 #define WLAN_IS_CHAN_DFS(_c) \

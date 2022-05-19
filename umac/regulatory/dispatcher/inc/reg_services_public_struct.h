@@ -749,6 +749,21 @@ struct reg_dmn_op_class_map_t {
 };
 
 /**
+ * enum opclass_config: Opclass configuration
+ * @OPCLASSES_SUPPORTED_BY_CUR_HWMODE: Retrieve opclasses that is supported
+ * by the current hw mode.
+ * @OPCLASSES_NOT_SUPPORTED_BY_CUR_HWMODE: Retrieve opclasses that are not
+ * supported by the current hw mode.
+ * OPCLASSES_SUPPORTED_BY_DOMAIN: Populate the opclass supported by the radio
+ * without considering the capability of current hwmode.
+ */
+enum opclass_config {
+	OPCLASSES_SUPPORTED_BY_CUR_HWMODE = 1,
+	OPCLASSES_NOT_SUPPORTED_BY_CUR_HWMODE = 2,
+	OPCLASSES_SUPPORTED_BY_DOMAIN = 3
+};
+
+/**
  * struct regdmn_ap_cap_opclass_t: AP Cap operation class table
  * @op_class: operating class number
  * @ch_width: channel width in MHz
@@ -1346,7 +1361,7 @@ struct reg_afc_expiry_event {
  * @afc_chan_info: Pointer to AFC channel object
  */
 struct reg_fw_afc_power_event {
-	uint8_t resp_id;
+	uint32_t resp_id;
 	enum reg_fw_afc_power_event_status_code fw_status_code;
 	enum reg_afc_serv_resp_code serv_resp_code;
 	uint32_t afc_wfa_version;

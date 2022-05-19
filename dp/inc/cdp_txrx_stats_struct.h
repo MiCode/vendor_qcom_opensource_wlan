@@ -47,6 +47,7 @@
 #ifdef WLAN_FEATURE_11BE
 #define MAX_MCS (16 + 1)
 #define MAX_MCS_11BE 16
+#define MAX_PUNCTURED_MODE 5
 #else
 #define MAX_MCS (14 + 1)
 #endif
@@ -706,6 +707,8 @@ enum WDI_EVENT {
 #ifdef QCA_UNDECODED_METADATA_SUPPORT
 	WDI_EVENT_RX_PPDU_DESC_UNDECODED_METADATA,
 #endif
+	WDI_EVENT_LITE_MON_RX,
+	WDI_EVENT_LITE_MON_TX,
 	/* End of new event items */
 	WDI_EVENT_LAST
 };
@@ -1362,6 +1365,7 @@ struct protocol_trace_count {
  * @last_tx_ts: last timestamp in jiffies when tx comp occurred
  * @su_be_ppdu_cnt: SU Tx packet count
  * @mu_be_ppdu_cnt: MU Tx packet count
+ * @punc_bw[MAX_PUNCTURED_MODE]: MSDU count for punctured BW
  */
 struct cdp_tx_stats {
 	struct cdp_pkt_info comp_pkt;
@@ -1477,6 +1481,7 @@ struct cdp_tx_stats {
 #ifdef WLAN_FEATURE_11BE
 	struct cdp_pkt_type su_be_ppdu_cnt;
 	struct cdp_pkt_type mu_be_ppdu_cnt[TXRX_TYPE_MU_MAX];
+	uint32_t punc_bw[MAX_PUNCTURED_MODE];
 #endif
 };
 
@@ -1565,6 +1570,7 @@ struct cdp_tx_stats {
  * @mpdu_retry_cnt: retries of mpdu in rx
  * @su_be_ppdu_cnt: SU Rx packet count for BE
  * @mu_be_ppdu_cnt: MU rx packet count for BE
+ * @punc_bw[MAX_PUNCTURED_MODE]: MSDU count for punctured BW
  */
 struct cdp_rx_stats {
 	struct cdp_pkt_info to_stack;
@@ -1650,7 +1656,9 @@ struct cdp_rx_stats {
 #ifdef WLAN_FEATURE_11BE
 	struct cdp_pkt_type su_be_ppdu_cnt;
 	struct cdp_pkt_type mu_be_ppdu_cnt[TXRX_TYPE_MU_MAX];
+	uint32_t punc_bw[MAX_PUNCTURED_MODE];
 #endif
+	uint32_t mcast_3addr_drop;
 };
 
 /* struct cdp_tx_ingress_stats - Tx ingress Stats
@@ -2747,6 +2755,7 @@ struct cdp_peer_hmwds_ast_add_status {
  * Enumeration of cdp soc parameters
  * @DP_SOC_PARAM_EAPOL_OVER_CONTROL_PORT: For sending EAPOL's over control port
  * @DP_SOC_PARAM_MULTI_PEER_GRP_CMD_SUPPORT: For sending bulk AST delete
+ * @DP_SOC_PARAM_RSSI_DBM_CONV_SUPPORT: To set the rssi dbm support bit
  */
 enum cdp_soc_param_t {
 	DP_SOC_PARAM_MSDU_EXCEPTION_DESC,
@@ -2754,6 +2763,7 @@ enum cdp_soc_param_t {
 	DP_SOC_PARAM_MAX_AST_AGEOUT,
 	DP_SOC_PARAM_EAPOL_OVER_CONTROL_PORT,
 	DP_SOC_PARAM_MULTI_PEER_GRP_CMD_SUPPORT,
+	DP_SOC_PARAM_RSSI_DBM_CONV_SUPPORT,
 	DP_SOC_PARAM_MAX,
 };
 

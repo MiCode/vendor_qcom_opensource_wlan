@@ -1158,6 +1158,55 @@ static inline uint8_t wlan_vdev_mlme_feat_ext2_cap_get(
 }
 
 /**
+ * wlan_vdev_mlme_op_flags_set() - set vdev op flag
+ * @vdev: VDEV object
+ * @flag: vdev op flag to be set
+ *
+ * API to set the MLME VDEV OP flag
+ *
+ * Return: void
+ */
+static inline void wlan_vdev_mlme_op_flags_set(
+				struct wlan_objmgr_vdev *vdev,
+				uint32_t flag)
+{
+	vdev->vdev_mlme.vdev_op_flags |= flag;
+}
+
+/**
+ * wlan_vdev_mlme_op_flags_clear() - clear vdev op flag
+ * @vdev: VDEV object
+ * @flag: vdev op flag to be cleared
+ *
+ * API to clear the MLME VDEV OP flag
+ *
+ * Return: void
+ */
+static inline void wlan_vdev_mlme_op_flags_clear(
+				struct wlan_objmgr_vdev *vdev,
+				uint32_t flag)
+{
+	vdev->vdev_mlme.vdev_op_flags &= ~flag;
+}
+
+/**
+ * wlan_vdev_mlme_op_flags_get() - get vdev op flag
+ * @vdev: VDEV object
+ * @flag: vdev op flags to be checked
+ *
+ * API to know MLME VDEV OP flag is set or not
+ *
+ * Return: 1 -- if flag is set
+ *         0 -- if flag is clear
+ */
+static inline uint8_t wlan_vdev_mlme_op_flags_get(
+				struct wlan_objmgr_vdev *vdev,
+				uint32_t flag)
+{
+	return (vdev->vdev_mlme.vdev_op_flags & flag) ? 1 : 0;
+}
+
+/**
  * wlan_vdev_mlme_cap_set() - mlme caps set
  * @vdev: VDEV object
  * @cap: capabilities to be set

@@ -444,7 +444,8 @@ static void osif_fill_connect_resp_mlo_params(
 					goto end;
 				}
 			}
-			ml_link_params[i].bss = bss;
+			qdf_mem_copy(ml_link_params[i].bssid, bss->bssid,
+				     QDF_MAC_ADDR_SIZE);
 
 			if (i == rsp->ml_parnter_info.num_partner_links)
 				break;

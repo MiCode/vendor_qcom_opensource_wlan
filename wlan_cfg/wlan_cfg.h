@@ -195,7 +195,7 @@ struct wlan_srng_cfg {
  * @rxdma_refill_ring: rxdma refill ring size
  * @rxdma_err_dst_ring: rxdma error detination ring size
  * @raw_mode_war: enable/disable raw mode war
- * @enable_data_stall_detection: flag to enable data stall detection
+ * @enable_data_stall_detection: enable/disable specific data stall detection
  * @disable_intra_bss_fwd: flag to disable intra bss forwarding
  * @rxdma1_enable: flag to indicate if rxdma1 is enabled
  * @delay_mon_replenish: delay monitor buffer replenish
@@ -335,7 +335,7 @@ struct wlan_cfg_dp_soc_ctxt {
 	int rxdma_err_dst_ring;
 	uint32_t per_pkt_trace;
 	bool raw_mode_war;
-	bool enable_data_stall_detection;
+	uint32_t enable_data_stall_detection;
 	bool disable_intra_bss_fwd;
 	bool rxdma1_enable;
 	bool delay_mon_replenish;

@@ -31,6 +31,7 @@
 #include "wlan_mgmt_txrx_utils_api.h"
 #ifdef CONN_MGR_ADV_FEATURE
 #include "wlan_mlme_api.h"
+#include "wlan_wfa_tgt_if_tx_api.h"
 #endif
 
 #define CM_PCL_RSSI_THRESHOLD -75
@@ -2085,6 +2086,18 @@ static bool cm_check_h2e_support(const uint8_t *rsnxe)
 	return false;
 }
 
+#ifdef CONN_MGR_ADV_FEATURE
+static bool wlan_cm_wfa_get_test_feature_flags(struct wlan_objmgr_psoc *psoc)
+{
+	return wlan_wfa_get_test_feature_flags(psoc, WFA_TEST_IGNORE_RSNXE);
+}
+#else
+static bool wlan_cm_wfa_get_test_feature_flags(struct wlan_objmgr_psoc *psoc)
+{
+	return false;
+}
+#endif
+
 bool wlan_cm_6ghz_allowed_for_akm(struct wlan_objmgr_psoc *psoc,
 				  uint32_t key_mgmt, uint16_t rsn_caps,
 				  const uint8_t *rsnxe, uint8_t sae_pwe,
@@ -2140,7 +2153,8 @@ bool wlan_cm_6ghz_allowed_for_akm(struct wlan_objmgr_psoc *psoc,
 	    QDF_HAS_PARAM(key_mgmt, WLAN_CRYPTO_KEY_MGMT_FT_SAE)))
 		return true;
 
-	return cm_check_h2e_support(rsnxe);
+	return (cm_check_h2e_support(rsnxe) ||
+		wlan_cm_wfa_get_test_feature_flags(psoc));
 }
 
 void wlan_cm_set_check_6ghz_security(struct wlan_objmgr_psoc *psoc,

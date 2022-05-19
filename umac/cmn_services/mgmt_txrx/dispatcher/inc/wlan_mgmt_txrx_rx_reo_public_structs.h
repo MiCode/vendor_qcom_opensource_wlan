@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -58,22 +58,38 @@ struct mgmt_rx_reo_snapshot_params {
 };
 
 /*
- * struct mgmt_rx_reo_snapshot - Represents the management rx-reorder snapshot
+ * struct mgmt_rx_reo_snapshot_info - Information related to management Rx
+ * reorder snapshot
+ * @address: Snapshot address
+ * @version: Snapshot version
+ */
+struct mgmt_rx_reo_snapshot_info {
+	struct mgmt_rx_reo_shared_snapshot *address;
+	uint8_t version;
+};
+
+/*
+ * struct mgmt_rx_reo_shared_snapshot - Represents the management rx-reorder
+ * shared snapshots
  * @mgmt_rx_reo_snapshot_low: Lower 32 bits of the reo snapshot
  * @mgmt_rx_reo_snapshot_high: Higher 32 bits of the reo snapshot
  */
-struct mgmt_rx_reo_snapshot {
+struct mgmt_rx_reo_shared_snapshot {
 	union {
 		uint32_t mgmt_rx_reo_snapshot_low;
-		uint32_t valid:1,
-			 mgmt_pkt_ctr:16,
-			 global_timestamp_low:15;
+		uint32_t mgmt_pkt_ctr_ver_a:16,
+			 global_timestamp_redundant_ver_a:15,
+			 valid_ver_a:1;
+		uint32_t global_timestamp_low_ver_b:15,
+			 mgmt_pkt_ctr_ver_b:16,
+			 valid_ver_b:1;
 	};
 
 	union {
 		uint32_t mgmt_rx_reo_snapshot_high;
-		uint32_t global_timestamp_high:17,
-			 mgmt_pkt_ctr_redundant:15;
+		uint32_t global_timestamp_ver_a;
+		uint32_t mgmt_pkt_ctr_redundant_ver_b:15,
+			 global_timestamp_high_ver_b:17;
 	};
 };
 
@@ -84,6 +100,9 @@ struct mgmt_rx_reo_snapshot {
  * @link_id: link ID for which FW consumed event is received
  * @mgmt_pkt_ctr: MGMT packet counter of the frame that is consumed
  * @global_timestamp: Global timestamp of the frame that is consumed
+ * @duration_us: duration in us
+ * @start_timestamp: start time stamp
+ * @end_timestamp: end time stamp
  */
 struct mgmt_rx_reo_params {
 	bool valid;
@@ -91,6 +110,9 @@ struct mgmt_rx_reo_params {
 	uint8_t link_id;
 	uint16_t mgmt_pkt_ctr;
 	uint32_t global_timestamp;
+	uint16_t duration_us;
+	uint32_t start_timestamp;
+	uint32_t end_timestamp;
 };
 
 /*

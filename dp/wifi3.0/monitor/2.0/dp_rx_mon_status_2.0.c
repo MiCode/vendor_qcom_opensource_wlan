@@ -46,7 +46,7 @@ dp_rx_process_pktlog_be(struct dp_soc *soc, struct dp_pdev *pdev,
 		return QDF_STATUS_E_NOMEM;
 
 	qdf_nbuf_add_rx_frag(status_frag, nbuf, 0,
-			     end_offset,
+			     (end_offset + BUFFER_RESIDUE),
 			     RX_MON_MIN_HEAD_ROOM, true);
 
 	if (mon_pdev->dp_peer_based_pktlog && ppdu_info) {

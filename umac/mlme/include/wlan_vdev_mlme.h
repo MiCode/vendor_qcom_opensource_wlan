@@ -166,7 +166,7 @@ struct vdev_mlme_he_ops_info {
 
 /**
  * struct vdev_mlme_eht_caps_info - vdev mlme EHT capability information
- * @eht_maccap_nseppriaccess_support : NSEP Priority Access Supported
+ * @eht_maccap_epcspriaccess_support : EPCS Priority Access Supported
  * @eht_maccap_ehtomctrl_support     : EHT OM Control Support
  * @eht_maccap_trigtxop_support      : Triggered TXOP Sharing Support
  * @eht_phycap_reserved              : Reserved
@@ -216,7 +216,7 @@ struct vdev_mlme_he_ops_info {
  * @eht_phycap_mubfmr320mhz          : MU Beamformer (BW = 320 MHz)
  */
 struct vdev_mlme_eht_caps_info {
-	uint32_t eht_maccap_nseppriaccess_support :1,
+	uint32_t eht_maccap_epcspriaccess_support :1,
 		 eht_maccap_ehtomctrl_support     :1,
 		 eht_maccap_trigtxop_support      :1;
 	uint32_t eht_phycap_reserved                    :1,
@@ -258,7 +258,10 @@ struct vdev_mlme_eht_caps_info {
 		 eht_phycap_nonofdmaulmumimo320mhz      :1,
 		 eht_phycap_mubfmrlt80mhz               :1,
 		 eht_phycap_mubfmr160mhz                :1,
-		 eht_phycap_mubfmr320mhz                :1;
+		 eht_phycap_mubfmr320mhz                :1,
+		 eht_phycap_tb_sounding_feedback_rl     :1;
+	uint32_t eht_phycap_rx1024qamwiderbwdlofdma     :1,
+		 eht_phycap_rx4096qamwiderbwdlofdma     :1;
 };
 
 /**

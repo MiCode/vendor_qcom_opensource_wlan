@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2014-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -221,7 +222,9 @@ typedef struct s_qdf_trace_data {
  * @QDF_DP_TRACE_FREE_PACKET_PTR_RECORD - tx completion ptr record
  * @QDF_DP_TRACE_LOW_VERBOSITY - below this are part of low verbosity
  * @QDF_DP_TRACE_HDD_TX_PACKET_PTR_RECORD - HDD layer ptr record
+ * @QDF_DP_TRACE_TX_PACKET_PTR_RECORD - DP component Tx ptr record
  * @QDF_DP_TRACE_LI_DP_TX_PACKET_PTR_RECORD - Lithium DP layer ptr record
+ * @QDF_DP_TRACE_RX_PACKET_PTR_RECORD - DP component Rx ptr record
  * @QDF_DP_TRACE_RX_HDD_PACKET_PTR_RECORD - HDD RX record
  * @QDF_DP_TRACE_CE_PACKET_PTR_RECORD - CE layer ptr record
  * @QDF_DP_TRACE_CE_FAST_PACKET_PTR_RECORD- CE fastpath ptr record
@@ -267,7 +270,9 @@ enum  QDF_DP_TRACE_ID {
 	QDF_DP_TRACE_FREE_PACKET_PTR_RECORD,
 	QDF_DP_TRACE_LOW_VERBOSITY,
 	QDF_DP_TRACE_HDD_TX_PACKET_PTR_RECORD,
+	QDF_DP_TRACE_TX_PACKET_PTR_RECORD,
 	QDF_DP_TRACE_LI_DP_TX_PACKET_PTR_RECORD,
+	QDF_DP_TRACE_RX_PACKET_PTR_RECORD,
 	QDF_DP_TRACE_RX_HDD_PACKET_PTR_RECORD,
 	QDF_DP_TRACE_CE_PACKET_PTR_RECORD,
 	QDF_DP_TRACE_CE_FAST_PACKET_PTR_RECORD,

@@ -6428,12 +6428,30 @@ static inline void dp_vdev_register_rx_eapol(struct dp_vdev *vdev,
 #endif
 
 #ifdef WLAN_FEATURE_11BE_MLO
+#if defined(WLAN_MLO_MULTI_CHIP) && defined(WLAN_MCAST_MLO)
+static inline void dp_vdev_save_mld_info(struct dp_vdev *vdev,
+					 struct cdp_vdev_info *vdev_info)
+{
+	if (qdf_is_macaddr_zero((struct qdf_mac_addr *)vdev_info->mld_mac_addr))
+		vdev->mlo_vdev = false;
+	else
+		vdev->mlo_vdev = true;
+}
+#else
+static inline void dp_vdev_save_mld_info(struct dp_vdev *vdev,
+					 struct cdp_vdev_info *vdev_info)
+{
+}
+#endif
 static inline void dp_vdev_save_mld_addr(struct dp_vdev *vdev,
 					 struct cdp_vdev_info *vdev_info)
 {
 	if (vdev_info->mld_mac_addr)
 		qdf_mem_copy(&vdev->mld_mac_addr.raw[0],
 			     vdev_info->mld_mac_addr, QDF_MAC_ADDR_SIZE);
+
+	dp_vdev_save_mld_info(vdev, vdev_info);
+
 }
 #else
 static inline void dp_vdev_save_mld_addr(struct dp_vdev *vdev,
@@ -7170,6 +7188,7 @@ dp_peer_create_wifi3(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
 		dp_peer_add_ast(soc, peer, peer_mac_addr, ast_type, 0);
 
 		peer->valid = 1;
+		peer->is_tdls_peer = false;
 		dp_local_peer_id_alloc(pdev, peer);
 
 		qdf_spinlock_create(&peer->peer_info_lock);
@@ -7369,7 +7388,7 @@ QDF_STATUS dp_peer_mlo_setup(
 	peer->primary_link = setup_info->is_primary_link;
 	mld_peer = dp_peer_find_hash_find(soc,
 					  setup_info->mld_peer_mac,
-					  0, DP_VDEV_ALL, DP_MOD_ID_CDP);
+					  0, vdev_id, DP_MOD_ID_CDP);
 	if (mld_peer) {
 		if (setup_info->is_first_link) {
 			/* assign rx_tid to mld peer */
@@ -8879,7 +8898,8 @@ static QDF_STATUS dp_vdev_getstats(struct cdp_vdev *vdev_handle,
 			    vdev_stats->rx.multipass_rx_pkt_drop +
 			    vdev_stats->rx.peer_unauth_rx_pkt_drop +
 			    vdev_stats->rx.policy_check_drop +
-			    vdev_stats->rx.nawds_mcast_drop;
+			    vdev_stats->rx.nawds_mcast_drop +
+			    vdev_stats->rx.mcast_3addr_drop;
 
 	qdf_mem_free(vdev_stats);
 
@@ -8943,7 +8963,8 @@ static void dp_pdev_getstats(struct cdp_pdev *pdev_handle,
 		pdev->stats.rx.multipass_rx_pkt_drop +
 		pdev->stats.rx.peer_unauth_rx_pkt_drop +
 		pdev->stats.rx.policy_check_drop +
-		pdev->stats.rx.nawds_mcast_drop;
+		pdev->stats.rx.nawds_mcast_drop +
+		pdev->stats.rx.mcast_3addr_drop;
 }
 
 /**
@@ -10202,6 +10223,11 @@ dp_set_vdev_param(struct cdp_soc_t *cdp_soc, uint8_t vdev_id,
 		vdev->skip_bar_update_last_ts = 0;
 		break;
 #endif
+	case CDP_DROP_3ADDR_MCAST:
+		dp_info("vdev_id %d drop 3 addr mcast :%d", vdev_id,
+			val.cdp_drop_3addr_mcast);
+		vdev->drop_3addr_mcast = val.cdp_drop_3addr_mcast;
+		break;
 	default:
 		break;
 	}
@@ -10230,7 +10256,7 @@ dp_set_psoc_param(struct cdp_soc_t *cdp_soc,
 
 	switch (param) {
 	case CDP_ENABLE_RATE_STATS:
-		soc->rdkstats_enabled = val.cdp_psoc_param_en_rate_stats;
+		soc->peerstats_enabled = val.cdp_psoc_param_en_rate_stats;
 		break;
 	case CDP_SET_NSS_CFG:
 		wlan_cfg_set_dp_soc_nss_cfg(wlan_cfg_ctx,
@@ -10358,7 +10384,7 @@ static int dp_txrx_get_ratekbps(int preamb, int mcs,
 {
 	uint32_t rix;
 	uint16_t ratecode;
-	enum PUNCTURED_MODES punc_mode = NO_PUNCTURE;
+	enum cdp_punctured_modes punc_mode = NO_PUNCTURE;
 
 	return dp_getrateindex((uint32_t)gintval, (uint16_t)mcs, 1,
 			       (uint8_t)preamb, 1, punc_mode,
@@ -11969,6 +11995,11 @@ static QDF_STATUS dp_soc_set_param(struct cdp_soc_t  *soc_hdl,
 		dp_info("Multi Peer group command support:%d",
 			soc->multi_peer_grp_cmd_supported);
 		break;
+	case DP_SOC_PARAM_RSSI_DBM_CONV_SUPPORT:
+		soc->features.rssi_dbm_conv_support = value;
+		dp_info("Rssi dbm converstion support:%u",
+			soc->features.rssi_dbm_conv_support);
+		break;
 	default:
 		dp_info("not handled param %d ", param);
 		break;
@@ -12003,7 +12034,7 @@ dp_peer_flush_rate_stats_req(struct dp_soc *soc, struct dp_peer *peer,
 
 	dp_wdi_event_handler(
 		WDI_EVENT_FLUSH_RATE_STATS_REQ,
-		soc, dp_monitor_peer_get_rdkstats_ctx(soc, peer),
+		soc, dp_monitor_peer_get_peerstats_ctx(soc, peer),
 		peer->peer_id,
 		WDI_NO_VAL, peer->vdev->pdev->pdev_id);
 }
@@ -12039,13 +12070,13 @@ dp_flush_rate_stats_req(struct cdp_soc_t *soc_hdl,
 }
 #endif
 
-static void *dp_peer_get_rdkstats_ctx(struct cdp_soc_t *soc_hdl,
-				      uint8_t vdev_id,
-				      uint8_t *mac_addr)
+static void *dp_peer_get_peerstats_ctx(struct cdp_soc_t *soc_hdl,
+				       uint8_t vdev_id,
+				       uint8_t *mac_addr)
 {
 	struct dp_soc *soc = (struct dp_soc *)soc_hdl;
 	struct dp_peer *peer;
-	void *rdkstats_ctx = NULL;
+	void *peerstats_ctx = NULL;
 
 	if (mac_addr) {
 		peer = dp_peer_find_hash_find(soc, mac_addr,
@@ -12055,13 +12086,13 @@ static void *dp_peer_get_rdkstats_ctx(struct cdp_soc_t *soc_hdl,
 			return NULL;
 
 		if (!IS_MLO_DP_MLD_PEER(peer))
-			rdkstats_ctx = dp_monitor_peer_get_rdkstats_ctx(soc,
-									peer);
+			peerstats_ctx = dp_monitor_peer_get_peerstats_ctx(soc,
+									  peer);
 
 		dp_peer_unref_delete(peer, DP_MOD_ID_CDP);
 	}
 
-	return rdkstats_ctx;
+	return peerstats_ctx;
 }
 
 #if defined(FEATURE_PERPKT_INFO) && WDI_EVENT_ENABLE
@@ -12477,7 +12508,7 @@ static struct cdp_cmn_ops dp_ops_cmn = {
 	.get_rate_stats_ctx = dp_soc_get_rate_stats_ctx,
 	.txrx_peer_flush_rate_stats = dp_peer_flush_rate_stats,
 	.txrx_flush_rate_stats_request = dp_flush_rate_stats_req,
-	.txrx_peer_get_rdkstats_ctx = dp_peer_get_rdkstats_ctx,
+	.txrx_peer_get_peerstats_ctx = dp_peer_get_peerstats_ctx,
 
 	.set_pdev_pcp_tid_map = dp_set_pdev_pcp_tid_map_wifi3,
 	.set_vdev_pcp_tid_map = dp_set_vdev_pcp_tid_map_wifi3,
@@ -13498,6 +13529,7 @@ static struct cdp_peer_ops dp_ops_peer = {
 	.peer_get_peer_mac_addr = dp_peer_get_peer_mac_addr,
 	.get_peer_state = dp_get_peer_state,
 	.peer_flush_frags = dp_peer_flush_frags,
+	.set_peer_as_tdls_peer = dp_set_peer_as_tdls_peer,
 };
 #endif
 
@@ -14141,7 +14173,7 @@ static uint8_t dp_bucket_index(uint32_t delay, uint16_t *array)
 	uint8_t i = CDP_DELAY_BUCKET_0;
 
 	for (; i < CDP_DELAY_BUCKET_MAX - 1; i++) {
-		if (delay >= array[i] && delay <= array[i + 1])
+		if (delay >= array[i] && delay < array[i + 1])
 			return i;
 	}
 

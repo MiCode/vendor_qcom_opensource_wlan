@@ -162,11 +162,12 @@ wmi_unified_peer_flush_tids_send(wmi_unified_t wmi_handle,
 
 QDF_STATUS wmi_unified_peer_delete_send(wmi_unified_t wmi_handle,
 					uint8_t peer_addr[QDF_MAC_ADDR_SIZE],
-					uint8_t vdev_id)
+					struct peer_delete_cmd_params *param)
 {
 	if (wmi_handle->ops->send_peer_delete_cmd)
-		return wmi_handle->ops->send_peer_delete_cmd(wmi_handle,
-				  peer_addr, vdev_id);
+		return wmi_handle->ops->send_peer_delete_cmd(
+				wmi_handle,
+				peer_addr, param);
 
 	return QDF_STATUS_E_FAILURE;
 }
@@ -2670,6 +2671,18 @@ QDF_STATUS wmi_extract_scan_radio_cap_service_ready_ext2(
 	return QDF_STATUS_E_FAILURE;
 }
 
+QDF_STATUS wmi_extract_sw_cal_ver_ext2(wmi_unified_t wmi_handle,
+				       uint8_t *event,
+				       struct wmi_host_sw_cal_ver *cal)
+{
+	if (wmi_handle->ops->extract_sw_cal_ver_ext2)
+		return wmi_handle->ops->extract_sw_cal_ver_ext2(wmi_handle,
+								event,
+								cal);
+
+	return QDF_STATUS_E_FAILURE;
+}
+
 #ifdef WLAN_CONV_SPECTRAL_ENABLE
 QDF_STATUS wmi_extract_pdev_sscan_fw_cmd_fixed_param(
 			wmi_unified_t wmi_handle,
@@ -3398,6 +3411,32 @@ wmi_extract_oem_response_param(wmi_unified_t wmi_hdl, void *resp_buf,
 }
 #endif /* WIFI_POS_CONVERGED */
 
+#if defined(WIFI_POS_CONVERGED) && defined(WLAN_FEATURE_RTT_11AZ_SUPPORT)
+QDF_STATUS
+wmi_extract_pasn_peer_create_req(wmi_unified_t wmi, void *evt_buf,
+				 struct wifi_pos_pasn_peer_data *dst)
+{
+	if (wmi->ops->extract_pasn_peer_create_req_event)
+		return wmi->ops->extract_pasn_peer_create_req_event(wmi,
+								    evt_buf,
+								    dst);
+
+	return QDF_STATUS_E_FAILURE;
+}
+
+QDF_STATUS
+wmi_extract_pasn_peer_delete_req(wmi_unified_t wmi, void *evt_buf,
+				 struct wifi_pos_pasn_peer_data *dst)
+{
+	if (wmi->ops->extract_pasn_peer_delete_req_event)
+		return wmi->ops->extract_pasn_peer_delete_req_event(wmi,
+								    evt_buf,
+								    dst);
+
+	return QDF_STATUS_E_FAILURE;
+}
+#endif
+
 QDF_STATUS wmi_unified_extract_hw_mode_resp(wmi_unified_t wmi,
 					    void *evt_buf,
 					    uint32_t *cmd_status)
@@ -3795,5 +3834,20 @@ QDF_STATUS wmi_unified_pn_mgmt_rxfilter_send_cmd(
 	if (wmi_handle->ops->send_vdev_pn_mgmt_rxfilter_cmd)
 		return wmi_handle->ops->send_vdev_pn_mgmt_rxfilter_cmd(
 					wmi_handle, params);
+	return QDF_STATUS_E_FAILURE;
+}
+
+QDF_STATUS
+wmi_extract_pktlog_decode_info_event(wmi_unified_t wmi_handle,
+				     void *evt_buf, uint8_t *pdev_id,
+				     uint8_t *software_image,
+				     uint8_t *chip_info,
+				     uint32_t *pktlog_json_version)
+{
+	if (wmi_handle->ops->extract_pktlog_decode_info_event)
+		return wmi_handle->ops->extract_pktlog_decode_info_event(
+					wmi_handle, evt_buf, pdev_id,
+					software_image, chip_info,
+					pktlog_json_version);
 	return QDF_STATUS_E_FAILURE;
 }
