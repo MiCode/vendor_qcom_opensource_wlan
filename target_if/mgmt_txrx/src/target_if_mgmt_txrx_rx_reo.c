@@ -116,8 +116,12 @@ target_if_mgmt_rx_reo_register_event_handlers(struct wlan_objmgr_psoc *psoc)
 			target_if_mgmt_rx_reo_fw_consumed_event_handler,
 			WMI_RX_UMAC_CTX);
 
-	if (QDF_IS_STATUS_ERROR(status))
-		mgmt_rx_reo_err("Registering for MGMT Rx FW consumed event failed");
+	if (QDF_IS_STATUS_ERROR(status)) {
+		mgmt_rx_reo_err("Register Rx FW consumed event cb errcode %d",
+				status);
+		if (status ==  QDF_STATUS_E_NOSUPPORT)
+			status = QDF_STATUS_SUCCESS;
+	}
 
 	return status;
 }
@@ -138,8 +142,12 @@ target_if_mgmt_rx_reo_unregister_event_handlers(struct wlan_objmgr_psoc *psoc)
 			wmi_handle,
 			wmi_mgmt_rx_fw_consumed_eventid);
 
-	if (QDF_IS_STATUS_ERROR(status))
-		mgmt_rx_reo_err("Unregistering for MGMT Rx FW consumed event failed");
+	if (QDF_IS_STATUS_ERROR(status)) {
+		mgmt_rx_reo_err("Unregister Rx FW consumed event cb errcode %d",
+				status);
+		if (status ==  QDF_STATUS_E_NOSUPPORT)
+			status = QDF_STATUS_SUCCESS;
+	}
 
 	return status;
 }
