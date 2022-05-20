@@ -532,7 +532,7 @@ target_if_mgmt_rx_reo_extract_reo_params(
 	}
 
 	/* If REO feature is not enabled in FW, no need to extract REO params */
-	if (!wlan_psoc_nif_fw_ext_cap_get(psoc, WLAN_SOC_F_MGMT_RX_REO_CAPABLE))
+	if (!wlan_psoc_nif_feat_cap_get(psoc, WLAN_SOC_F_MGMT_RX_REO_CAPABLE))
 		return QDF_STATUS_SUCCESS;
 
 	if (!params) {

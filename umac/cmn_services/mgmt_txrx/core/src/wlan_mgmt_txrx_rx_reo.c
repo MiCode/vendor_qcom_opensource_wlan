@@ -2531,8 +2531,9 @@ wlan_mgmt_rx_reo_update_host_snapshot(struct wlan_objmgr_pdev *pdev,
 	pkt_ctr_delta_thresh = wlan_mgmt_rx_reo_get_pkt_ctr_delta_thresh(psoc);
 
 	if (pkt_ctr_delta_thresh && pkt_ctr_delta > pkt_ctr_delta_thresh) {
-		mgmt_rx_reo_err("pkt ctr delta %u > thresh %u", pkt_ctr_delta,
-				pkt_ctr_delta_thresh);
+		mgmt_rx_reo_err("pkt ctr delta %u > thresh %u for link %u",
+				pkt_ctr_delta, pkt_ctr_delta_thresh,
+				reo_params->link_id);
 		goto failure_debug;
 	}
 

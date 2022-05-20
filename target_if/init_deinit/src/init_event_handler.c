@@ -283,8 +283,8 @@ static int init_deinit_service_ready_event_handler(ol_scn_t scn_handle,
 
 	if (wmi_service_enabled(wmi_handle,
 				wmi_service_mgmt_rx_reo_supported))
-		wlan_psoc_nif_fw_ext_cap_set(psoc,
-					     WLAN_SOC_F_MGMT_RX_REO_CAPABLE);
+		wlan_psoc_nif_feat_cap_set(psoc,
+					   WLAN_SOC_F_MGMT_RX_REO_CAPABLE);
 
 	target_if_lteu_cfg_enable(psoc, tgt_hdl, event);
 

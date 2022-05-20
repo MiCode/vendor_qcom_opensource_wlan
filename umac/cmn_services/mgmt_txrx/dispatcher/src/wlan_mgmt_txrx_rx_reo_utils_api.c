@@ -223,8 +223,7 @@ wlan_mgmt_rx_reo_is_feature_enabled_at_psoc(struct wlan_objmgr_psoc *psoc)
 	if (!cfg_get(psoc, CFG_MGMT_RX_REO_ENABLE))
 		return false;
 
-	return wlan_psoc_nif_fw_ext_cap_get(psoc,
-					    WLAN_SOC_F_MGMT_RX_REO_CAPABLE);
+	return wlan_psoc_nif_feat_cap_get(psoc, WLAN_SOC_F_MGMT_RX_REO_CAPABLE);
 }
 
 qdf_export_symbol(wlan_mgmt_rx_reo_is_feature_enabled_at_psoc);
