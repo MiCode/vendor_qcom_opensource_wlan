@@ -2202,7 +2202,6 @@ hal_srng_access_end_unlocked(void *hal_soc, hal_ring_handle_t hal_ring_hdl)
  * This API should be used only if hal_srng_access_start was used to
  * start ring access
  *
- * Return: 0 on success; error on failire
  */
 static inline void
 hal_srng_access_end(void *hal_soc, hal_ring_handle_t hal_ring_hdl)
@@ -2217,6 +2216,40 @@ hal_srng_access_end(void *hal_soc, hal_ring_handle_t hal_ring_hdl)
 	hal_srng_access_end_unlocked(hal_soc, hal_ring_hdl);
 	SRNG_UNLOCK(&(srng->lock));
 }
+
+void hal_srng_access_end_v1(hal_soc_handle_t hal_soc_hdl,
+			    hal_ring_handle_t hal_ring_hdl,
+			    wlan_rtpm_dbgid rtpm_dbgid,
+			    bool is_critical_ctx);
+
+#ifdef FEATURE_RUNTIME_PM
+#define hal_srng_access_end_v1 hal_srng_rtpm_access_end
+
+/**
+ * hal_srng_rtpm_access_end - RTPM aware, Unlock ring access
+ * @hal_soc: Opaque HAL SOC handle
+ * @hal_ring_hdl: Ring pointer (Source or Destination ring)
+ * @rtpm_dbgid: RTPM debug id
+ * @is_critical_ctx: Whether the calling context is critical
+ *
+ * Function updates the HP/TP value to the hardware register.
+ * The target expects cached head/tail pointer to be updated to the
+ * shared location in the little-endian order, This API ensures that.
+ * This API should be used only if hal_srng_access_start was used to
+ * start ring access
+ *
+ * Return: None
+ */
+void
+hal_srng_rtpm_access_end(hal_soc_handle_t hal_soc_hdl,
+			 hal_ring_handle_t hal_ring_hdl,
+			 wlan_rtpm_dbgid rtpm_dbgid,
+			 bool is_critical_ctx);
+#else
+#define hal_srng_access_end_v1(hal_soc_hdl, hal_ring_hdl, rtpm_dbgid, \
+			       is_critical_ctx)\
+	hal_srng_access_end(hal_soc_hdl, hal_ring_hdl)
+#endif
 
 /* hal_srng_access_end already handles endianness conversion, so use the same */
 #define hal_le_srng_access_end_in_cpu_order \

@@ -991,7 +991,7 @@ struct reo_desc_deferred_freelist_node {
 struct reo_cmd_event_record {
 	enum hal_reo_cmd_type cmd_type;
 	uint8_t cmd_return_status;
-	uint32_t timestamp;
+	uint64_t timestamp;
 };
 
 /**
