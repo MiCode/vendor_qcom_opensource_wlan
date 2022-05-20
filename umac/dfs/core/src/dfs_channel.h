@@ -880,4 +880,28 @@
 
 #define WLAN_IS_CHAN_MODE_320(_c) WLAN_IS_CHAN_11BE_EHT320(_c)
 
+#define WLAN_IS_CHAN_11BE(_c)             \
+	(WLAN_IS_CHAN_11BE_EHT20(_c)      || \
+	 WLAN_IS_CHAN_11BE_EHT40PLUS(_c)  || \
+	 WLAN_IS_CHAN_11BE_EHT40MINUS(_c) || \
+	 WLAN_IS_CHAN_11BE_EHT80(_c)      || \
+	 WLAN_IS_CHAN_11BE_EHT160(_c)     || \
+	 WLAN_IS_CHAN_11BE_EHT320(_c))
+
+#define WLAN_IS_CHAN_11AXA(_c)            \
+	(WLAN_IS_CHAN_11AXA_HE20(_c)      || \
+	 WLAN_IS_CHAN_11AXA_HE40PLUS(_c)  || \
+	 WLAN_IS_CHAN_11AXA_HE40MINUS(_c) || \
+	 WLAN_IS_CHAN_11AXA_HE80(_c)      || \
+	 WLAN_IS_CHAN_11AXA_HE160(_c)     || \
+	 WLAN_IS_CHAN_11AXA_HE80_80(_c))
+
+#define WLAN_IS_CHAN_11AC(_c)             \
+	(WLAN_IS_CHAN_11AC_VHT20(_c)      || \
+	 WLAN_IS_CHAN_11AC_VHT40PLUS(_c)  || \
+	 WLAN_IS_CHAN_11AC_VHT40MINUS(_c) || \
+	 WLAN_IS_CHAN_11AC_VHT80(_c)      || \
+	 WLAN_IS_CHAN_11AC_VHT160(_c)     || \
+	 WLAN_IS_CHAN_11AC_VHT80_80(_c))
+
 #endif /* _DFS_CHANNEL_H_ */
