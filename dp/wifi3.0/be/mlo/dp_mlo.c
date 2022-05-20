@@ -48,6 +48,13 @@ dp_mlo_ctxt_attach_wifi3(struct cdp_ctrl_mlo_mgr *ctrl_ctxt)
 		return NULL;
 	}
 
+	qdf_get_random_bytes(mlo_ctxt->toeplitz_hash_ipv4,
+			     (sizeof(mlo_ctxt->toeplitz_hash_ipv4[0]) *
+			      LRO_IPV4_SEED_ARR_SZ));
+	qdf_get_random_bytes(mlo_ctxt->toeplitz_hash_ipv6,
+			     (sizeof(mlo_ctxt->toeplitz_hash_ipv6[0]) *
+			      LRO_IPV6_SEED_ARR_SZ));
+
 	qdf_spinlock_create(&mlo_ctxt->ml_soc_list_lock);
 	return dp_mlo_ctx_to_cdp(mlo_ctxt);
 }
@@ -515,6 +522,23 @@ dp_link_peer_hash_find_by_chip_id(struct dp_soc *soc,
 }
 
 qdf_export_symbol(dp_link_peer_hash_find_by_chip_id);
+
+void dp_mlo_get_rx_hash_key(struct dp_soc *soc,
+			    struct cdp_lro_hash_config *lro_hash)
+{
+	struct dp_soc_be *be_soc = dp_get_be_soc_from_dp_soc(soc);
+	struct dp_mlo_ctxt *ml_ctxt = be_soc->ml_ctxt;
+
+	if (!be_soc->mlo_enabled || !ml_ctxt)
+		return dp_get_rx_hash_key_bytes(lro_hash);
+
+	qdf_mem_copy(lro_hash->toeplitz_hash_ipv4, ml_ctxt->toeplitz_hash_ipv4,
+		     (sizeof(lro_hash->toeplitz_hash_ipv4[0]) *
+		      LRO_IPV4_SEED_ARR_SZ));
+	qdf_mem_copy(lro_hash->toeplitz_hash_ipv6, ml_ctxt->toeplitz_hash_ipv6,
+		     (sizeof(lro_hash->toeplitz_hash_ipv6[0]) *
+		      LRO_IPV6_SEED_ARR_SZ));
+}
 
 struct dp_soc *
 dp_rx_replensih_soc_get(struct dp_soc *soc, uint8_t reo_ring_num)

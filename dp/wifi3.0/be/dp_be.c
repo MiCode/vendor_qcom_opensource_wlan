@@ -532,6 +532,12 @@ static void dp_mlo_init_ptnr_list(struct dp_vdev *vdev)
 		    WLAN_MAX_MLO_CHIPS * WLAN_MAX_MLO_LINKS_PER_SOC,
 		    CDP_INVALID_VDEV_ID);
 }
+
+static void dp_get_rx_hash_key_be(struct dp_soc *soc,
+				  struct cdp_lro_hash_config *lro_hash)
+{
+	dp_mlo_get_rx_hash_key(soc, lro_hash);
+}
 #else
 static inline void
 dp_mlo_mcast_init(struct dp_soc *soc, struct dp_vdev *vdev)
@@ -545,6 +551,12 @@ dp_mlo_mcast_deinit(struct dp_soc *soc, struct dp_vdev *vdev)
 
 static void dp_mlo_init_ptnr_list(struct dp_vdev *vdev)
 {
+}
+
+static void dp_get_rx_hash_key_be(struct dp_soc *soc,
+				  struct cdp_lro_hash_config *lro_hash)
+{
+	dp_get_rx_hash_key_bytes(lro_hash);
 }
 #endif
 
@@ -1834,4 +1846,5 @@ void dp_initialize_arch_ops_be(struct dp_arch_ops *arch_ops)
 	arch_ops->txrx_print_peer_stats = dp_print_peer_txrx_stats_be;
 	arch_ops->dp_find_peer_by_destmac = dp_find_peer_by_destmac_be;
 	dp_init_near_full_arch_ops_be(arch_ops);
+	arch_ops->get_rx_hash_key = dp_get_rx_hash_key_be;
 }

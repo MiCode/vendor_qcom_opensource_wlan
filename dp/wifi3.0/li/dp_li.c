@@ -569,6 +569,12 @@ static struct dp_peer *dp_find_peer_by_destmac_li(struct dp_soc *soc,
 	return peer;
 }
 
+static void dp_get_rx_hash_key_li(struct dp_soc *soc,
+				  struct cdp_lro_hash_config *lro_hash)
+{
+	dp_get_rx_hash_key_bytes(lro_hash);
+}
+
 void dp_initialize_arch_ops_li(struct dp_arch_ops *arch_ops)
 {
 #ifndef QCA_HOST_MODE_WIFI_DISABLED
@@ -604,6 +610,7 @@ void dp_initialize_arch_ops_li(struct dp_arch_ops *arch_ops)
 	arch_ops->txrx_vdev_detach = dp_vdev_detach_li;
 	arch_ops->txrx_peer_map_attach = dp_peer_map_attach_li;
 	arch_ops->txrx_peer_map_detach = dp_peer_map_detach_li;
+	arch_ops->get_rx_hash_key = dp_get_rx_hash_key_li;
 	arch_ops->dp_rx_desc_cookie_2_va =
 			dp_rx_desc_cookie_2_va_li;
 	arch_ops->dp_rx_intrabss_handle_nawds = dp_rx_intrabss_handle_nawds_li;

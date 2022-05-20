@@ -3560,4 +3560,15 @@ static inline void dp_pdev_clear_tx_delay_stats(struct dp_soc *soc)
 {
 }
 #endif
+
+static inline void
+dp_get_rx_hash_key_bytes(struct cdp_lro_hash_config *lro_hash)
+{
+	qdf_get_random_bytes(lro_hash->toeplitz_hash_ipv4,
+			     (sizeof(lro_hash->toeplitz_hash_ipv4[0]) *
+			      LRO_IPV4_SEED_ARR_SZ));
+	qdf_get_random_bytes(lro_hash->toeplitz_hash_ipv6,
+			     (sizeof(lro_hash->toeplitz_hash_ipv6[0]) *
+			      LRO_IPV6_SEED_ARR_SZ));
+}
 #endif /* #ifndef _DP_INTERNAL_H_ */

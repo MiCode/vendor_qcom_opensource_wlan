@@ -4759,12 +4759,7 @@ static QDF_STATUS dp_lro_hash_setup(struct dp_soc *soc, struct dp_pdev *pdev)
 			 QDF_TCPHDR_ECE | QDF_TCPHDR_CWR;
 	}
 
-	qdf_get_random_bytes(lro_hash.toeplitz_hash_ipv4,
-			     (sizeof(lro_hash.toeplitz_hash_ipv4[0]) *
-			      LRO_IPV4_SEED_ARR_SZ));
-	qdf_get_random_bytes(lro_hash.toeplitz_hash_ipv6,
-			     (sizeof(lro_hash.toeplitz_hash_ipv6[0]) *
-			      LRO_IPV6_SEED_ARR_SZ));
+	soc->arch_ops.get_rx_hash_key(soc, &lro_hash);
 
 	qdf_assert(soc->cdp_soc.ol_ops->lro_hash_config);
 

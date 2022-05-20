@@ -1811,6 +1811,8 @@ struct dp_arch_ops {
 						   enum dp_mod_id mod_id,
 						   uint8_t vdev_id);
 #endif
+	void (*get_rx_hash_key)(struct dp_soc *soc,
+				struct cdp_lro_hash_config *lro_hash);
 	void (*txrx_print_peer_stats)(struct cdp_peer_stats *peer_stats,
 				      enum peer_stats_type stats_type);
 	/* Dp peer reorder queue setup */

@@ -51,6 +51,8 @@ struct dp_mlo_ctxt {
 	} mld_peer_hash;
 
 	qdf_spinlock_t mld_peer_hash_lock;
+	uint32_t toeplitz_hash_ipv4[LRO_IPV4_SEED_ARR_SZ];
+	uint32_t toeplitz_hash_ipv6[LRO_IPV6_SEED_ARR_SZ];
 };
 
 /**
@@ -100,4 +102,12 @@ void dp_pdev_mlo_fill_params(struct dp_pdev *pdev,
 struct dp_soc*
 dp_mlo_get_soc_ref_by_chip_id(struct dp_mlo_ctxt *ml_ctxt, uint8_t chip_id);
 
+/**
+ * dp_mlo_get_rx_hash_key() - Get Rx hash key from MLO context
+ * @soc: DP SOC
+ * @lro_hash: Hash params
+ *
+ */
+void dp_mlo_get_rx_hash_key(struct dp_soc *soc,
+			    struct cdp_lro_hash_config *lro_hash);
 #endif /* __DP_MLO_H */
