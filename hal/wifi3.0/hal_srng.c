@@ -351,12 +351,25 @@ void hal_get_shadow_config(void *hal_soc,
 {
 	struct hal_soc *hal = (struct hal_soc *)hal_soc;
 
-	*shadow_config = hal->shadow_config;
+	*shadow_config = &hal->shadow_config[0].v2;
 	*num_shadow_registers_configured =
 		hal->num_shadow_registers_configured;
 }
-
 qdf_export_symbol(hal_get_shadow_config);
+
+#ifdef CONFIG_SHADOW_V3
+void hal_get_shadow_v3_config(void *hal_soc,
+			      struct pld_shadow_reg_v3_cfg **shadow_config,
+			      int *num_shadow_registers_configured)
+{
+	struct hal_soc *hal = (struct hal_soc *)hal_soc;
+
+	*shadow_config = &hal->shadow_config[0].v3;
+	*num_shadow_registers_configured =
+		hal->num_shadow_registers_configured;
+}
+qdf_export_symbol(hal_get_shadow_v3_config);
+#endif
 
 static bool hal_validate_shadow_register(struct hal_soc *hal,
 					 uint32_t *destination,
@@ -1351,7 +1364,7 @@ static inline void hal_srng_hw_init(struct hal_soc *hal,
 		hal_srng_dst_hw_init(hal, srng);
 }
 
-#ifdef CONFIG_SHADOW_V2
+#if defined(CONFIG_SHADOW_V2) || defined(CONFIG_SHADOW_V3)
 #define ignore_shadow false
 #define CHECK_SHADOW_REGISTERS true
 #else

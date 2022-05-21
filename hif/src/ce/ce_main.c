@@ -1721,6 +1721,28 @@ static void hif_prepare_hal_shadow_register_cfg(struct hif_softc *scn,
 	return;
 }
 
+#ifdef CONFIG_SHADOW_V3
+static inline void
+hif_prepare_hal_shadow_reg_cfg_v3(struct hif_softc *scn,
+				  struct pld_wlan_enable_cfg *cfg)
+{
+	struct HIF_CE_state *hif_state = HIF_GET_CE_STATE(scn);
+
+	if (!hif_state->ce_services->ce_prepare_shadow_register_v3_cfg)
+		return;
+
+	hif_state->ce_services->ce_prepare_shadow_register_v3_cfg(
+			scn, &cfg->shadow_reg_v3_cfg,
+			&cfg->num_shadow_reg_v3_cfg);
+}
+#else
+static inline void
+hif_prepare_hal_shadow_reg_cfg_v3(struct hif_softc *scn,
+				  struct pld_wlan_enable_cfg *cfg)
+{
+}
+#endif
+
 static inline uint32_t ce_get_desc_size(struct hif_softc *scn,
 						uint8_t ring_type)
 {
@@ -3552,7 +3574,19 @@ void hif_get_target_ce_config(struct hif_softc *scn,
 			       shadow_cfg_sz_ret);
 }
 
-#ifdef CONFIG_SHADOW_V2
+#ifdef CONFIG_SHADOW_V3
+static void hif_print_hal_shadow_register_cfg(struct pld_wlan_enable_cfg *cfg)
+{
+	int i;
+
+	hif_err("num_config %d", cfg->num_shadow_reg_v2_cfg);
+
+	for (i = 0; i < cfg->num_shadow_reg_v2_cfg; i++) {
+		hif_err("i %d, val %x", i, cfg->shadow_reg_v2_cfg[i].addr);
+	}
+}
+
+#elif defined(CONFIG_SHADOW_V2)
 static void hif_print_hal_shadow_register_cfg(struct pld_wlan_enable_cfg *cfg)
 {
 	int i;
@@ -3570,7 +3604,7 @@ static void hif_print_hal_shadow_register_cfg(struct pld_wlan_enable_cfg *cfg)
 static void hif_print_hal_shadow_register_cfg(struct pld_wlan_enable_cfg *cfg)
 {
 	QDF_TRACE(QDF_MODULE_ID_TXRX, QDF_TRACE_LEVEL_ERROR,
-		  "%s: CONFIG_SHADOW_V2 not defined", __func__);
+		  "%s: CONFIG_SHADOW V2/V3 not defined", __func__);
 }
 #endif
 
@@ -3751,6 +3785,8 @@ static void hif_update_rri_over_ddr_config(struct hif_softc *scn,
  */
 int hif_wlan_enable(struct hif_softc *scn)
 {
+	struct hif_opaque_softc *hif_hdl = GET_HIF_OPAQUE_HDL(scn);
+	struct hif_target_info *tgt_info = hif_get_target_info_handle(hif_hdl);
 	struct pld_wlan_enable_cfg cfg = { 0 };
 	enum pld_driver_mode mode;
 	uint32_t con_mode = hif_get_conparam(scn);
@@ -3768,8 +3804,16 @@ int hif_wlan_enable(struct hif_softc *scn)
 	cfg.num_ce_svc_pipe_cfg /= sizeof(struct service_to_pipe);
 	cfg.num_shadow_reg_cfg /= sizeof(struct shadow_reg_cfg);
 
-	hif_prepare_hal_shadow_register_cfg(scn, &cfg.shadow_reg_v2_cfg,
-			      &cfg.num_shadow_reg_v2_cfg);
+	switch (tgt_info->target_type) {
+	case TARGET_TYPE_KIWI:
+		hif_prepare_hal_shadow_reg_cfg_v3(scn, &cfg);
+		break;
+	default:
+		hif_prepare_hal_shadow_register_cfg(scn,
+						    &cfg.shadow_reg_v2_cfg,
+						    &cfg.num_shadow_reg_v2_cfg);
+		break;
+	}
 
 	hif_print_hal_shadow_register_cfg(&cfg);
 
