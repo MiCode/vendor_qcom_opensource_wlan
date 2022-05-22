@@ -18940,6 +18940,10 @@ static void populate_tlv_events_id(uint32_t *event_ids)
 	event_ids[wmi_rtt_pasn_peer_delete_eventid] =
 			WMI_RTT_PASN_PEER_DELETE_EVENTID;
 #endif
+#ifdef WLAN_VENDOR_HANDOFF_CONTROL
+	event_ids[wmi_get_roam_vendor_control_param_event_id] =
+				WMI_ROAM_GET_VENDOR_CONTROL_PARAM_EVENTID;
+#endif
 }
 
 #ifdef WLAN_FEATURE_LINK_LAYER_STATS

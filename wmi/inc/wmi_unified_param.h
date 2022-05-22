@@ -5069,6 +5069,9 @@ typedef enum {
 	wmi_rtt_pasn_peer_create_req_eventid,
 	wmi_rtt_pasn_peer_delete_eventid,
 #endif
+#ifdef WLAN_VENDOR_HANDOFF_CONTROL
+	wmi_get_roam_vendor_control_param_event_id,
+#endif
 	wmi_events_max,
 } wmi_conv_event_id;
 

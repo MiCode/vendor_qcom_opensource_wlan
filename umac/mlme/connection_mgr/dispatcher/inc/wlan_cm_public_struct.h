@@ -521,6 +521,34 @@ struct wlan_cm_connect_resp {
 #endif
 };
 
+#ifdef WLAN_VENDOR_HANDOFF_CONTROL
+/* As per enum WMI_ROAM_GET_VENDOR_CONTROL_PARAM_ID */
+#define MAX_VENDOR_CONTROL_PARAMS 8
+/*
+ * struct roam_param_info: vendor handoff related parameters
+ * @param_id : vendor control Param ID from enum
+ * WMI_ROAM_GET_VENDOR_CONTROL_PARAM_ID
+ * @param_value : vendor control param value
+ */
+struct roam_param_info {
+	uint32_t param_id;
+	uint32_t param_value;
+};
+
+/*
+ * struct roam_vendor_handoff_params: vendor handoff parameters
+ * @vdev_id : vdev id
+ * @num_entries: num of tlv present in vendor handoff event
+ * @param_info: vendor handoff related parameters
+ */
+struct roam_vendor_handoff_params {
+	uint32_t vdev_id;
+	uint32_t num_entries;
+	struct roam_param_info param_info[MAX_VENDOR_CONTROL_PARAMS];
+};
+
+#endif
+
 #ifdef WLAN_FEATURE_PREAUTH_ENABLE
 /**
  * struct wlan_preauth_req - preauth request
