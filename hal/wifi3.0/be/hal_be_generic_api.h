@@ -1482,6 +1482,68 @@ hal_txmon_status_parse_tlv_generic_be(void *data_ppdu_info,
 		/* user tlv */
 		status = HAL_MON_RX_FRAME_BITMAP_ACK;
 		SHOW_DEFINED(WIFIRX_FRAME_BITMAP_ACK_E);
+		TXMON_HAL(ppdu_info, cur_usr_idx) = user_id;
+		TXMON_STATUS_INFO(tx_status_info, no_bitmap_avail) =
+					HAL_TX_DESC_GET_64(tx_tlv,
+							   RX_FRAME_BITMAP_ACK,
+							   NO_BITMAP_AVAILABLE);
+
+		TXMON_STATUS_INFO(tx_status_info, explicit_ack) =
+					HAL_TX_DESC_GET_64(tx_tlv,
+							   RX_FRAME_BITMAP_ACK,
+							   EXPLICIT_ACK);
+		/*
+		 * get mac address, since address is received frame
+		 * change the order and store it
+		 */
+		*(uint32_t *)&tx_status_info->addr2[0] =
+					HAL_TX_DESC_GET_64(tx_tlv,
+							   RX_FRAME_BITMAP_ACK,
+							   ADDR1_31_0);
+		*(uint32_t *)&tx_status_info->addr2[4] =
+					HAL_TX_DESC_GET_64(tx_tlv,
+							   RX_FRAME_BITMAP_ACK,
+							   ADDR1_47_32);
+		*(uint32_t *)&tx_status_info->addr1[0] =
+					HAL_TX_DESC_GET_64(tx_tlv,
+							   RX_FRAME_BITMAP_ACK,
+							   ADDR2_15_0);
+		*(uint32_t *)&tx_status_info->addr1[2] =
+					HAL_TX_DESC_GET_64(tx_tlv,
+							   RX_FRAME_BITMAP_ACK,
+							   ADDR2_47_16);
+
+		TXMON_STATUS_INFO(tx_status_info, explicit_ack_type) =
+				HAL_TX_DESC_GET_64(tx_tlv, RX_FRAME_BITMAP_ACK,
+						   EXPLICT_ACK_TYPE);
+
+		TXMON_HAL_USER(ppdu_info, user_id, tid) =
+					HAL_TX_DESC_GET_64(tx_tlv,
+							   RX_FRAME_BITMAP_ACK,
+							   BA_TID);
+		TXMON_HAL_USER(ppdu_info, user_id, aid) =
+					HAL_TX_DESC_GET_64(tx_tlv,
+							   RX_FRAME_BITMAP_ACK,
+							   STA_FULL_AID);
+		TXMON_HAL_USER(ppdu_info, user_id, start_seq) =
+					HAL_TX_DESC_GET_64(tx_tlv,
+							   RX_FRAME_BITMAP_ACK,
+							   BA_TS_SEQ);
+		TXMON_HAL_USER(ppdu_info, user_id, ba_control) =
+					HAL_TX_DESC_GET_64(tx_tlv,
+							   RX_FRAME_BITMAP_ACK,
+							   BA_TS_CTRL);
+		TXMON_HAL_USER(ppdu_info, user_id, ba_bitmap_sz) =
+					HAL_TX_DESC_GET_64(tx_tlv,
+							   RX_FRAME_BITMAP_ACK,
+							   BA_BITMAP_SIZE);
+
+		/* ba bitmap */
+		qdf_mem_copy(TXMON_HAL_USER(ppdu_info, user_id, ba_bitmap),
+			     &HAL_SET_FLD_OFFSET_64(tx_tlv,
+						    RX_FRAME_BITMAP_ACK,
+						    BA_TS_BITMAP_31_0, 0), 32);
+
 		break;
 	}
 	case WIFIRX_FRAME_1K_BITMAP_ACK_E:
@@ -1489,6 +1551,53 @@ hal_txmon_status_parse_tlv_generic_be(void *data_ppdu_info,
 		/* user tlv */
 		status = HAL_MON_RX_FRAME_BITMAP_BLOCK_ACK_1K;
 		SHOW_DEFINED(WIFIRX_FRAME_1K_BITMAP_ACK_E);
+		TXMON_HAL(ppdu_info, cur_usr_idx) = user_id;
+		TXMON_HAL_USER(ppdu_info, user_id, ba_bitmap_sz) =
+			(4 + HAL_TX_DESC_GET_64(tx_tlv, RX_FRAME_1K_BITMAP_ACK,
+						BA_BITMAP_SIZE));
+		TXMON_HAL_USER(ppdu_info, user_id, tid) =
+				HAL_TX_DESC_GET_64(tx_tlv,
+						   RX_FRAME_1K_BITMAP_ACK,
+						   BA_TID);
+		TXMON_HAL_USER(ppdu_info, user_id, aid) =
+				HAL_TX_DESC_GET_64(tx_tlv,
+						   RX_FRAME_1K_BITMAP_ACK,
+						   STA_FULL_AID);
+		/* get mac address */
+		*(uint32_t *)&tx_status_info->addr1[0] =
+				HAL_TX_DESC_GET_64(tx_tlv,
+						   RX_FRAME_1K_BITMAP_ACK,
+						   ADDR1_31_0);
+		*(uint32_t *)&tx_status_info->addr1[4] =
+				HAL_TX_DESC_GET_64(tx_tlv,
+						   RX_FRAME_1K_BITMAP_ACK,
+						   ADDR1_47_32);
+		*(uint32_t *)&tx_status_info->addr2[0] =
+				HAL_TX_DESC_GET_64(tx_tlv,
+						   RX_FRAME_1K_BITMAP_ACK,
+						   ADDR2_15_0);
+		*(uint32_t *)&tx_status_info->addr2[2] =
+				HAL_TX_DESC_GET_64(tx_tlv,
+						   RX_FRAME_1K_BITMAP_ACK,
+						   ADDR2_47_16);
+
+		TXMON_HAL_USER(ppdu_info, user_id, start_seq) =
+				HAL_TX_DESC_GET_64(tx_tlv,
+						   RX_FRAME_1K_BITMAP_ACK,
+						   BA_TS_SEQ);
+		TXMON_HAL_USER(ppdu_info, user_id, ba_control) =
+				HAL_TX_DESC_GET_64(tx_tlv,
+						   RX_FRAME_1K_BITMAP_ACK,
+						   BA_TS_CTRL);
+		/* memcpy  ba bitmap */
+		qdf_mem_copy(TXMON_HAL_USER(ppdu_info, user_id, ba_bitmap),
+			     tx_tlv +
+			     HAL_TX_DESC_OFFSET_GET_64(tx_tlv,
+						       RX_FRAME_1K_BITMAP_ACK,
+						       BA_TS_BITMAP_31_0, 0),
+			     4 << TXMON_HAL_USER(ppdu_info,
+						 user_id, ba_bitmap_sz));
+
 		break;
 	}
 	case WIFIRESPONSE_START_STATUS_E:
