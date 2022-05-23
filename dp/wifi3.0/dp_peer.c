@@ -4272,11 +4272,16 @@ static void dp_check_ba_buffersize(struct dp_peer *peer,
 {
 	struct dp_rx_tid *rx_tid = NULL;
 
+	dp_info(QDF_MAC_ADDR_FMT" per_tid_basize_max_tid %d tid %d buffersize %d hw_buffer_size %d",
+		peer->mac_addr.raw,
+		peer->vdev->pdev->soc->per_tid_basize_max_tid, tid, buffersize,
+		peer->hw_buffer_size);
+
 	rx_tid = &peer->rx_tid[tid];
 	if (peer->vdev->pdev->soc->per_tid_basize_max_tid &&
 	    tid < peer->vdev->pdev->soc->per_tid_basize_max_tid) {
 		rx_tid->ba_win_size = buffersize;
-		return;
+		goto out;
 	} else {
 		if (peer->active_ba_session_cnt == 0) {
 			rx_tid->ba_win_size = buffersize;
@@ -4294,9 +4299,24 @@ static void dp_check_ba_buffersize(struct dp_peer *peer,
 					peer->hw_buffer_size = 64;
 					peer->kill_256_sessions = 1;
 				}
+			} else if (buffersize <= 1024) {
+				/**
+				 * Above checks are only for HK V2
+				 * Set incoming buffer size for others
+				 */
+				rx_tid->ba_win_size = buffersize;
+			} else {
+				dp_err("Invalid buffer size %d", buffersize);
+				qdf_assert_always(0);
 			}
 		}
 	}
+
+out:
+	dp_info("rx_tid->ba_win_size %d peer->hw_buffer_size %d peer->kill_256_sessions %d",
+		rx_tid->ba_win_size,
+		peer->hw_buffer_size,
+		peer->kill_256_sessions);
 }
 
 #define DP_RX_BA_SESSION_DISABLE  1
