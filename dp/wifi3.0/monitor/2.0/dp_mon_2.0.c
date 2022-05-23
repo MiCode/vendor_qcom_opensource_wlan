@@ -244,6 +244,13 @@ dp_mon_buffers_replenish(struct dp_soc *dp_soc,
 	void *mon_srng;
 	QDF_STATUS ret = QDF_STATUS_E_FAILURE;
 
+	if (!num_req_buffers) {
+		dp_mon_debug("%pK: Received request for 0 buffers replenish",
+			     dp_soc);
+		ret = QDF_STATUS_E_INVAL;
+		goto free_desc;
+	}
+
 	mon_srng = dp_mon_srng->hal_srng;
 
 	hal_srng_access_start(dp_soc->hal_soc, mon_srng);
@@ -430,22 +437,27 @@ void dp_vdev_set_monitor_mode_buf_rings_2_0(struct dp_pdev *pdev)
 		return;
 	}
 
-	if (dp_rx_mon_buffers_alloc(soc,
-				    (rx_mon_max_entries - mon_soc_be->rx_mon_ring_fill_level))) {
-		dp_mon_err("%pK: Rx mon buffers allocation failed", soc);
-		return;
+	if (mon_soc_be->rx_mon_ring_fill_level < rx_mon_max_entries) {
+		if (dp_rx_mon_buffers_alloc(soc,
+					    (rx_mon_max_entries - mon_soc_be->rx_mon_ring_fill_level))) {
+			dp_mon_err("%pK: Rx mon buffers allocation failed", soc);
+			return;
+		}
+
+		mon_soc_be->rx_mon_ring_fill_level +=
+					(rx_mon_max_entries - mon_soc_be->rx_mon_ring_fill_level);
 	}
 
-	if (dp_tx_mon_buffers_alloc(soc,
-				    (tx_mon_max_entries - mon_soc_be->tx_mon_ring_fill_level))) {
-		dp_mon_err("%pK: Tx mon buffers allocation failed", soc);
-		return;
-	}
+	if (mon_soc_be->tx_mon_ring_fill_level < tx_mon_max_entries) {
+		if (dp_tx_mon_buffers_alloc(soc,
+					    (tx_mon_max_entries - mon_soc_be->tx_mon_ring_fill_level))) {
+			dp_mon_err("%pK: Tx mon buffers allocation failed", soc);
+			return;
+		}
 
-	mon_soc_be->tx_mon_ring_fill_level +=
-				(tx_mon_max_entries - mon_soc_be->tx_mon_ring_fill_level);
-	mon_soc_be->rx_mon_ring_fill_level +=
-				(rx_mon_max_entries - mon_soc_be->rx_mon_ring_fill_level);
+		mon_soc_be->tx_mon_ring_fill_level +=
+					(tx_mon_max_entries - mon_soc_be->tx_mon_ring_fill_level);
+	}
 }
 
 static
@@ -908,6 +920,9 @@ QDF_STATUS dp_mon_soc_init_2_0(struct dp_soc *soc)
 		goto fail;
 	}
 
+	mon_soc_be->tx_mon_ring_fill_level = DP_MON_RING_FILL_LEVEL_DEFAULT;
+	mon_soc_be->rx_mon_ring_fill_level = DP_MON_RING_FILL_LEVEL_DEFAULT;
+
 	mon_soc_be->is_dp_mon_soc_initialized = true;
 	return QDF_STATUS_SUCCESS;
 fail:
@@ -929,9 +944,6 @@ QDF_STATUS dp_mon_soc_attach_2_0(struct dp_soc *soc)
 		dp_mon_err("DP MON SOC is NULL");
 		return QDF_STATUS_E_FAILURE;
 	}
-
-	mon_soc_be->tx_mon_ring_fill_level = DP_MON_RING_FILL_LEVEL_DEFAULT;
-	mon_soc_be->rx_mon_ring_fill_level = DP_MON_RING_FILL_LEVEL_DEFAULT;
 
 	entries = wlan_cfg_get_dp_soc_rx_mon_buf_ring_size(soc_cfg_ctx);
 	qdf_print("%s:%d rx mon buf entries: %d", __func__, __LINE__, entries);
