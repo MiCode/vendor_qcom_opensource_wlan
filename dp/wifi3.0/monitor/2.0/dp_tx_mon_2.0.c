@@ -29,6 +29,9 @@
 #include <dp_be.h>
 #include <hal_be_api_mon.h>
 #include <dp_mon_filter_2.0.h>
+#ifdef FEATURE_PERPKT_INFO
+#include "dp_ratetable.h"
+#endif
 
 static inline uint32_t
 dp_tx_mon_srng_process_2_0(struct dp_soc *soc, struct dp_intr *int_ctx,
@@ -656,6 +659,25 @@ dp_tx_mon_update_radiotap(struct dp_pdev *pdev,
 			/* free ppdu_info per user */
 			dp_tx_mon_free_usr_mpduq(ppdu_info, i);
 			continue;
+		}
+
+		if (qdf_unlikely(!TXMON_PPDU_COM(ppdu_info, rate))) {
+			uint32_t rate = 0;
+			uint32_t rix = 0;
+			uint16_t ratecode = 0;
+
+			rate = dp_getrateindex(TXMON_PPDU_COM(ppdu_info, sgi),
+					       TXMON_PPDU_USR(ppdu_info,
+							      i, mcs),
+					       TXMON_PPDU_COM(ppdu_info, nss),
+					       TXMON_PPDU_COM(ppdu_info,
+							      preamble_type),
+					       TXMON_PPDU_COM(ppdu_info, bw),
+					       0,
+					       &rix, &ratecode);
+
+			/* update rate */
+			TXMON_PPDU_COM(ppdu_info, rate) = rate;
 		}
 
 		/* copy rx_status to rx_status and invoke update radiotap */
