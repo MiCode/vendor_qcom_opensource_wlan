@@ -62,7 +62,7 @@ QDF_STATUS dp_soc_umac_reset_init(struct dp_soc *soc)
 	qdf_mem_zero(umac_reset_ctx, sizeof(*umac_reset_ctx));
 
 	umac_reset_ctx->supported = true;
-	umac_reset_ctx->current_state = UMAC_RESET_STATE_WAIT_FOR_PRE_RESET;
+	umac_reset_ctx->current_state = UMAC_RESET_STATE_WAIT_FOR_DO_PRE_RESET;
 
 	status = dp_get_umac_reset_intr_ctx(soc, &umac_reset_ctx->intr_offset);
 	if (QDF_IS_STATUS_ERROR(status)) {
@@ -70,7 +70,7 @@ QDF_STATUS dp_soc_umac_reset_init(struct dp_soc *soc)
 		return status;
 	}
 
-	alloc_size = sizeof(struct umac_reset_shmem) +
+	alloc_size = sizeof(htt_umac_hang_recovery_msg_shmem_t) +
 			DP_UMAC_RESET_SHMEM_ALIGN - 1;
 	umac_reset_ctx->shmem_vaddr_unaligned =
 	    qdf_mem_alloc_consistent(soc->osdev, soc->osdev->dev,
@@ -92,6 +92,112 @@ QDF_STATUS dp_soc_umac_reset_init(struct dp_soc *soc)
 }
 
 /**
+ * dp_umac_reset_get_rx_event() - Extract the Rx event from the shared memory
+ * @umac_reset_ctx: UMAC reset context
+ *
+ * Return: Extracted Rx event in the form of enumeration umac_reset_rx_event
+ */
+static enum umac_reset_rx_event
+dp_umac_reset_get_rx_event_from_shmem(
+	struct dp_soc_umac_reset_ctx *umac_reset_ctx)
+{
+	htt_umac_hang_recovery_msg_shmem_t *shmem_vaddr;
+	uint32_t t2h_msg;
+	uint8_t num_events = 0;
+	enum umac_reset_rx_event rx_event;
+
+	shmem_vaddr = umac_reset_ctx->shmem_vaddr_aligned;
+	if (!shmem_vaddr) {
+		dp_umac_reset_err("Shared memory address is NULL");
+		goto err;
+	}
+
+	if (shmem_vaddr->magic_num != umac_reset_ctx->shmem_exp_magic_num) {
+		dp_umac_reset_err("Shared memory got corrupted");
+		goto err;
+	}
+
+	/* Read the shared memory into a local variable */
+	t2h_msg = shmem_vaddr->t2h_msg;
+
+	/* Clear the shared memory right away */
+	shmem_vaddr->t2h_msg = 0;
+
+	dp_umac_reset_debug("shmem value - t2h_msg: 0x%x", t2h_msg);
+
+	rx_event = UMAC_RESET_RX_EVENT_NONE;
+
+	if (HTT_UMAC_HANG_RECOVERY_MSG_SHMEM_DO_PRE_RESET_GET(t2h_msg)) {
+		rx_event |= UMAC_RESET_RX_EVENT_DO_PRE_RESET;
+		num_events++;
+	}
+
+	if (HTT_UMAC_HANG_RECOVERY_MSG_SHMEM_DO_POST_RESET_START_GET(t2h_msg)) {
+		rx_event |= UMAC_RESET_RX_EVENT_DO_POST_RESET_START;
+		num_events++;
+	}
+
+	if (HTT_UMAC_HANG_RECOVERY_MSG_SHMEM_DO_POST_RESET_COMPLETE_GET(t2h_msg)) {
+		rx_event |= UMAC_RESET_RX_EVENT_DO_POST_RESET_COMPELTE;
+		num_events++;
+	}
+
+	dp_umac_reset_debug("deduced rx event: 0x%x", rx_event);
+	/* There should not be more than 1 event */
+	if (num_events > 1) {
+		dp_umac_reset_err("Multiple events(0x%x) got posted", rx_event);
+		goto err;
+	}
+
+	return rx_event;
+err:
+	qdf_assert_always(0);
+	return UMAC_RESET_RX_EVENT_ERROR;
+}
+
+/**
+ * dp_umac_reset_get_rx_event() - Extract the Rx event
+ * @umac_reset_ctx: UMAC reset context
+ *
+ * Return: Extracted Rx event in the form of enumeration umac_reset_rx_event
+ */
+static inline enum umac_reset_rx_event
+dp_umac_reset_get_rx_event(struct dp_soc_umac_reset_ctx *umac_reset_ctx)
+{
+	return dp_umac_reset_get_rx_event_from_shmem(umac_reset_ctx);
+}
+
+/**
+ * dp_umac_reset_validate_n_update_state_machine_on_rx() - Validate the state
+ * machine for a given rx event and update the state machine
+ * @umac_reset_ctx: UMAC reset context
+ * @rx_event: Rx event
+ * @current_exp_state: Expected state
+ * @next_state: The state to which the state machine needs to be updated
+ *
+ * Return: QDF_STATUS of operation
+ */
+static QDF_STATUS
+dp_umac_reset_validate_n_update_state_machine_on_rx(
+	struct dp_soc_umac_reset_ctx *umac_reset_ctx,
+	enum umac_reset_rx_event rx_event,
+	enum umac_reset_state current_exp_state,
+	enum umac_reset_state next_state)
+{
+	if (umac_reset_ctx->current_state != current_exp_state) {
+		dp_umac_reset_err("state machine validation failed on rx event: %d, current state is %d",
+				  rx_event,
+				  umac_reset_ctx->current_state);
+		qdf_assert_always(0);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	/* Update the state */
+	umac_reset_ctx->current_state = next_state;
+	return QDF_STATUS_SUCCESS;
+}
+
+/**
  * dp_umac_reset_rx_event_handler() - Main Rx event handler for UMAC reset
  * @dp_ctx: Interrupt context corresponding to UMAC reset
  *
@@ -99,8 +205,78 @@ QDF_STATUS dp_soc_umac_reset_init(struct dp_soc *soc)
  */
 static int dp_umac_reset_rx_event_handler(void *dp_ctx)
 {
-	/* Note: This will be implemented in an upcoming change */
-	return 0;
+	struct dp_intr *int_ctx = (struct dp_intr *)dp_ctx;
+	struct dp_soc *soc = int_ctx->soc;
+	struct dp_soc_umac_reset_ctx *umac_reset_ctx;
+	enum umac_reset_rx_event rx_event;
+	QDF_STATUS status = QDF_STATUS_E_INVAL;
+	enum umac_reset_action action;
+
+	if (!soc) {
+		dp_umac_reset_err("DP SOC is null");
+		goto exit;
+	}
+
+	umac_reset_ctx = &soc->umac_reset_ctx;
+
+	dp_umac_reset_debug("enter");
+	rx_event = dp_umac_reset_get_rx_event(umac_reset_ctx);
+
+	switch (rx_event) {
+	case UMAC_RESET_RX_EVENT_NONE:
+		/* This interrupt is not meant for us, so exit */
+		dp_umac_reset_debug("Not a UMAC reset event");
+		status = QDF_STATUS_SUCCESS;
+		goto exit;
+
+	case UMAC_RESET_RX_EVENT_DO_PRE_RESET:
+		status = dp_umac_reset_validate_n_update_state_machine_on_rx(
+			umac_reset_ctx, rx_event,
+			UMAC_RESET_STATE_WAIT_FOR_DO_PRE_RESET,
+			UMAC_RESET_STATE_DO_PRE_RESET_RECEIVED);
+
+		action = UMAC_RESET_ACTION_DO_PRE_RESET;
+		break;
+
+	case UMAC_RESET_RX_EVENT_DO_POST_RESET_START:
+		status = dp_umac_reset_validate_n_update_state_machine_on_rx(
+			umac_reset_ctx, rx_event,
+			UMAC_RESET_STATE_WAIT_FOR_DO_POST_RESET_START,
+			UMAC_RESET_STATE_DO_POST_RESET_START_RECEIVED);
+
+		action = UMAC_RESET_ACTION_DO_POST_RESET_START;
+		break;
+
+	case UMAC_RESET_RX_EVENT_DO_POST_RESET_COMPELTE:
+		status = dp_umac_reset_validate_n_update_state_machine_on_rx(
+			umac_reset_ctx, rx_event,
+			UMAC_RESET_STATE_WAIT_FOR_DO_POST_RESET_COMPLETE,
+			UMAC_RESET_STATE_DO_POST_RESET_COMPLETE_RECEIVED);
+
+		action = UMAC_RESET_ACTION_DO_POST_RESET_COMPLETE;
+		break;
+
+	case UMAC_RESET_RX_EVENT_ERROR:
+		dp_umac_reset_err("Error Rx event");
+		goto exit;
+
+	default:
+		dp_umac_reset_err("Invalid value(%u) for Rx event", rx_event);
+		goto exit;
+	}
+
+	/* Call the handler for this event */
+	if (QDF_IS_STATUS_SUCCESS(status)) {
+		if (!umac_reset_ctx->rx_actions.cb[action]) {
+			dp_umac_reset_err("rx callback is NULL");
+			goto exit;
+		}
+
+		status = umac_reset_ctx->rx_actions.cb[action](soc);
+	}
+
+exit:
+	return qdf_status_to_os_return(status);
 }
 
 QDF_STATUS dp_umac_reset_interrupt_attach(struct dp_soc *soc)
@@ -174,4 +350,28 @@ QDF_STATUS dp_umac_reset_interrupt_detach(struct dp_soc *soc)
 	}
 
 	return hif_unregister_umac_reset_handler(soc->hif_handle);
+}
+
+QDF_STATUS dp_umac_reset_register_rx_action_callback(
+			struct dp_soc *soc,
+			QDF_STATUS (*handler)(struct dp_soc *soc),
+			enum umac_reset_action action)
+{
+	struct dp_soc_umac_reset_ctx *umac_reset_ctx;
+
+	if (!soc) {
+		dp_umac_reset_err("DP SOC is null");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	if (action >= UMAC_RESET_ACTION_MAX) {
+		dp_umac_reset_err("invalid action: %d", action);
+		return QDF_STATUS_E_INVAL;
+	}
+
+	umac_reset_ctx = &soc->umac_reset_ctx;
+
+	umac_reset_ctx->rx_actions.cb[action] = handler;
+
+	return QDF_STATUS_SUCCESS;
 }
