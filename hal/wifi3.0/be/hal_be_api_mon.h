@@ -1774,6 +1774,7 @@ hal_rx_status_get_mon_buf_addr(uint8_t *rx_tlv,
 					    (addr->buffer_virt_addr_31_0));
 	ppdu_info->packet_info.dma_length = addr->dma_length;
 	ppdu_info->packet_info.msdu_continuation = addr->msdu_continuation;
+	ppdu_info->packet_info.truncated = addr->truncated;
 
 }
 #else

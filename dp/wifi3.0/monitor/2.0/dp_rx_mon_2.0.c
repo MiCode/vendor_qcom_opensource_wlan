@@ -270,6 +270,11 @@ dp_rx_mon_process_ppdu_info(struct dp_pdev *pdev,
 				}
 			} else {
 				if (mpdu_meta->full_pkt) {
+					if (qdf_unlikely(mpdu_meta->truncated)) {
+						qdf_nbuf_free(mpdu);
+						continue;
+					}
+
 					dp_rx_mon_handle_full_mon(pdev,
 								  ppdu_info, mpdu);
 				} else {
@@ -401,7 +406,7 @@ dp_rx_mon_handle_full_mon(struct dp_pdev *pdev,
 	struct ieee80211_qoscntl *qos;
 	void *hdr_frag_addr;
 	uint32_t hdr_frag_size, frag_page_offset, pad_byte_pholder,
-		 total_msdu_len, msdu_len;
+		 msdu_len;
 	qdf_nbuf_t head_msdu, msdu_cur;
 	void *frag_addr;
 	bool prev_msdu_end_received = false;
@@ -481,7 +486,7 @@ dp_rx_mon_handle_full_mon(struct dp_pdev *pdev,
 	decap_hdr_pull_bytes = DP_RX_MON_DECAP_HDR_SIZE;
 
 	amsdu_pad = 0;
-	total_msdu_len = 0;
+	tot_msdu_len = 0;
 	tot_msdu_len = 0;
 
 	/*
@@ -498,7 +503,7 @@ dp_rx_mon_handle_full_mon(struct dp_pdev *pdev,
 	/* Adjust page frag offset to point to 802.11 header */
 	qdf_nbuf_trim_add_frag_size(head_msdu, 0, -(hdr_frag_size - mpdu_buf_len), 0);
 
-	msdu_meta = (struct hal_rx_mon_msdu_info *)(qdf_nbuf_get_frag_addr(mpdu, 1) - DP_RX_MON_PACKET_OFFSET + 2);
+	msdu_meta = (struct hal_rx_mon_msdu_info *)(qdf_nbuf_get_frag_addr(mpdu, 1) - DP_RX_MON_PACKET_OFFSET + DP_RX_MON_NONRAW_L2_HDR_PAD_BYTE);
 
 	msdu_len = msdu_meta->msdu_len;
 
@@ -509,7 +514,7 @@ dp_rx_mon_handle_full_mon(struct dp_pdev *pdev,
 
 	frag_size = qdf_nbuf_get_frag_size_by_idx(head_msdu, 1);
 	pad_byte_pholder =
-		RX_MONITOR_BUFFER_SIZE - frag_size;
+		RX_MONITOR_BUFFER_SIZE - (frag_size + DP_RX_MON_PACKET_OFFSET + DP_RX_MON_NONRAW_L2_HDR_PAD_BYTE);
 
 	if (msdu_meta->first_buffer && msdu_meta->last_buffer) {
 		/* MSDU with single bufffer */
@@ -528,10 +533,11 @@ dp_rx_mon_handle_full_mon(struct dp_pdev *pdev,
 			amsdu_pad = 0;
 		}
 	} else {
-		total_msdu_len = msdu_len;
+		tot_msdu_len = frag_size;
 		amsdu_pad = 0;
 	}
 
+	pad_byte_pholder = 0;
 	for (msdu_cur = mpdu; msdu_cur;) {
 		/* frag_iter will start from 0 for second skb onwards */
 		if (msdu_cur == mpdu)
@@ -568,11 +574,14 @@ dp_rx_mon_handle_full_mon(struct dp_pdev *pdev,
 				hdr_frag_size = qdf_nbuf_get_frag_size_by_idx(msdu_cur, frag_iter);
 				/* Adjust page frag offset to point to llc/snap header */
 				qdf_nbuf_trim_add_frag_size(msdu_cur, frag_iter, -(hdr_frag_size - msdu_llc_len), 0);
+				prev_msdu_end_received = false;
 				continue;
 			}
 
 			frag_addr =
-				qdf_nbuf_get_frag_addr(msdu_cur, frag_iter) - 8;
+				qdf_nbuf_get_frag_addr(msdu_cur, frag_iter) -
+						       (DP_RX_MON_PACKET_OFFSET +
+						       DP_RX_MON_NONRAW_L2_HDR_PAD_BYTE);
 			msdu_meta = (struct hal_rx_mon_msdu_info *)frag_addr;
 
 			/*
@@ -597,7 +606,8 @@ dp_rx_mon_handle_full_mon(struct dp_pdev *pdev,
 			 * to accommodate amsdu pad byte
 			 */
 			pad_byte_pholder =
-				RX_MONITOR_BUFFER_SIZE - frag_size;
+				RX_MONITOR_BUFFER_SIZE - (frag_size + (DP_RX_MON_PACKET_OFFSET +
+							  DP_RX_MON_NONRAW_L2_HDR_PAD_BYTE));
 			/*
 			 * We will come here only only three condition:
 			 * 1. Msdu with single Buffer
@@ -622,13 +632,17 @@ dp_rx_mon_handle_full_mon(struct dp_pdev *pdev,
 
 			if (msdu_meta->first_buffer) {
 				/* Adjust page frag offset to point to 802.11 header */
-				hdr_frag_size = qdf_nbuf_get_frag_size_by_idx(msdu_cur, frag_iter - 1);
-				qdf_nbuf_trim_add_frag_size(msdu_cur, frag_iter - 1, -(hdr_frag_size - msdu_llc_len), 0);
+				hdr_frag_size = qdf_nbuf_get_frag_size_by_idx(msdu_cur, frag_iter-1);
+				qdf_nbuf_trim_add_frag_size(msdu_cur, frag_iter - 1, -(hdr_frag_size - (msdu_llc_len + amsdu_pad)), 0);
 
 				/* Adjust page frag offset to appropriate after decap header */
 				frag_page_offset =
-					(decap_hdr_pull_bytes);
-				qdf_nbuf_move_frag_page_offset(msdu_cur, frag_iter, frag_page_offset);
+					(decap_hdr_pull_bytes + l2_hdr_offset);
+				if (frag_size > (decap_hdr_pull_bytes + l2_hdr_offset)) {
+					qdf_nbuf_move_frag_page_offset(msdu_cur, frag_iter, frag_page_offset);
+					frag_size = frag_size - (l2_hdr_offset + decap_hdr_pull_bytes);
+				}
+
 
 				/*
 				 * Calculate new page offset and create hole
@@ -687,7 +701,6 @@ dp_rx_mon_handle_full_mon(struct dp_pdev *pdev,
 		}
 	}
 }
-
 
 /**
  * dp_rx_mon_flush_status_buf_queue () - Flush status buffer queue
@@ -977,6 +990,9 @@ uint8_t dp_rx_mon_process_tlv_status(struct dp_pdev *pdev,
 
 			buf_info->frag_len = packet_info->dma_length;
 		}
+
+		if (qdf_unlikely(packet_info->truncated))
+			mpdu_info->truncated = true;
 	}
 	break;
 	case HAL_TLV_STATUS_MSDU_END:
