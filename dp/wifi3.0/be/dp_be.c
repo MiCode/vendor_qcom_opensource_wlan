@@ -405,6 +405,10 @@ dp_hw_cookie_conversion_init(struct dp_soc_be *be_soc,
 				     DP_CC_PPT_ENTRY_HW_APEND_BITS_4K_ALIGNED));
 
 		ppt_index = ppt_id_start + i;
+
+		if (ppt_index >= DP_CC_PPT_MAX_ENTRIES)
+			qdf_assert_always(0);
+
 		spt_desc[i].ppt_index = ppt_index;
 
 		be_soc->page_desc_base[ppt_index].page_v_addr =

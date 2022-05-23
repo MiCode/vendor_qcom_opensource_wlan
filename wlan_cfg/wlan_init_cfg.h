@@ -69,10 +69,6 @@
 
 /* Tx configuration */
 #define MAX_LINK_DESC_BANKS 8
-#define MAX_TXDESC_POOLS 6
-
-/* Rx configuration */
-#define MAX_RXDESC_POOLS 4
 
 #define MAX_REO_DEST_RINGS 8
 #define MAX_TCL_DATA_RINGS 5
