@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2017-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -115,6 +115,8 @@ dfs_flush_additional_pulses(struct wlan_dfs *dfs)
 #define NUM_CHANNELS_160MHZ  8
 /* Number of 20MHz sub-channels in 320 MHz segment */
 #define NUM_CHANNELS_320MHZ 16
+/* Number of 20MHz sub-channels in 240 MHz (320-80) segment */
+#define NUM_CHANNELS_240MHZ 12
 
 #ifdef WLAN_FEATURE_11BE
 #define MAX_20MHZ_SUBCHANS NUM_CHANNELS_320MHZ
