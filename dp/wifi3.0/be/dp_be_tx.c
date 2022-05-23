@@ -47,6 +47,20 @@
 /* MLO peer id for reinject*/
 #define DP_MLO_MCAST_REINJECT_PEER_ID 0XFFFD
 #define MAX_GSN_NUM 0x0FFF
+
+#ifdef QCA_MULTIPASS_SUPPORT
+#define INVALID_VLAN_ID         0xFFFF
+#define MULTIPASS_WITH_VLAN_ID 0xFFFE
+/**
+ * struct dp_mlo_mpass_buf - Multipass buffer
+ * @vlan_id: vlan_id of frame
+ * @nbuf: pointer to skb buf
+ */
+struct dp_mlo_mpass_buf {
+	uint16_t vlan_id;
+	qdf_nbuf_t  nbuf;
+};
+#endif
 #endif
 #endif
 
@@ -419,6 +433,207 @@ dp_tx_set_min_rates_for_critical_frames(struct dp_soc *soc,
 
 #if defined(WLAN_FEATURE_11BE_MLO) && defined(WLAN_MLO_MULTI_CHIP) && \
 	defined(WLAN_MCAST_MLO)
+#ifdef QCA_MULTIPASS_SUPPORT
+/**
+ * dp_tx_mlo_mcast_multipass_lookup() - lookup vlan_id in mpass peer list
+ * @be_vdev: Handle to DP be_vdev structure
+ * @ptnr_vdev: DP ptnr_vdev handle
+ * @arg: pointer to dp_mlo_mpass_ buf
+ *
+ * Return: None
+ */
+static void
+dp_tx_mlo_mcast_multipass_lookup(struct dp_vdev_be *be_vdev,
+				 struct dp_vdev *ptnr_vdev,
+				 void *arg)
+{
+	struct dp_mlo_mpass_buf *ptr = (struct dp_mlo_mpass_buf *)arg;
+	struct dp_txrx_peer *txrx_peer = NULL;
+	struct vlan_ethhdr *veh = NULL;
+	qdf_ether_header_t *eh = (qdf_ether_header_t *)qdf_nbuf_data(ptr->nbuf);
+	uint16_t vlan_id = 0;
+	bool not_vlan = ((ptnr_vdev->tx_encap_type == htt_cmn_pkt_type_raw) ||
+			(htons(eh->ether_type) != ETH_P_8021Q));
+
+	if (qdf_unlikely(not_vlan))
+		return;
+	veh = (struct vlan_ethhdr *)eh;
+	vlan_id = (ntohs(veh->h_vlan_TCI) & VLAN_VID_MASK);
+
+	qdf_spin_lock_bh(&ptnr_vdev->mpass_peer_mutex);
+	TAILQ_FOREACH(txrx_peer, &ptnr_vdev->mpass_peer_list,
+		      mpass_peer_list_elem) {
+		if (vlan_id == txrx_peer->vlan_id) {
+			qdf_spin_unlock_bh(&ptnr_vdev->mpass_peer_mutex);
+			ptr->vlan_id = vlan_id;
+			return;
+		}
+	}
+	qdf_spin_unlock_bh(&ptnr_vdev->mpass_peer_mutex);
+}
+
+/**
+ * dp_tx_mlo_mcast_multipass_send() - send multipass MLO Mcast packets
+ * @be_vdev: Handle to DP be_vdev structure
+ * @ptnr_vdev: DP ptnr_vdev handle
+ * @arg: pointer to dp_mlo_mpass_ buf
+ *
+ * Return: None
+ */
+static void
+dp_tx_mlo_mcast_multipass_send(struct dp_vdev_be *be_vdev,
+			       struct dp_vdev *ptnr_vdev,
+			       void *arg)
+{
+	struct dp_mlo_mpass_buf *ptr = (struct dp_mlo_mpass_buf *)arg;
+	struct dp_tx_msdu_info_s msdu_info;
+	struct dp_vdev_be *be_ptnr_vdev = NULL;
+	qdf_nbuf_t  nbuf_clone;
+	uint16_t group_key = 0;
+
+	be_ptnr_vdev = dp_get_be_vdev_from_dp_vdev(ptnr_vdev);
+	if (be_vdev != be_ptnr_vdev) {
+		nbuf_clone = qdf_nbuf_clone(ptr->nbuf);
+		if (qdf_unlikely(!nbuf_clone)) {
+			dp_tx_debug("nbuf clone failed");
+			return;
+		}
+	} else {
+		nbuf_clone = ptr->nbuf;
+	}
+	qdf_mem_zero(&msdu_info, sizeof(msdu_info));
+	dp_tx_get_queue(ptnr_vdev, nbuf_clone, &msdu_info.tx_queue);
+	msdu_info.gsn = be_vdev->seq_num;
+	be_ptnr_vdev->seq_num = be_vdev->seq_num;
+
+	if (ptr->vlan_id == MULTIPASS_WITH_VLAN_ID) {
+		msdu_info.tid = HTT_TX_EXT_TID_INVALID;
+		HTT_TX_MSDU_EXT2_DESC_FLAG_VALID_KEY_FLAGS_SET(
+						msdu_info.meta_data[0], 1);
+	} else {
+		/* return when vlan map is not initialized */
+		if (!ptnr_vdev->iv_vlan_map)
+			return;
+		group_key = ptnr_vdev->iv_vlan_map[ptr->vlan_id];
+
+		/*
+		 * If group key is not installed, drop the frame.
+		 */
+
+		if (!group_key)
+			return;
+
+		dp_tx_remove_vlan_tag(ptnr_vdev, nbuf_clone);
+		dp_tx_add_groupkey_metadata(ptnr_vdev, &msdu_info, group_key);
+		msdu_info.exception_fw = 1;
+	}
+
+	nbuf_clone = dp_tx_send_msdu_single(
+					ptnr_vdev,
+					nbuf_clone,
+					&msdu_info,
+					DP_MLO_MCAST_REINJECT_PEER_ID,
+					NULL);
+	if (qdf_unlikely(nbuf_clone)) {
+		dp_info("pkt send failed");
+		qdf_nbuf_free(nbuf_clone);
+		return;
+	}
+}
+
+/**
+ * dp_tx_mlo_mcast_multipass_handler - If frame needs multipass processing
+ * @soc: DP soc handle
+ * @vdev: DP vdev handle
+ * @nbuf: nbuf to be enqueued
+ *
+ * Return: true if handling is done else false
+ */
+static bool
+dp_tx_mlo_mcast_multipass_handler(struct dp_soc *soc,
+				  struct dp_vdev *vdev,
+				  qdf_nbuf_t nbuf)
+{
+	struct dp_vdev_be *be_vdev = dp_get_be_vdev_from_dp_vdev(vdev);
+	struct dp_soc_be *be_soc = dp_get_be_soc_from_dp_soc(soc);
+	qdf_nbuf_t nbuf_copy = NULL;
+	struct dp_mlo_mpass_buf mpass_buf;
+
+	memset(&mpass_buf, 0, sizeof(struct dp_mlo_mpass_buf));
+	mpass_buf.vlan_id = INVALID_VLAN_ID;
+	mpass_buf.nbuf = nbuf;
+
+	dp_tx_mlo_mcast_multipass_lookup(be_vdev, vdev, &mpass_buf);
+	if (mpass_buf.vlan_id == INVALID_VLAN_ID) {
+		dp_mcast_mlo_iter_ptnr_vdev(be_soc, be_vdev,
+					    dp_tx_mlo_mcast_multipass_lookup,
+					    &mpass_buf, DP_MOD_ID_TX);
+		/*
+		 * Do not drop the frame when vlan_id doesn't match.
+		 * Send the frame as it is.
+		 */
+		if (mpass_buf.vlan_id == INVALID_VLAN_ID)
+			return false;
+	}
+
+	/* AP can have classic clients, special clients &
+	 * classic repeaters.
+	 * 1. Classic clients & special client:
+	 *	Remove vlan header, find corresponding group key
+	 *	index, fill in metaheader and enqueue multicast
+	 *	frame to TCL.
+	 * 2. Classic repeater:
+	 *	Pass through to classic repeater with vlan tag
+	 *	intact without any group key index. Hardware
+	 *	will know which key to use to send frame to
+	 *	repeater.
+	 */
+	nbuf_copy = qdf_nbuf_copy(nbuf);
+
+	/*
+	 * Send multicast frame to special peers even
+	 * if pass through to classic repeater fails.
+	 */
+	if (nbuf_copy) {
+		struct dp_mlo_mpass_buf mpass_buf_copy = {0};
+
+		mpass_buf_copy.vlan_id = MULTIPASS_WITH_VLAN_ID;
+		mpass_buf_copy.nbuf = nbuf_copy;
+		/* send frame on partner vdevs */
+		dp_mcast_mlo_iter_ptnr_vdev(be_soc, be_vdev,
+					    dp_tx_mlo_mcast_multipass_send,
+					    &mpass_buf_copy, DP_MOD_ID_TX);
+
+		/* send frame on mcast primary vdev */
+		dp_tx_mlo_mcast_multipass_send(be_vdev, vdev, &mpass_buf_copy);
+
+		if (qdf_unlikely(be_vdev->seq_num > MAX_GSN_NUM))
+			be_vdev->seq_num = 0;
+		else
+			be_vdev->seq_num++;
+	}
+
+	dp_mcast_mlo_iter_ptnr_vdev(be_soc, be_vdev,
+				    dp_tx_mlo_mcast_multipass_send,
+				    &mpass_buf, DP_MOD_ID_TX);
+	dp_tx_mlo_mcast_multipass_send(be_vdev, vdev, &mpass_buf);
+
+	if (qdf_unlikely(be_vdev->seq_num > MAX_GSN_NUM))
+		be_vdev->seq_num = 0;
+	else
+		be_vdev->seq_num++;
+
+	return true;
+}
+#else
+static bool
+dp_tx_mlo_mcast_multipass_handler(struct dp_soc *soc, struct dp_vdev *vdev,
+				  qdf_nbuf_t nbuf)
+{
+	return false;
+}
+#endif
+
 void dp_tx_mcast_mlo_reinject_routing_set(struct dp_soc *soc, void *arg)
 {
 	hal_soc_handle_t hal_soc = soc->hal_soc;
@@ -488,6 +703,9 @@ void dp_tx_mlo_mcast_handler_be(struct dp_soc *soc,
 	struct dp_vdev_be *be_vdev = dp_get_be_vdev_from_dp_vdev(vdev);
 	struct dp_soc_be *be_soc = dp_get_be_soc_from_dp_soc(soc);
 
+	if (qdf_unlikely(vdev->multipass_en) &&
+	    dp_tx_mlo_mcast_multipass_handler(soc, vdev, nbuf))
+		return;
 	/* send frame on partner vdevs */
 	dp_mcast_mlo_iter_ptnr_vdev(be_soc, be_vdev,
 				    dp_tx_mlo_mcast_pkt_send,
