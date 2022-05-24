@@ -375,3 +375,155 @@ QDF_STATUS dp_umac_reset_register_rx_action_callback(
 
 	return QDF_STATUS_SUCCESS;
 }
+
+/**
+ * dp_umac_reset_post_tx_cmd_via_shmem() - Post Tx command using shared memory
+ * @umac_reset_ctx: UMAC reset context
+ * @tx_cmd: Tx command to be posted
+ *
+ * Return: QDF status of operation
+ */
+static QDF_STATUS
+dp_umac_reset_post_tx_cmd_via_shmem(
+	struct dp_soc_umac_reset_ctx *umac_reset_ctx,
+	enum umac_reset_tx_cmd tx_cmd)
+{
+	htt_umac_hang_recovery_msg_shmem_t *shmem_vaddr;
+
+	shmem_vaddr = umac_reset_ctx->shmem_vaddr_aligned;
+	if (!shmem_vaddr) {
+		dp_umac_reset_err("Shared memory address is NULL");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	switch (tx_cmd) {
+	case UMAC_RESET_TX_CMD_PRE_RESET_DONE:
+		HTT_UMAC_HANG_RECOVERY_MSG_SHMEM_PRE_RESET_DONE_SET(
+			shmem_vaddr->h2t_msg, 1);
+		break;
+
+	case UMAC_RESET_TX_CMD_POST_RESET_START_DONE:
+		HTT_UMAC_HANG_RECOVERY_MSG_SHMEM_POST_RESET_START_DONE_SET(
+			shmem_vaddr->h2t_msg, 1);
+		break;
+
+	case UMAC_RESET_TX_CMD_POST_RESET_COMPLETE_DONE:
+		HTT_UMAC_HANG_RECOVERY_MSG_SHMEM_POST_RESET_COMPLETE_DONE_SET(
+			shmem_vaddr->h2t_msg, 1);
+		break;
+
+	default:
+		dp_umac_reset_err("Invalid tx cmd: %d", tx_cmd);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	return QDF_STATUS_SUCCESS;
+}
+
+/**
+ * dp_umac_reset_notify_target() - Notify the target about completion of action.
+ * @umac_reset_ctx: UMAC reset context
+ *
+ * This API figures out the Tx command that needs to be posted based on the
+ * current state in the state machine. Also, updates the state machine once the
+ * Tx command has been posted.
+ *
+ * Return: QDF status of operation
+ */
+static QDF_STATUS
+dp_umac_reset_notify_target(struct dp_soc_umac_reset_ctx *umac_reset_ctx)
+{
+	enum umac_reset_state next_state;
+	enum umac_reset_tx_cmd tx_cmd;
+	QDF_STATUS status;
+
+	switch (umac_reset_ctx->current_state) {
+	case UMAC_RESET_STATE_HOST_PRE_RESET_DONE:
+		tx_cmd = UMAC_RESET_TX_CMD_PRE_RESET_DONE;
+		next_state = UMAC_RESET_STATE_WAIT_FOR_DO_POST_RESET_START;
+		break;
+
+	case UMAC_RESET_STATE_HOST_POST_RESET_START_DONE:
+		tx_cmd = UMAC_RESET_TX_CMD_POST_RESET_START_DONE;
+		next_state = UMAC_RESET_STATE_WAIT_FOR_DO_POST_RESET_COMPLETE;
+		break;
+
+	case UMAC_RESET_STATE_HOST_POST_RESET_COMPLETE_DONE:
+		tx_cmd = UMAC_RESET_TX_CMD_POST_RESET_COMPLETE_DONE;
+		next_state = UMAC_RESET_STATE_WAIT_FOR_DO_PRE_RESET;
+		break;
+
+	default:
+		dp_umac_reset_err("Invalid state(%d) during Tx",
+				  umac_reset_ctx->current_state);
+		qdf_assert_always(0);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	status = dp_umac_reset_post_tx_cmd_via_shmem(umac_reset_ctx, tx_cmd);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		dp_umac_reset_err("Couldn't post Tx cmd");
+		qdf_assert_always(0);
+		return status;
+	}
+
+	/* Update the state machine */
+	umac_reset_ctx->current_state = next_state;
+
+	return status;
+}
+
+/**
+ * dp_umac_reset_notify_completion() - Notify that a given action has been
+ * completed
+ * @soc: DP soc object
+ * @next_state: The state to which the state machine needs to be updated due to
+ * this completion
+ *
+ * Return: QDF status of operation
+ */
+static QDF_STATUS dp_umac_reset_notify_completion(
+		struct dp_soc *soc,
+		enum umac_reset_state next_state)
+{
+	struct dp_soc_umac_reset_ctx *umac_reset_ctx;
+
+	if (!soc) {
+		dp_umac_reset_err("DP SOC is null");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	umac_reset_ctx = &soc->umac_reset_ctx;
+
+	/* Update the state first */
+	umac_reset_ctx->current_state = next_state;
+
+	return dp_umac_reset_notify_target(umac_reset_ctx);
+}
+
+QDF_STATUS dp_umac_reset_notify_action_completion(
+		struct dp_soc *soc,
+		enum umac_reset_action action)
+{
+	enum umac_reset_state next_state;
+
+	switch (action) {
+	case UMAC_RESET_ACTION_DO_PRE_RESET:
+		next_state = UMAC_RESET_STATE_HOST_PRE_RESET_DONE;
+		break;
+
+	case UMAC_RESET_ACTION_DO_POST_RESET_START:
+		next_state = UMAC_RESET_STATE_HOST_POST_RESET_START_DONE;
+		break;
+
+	case UMAC_RESET_ACTION_DO_POST_RESET_COMPLETE:
+		next_state = UMAC_RESET_STATE_HOST_POST_RESET_COMPLETE_DONE;
+		break;
+
+	default:
+		dp_umac_reset_err("Invalid action");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	return dp_umac_reset_notify_completion(soc, next_state);
+}

@@ -100,6 +100,18 @@ enum umac_reset_rx_event {
 };
 
 /**
+ * enum umac_reset_tx_cmd: UMAC reset Tx command
+ * @UMAC_RESET_TX_CMD_PRE_RESET_DONE: PRE_RESET_DONE
+ * @UMAC_RESET_TX_CMD_POST_RESET_START_DONE: POST_RESET_START_DONE
+ * @UMAC_RESET_TX_CMD_POST_RESET_COMPLETE_DONE: POST_RESET_COMPLETE_DONE
+ */
+enum umac_reset_tx_cmd {
+	UMAC_RESET_TX_CMD_PRE_RESET_DONE,
+	UMAC_RESET_TX_CMD_POST_RESET_START_DONE,
+	UMAC_RESET_TX_CMD_POST_RESET_COMPLETE_DONE,
+};
+
+/**
  * struct umac_reset_rx_actions - callbacks for handling UMAC reset actions
  * @cb: Array of pointers where each pointer contains callback for each UMAC
  * reset action for that index
@@ -169,6 +181,18 @@ QDF_STATUS dp_umac_reset_register_rx_action_callback(
 			struct dp_soc *soc,
 			QDF_STATUS (*handler)(struct dp_soc *soc),
 			enum umac_reset_action action);
+
+/**
+ * dp_umac_reset_notify_action_completion() - Notify that a given action has
+ * been completed
+ * @soc: DP soc object
+ * @action: UMAC reset action that got completed
+ *
+ * Return: QDF status of operation
+ */
+QDF_STATUS dp_umac_reset_notify_action_completion(
+			struct dp_soc *soc,
+			enum umac_reset_action action);
 #else
 static inline
 QDF_STATUS dp_soc_umac_reset_init(struct dp_soc *soc)
@@ -181,6 +205,14 @@ QDF_STATUS dp_umac_reset_register_rx_action_callback(
 			struct dp_soc *soc,
 			QDF_STATUS (*handler)(struct dp_soc *soc),
 			enum umac_reset_action action)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static inline
+QDF_STATUS dp_umac_reset_notify_action_completion(
+		struct dp_soc *soc,
+		enum umac_reset_action action)
 {
 	return QDF_STATUS_SUCCESS;
 }
