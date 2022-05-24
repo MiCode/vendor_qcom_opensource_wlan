@@ -100,14 +100,12 @@ dp_rx_mon_pf_tag_to_buf_headroom_2_0(void *nbuf,
 				     struct dp_pdev *pdev, struct dp_soc *soc)
 {
 	uint8_t *nbuf_head = NULL;
-	uint8_t user_id = ppdu_info->user_id;
-	struct hal_rx_mon_msdu_info *msdu_info = &ppdu_info->msdu[user_id];
-	uint16_t flow_id = ppdu_info->rx_msdu_info[user_id].flow_idx;
-	uint16_t cce_metadata = ppdu_info->rx_msdu_info[user_id].cce_metadata -
-				RX_PROTOCOL_TAG_START_OFFSET;
-	uint16_t protocol_tag = pdev->rx_proto_tag_map[cce_metadata].tag;
-	uint32_t flow_tag = ppdu_info->rx_msdu_info[user_id].fse_metadata &
-			    F_MASK;
+	uint8_t user_id;
+	struct hal_rx_mon_msdu_info *msdu_info;
+	uint16_t flow_id;
+	uint16_t cce_metadata;
+	uint16_t protocol_tag;
+	uint32_t flow_tag;
 
 	if (qdf_unlikely(!soc)) {
 		dp_mon_err("Soc[%pK] Null. Can't update pftag to nbuf headroom",
@@ -128,6 +126,25 @@ dp_rx_mon_pf_tag_to_buf_headroom_2_0(void *nbuf,
 			   qdf_nbuf_headroom(nbuf), DP_RX_MON_TOT_PF_TAG_LEN);
 		return;
 	}
+
+	user_id = ppdu_info->user_id;
+	if (qdf_unlikely(user_id > HAL_MAX_UL_MU_USERS)) {
+		dp_mon_debug("Invalid user_id user_id: %d pdev: %pK", user_id, pdev);
+		return;
+	}
+
+	msdu_info = &ppdu_info->msdu[user_id];
+	flow_id = ppdu_info->rx_msdu_info[user_id].flow_idx;
+	cce_metadata = ppdu_info->rx_msdu_info[user_id].cce_metadata -
+		       RX_PROTOCOL_TAG_START_OFFSET;
+
+	if (qdf_unlikely(cce_metadata > RX_PROTOCOL_TAG_MAX - 1)) {
+		dp_mon_debug("Invalid user_id cce_metadata: %d pdev: %pK", cce_metadata, pdev);
+		return;
+	}
+
+	protocol_tag = pdev->rx_proto_tag_map[cce_metadata].tag;
+	flow_tag = ppdu_info->rx_msdu_info[user_id].fse_metadata & F_MASK;
 
 	if (msdu_info->msdu_index >= QDF_NBUF_MAX_FRAGS) {
 		dp_mon_err("msdu_index causes overflow in headroom");
