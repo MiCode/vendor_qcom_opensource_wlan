@@ -1606,77 +1606,6 @@ static void dp_tx_implicit_rbm_set_be(struct dp_soc *soc,
 }
 #endif
 
-#ifdef WLAN_MLO_MULTI_CHIP
-static void dp_peer_get_reo_hash_be(struct dp_vdev *vdev,
-				    struct cdp_peer_setup_info *setup_info,
-				    enum cdp_host_reo_dest_ring *reo_dest,
-				    bool *hash_based,
-				    uint8_t *lmac_peer_id_msb)
-{
-	struct dp_soc *soc = vdev->pdev->soc;
-	struct dp_soc_be *be_soc = dp_get_be_soc_from_dp_soc(soc);
-	uint8_t default_rx_ring_id;
-	uint8_t chip_id;
-
-	if (!be_soc->mlo_enabled)
-		return dp_vdev_get_default_reo_hash(vdev, reo_dest,
-						    hash_based);
-
-	chip_id = be_soc->mlo_chip_id;
-	default_rx_ring_id =
-		wlan_cfg_mlo_default_rx_ring_get_by_chip_id(soc->wlan_cfg_ctx,
-							    chip_id);
-	*reo_dest = hal_reo_ring_remap_value_get_be(default_rx_ring_id);
-	*hash_based = wlan_cfg_is_rx_hash_enabled(soc->wlan_cfg_ctx);
-	*lmac_peer_id_msb =
-		wlan_cfg_mlo_lmac_peer_id_msb_get_by_chip_id(soc->wlan_cfg_ctx,
-							     chip_id);
-}
-
-static bool dp_reo_remap_config_be(struct dp_soc *soc,
-				   uint32_t *remap0,
-				   uint32_t *remap1,
-				   uint32_t *remap2)
-{
-	uint8_t rx_ring_mask;
-	struct dp_soc_be *be_soc = dp_get_be_soc_from_dp_soc(soc);
-
-	if (!be_soc->mlo_enabled)
-		return dp_reo_remap_config(soc, remap0, remap1, remap2);
-
-	rx_ring_mask =
-		wlan_cfg_mlo_rx_ring_map_get_by_chip_id(soc->wlan_cfg_ctx, 0);
-	*remap0 = hal_reo_ix_remap_value_get_be(soc->hal_soc, rx_ring_mask);
-
-	rx_ring_mask =
-		wlan_cfg_mlo_rx_ring_map_get_by_chip_id(soc->wlan_cfg_ctx, 1);
-	*remap1 = hal_reo_ix_remap_value_get_be(soc->hal_soc, rx_ring_mask);
-
-	rx_ring_mask =
-		wlan_cfg_mlo_rx_ring_map_get_by_chip_id(soc->wlan_cfg_ctx, 2);
-	*remap2 = hal_reo_ix_remap_value_get_be(soc->hal_soc, rx_ring_mask);
-
-	return true;
-}
-#else
-static void dp_peer_get_reo_hash_be(struct dp_vdev *vdev,
-				    struct cdp_peer_setup_info *setup_info,
-				    enum cdp_host_reo_dest_ring *reo_dest,
-				    bool *hash_based,
-				    uint8_t *lmac_peer_id_msb)
-{
-	dp_vdev_get_default_reo_hash(vdev, reo_dest, hash_based);
-}
-
-static bool dp_reo_remap_config_be(struct dp_soc *soc,
-				   uint32_t *remap0,
-				   uint32_t *remap1,
-				   uint32_t *remap2)
-{
-	return dp_reo_remap_config(soc, remap0, remap1, remap2);
-}
-#endif
-
 QDF_STATUS dp_txrx_set_vdev_param_be(struct dp_soc *soc,
 				     struct dp_vdev *vdev,
 				     enum cdp_vdev_param_type param,
@@ -1837,8 +1766,6 @@ void dp_initialize_arch_ops_be(struct dp_arch_ops *arch_ops)
 					dp_rx_peer_metadata_peer_id_get_be;
 	arch_ops->soc_cfg_attach = dp_soc_cfg_attach_be;
 	arch_ops->tx_implicit_rbm_set = dp_tx_implicit_rbm_set_be;
-	arch_ops->peer_get_reo_hash = dp_peer_get_reo_hash_be;
-	arch_ops->reo_remap_config = dp_reo_remap_config_be;
 	arch_ops->txrx_set_vdev_param = dp_txrx_set_vdev_param_be;
 	dp_initialize_arch_ops_be_mlo(arch_ops);
 	arch_ops->dp_peer_rx_reorder_queue_setup =

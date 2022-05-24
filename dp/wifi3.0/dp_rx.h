@@ -115,6 +115,8 @@ struct dp_rx_desc_dbg_info {
  * @pool_id		: pool Id for which this allocated.
  *			  Can only be used if there is no flow
  *			  steering
+ * @chip_id		: chip_id indicating MLO chip_id
+ *			  valid or used only in case of multi-chip MLO
  * @in_use		  rx_desc is in use
  * @unmapped		  used to mark rx_desc an unmapped if the corresponding
  *			  nbuf is already unmapped
@@ -127,6 +129,7 @@ struct dp_rx_desc {
 	qdf_dma_addr_t paddr_buf_start;
 	uint32_t cookie;
 	uint8_t	 pool_id;
+	uint8_t chip_id;
 #ifdef RX_DESC_DEBUG_CHECK
 	uint32_t magic;
 	uint8_t *nbuf_data_addr;

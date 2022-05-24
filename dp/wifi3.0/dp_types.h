@@ -1716,13 +1716,6 @@ struct dp_arch_ops {
 	void (*txrx_peer_map_detach)(struct dp_soc *soc);
 	QDF_STATUS (*dp_rxdma_ring_sel_cfg)(struct dp_soc *soc);
 	void (*soc_cfg_attach)(struct dp_soc *soc);
-	void (*peer_get_reo_hash)(struct dp_vdev *vdev,
-				  struct cdp_peer_setup_info *setup_info,
-				  enum cdp_host_reo_dest_ring *reo_dest,
-				  bool *hash_based,
-				  uint8_t *lmac_peer_id_msb);
-	bool (*reo_remap_config)(struct dp_soc *soc, uint32_t *remap0,
-				 uint32_t *remap1, uint32_t *remap2);
 
 	/* TX RX Arch Ops */
 	QDF_STATUS (*tx_hw_enqueue)(struct dp_soc *soc, struct dp_vdev *vdev,

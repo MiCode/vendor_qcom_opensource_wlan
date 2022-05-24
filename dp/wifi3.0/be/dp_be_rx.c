@@ -147,8 +147,8 @@ uint32_t dp_rx_process_be(struct dp_intr *int_ctx,
 	struct dp_rx_desc *rx_desc = NULL;
 	qdf_nbuf_t nbuf, next;
 	bool near_full;
-	union dp_rx_desc_list_elem_t *head[MAX_PDEV_CNT];
-	union dp_rx_desc_list_elem_t *tail[MAX_PDEV_CNT];
+	union dp_rx_desc_list_elem_t *head[WLAN_MAX_MLO_CHIPS][MAX_PDEV_CNT];
+	union dp_rx_desc_list_elem_t *tail[WLAN_MAX_MLO_CHIPS][MAX_PDEV_CNT];
 	uint32_t num_pending;
 	uint32_t rx_bufs_used = 0, rx_buf_cookie;
 	uint16_t msdu_len = 0;
@@ -163,7 +163,7 @@ uint32_t dp_rx_process_be(struct dp_intr *int_ctx,
 	enum hal_reo_error_status error;
 	uint32_t peer_mdata;
 	uint8_t *rx_tlv_hdr;
-	uint32_t rx_bufs_reaped[MAX_PDEV_CNT];
+	uint32_t rx_bufs_reaped[WLAN_MAX_MLO_CHIPS][MAX_PDEV_CNT];
 	uint8_t mac_id = 0;
 	struct dp_pdev *rx_pdev;
 	bool enh_flag;
@@ -192,6 +192,7 @@ uint32_t dp_rx_process_be(struct dp_intr *int_ctx,
 	struct dp_srng *rx_ring = &soc->reo_dest_ring[reo_ring_num];
 	int max_reap_limit, ring_near_full;
 	struct dp_soc *replenish_soc;
+	uint8_t chip_id;
 
 	DP_HIST_INIT();
 
@@ -279,9 +280,9 @@ more_data:
 				dp_rx_buffer_pool_nbuf_free(soc, rx_desc->nbuf,
 							    rx_desc->pool_id);
 				dp_rx_add_to_free_desc_list(
-							&head[rx_desc->pool_id],
-							&tail[rx_desc->pool_id],
-							rx_desc);
+					&head[rx_desc->chip_id][rx_desc->pool_id],
+					&tail[rx_desc->chip_id][rx_desc->pool_id],
+					rx_desc);
 			}
 			hal_srng_dst_get_next(hal_soc, hal_ring_hdl);
 			continue;
@@ -377,7 +378,7 @@ more_data:
 		/* Pop out the descriptor*/
 		hal_srng_dst_get_next(hal_soc, hal_ring_hdl);
 
-		rx_bufs_reaped[rx_desc->pool_id]++;
+		rx_bufs_reaped[rx_desc->chip_id][rx_desc->pool_id]++;
 		peer_mdata = mpdu_desc_info.peer_meta_data;
 		QDF_NBUF_CB_RX_PEER_ID(rx_desc->nbuf) =
 			dp_rx_peer_metadata_peer_id_get_be(soc, peer_mdata);
@@ -447,8 +448,9 @@ more_data:
 		if (qdf_likely(!qdf_nbuf_is_rx_chfrag_cont(rx_desc->nbuf)))
 			quota -= 1;
 
-		dp_rx_add_to_free_desc_list(&head[rx_desc->pool_id],
-					    &tail[rx_desc->pool_id], rx_desc);
+		dp_rx_add_to_free_desc_list
+			(&head[rx_desc->chip_id][rx_desc->pool_id],
+			 &tail[rx_desc->chip_id][rx_desc->pool_id], rx_desc);
 		num_rx_bufs_reaped++;
 		/*
 		 * only if complete msdu is received for scatter case,
@@ -462,25 +464,30 @@ more_data:
 done:
 	dp_rx_srng_access_end(int_ctx, soc, hal_ring_hdl);
 
-	replenish_soc = dp_rx_replensih_soc_get(soc, reo_ring_num);
-	for (mac_id = 0; mac_id < MAX_PDEV_CNT; mac_id++) {
-		/*
-		 * continue with next mac_id if no pkts were reaped
-		 * from that pool
-		 */
-		if (!rx_bufs_reaped[mac_id])
-			continue;
+	for (chip_id = 0; chip_id < WLAN_MAX_MLO_CHIPS; chip_id++) {
+		for (mac_id = 0; mac_id < MAX_PDEV_CNT; mac_id++) {
+			/*
+			 * continue with next mac_id if no pkts were reaped
+			 * from that pool
+			 */
+			if (!rx_bufs_reaped[chip_id][mac_id])
+				continue;
 
-		dp_rxdma_srng = &replenish_soc->rx_refill_buf_ring[mac_id];
+			replenish_soc = dp_rx_replensih_soc_get(soc, chip_id);
 
-		rx_desc_pool = &replenish_soc->rx_desc_buf[mac_id];
+			dp_rxdma_srng =
+				&replenish_soc->rx_refill_buf_ring[mac_id];
 
-		dp_rx_buffers_replenish(replenish_soc, mac_id, dp_rxdma_srng,
-					rx_desc_pool, rx_bufs_reaped[mac_id],
-					&head[mac_id], &tail[mac_id]);
+			rx_desc_pool = &replenish_soc->rx_desc_buf[mac_id];
+
+			dp_rx_buffers_replenish(replenish_soc, mac_id,
+						dp_rxdma_srng, rx_desc_pool,
+						rx_bufs_reaped[chip_id][mac_id],
+						&head[chip_id][mac_id],
+						&tail[chip_id][mac_id]);
+		}
 	}
 
-	dp_verbose_debug("replenished %u\n", rx_bufs_reaped[0]);
 	/* Peer can be NULL is case of LFR */
 	if (qdf_likely(txrx_peer))
 		vdev = NULL;
@@ -919,6 +926,7 @@ dp_rx_desc_pool_init_be_cc(struct dp_soc *soc,
 		rx_desc_elem->rx_desc.cookie =
 			dp_cc_desc_id_generate(page_desc->ppt_index,
 					       avail_entry_index);
+		rx_desc_elem->rx_desc.chip_id = dp_mlo_get_chip_id(soc);
 		rx_desc_elem->rx_desc.pool_id = pool_id;
 		rx_desc_elem->rx_desc.in_use = 0;
 		rx_desc_elem = rx_desc_elem->next;
@@ -977,6 +985,8 @@ dp_rx_desc_pool_init_be_cc(struct dp_soc *soc,
 					       avail_entry_index);
 		rx_desc_pool->array[i].rx_desc.pool_id = pool_id;
 		rx_desc_pool->array[i].rx_desc.in_use = 0;
+		rx_desc_pool->array[i].rx_desc.chip_id =
+					dp_mlo_get_chip_id(soc);
 
 		avail_entry_index = (avail_entry_index + 1) &
 					DP_CC_SPT_PAGE_MAX_ENTRIES_MASK;
