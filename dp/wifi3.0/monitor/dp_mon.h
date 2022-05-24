@@ -2344,11 +2344,13 @@ dp_tx_mon_process(struct dp_soc *soc, struct dp_intr *int_ctx,
 static inline
 uint32_t dp_tx_mon_buf_refill(struct dp_intr *int_ctx)
 {
+	return 0;
 }
 
 static inline
 uint32_t dp_rx_mon_buf_refill(struct dp_intr *int_ctx)
 {
+	return 0;
 }
 #endif
 
