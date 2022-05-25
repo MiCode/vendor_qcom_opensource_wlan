@@ -3390,6 +3390,12 @@ struct dp_vdev {
 	uint32_t roaming_peer_status;
 	union dp_align_mac_addr roaming_peer_mac;
 #endif
+#ifdef DP_TRAFFIC_END_INDICATION
+	/* per vdev feature enable/disable status */
+	bool traffic_end_ind_en;
+	/* per vdev nbuf queue for traffic end indication packets */
+	qdf_nbuf_queue_t end_ind_pkt_q;
+#endif
 };
 
 enum {

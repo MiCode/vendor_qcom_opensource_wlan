@@ -1274,6 +1274,7 @@ enum cdp_pdev_param_type {
  * @cdp_ipa_enabled : set ipa mode
  * @cdp_psoc_param_vdev_stats_hw_offload: Configure HW vdev stats offload
  * @cdp_pdev_param_undecoded_metadata_enable: Undecoded metadata capture enable
+ * @cdp_vdev_param_traffic_end_ind: Traffic end indication enable/disable
  */
 typedef union cdp_config_param_t {
 	/* peer params */
@@ -1359,6 +1360,7 @@ typedef union cdp_config_param_t {
 	bool cdp_pdev_param_undecoded_metadata_enable;
 	bool cdp_sawf_enabled;
 	bool cdp_drop_3addr_mcast;
+	bool cdp_vdev_param_traffic_end_ind;
 } cdp_config_param_type;
 
 /**
@@ -1438,6 +1440,7 @@ enum cdp_pdev_bpr_param {
  * @CDP_UPDATE_DSCP_TO_TID_MAP: Set DSCP to TID map id
  * @CDP_SET_MCAST_VDEV : Set primary mcast vdev
  * @CDP_ENABLE_WRAP: qwrap ap
+ * @CDP_ENABLE_TRAFFIC_END_INDICATION: enable/disable traffic end indication
  */
 enum cdp_vdev_param_type {
 	CDP_ENABLE_NAWDS,
@@ -1479,6 +1482,9 @@ enum cdp_vdev_param_type {
 	CDP_SET_MCAST_VDEV,
 	CDP_DROP_3ADDR_MCAST,
 	CDP_ENABLE_WRAP,
+#ifdef DP_TRAFFIC_END_INDICATION
+	CDP_ENABLE_TRAFFIC_END_INDICATION,
+#endif
 };
 
 /*

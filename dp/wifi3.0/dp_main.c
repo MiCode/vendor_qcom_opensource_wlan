@@ -6780,6 +6780,45 @@ static inline void dp_vdev_save_mld_addr(struct dp_vdev *vdev,
 }
 #endif
 
+#ifdef DP_TRAFFIC_END_INDICATION
+/*
+ * dp_tx_traffic_end_indication_attach() - Initialize data end indication
+ *                                         related members in VDEV
+ * @vdev: DP vdev handle
+ *
+ * Return: None
+ */
+static inline void
+dp_tx_vdev_traffic_end_indication_attach(struct dp_vdev *vdev)
+{
+	qdf_nbuf_queue_init(&vdev->end_ind_pkt_q);
+}
+
+/*
+ * dp_tx_vdev_traffic_end_indication_detach() - De-init data end indication
+ *                                              related members in VDEV
+ * @vdev: DP vdev handle
+ *
+ * Return: None
+ */
+static inline void
+dp_tx_vdev_traffic_end_indication_detach(struct dp_vdev *vdev)
+{
+	qdf_nbuf_t nbuf;
+
+	while ((nbuf = qdf_nbuf_queue_remove(&vdev->end_ind_pkt_q)) != NULL)
+		qdf_nbuf_free(nbuf);
+}
+#else
+static inline void
+dp_tx_vdev_traffic_end_indication_attach(struct dp_vdev *vdev)
+{}
+
+static inline void
+dp_tx_vdev_traffic_end_indication_detach(struct dp_vdev *vdev)
+{}
+#endif
+
 /*
 * dp_vdev_attach_wifi3() - attach txrx vdev
 * @txrx_pdev: Datapath PDEV handle
@@ -6900,6 +6939,7 @@ static QDF_STATUS dp_vdev_attach_wifi3(struct cdp_soc_t *cdp_soc,
 	vdev->prev_tx_enq_tstamp = 0;
 	vdev->prev_rx_deliver_tstamp = 0;
 	vdev->skip_sw_tid_classification = DP_TX_HW_DSCP_TID_MAP_VALID;
+	dp_tx_vdev_traffic_end_indication_attach(vdev);
 
 	dp_vdev_pdev_list_add(soc, pdev, vdev);
 	pdev->vdev_count++;
@@ -7290,6 +7330,7 @@ static QDF_STATUS dp_vdev_detach_wifi3(struct cdp_soc_t *cdp_soc,
 	dp_txrx_reset_vdev_stats_id(cdp_soc, vdev->vdev_stats_id);
 
 	dp_tx_vdev_multipass_deinit(vdev);
+	dp_tx_vdev_traffic_end_indication_detach(vdev);
 
 	if (vdev->vdev_dp_ext_handle) {
 		qdf_mem_free(vdev->vdev_dp_ext_handle);
@@ -10604,6 +10645,11 @@ dp_set_vdev_param(struct cdp_soc_t *cdp_soc, uint8_t vdev_id,
 	case CDP_ENABLE_WRAP:
 		vdev->wrap_vdev = val.cdp_vdev_param_wrap;
 		break;
+#ifdef DP_TRAFFIC_END_INDICATION
+	case CDP_ENABLE_TRAFFIC_END_INDICATION:
+		vdev->traffic_end_ind_en = val.cdp_vdev_param_traffic_end_ind;
+		break;
+#endif
 	default:
 		break;
 	}

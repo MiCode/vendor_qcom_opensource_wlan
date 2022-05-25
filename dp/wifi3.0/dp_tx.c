@@ -575,7 +575,8 @@ static uint8_t dp_tx_prepare_htt_metadata(struct dp_vdev *vdev, qdf_nbuf_t nbuf,
 
 	if (vdev->mesh_vdev || msdu_info->is_tx_sniffer ||
 	    HTT_TX_MSDU_EXT2_DESC_FLAG_VALID_KEY_FLAGS_GET(msdu_info->
-							   meta_data[0])) {
+							   meta_data[0]) ||
+	    msdu_info->exception_fw) {
 		if (qdf_unlikely(qdf_nbuf_headroom(nbuf) <
 				 htt_desc_size_aligned)) {
 			nbuf = qdf_nbuf_realloc_headroom(nbuf,
@@ -1032,6 +1033,211 @@ static inline int dp_tx_is_nbuf_marked_exception(struct dp_soc *soc,
 }
 #endif
 
+#ifdef DP_TRAFFIC_END_INDICATION
+/**
+ * dp_tx_get_traffic_end_indication_pkt() - Allocate and prepare packet to send
+ *                                          as indication to fw to inform that
+ *                                          data stream has ended
+ * @vdev: DP vdev handle
+ * @nbuf: original buffer from network stack
+ *
+ * Return: NULL on failure,
+ *         nbuf on success
+ */
+static inline qdf_nbuf_t
+dp_tx_get_traffic_end_indication_pkt(struct dp_vdev *vdev,
+				     qdf_nbuf_t nbuf)
+{
+	/* Packet length should be enough to copy upto L3 header */
+	uint8_t end_nbuf_len = 64;
+	uint8_t htt_desc_size_aligned;
+	uint8_t htt_desc_size;
+	qdf_nbuf_t end_nbuf;
+
+	if (qdf_unlikely(QDF_NBUF_CB_GET_PACKET_TYPE(nbuf) ==
+			 QDF_NBUF_CB_PACKET_TYPE_END_INDICATION)) {
+		htt_desc_size = sizeof(struct htt_tx_msdu_desc_ext2_t);
+		htt_desc_size_aligned = (htt_desc_size + 7) & ~0x7;
+
+		end_nbuf = qdf_nbuf_queue_remove(&vdev->end_ind_pkt_q);
+		if (!end_nbuf) {
+			end_nbuf = qdf_nbuf_alloc(NULL,
+						  (htt_desc_size_aligned +
+						  end_nbuf_len),
+						  htt_desc_size_aligned,
+						  8, false);
+			if (!end_nbuf) {
+				dp_err("Packet allocation failed");
+				goto out;
+			}
+		} else {
+			qdf_nbuf_reset(end_nbuf, htt_desc_size_aligned, 8);
+		}
+		qdf_mem_copy(qdf_nbuf_data(end_nbuf), qdf_nbuf_data(nbuf),
+			     end_nbuf_len);
+		qdf_nbuf_set_pktlen(end_nbuf, end_nbuf_len);
+
+		return end_nbuf;
+	}
+out:
+	return NULL;
+}
+
+/**
+ * dp_tx_send_traffic_end_indication_pkt() - Send indication packet to FW
+ *                                           via exception path.
+ * @vdev: DP vdev handle
+ * @end_nbuf: skb to send as indication
+ * @msdu_info: msdu_info of original nbuf
+ * @peer_id: peer id
+ *
+ * Return: None
+ */
+static inline void
+dp_tx_send_traffic_end_indication_pkt(struct dp_vdev *vdev,
+				      qdf_nbuf_t end_nbuf,
+				      struct dp_tx_msdu_info_s *msdu_info,
+				      uint16_t peer_id)
+{
+	struct dp_tx_msdu_info_s e_msdu_info = {0};
+	qdf_nbuf_t nbuf;
+	struct htt_tx_msdu_desc_ext2_t *desc_ext =
+		(struct htt_tx_msdu_desc_ext2_t *)(e_msdu_info.meta_data);
+	e_msdu_info.tx_queue = msdu_info->tx_queue;
+	e_msdu_info.tid = msdu_info->tid;
+	e_msdu_info.exception_fw = 1;
+	desc_ext->host_tx_desc_pool = 1;
+	desc_ext->traffic_end_indication = 1;
+	nbuf = dp_tx_send_msdu_single(vdev, end_nbuf, &e_msdu_info,
+				      peer_id, NULL);
+	if (nbuf) {
+		dp_err("Traffic end indication packet tx failed");
+		qdf_nbuf_free(nbuf);
+	}
+}
+
+/**
+ * dp_tx_traffic_end_indication_set_desc_flag() - Set tx descriptor flag to
+ *                                                mark it trafic end indication
+ *                                                packet.
+ * @tx_desc: Tx descriptor pointer
+ * @msdu_info: msdu_info structure pointer
+ *
+ * Return: None
+ */
+static inline void
+dp_tx_traffic_end_indication_set_desc_flag(struct dp_tx_desc_s *tx_desc,
+					   struct dp_tx_msdu_info_s *msdu_info)
+{
+	struct htt_tx_msdu_desc_ext2_t *desc_ext =
+		(struct htt_tx_msdu_desc_ext2_t *)(msdu_info->meta_data);
+
+	if (qdf_unlikely(desc_ext->traffic_end_indication))
+		tx_desc->flags |= DP_TX_DESC_FLAG_TRAFFIC_END_IND;
+}
+
+/**
+ * dp_tx_traffic_end_indication_enq_ind_pkt() - Enqueue the packet instead of
+ *                                              freeing which are associated
+ *                                              with traffic end indication
+ *                                              flagged descriptor.
+ * @soc: dp soc handle
+ * @desc: Tx descriptor pointer
+ * @nbuf: buffer pointer
+ *
+ * Return: True if packet gets enqueued else false
+ */
+static bool
+dp_tx_traffic_end_indication_enq_ind_pkt(struct dp_soc *soc,
+					 struct dp_tx_desc_s *desc,
+					 qdf_nbuf_t nbuf)
+{
+	struct dp_vdev *vdev = NULL;
+
+	if (qdf_unlikely((desc->flags &
+			  DP_TX_DESC_FLAG_TRAFFIC_END_IND) != 0)) {
+		vdev = dp_vdev_get_ref_by_id(soc, desc->vdev_id,
+					     DP_MOD_ID_TX_COMP);
+		if (vdev) {
+			qdf_nbuf_queue_add(&vdev->end_ind_pkt_q, nbuf);
+			dp_vdev_unref_delete(soc, vdev, DP_MOD_ID_TX_COMP);
+			return true;
+		}
+	}
+	return false;
+}
+
+/**
+ * dp_tx_traffic_end_indication_is_enabled() - get the feature
+ *                                             enable/disable status
+ * @vdev: dp vdev handle
+ *
+ * Return: True if feature is enable else false
+ */
+static inline bool
+dp_tx_traffic_end_indication_is_enabled(struct dp_vdev *vdev)
+{
+	return qdf_unlikely(vdev->traffic_end_ind_en);
+}
+
+static inline qdf_nbuf_t
+dp_tx_send_msdu_single_wrapper(struct dp_vdev *vdev, qdf_nbuf_t nbuf,
+			       struct dp_tx_msdu_info_s *msdu_info,
+			       uint16_t peer_id, qdf_nbuf_t end_nbuf)
+{
+	if (dp_tx_traffic_end_indication_is_enabled(vdev))
+		end_nbuf = dp_tx_get_traffic_end_indication_pkt(vdev, nbuf);
+
+	nbuf = dp_tx_send_msdu_single(vdev, nbuf, msdu_info, peer_id, NULL);
+
+	if (qdf_unlikely(end_nbuf))
+		dp_tx_send_traffic_end_indication_pkt(vdev, end_nbuf,
+						      msdu_info, peer_id);
+	return nbuf;
+}
+#else
+static inline qdf_nbuf_t
+dp_tx_get_traffic_end_indication_pkt(struct dp_vdev *vdev,
+				     qdf_nbuf_t nbuf)
+{
+	return NULL;
+}
+
+static inline void
+dp_tx_send_traffic_end_indication_pkt(struct dp_vdev *vdev,
+				      qdf_nbuf_t end_nbuf,
+				      struct dp_tx_msdu_info_s *msdu_info,
+				      uint16_t peer_id)
+{}
+
+static inline void
+dp_tx_traffic_end_indication_set_desc_flag(struct dp_tx_desc_s *tx_desc,
+					   struct dp_tx_msdu_info_s *msdu_info)
+{}
+
+static inline bool
+dp_tx_traffic_end_indication_enq_ind_pkt(struct dp_soc *soc,
+					 struct dp_tx_desc_s *desc,
+					 qdf_nbuf_t nbuf)
+{
+	return false;
+}
+
+static inline bool
+dp_tx_traffic_end_indication_is_enabled(struct dp_vdev *vdev)
+{
+	return false;
+}
+
+static inline qdf_nbuf_t
+dp_tx_send_msdu_single_wrapper(struct dp_vdev *vdev, qdf_nbuf_t nbuf,
+			       struct dp_tx_msdu_info_s *msdu_info,
+			       uint16_t peer_id, qdf_nbuf_t end_nbuf)
+{
+	return dp_tx_send_msdu_single(vdev, nbuf, msdu_info, peer_id, NULL);
+}
+#endif
+
 /**
  * dp_tx_desc_prepare_single - Allocate and prepare Tx descriptor
  * @vdev: DP vdev handle
@@ -1149,6 +1355,8 @@ struct dp_tx_desc_s *dp_tx_prepare_desc_single(struct dp_vdev *vdev,
 		tx_desc->length = qdf_nbuf_headlen(nbuf);
 		tx_desc->pkt_offset = align_pad + htt_hdr_size;
 		tx_desc->flags |= DP_TX_DESC_FLAG_TO_FW;
+		dp_tx_traffic_end_indication_set_desc_flag(tx_desc,
+							   msdu_info);
 		is_exception = 1;
 		tx_desc->length -= tx_desc->pkt_offset;
 	}
@@ -2301,6 +2509,10 @@ void dp_tx_comp_free_buf(struct dp_soc *soc, struct dp_tx_desc_s *desc)
 
 	if (desc->flags & DP_TX_DESC_FLAG_MESH_MODE)
 		return dp_mesh_tx_comp_free_buff(soc, desc);
+
+	if (dp_tx_traffic_end_indication_enq_ind_pkt(soc, desc, nbuf))
+		return;
+
 nbuf_free:
 	qdf_nbuf_free(nbuf);
 }
@@ -3362,6 +3574,7 @@ qdf_nbuf_t dp_tx_send(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
 	 */
 	struct dp_tx_msdu_info_s msdu_info = {0};
 	struct dp_vdev *vdev = NULL;
+	qdf_nbuf_t end_nbuf = NULL;
 
 	if (qdf_unlikely(vdev_id >= MAX_VDEV_CNT))
 		return nbuf;
@@ -3510,8 +3723,9 @@ qdf_nbuf_t dp_tx_send(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
 	 * SRNG. There is no need to setup a MSDU extension descriptor.
 	 */
 	dp_tx_prefetch_nbuf_data(nbuf);
-	nbuf = dp_tx_send_msdu_single(vdev, nbuf, &msdu_info, peer_id, NULL);
 
+	nbuf = dp_tx_send_msdu_single_wrapper(vdev, nbuf, &msdu_info,
+					      peer_id, end_nbuf);
 	return nbuf;
 
 send_multiple:
