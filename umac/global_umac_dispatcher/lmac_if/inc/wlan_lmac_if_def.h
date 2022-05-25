@@ -1439,6 +1439,13 @@ struct wlan_lmac_if_twt_rx_ops {
 };
 #endif
 
+#if defined WLAN_FEATURE_11AX
+struct wlan_lmac_if_spatial_reuse_tx_ops {
+	QDF_STATUS (*send_cfg)(struct wlan_objmgr_vdev *vdev, uint8_t sr_ctrl,
+			       uint8_t non_srg_max_pd_offset);
+};
+#endif
+
 /**
  * struct wlan_lmac_if_tx_ops - south bound tx function pointers
  * @mgmt_txrx_tx_ops: mgmt txrx tx ops
@@ -1541,6 +1548,10 @@ struct wlan_lmac_if_tx_ops {
 
 #if defined(WLAN_SUPPORT_TWT) && defined(WLAN_TWT_CONV_SUPPORTED)
 	struct wlan_lmac_if_twt_tx_ops twt_tx_ops;
+#endif
+
+#if defined WLAN_FEATURE_11AX
+	struct wlan_lmac_if_spatial_reuse_tx_ops spatial_reuse_tx_ops;
 #endif
 };
 

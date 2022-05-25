@@ -63,6 +63,9 @@
 #if defined(QCA_SUPPORT_SON) || defined(WLAN_FEATURE_SON)
 #include <target_if_son.h>
 #endif
+#if defined WLAN_FEATURE_11AX
+#include <target_if_spatial_reuse.h>
+#endif
 #ifdef WLAN_OFFCHAN_TXRX_ENABLE
 #include <target_if_offchan_txrx_api.h>
 #endif
@@ -293,6 +296,21 @@ static void target_if_son_tx_ops_register(
 {
 	return;
 }
+#endif
+
+#if defined WLAN_FEATURE_11AX
+static void target_if_spatial_reuse_tx_ops_register(
+			struct wlan_lmac_if_tx_ops *tx_ops)
+{
+	target_if_spatial_reuse_register_tx_ops(tx_ops);
+}
+
+#else
+static void target_if_spatial_reuse_tx_ops_register(
+			struct wlan_lmac_if_tx_ops *tx_ops)
+{
+}
+
 #endif
 
 #ifdef FEATURE_WLAN_TDLS
@@ -566,6 +584,8 @@ QDF_STATUS target_if_register_umac_tx_ops(struct wlan_lmac_if_tx_ops *tx_ops)
 	target_if_dfs_tx_ops_register(tx_ops);
 
 	target_if_son_tx_ops_register(tx_ops);
+
+	target_if_spatial_reuse_tx_ops_register(tx_ops);
 
 	target_if_tdls_tx_ops_register(tx_ops);
 
