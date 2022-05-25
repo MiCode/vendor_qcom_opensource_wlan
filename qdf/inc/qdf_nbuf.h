@@ -64,6 +64,7 @@
 #define QDF_NBUF_TRAC_IPV6_ETH_TYPE     0x86dd
 #define QDF_NBUF_DEST_MAC_OFFSET		0
 #define QDF_NBUF_SRC_MAC_OFFSET			6
+#define QDF_NBUF_TRAC_IPV4_TOS_OFFSET		15
 #define QDF_NBUF_TRAC_IPV4_PROTO_TYPE_OFFSET  23
 #define QDF_NBUF_TRAC_IPV4_DEST_ADDR_OFFSET   30
 #define QDF_NBUF_TRAC_IPV4_SRC_ADDR_OFFSET    26
@@ -3157,6 +3158,52 @@ qdf_nbuf_data_get_icmpv6_subtype(uint8_t *data)
 }
 
 /**
+ * qdf_nbuf_is_ipv4_last_fragment() - Check if IPV4 packet is last fragment
+ * @nbuf: Network buffer
+ *
+ * This function check if IPV4 packet is last fragment or not.
+ * Caller has to call this function for ipv4 packets only.
+ *
+ * Return: True if ipv4 packet is last fragment otherwise false
+ */
+static inline bool
+qdf_nbuf_is_ipv4_last_fragment(qdf_nbuf_t nbuf)
+{
+	return __qdf_nbuf_is_ipv4_last_fragment(nbuf);
+}
+
+/**
+ * qdf_nbuf_data_set_ipv4_tos() - set the TOS field of IPV4 packet.
+ *
+ * @data: Pointer to IPV4 packet data buffer
+ * @tos: TOS value to be set in IPV4 packet
+ *
+ * This func. set the TOS field of IPV4 packet.
+ *
+ * Return: None
+ */
+static inline void
+qdf_nbuf_data_set_ipv4_tos(uint8_t *data, uint8_t tos)
+{
+	__qdf_nbuf_data_set_ipv4_tos(data, tos);
+}
+
+/**
+ * qdf_nbuf_data_get_ipv4_tos() - get the TOS field of IPV4 packet.
+ *
+ * @data: Pointer to IPV4 packet data buffer
+ *
+ * This func. returns the TOS field of IPV4 packet.
+ *
+ * Return: TOS of IPV4 packet.
+ */
+static inline uint8_t
+qdf_nbuf_data_get_ipv4_tos(uint8_t *data)
+{
+	return __qdf_nbuf_data_get_ipv4_tos(data);
+}
+
+/**
  * qdf_nbuf_data_get_ipv4_proto() - get the proto type
  *            of IPV4 packet.
  * @data: Pointer to IPV4 packet data buffer
@@ -3169,6 +3216,37 @@ static inline uint8_t
 qdf_nbuf_data_get_ipv4_proto(uint8_t *data)
 {
 	return __qdf_nbuf_data_get_ipv4_proto(data);
+}
+
+/**
+ * qdf_nbuf_data_set_ipv6_tc() - set the TC field
+ *                               of IPV6 packet.
+ * @data: Pointer to IPV6 packet data buffer
+ * @tc: Value to IPV6 packet TC field
+ *
+ * This func. set the TC field of IPV6 packet.
+ *
+ * Return: None
+ */
+static inline void
+qdf_nbuf_data_set_ipv6_tc(uint8_t *data, uint8_t tc)
+{
+	__qdf_nbuf_data_set_ipv6_tc(data, tc);
+}
+
+/**
+ * qdf_nbuf_data_get_ipv6_tc() - get the TC field
+ *                               of IPV6 packet.
+ * @data: Pointer to IPV6 packet data buffer
+ *
+ * This func. returns the TC field of IPV6 packet.
+ *
+ * Return: Traffic classification field of IPV6 packet.
+ */
+static inline uint8_t
+qdf_nbuf_data_get_ipv6_tc(uint8_t *data)
+{
+	return __qdf_nbuf_data_get_ipv6_tc(data);
 }
 
 /**

@@ -1473,6 +1473,57 @@ __qdf_nbuf_data_get_icmpv6_subtype(uint8_t *data)
 }
 
 /**
+ * __qdf_nbuf_is_ipv4_last_fragment() - Check if IPv4 packet is last fragment
+ * @skb: Buffer
+ *
+ * This function checks IPv4 packet is last fragment or not.
+ * Caller has to call this function for IPv4 packets only.
+ *
+ * Return: True if IPv4 packet is last fragment otherwise false
+ */
+bool
+__qdf_nbuf_is_ipv4_last_fragment(struct sk_buff *skb)
+{
+	if (((ntohs(ip_hdr(skb)->frag_off) & ~IP_OFFSET) & IP_MF) == 0)
+		return true;
+
+	return false;
+}
+
+/**
+ * __qdf_nbuf_data_set_ipv4_tos() - set the TOS for IPv4 packet
+ * @data: pointer to skb payload
+ * @tos: value of TOS to be set
+ *
+ * This func. set the TOS field of IPv4 packet.
+ *
+ * Return: None
+ */
+void
+__qdf_nbuf_data_set_ipv4_tos(uint8_t *data, uint8_t tos)
+{
+	*(uint8_t *)(data + QDF_NBUF_TRAC_IPV4_TOS_OFFSET) = tos;
+}
+
+/**
+ * __qdf_nbuf_data_get_ipv4_tos() - get the TOS type of IPv4 packet
+ * @data: Pointer to skb payload
+ *
+ * This func. returns the TOS type of IPv4 packet.
+ *
+ * Return: TOS type of IPv4 packet.
+ */
+uint8_t
+__qdf_nbuf_data_get_ipv4_tos(uint8_t *data)
+{
+	uint8_t tos;
+
+	tos = (uint8_t)(*(uint8_t *)(data +
+			QDF_NBUF_TRAC_IPV4_TOS_OFFSET));
+	return tos;
+}
+
+/**
  * __qdf_nbuf_data_get_ipv4_proto() - get the proto type
  *            of IPV4 packet.
  * @data: Pointer to IPV4 packet data buffer
@@ -1489,6 +1540,43 @@ __qdf_nbuf_data_get_ipv4_proto(uint8_t *data)
 	proto_type = (uint8_t)(*(uint8_t *)(data +
 				QDF_NBUF_TRAC_IPV4_PROTO_TYPE_OFFSET));
 	return proto_type;
+}
+
+/**
+ * __qdf_nbuf_data_get_ipv6_tc() - get the TC field
+ *                                 of IPv6 packet.
+ * @data: Pointer to IPv6 packet data buffer
+ *
+ * This func. returns the TC field of IPv6 packet.
+ *
+ * Return: traffic classification of IPv6 packet.
+ */
+uint8_t
+__qdf_nbuf_data_get_ipv6_tc(uint8_t *data)
+{
+	struct ipv6hdr *hdr;
+
+	hdr =  (struct ipv6hdr *)(data + QDF_NBUF_TRAC_IPV6_OFFSET);
+	return ip6_tclass(ip6_flowinfo(hdr));
+}
+
+/**
+ * __qdf_nbuf_data_set_ipv6_tc() - set the TC field
+ *                                 of IPv6 packet.
+ * @data: Pointer to skb payload
+ * @tc: value to set to IPv6 header TC field
+ *
+ * This func. set the TC field of IPv6 header.
+ *
+ * Return: None
+ */
+void
+__qdf_nbuf_data_set_ipv6_tc(uint8_t *data, uint8_t tc)
+{
+	struct ipv6hdr *hdr;
+
+	hdr =  (struct ipv6hdr *)(data + QDF_NBUF_TRAC_IPV6_OFFSET);
+	ip6_flow_hdr(hdr, tc, ip6_flowlabel(hdr));
 }
 
 /**
