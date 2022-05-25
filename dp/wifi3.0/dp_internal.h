@@ -1580,6 +1580,8 @@ void dp_update_vdev_stats_on_peer_unmap(struct dp_vdev *vdev,
 		_tgtobj->tx.tx_success_twt.bytes += \
 					_srcobj->tx.tx_success_twt.bytes; \
 		_tgtobj->tx.last_tx_ts = _srcobj->tx.last_tx_ts; \
+		_tgtobj->tx.release_src_not_tqm += \
+					_srcobj->tx.release_src_not_tqm; \
 		for (i = 0; i < QDF_PROTO_SUBTYPE_MAX; i++) { \
 			_tgtobj->tx.no_ack_count[i] += \
 					_srcobj->tx.no_ack_count[i];\
