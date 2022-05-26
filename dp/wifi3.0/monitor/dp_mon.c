@@ -1278,15 +1278,15 @@ QDF_STATUS dp_peer_stats_notify(struct dp_pdev *dp_pdev, struct dp_peer *peer)
 	struct dp_peer *tgt_peer = NULL;
 	struct dp_txrx_peer *txrx_peer = NULL;
 
-	if (!peer || !peer->vdev || !peer->monitor_peer)
+	if (qdf_unlikely(!peer || !peer->vdev || !peer->monitor_peer))
 		return QDF_STATUS_E_FAULT;
 
 	tgt_peer = dp_get_tgt_peer_from_peer(peer);
-	if (!tgt_peer)
+	if (qdf_unlikely(!tgt_peer))
 		return QDF_STATUS_E_FAULT;
 
 	txrx_peer = tgt_peer->txrx_peer;
-	if (!txrx_peer)
+	if (!qdf_unlikely(txrx_peer))
 		return QDF_STATUS_E_FAULT;
 
 	mon_peer_stats = &peer->monitor_peer->stats;
@@ -1826,13 +1826,12 @@ dp_disable_enhanced_stats(struct cdp_soc_t *soc, uint8_t pdev_id)
 QDF_STATUS dp_peer_qos_stats_notify(struct dp_pdev *dp_pdev,
 				    struct cdp_rx_stats_ppdu_user *ppdu_user)
 {
-	struct cdp_interface_peer_qos_stats qos_stats_intf;
+	struct cdp_interface_peer_qos_stats qos_stats_intf = {0};
 
-	if (ppdu_user->peer_id == HTT_INVALID_PEER) {
+	if (qdf_unlikely(ppdu_user->peer_id == HTT_INVALID_PEER)) {
 		dp_mon_warn("Invalid peer id");
 		return QDF_STATUS_E_FAILURE;
 	}
-	qdf_mem_zero(&qos_stats_intf, sizeof(qos_stats_intf));
 
 	qdf_mem_copy(qos_stats_intf.peer_mac, ppdu_user->mac_addr,
 		     QDF_MAC_ADDR_SIZE);
@@ -2505,20 +2504,18 @@ dp_tx_rate_stats_update(struct dp_peer *peer,
 void dp_send_stats_event(struct dp_pdev *pdev, struct dp_peer *peer,
 			 uint16_t peer_id)
 {
-	struct cdp_interface_peer_stats peer_stats_intf;
+	struct cdp_interface_peer_stats peer_stats_intf = {0};
 	struct dp_mon_peer *mon_peer = peer->monitor_peer;
 	struct dp_txrx_peer *txrx_peer = NULL;
 
-	if (!mon_peer)
+	if (qdf_unlikely(!mon_peer))
 		return;
 
-	qdf_mem_zero(&peer_stats_intf,
-		     sizeof(struct cdp_interface_peer_stats));
 	mon_peer->stats.rx.rx_snr_measured_time = qdf_system_ticks();
 	peer_stats_intf.rx_avg_snr = mon_peer->stats.rx.avg_snr;
 
 	txrx_peer = dp_get_txrx_peer(peer);
-	if (txrx_peer) {
+	if (qdf_likely(txrx_peer)) {
 		peer_stats_intf.rx_byte_count = txrx_peer->to_stack.bytes;
 		peer_stats_intf.tx_byte_count =
 			txrx_peer->stats.per_pkt_stats.tx.tx_success.bytes;
