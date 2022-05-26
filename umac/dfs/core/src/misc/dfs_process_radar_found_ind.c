@@ -585,7 +585,12 @@ void dfs_get_320mhz_bonding_channels(uint16_t center_freq, uint16_t *freq_list,
 {
 	uint16_t chwidth = 320;
 
-	*nchannels = 16;
+	/*
+	 * In 5Ghz band, the 320Mhz channel is always 80Mhz punctured
+	 * to the right. Therefore, it is actually a 240Mhz channel and
+	 * has twelve 20Mhz subchannels.
+	 */
+	*nchannels = NUM_CHANNELS_240MHZ;
 	dfs_calc_bonding_freqs(center_freq, chwidth, freq_list);
 }
 #else
