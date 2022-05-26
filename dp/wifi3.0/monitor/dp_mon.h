@@ -471,9 +471,9 @@ void dp_pktlogmod_exit(struct dp_pdev *handle)
  *
  * @pdev: DP pdev object
  *
- * Return: void
+ * Return: QDF_STATUS
  */
-void dp_vdev_set_monitor_mode_buf_rings(struct dp_pdev *pdev);
+QDF_STATUS dp_vdev_set_monitor_mode_buf_rings(struct dp_pdev *pdev);
 
 /**
  * dp_vdev_set_monitor_mode_rings () - set monitor mode rings
@@ -489,7 +489,7 @@ QDF_STATUS dp_vdev_set_monitor_mode_rings(struct dp_pdev *pdev,
 					  uint8_t delayed_replenish);
 
 #else
-static inline void
+static inline QDF_STATUS
 dp_vdev_set_monitor_mode_buf_rings(struct dp_pdev *pdev)
 {
 }
@@ -652,7 +652,7 @@ struct dp_mon_ops {
 #if defined(DP_CON_MON) && !defined(REMOVE_PKT_LOG)
 	void (*mon_pktlogmod_exit)(struct dp_pdev *pdev);
 #endif
-	void (*mon_vdev_set_monitor_mode_buf_rings)(struct dp_pdev *pdev);
+	QDF_STATUS (*mon_vdev_set_monitor_mode_buf_rings)(struct dp_pdev *pdev);
 	QDF_STATUS (*mon_vdev_set_monitor_mode_rings)(struct dp_pdev *pdev,
 						      uint8_t delayed_replenish);
 	void (*mon_neighbour_peers_detach)(struct dp_pdev *pdev);
@@ -3218,20 +3218,20 @@ static inline void dp_monitor_pktlogmod_exit(struct dp_pdev *pdev) {}
 #endif
 
 static inline
-void dp_monitor_vdev_set_monitor_mode_buf_rings(struct dp_pdev *pdev)
+QDF_STATUS dp_monitor_vdev_set_monitor_mode_buf_rings(struct dp_pdev *pdev)
 {
 	struct dp_mon_ops *monitor_ops;
 	struct dp_mon_soc *mon_soc = pdev->soc->monitor_soc;
 
 	if (!mon_soc) {
 		dp_mon_debug("monitor soc is NULL");
-		return;
+		return QDF_STATUS_E_FAILURE;
 	}
 
 	monitor_ops = mon_soc->mon_ops;
 	if (!monitor_ops || !monitor_ops->mon_vdev_set_monitor_mode_buf_rings) {
 		dp_mon_debug("callback not registered");
-		return;
+		return QDF_STATUS_E_FAILURE;
 	}
 
 	return monitor_ops->mon_vdev_set_monitor_mode_buf_rings(pdev);

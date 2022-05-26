@@ -398,10 +398,9 @@ QDF_STATUS dp_mon_desc_pool_alloc(uint32_t pool_size,
 	return QDF_STATUS_SUCCESS;
 }
 
-static
-void dp_vdev_set_monitor_mode_buf_rings_2_0(struct dp_pdev *pdev)
+QDF_STATUS dp_vdev_set_monitor_mode_buf_rings_rx_2_0(struct dp_pdev *pdev)
 {
-	int tx_mon_max_entries, rx_mon_max_entries;
+	int rx_mon_max_entries;
 	struct wlan_cfg_dp_soc_ctxt *soc_cfg_ctx;
 	struct dp_soc *soc = pdev->soc;
 	struct dp_mon_soc *mon_soc = soc->monitor_soc;
@@ -410,54 +409,106 @@ void dp_vdev_set_monitor_mode_buf_rings_2_0(struct dp_pdev *pdev)
 
 	if (!mon_soc_be) {
 		dp_mon_err("DP MON SOC is NULL");
-		return;
+		return QDF_STATUS_E_FAILURE;
 	}
 
 	soc_cfg_ctx = soc->wlan_cfg_ctx;
 	rx_mon_max_entries = wlan_cfg_get_dp_soc_rx_mon_buf_ring_size(soc_cfg_ctx);
-	tx_mon_max_entries = wlan_cfg_get_dp_soc_tx_mon_buf_ring_size(soc_cfg_ctx);
 
 	hal_set_low_threshold(soc->rxdma_mon_buf_ring[0].hal_srng,
 			      rx_mon_max_entries >> 2);
 	status = htt_srng_setup(soc->htt_handle, 0,
 				soc->rxdma_mon_buf_ring[0].hal_srng,
 				RXDMA_MONITOR_BUF);
+
 	if (status != QDF_STATUS_SUCCESS) {
-		dp_err("Failed to send htt srng setup message for Rx mon buf ring");
-		return;
+		dp_mon_err("Failed to send htt srng setup message for Rx mon buf ring");
+		return status;
 	}
+
+	if (mon_soc_be->rx_mon_ring_fill_level < rx_mon_max_entries) {
+		status = dp_rx_mon_buffers_alloc(soc,
+						 (rx_mon_max_entries -
+						 mon_soc_be->rx_mon_ring_fill_level));
+		if (status != QDF_STATUS_SUCCESS) {
+			dp_mon_err("%pK: Rx mon buffers allocation failed", soc);
+			return status;
+		}
+		mon_soc_be->rx_mon_ring_fill_level +=
+				(rx_mon_max_entries -
+				mon_soc_be->rx_mon_ring_fill_level);
+	}
+
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS dp_vdev_set_monitor_mode_buf_rings_tx_2_0(struct dp_pdev *pdev)
+{
+	int tx_mon_max_entries;
+	struct wlan_cfg_dp_soc_ctxt *soc_cfg_ctx;
+	struct dp_soc *soc = pdev->soc;
+	struct dp_mon_soc *mon_soc = soc->monitor_soc;
+	struct dp_mon_soc_be *mon_soc_be =
+		dp_get_be_mon_soc_from_dp_mon_soc(mon_soc);
+	QDF_STATUS status;
+
+	if (!mon_soc_be) {
+		dp_mon_err("DP MON SOC is NULL");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	soc_cfg_ctx = soc->wlan_cfg_ctx;
+	tx_mon_max_entries =
+		wlan_cfg_get_dp_soc_tx_mon_buf_ring_size(soc_cfg_ctx);
 
 	hal_set_low_threshold(mon_soc_be->tx_mon_buf_ring.hal_srng,
 			      tx_mon_max_entries >> 2);
 	status = htt_srng_setup(soc->htt_handle, 0,
 				mon_soc_be->tx_mon_buf_ring.hal_srng,
 				TX_MONITOR_BUF);
+
 	if (status != QDF_STATUS_SUCCESS) {
-		dp_err("Failed to send htt srng setup message for Tx mon buf ring");
-		return;
-	}
-
-	if (mon_soc_be->rx_mon_ring_fill_level < rx_mon_max_entries) {
-		if (dp_rx_mon_buffers_alloc(soc,
-					    (rx_mon_max_entries - mon_soc_be->rx_mon_ring_fill_level))) {
-			dp_mon_err("%pK: Rx mon buffers allocation failed", soc);
-			return;
-		}
-
-		mon_soc_be->rx_mon_ring_fill_level +=
-					(rx_mon_max_entries - mon_soc_be->rx_mon_ring_fill_level);
+		dp_mon_err("Failed to send htt srng setup message for Tx mon buf ring");
+		return status;
 	}
 
 	if (mon_soc_be->tx_mon_ring_fill_level < tx_mon_max_entries) {
-		if (dp_tx_mon_buffers_alloc(soc,
-					    (tx_mon_max_entries - mon_soc_be->tx_mon_ring_fill_level))) {
+		status = dp_tx_mon_buffers_alloc(soc,
+						 (tx_mon_max_entries -
+						 mon_soc_be->tx_mon_ring_fill_level));
+		if (status != QDF_STATUS_SUCCESS) {
 			dp_mon_err("%pK: Tx mon buffers allocation failed", soc);
-			return;
+			return status;
 		}
-
 		mon_soc_be->tx_mon_ring_fill_level +=
-					(tx_mon_max_entries - mon_soc_be->tx_mon_ring_fill_level);
+				(tx_mon_max_entries -
+				mon_soc_be->tx_mon_ring_fill_level);
 	}
+
+	return QDF_STATUS_SUCCESS;
+}
+
+static
+QDF_STATUS dp_vdev_set_monitor_mode_buf_rings_2_0(struct dp_pdev *pdev)
+{
+	int status;
+	struct dp_soc *soc = pdev->soc;
+
+	status = dp_vdev_set_monitor_mode_buf_rings_rx_2_0(pdev);
+	if (status != QDF_STATUS_SUCCESS) {
+		dp_mon_err("%pK: Rx monitor extra buffer allocation failed",
+			   soc);
+		return status;
+	}
+
+	status = dp_vdev_set_monitor_mode_buf_rings_tx_2_0(pdev);
+	if (status != QDF_STATUS_SUCCESS) {
+		dp_mon_err("%pK: Tx monitor extra buffer allocation failed",
+			   soc);
+		return status;
+	}
+
+	return QDF_STATUS_SUCCESS;
 }
 
 static

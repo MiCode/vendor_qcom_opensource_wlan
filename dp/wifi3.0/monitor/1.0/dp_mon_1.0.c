@@ -353,7 +353,7 @@ QDF_STATUS dp_mon_rings_alloc_1_0(struct dp_pdev *pdev)
 #endif
 
 #ifdef QCA_MONITOR_PKT_SUPPORT
-void dp_vdev_set_monitor_mode_buf_rings(struct dp_pdev *pdev)
+QDF_STATUS dp_vdev_set_monitor_mode_buf_rings(struct dp_pdev *pdev)
 {
 	uint32_t mac_id;
 	uint32_t mac_for_pdev;
@@ -392,6 +392,7 @@ void dp_vdev_set_monitor_mode_buf_rings(struct dp_pdev *pdev)
 			}
 		}
 	}
+	return QDF_STATUS_SUCCESS;
 }
 #endif
 

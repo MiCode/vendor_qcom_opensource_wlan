@@ -297,6 +297,22 @@ void dp_mon_filter_show_filter_be(enum dp_mon_filter_mode mode,
 void dp_mon_filter_show_tx_filter_be(enum dp_mon_filter_mode mode,
 				     struct dp_mon_filter_be *filter);
 
+/**
+ * dp_vdev_set_monitor_mode_buf_rings_tx_2_0() - Add buffers to tx ring
+ * @pdev: Pointer to dp_pdev object
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS dp_vdev_set_monitor_mode_buf_rings_tx_2_0(struct dp_pdev *pdev);
+
+/**
+ * dp_vdev_set_monitor_mode_buf_rings_rx_2_0() - Add buffers to rx ring
+ * @pdev: Pointer to dp_pdev object
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS dp_vdev_set_monitor_mode_buf_rings_rx_2_0(struct dp_pdev *pdev);
+
 #ifdef QCA_ENHANCED_STATS_SUPPORT
 /**
  * dp_mon_get_puncture_type() - Get puncture type

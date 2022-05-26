@@ -6586,8 +6586,7 @@ static QDF_STATUS dp_vdev_attach_wifi3(struct cdp_soc_t *cdp_soc,
 	if (wlan_op_mode_monitor == vdev->opmode) {
 		if (dp_monitor_vdev_attach(vdev) == QDF_STATUS_SUCCESS) {
 			dp_monitor_pdev_set_mon_vdev(vdev);
-			dp_monitor_vdev_set_monitor_mode_buf_rings(pdev);
-			return QDF_STATUS_SUCCESS;
+			return dp_monitor_vdev_set_monitor_mode_buf_rings(pdev);
 		}
 		return QDF_STATUS_E_FAILURE;
 	}
