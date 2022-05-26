@@ -1676,7 +1676,7 @@ static struct dp_peer *dp_find_peer_by_destmac_be(struct dp_soc *soc,
 	peer = dp_peer_find_hash_find(soc, dest_mac, 0,
 				      vdev_id, DP_MOD_ID_SAWF);
 	if (!peer) {
-		qdf_err("Invalid peer");
+		dp_err("Invalid peer");
 		return NULL;
 	}
 

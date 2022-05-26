@@ -554,7 +554,7 @@ static struct dp_peer *dp_find_peer_by_destmac_li(struct dp_soc *soc,
 
 	if (!ast_entry) {
 		qdf_spin_unlock_bh(&soc->ast_lock);
-		qdf_warn("%s NULL ast entry");
+		dp_err("NULL ast entry");
 		return NULL;
 	}
 
