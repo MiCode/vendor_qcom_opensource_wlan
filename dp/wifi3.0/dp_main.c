@@ -12727,6 +12727,7 @@ static struct cdp_host_stats_ops dp_ops_host_stats = {
 				dp_enable_disable_vdev_tx_delay_stats,
 	.is_tx_delay_stats_enabled = dp_check_vdev_tx_delay_stats_enabled,
 #endif
+	.txrx_get_pdev_tid_stats = dp_pdev_get_tid_stats,
 	/* TODO */
 };
 

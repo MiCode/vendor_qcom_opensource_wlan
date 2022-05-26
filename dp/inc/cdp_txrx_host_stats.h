@@ -955,4 +955,28 @@ cdp_vdev_is_tx_delay_stats_enabled(ol_txrx_soc_handle soc, uint8_t vdev_id)
 	return 0;
 }
 #endif
+
+/**
+ * cdp_get_pdev_tid_stats() - Get pdev tid stats
+ * @soc: soc handle
+ * @pdev_id: Pdev id
+ * @tid_stats: Pointer to cdp_tid_stats_intf
+ *
+ * Return: status Success/Failure
+ */
+static inline QDF_STATUS
+cdp_get_pdev_tid_stats(ol_txrx_soc_handle soc, uint8_t pdev_id,
+		       struct cdp_tid_stats_intf *tid_stats)
+{
+	if (!soc || !soc->ops || !soc->ops->host_stats_ops) {
+		dp_cdp_debug("Invalid Instance:");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	if (!soc->ops->host_stats_ops->txrx_get_pdev_tid_stats)
+		return QDF_STATUS_E_FAILURE;
+
+	return soc->ops->host_stats_ops->txrx_get_pdev_tid_stats(soc, pdev_id,
+								 tid_stats);
+}
 #endif /* _CDP_TXRX_HOST_STATS_H_ */

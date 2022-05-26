@@ -1043,6 +1043,20 @@ struct cdp_tid_stats {
 };
 
 /*
+ * struct cdp_tid_stats_intf
+ * @ingress_stack: Total packets received from linux stack
+ * @osif_drop: drops in osif layer
+ * @tx_total: total of per ring transmit counters per tid
+ * @rx_total: total of per ring receive counters per tid
+ */
+struct cdp_tid_stats_intf {
+	uint64_t ingress_stack;
+	uint64_t osif_drop;
+	struct cdp_tid_tx_stats tx_total[CDP_MAX_DATA_TIDS];
+	struct cdp_tid_rx_stats rx_total[CDP_MAX_DATA_TIDS];
+};
+
+/*
  * struct cdp_delay_tx_stats: Tx delay stats
  * @tx_swq_delay: software enqueue delay
  * @hwtx_delay: HW enque to completion delay

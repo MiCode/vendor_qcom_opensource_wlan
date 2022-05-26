@@ -2784,7 +2784,18 @@ void dp_pdev_print_tid_stats(struct dp_pdev *pdev);
  * Return:void
  */
 void dp_pdev_print_rx_error_stats(struct dp_pdev *pdev);
-#endif /* CONFIG_WIN */
+#endif /* QCA_ENH_V3_STATS_SUPPORT */
+
+/**
+ * dp_pdev_get_tid_stats(): Get accumulated pdev level tid_stats
+ * @soc_hdl: soc handle
+ * @pdev_id: id of dp_pdev handle
+ * @tid_stats: Pointer for cdp_tid_stats_intf
+ *
+ * Return: QDF_STATUS_SUCCESS or QDF_STATUS_E_INVAL
+ */
+QDF_STATUS dp_pdev_get_tid_stats(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
+				 struct cdp_tid_stats_intf *tid_stats);
 
 void dp_soc_set_txrx_ring_map(struct dp_soc *soc);
 

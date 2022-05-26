@@ -4708,6 +4708,7 @@ dp_accumulate_tid_stats(struct dp_pdev *pdev, uint8_t tid,
 		for (ring_id = 0; ring_id < CDP_MAX_TX_COMP_RINGS; ring_id++) {
 			per_ring_tx = &tid_stats->tid_tx_stats[ring_id][tid];
 			total_tx->success_cnt += per_ring_tx->success_cnt;
+			total_tx->comp_fail_cnt += per_ring_tx->comp_fail_cnt;
 			for (tqm_status_idx = 0; tqm_status_idx < CDP_MAX_TX_TQM_STATUS; tqm_status_idx++) {
 				total_tx->tqm_status_cnt[tqm_status_idx] +=
 					per_ring_tx->tqm_status_cnt[tqm_status_idx];
@@ -4976,6 +4977,80 @@ void dp_pdev_print_rx_error_stats(struct dp_pdev *pdev)
 			DP_PRINT_STATS("err src dma codes: %d = %llu", index, total_rx.rxdma_err.err_dma_codes[index]);
 		}
 	}
+}
+
+QDF_STATUS dp_pdev_get_tid_stats(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
+				 struct cdp_tid_stats_intf *tid_stats)
+{
+	struct dp_soc *soc = (struct dp_soc *)soc_hdl;
+	struct dp_pdev *pdev = dp_get_pdev_from_soc_pdev_id_wifi3(soc, pdev_id);
+	struct cdp_tid_rx_stats rx;
+	struct cdp_tid_tx_stats tx;
+	uint8_t tid;
+	uint32_t size;
+
+	if (!pdev)
+		return QDF_STATUS_E_INVAL;
+
+	size = sizeof(struct cdp_delay_stats);
+	for (tid = 0; tid < CDP_MAX_DATA_TIDS; tid++) {
+		dp_accumulate_tid_stats(pdev, tid, &tx, &rx, TID_COUNTER_STATS);
+		/* Copy specific accumulated Tx tid stats */
+		tid_stats->tx_total[tid].success_cnt = tx.success_cnt;
+		tid_stats->tx_total[tid].comp_fail_cnt = tx.comp_fail_cnt;
+		qdf_mem_copy(&tid_stats->tx_total[tid].tqm_status_cnt[0],
+			     &tx.tqm_status_cnt[0],
+			     CDP_MAX_TX_TQM_STATUS * sizeof(uint64_t));
+		qdf_mem_copy(&tid_stats->tx_total[tid].htt_status_cnt[0],
+			     &tx.htt_status_cnt[0],
+			     CDP_MAX_TX_HTT_STATUS * sizeof(uint64_t));
+		qdf_mem_copy(&tid_stats->tx_total[tid].swdrop_cnt[0],
+			     &tx.swdrop_cnt[0], TX_MAX_DROP * sizeof(uint64_t));
+
+		/* Copy specific accumulated Rx tid stats */
+		tid_stats->rx_total[tid].delivered_to_stack =
+							rx.delivered_to_stack;
+		tid_stats->rx_total[tid].intrabss_cnt = rx.intrabss_cnt;
+		tid_stats->rx_total[tid].msdu_cnt = rx.msdu_cnt;
+		tid_stats->rx_total[tid].mcast_msdu_cnt = rx.mcast_msdu_cnt;
+		tid_stats->rx_total[tid].bcast_msdu_cnt = rx.bcast_msdu_cnt;
+		qdf_mem_copy(&tid_stats->rx_total[tid].fail_cnt[0],
+			     &rx.fail_cnt[0], RX_MAX_DROP * sizeof(uint64_t));
+
+		dp_accumulate_tid_stats(pdev, tid, &tx, &rx, TID_DELAY_STATS);
+		/* Copy specific accumulated Tx delay stats */
+		qdf_mem_copy(&tid_stats->tx_total[tid].swq_delay,
+			     &tx.swq_delay, size);
+		qdf_mem_copy(&tid_stats->tx_total[tid].hwtx_delay,
+			     &tx.hwtx_delay, size);
+		qdf_mem_copy(&tid_stats->tx_total[tid].intfrm_delay,
+			     &tx.intfrm_delay, size);
+
+		/* Copy specific accumulated Rx delay stats */
+		qdf_mem_copy(&tid_stats->rx_total[tid].intfrm_delay,
+			     &rx.intfrm_delay, size);
+		qdf_mem_copy(&tid_stats->rx_total[tid].to_stack_delay,
+			     &rx.to_stack_delay, size);
+	}
+	for (tid = 0; tid < CDP_MAX_VOW_TID; tid++) {
+		dp_accumulate_tid_stats(pdev, tid, &tx, &rx,
+					TID_RX_ERROR_STATS);
+		/* Copy specific accumulated VOW Rx stats */
+		qdf_mem_copy(&tid_stats->rx_total[tid].reo_err,
+			     &rx.reo_err, sizeof(struct cdp_reo_error_stats));
+		qdf_mem_copy(&tid_stats->rx_total[tid].rxdma_err, &rx.rxdma_err,
+			     sizeof(struct cdp_rxdma_error_stats));
+	}
+	tid_stats->ingress_stack = pdev->stats.tid_stats.ingress_stack;
+	tid_stats->osif_drop = pdev->stats.tid_stats.osif_drop;
+
+	return QDF_STATUS_SUCCESS;
+}
+#else
+QDF_STATUS dp_pdev_get_tid_stats(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
+				 struct cdp_tid_stats_intf *tid_stats)
+{
+	return QDF_STATUS_E_INVAL;
 }
 #endif
 

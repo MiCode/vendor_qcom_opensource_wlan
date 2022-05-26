@@ -1153,6 +1153,9 @@ struct cdp_host_stats_ops {
 	uint8_t (*is_tx_delay_stats_enabled)(struct cdp_soc_t *soc_hdl,
 					     uint8_t vdev_id);
 #endif
+	QDF_STATUS
+	(*txrx_get_pdev_tid_stats)(struct cdp_soc_t *soc, uint8_t pdev_id,
+				   struct cdp_tid_stats_intf *tid_stats);
 };
 
 struct cdp_wds_ops {
