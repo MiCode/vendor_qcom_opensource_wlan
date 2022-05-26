@@ -1869,6 +1869,8 @@ struct wlan_ml_probe_req {
  *    Multi-Link element Link Info field.
  * 4. STA Info Length subfield in STA Info field in Per-STA Profile subelement
  *    in Basic variant Multi-Link element Link Info field.
+ * 5. EML Capabilities subfield of Common Info field.
+ * 6. MLD Capabilities subfield of Common Info field.
  */
 
 /* Size in octets of Multi-Link element Control field */
@@ -2098,7 +2100,7 @@ enum wlan_ml_bv_cinfo_emlcap_transtimeout {
 };
 
 /* Size in octets of MLD Capabilities subfield in Basic variant Multi-Link
- * element Common Info field.
+ * element Common Info field as per IEEE P802.11be/D1.5.
  */
 #define WLAN_ML_BV_CINFO_MLDCAP_SIZE                                2
 
@@ -2117,6 +2119,9 @@ enum wlan_ml_bv_cinfo_emlcap_transtimeout {
 /* Frequency Separation For STR */
 #define WLAN_ML_BV_CINFO_MLDCAP_STRFREQSEPARATION_IDX               7
 #define WLAN_ML_BV_CINFO_MLDCAP_STRFREQSEPARATION_BITS              5
+/* AAR Support */
+#define WLAN_ML_BV_CINFO_MLDCAP_AARSUPPORT_IDX                      12
+#define WLAN_ML_BV_CINFO_MLDCAP_AARSUPPORT_BITS                     1
 
 /* Max value in octets of Common Info Length subfield of Common Info field in
  * Basic variant Multi-Link element

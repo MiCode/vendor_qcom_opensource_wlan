@@ -2701,7 +2701,8 @@ util_get_bvmlie_mldcap(uint8_t *mlieseq, qdf_size_t mlieseqlen,
 	uint16_t mlcontrol;
 	uint16_t presencebitmap;
 	uint8_t *commoninfo;
-	qdf_size_t commoninfolen;
+	uint8_t commoninfo_len;
+	qdf_size_t mldcap_offset;
 
 	if (!mlieseq || !mlieseqlen || !mldcapfound || !mldcap)
 		return QDF_STATUS_E_NULL_VALUE;
@@ -2730,51 +2731,59 @@ util_get_bvmlie_mldcap(uint8_t *mlieseq, qdf_size_t mlieseqlen,
 				      WLAN_ML_CTRL_PBM_BITS);
 
 	commoninfo = mlieseq + sizeof(struct wlan_ie_multilink);
-	commoninfolen = WLAN_ML_BV_CINFO_LENGTH_SIZE;
-
-	commoninfolen += QDF_MAC_ADDR_SIZE;
+	commoninfo_len = *(mlieseq + sizeof(struct wlan_ie_multilink));
+	/* mldcap_offset stores the offset of MLD Capabilities within
+	 * Common Info
+	 */
+	mldcap_offset = WLAN_ML_BV_CINFO_LENGTH_SIZE;
+	mldcap_offset += QDF_MAC_ADDR_SIZE;
 
 	if (presencebitmap & WLAN_ML_BV_CTRL_PBM_LINKIDINFO_P) {
-		commoninfolen += WLAN_ML_BV_CINFO_LINKIDINFO_SIZE;
+		mldcap_offset += WLAN_ML_BV_CINFO_LINKIDINFO_SIZE;
 
-		if ((sizeof(struct wlan_ie_multilink) + commoninfolen) >
+		if ((sizeof(struct wlan_ie_multilink) + mldcap_offset) >
 				mlieseqlen)
 			return QDF_STATUS_E_PROTO;
 	}
 
 	if (presencebitmap & WLAN_ML_BV_CTRL_PBM_BSSPARAMCHANGECNT_P) {
-		commoninfolen += WLAN_ML_BSSPARAMCHNGCNT_SIZE;
+		mldcap_offset += WLAN_ML_BSSPARAMCHNGCNT_SIZE;
 
-		if ((sizeof(struct wlan_ie_multilink) + commoninfolen) >
+		if ((sizeof(struct wlan_ie_multilink) + mldcap_offset) >
 				mlieseqlen)
 			return QDF_STATUS_E_PROTO;
 	}
 
 	if (presencebitmap & WLAN_ML_BV_CTRL_PBM_MEDIUMSYNCDELAYINFO_P) {
-		commoninfolen += WLAN_ML_BV_CINFO_MEDMSYNCDELAYINFO_SIZE;
+		mldcap_offset += WLAN_ML_BV_CINFO_MEDMSYNCDELAYINFO_SIZE;
 
-		if ((sizeof(struct wlan_ie_multilink) + commoninfolen) >
+		if ((sizeof(struct wlan_ie_multilink) + mldcap_offset) >
 				mlieseqlen)
 			return QDF_STATUS_E_PROTO;
 	}
 
 	if (presencebitmap & WLAN_ML_BV_CTRL_PBM_EMLCAP_P) {
-		commoninfolen += WLAN_ML_BV_CINFO_EMLCAP_SIZE;
+		mldcap_offset += WLAN_ML_BV_CINFO_EMLCAP_SIZE;
 
-		if ((sizeof(struct wlan_ie_multilink) + commoninfolen) >
+		if ((sizeof(struct wlan_ie_multilink) + mldcap_offset) >
 				mlieseqlen)
 			return QDF_STATUS_E_PROTO;
 	}
 
 	if (presencebitmap & WLAN_ML_BV_CTRL_PBM_MLDCAP_P) {
-		if ((sizeof(struct wlan_ie_multilink) + commoninfolen +
+		/* Check if the value indicated in the Common Info Length
+		 * subfield is sufficient to access the MLD capabilities.
+		 */
+		if (commoninfo_len < (mldcap_offset +
+				      WLAN_ML_BV_CINFO_MLDCAP_SIZE))
+			return QDF_STATUS_E_PROTO;
+
+		if ((sizeof(struct wlan_ie_multilink) + mldcap_offset +
 					WLAN_ML_BV_CINFO_MLDCAP_SIZE) >
 				mlieseqlen)
 			return QDF_STATUS_E_PROTO;
 
-		*mldcap = *((uint16_t *)(commoninfo + commoninfolen));
-		commoninfolen += WLAN_ML_BV_CINFO_MLDCAP_SIZE;
-
+		*mldcap = qdf_le16_to_cpu(*((uint16_t *)(commoninfo + mldcap_offset)));
 		*mldcapfound = true;
 	}
 
