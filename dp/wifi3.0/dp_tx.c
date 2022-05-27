@@ -2126,6 +2126,9 @@ dp_tx_update_mcast_param(uint16_t peer_id,
 						    msdu_info->gsn);
 
 		msdu_info->vdev_id = vdev->vdev_id + DP_MLO_VDEV_ID_OFFSET;
+		if (qdf_unlikely(vdev->nawds_enabled))
+			HTT_TX_TCL_METADATA_GLBL_SEQ_HOST_INSPECTED_SET(
+							*htt_tcl_metadata, 1);
 	} else {
 		msdu_info->vdev_id = vdev->vdev_id;
 	}
