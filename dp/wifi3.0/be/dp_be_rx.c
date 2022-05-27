@@ -1342,11 +1342,15 @@ dp_rx_intrabss_ucast_check_be(qdf_nbuf_t nbuf,
 	 * list then dont forward instead push to bridge stack.
 	 */
 	if (dp_get_peer_isolation(ta_peer) ||
-	    dp_get_peer_isolation(da_peer))
+	    dp_get_peer_isolation(da_peer)) {
+		ret = false;
 		goto rel_da_peer;
+	}
 
-	if (da_peer->bss_peer || da_peer == ta_peer)
+	if (da_peer->bss_peer || (da_peer == ta_peer)) {
+		ret = false;
 		goto rel_da_peer;
+	}
 
 	/* Same vdev, support Inra-BSS */
 	if (da_peer->vdev == ta_peer->vdev) {
