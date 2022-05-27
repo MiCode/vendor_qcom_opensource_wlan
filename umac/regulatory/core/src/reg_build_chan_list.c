@@ -3777,6 +3777,7 @@ reg_process_afc_expiry_event(struct afc_regulatory_info *afc_info)
 		reg_afc_start(pdev, pdev_priv_obj->afc_request_id);
 		break;
 	case REG_AFC_EXPIRY_EVENT_SWITCH_TO_LPI:
+	case REG_AFC_EXPIRY_EVENT_STOP_TX:
 		pdev_priv_obj->is_6g_afc_power_event_received = false;
 		reg_disable_afc_mas_chan_list_channels(pdev_priv_obj);
 		reg_disable_sp_channels_in_super_chan_list(pdev_priv_obj);
