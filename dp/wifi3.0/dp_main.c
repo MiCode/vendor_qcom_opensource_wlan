@@ -9223,6 +9223,27 @@ void dp_get_peer_calibr_stats(struct dp_peer *peer,
  *
  * Return: none
  */
+#ifdef QCA_ENHANCED_STATS_SUPPORT
+static inline
+void dp_get_peer_basic_stats(struct dp_peer *peer,
+			     struct cdp_peer_stats *peer_stats)
+{
+	struct dp_txrx_peer *txrx_peer;
+
+	if (dp_peer_is_primary_link_peer(peer))
+		txrx_peer = dp_get_txrx_peer(peer);
+	else
+		txrx_peer = peer->txrx_peer;
+	if (!txrx_peer)
+		return;
+
+	peer_stats->tx.comp_pkt.num += txrx_peer->comp_pkt.num;
+	peer_stats->tx.comp_pkt.bytes += txrx_peer->comp_pkt.bytes;
+	peer_stats->tx.tx_failed += txrx_peer->tx_failed;
+	peer_stats->rx.to_stack.num += txrx_peer->to_stack.num;
+	peer_stats->rx.to_stack.bytes += txrx_peer->to_stack.bytes;
+}
+#else
 static inline
 void dp_get_peer_basic_stats(struct dp_peer *peer,
 			     struct cdp_peer_stats *peer_stats)
@@ -9239,6 +9260,7 @@ void dp_get_peer_basic_stats(struct dp_peer *peer,
 	peer_stats->rx.to_stack.num += txrx_peer->to_stack.num;
 	peer_stats->rx.to_stack.bytes += txrx_peer->to_stack.bytes;
 }
+#endif
 
 /**
  * dp_get_peer_per_pkt_stats()- Get peer per pkt stats
@@ -9247,6 +9269,25 @@ void dp_get_peer_basic_stats(struct dp_peer *peer,
  *
  * Return: none
  */
+#ifdef QCA_ENHANCED_STATS_SUPPORT
+static inline
+void dp_get_peer_per_pkt_stats(struct dp_peer *peer,
+			       struct cdp_peer_stats *peer_stats)
+{
+	struct dp_txrx_peer *txrx_peer;
+	struct dp_peer_per_pkt_stats *per_pkt_stats;
+
+	if (dp_peer_is_primary_link_peer(peer))
+		txrx_peer = dp_get_txrx_peer(peer);
+	else
+		txrx_peer = peer->txrx_peer;
+	if (!txrx_peer)
+		return;
+
+	per_pkt_stats = &txrx_peer->stats.per_pkt_stats;
+	DP_UPDATE_PER_PKT_STATS(peer_stats, per_pkt_stats);
+}
+#else
 static inline
 void dp_get_peer_per_pkt_stats(struct dp_peer *peer,
 			       struct cdp_peer_stats *peer_stats)
@@ -9261,6 +9302,7 @@ void dp_get_peer_per_pkt_stats(struct dp_peer *peer,
 	per_pkt_stats = &txrx_peer->stats.per_pkt_stats;
 	DP_UPDATE_PER_PKT_STATS(peer_stats, per_pkt_stats);
 }
+#endif
 
 /**
  * dp_get_peer_extd_stats()- Get peer extd stats
