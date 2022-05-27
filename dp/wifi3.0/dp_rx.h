@@ -2415,8 +2415,9 @@ static inline
 void dp_rx_per_core_stats_update(struct dp_soc *soc, uint8_t ring_id,
 				 uint32_t bufs_reaped)
 {
-	DP_STATS_INC(soc,
-		     rx.ring_packets[smp_processor_id()][ring_id], bufs_reaped);
+	int cpu_id = qdf_get_cpu();
+
+	DP_STATS_INC(soc, rx.ring_packets[cpu_id][ring_id], bufs_reaped);
 }
 
 static inline
