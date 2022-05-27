@@ -3479,6 +3479,8 @@ typedef void *dp_txrx_ref_handle;
  * @last_tx_ts: last timestamp in jiffies when tx comp occurred
  * @avg_sojourn_msdu[CDP_DATA_TID_MAX]: Avg sojourn msdu stat
  * @protocol_trace_cnt: per-peer protocol counter
+ * @release_src_not_tqm: Counter to keep track of release source is not TQM
+ *			 in TX completion status processing
  */
 struct dp_peer_per_pkt_tx_stats {
 	struct cdp_pkt_info ucast;
@@ -3516,6 +3518,7 @@ struct dp_peer_per_pkt_tx_stats {
 #ifdef VDEV_PEER_PROTOCOL_COUNT
 	struct protocol_trace_count protocol_trace_cnt[CDP_TRACE_MAX];
 #endif
+	uint32_t release_src_not_tqm;
 };
 
 /**

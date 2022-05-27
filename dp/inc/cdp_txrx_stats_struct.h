@@ -1366,6 +1366,8 @@ struct protocol_trace_count {
  * @su_be_ppdu_cnt: SU Tx packet count
  * @mu_be_ppdu_cnt: MU Tx packet count
  * @punc_bw[MAX_PUNCTURED_MODE]: MSDU count for punctured BW
+ * @release_src_not_tqm: Counter to keep track of release source is not TQM
+ *			 in TX completion status processing
  */
 struct cdp_tx_stats {
 	struct cdp_pkt_info comp_pkt;
@@ -1483,6 +1485,7 @@ struct cdp_tx_stats {
 	struct cdp_pkt_type mu_be_ppdu_cnt[TXRX_TYPE_MU_MAX];
 	uint32_t punc_bw[MAX_PUNCTURED_MODE];
 #endif
+	uint32_t release_src_not_tqm;
 };
 
 /* struct cdp_rx_stats - rx Level Stats

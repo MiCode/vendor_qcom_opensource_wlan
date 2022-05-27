@@ -6301,6 +6301,8 @@ void dp_print_peer_stats(struct dp_peer *peer,
 		       peer_stats->tx.last_ack_rssi);
 	DP_PRINT_STATS("Dropped At FW: Removed Pkts = %u",
 		       peer_stats->tx.dropped.fw_rem.num);
+	DP_PRINT_STATS("Release source not TQM = %u",
+		       peer_stats->tx.release_src_not_tqm);
 	if (pdev && !wlan_cfg_get_dp_pdev_nss_enabled(pdev->wlan_cfg_ctx)) {
 		DP_PRINT_STATS("Dropped At FW: Removed bytes = %llu",
 			peer_stats->tx.dropped.fw_rem.bytes);
@@ -6494,7 +6496,7 @@ void dp_print_peer_stats(struct dp_peer *peer,
 		       peer_stats->rx.err.rxdma_wifi_parse_err);
 	DP_PRINT_STATS("Msdu's Received As Part of Ampdu = %d",
 		       peer_stats->rx.non_ampdu_cnt);
-	DP_PRINT_STATS("Msdu's Recived As Ampdu = %d",
+	DP_PRINT_STATS("Msdu's Received As Ampdu = %d",
 		       peer_stats->rx.ampdu_cnt);
 	DP_PRINT_STATS("Msdu's Received Not Part of Amsdu's = %d",
 		       peer_stats->rx.non_amsdu_cnt);
