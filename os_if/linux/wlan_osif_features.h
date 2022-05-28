@@ -54,13 +54,14 @@
  * https://android-review.googlesource.com/c/kernel/common/+/1996268
  */
 
+#if defined(WLAN_11BE_MLO_FEATURE_ENABLE)
 #if (defined(__ANDROID_COMMON_KERNEL__) && \
 	(LINUX_VERSION_CODE >= KERNEL_VERSION(5, 15, 0)) && \
 	(LINUX_VERSION_CODE < KERNEL_VERSION(5, 16, 0))) || \
 	(LINUX_VERSION_CODE >= KERNEL_VERSION(5, 18, 0))
 #define CFG80211_11BE_BASIC 1
 #endif
-
+#endif
 /*
  * CFG80211_SA_QUERY_OFFLOAD_SUPPORT
  * Used to indicate the Linux Kernel contains support to offload SA Query
