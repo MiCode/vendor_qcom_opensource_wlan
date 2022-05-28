@@ -1334,7 +1334,6 @@ dp_rx_intrabss_ucast_check_be(qdf_nbuf_t nbuf,
 		if (!da_peer)
 			return false;
 
-		ret = true;
 	} else {
 		da_peer = dp_txrx_peer_get_ref_by_id(params->dest_soc,
 						     da_peer_id,
@@ -1347,7 +1346,6 @@ dp_rx_intrabss_ucast_check_be(qdf_nbuf_t nbuf,
 		if (!params->dest_soc)
 			goto rel_da_peer;
 
-		ret = true;
 	}
 
 	params->tx_vdev_id = da_peer->vdev->vdev_id;
