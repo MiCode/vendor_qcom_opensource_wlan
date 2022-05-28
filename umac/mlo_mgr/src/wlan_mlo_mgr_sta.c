@@ -757,9 +757,9 @@ static inline
 QDF_STATUS mlo_post_disconnect_msg(struct scheduler_msg *msg)
 {
 	return scheduler_post_message(
-			QDF_MODULE_ID_SYS,
-			QDF_MODULE_ID_SYS,
-			QDF_MODULE_ID_SYS,
+			QDF_MODULE_ID_OS_IF,
+			QDF_MODULE_ID_SCAN,
+			QDF_MODULE_ID_OS_IF,
 			msg);
 }
 #else
@@ -781,35 +781,42 @@ void mlo_handle_sta_link_connect_failure(struct wlan_objmgr_vdev *vdev,
 	struct wlan_mlo_dev_context *mlo_dev_ctx = vdev->mlo_dev_ctx;
 	struct scheduler_msg msg = {0};
 	QDF_STATUS ret;
+	struct wlan_objmgr_vdev *assoc_vdev;
 
 	if (!mlo_dev_ctx) {
 		mlo_err("ML dev ctx is NULL");
 		return;
 	}
 
-	if (vdev != mlo_get_assoc_link_vdev(mlo_dev_ctx)) {
+	assoc_vdev = mlo_get_assoc_link_vdev(mlo_dev_ctx);
+	if (!assoc_vdev) {
+		mlo_err("Assoc Vdev is NULL");
+		return;
+	}
+
+	if (vdev != assoc_vdev) {
 		mlo_update_connected_links(vdev, 0);
 		if (rsp->reason == CM_NO_CANDIDATE_FOUND ||
 		    rsp->reason == CM_HW_MODE_FAILURE ||
 		    rsp->reason == CM_SER_FAILURE) {
 			ret = wlan_objmgr_vdev_try_get_ref(
-					vdev, WLAN_MLO_MGR_ID);
+					assoc_vdev, WLAN_MLO_MGR_ID);
 			if (QDF_IS_STATUS_ERROR(ret)) {
 				mlo_err("Failed to get ref vdev_id %d",
-					wlan_vdev_get_id(vdev));
+					wlan_vdev_get_id(assoc_vdev));
 				return;
 			}
 			/* Since these failures happen in same context. use
 			 * scheduler to avoid deadlock by deferring context
 			 */
-			msg.bodyptr = vdev;
+			msg.bodyptr = assoc_vdev;
 			msg.callback = ml_activate_disconnect_req_sched_cb;
 			msg.flush_callback =
 				ml_activate_disconnect_req_flush_cb;
 			mlo_post_disconnect_msg(&msg);
 			if (QDF_IS_STATUS_ERROR(ret)) {
 				wlan_objmgr_vdev_release_ref(
-						vdev,
+						assoc_vdev,
 						WLAN_MLO_MGR_ID);
 				return;
 			}

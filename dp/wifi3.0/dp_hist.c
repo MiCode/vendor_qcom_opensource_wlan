@@ -80,6 +80,41 @@ static uint16_t dp_hist_reap2stack_bucket[CDP_HIST_BUCKET_MAX] = {
 	0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60};
 
 /*
+ * dp_hist_hw_tx_comp_dbucket: Tx HW Completion Delay bucket in us
+ * @index_0 = 0_250 us
+ * @index_1 = 250_500 us
+ * @index_2 = 500_750 us
+ * @index_3 = 750_1000 us
+ * @index_4 = 1000_1500 us
+ * @index_5 = 1500_2000 us
+ * @index_6 = 2000_2500 us
+ * @index_7 = 2500_5000 us
+ * @index_8 = 5000_6000 us
+ * @index_9 = 6000_7000 us
+ * @index_10 = 7000_8000 us
+ * @index_11 = 8000_9000 us
+ * @index_12 = 9000+ us
+ */
+static uint16_t dp_hist_hw_tx_comp_dbucket[CDP_HIST_BUCKET_MAX] = {
+	0, 250, 500, 750, 1000, 1500, 2000, 2500, 5000, 6000, 7000, 8000, 9000};
+
+static const char *dp_hist_hw_tx_comp_dbucket_str[CDP_HIST_BUCKET_MAX + 1] = {
+	"0 to 250 us", "250 to 500 us",
+	"500 to 750 us", "750 to 1000 us",
+	"1000 to 1500 us", "1500 to 2000 us",
+	"2000 to 2500 us", "2500 to 5000 us",
+	"5000 to 6000 us", "6000 to 7000 ms",
+	"7000 to 8000 us", "8000 to 9000 us", "9000+ us"
+};
+
+const char *dp_hist_tx_hw_delay_str(uint8_t index)
+{
+	if (index > CDP_HIST_BUCKET_MAX)
+		return "Invalid index";
+	return dp_hist_hw_tx_comp_dbucket_str[index];
+}
+
+/*
  * dp_hist_find_bucket_idx: Find the bucket index
  * @bucket_array: Bucket array
  * @value: Frequency value
@@ -128,6 +163,10 @@ static void dp_hist_fill_buckets(struct cdp_hist_bucket *hist_bucket, int value)
 	case CDP_HIST_TYPE_REAP_STACK:
 		idx =  dp_hist_find_bucket_idx(
 				&dp_hist_reap2stack_bucket[0], value);
+		break;
+	case CDP_HIST_TYPE_HW_TX_COMP_DELAY:
+		idx =  dp_hist_find_bucket_idx(
+				&dp_hist_hw_tx_comp_dbucket[0], value);
 		break;
 	default:
 		break;

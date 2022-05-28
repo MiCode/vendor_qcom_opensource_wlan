@@ -8604,6 +8604,31 @@ reg_is_freq_idx_enabled_on_given_pwr_mode(struct wlan_regulatory_pdev_priv_obj
 	return reg_is_freq_idx_enabled_on_cur_chan_list(pdev_priv_obj,
 							freq_idx);
 }
+
+static inline QDF_STATUS
+reg_get_min_max_bw_on_given_pwr_mode(struct wlan_regulatory_pdev_priv_obj
+				     *pdev_priv_obj,
+				     enum channel_enum freq_idx,
+				     enum supported_6g_pwr_types
+				     in_6g_pwr_mode,
+				     uint16_t *min_bw,
+				     uint16_t *max_bw)
+{
+	return reg_get_min_max_bw_on_cur_chan_list(pdev_priv_obj,
+						   freq_idx,
+						   min_bw, max_bw);
+}
+
+static inline enum channel_state
+reg_get_chan_state_on_given_pwr_mode(struct wlan_regulatory_pdev_priv_obj
+				     *pdev_priv_obj,
+				     enum channel_enum freq_idx,
+				     enum supported_6g_pwr_types
+				     in_6g_pwr_mode)
+{
+	return reg_get_chan_state_on_cur_chan_list(pdev_priv_obj,
+						   freq_idx);
+}
 #endif /* CONFIG_BAND_6GHZ */
 
 bool

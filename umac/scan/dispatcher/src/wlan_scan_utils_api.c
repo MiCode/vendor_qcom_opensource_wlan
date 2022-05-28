@@ -39,6 +39,8 @@
 #define NEIGHBOR_AP_LEN 1
 #define BSS_PARAMS_LEN 1
 
+static struct he_oper_6g_param *util_scan_get_he_6g_params(uint8_t *he_ops);
+
 const char*
 util_scan_get_ev_type_name(enum scan_event_type type)
 {
@@ -191,43 +193,84 @@ util_scan_get_phymode_11be(struct wlan_objmgr_pdev *pdev,
 			   uint8_t band_mask)
 {
 	struct wlan_ie_ehtops *eht_ops;
+	uint8_t width;
 
 	eht_ops = (struct wlan_ie_ehtops *)util_scan_entry_ehtop(scan_params);
 	if (!util_scan_entry_ehtcap(scan_params) || !eht_ops)
 		return phymode;
 
-	switch (eht_ops->width) {
-	case WLAN_EHT_CHWIDTH_20:
-		phymode = WLAN_PHYMODE_11BEA_EHT20;
-		break;
-	case WLAN_EHT_CHWIDTH_40:
-		phymode = WLAN_PHYMODE_11BEA_EHT40;
-		break;
-	case WLAN_EHT_CHWIDTH_80:
-		phymode = WLAN_PHYMODE_11BEA_EHT80;
-		break;
-	case WLAN_EHT_CHWIDTH_160:
-		phymode = WLAN_PHYMODE_11BEA_EHT160;
-		break;
-	case WLAN_EHT_CHWIDTH_320:
-		phymode = WLAN_PHYMODE_11BEA_EHT320;
-		break;
-	default:
-		scm_debug("Invalid eht_ops width: %d", eht_ops->width);
-		phymode = WLAN_PHYMODE_11BEA_EHT20;
-		break;
+	if (QDF_GET_BITS(eht_ops->ehtop_param,
+			 EHTOP_INFO_PRESENT_IDX, EHTOP_INFO_PRESENT_BITS)) {
+		width = QDF_GET_BITS(eht_ops->control,
+				     EHTOP_INFO_CHAN_WIDTH_IDX,
+				     EHTOP_INFO_CHAN_WIDTH_BITS);
+		switch (width) {
+		case WLAN_EHT_CHWIDTH_20:
+			phymode = WLAN_PHYMODE_11BEA_EHT20;
+			break;
+		case WLAN_EHT_CHWIDTH_40:
+			phymode = WLAN_PHYMODE_11BEA_EHT40;
+			break;
+		case WLAN_EHT_CHWIDTH_80:
+			phymode = WLAN_PHYMODE_11BEA_EHT80;
+			break;
+		case WLAN_EHT_CHWIDTH_160:
+			phymode = WLAN_PHYMODE_11BEA_EHT160;
+			break;
+		case WLAN_EHT_CHWIDTH_320:
+			phymode = WLAN_PHYMODE_11BEA_EHT320;
+			break;
+		default:
+			scm_debug("Invalid eht_ops width: %d", width);
+			phymode = WLAN_PHYMODE_11BEA_EHT20;
+			break;
+		}
+	} else {
+		switch (phymode) {
+		case WLAN_PHYMODE_11AXA_HE20:
+			phymode = WLAN_PHYMODE_11BEA_EHT20;
+			break;
+		case WLAN_PHYMODE_11AXG_HE20:
+			phymode = WLAN_PHYMODE_11BEG_EHT20;
+			break;
+		case WLAN_PHYMODE_11AXA_HE40:
+			phymode = WLAN_PHYMODE_11BEA_EHT40;
+			break;
+		case WLAN_PHYMODE_11AXG_HE40:
+			phymode = WLAN_PHYMODE_11BEG_EHT40;
+			break;
+		case WLAN_PHYMODE_11AXA_HE80:
+			phymode = WLAN_PHYMODE_11BEA_EHT80;
+			break;
+		case WLAN_PHYMODE_11AXA_HE160:
+			phymode = WLAN_PHYMODE_11BEA_EHT160;
+			break;
+		default:
+			break;
+		}
 	}
 
-	scan_params->channel.cfreq1 =
-		wlan_reg_chan_band_to_freq(pdev,
-					   eht_ops->ccfs,
-					   band_mask);
+	if (QDF_GET_BITS(eht_ops->ehtop_param,
+			 EHTOP_INFO_PRESENT_IDX, EHTOP_INFO_PRESENT_BITS)) {
+		scan_params->channel.cfreq0 =
+			wlan_reg_chan_band_to_freq(pdev,
+						   eht_ops->ccfs0,
+						   band_mask);
+		scan_params->channel.cfreq1 =
+			wlan_reg_chan_band_to_freq(pdev,
+						   eht_ops->ccfs1,
+						   band_mask);
+	}
 
-	if (eht_ops->disable_sub_chan_bitmap_present) {
+	if (QDF_GET_BITS(eht_ops->ehtop_param,
+			 EHTOP_PARAM_DISABLED_SC_BITMAP_PRESENT_IDX,
+			 EHTOP_PARAM_DISABLED_SC_BITMAP_PRESENT_BITS)) {
 		scan_params->channel.puncture_bitmap =
 				QDF_GET_BITS(eht_ops->disable_sub_chan_bitmap[0], 0, 8);
 		scan_params->channel.puncture_bitmap |=
 				QDF_GET_BITS(eht_ops->disable_sub_chan_bitmap[1], 0, 8) << 8;
+	} else {
+		scan_params->channel.puncture_bitmap = 0;
 	}
 
 	return phymode;
