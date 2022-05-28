@@ -813,13 +813,6 @@ static void reg_propagate_6g_mas_channel_list(
 				mas_chan_params->reg_6g_thresh_priority_freq;
 	reg_set_ap_pwr_type(pdev_priv_obj);
 }
-#else
-static inline void reg_propagate_6g_mas_channel_list(
-		struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj,
-		struct mas_chan_params *mas_chan_params)
-{
-}
-#endif
 
 #ifdef CONFIG_AFC_SUPPORT
 void reg_set_ap_pwr_type(struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj)
@@ -833,6 +826,13 @@ void reg_set_ap_pwr_type(struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj)
 void reg_set_ap_pwr_type(struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj)
 {
 	pdev_priv_obj->reg_cur_6g_ap_pwr_type = REG_INDOOR_AP;
+}
+#endif /* CONFIG_AFC_SUPPORT */
+#else
+static inline void reg_propagate_6g_mas_channel_list(
+		struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj,
+		struct mas_chan_params *mas_chan_params)
+{
 }
 #endif
 
