@@ -857,6 +857,12 @@ QDF_STATUS wlan_mlo_vdev_deinit_mbss_aid_mgr(struct wlan_mlo_dev_context *mldev,
 		return QDF_STATUS_E_FAILURE;
 	}
 
+	if (aid_mgr != txvdev_aid_mgr) {
+		mlo_err("AID mgr of VDEV%d and tx vdev(%d) aid mgr doesn't match",
+			wlan_vdev_get_id(vdev), wlan_vdev_get_id(tx_vdev));
+		return QDF_STATUS_E_FAILURE;
+	}
+
 	for (i = 0; i < WLAN_UMAC_MLO_MAX_VDEVS; i++) {
 		vdev_iter = mldev->wlan_vdev_list[i];
 		if (!vdev_iter)
@@ -936,6 +942,12 @@ QDF_STATUS wlan_mlme_vdev_deinit_mbss_aid_mgr(struct wlan_objmgr_vdev *vdev,
 		return QDF_STATUS_E_FAILURE;
 	}
 
+	if (aid_mgr != txvdev_aid_mgr) {
+		mlo_err("AID mgr of VDEV%d and tx vdev(%d) aid mgr doesn't match",
+			wlan_vdev_get_id(vdev), wlan_vdev_get_id(tx_vdev));
+		return QDF_STATUS_E_FAILURE;
+	}
+
 	aid_mgr = wlan_vdev_aid_mgr_init(txvdev_aid_mgr->max_aid);
 	if (!aid_mgr) {
 		mlo_err("AID bitmap allocation failed for VDEV%d",
@@ -960,6 +972,7 @@ QDF_STATUS wlan_mlo_vdev_alloc_aid_mgr(struct wlan_mlo_dev_context *ml_dev,
 	uint8_t i;
 	struct wlan_objmgr_vdev *vdev_iter;
 	struct wlan_ml_vdev_aid_mgr *ml_aidmgr;
+	struct wlan_vdev_aid_mgr *aid_mgr = NULL;
 	uint16_t max_aid = WLAN_UMAC_MAX_AID;
 
 	if (!ml_dev->ap_ctx) {
@@ -981,13 +994,20 @@ QDF_STATUS wlan_mlo_vdev_alloc_aid_mgr(struct wlan_mlo_dev_context *ml_dev,
 		if (vdev != vdev_iter)
 			continue;
 
-		ml_aidmgr->aid_mgr[i] = wlan_vdev_aid_mgr_init(max_aid);
-		if (!ml_aidmgr->aid_mgr[i]) {
-			mlo_err("AID bitmap allocation failed for VDEV%d",
-				wlan_vdev_get_id(vdev));
-			return QDF_STATUS_E_NOMEM;
+		/* if it is already allocated, assign it to ML AID mgr */
+		aid_mgr = wlan_vdev_mlme_get_aid_mgr(vdev);
+		if (!aid_mgr) {
+			aid_mgr = wlan_vdev_aid_mgr_init(max_aid);
+			if (aid_mgr) {
+				wlan_vdev_mlme_set_aid_mgr(vdev, aid_mgr);
+			} else {
+				mlo_err("AID bitmap allocation failed for VDEV%d",
+					wlan_vdev_get_id(vdev));
+				return QDF_STATUS_E_NOMEM;
+			}
 		}
-		wlan_vdev_mlme_set_aid_mgr(vdev, ml_aidmgr->aid_mgr[i]);
+
+		ml_aidmgr->aid_mgr[i] = aid_mgr;
 		break;
 	}
 
@@ -1022,6 +1042,7 @@ QDF_STATUS wlan_mlo_vdev_free_aid_mgr(struct wlan_mlo_dev_context *ml_dev,
 
 		wlan_vdev_aid_mgr_free(ml_aidmgr->aid_mgr[i]);
 		ml_aidmgr->aid_mgr[i] = NULL;
+		wlan_vdev_mlme_set_aid_mgr(vdev, NULL);
 		break;
 	}
 
