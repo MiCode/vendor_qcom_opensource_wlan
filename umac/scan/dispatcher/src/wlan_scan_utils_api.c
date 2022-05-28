@@ -39,8 +39,6 @@
 #define NEIGHBOR_AP_LEN 1
 #define BSS_PARAMS_LEN 1
 
-static struct he_oper_6g_param *util_scan_get_he_6g_params(uint8_t *he_ops);
-
 const char*
 util_scan_get_ev_type_name(enum scan_event_type type)
 {
