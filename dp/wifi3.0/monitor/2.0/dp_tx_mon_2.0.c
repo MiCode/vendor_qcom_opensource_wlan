@@ -228,7 +228,8 @@ dp_tx_mon_buf_desc_pool_init(struct dp_soc *soc)
 	uint32_t num_entries;
 
 	num_entries =
-		wlan_cfg_get_dp_soc_rx_mon_buf_ring_size(soc->wlan_cfg_ctx);
+		wlan_cfg_get_dp_soc_tx_mon_buf_ring_size(soc->wlan_cfg_ctx);
+
 	return dp_mon_desc_pool_init(&mon_soc_be->tx_desc_mon, num_entries);
 }
 

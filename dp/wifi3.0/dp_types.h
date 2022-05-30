@@ -76,7 +76,12 @@
 
 #if defined(WLAN_MAX_PDEVS) && (WLAN_MAX_PDEVS == 1)
 #define WLAN_DP_RESET_MON_BUF_RING_FILTER
+#define MAX_TXDESC_POOLS 6
+#else
+#define MAX_TXDESC_POOLS 4
 #endif
+
+#define MAX_RXDESC_POOLS 4
 
 /* Max no. of VDEV per PSOC */
 #ifdef WLAN_PSOC_MAX_VDEVS
@@ -91,9 +96,6 @@
 #else
 #define DP_PDEV_MAX_VDEVS 17
 #endif
-
-#define MAX_TXDESC_POOLS 6
-#define MAX_RXDESC_POOLS 4
 
 #define EXCEPTION_DEST_RING_ID 0
 #define MAX_IDLE_SCATTER_BUFS 16
