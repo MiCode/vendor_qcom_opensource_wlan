@@ -11596,6 +11596,48 @@ static QDF_STATUS extract_mgmt_rx_params_tlv(wmi_unified_t wmi_handle,
 	return QDF_STATUS_SUCCESS;
 }
 
+static QDF_STATUS extract_mgmt_rx_ext_params_tlv(wmi_unified_t wmi_handle,
+	void *evt_buf, struct mgmt_rx_event_ext_params *ext_params)
+{
+	WMI_MGMT_RX_EVENTID_param_tlvs *param_tlvs;
+	wmi_mgmt_rx_params_ext *ext_params_tlv;
+	wmi_mgmt_rx_hdr *ev_hdr;
+
+	param_tlvs = (WMI_MGMT_RX_EVENTID_param_tlvs *) evt_buf;
+	if (!param_tlvs) {
+		wmi_err("param_tlvs is NULL");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	ev_hdr = param_tlvs->hdr;
+	if (!ev_hdr) {
+		wmi_err("Rx event is NULL");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	ext_params_tlv = param_tlvs->mgmt_rx_params_ext;
+	if (ext_params_tlv) {
+		ext_params->ba_win_size = WMI_RX_PARAM_EXT_BA_WIN_SIZE_GET(
+					ext_params_tlv->mgmt_rx_params_ext_dword1);
+		if (ext_params->ba_win_size > 1024) {
+			wmi_err("ba win size from TLV is Invalid");
+			return QDF_STATUS_E_INVAL;
+		}
+
+		ext_params->reo_win_size = WMI_RX_PARAM_EXT_REO_WIN_SIZE_GET(
+					ext_params_tlv->mgmt_rx_params_ext_dword1);
+		if (ext_params->reo_win_size > 2048) {
+			wmi_err("reo win size from TLV is Invalid");
+			return QDF_STATUS_E_INVAL;
+		}
+	} else {
+		ext_params->ba_win_size = 0;
+		ext_params->reo_win_size = 0;
+	}
+
+	return QDF_STATUS_SUCCESS;
+}
+
 #ifdef WLAN_MGMT_RX_REO_SUPPORT
 /**
  * extract_mgmt_rx_fw_consumed_tlv() - extract MGMT Rx FW consumed event
@@ -18344,6 +18386,7 @@ struct wmi_ops tlv_ops =  {
 	.extract_pktlog_decode_info_event =
 		extract_pktlog_decode_info_event_tlv,
 	.extract_pdev_telemetry_stats = extract_pdev_telemetry_stats_tlv,
+	.extract_mgmt_rx_ext_params = extract_mgmt_rx_ext_params_tlv,
 };
 
 #ifdef WLAN_FEATURE_11BE_MLO

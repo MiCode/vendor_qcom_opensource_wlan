@@ -2916,6 +2916,18 @@ QDF_STATUS
 wmi_extract_mgmt_rx_params(wmi_unified_t wmi_handle, void *evt_buf,
 			   struct mgmt_rx_event_params *hdr, uint8_t **bufp);
 
+/**
+ * wmi_extract_mgmt_rx_ext_params() - extract extended rx params from event
+ * @wmi_handle: wmi handle
+ * @evt_buf: pointer to event buffer
+ * @params: Pointer to hold ext params
+ *
+ * Return: QDF_STATUS_SUCCESS on success and QDF_STATUS_E_FAILURE for failure
+ */
+QDF_STATUS
+wmi_extract_mgmt_rx_ext_params(wmi_unified_t wmi_handle, void *evt_buf,
+			       struct mgmt_rx_event_ext_params *params);
+
 #ifdef WLAN_MGMT_RX_REO_SUPPORT
 /**
  * wmi_extract_mgmt_rx_fw_consumed() - extract MGMT Rx FW consumed event
