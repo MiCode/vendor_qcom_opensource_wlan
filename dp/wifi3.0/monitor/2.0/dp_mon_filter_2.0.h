@@ -85,6 +85,15 @@ void
 dp_rx_mon_enable_mpdu_logging(uint32_t *msg_word,
 			      struct htt_rx_ring_tlv_filter *tlv_filter);
 
+/**
+ * dp_rx_mon_enable_fpmo() - Setup rx monitor fpmo mode type/subtype filters
+ * @msg_word: msg word
+ * @htt_tlv_filter: rx ring filter configuration
+ */
+void
+dp_rx_mon_enable_fpmo(uint32_t *msg_word,
+		      struct htt_rx_ring_tlv_filter *tlv_filter);
+
 #ifdef QCA_ENHANCED_STATS_SUPPORT
 /**
  * dp_mon_filter_setup_enhanced_stats() - Setup the enhanced stats filter

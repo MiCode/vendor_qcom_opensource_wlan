@@ -618,6 +618,10 @@ struct htt_tx_ring_tlv_filter {
  * @ctrl_mpdu_log: enable ctrl mpdu level logging
  * @data_mpdu_log: enable data mpdu level logging
  * @enable: enable rx monitor
+ * @enable_fpmo: enable/disable FPMO packet
+ * @fpmo_data_filter: FPMO mode data filter
+ * @fpmo_mgmt_filter: FPMO mode mgmt filter
+ * @fpmo_ctrl_filter: FPMO mode ctrl filter
  *
  * NOTE: Do not change the layout of this structure
  */
@@ -677,6 +681,10 @@ struct htt_rx_ring_tlv_filter {
 		 ctrl_mpdu_log:1,
 		 data_mpdu_log:1,
 		 enable:1;
+	u_int16_t enable_fpmo:1;
+	u_int16_t fpmo_data_filter;
+	u_int16_t fpmo_mgmt_filter;
+	u_int16_t fpmo_ctrl_filter;
 #endif
 };
 
