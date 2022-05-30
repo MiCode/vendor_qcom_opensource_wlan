@@ -1224,7 +1224,7 @@ void reg_freq_to_chan_op_class(struct wlan_objmgr_pdev *pdev,
 	enum channel_enum chan_enum;
 	struct regulatory_channel *cur_chan_list;
 	struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj;
-	struct ch_params chan_params;
+	struct ch_params chan_params = {0};
 
 	pdev_priv_obj = reg_get_pdev_obj(pdev);
 
@@ -1563,7 +1563,7 @@ static bool reg_is_chan_supported(struct wlan_objmgr_pdev *pdev,
 {
 	struct reg_channel_list chan_list;
 	qdf_freq_t center_320;
-	struct ch_params ch_params;
+	struct ch_params ch_params = {0};
 
 	center_320 = (ch_width == CH_WIDTH_320MHZ) ? cfi_freq : 0;
 	reg_fill_channel_list(pdev,
@@ -1585,7 +1585,7 @@ static bool reg_is_chan_supported(struct wlan_objmgr_pdev *pdev,
 				  qdf_freq_t cfi_freq,
 				  enum phy_ch_width ch_width)
 {
-	struct ch_params ch_params;
+	struct ch_params ch_params = {0};
 
 	ch_params.ch_width = ch_width;
 	reg_set_channel_params_for_freq(pdev, pri_freq, 0, &ch_params, true);

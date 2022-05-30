@@ -4289,7 +4289,7 @@ static bool
 target_if_spectral_is_valid_80p80_freq(struct wlan_objmgr_pdev *pdev,
 				       uint32_t cfreq1, uint32_t cfreq2)
 {
-	struct ch_params ch_params;
+	struct ch_params ch_params = {0};
 	enum channel_state chan_state1;
 	enum channel_state chan_state2;
 	struct wlan_objmgr_psoc *psoc;
