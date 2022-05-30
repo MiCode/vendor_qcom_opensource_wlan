@@ -2263,6 +2263,13 @@ struct dp_soc {
 		qdf_atomic_t skip_fisa;
 		uint8_t fisa_force_flush[MAX_REO_DEST_RINGS];
 	} skip_fisa_param;
+
+	/**
+	 * CMEM address and size for FST in CMEM, This is the address
+	 * shared during init time.
+	 */
+	uint64_t fst_cmem_base;
+	uint64_t fst_cmem_size;
 #endif
 #endif /* WLAN_SUPPORT_RX_FLOW_TAG || WLAN_SUPPORT_RX_FISA */
 	/* SG supported for msdu continued packets from wbm release ring */
@@ -2345,7 +2352,9 @@ struct dp_soc {
 	/* CMEM buffer target reserved for host usage */
 	uint64_t cmem_base;
 	/* CMEM size in bytes */
-	uint64_t cmem_size;
+	uint64_t cmem_total_size;
+	/* CMEM free size in bytes */
+	uint64_t cmem_avail_size;
 
 	/* SOC level feature flags */
 	struct dp_soc_features features;

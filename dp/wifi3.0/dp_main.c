@@ -6118,13 +6118,29 @@ dp_rx_target_fst_config(struct dp_soc *soc)
  */
 static inline QDF_STATUS dp_rx_target_fst_config(struct dp_soc *soc)
 {
+	QDF_STATUS status;
+	struct dp_rx_fst *fst = soc->rx_fst;
+
 	/* Check if it is enabled in the INI */
 	if (!soc->fisa_enable) {
 		dp_err("RX FISA feature is disabled");
 		return QDF_STATUS_E_NOSUPPORT;
 	}
 
-	return dp_rx_flow_send_fst_fw_setup(soc, soc->pdev_list[0]);
+	status = dp_rx_flow_send_fst_fw_setup(soc, soc->pdev_list[0]);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		dp_err("dp_rx_flow_send_fst_fw_setup failed %d",
+		       status);
+		return status;
+	}
+
+	if (soc->fst_cmem_base) {
+		soc->fst_in_cmem = true;
+		dp_rx_fst_update_cmem_params(soc, fst->max_entries,
+					     soc->fst_cmem_base & 0xffffffff,
+					     soc->fst_cmem_base >> 32);
+	}
+	return status;
 }
 
 #define FISA_MAX_TIMEOUT 0xffffffff
@@ -6138,6 +6154,7 @@ static QDF_STATUS dp_rx_fisa_config(struct dp_soc *soc)
 
 	return dp_htt_rx_fisa_config(soc->pdev_list[0], &fisa_config);
 }
+
 #else /* !WLAN_SUPPORT_RX_FISA */
 static inline QDF_STATUS dp_rx_target_fst_config(struct dp_soc *soc)
 {
@@ -13710,7 +13727,8 @@ dp_soc_attach(struct cdp_ctrl_objmgr_psoc *ctrl_psoc,
 
 	hif_get_cmem_info(soc->hif_handle,
 			  &soc->cmem_base,
-			  &soc->cmem_size);
+			  &soc->cmem_total_size);
+	soc->cmem_avail_size = soc->cmem_total_size;
 	int_ctx = 0;
 	soc->device_id = device_id;
 	soc->cdp_soc.ops =
