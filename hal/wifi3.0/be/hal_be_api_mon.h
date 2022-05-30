@@ -2924,9 +2924,11 @@ hal_rx_status_get_tlv_info_generic_be(void *rx_tlv_hdr, void *ppduinfo,
 		return HAL_TLV_STATUS_MON_BUF_ADDR;
 	case 0:
 		return HAL_TLV_STATUS_PPDU_DONE;
+	case WIFIRX_STATUS_BUFFER_DONE_E:
+		return HAL_TLV_STATUS_PPDU_NOT_DONE;
 
 	default:
-		qdf_debug("unhandled tlv tag %d", tlv_tag);
+		hal_debug("unhandled tlv tag %d", tlv_tag);
 	}
 
 	qdf_trace_hex_dump(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_DEBUG,

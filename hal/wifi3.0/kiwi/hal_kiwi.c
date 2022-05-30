@@ -1232,9 +1232,8 @@ void hal_rx_proc_phyrx_other_receive_info_tlv_kiwi(void *rx_tlv_hdr,
 
 	switch (other_tlv_tag) {
 	default:
-		QDF_TRACE(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_ERROR,
-			  "%s unhandled TLV type: %d, TLV len:%d",
-			  __func__, other_tlv_tag, other_tlv_len);
+		hal_err_rl("unhandled TLV type: %d, TLV len:%d",
+			   other_tlv_tag, other_tlv_len);
 		break;
 	}
 }
