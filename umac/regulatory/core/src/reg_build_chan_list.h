@@ -53,7 +53,7 @@ void reg_init_pdev_mas_chan_list(
 		struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj,
 		struct mas_chan_params *mas_chan_params);
 
-/*
+/**
  * reg_set_ap_pwr_type() - Set the AP power type.
  * @pdev_priv_obj: pdev private object
  *
