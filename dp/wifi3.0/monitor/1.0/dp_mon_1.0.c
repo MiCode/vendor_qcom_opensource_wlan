@@ -992,11 +992,27 @@ dp_rx_mon_process_1_0(struct dp_soc *soc, struct dp_intr *int_ctx,
 	return dp_rx_mon_status_process(soc, int_ctx, mac_id, quota);
 }
 
+#if defined(WDI_EVENT_ENABLE) &&\
+	(defined(QCA_ENHANCED_STATS_SUPPORT) || !defined(REMOVE_PKT_LOG))
+static inline
+void dp_mon_ppdu_stats_handler_register(struct dp_mon_soc *mon_soc)
+{
+	mon_soc->mon_ops->mon_ppdu_stats_ind_handler =
+					dp_ppdu_stats_ind_handler;
+}
+#else
+static inline
+void dp_mon_ppdu_stats_handler_register(struct dp_mon_soc *mon_soc)
+{
+}
+#endif
+
 static void dp_mon_register_intr_ops_1_0(struct dp_soc *soc)
 {
 	struct dp_mon_soc *mon_soc = soc->monitor_soc;
 
 	mon_soc->mon_rx_process = dp_rx_mon_process_1_0;
+	dp_mon_ppdu_stats_handler_register(mon_soc);
 }
 #endif
 
@@ -1048,10 +1064,6 @@ dp_mon_register_feature_ops_1_0(struct dp_soc *soc)
 	mon_ops->mon_print_pdev_tx_capture_stats = NULL;
 	mon_ops->mon_config_enh_tx_capture = NULL;
 	mon_ops->mon_tx_peer_filter = NULL;
-#endif
-#if defined(WDI_EVENT_ENABLE) &&\
-	(defined(QCA_ENHANCED_STATS_SUPPORT) || !defined(REMOVE_PKT_LOG))
-	mon_ops->mon_ppdu_stats_ind_handler = dp_ppdu_stats_ind_handler;
 #endif
 #ifdef WLAN_RX_PKT_CAPTURE_ENH
 	mon_ops->mon_config_enh_rx_capture = dp_config_enh_rx_capture;
