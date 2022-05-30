@@ -4792,6 +4792,7 @@ void dp_tx_comp_process_tx_status(struct dp_soc *soc,
 	dp_tx_update_peer_delay_stats(txrx_peer, tx_desc, ts->tid, ring_id);
 	dp_tx_update_peer_sawf_stats(soc, vdev, txrx_peer, tx_desc,
 				     ts, ts->tid);
+	dp_tx_send_pktlog(soc, vdev->pdev, nbuf, dp_status);
 
 #ifdef QCA_SUPPORT_RDK_STATS
 	if (soc->peerstats_enabled)
