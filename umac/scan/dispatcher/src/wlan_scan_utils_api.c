@@ -264,9 +264,11 @@ util_scan_get_phymode_11be(struct wlan_objmgr_pdev *pdev,
 			 EHTOP_PARAM_DISABLED_SC_BITMAP_PRESENT_IDX,
 			 EHTOP_PARAM_DISABLED_SC_BITMAP_PRESENT_BITS)) {
 		scan_params->channel.puncture_bitmap =
-				QDF_GET_BITS(eht_ops->disable_sub_chan_bitmap[0], 0, 8);
+			QDF_GET_BITS(eht_ops->disabled_sub_chan_bitmap[0],
+				     0, 8);
 		scan_params->channel.puncture_bitmap |=
-				QDF_GET_BITS(eht_ops->disable_sub_chan_bitmap[1], 0, 8) << 8;
+			QDF_GET_BITS(eht_ops->disabled_sub_chan_bitmap[1],
+				     0, 8) << 8;
 	} else {
 		scan_params->channel.puncture_bitmap = 0;
 	}
