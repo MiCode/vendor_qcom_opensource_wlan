@@ -190,6 +190,51 @@ util_get_bvmlie_primary_linkid(uint8_t *mlieseq, qdf_size_t mlieseqlen,
 			       bool *linkidfound, uint8_t *linkid);
 
 /**
+ * util_get_mlie_common_info_len() - Get the MLD common info len
+ * @mlieseq: Starting address of the Multi-Link element or Multi-Link element
+ * fragment sequence
+ * @mlieseqlen: Total length of the Multi-Link element or Multi-Link element
+ * fragment sequence
+ * @commoninfo_len: Pointer to the location where the value of the MLD common
+ * info len should be updated. This should be ignored by the caller if the
+ * function returns error.
+ *
+ * Get the MLD common info len from Multi-Link element transmitted by the AP.
+ *
+ * Return: QDF_STATUS_SUCCESS in the case of success, QDF_STATUS value giving
+ * the reason for error in the case of failure
+ */
+QDF_STATUS
+util_get_mlie_common_info_len(uint8_t *mlieseq, qdf_size_t mlieseqlen,
+			      uint8_t *commoninfo_len);
+
+/**
+ * util_get_bvmlie_bssparamchangecnt() - Get the MLD BSS PARAM Change Count
+ * @mlieseq: Starting address of the Multi-Link element or Multi-Link element
+ * fragment sequence
+ * @mlieseqlen: Total length of the Multi-Link element or Multi-Link element
+ * fragment sequence
+ * @bssparamchangecntfound: Pointer to the location where a boolean status
+ * should be updated indicating whether the MLD BSS PARAM Change Count was
+ * found or not. This should be ignored by the caller if the function
+ * returns error.
+ * @bssparamchangecnt: Pointer to the location where the value of the MLD BSS
+ * PARAM Change Count should be updated. This should be ignored by the caller
+ * if the function returns error, or if the function indicates that the MLD
+ * BSS PARAM Change Count was not found.
+ *
+ * Get the MLD BSS PARAM Change Count from Multi-Link element transmitted
+ * by the AP.
+ *
+ * Return: QDF_STATUS_SUCCESS in the case of success, QDF_STATUS value giving
+ * the reason for error in the case of failure
+ */
+QDF_STATUS
+util_get_bvmlie_bssparamchangecnt(uint8_t *mlieseq, qdf_size_t mlieseqlen,
+				  bool *bssparamchangecntfound,
+				  uint8_t *bssparamchangecnt);
+
+/**
  * util_get_bvmlie_mldcap - Get the MLD capabilities from a given Basic
  * variant Multi-Link element or element fragment sequence, of the AP that
  * transmits the Multi-Link element/element fragment sequence or the
@@ -277,8 +322,22 @@ util_get_mlie_variant(uint8_t *mlieseq, qdf_size_t mlieseqlen,
 }
 
 static inline QDF_STATUS
+util_get_mlie_common_info_len(uint8_t *mlieseq, qdf_size_t mlieseqlen,
+			      uint8_t *commoninfo_len)
+{
+	return QDF_STATUS_E_NOSUPPORT;
+}
+
+static inline QDF_STATUS
+util_get_bvmlie_bssparamchangecnt(uint8_t *mlieseq, qdf_size_t mlieseqlen,
+				  bool *bssparamchangecntfound,
+				  uint8_t *bssparamchangecnt)
+{
+	return QDF_STATUS_E_NOSUPPORT;
+}
+
+static inline QDF_STATUS
 util_get_bvmlie_mldmacaddr(uint8_t *mlieseq, qdf_size_t mlieseqlen,
-			   bool *mldmacaddrfound,
 			   struct qdf_mac_addr *mldmacaddr)
 {
 	return QDF_STATUS_E_NOSUPPORT;

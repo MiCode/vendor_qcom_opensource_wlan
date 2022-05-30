@@ -2182,6 +2182,107 @@ util_find_mlie(uint8_t *buf, qdf_size_t buflen, uint8_t **mlieseq,
 }
 
 QDF_STATUS
+util_get_mlie_common_info_len(uint8_t *mlieseq, qdf_size_t mlieseqlen,
+			      uint8_t *commoninfo_len)
+{
+	struct wlan_ie_multilink *mlie_fixed;
+	enum wlan_ml_variant variant;
+	uint16_t mlcontrol;
+
+	if (!mlieseq || !mlieseqlen || !commoninfo_len)
+		return QDF_STATUS_E_NULL_VALUE;
+
+	if (mlieseqlen < sizeof(struct wlan_ie_multilink))
+		return QDF_STATUS_E_INVAL;
+
+	mlie_fixed = (struct wlan_ie_multilink *)mlieseq;
+
+	if (mlie_fixed->elem_id != WLAN_ELEMID_EXTN_ELEM ||
+	    mlie_fixed->elem_id_ext != WLAN_EXTN_ELEMID_MULTI_LINK)
+		return QDF_STATUS_E_INVAL;
+
+	mlcontrol = qdf_le16_to_cpu(mlie_fixed->mlcontrol);
+
+	variant = QDF_GET_BITS(mlcontrol, WLAN_ML_CTRL_TYPE_IDX,
+			       WLAN_ML_CTRL_TYPE_BITS);
+
+	if (variant != WLAN_ML_VARIANT_BASIC)
+		return QDF_STATUS_E_INVAL;
+
+	/* Common Info starts at mlieseq + sizeof(struct wlan_ie_multilink).
+	 * Check if there is sufficient space in the buffer for the Common Info
+	 * Length and MLD MAC address.
+	 */
+	if ((sizeof(struct wlan_ie_multilink) + WLAN_ML_BV_CINFO_LENGTH_SIZE +
+	    QDF_MAC_ADDR_SIZE) > mlieseqlen)
+		return QDF_STATUS_E_PROTO;
+
+	*commoninfo_len = *(mlieseq + sizeof(struct wlan_ie_multilink));
+
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS
+util_get_bvmlie_bssparamchangecnt(uint8_t *mlieseq, qdf_size_t mlieseqlen,
+				  bool *bssparamchangecntfound,
+				  uint8_t *bssparamchangecnt)
+{
+	struct wlan_ie_multilink *mlie_fixed;
+	enum wlan_ml_variant variant;
+	uint16_t mlcontrol;
+	uint16_t presencebitmap;
+	uint8_t *commoninfo;
+	qdf_size_t commoninfolen;
+
+	if (!mlieseq || !mlieseqlen || !bssparamchangecntfound ||
+	    !bssparamchangecnt)
+		return QDF_STATUS_E_NULL_VALUE;
+
+	*bssparamchangecntfound = false;
+	*bssparamchangecnt = 0;
+
+	if (mlieseqlen < sizeof(struct wlan_ie_multilink))
+		return QDF_STATUS_E_INVAL;
+
+	mlie_fixed = (struct wlan_ie_multilink *)mlieseq;
+
+	if (mlie_fixed->elem_id != WLAN_ELEMID_EXTN_ELEM ||
+	    mlie_fixed->elem_id_ext != WLAN_EXTN_ELEMID_MULTI_LINK)
+		return QDF_STATUS_E_INVAL;
+
+	mlcontrol = qdf_le16_to_cpu(mlie_fixed->mlcontrol);
+
+	variant = QDF_GET_BITS(mlcontrol, WLAN_ML_CTRL_TYPE_IDX,
+			       WLAN_ML_CTRL_TYPE_BITS);
+
+	if (variant != WLAN_ML_VARIANT_BASIC)
+		return QDF_STATUS_E_NOSUPPORT;
+
+	presencebitmap = QDF_GET_BITS(mlcontrol, WLAN_ML_CTRL_PBM_IDX,
+				      WLAN_ML_CTRL_PBM_BITS);
+
+	commoninfo = mlieseq + sizeof(struct wlan_ie_multilink);
+	commoninfolen = WLAN_ML_BV_CINFO_LENGTH_SIZE;
+
+	commoninfolen += QDF_MAC_ADDR_SIZE;
+
+	if (presencebitmap & WLAN_ML_BV_CTRL_PBM_LINKIDINFO_P) {
+		commoninfolen += WLAN_ML_BV_CINFO_LINKIDINFO_SIZE;
+
+		if ((sizeof(struct wlan_ie_multilink) + commoninfolen) >
+				mlieseqlen)
+			return QDF_STATUS_E_PROTO;
+	}
+
+	if (presencebitmap & WLAN_ML_BV_CTRL_PBM_BSSPARAMCHANGECNT_P) {
+		*bssparamchangecntfound = true;
+		*bssparamchangecnt = *(commoninfo + commoninfolen);
+	}
+
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS
 util_get_mlie_variant(uint8_t *mlieseq, qdf_size_t mlieseqlen,
 		      int *variant)
 {
