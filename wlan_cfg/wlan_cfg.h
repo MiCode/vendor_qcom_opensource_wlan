@@ -254,7 +254,9 @@ struct wlan_srng_cfg {
  * @txmon_hw_support: TxMON HW support
  * @num_rxdma_status_rings_per_pdev: Num RXDMA status rings
  * @mpdu_retry_threshold_1: MPDU retry threshold 1 to increment tx bad count
- * @mpdu_retry_threshold_1: MPDU retry threshold 2 to increment tx bad count
+ * @mpdu_retry_threshold_2: MPDU retry threshold 2 to increment tx bad count
+ * napi_scale_factor: scaling factor to be used for napi polls
+ * @notify_frame_support: flag indicating capability to mark notify frames
  */
 struct wlan_cfg_dp_soc_ctxt {
 	int num_int_ctxts;
@@ -428,6 +430,7 @@ struct wlan_cfg_dp_soc_ctxt {
 	uint8_t mpdu_retry_threshold_1;
 	uint8_t mpdu_retry_threshold_2;
 	uint8_t napi_scale_factor;
+	uint8_t notify_frame_support;
 };
 
 /**

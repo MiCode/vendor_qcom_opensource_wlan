@@ -1711,6 +1711,13 @@
 		CFG_DP_MPDU_RETRY_THRESHOLD, \
 		CFG_VALUE_OR_DEFAULT, "DP mpdu retry threshold 2")
 
+#ifdef QCA_SUPPORT_TX_MIN_RATES_FOR_SPECIAL_FRAMES
+/* Macro enabling support marking of notify frames by host */
+#define DP_MARK_NOTIFY_FRAME_SUPPORT 1
+#else
+#define DP_MARK_NOTIFY_FRAME_SUPPORT 0
+#endif /* QCA_SUPPORT_TX_MIN_RATES_FOR_SPECIAL_FRAMES */
+
 #define CFG_DP \
 		CFG(CFG_DP_HTT_PACKET_TYPE) \
 		CFG(CFG_DP_INT_BATCH_THRESHOLD_OTHER) \

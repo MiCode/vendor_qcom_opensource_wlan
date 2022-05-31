@@ -733,7 +733,16 @@ enum txrx_direction {
 };
 
 /**
- * cdp_capabilities- DP capabilities
+ * enum cdp_capabilities- DP capabilities
+ * @CDP_CFG_DP_TSO: TSO capability
+ * @CDP_CFG_DP_LRO: LRO capability
+ * @CDP_CFG_DP_SG: Scatter Gather capability
+ * @CDP_CFG_DP_GRO: GRO capability
+ * @CDP_CFG_DP_OL_TX_CSUM: Hardware based TX checksum capability
+ * @CDP_CFG_DP_OL_RX_CSUM: Hardware based RX checksum capability
+ * @CDP_CFG_DP_RAWMODE: RAW mode capability
+ * @CDP_CFG_DP_PEER_FLOW_CTRL: Peer flow-control capability
+ * @CDP_CFG_DP_MARK_NOTIFY_FRAME_SUPPORT: mark notify frames capability
  */
 enum cdp_capabilities {
 	CDP_CFG_DP_TSO,
@@ -744,6 +753,7 @@ enum cdp_capabilities {
 	CDP_CFG_DP_OL_RX_CSUM,
 	CDP_CFG_DP_RAWMODE,
 	CDP_CFG_DP_PEER_FLOW_CTRL,
+	CDP_CFG_DP_MARK_NOTIFY_FRAME_SUPPORT,
 };
 
 /**

@@ -8330,6 +8330,10 @@ void wmi_copy_resource_config(wmi_resource_config *resource_cfg,
 
 	WMI_RSRC_CFG_FLAGS2_RX_PEER_METADATA_VERSION_SET(resource_cfg->flags2,
 						 tgt_res_cfg->target_cap_flags);
+	if (tgt_res_cfg->notify_frame_support)
+		WMI_RSRC_CFG_FLAGS2_NOTIFY_FRAME_CONFIG_ENABLE_SET(
+			resource_cfg->flags2, 1);
+
 }
 
 /* copy_hw_mode_id_in_init_cmd() - Helper routine to copy hw_mode in init cmd

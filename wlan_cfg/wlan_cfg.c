@@ -2927,6 +2927,8 @@ wlan_cfg_get_dp_caps(struct wlan_cfg_dp_soc_ctxt *cfg,
 		return cfg->rawmode_enabled;
 	case CDP_CFG_DP_PEER_FLOW_CTRL:
 		return cfg->peer_flow_ctrl_enabled;
+	case CDP_CFG_DP_MARK_NOTIFY_FRAME_SUPPORT:
+		return cfg->notify_frame_support;
 	default:
 		return false;
 	}

@@ -5896,8 +5896,9 @@ struct wmi_host_fw_abi_ver {
  * @afc_outdoor_support: AFC support outdoor deployment
  * @carrier_profile_config: Configuration for per-carrier profile
  * @reo_qdesc_shared_addr_table_enabled: Reo shared qref enhancement enabled
- * @num_max_active_vdevs: number of max active virtual devices (VAPs) to
- *  support
+ * @num_max_active_vdevs: max number of active virtual devices (VAPs) to
+ * support
+ * @notify_frame_support: capability to mark notify frames from host
  */
 typedef struct {
 	uint32_t num_vdevs;
@@ -6023,6 +6024,7 @@ typedef struct {
 	bool sawf;
 	bool reo_qdesc_shared_addr_table_enabled;
 	uint32_t num_max_active_vdevs;
+	uint8_t notify_frame_support;
 } target_resource_config;
 
 /**

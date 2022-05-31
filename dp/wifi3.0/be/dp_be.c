@@ -63,6 +63,9 @@ static void dp_soc_cfg_attach_be(struct dp_soc *soc)
 
 	/* this is used only when dmac mode is enabled */
 	soc->num_rx_refill_buf_rings = 1;
+
+	soc->wlan_cfg_ctx->notify_frame_support =
+				DP_MARK_NOTIFY_FRAME_SUPPORT;
 }
 
 qdf_size_t dp_get_context_size_be(enum dp_context_type context_type)

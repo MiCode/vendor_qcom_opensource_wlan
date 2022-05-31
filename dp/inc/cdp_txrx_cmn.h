@@ -2301,6 +2301,8 @@ cdp_get_dp_capabilities(struct cdp_soc_t *soc, enum cdp_capabilities dp_caps)
 	if (soc && soc->ops && soc->ops->cmn_drv_ops &&
 	    soc->ops->cmn_drv_ops->get_dp_capabilities)
 		return soc->ops->cmn_drv_ops->get_dp_capabilities(soc, dp_caps);
+
+	qdf_err("invalid instance");
 	return false;
 }
 
