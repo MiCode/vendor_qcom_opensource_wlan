@@ -7088,6 +7088,12 @@ static QDF_STATUS dp_txrx_peer_attach(struct dp_soc *soc, struct dp_peer *peer)
 	txrx_peer->vdev = peer->vdev;
 	pdev = peer->vdev->pdev;
 
+	/* Initialize MPDU success count with retry update thresholds */
+	txrx_peer->mpdu_retry_threshold_1 =
+		soc->wlan_cfg_ctx->mpdu_retry_threshold_1;
+	txrx_peer->mpdu_retry_threshold_2 =
+		soc->wlan_cfg_ctx->mpdu_retry_threshold_2;
+
 	DP_STATS_INIT(txrx_peer);
 
 	dp_wds_ext_peer_init(txrx_peer);

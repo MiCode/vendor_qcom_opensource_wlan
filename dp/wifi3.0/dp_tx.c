@@ -4062,7 +4062,7 @@ static inline void
 dp_tx_update_peer_extd_stats(struct hal_tx_completion_status *ts,
 			     struct dp_txrx_peer *txrx_peer)
 {
-	uint8_t mcs, pkt_type;
+	uint8_t mcs, pkt_type, retry_threshold;
 
 	mcs = ts->mcs;
 	pkt_type = ts->pkt_type;
@@ -4109,9 +4109,23 @@ dp_tx_update_peer_extd_stats(struct hal_tx_completion_status *ts,
 	if (ts->first_msdu) {
 		DP_PEER_EXTD_STATS_INCC(txrx_peer, tx.retries_mpdu, 1,
 					ts->transmit_cnt > 1);
+		switch (ts->bw) {
+		case 0: /* 20Mhz */
+		case 1: /* 40Mhz */
+		case 2: /* 80Mhz */
+			retry_threshold = txrx_peer->mpdu_retry_threshold_1;
+			break;
+		default: /* 160Mhz */
+			retry_threshold = txrx_peer->mpdu_retry_threshold_2;
+			break;
+		}
+		if (!retry_threshold)
+			return;
+
 		DP_PEER_EXTD_STATS_INCC(txrx_peer, tx.mpdu_success_with_retries,
-					qdf_do_div(ts->transmit_cnt, DP_RETRY_COUNT),
-					ts->transmit_cnt > DP_RETRY_COUNT);
+					qdf_do_div(ts->transmit_cnt,
+						   retry_threshold),
+					ts->transmit_cnt > retry_threshold);
 	}
 }
 #else
