@@ -7678,6 +7678,7 @@ QDF_STATUS dp_txrx_get_peer_per_pkt_stats_param(struct dp_peer *peer,
 						cdp_peer_stats_param_t *buf)
 {
 	QDF_STATUS ret = QDF_STATUS_SUCCESS;
+	struct dp_peer *tgt_peer;
 	struct dp_txrx_peer *txrx_peer;
 	struct dp_peer_per_pkt_stats *peer_stats;
 
@@ -7694,7 +7695,12 @@ QDF_STATUS dp_txrx_get_peer_per_pkt_stats_param(struct dp_peer *peer,
 		buf->tx_mcast = peer_stats->tx.mcast;
 		break;
 	case cdp_peer_tx_inactive_time:
-		buf->tx_inactive_time = peer->stats.tx.inactive_time;
+		tgt_peer = dp_get_tgt_peer_from_peer(peer);
+		if (tgt_peer)
+			buf->tx_inactive_time =
+					tgt_peer->stats.tx.inactive_time;
+		else
+			ret = QDF_STATUS_E_FAILURE;
 		break;
 	case cdp_peer_rx_ucast:
 		buf->rx_ucast = peer_stats->rx.unicast;

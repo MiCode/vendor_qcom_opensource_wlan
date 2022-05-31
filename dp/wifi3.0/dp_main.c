@@ -9204,22 +9204,30 @@ static inline
 void dp_get_peer_calibr_stats(struct dp_peer *peer,
 			      struct cdp_peer_stats *peer_stats)
 {
-	peer_stats->tx.last_per = peer->stats.tx.last_per;
+	struct dp_peer *tgt_peer;
+
+	tgt_peer = dp_get_tgt_peer_from_peer(peer);
+	if (!tgt_peer)
+		return;
+
+	peer_stats->tx.last_per = tgt_peer->stats.tx.last_per;
 	peer_stats->tx.tx_bytes_success_last =
-					peer->stats.tx.tx_bytes_success_last;
+				tgt_peer->stats.tx.tx_bytes_success_last;
 	peer_stats->tx.tx_data_success_last =
-					peer->stats.tx.tx_data_success_last;
-	peer_stats->tx.tx_byte_rate = peer->stats.tx.tx_byte_rate;
-	peer_stats->tx.tx_data_rate = peer->stats.tx.tx_data_rate;
-	peer_stats->tx.tx_data_ucast_last = peer->stats.tx.tx_data_ucast_last;
-	peer_stats->tx.tx_data_ucast_rate = peer->stats.tx.tx_data_ucast_rate;
-	peer_stats->tx.inactive_time = peer->stats.tx.inactive_time;
+					tgt_peer->stats.tx.tx_data_success_last;
+	peer_stats->tx.tx_byte_rate = tgt_peer->stats.tx.tx_byte_rate;
+	peer_stats->tx.tx_data_rate = tgt_peer->stats.tx.tx_data_rate;
+	peer_stats->tx.tx_data_ucast_last =
+					tgt_peer->stats.tx.tx_data_ucast_last;
+	peer_stats->tx.tx_data_ucast_rate =
+					tgt_peer->stats.tx.tx_data_ucast_rate;
+	peer_stats->tx.inactive_time = tgt_peer->stats.tx.inactive_time;
 	peer_stats->rx.rx_bytes_success_last =
-					peer->stats.rx.rx_bytes_success_last;
+				tgt_peer->stats.rx.rx_bytes_success_last;
 	peer_stats->rx.rx_data_success_last =
-					peer->stats.rx.rx_data_success_last;
-	peer_stats->rx.rx_byte_rate = peer->stats.rx.rx_byte_rate;
-	peer_stats->rx.rx_data_rate = peer->stats.rx.rx_data_rate;
+				tgt_peer->stats.rx.rx_data_success_last;
+	peer_stats->rx.rx_byte_rate = tgt_peer->stats.rx.rx_byte_rate;
+	peer_stats->rx.rx_data_rate = tgt_peer->stats.rx.rx_data_rate;
 }
 
 /**
@@ -9236,10 +9244,7 @@ void dp_get_peer_basic_stats(struct dp_peer *peer,
 {
 	struct dp_txrx_peer *txrx_peer;
 
-	if (dp_peer_is_primary_link_peer(peer))
-		txrx_peer = dp_get_txrx_peer(peer);
-	else
-		txrx_peer = peer->txrx_peer;
+	txrx_peer = dp_get_txrx_peer(peer);
 	if (!txrx_peer)
 		return;
 
@@ -9283,10 +9288,7 @@ void dp_get_peer_per_pkt_stats(struct dp_peer *peer,
 	struct dp_txrx_peer *txrx_peer;
 	struct dp_peer_per_pkt_stats *per_pkt_stats;
 
-	if (dp_peer_is_primary_link_peer(peer))
-		txrx_peer = dp_get_txrx_peer(peer);
-	else
-		txrx_peer = peer->txrx_peer;
+	txrx_peer = dp_get_txrx_peer(peer);
 	if (!txrx_peer)
 		return;
 
