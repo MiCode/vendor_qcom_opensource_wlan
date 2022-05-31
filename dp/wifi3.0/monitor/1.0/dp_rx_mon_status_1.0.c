@@ -414,6 +414,7 @@ dp_rx_mon_status_process_tlv(struct dp_soc *soc, struct dp_intr *int_ctx,
 			} while ((tlv_status == HAL_TLV_STATUS_PPDU_NOT_DONE) ||
 				 (tlv_status == HAL_TLV_STATUS_HEADER) ||
 				 (tlv_status == HAL_TLV_STATUS_MPDU_END) ||
+				 (tlv_status == HAL_TLV_STATUS_MPDU_START) ||
 				 (tlv_status == HAL_TLV_STATUS_MSDU_END));
 		}
 		if (mon_pdev->dp_peer_based_pktlog) {
