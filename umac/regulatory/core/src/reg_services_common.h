@@ -1640,6 +1640,17 @@ reg_set_afc_soc_dev_type(struct wlan_objmgr_psoc *psoc,
 			 enum reg_afc_dev_deploy_type reg_afc_dev_type);
 
 /**
+ * reg_is_sta_connect_allowed() - Check if STA connection is allowed.
+ * @pdev: Pointer to pdev
+ * @root_ap_pwr_mode: power mode of the Root AP.
+ *
+ * Return: True if STA Vap is allowed to connect.
+ */
+bool
+reg_is_sta_connect_allowed(struct wlan_objmgr_pdev *pdev,
+			   enum reg_6g_ap_type root_ap_pwr_mode);
+
+/**
  * reg_get_afc_soc_dev_deploy_type() - Get AFC soc device deployment type
  * @pdev: Pointer to psoc
  * @reg_afc_dev_type: Pointer to afc device deployment type

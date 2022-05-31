@@ -804,6 +804,17 @@ wlan_reg_is_noaction_on_afc_pwr_evt(struct wlan_objmgr_pdev *pdev);
 QDF_STATUS
 wlan_reg_get_afc_dev_deploy_type(struct wlan_objmgr_pdev *pdev,
 				 enum reg_afc_dev_deploy_type *afc_dev_type);
+
+/**
+ * wlan_reg_is_sta_connect_allowed() - Check if STA connection allowed
+ * @pdev: pdev pointer
+ * @root_ap_pwr_mode: power mode of the Root AP.
+ *
+ * Return : True if STA Vap connection is allowed.
+ */
+bool
+wlan_reg_is_sta_connect_allowed(struct wlan_objmgr_pdev *pdev,
+				enum reg_6g_ap_type root_ap_pwr_mode);
 #else
 static inline bool
 wlan_reg_is_afc_power_event_received(struct wlan_objmgr_pdev *pdev)
@@ -822,6 +833,13 @@ wlan_reg_get_6g_afc_chan_list(struct wlan_objmgr_pdev *pdev,
 			      struct regulatory_channel *chan_list)
 {
 	return QDF_STATUS_E_NOSUPPORT;
+}
+
+static inline bool
+wlan_reg_is_sta_connect_allowed(struct wlan_objmgr_pdev *pdev,
+				enum reg_6g_ap_type root_ap_pwr_mode)
+{
+	return true;
 }
 #endif
 

@@ -1780,6 +1780,15 @@ wlan_reg_get_afc_dev_deploy_type(struct wlan_objmgr_pdev *pdev,
 }
 
 qdf_export_symbol(wlan_reg_get_afc_dev_deploy_type);
+
+bool
+wlan_reg_is_sta_connect_allowed(struct wlan_objmgr_pdev *pdev,
+				enum reg_6g_ap_type root_ap_pwr_mode)
+{
+	return reg_is_sta_connect_allowed(pdev, root_ap_pwr_mode);
+}
+
+qdf_export_symbol(wlan_reg_is_sta_connect_allowed);
 #endif /* CONFIG_AFC_SUPPORT */
 
 QDF_STATUS wlan_reg_is_chwidth_supported(struct wlan_objmgr_pdev *pdev,
