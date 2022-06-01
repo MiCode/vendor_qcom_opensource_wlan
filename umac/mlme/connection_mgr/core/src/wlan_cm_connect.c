@@ -1195,6 +1195,26 @@ static QDF_STATUS cm_is_scan_support(struct cm_connect_req *cm_req)
 }
 #endif
 
+#if defined(WLAN_FEATURE_11BE_MLO) && defined(WLAN_FEATURE_11BE_MLO_ADV_FEATURE)
+static QDF_STATUS cm_update_mlo_filter(struct wlan_objmgr_pdev *pdev,
+				       struct scan_filter *filter)
+{
+	struct wlan_objmgr_psoc *psoc;
+
+	psoc = wlan_pdev_get_psoc(pdev);
+	filter->band_bitmap = wlan_mlme_get_sta_mlo_conn_band_bmp(psoc);
+	mlme_debug("band bitmap: %d", filter->band_bitmap);
+
+	return QDF_STATUS_SUCCESS;
+}
+#else
+static QDF_STATUS cm_update_mlo_filter(struct wlan_objmgr_pdev *pdev,
+				       struct scan_filter *filter)
+{
+	return QDF_STATUS_SUCCESS;
+}
+#endif
+
 static QDF_STATUS cm_connect_get_candidates(struct wlan_objmgr_pdev *pdev,
 					    struct cnx_mgr *cm_ctx,
 					    struct cm_connect_req *cm_req)
@@ -1234,6 +1254,8 @@ static QDF_STATUS cm_connect_get_candidates(struct wlan_objmgr_pdev *pdev,
 	}
 	cm_connect_prepare_scan_filter(pdev, cm_ctx, cm_req, filter,
 				       security_valid_for_6ghz);
+
+	cm_update_mlo_filter(pdev, filter);
 
 	candidate_list = wlan_scan_get_result(pdev, filter);
 	if (candidate_list) {

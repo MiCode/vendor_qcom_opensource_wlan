@@ -1914,7 +1914,10 @@ static void util_get_partner_link_info(struct scan_cache_entry *scan_entry)
 				     &rnr->bssid, QDF_MAC_ADDR_SIZE);
 
 			link_info->link_id = rnr->mld_info.link_id;
-
+			link_info->freq =
+				wlan_reg_chan_opclass_to_freq(rnr->channel_number,
+							      rnr->operating_class,
+							      true);
 			link_idx++;
 		}
 		rnr_idx++;

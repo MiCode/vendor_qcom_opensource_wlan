@@ -26,6 +26,7 @@
 #include <wlan_dfs_utils_api.h>
 #include "wlan_crypto_global_def.h"
 #include "wlan_crypto_global_api.h"
+#include "wlan_reg_services_api.h"
 
 /**
  * scm_check_open() - Check if scan entry support open authmode
@@ -639,6 +640,48 @@ static bool scm_check_dot11mode(struct scan_cache_entry *db_entry,
 	return true;
 }
 
+#ifdef WLAN_FEATURE_11BE_MLO
+static bool util_mlo_filter_match(struct scan_filter *filter,
+				  struct scan_cache_entry *db_entry)
+{
+	uint8_t i;
+	enum reg_wifi_band band;
+	struct partner_link_info *partner_link;
+
+	if (!db_entry->ie_list.multi_link)
+		return true;
+
+	if (!filter->band_bitmap)
+		return true;
+
+	band = wlan_reg_freq_to_band(db_entry->channel.chan_freq);
+	if (!(filter->band_bitmap & BIT(band))) {
+		scm_debug("bss freq %d not match band bitmap: %d",
+			  db_entry->channel.chan_freq,
+			  filter->band_bitmap);
+		return false;
+	}
+	for (i = 0; i < db_entry->ml_info.num_links; i++) {
+		partner_link = &db_entry->ml_info.link_info[i];
+		band = wlan_reg_freq_to_band(partner_link->freq);
+		if (filter->band_bitmap & BIT(band)) {
+			scm_debug("partner freq %d  match band bitmap: %d",
+				  partner_link->freq,
+				  filter->band_bitmap);
+			partner_link->is_valid_link = true;
+		}
+	}
+
+	return true;
+}
+#else
+static bool util_mlo_filter_match(struct scan_filter *filter,
+				  struct scan_cache_entry *db_entry)
+{
+	return true;
+}
+#endif
+
 bool scm_filter_match(struct wlan_objmgr_psoc *psoc,
 		      struct scan_cache_entry *db_entry,
 		      struct scan_filter *filter,
@@ -815,5 +858,12 @@ bool scm_filter_match(struct wlan_objmgr_psoc *psoc,
 			  QDF_MAC_ADDR_REF(db_entry->bssid.bytes));
 		return false;
 	}
+
+	if (!util_mlo_filter_match(filter, db_entry)) {
+		scm_debug(QDF_MAC_ADDR_FMT ": Ignore as mlo filter didn't match",
+			  QDF_MAC_ADDR_REF(db_entry->bssid.bytes));
+		return false;
+	}
+
 	return true;
 }

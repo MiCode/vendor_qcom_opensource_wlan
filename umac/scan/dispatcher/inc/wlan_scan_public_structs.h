@@ -527,6 +527,7 @@ struct reduced_neighbor_report {
  * @csa_ie: Pointer to CSA IE
  * @ecsa_ie: Pointer to eCSA IE
  * @max_cst_ie: Pointer to Max Channel Switch Time IE
+ * @is_valid_link: The partner link can be used if true
  */
 struct partner_link_info {
 	struct qdf_mac_addr link_addr;
@@ -536,6 +537,7 @@ struct partner_link_info {
 	const uint8_t *csa_ie;
 	const uint8_t *ecsa_ie;
 	const uint8_t *max_cst_ie;
+	uint8_t  is_valid_link;
 };
 
 /**
@@ -716,7 +718,6 @@ enum dot11_mode_filter {
  * @bss_type: bss type IBSS or BSS or ANY
  * @pmf_cap: Pmf capability
  * @dot11mode: Filter APs based upon dot11mode
- * @band: to get specific band 2.4G, 5G or 4.9 G
  * @rssi_threshold: AP having RSSI greater than
  *                  rssi threasholed (ignored if set 0)
  * @mobility_domain: Mobility domain for 11r
@@ -734,6 +735,7 @@ enum dot11_mode_filter {
  * @match_security_func_arg: Function argument to custom security filter
  * @ccx_validate_bss: Function pointer to custom bssid filter
  * @ccx_validate_bss_arg: Function argument to custom bssid filter
+ * @band_bitmap: Allowed band bit map, BIT0: 2G, BIT1: 5G, BIT2: 6G
  */
 struct scan_filter {
 	uint8_t enable_adaptive_11r:1,
@@ -749,7 +751,6 @@ struct scan_filter {
 	enum wlan_bss_type bss_type;
 	enum wlan_pmf_cap pmf_cap;
 	enum dot11_mode_filter dot11mode;
-	enum wlan_band band;
 	uint8_t rssi_threshold;
 	uint32_t mobility_domain;
 	uint32_t authmodeset;
@@ -769,6 +770,9 @@ struct scan_filter {
 	bss_filter_arg_t match_security_func_arg;
 	bool (*ccx_validate_bss)(void *, struct scan_cache_entry *, int);
 	bss_filter_arg_t ccx_validate_bss_arg;
+#ifdef WLAN_FEATURE_11BE_MLO
+	uint32_t band_bitmap;
+#endif
 };
 
 /**
