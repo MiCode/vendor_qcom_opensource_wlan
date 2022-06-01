@@ -19326,6 +19326,8 @@ static void populate_tlv_service(uint32_t *wmi_service)
 #ifdef FEATURE_WLAN_TDLS
 	wmi_service[wmi_service_tdls_ax_support] =
 			WMI_SERVICE_11AX_TDLS_SUPPORT;
+	wmi_service[wmi_service_tdls_6g_support] =
+			WMI_SERVICE_TDLS_6GHZ_SUPPORT;
 #endif
 #endif
 #ifdef WLAN_SUPPORT_TWT

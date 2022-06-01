@@ -5743,6 +5743,11 @@ typedef enum {
 #ifdef WLAN_VENDOR_HANDOFF_CONTROL
 	wmi_service_configure_vendor_handoff_control_support,
 #endif
+#ifdef FEATURE_WLAN_TDLS
+#ifdef WLAN_FEATURE_11AX
+	wmi_service_tdls_6g_support,
+#endif
+#endif
 	wmi_services_max,
 } wmi_conv_service_ids;
 #define WMI_SERVICE_UNAVAILABLE 0xFFFF
