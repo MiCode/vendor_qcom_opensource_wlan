@@ -4340,6 +4340,12 @@ enum wifi_logger_supported_features {
  * Used with command to configure ACS operation for EHT mode.
  * Disable (flag attribute not present) - EHT disabled and
  * Enable (flag attribute present) - EHT enabled.
+ *
+ * @QCA_WLAN_VENDOR_ATTR_ACS_LAST_SCAN_AGEOUT_TIME: Optional (u32).
+ * Used with command to configure how older scan can be considered for ACS
+ * scoring. In case scan was performed on partial set of channels configured
+ * with this command, within last QCA_WLAN_VENDOR_ATTR_ACS_LAST_SCAN_AGEOUT_TIME
+ * (in ms), then scan only remaining channels.
  */
 enum qca_wlan_vendor_attr_acs_offload {
 	QCA_WLAN_VENDOR_ATTR_ACS_CHANNEL_INVALID = 0,
@@ -4362,6 +4368,7 @@ enum qca_wlan_vendor_attr_acs_offload {
 	QCA_WLAN_VENDOR_ATTR_ACS_EDMG_CHANNEL = 17,
 	QCA_WLAN_VENDOR_ATTR_ACS_PUNCTURE_BITMAP = 18,
 	QCA_WLAN_VENDOR_ATTR_ACS_EHT_ENABLED = 19,
+	QCA_WLAN_VENDOR_ATTR_ACS_LAST_SCAN_AGEOUT_TIME = 20,
 
 	/* keep last */
 	QCA_WLAN_VENDOR_ATTR_ACS_AFTER_LAST,
