@@ -406,12 +406,14 @@ struct non_inheritance_ie {
  * @mld_id: MLD ID
  * @link_id: Link ID
  * @bss_param_change_cnt: BSS parameters change count
+ * @all_updates_included: All Updates Included
  */
 struct rnr_mld_info {
 	uint8_t mld_id;
 	uint16_t link_id: 4,
 		 bss_param_change_cnt: 8,
-		 reserved: 4;
+		 all_updates_included: 1,
+		 reserved: 3;
 };
 #endif
 /**
