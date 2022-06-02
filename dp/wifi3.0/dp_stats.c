@@ -5269,6 +5269,8 @@ void dp_print_soc_cfg_params(struct dp_soc *soc)
 		       soc_cfg_ctx->int_batch_threshold_other);
 	DP_PRINT_STATS("Int timer threshold other: %u ",
 		       soc_cfg_ctx->int_timer_threshold_other);
+	DP_PRINT_STATS("DP NAPI scale factor: %u ",
+		       soc_cfg_ctx->napi_scale_factor);
 
 	for (i = 0; i < num_of_int_contexts; i++) {
 		index += qdf_snprint(&ring_mask[index],

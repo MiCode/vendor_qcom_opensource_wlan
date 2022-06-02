@@ -3290,6 +3290,7 @@ static QDF_STATUS dp_soc_interrupt_attach(struct cdp_soc_t *txrx_soc)
 	int num_irq = 0;
 	int rx_err_ring_intr_ctxt_id = HIF_MAX_GROUP;
 	int lmac_id = 0;
+	int napi_scale;
 
 	qdf_mem_set(&soc->mon_intr_id_lmac_map,
 		    sizeof(soc->mon_intr_id_lmac_map), DP_MON_INVALID_LMAC_ID);
@@ -3365,11 +3366,15 @@ static QDF_STATUS dp_soc_interrupt_attach(struct cdp_soc_t *txrx_soc)
 			dp_soc_near_full_interrupt_attach(soc, num_irq,
 							  irq_id_map, i);
 		} else {
+			napi_scale = wlan_cfg_get_napi_scale_factor(
+							    soc->wlan_cfg_ctx);
+			if (!napi_scale)
+				napi_scale = QCA_NAPI_DEF_SCALE_BIN_SHIFT;
+
 			ret = hif_register_ext_group(soc->hif_handle,
 				num_irq, irq_id_map, dp_service_srngs,
 				&soc->intr_ctx[i], "dp_intr",
-				HIF_EXEC_NAPI_TYPE,
-				QCA_NAPI_DEF_SCALE_BIN_SHIFT);
+				HIF_EXEC_NAPI_TYPE, napi_scale);
 		}
 
 		dp_debug(" int ctx %u num_irq %u irq_id_map %u %u",

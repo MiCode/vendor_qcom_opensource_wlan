@@ -463,6 +463,10 @@
 #define CFG_DP_MPDU_RETRY_THRESHOLD_MAX 255
 #define CFG_DP_MPDU_RETRY_THRESHOLD 0
 
+#define WLAN_CFG_DP_NAPI_SCALE_FACTOR 0
+#define WLAN_CFG_DP_NAPI_SCALE_FACTOR_MIN 0
+#define WLAN_CFG_DP_NAPI_SCALE_FACTOR_MAX 4
+
 /*
  * <ini>
  * "dp_tx_capt_max_mem_mb"- maximum memory used by Tx capture
@@ -1316,6 +1320,14 @@
 #define CFG_DP_PEER_EXT_STATS \
 		CFG_INI_BOOL("peer_ext_stats", \
 		false, "Peer extended stats")
+
+#define CFG_DP_NAPI_SCALE_FACTOR \
+		CFG_INI_UINT("dp_napi_scale_factor", \
+		WLAN_CFG_DP_NAPI_SCALE_FACTOR_MIN, \
+		WLAN_CFG_DP_NAPI_SCALE_FACTOR_MAX, \
+		WLAN_CFG_DP_NAPI_SCALE_FACTOR, \
+		CFG_VALUE_OR_DEFAULT, "NAPI scale factor for DP")
+
 /*
  * <ini>
  * legacy_mode_csum_disable - Disable csum offload for legacy 802.11abg modes
@@ -1808,5 +1820,6 @@
 		CFG_DP_MLO_CONFIG \
 		CFG_DP_INI_SECTION_PARAMS \
 		CFG_DP_VDEV_STATS_HW_OFFLOAD \
-		CFG(CFG_DP_TX_CAPT_MAX_MEM_MB)
+		CFG(CFG_DP_TX_CAPT_MAX_MEM_MB) \
+		CFG(CFG_DP_NAPI_SCALE_FACTOR)
 #endif /* _CFG_DP_H_ */
