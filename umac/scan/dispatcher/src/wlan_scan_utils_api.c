@@ -3143,7 +3143,7 @@ static QDF_STATUS util_scan_parse_mbssid(struct wlan_objmgr_pdev *pdev,
 
 			new_frame_len = frame_len - ielen + new_ie_len;
 
-			if (new_frame_len < 0) {
+			if (new_frame_len < 0 || new_frame_len > frame_len) {
 				if (mbssid_info.split_prof_continue) {
 					qdf_mem_free(split_prof_start);
 					split_prof_start = NULL;
