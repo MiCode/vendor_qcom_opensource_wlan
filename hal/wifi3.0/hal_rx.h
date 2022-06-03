@@ -1125,6 +1125,26 @@ hal_rx_msdu_end_da_is_mcbc_get(hal_soc_handle_t hal_soc_hdl, uint8_t *buf)
 }
 
 /**
+ * hal_rx_msdu_end_is_tkip_mic_err: API to check if pkt has mic error
+ * from rx_msdu_end TLV
+ *
+ * @buf: pointer to the start of RX PKT TLV headers
+ *
+ * Return: tkip_mic_err
+ */
+static inline uint8_t
+hal_rx_msdu_end_is_tkip_mic_err(hal_soc_handle_t hal_soc_hdl,
+				uint8_t *buf)
+{
+	struct hal_soc *hal_soc = (struct hal_soc *)hal_soc_hdl;
+
+	if (hal_soc->ops->hal_rx_msdu_end_is_tkip_mic_err)
+		return hal_soc->ops->hal_rx_msdu_end_is_tkip_mic_err(buf);
+	else
+		return 0;
+}
+
+/**
  * hal_rx_msdu_end_first_msdu_get: API to get first msdu status
  * from rx_msdu_end TLV
  * @hal_soc_hdl: hal soc handle

@@ -274,6 +274,9 @@ struct rx_pkt_tlvs {
 #define HAL_RX_TLV_DA_IS_MCBC_GET(_rx_pkt_tlv)	\
 	HAL_RX_MSDU_END(_rx_pkt_tlv).da_is_mcbc
 
+#define HAL_RX_TLV_IS_TKIP_MIC_ERR_GET(_rx_pkt_tlv)	\
+	HAL_RX_MSDU_END(_rx_pkt_tlv).tkip_mic_err
+
 #define HAL_RX_TLV_SA_IS_VALID_GET(_rx_pkt_tlv)	\
 	HAL_RX_MSDU_END(_rx_pkt_tlv).sa_is_valid
 
@@ -961,6 +964,21 @@ hal_rx_tlv_da_is_mcbc_get_be(uint8_t *buf)
 	struct rx_pkt_tlvs *rx_pkt_tlvs = (struct rx_pkt_tlvs *)buf;
 
 	return HAL_RX_TLV_DA_IS_MCBC_GET(rx_pkt_tlvs);
+}
+
+/**
+ * hal_rx_tlv_is_tkip_mic_err_get_be(): API to get tkip Mic error
+ * from rx_msdu_end TLV
+ *
+ * @ buf: pointer to the start of RX PKT TLV headers
+ * Return: tkip_mic_err
+ */
+static inline uint8_t
+hal_rx_tlv_is_tkip_mic_err_get_be(uint8_t *buf)
+{
+	struct rx_pkt_tlvs *rx_pkt_tlvs = (struct rx_pkt_tlvs *)buf;
+
+	return HAL_RX_TLV_IS_TKIP_MIC_ERR_GET(rx_pkt_tlvs);
 }
 
 /**

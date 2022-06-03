@@ -2665,6 +2665,7 @@ dp_rx_wbm_err_process(struct dp_intr *int_ctx, struct dp_soc *soc,
 	struct dp_srng *dp_rxdma_srng;
 	struct rx_desc_pool *rx_desc_pool;
 	uint8_t *rx_tlv_hdr;
+	bool is_tkip_mic_err;
 	qdf_nbuf_t nbuf_head = NULL;
 	qdf_nbuf_t nbuf_tail = NULL;
 	qdf_nbuf_t nbuf, next;
@@ -3062,6 +3063,20 @@ done:
 					break;
 
 				case HAL_RXDMA_ERR_DECRYPT:
+					/* All the TKIP-MIC failures are treated as Decrypt Errors
+					 * for QCN9224 Targets
+					 */
+					is_tkip_mic_err = hal_rx_msdu_end_is_tkip_mic_err(hal_soc, rx_tlv_hdr);
+
+					if (is_tkip_mic_err && txrx_peer) {
+						dp_rx_process_mic_error(soc, nbuf,
+									rx_tlv_hdr,
+									txrx_peer);
+						DP_PEER_PER_PKT_STATS_INC(txrx_peer,
+									  rx.err.mic_err,
+									  1);
+						break;
+					}
 
 					if (txrx_peer) {
 						DP_PEER_PER_PKT_STATS_INC(txrx_peer,
