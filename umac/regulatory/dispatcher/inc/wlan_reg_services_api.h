@@ -1505,6 +1505,26 @@ bool wlan_reg_is_punc_bitmap_valid(enum phy_ch_width bw,
 				   uint16_t puncture_bitmap);
 
 /**
+ * wlan_reg_extract_puncture_by_bw() - generate new puncture bitmap from
+ *                                     original puncture bitmap and bandwidth
+ *                                     based on new bandwidth
+ * @ori_bw: original bandwidth
+ * @ori_puncture_bitmap: original puncture bitmap
+ * @freq: frequency of primary channel
+ * @cen320_freq: center frequency of 320 MHZ if channel width is 320
+ * @new_bw new bandwidth
+ * @new_puncture_bitmap: output of puncture bitmap
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS wlan_reg_extract_puncture_by_bw(enum phy_ch_width ori_bw,
+					   uint16_t ori_puncture_bitmap,
+					   qdf_freq_t freq,
+					   qdf_freq_t cen320_freq,
+					   enum phy_ch_width new_bw,
+					   uint16_t *new_puncture_bitmap);
+
+/**
  * wlan_reg_set_create_punc_bitmap() - set is_create_punc_bitmap of ch_params
  * @ch_params: ch_params to set
  * @is_create_punc_bitmap: is create punc bitmap
@@ -1540,6 +1560,16 @@ void wlan_reg_fill_channel_list_for_pwrmode(
 				bool treat_nol_chan_as_disabled);
 #endif
 #else
+static inline
+QDF_STATUS wlan_reg_extract_puncture_by_bw(enum phy_ch_width ori_bw,
+					   uint16_t ori_puncture_bitmap,
+					   qdf_freq_t freq,
+					   enum phy_ch_width new_bw,
+					   uint16_t *new_puncture_bitmap)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
 static inline void wlan_reg_set_create_punc_bitmap(struct ch_params *ch_params,
 						   bool is_create_punc_bitmap)
 {

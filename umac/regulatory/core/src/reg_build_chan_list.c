@@ -3216,7 +3216,7 @@ reg_modify_max_bw_for_240mhz_5g_chans(struct cur_regulatory_info *regulat_info,
 	const struct bonded_channel_freq *bonded_ch_ptr;
 
 	bonded_ch_ptr = reg_get_bonded_chan_entry(FREQ_5500_MHZ,
-						  CH_WIDTH_320MHZ);
+						  CH_WIDTH_320MHZ, 0);
 	if (!reg_is_chip_cc_11be_cap(regulat_info->psoc,
 				     regulat_info->phy_id,
 				     regulat_info->max_bw_5g))

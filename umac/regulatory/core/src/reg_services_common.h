@@ -1095,6 +1095,38 @@ reg_fill_channel_list_for_pwrmode(struct wlan_objmgr_pdev *pdev,
 bool reg_is_punc_bitmap_valid(enum phy_ch_width bw, uint16_t puncture_bitmap);
 
 /**
+ * reg_extract_puncture_by_bw() - generate new puncture bitmap from original
+ *                                puncture bitmap and bandwidth based on new
+ *                                bandwidth
+ * @ori_bw: original bandwidth
+ * @ori_puncture_bitmap: original puncture bitmap
+ * @freq: frequency of primary channel
+ * @cen320_freq: center frequency of 320 MHZ if channel width is 320
+ * @new_bw new bandwidth. It should be smaller than original bandwidth
+ * @new_puncture_bitmap: output of puncture bitmap
+ *
+ * Example 1: ori_bw = CH_WIDTH_320MHZ (center 320 = 6105{IEEE31})
+ * freq = 6075 ( Primary chan location: 0000_000P_0000_0000)
+ * ori_puncture_bitmap = B1111 0000 0011 0000(binary)
+ * If new_bw = CH_WIDTH_160MHZ, then new_puncture_bitmap = B0011 0000(binary)
+ * If new_bw = CH_WIDTH_80MHZ, then new_puncture_bitmap = B0011(binary)
+ *
+ * Example 2: ori_bw = CH_WIDTH_320MHZ (center 320 = 6105{IEEE31})
+ * freq = 6135 ( Primary chan location: 0000_0000_0P00_0000)
+ * ori_puncture_bitmap = B1111 0000 0011 0000(binary)
+ * If new_bw = CH_WIDTH_160MHZ, then new_puncture_bitmap = B1111 0000(binary)
+ * If new_bw = CH_WIDTH_80MHZ, then new_puncture_bitmap = B0000(binary)
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS reg_extract_puncture_by_bw(enum phy_ch_width ori_bw,
+				      uint16_t ori_puncture_bitmap,
+				      qdf_freq_t freq,
+				      qdf_freq_t cen320_freq,
+				      enum phy_ch_width new_bw,
+				      uint16_t *new_puncture_bitmap);
+
+/**
  * reg_set_create_punc_bitmap() - set is_create_punc_bitmap of ch_params
  * @ch_params: ch_params to set
  * @is_create_punc_bitmap: is create punc bitmap
@@ -1104,6 +1136,17 @@ bool reg_is_punc_bitmap_valid(enum phy_ch_width bw, uint16_t puncture_bitmap);
 void reg_set_create_punc_bitmap(struct ch_params *ch_params,
 				bool is_create_punc_bitmap);
 #else
+static inline
+QDF_STATUS reg_extract_puncture_by_bw(enum phy_ch_width ori_bw,
+				      uint16_t ori_puncture_bitmap,
+				      qdf_freq_t freq,
+				      qdf_freq_t cen320_freq,
+				      enum phy_ch_width new_bw,
+				      uint16_t *new_puncture_bitmap)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
 static inline void reg_set_create_punc_bitmap(struct ch_params *ch_params,
 					      bool is_create_punc_bitmap)
 {
@@ -1962,11 +2005,20 @@ bool reg_is_ext_tpc_supported(struct wlan_objmgr_psoc *psoc);
  * frequency and channel width.
  * @freq: Input frequency.
  * @chwidth: Input channel width.
+ * @cen320_freq: center frequency of 320. In 6G band 320Mhz channel are
+ *               overlapping. The exact band should be therefore identified
+ *               by the center frequency of the 320Mhz channel.
+ * For example: Primary channel 6135 (IEEE37) can be part of either channel
+ * (A) the 320Mhz channel with center 6105(IEEE31) or
+ * (B) the 320Mhz channel with center 6265(IEEE63)
+ * For (A) the start frequency is 5955(IEEE1) whereas for (B) the start
+ * frequency is 6115(IEEE33)
  *
  * Return: A valid bonded channel pointer if found, else NULL.
  */
 const struct bonded_channel_freq *
-reg_get_bonded_chan_entry(qdf_freq_t freq, enum phy_ch_width chwidth);
+reg_get_bonded_chan_entry(qdf_freq_t freq, enum phy_ch_width chwidth,
+			  qdf_freq_t cen320_freq);
 
 /**
  * reg_set_2g_channel_params_for_freq() - set the 2.4G bonded channel parameters

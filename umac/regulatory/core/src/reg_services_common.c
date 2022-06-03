@@ -319,9 +319,31 @@ struct bw_puncture_bitmap_pair bw_puncture_bitmap_pair_map[] = {
 };
 #endif /* WLAN_FEATURE_11BE */
 
+static bool reg_is_freq_within_bonded_chan(
+		qdf_freq_t freq,
+		const struct bonded_channel_freq *bonded_chan_arr,
+		enum phy_ch_width chwidth, qdf_freq_t cen320_freq)
+{
+	qdf_freq_t band_center;
+
+	if (reg_is_ch_width_320(chwidth) && cen320_freq) {
+		band_center =  (bonded_chan_arr->start_freq +
+				bonded_chan_arr->end_freq) >> 1;
+		if (band_center != cen320_freq)
+			return false;
+	}
+
+	if (freq >= bonded_chan_arr->start_freq &&
+	    freq <= bonded_chan_arr->end_freq)
+		return true;
+
+	return false;
+}
+
 const struct bonded_channel_freq *
 reg_get_bonded_chan_entry(qdf_freq_t freq,
-			  enum phy_ch_width chwidth)
+			  enum phy_ch_width chwidth,
+			  qdf_freq_t cen320_freq)
 {
 	const struct bonded_channel_freq *bonded_chan_arr;
 	uint16_t array_size, i, num_bws;
@@ -342,10 +364,9 @@ reg_get_bonded_chan_entry(qdf_freq_t freq,
 	}
 
 	for (i = 0; i < array_size; i++) {
-		if ((freq >= bonded_chan_arr[i].start_freq) &&
-		    (freq <= bonded_chan_arr[i].end_freq)) {
+		if (reg_is_freq_within_bonded_chan(freq, &bonded_chan_arr[i],
+						   chwidth, cen320_freq))
 			return &bonded_chan_arr[i];
-		}
 	}
 
 	reg_debug("Could not find a bonded pair for freq %d and width %d",
@@ -3841,7 +3862,7 @@ reg_get_5g_chan_state(struct wlan_objmgr_pdev *pdev, qdf_freq_t freq,
 		return reg_get_nol_channel_state(pdev, freq, in_6g_pwr_mode);
 
 	/* Fetch the bonded_chan_ptr for width greater than 20MHZ. */
-	bonded_chan_ptr = reg_get_bonded_chan_entry(freq, bw);
+	bonded_chan_ptr = reg_get_bonded_chan_entry(freq, bw, 0);
 
 	if (!bonded_chan_ptr)
 		return CHANNEL_STATE_INVALID;
@@ -4100,6 +4121,68 @@ reg_get_5g_bonded_chan_array_for_pwrmode(struct wlan_objmgr_pdev *pdev,
 #endif
 
 #ifdef WLAN_FEATURE_11BE
+
+QDF_STATUS reg_extract_puncture_by_bw(enum phy_ch_width ori_bw,
+				      uint16_t ori_puncture_bitmap,
+				      qdf_freq_t freq,
+				      qdf_freq_t cen320_freq,
+				      enum phy_ch_width new_bw,
+				      uint16_t *new_puncture_bitmap)
+{
+	const struct bonded_channel_freq *ori_bonded_chan;
+	const struct bonded_channel_freq *new_bonded_chan;
+	uint16_t chan_cfreq;
+	uint16_t new_bit;
+
+	if (ori_bw < new_bw) {
+		reg_err_rl("freq %d, ori bw %d can't be smaller than new bw %d",
+			   freq, ori_bw, new_bw);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	if (ori_bw == new_bw) {
+		*new_puncture_bitmap = ori_puncture_bitmap;
+		return QDF_STATUS_SUCCESS;
+	}
+
+	ori_bonded_chan = reg_get_bonded_chan_entry(freq, ori_bw, cen320_freq);
+	new_bonded_chan = reg_get_bonded_chan_entry(freq, new_bw, 0);
+	if (!ori_bonded_chan) {
+		reg_err_rl("bonded chan fails, freq %d, ori bw %d, new bw %d",
+			   freq, ori_bw, new_bw);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	new_bit = 0;
+	*new_puncture_bitmap = 0;
+	chan_cfreq =  ori_bonded_chan->start_freq;
+	while (chan_cfreq <= ori_bonded_chan->end_freq) {
+		/*
+		 * If the "new_bw" is 20, then new_bonded_chan = NULL and the
+		 * output puncturing bitmap (*new_puncture_bitmap) as per spec
+		 * should be 0. However, if the "ori_puncture_bitmap" has
+		 * punctured the primary channel (the only channel in 20Mhz
+		 * case), then the output "(*ori_puncture_bitmap) should contain
+		 * the same so that the caller can recognize the error in the
+		 * input pattern.
+		 */
+		if (freq == chan_cfreq ||
+		    (new_bonded_chan &&
+		     chan_cfreq >= new_bonded_chan->start_freq &&
+		     chan_cfreq <= new_bonded_chan->end_freq)) {
+			/* this frequency is in new bw */
+			*new_puncture_bitmap |=
+					(ori_puncture_bitmap & 1) << new_bit;
+			new_bit++;
+		}
+
+		ori_puncture_bitmap >>= 1;
+		chan_cfreq = chan_cfreq + BW_20_MHZ;
+	}
+
+	return QDF_STATUS_SUCCESS;
+}
+
 void reg_set_create_punc_bitmap(struct ch_params *ch_params,
 				bool is_create_punc_bitmap)
 {
@@ -4814,7 +4897,7 @@ reg_fill_chan320mhz_seg0_center(struct wlan_objmgr_pdev *pdev,
 {
 	const struct bonded_channel_freq *t_bonded_ch_ptr;
 
-	t_bonded_ch_ptr = reg_get_bonded_chan_entry(freq, CH_WIDTH_160MHZ);
+	t_bonded_ch_ptr = reg_get_bonded_chan_entry(freq, CH_WIDTH_160MHZ, 0);
 	if (t_bonded_ch_ptr) {
 		ch_param->mhz_freq_seg0 =
 			(t_bonded_ch_ptr->start_freq +
@@ -5288,7 +5371,7 @@ reg_get_5g_bonded_channel_for_freq(struct wlan_objmgr_pdev *pdev,
 						  true);
 	} else {
 		*bonded_chan_ptr_ptr = reg_get_bonded_chan_entry(freq,
-								 ch_width);
+								 ch_width, 0);
 		if (!(*bonded_chan_ptr_ptr))
 			return CHANNEL_STATE_INVALID;
 
@@ -5318,7 +5401,7 @@ reg_get_5g_bonded_channel_for_pwrmode(struct wlan_objmgr_pdev *pdev,
 						  bonded_chan_ptr_ptr,
 						  in_6g_pwr_mode, true);
 	/* Fetch the bonded_chan_ptr for width greater than 20MHZ. */
-	*bonded_chan_ptr_ptr = reg_get_bonded_chan_entry(freq, ch_width);
+	*bonded_chan_ptr_ptr = reg_get_bonded_chan_entry(freq, ch_width, 0);
 
 	if (!(*bonded_chan_ptr_ptr)) {
 		reg_debug_rl("bonded_chan_ptr_ptr is NULL");
@@ -5447,7 +5530,8 @@ static void reg_set_5g_channel_params_for_freq(struct wlan_objmgr_pdev *pdev,
 			break;
 		} else if (ch_params->ch_width >= CH_WIDTH_40MHZ) {
 			bonded_chan_ptr2 =
-				reg_get_bonded_chan_entry(freq, CH_WIDTH_40MHZ);
+				reg_get_bonded_chan_entry(freq,
+							  CH_WIDTH_40MHZ, 0);
 
 			if (!bonded_chan_ptr || !bonded_chan_ptr2)
 				goto update_bw;
@@ -5631,7 +5715,8 @@ static void reg_set_5g_channel_params_for_pwrmode(
 			break;
 		} else if (ch_params->ch_width >= CH_WIDTH_40MHZ) {
 			bonded_chan_ptr2 =
-				reg_get_bonded_chan_entry(freq, CH_WIDTH_40MHZ);
+				reg_get_bonded_chan_entry(freq,
+							  CH_WIDTH_40MHZ, 0);
 
 			if (!bonded_chan_ptr || !bonded_chan_ptr2)
 				goto update_bw;
