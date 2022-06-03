@@ -682,6 +682,61 @@ static bool util_mlo_filter_match(struct scan_filter *filter,
 }
 #endif
 
+#ifdef WLAN_FEATURE_11BE
+static bool util_eht_puncture_valid(struct scan_cache_entry *db_entry)
+{
+	struct wlan_ie_ehtops *eht_ops;
+	int8_t orig_width;
+	enum phy_ch_width width;
+	qdf_freq_t center_freq_320m;
+	uint16_t orig_puncture_bitmap;
+	uint16_t new_puncture_bitmap = 0;
+	QDF_STATUS status;
+
+	eht_ops = (struct wlan_ie_ehtops *)util_scan_entry_ehtop(db_entry);
+	if (!eht_ops)
+		return true;
+	if (!QDF_GET_BITS(eht_ops->ehtop_param,
+			  EHTOP_INFO_PRESENT_IDX, EHTOP_INFO_PRESENT_BITS))
+		return true;
+	orig_puncture_bitmap = db_entry->channel.puncture_bitmap;
+	if (!orig_puncture_bitmap)
+		return true;
+
+	orig_width = QDF_GET_BITS(eht_ops->control,
+				  EHTOP_INFO_CHAN_WIDTH_IDX,
+				  EHTOP_INFO_CHAN_WIDTH_BITS);
+	if (orig_width == WLAN_EHT_CHWIDTH_320) {
+		width = CH_WIDTH_320MHZ;
+		center_freq_320m = db_entry->channel.cfreq1;
+	} else {
+		width = orig_width;
+		center_freq_320m = 0;
+	}
+
+	status = wlan_reg_extract_puncture_by_bw(width,
+						 orig_puncture_bitmap,
+						 db_entry->channel.chan_freq,
+						 center_freq_320m,
+						 CH_WIDTH_20MHZ,
+						 &new_puncture_bitmap);
+	if (QDF_IS_STATUS_ERROR(status) || new_puncture_bitmap) {
+		scm_debug(QDF_MAC_ADDR_FMT "freq %d width %d 320m center %d puncture: orig %d new %d status %d",
+			  QDF_MAC_ADDR_REF(db_entry->bssid.bytes),
+			  db_entry->channel.chan_freq, width, center_freq_320m,
+			  orig_puncture_bitmap, new_puncture_bitmap, status);
+		return false;
+	} else {
+		return true;
+	}
+}
+#else
+static bool util_eht_puncture_valid(struct scan_cache_entry *db_entry)
+{
+	return true;
+}
+#endif
+
 bool scm_filter_match(struct wlan_objmgr_psoc *psoc,
 		      struct scan_cache_entry *db_entry,
 		      struct scan_filter *filter,
@@ -864,6 +919,9 @@ bool scm_filter_match(struct wlan_objmgr_psoc *psoc,
 			  QDF_MAC_ADDR_REF(db_entry->bssid.bytes));
 		return false;
 	}
+
+	if (!util_eht_puncture_valid(db_entry))
+		return false;
 
 	return true;
 }
