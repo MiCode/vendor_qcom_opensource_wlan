@@ -93,4 +93,18 @@ QDF_STATUS dp_tx_desc_pool_init_li(struct dp_soc *soc,
 void dp_tx_desc_pool_deinit_li(struct dp_soc *soc,
 			       struct dp_tx_desc_pool_s *tx_desc_pool,
 			       uint8_t pool_id);
+
+/**
+ * dp_tx_compute_tx_delay_li() - Compute HW Tx completion delay
+ * @soc: Handle to DP Soc structure
+ * @vdev: vdev
+ * @ts: Tx completion status
+ * @delay_us: Delay to be calculated in microseconds
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS dp_tx_compute_tx_delay_li(struct dp_soc *soc,
+				     struct dp_vdev *vdev,
+				     struct hal_tx_completion_status *ts,
+				     uint32_t *delay_us);
 #endif

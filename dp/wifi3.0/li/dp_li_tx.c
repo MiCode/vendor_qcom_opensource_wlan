@@ -368,12 +368,30 @@ void dp_sawf_config_li(struct dp_soc *soc, uint32_t *hal_tx_desc_cached,
 	hal_tx_desc_set_search_index_li(soc->hal_soc, hal_tx_desc_cached,
 					search_index);
 }
+
+static inline
+QDF_STATUS dp_tx_compute_hw_delay_li(struct dp_soc *soc,
+				     struct dp_vdev *vdev,
+				     struct hal_tx_completion_status *ts,
+				     uint32_t *delay_us)
+{
+	return dp_tx_compute_hw_delay_us(ts, vdev->delta_tsf, delay_us);
+}
 #else
 static inline
 void dp_sawf_config_li(struct dp_soc *soc, uint32_t *hal_tx_desc_cached,
 		       uint16_t *fw_metadata, uint16_t vdev_id,
 		       qdf_nbuf_t nbuf)
 {
+}
+
+static inline
+QDF_STATUS dp_tx_compute_hw_delay_li(struct dp_soc *soc,
+				     struct dp_vdev *vdev,
+				     struct hal_tx_completion_status *ts,
+				     uint32_t *delay_us)
+{
+	return QDF_STATUS_SUCCESS;
 }
 
 #define dp_sawf_tx_enqueue_peer_stats(soc, tx_desc)
@@ -553,4 +571,12 @@ void dp_tx_desc_pool_deinit_li(struct dp_soc *soc,
 			       struct dp_tx_desc_pool_s *tx_desc_pool,
 			       uint8_t pool_id)
 {
+}
+
+QDF_STATUS dp_tx_compute_tx_delay_li(struct dp_soc *soc,
+				     struct dp_vdev *vdev,
+				     struct hal_tx_completion_status *ts,
+				     uint32_t *delay_us)
+{
+	return dp_tx_compute_hw_delay_li(soc, vdev, ts, delay_us);
 }

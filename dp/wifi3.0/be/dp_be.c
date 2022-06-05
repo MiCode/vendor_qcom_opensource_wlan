@@ -1779,6 +1779,7 @@ void dp_initialize_arch_ops_be(struct dp_arch_ops *arch_ops)
 					dp_peer_rx_reorder_queue_setup_be;
 	arch_ops->txrx_print_peer_stats = dp_print_peer_txrx_stats_be;
 	arch_ops->dp_find_peer_by_destmac = dp_find_peer_by_destmac_be;
+	arch_ops->dp_tx_compute_hw_delay = dp_tx_compute_tx_delay_be;
 	dp_init_near_full_arch_ops_be(arch_ops);
 	arch_ops->get_rx_hash_key = dp_get_rx_hash_key_be;
 }
