@@ -239,7 +239,8 @@ static inline QDF_STATUS dp_peer_create_wifi3(struct cdp_soc_t *soc_hdl,
 					      enum cdp_peer_type peer_type);
 static QDF_STATUS dp_peer_delete_wifi3(struct cdp_soc_t *soc_hdl,
 				       uint8_t vdev_id,
-				       uint8_t *peer_mac, uint32_t bitmap);
+				       uint8_t *peer_mac, uint32_t bitmap,
+				       enum cdp_peer_type peer_type);
 static void dp_vdev_flush_peers(struct cdp_vdev *vdev_handle,
 				bool unmap_only);
 #ifdef ENABLE_VERBOSE_DEBUG
@@ -6978,6 +6979,7 @@ static QDF_STATUS dp_vdev_register_wifi3(struct cdp_soc_t *soc_hdl,
 	return QDF_STATUS_SUCCESS;
 }
 
+#ifdef WLAN_FEATURE_11BE_MLO
 void dp_peer_delete(struct dp_soc *soc,
 		    struct dp_peer *peer,
 		    void *arg)
@@ -6987,8 +6989,23 @@ void dp_peer_delete(struct dp_soc *soc,
 
 	dp_peer_delete_wifi3((struct cdp_soc_t *)soc,
 			     peer->vdev->vdev_id,
-			     peer->mac_addr.raw, 0);
+			     peer->mac_addr.raw, 0,
+			     peer->peer_type);
 }
+#else
+void dp_peer_delete(struct dp_soc *soc,
+		    struct dp_peer *peer,
+		    void *arg)
+{
+	if (!peer->valid)
+		return;
+
+	dp_peer_delete_wifi3((struct cdp_soc_t *)soc,
+			     peer->vdev->vdev_id,
+			     peer->mac_addr.raw, 0,
+			     CDP_LINK_PEER_TYPE);
+}
+#endif
 
 /**
  * dp_vdev_flush_peers() - Forcibily Flush peers of vdev
@@ -7126,7 +7143,8 @@ static QDF_STATUS dp_vdev_detach_wifi3(struct cdp_soc_t *cdp_soc,
 		qdf_spin_unlock_bh(&soc->ast_lock);
 
 		dp_peer_delete_wifi3((struct cdp_soc_t *)soc, vdev->vdev_id,
-				     vap_self_peer->mac_addr.raw, 0);
+				     vap_self_peer->mac_addr.raw, 0,
+				     CDP_LINK_PEER_TYPE);
 		dp_peer_unref_delete(vap_self_peer, DP_MOD_ID_CONFIG);
 	}
 
@@ -7271,6 +7289,12 @@ static inline void dp_peer_ast_handle_roam_del(struct dp_soc *soc,
 		dp_peer_del_ast(soc, ast_entry);
 
 	qdf_spin_unlock_bh(&soc->ast_lock);
+}
+#else
+static inline void dp_peer_ast_handle_roam_del(struct dp_soc *soc,
+					       struct dp_pdev *pdev,
+					       uint8_t *peer_mac_addr)
+{
 }
 #endif
 
@@ -7632,12 +7656,12 @@ QDF_STATUS dp_peer_mlo_setup(
 	if (!setup_info || !setup_info->mld_peer_mac)
 		return QDF_STATUS_SUCCESS;
 
-	/* To do: remove this check if link/mld peer mac_addr allow to same */
-	if (!qdf_mem_cmp(setup_info->mld_peer_mac, peer->mac_addr.raw,
-			 QDF_MAC_ADDR_SIZE)) {
-		dp_peer_err("Same mac addres for link/mld peer");
-		return QDF_STATUS_E_FAILURE;
-	}
+	dp_info("link peer:" QDF_MAC_ADDR_FMT "mld peer:" QDF_MAC_ADDR_FMT
+		"assoc_link %d, primary_link %d",
+		QDF_MAC_ADDR_REF(peer->mac_addr.raw),
+		QDF_MAC_ADDR_REF(setup_info->mld_peer_mac),
+		setup_info->is_first_link,
+		setup_info->is_primary_link);
 
 	/* if this is the first link peer */
 	if (setup_info->is_first_link)
@@ -7649,9 +7673,9 @@ QDF_STATUS dp_peer_mlo_setup(
 
 	peer->first_link = setup_info->is_first_link;
 	peer->primary_link = setup_info->is_primary_link;
-	mld_peer = dp_peer_find_hash_find(soc,
-					  setup_info->mld_peer_mac,
-					  0, vdev_id, DP_MOD_ID_CDP);
+	mld_peer = dp_mld_peer_find_hash_find(soc,
+					      setup_info->mld_peer_mac,
+					      0, vdev_id, DP_MOD_ID_CDP);
 	if (mld_peer) {
 		if (setup_info->is_first_link) {
 			/* assign rx_tid to mld peer */
@@ -8450,22 +8474,27 @@ void dp_txrx_peer_unref_delete(dp_txrx_ref_handle handle,
 qdf_export_symbol(dp_txrx_peer_unref_delete);
 
 /*
- * dp_peer_detach_wifi3() – Detach txrx peer
+ * dp_peer_delete_wifi3() – Delete txrx peer
  * @soc_hdl: soc handle
  * @vdev_id: id of dp handle
  * @peer_mac: mac of datapath PEER handle
  * @bitmap: bitmap indicating special handling of request.
+ * @peer_type: peer type (link or MLD)
  *
  */
 static QDF_STATUS dp_peer_delete_wifi3(struct cdp_soc_t *soc_hdl,
 				       uint8_t vdev_id,
-				       uint8_t *peer_mac, uint32_t bitmap)
+				       uint8_t *peer_mac, uint32_t bitmap,
+				       enum cdp_peer_type peer_type)
 {
 	struct dp_soc *soc = cdp_soc_t_to_dp_soc(soc_hdl);
-	struct dp_peer *peer = dp_peer_find_hash_find(soc, peer_mac,
-						      0, vdev_id,
-						      DP_MOD_ID_CDP);
+	struct dp_peer *peer;
+	struct cdp_peer_info peer_info = { 0 };
 	struct dp_vdev *vdev = NULL;
+
+	DP_PEER_INFO_PARAMS_INIT(&peer_info, vdev_id, peer_mac,
+				 false, peer_type);
+	peer = dp_peer_hash_find_wrapper(soc, &peer_info, DP_MOD_ID_CDP);
 
 	/* Peer can be null for monitor vap mac address */
 	if (!peer) {

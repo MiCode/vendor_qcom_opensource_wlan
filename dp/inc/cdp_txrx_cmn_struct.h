@@ -403,11 +403,13 @@ enum htt_cmn_t2h_en_stats_status {
  * @CDP_INVALID_PEER_TYPE: invalid peer type
  * @CDP_LINK_PEER_TYPE: legacy peer or link peer for MLO connection
  * @CDP_MLD_PEER_TYPE: MLD peer for MLO connection
+ * @CDP_WILD_PEER_TYPE: used to set peer type for same mld/link mac addr
  */
 enum cdp_peer_type {
 	CDP_INVALID_PEER_TYPE,
 	CDP_LINK_PEER_TYPE,
 	CDP_MLD_PEER_TYPE,
+	CDP_WILD_PEER_TYPE,
 };
 
 /**
@@ -422,6 +424,21 @@ struct cdp_peer_setup_info {
 	uint8_t is_first_link:1,
 		is_primary_link:1;
 	uint8_t primary_umac_id;
+};
+
+/**
+ * struct cdp_peer_info: peer info for dp hash find
+ * @vdev_id: Vdev ID
+ * @mac_addr: peer mac address to search
+ * @mac_addr_is_aligned: true only if mac_addr type is
+			"union dp_align_mac_addr", otherwise set false always.
+ * @peer_type: link or MLD peer type
+ */
+struct cdp_peer_info {
+	uint8_t vdev_id;
+	uint8_t *mac_addr;
+	bool mac_addr_is_aligned;
+	enum cdp_peer_type peer_type;
 };
 
 /**

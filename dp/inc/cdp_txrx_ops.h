@@ -266,7 +266,8 @@ struct cdp_cmn_ops {
 
 	QDF_STATUS
 	(*txrx_peer_delete)(struct cdp_soc_t *soc, uint8_t vdev_id,
-			    uint8_t *peer_mac, uint32_t bitmap);
+			    uint8_t *peer_mac, uint32_t bitmap,
+			    enum cdp_peer_type peer_type);
 
 	QDF_STATUS (*txrx_set_monitor_mode)(struct cdp_soc_t *soc,
 					    uint8_t vdev_id,

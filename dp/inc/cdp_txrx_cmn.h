@@ -116,6 +116,16 @@ enum verbose_debug_module {
 #define dp_cdp_nofl_debug(params...) \
 	QDF_TRACE_DEBUG_NO_FL(QDF_MODULE_ID_DP_CDP, params)
 
+#define DP_PEER_INFO_PARAMS_INIT(peer_info, _vdev_id, \
+				_peer_mac, _addr_align, _peer_type) \
+({	typeof(peer_info) _peer_info = (peer_info); \
+	do {								\
+		(_peer_info)->vdev_id = (_vdev_id);			\
+		(_peer_info)->mac_addr = (_peer_mac);			\
+		(_peer_info)->mac_addr_is_aligned = (_addr_align);	\
+		(_peer_info)->peer_type = (_peer_type);			\
+	} while (0); })
+
 /**
  * @enum vdev_host_stats_id:
  * host stats update from CDP have to set one of the following stats ID
@@ -705,7 +715,8 @@ cdp_peer_delete(ol_txrx_soc_handle soc, uint8_t vdev_id,
 	    !soc->ops->cmn_drv_ops->txrx_peer_delete)
 		return;
 
-	soc->ops->cmn_drv_ops->txrx_peer_delete(soc, vdev_id, peer_mac, bitmap);
+	soc->ops->cmn_drv_ops->txrx_peer_delete(soc, vdev_id, peer_mac,
+						bitmap, CDP_LINK_PEER_TYPE);
 }
 
 #ifdef DP_RX_UDP_OVER_PEER_ROAM
