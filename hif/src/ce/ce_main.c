@@ -2855,6 +2855,39 @@ void hif_send_complete_check(struct hif_opaque_softc *hif_ctx, uint8_t pipe,
 #endif
 }
 
+#if defined(CE_TASKLET_SCHEDULE_ON_FULL) && defined(CE_TASKLET_DEBUG_ENABLE)
+#define CE_RING_FULL_THRESHOLD_TIME 3000000
+#define CE_RING_FULL_THRESHOLD 1024
+/* Ths function is called from htc_send path. If there is no resourse to send
+ * packet via HTC, then check if interrupts are not processed from that
+ * CE for last 3 seconds. If so, schedule a tasklet to reap available entries.
+ * Also if Queue has reached 1024 entries within 3 seconds, then also schedule
+ * tasklet.
+ */
+void hif_schedule_ce_tasklet(struct hif_opaque_softc *hif_ctx, uint8_t pipe)
+{
+	struct HIF_CE_state *hif_state = HIF_GET_CE_STATE(hif_ctx);
+	uint64_t diff_time = qdf_get_log_timestamp_usecs() -
+			hif_state->stats.tasklet_sched_entry_ts[pipe];
+
+	hif_state->stats.ce_ring_full_count[pipe]++;
+
+	if (diff_time >= CE_RING_FULL_THRESHOLD_TIME ||
+	    hif_state->stats.ce_ring_full_count[pipe] >=
+	    CE_RING_FULL_THRESHOLD) {
+		hif_state->stats.ce_ring_full_count[pipe] = 0;
+		hif_state->stats.ce_manual_tasklet_schedule_count[pipe]++;
+		hif_state->stats.ce_last_manual_tasklet_schedule_ts[pipe] =
+			qdf_get_log_timestamp_usecs();
+		ce_dispatch_interrupt(pipe, &hif_state->tasklets[pipe]);
+	}
+}
+#else
+void hif_schedule_ce_tasklet(struct hif_opaque_softc *hif_ctx, uint8_t pipe)
+{
+}
+#endif
+
 uint16_t
 hif_get_free_queue_number(struct hif_opaque_softc *hif_ctx, uint8_t pipe)
 {

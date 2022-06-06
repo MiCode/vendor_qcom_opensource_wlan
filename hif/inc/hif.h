@@ -1013,6 +1013,7 @@ QDF_STATUS hif_send_head(struct hif_opaque_softc *hif_ctx, uint8_t PipeID,
 				  qdf_nbuf_t wbuf, uint32_t data_attr);
 void hif_send_complete_check(struct hif_opaque_softc *hif_ctx, uint8_t PipeID,
 			     int force);
+void hif_schedule_ce_tasklet(struct hif_opaque_softc *hif_ctx, uint8_t PipeID);
 void hif_shut_down_device(struct hif_opaque_softc *hif_ctx);
 void hif_get_default_pipe(struct hif_opaque_softc *hif_ctx, uint8_t *ULPipe,
 			  uint8_t *DLPipe);

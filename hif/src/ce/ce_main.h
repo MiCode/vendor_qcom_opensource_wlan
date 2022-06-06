@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2015-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -192,6 +193,11 @@ struct ce_stats {
 	uint64_t ce_tasklet_sched_bucket[CE_COUNT_MAX][CE_BUCKET_MAX];
 	uint64_t ce_tasklet_exec_last_update[CE_COUNT_MAX][CE_BUCKET_MAX];
 	uint64_t ce_tasklet_sched_last_update[CE_COUNT_MAX][CE_BUCKET_MAX];
+#ifdef CE_TASKLET_SCHEDULE_ON_FULL
+	uint32_t ce_ring_full_count[CE_COUNT_MAX];
+	uint32_t ce_manual_tasklet_schedule_count[CE_COUNT_MAX];
+	uint64_t ce_last_manual_tasklet_schedule_ts[CE_COUNT_MAX];
+#endif
 #endif
 };
 

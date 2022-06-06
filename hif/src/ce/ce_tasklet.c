@@ -340,6 +340,28 @@ hif_ce_latency_stats(struct hif_softc *hif_ctx)
 }
 #endif /*CE_TASKLET_DEBUG_ENABLE*/
 
+#if defined(CE_TASKLET_DEBUG_ENABLE) && defined(CE_TASKLET_SCHEDULE_ON_FULL)
+/**
+ * hif_reset_ce_full_count() - Reset ce full count
+ * @scn: hif_softc
+ * @ce_id: ce_id
+ *
+ * Return: None
+ */
+static inline void
+hif_reset_ce_full_count(struct hif_softc *scn, uint8_t ce_id)
+{
+	struct HIF_CE_state *hif_ce_state = HIF_GET_CE_STATE(scn);
+
+	hif_ce_state->stats.ce_ring_full_count[ce_id] = 0;
+}
+#else
+static inline void
+hif_reset_ce_full_count(struct hif_softc *scn, uint8_t ce_id)
+{
+}
+#endif
+
 #ifdef HIF_DETECTION_LATENCY_ENABLE
 static inline
 void hif_latency_detect_tasklet_sched(
@@ -429,6 +451,7 @@ static void ce_tasklet(unsigned long data)
 		ce_tasklet_schedule(tasklet_entry);
 		hif_latency_detect_tasklet_sched(scn, tasklet_entry);
 
+		hif_reset_ce_full_count(scn, tasklet_entry->ce_id);
 		if (scn->ce_latency_stats) {
 			ce_tasklet_update_bucket(hif_ce_state,
 						 tasklet_entry->ce_id);
@@ -697,6 +720,7 @@ static inline bool hif_tasklet_schedule(struct hif_opaque_softc *hif_ctx,
 	hif_latency_detect_tasklet_sched(scn, tasklet_entry);
 	ce_tasklet_schedule(tasklet_entry);
 
+	hif_reset_ce_full_count(scn, tasklet_entry->ce_id);
 	if (scn->ce_latency_stats)
 		hif_record_tasklet_sched_entry_ts(scn, tasklet_entry->ce_id);
 
