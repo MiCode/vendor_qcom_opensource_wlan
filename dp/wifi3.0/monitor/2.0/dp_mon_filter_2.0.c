@@ -41,15 +41,21 @@ void dp_mon_filter_dealloc_2_0(struct dp_pdev *pdev)
 {
 	enum dp_mon_filter_mode mode;
 	struct dp_mon_filter_be **mon_filter = NULL;
-	struct dp_mon_pdev *mon_pdev = pdev->monitor_pdev;
-	struct dp_mon_pdev_be *mon_pdev_be =
-			dp_get_be_mon_pdev_from_dp_mon_pdev(mon_pdev);
+	struct dp_mon_pdev *mon_pdev = NULL;
+	struct dp_mon_pdev_be *mon_pdev_be = NULL;
 
 	if (!pdev) {
-		dp_mon_filter_err("Monitor pdev Context is null");
+		dp_mon_filter_err("Pdev context is null");
 		return;
 	}
 
+	mon_pdev = pdev->monitor_pdev;
+	if (!mon_pdev) {
+		dp_mon_filter_err("Monitor pdev context is null");
+		return;
+	}
+
+	mon_pdev_be = dp_get_be_mon_pdev_from_dp_mon_pdev(mon_pdev);
 	mon_filter = mon_pdev_be->filter_be;
 	if (!mon_filter) {
 		dp_mon_filter_err("Found NULL memmory for the Monitor filter");
@@ -72,14 +78,21 @@ QDF_STATUS dp_mon_filter_alloc_2_0(struct dp_pdev *pdev)
 {
 	struct dp_mon_filter_be **mon_filter = NULL;
 	enum dp_mon_filter_mode mode;
-	struct dp_mon_pdev *mon_pdev = pdev->monitor_pdev;
-	struct dp_mon_pdev_be *mon_pdev_be =
-			dp_get_be_mon_pdev_from_dp_mon_pdev(mon_pdev);
+	struct dp_mon_pdev *mon_pdev = NULL;
+	struct dp_mon_pdev_be *mon_pdev_be = NULL;
 
 	if (!pdev) {
 		dp_mon_filter_err("pdev Context is null");
 		return QDF_STATUS_E_FAILURE;
 	}
+
+	mon_pdev = pdev->monitor_pdev;
+	if (!mon_pdev) {
+		dp_mon_filter_err("Monitor pdev context is null");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	mon_pdev_be = dp_get_be_mon_pdev_from_dp_mon_pdev(mon_pdev);
 
 	mon_filter = (struct dp_mon_filter_be **)qdf_mem_malloc(
 			(sizeof(struct dp_mon_filter_be *) *
@@ -1247,9 +1260,8 @@ void dp_mon_filter_setup_tx_mon_mode_2_0(struct dp_pdev *pdev)
 	enum dp_mon_filter_mode mode = DP_MON_FILTER_MONITOR_MODE;
 	enum dp_mon_filter_srng_type srng_type =
 				DP_MON_FILTER_SRNG_TYPE_TXMON_DEST;
-	struct dp_mon_pdev *mon_pdev = pdev->monitor_pdev;
-	struct dp_mon_pdev_be *mon_pdev_be =
-			dp_get_be_mon_pdev_from_dp_mon_pdev(mon_pdev);
+	struct dp_mon_pdev *mon_pdev = NULL;
+	struct dp_mon_pdev_be *mon_pdev_be = NULL;
 
 	if (!pdev) {
 		dp_mon_filter_err("pdev Context is null");
@@ -1261,6 +1273,14 @@ void dp_mon_filter_setup_tx_mon_mode_2_0(struct dp_pdev *pdev)
 		dp_mon_filter_err("Soc Context is null");
 		return;
 	}
+
+	mon_pdev = pdev->monitor_pdev;
+	if (!mon_pdev) {
+		dp_mon_filter_err("Monitor pdev context is null");
+		return;
+	}
+
+	mon_pdev_be = dp_get_be_mon_pdev_from_dp_mon_pdev(mon_pdev);
 
 	filter.tx_valid = !!mon_pdev_be->tx_mon_mode;
 	dp_tx_mon_filter_set_all(mon_pdev_be, &filter.tx_tlv_filter);
@@ -1781,9 +1801,8 @@ void dp_mon_filter_setup_rx_pkt_log_full_2_0(struct dp_pdev *pdev)
 	enum dp_mon_filter_mode mode = DP_MON_FILTER_PKT_LOG_FULL_MODE;
 	enum dp_mon_filter_srng_type srng_type =
 		DP_MON_FILTER_SRNG_TYPE_RXMON_DEST;
-	struct dp_mon_pdev *mon_pdev = pdev->monitor_pdev;
-	struct dp_mon_pdev_be *mon_pdev_be =
-			dp_get_be_mon_pdev_from_dp_mon_pdev(mon_pdev);
+	struct dp_mon_pdev *mon_pdev = NULL;
+	struct dp_mon_pdev_be *mon_pdev_be = NULL;
 	struct htt_rx_ring_tlv_filter *rx_tlv_filter =
 		&filter.rx_tlv_filter.tlv_filter;
 
@@ -1791,6 +1810,14 @@ void dp_mon_filter_setup_rx_pkt_log_full_2_0(struct dp_pdev *pdev)
 		dp_mon_filter_err("pdev Context is null");
 		return;
 	}
+
+	mon_pdev = pdev->monitor_pdev;
+	if (!mon_pdev) {
+		dp_mon_filter_err("Monitor pdev context is null");
+		return;
+	}
+
+	mon_pdev_be = dp_get_be_mon_pdev_from_dp_mon_pdev(mon_pdev);
 
 	/* Enabled the filter */
 	filter.rx_tlv_filter.valid = true;
@@ -1813,14 +1840,21 @@ void dp_mon_filter_reset_rx_pkt_log_full_2_0(struct dp_pdev *pdev)
 	enum dp_mon_filter_mode mode = DP_MON_FILTER_PKT_LOG_FULL_MODE;
 	enum dp_mon_filter_srng_type srng_type =
 		DP_MON_FILTER_SRNG_TYPE_RXMON_DEST;
-	struct dp_mon_pdev *mon_pdev = pdev->monitor_pdev;
-	struct dp_mon_pdev_be *mon_pdev_be =
-			dp_get_be_mon_pdev_from_dp_mon_pdev(mon_pdev);
+	struct dp_mon_pdev *mon_pdev = NULL;
+	struct dp_mon_pdev_be *mon_pdev_be = NULL;
 
 	if (!pdev) {
 		dp_mon_filter_err("pdev Context is null");
 		return;
 	}
+
+	mon_pdev = pdev->monitor_pdev;
+	if (!mon_pdev) {
+		dp_mon_filter_err("Monitor pdev context is null");
+		return;
+	}
+
+	mon_pdev_be = dp_get_be_mon_pdev_from_dp_mon_pdev(mon_pdev);
 
 	mon_pdev_be->filter_be[mode][srng_type] = filter;
 }
@@ -1831,14 +1865,21 @@ void dp_mon_filter_setup_rx_pkt_log_lite_2_0(struct dp_pdev *pdev)
 	enum dp_mon_filter_mode mode = DP_MON_FILTER_PKT_LOG_LITE_MODE;
 	enum dp_mon_filter_srng_type srng_type =
 		DP_MON_FILTER_SRNG_TYPE_RXMON_DEST;
-	struct dp_mon_pdev *mon_pdev = pdev->monitor_pdev;
-	struct dp_mon_pdev_be *mon_pdev_be =
-			dp_get_be_mon_pdev_from_dp_mon_pdev(mon_pdev);
+	struct dp_mon_pdev *mon_pdev = NULL;
+	struct dp_mon_pdev_be *mon_pdev_be = NULL;
 
 	if (!pdev) {
 		dp_mon_filter_err("pdev Context is null");
 		return;
 	}
+
+	mon_pdev = pdev->monitor_pdev;
+	if (!mon_pdev) {
+		dp_mon_filter_err("Monitor pdev context is null");
+		return;
+	}
+
+	mon_pdev_be = dp_get_be_mon_pdev_from_dp_mon_pdev(mon_pdev);
 
 	/* Enabled the filter */
 	filter.rx_tlv_filter.valid = true;
@@ -1855,14 +1896,21 @@ void dp_mon_filter_reset_rx_pkt_log_lite_2_0(struct dp_pdev *pdev)
 	enum dp_mon_filter_mode mode = DP_MON_FILTER_PKT_LOG_LITE_MODE;
 	enum dp_mon_filter_srng_type srng_type =
 		DP_MON_FILTER_SRNG_TYPE_RXMON_DEST;
-	struct dp_mon_pdev *mon_pdev = pdev->monitor_pdev;
-	struct dp_mon_pdev_be *mon_pdev_be =
-			dp_get_be_mon_pdev_from_dp_mon_pdev(mon_pdev);
+	struct dp_mon_pdev *mon_pdev = NULL;
+	struct dp_mon_pdev_be *mon_pdev_be = NULL;
 
 	if (!pdev) {
 		dp_mon_filter_err("pdev Context is null");
 		return;
 	}
+
+	mon_pdev = pdev->monitor_pdev;
+	if (!mon_pdev) {
+		dp_mon_filter_err("Monitor pdev context is null");
+		return;
+	}
+
+	mon_pdev_be = dp_get_be_mon_pdev_from_dp_mon_pdev(mon_pdev);
 
 	mon_pdev_be->filter_be[mode][srng_type] = filter;
 }
@@ -1908,10 +1956,9 @@ void dp_mon_filter_setup_rx_pkt_log_cbf_2_0(struct dp_pdev *pdev)
 	enum dp_mon_filter_mode mode = DP_MON_FILTER_PKT_LOG_CBF_MODE;
 	enum dp_mon_filter_srng_type srng_type =
 		DP_MON_FILTER_SRNG_TYPE_RXMON_DEST;
-	struct dp_mon_pdev *mon_pdev = pdev->monitor_pdev;
-	struct dp_mon_pdev_be *mon_pdev_be =
-			dp_get_be_mon_pdev_from_dp_mon_pdev(mon_pdev);
-	struct dp_pdev_be *pdev_be = dp_get_be_pdev_from_dp_pdev(pdev);
+	struct dp_mon_pdev *mon_pdev = NULL;
+	struct dp_mon_pdev_be *mon_pdev_be = NULL;
+	struct dp_pdev_be *pdev_be = NULL;
 
 	if (!pdev) {
 		dp_mon_filter_err("pdev Context is null");
@@ -1923,6 +1970,16 @@ void dp_mon_filter_setup_rx_pkt_log_cbf_2_0(struct dp_pdev *pdev)
 		dp_mon_filter_err("Soc Context is null");
 		return;
 	}
+
+	mon_pdev = pdev->monitor_pdev;
+	if (!mon_pdev) {
+		dp_mon_filter_err("Monitor pdev context is null");
+		return;
+	}
+
+	mon_pdev_be = dp_get_be_mon_pdev_from_dp_mon_pdev(mon_pdev);
+
+	pdev_be = dp_get_be_pdev_from_dp_pdev(pdev);
 
 	/* Enabled the filter */
 	filter.rx_tlv_filter.valid = true;
@@ -1947,10 +2004,9 @@ void dp_mon_filter_reset_rx_pktlog_cbf_2_0(struct dp_pdev *pdev)
 	enum dp_mon_filter_mode mode = DP_MON_FILTER_PKT_LOG_CBF_MODE;
 	enum dp_mon_filter_srng_type srng_type =
 		DP_MON_FILTER_SRNG_TYPE_RXDMA_BUF;
-	struct dp_mon_pdev *mon_pdev = pdev->monitor_pdev;
-	struct dp_mon_pdev_be *mon_pdev_be =
-			dp_get_be_mon_pdev_from_dp_mon_pdev(mon_pdev);
-	struct dp_pdev_be *pdev_be = dp_get_be_pdev_from_dp_pdev(pdev);
+	struct dp_mon_pdev *mon_pdev = NULL;
+	struct dp_mon_pdev_be *mon_pdev_be = NULL;
+	struct dp_pdev_be *pdev_be = NULL;
 
 	if (!pdev) {
 		QDF_TRACE(QDF_MODULE_ID_MON_FILTER, QDF_TRACE_LEVEL_ERROR,
@@ -1963,6 +2019,16 @@ void dp_mon_filter_reset_rx_pktlog_cbf_2_0(struct dp_pdev *pdev)
 		dp_mon_filter_err("Soc Context is null");
 		return;
 	}
+
+	mon_pdev = pdev->monitor_pdev;
+	if (!mon_pdev) {
+		dp_mon_filter_err("Monitor pdev context is null");
+		return;
+	}
+
+	mon_pdev_be = dp_get_be_mon_pdev_from_dp_mon_pdev(mon_pdev);
+
+	pdev_be = dp_get_be_pdev_from_dp_pdev(pdev);
 
 	/* Enabled the filter */
 	filter.rx_tlv_filter.valid = true;
@@ -1980,14 +2046,21 @@ void dp_mon_filter_setup_pktlog_hybrid_2_0(struct dp_pdev *pdev)
 	enum dp_mon_filter_srng_type srng_type =
 		DP_MON_FILTER_SRNG_TYPE_TXMON_DEST;
 	struct htt_tx_ring_tlv_filter *tlv_filter = &filter.tx_tlv_filter;
-	struct dp_mon_pdev *mon_pdev = pdev->monitor_pdev;
-	struct dp_mon_pdev_be *mon_pdev_be =
-			dp_get_be_mon_pdev_from_dp_mon_pdev(mon_pdev);
+	struct dp_mon_pdev *mon_pdev = NULL;
+	struct dp_mon_pdev_be *mon_pdev_be = NULL;
 
 	if (!pdev) {
 		dp_mon_filter_err("pdev Context is null");
 		return;
 	}
+
+	mon_pdev = pdev->monitor_pdev;
+	if (!mon_pdev) {
+		dp_mon_filter_err("Monitor pdev context is null");
+		return;
+	}
+
+	mon_pdev_be = dp_get_be_mon_pdev_from_dp_mon_pdev(mon_pdev);
 
 	/* Enabled the filter */
 	filter.tx_valid = true;
@@ -2017,14 +2090,21 @@ void dp_mon_filter_reset_pktlog_hybrid_2_0(struct dp_pdev *pdev)
 	enum dp_mon_filter_mode mode = DP_MON_FILTER_PKT_LOG_HYBRID_MODE;
 	enum dp_mon_filter_srng_type srng_type =
 		DP_MON_FILTER_SRNG_TYPE_TXMON_DEST;
-	struct dp_mon_pdev *mon_pdev = pdev->monitor_pdev;
-	struct dp_mon_pdev_be *mon_pdev_be =
-			dp_get_be_mon_pdev_from_dp_mon_pdev(mon_pdev);
+	struct dp_mon_pdev *mon_pdev = NULL;
+	struct dp_mon_pdev_be *mon_pdev_be = NULL;
 
 	if (!pdev) {
 		dp_mon_filter_err("pdev Context is null");
 		return;
 	}
+
+	mon_pdev = pdev->monitor_pdev;
+	if (!mon_pdev) {
+		dp_mon_filter_err("Monitor pdev context is null");
+		return;
+	}
+
+	mon_pdev_be = dp_get_be_mon_pdev_from_dp_mon_pdev(mon_pdev);
 
 	mon_pdev_be->filter_be[mode][srng_type] = filter;
 }
