@@ -7988,6 +7988,7 @@ void dp_update_pdev_stats(struct dp_pdev *tgtobj,
 {
 	uint8_t i;
 	uint8_t pream_type;
+	uint8_t mu_type;
 	struct cdp_pdev_stats *pdev_stats = NULL;
 
 	pdev_stats = &tgtobj->stats;
@@ -8012,6 +8013,7 @@ void dp_update_pdev_stats(struct dp_pdev *tgtobj,
 	for (i = 0; i < SS_COUNT; i++) {
 		tgtobj->stats.tx.nss[i] += srcobj->tx.nss[i];
 		tgtobj->stats.rx.nss[i] += srcobj->rx.nss[i];
+		tgtobj->stats.rx.ppdu_nss[i] += srcobj->rx.ppdu_nss[i];
 	}
 
 	for (i = 0; i < WME_AC_MAX; i++) {
@@ -8045,6 +8047,45 @@ void dp_update_pdev_stats(struct dp_pdev *tgtobj,
 				srcobj->tx.transmit_type[i].mpdu_tried;
 	}
 
+	for (i = 0; i < QDF_PROTO_SUBTYPE_MAX; i++)
+		tgtobj->stats.tx.no_ack_count[i] += srcobj->tx.no_ack_count[i];
+
+	for (i = 0; i < MAX_MU_GROUP_ID; i++)
+		tgtobj->stats.tx.mu_group_id[i] = srcobj->tx.mu_group_id[i];
+
+	for (i = 0; i < MAX_RU_LOCATIONS; i++) {
+		tgtobj->stats.tx.ru_loc[i].num_msdu +=
+			srcobj->tx.ru_loc[i].num_msdu;
+		tgtobj->stats.tx.ru_loc[i].num_mpdu +=
+			srcobj->tx.ru_loc[i].num_mpdu;
+		tgtobj->stats.tx.ru_loc[i].mpdu_tried +=
+			srcobj->tx.ru_loc[i].mpdu_tried;
+	}
+
+	tgtobj->stats.tx.tx_ppdus += srcobj->tx.tx_ppdus;
+	tgtobj->stats.tx.tx_mpdus_success += srcobj->tx.tx_mpdus_success;
+	tgtobj->stats.tx.tx_mpdus_tried += srcobj->tx.tx_mpdus_tried;
+	tgtobj->stats.tx.retries_mpdu += srcobj->tx.retries_mpdu;
+	tgtobj->stats.tx.mpdu_success_with_retries +=
+		srcobj->tx.mpdu_success_with_retries;
+	tgtobj->stats.tx.last_tx_ts = srcobj->tx.last_tx_ts;
+	tgtobj->stats.tx.tx_rate = srcobj->tx.tx_rate;
+	tgtobj->stats.tx.last_tx_rate = srcobj->tx.last_tx_rate;
+	tgtobj->stats.tx.last_tx_rate_mcs = srcobj->tx.last_tx_rate_mcs;
+	tgtobj->stats.tx.mcast_last_tx_rate = srcobj->tx.mcast_last_tx_rate;
+	tgtobj->stats.tx.mcast_last_tx_rate_mcs =
+		srcobj->tx.mcast_last_tx_rate_mcs;
+	tgtobj->stats.tx.rnd_avg_tx_rate = srcobj->tx.rnd_avg_tx_rate;
+	tgtobj->stats.tx.avg_tx_rate = srcobj->tx.avg_tx_rate;
+	tgtobj->stats.tx.tx_ratecode = srcobj->tx.tx_ratecode;
+	tgtobj->stats.tx.ru_start = srcobj->tx.ru_start;
+	tgtobj->stats.tx.ru_tones = srcobj->tx.ru_tones;
+	tgtobj->stats.tx.last_ack_rssi = srcobj->tx.last_ack_rssi;
+	tgtobj->stats.tx.nss_info = srcobj->tx.nss_info;
+	tgtobj->stats.tx.mcs_info = srcobj->tx.mcs_info;
+	tgtobj->stats.tx.bw_info = srcobj->tx.bw_info;
+	tgtobj->stats.tx.gi_info = srcobj->tx.gi_info;
+	tgtobj->stats.tx.preamble_info = srcobj->tx.preamble_info;
 	tgtobj->stats.tx.comp_pkt.bytes += srcobj->tx.comp_pkt.bytes;
 	tgtobj->stats.tx.comp_pkt.num += srcobj->tx.comp_pkt.num;
 	tgtobj->stats.tx.ucast.num += srcobj->tx.ucast.num;
@@ -8113,8 +8154,20 @@ void dp_update_pdev_stats(struct dp_pdev *tgtobj,
 	if (srcobj->rx.snr != 0)
 		tgtobj->stats.rx.snr = srcobj->rx.snr;
 	tgtobj->stats.rx.rx_rate = srcobj->rx.rx_rate;
+	tgtobj->stats.rx.last_rx_rate = srcobj->rx.last_rx_rate;
+	tgtobj->stats.rx.rnd_avg_rx_rate = srcobj->rx.rnd_avg_rx_rate;
+	tgtobj->stats.rx.avg_rx_rate = srcobj->rx.avg_rx_rate;
+	tgtobj->stats.rx.rx_ratecode = srcobj->rx.rx_ratecode;
+	tgtobj->stats.rx.avg_snr = srcobj->rx.avg_snr;
+	tgtobj->stats.rx.rx_snr_measured_time = srcobj->rx.rx_snr_measured_time;
+	tgtobj->stats.rx.last_snr = srcobj->rx.last_snr;
+	tgtobj->stats.rx.nss_info = srcobj->rx.nss_info;
+	tgtobj->stats.rx.mcs_info = srcobj->rx.mcs_info;
+	tgtobj->stats.rx.bw_info = srcobj->rx.bw_info;
+	tgtobj->stats.rx.gi_info = srcobj->rx.gi_info;
+	tgtobj->stats.rx.preamble_info = srcobj->rx.preamble_info;
 	tgtobj->stats.rx.non_ampdu_cnt += srcobj->rx.non_ampdu_cnt;
-	tgtobj->stats.rx.amsdu_cnt += srcobj->rx.ampdu_cnt;
+	tgtobj->stats.rx.ampdu_cnt += srcobj->rx.ampdu_cnt;
 	tgtobj->stats.rx.non_amsdu_cnt += srcobj->rx.non_amsdu_cnt;
 	tgtobj->stats.rx.amsdu_cnt += srcobj->rx.amsdu_cnt;
 	tgtobj->stats.rx.nawds_mcast_drop += srcobj->rx.nawds_mcast_drop;
@@ -8163,6 +8216,32 @@ void dp_update_pdev_stats(struct dp_pdev *tgtobj,
 		srcobj->rx.peer_unauth_rx_pkt_drop;
 	tgtobj->stats.rx.policy_check_drop +=
 		srcobj->rx.policy_check_drop;
+
+	for (mu_type = 0 ; mu_type < TXRX_TYPE_MU_MAX; mu_type++) {
+		tgtobj->stats.rx.rx_mu[mu_type].mpdu_cnt_fcs_ok +=
+			srcobj->rx.rx_mu[mu_type].mpdu_cnt_fcs_ok;
+		tgtobj->stats.rx.rx_mu[mu_type].mpdu_cnt_fcs_err +=
+			srcobj->rx.rx_mu[mu_type].mpdu_cnt_fcs_err;
+		for (i = 0; i < SS_COUNT; i++)
+			tgtobj->stats.rx.rx_mu[mu_type].ppdu_nss[i] +=
+				srcobj->rx.rx_mu[mu_type].ppdu_nss[i];
+		for (i = 0; i < MAX_MCS; i++)
+			tgtobj->stats.rx.rx_mu[mu_type].ppdu.mcs_count[i] +=
+				srcobj->rx.rx_mu[mu_type].ppdu.mcs_count[i];
+	}
+
+	for (i = 0; i < MAX_MCS; i++) {
+		tgtobj->stats.rx.su_ax_ppdu_cnt.mcs_count[i] +=
+			srcobj->rx.su_ax_ppdu_cnt.mcs_count[i];
+		tgtobj->stats.rx.rx_mpdu_cnt[i] += srcobj->rx.rx_mpdu_cnt[i];
+	}
+
+	tgtobj->stats.rx.mpdu_cnt_fcs_ok += srcobj->rx.mpdu_cnt_fcs_ok;
+	tgtobj->stats.rx.mpdu_cnt_fcs_err += srcobj->rx.mpdu_cnt_fcs_err;
+	tgtobj->stats.rx.rx_mpdus += srcobj->rx.rx_mpdus;
+	tgtobj->stats.rx.rx_ppdus += srcobj->rx.rx_ppdus;
+	tgtobj->stats.rx.mpdu_retry_cnt += srcobj->rx.mpdu_retry_cnt;
+	tgtobj->stats.rx.rx_retries += srcobj->rx.rx_retries;
 
 	DP_UPDATE_11BE_STATS(pdev_stats, srcobj);
 }
