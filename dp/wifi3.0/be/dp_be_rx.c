@@ -66,12 +66,14 @@ dp_rx_wds_learn(struct dp_soc *soc,
  * @soc: DP soc
  * @ta_txrx_peer: WDS repeater txrx peer
  * @rx_tlv_hdr  : start address of rx tlvs
+ * @nbuf: RX packet buffer
  *
  * Return: void
  */
 static inline void dp_wds_ext_peer_learn_be(struct dp_soc *soc,
 					    struct dp_txrx_peer *ta_txrx_peer,
-					    uint8_t *rx_tlv_hdr)
+					    uint8_t *rx_tlv_hdr,
+					    qdf_nbuf_t nbuf)
 {
 	uint8_t wds_ext_src_mac[QDF_MAC_ADDR_SIZE];
 	struct dp_peer *ta_base_peer;
@@ -85,7 +87,8 @@ static inline void dp_wds_ext_peer_learn_be(struct dp_soc *soc,
 				&ta_txrx_peer->wds_ext.init))
 		return;
 
-	if (hal_rx_get_mpdu_mac_ad4_valid_be(rx_tlv_hdr)) {
+	if (qdf_nbuf_is_rx_chfrag_start(nbuf) &&
+	    hal_rx_get_mpdu_mac_ad4_valid_be(rx_tlv_hdr)) {
 		qdf_atomic_test_and_set_bit(WDS_EXT_PEER_INIT_BIT,
 					    &ta_txrx_peer->wds_ext.init);
 
@@ -109,7 +112,8 @@ static inline void dp_wds_ext_peer_learn_be(struct dp_soc *soc,
 #else
 static inline void dp_wds_ext_peer_learn_be(struct dp_soc *soc,
 					    struct dp_txrx_peer *ta_txrx_peer,
-					    uint8_t *rx_tlv_hdr)
+					    uint8_t *rx_tlv_hdr,
+					    qdf_nbuf_t nbuf)
 {
 }
 #endif
@@ -121,7 +125,7 @@ dp_rx_wds_learn(struct dp_soc *soc,
 		qdf_nbuf_t nbuf,
 		struct hal_rx_msdu_metadata msdu_metadata)
 {
-	dp_wds_ext_peer_learn_be(soc, ta_txrx_peer, rx_tlv_hdr);
+	dp_wds_ext_peer_learn_be(soc, ta_txrx_peer, rx_tlv_hdr, nbuf);
 }
 #endif
 
