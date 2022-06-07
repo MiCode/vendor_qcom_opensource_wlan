@@ -1374,6 +1374,8 @@ dp_rx_mon_srng_process_2_0(struct dp_soc *soc, struct dp_intr *int_ctx,
 		/* Call enhanced stats update API */
 		if (mon_pdev->enhanced_stats_en && ppdu_info)
 			dp_rx_handle_ppdu_stats(soc, pdev, ppdu_info);
+		else if (dp_cfr_rcc_mode_status(pdev) && ppdu_info)
+			dp_rx_handle_cfr(soc, pdev, ppdu_info);
 
 		/* Call API to add PPDU info workqueue */
 		status = dp_rx_mon_add_ppdu_info_to_wq(mon_pdev, ppdu_info);
