@@ -1139,6 +1139,9 @@ struct hal_hw_txrx_ops {
 	uint8_t (*hal_get_tlv_hdr_size)(void);
 	uint8_t (*hal_get_idle_link_bm_id)(uint8_t chip_id);
 
+	bool (*hal_txmon_is_mon_buf_addr_tlv)(void *tx_tlv_hdr);
+	void (*hal_txmon_populate_packet_info)(void *tx_tlv_hdr,
+					       void *pkt_info);
 	/* TX MONITOR */
 #ifdef QCA_MONITOR_2_0_SUPPORT
 	uint32_t (*hal_txmon_status_parse_tlv)(void *data_ppdu_info,
@@ -1149,8 +1152,6 @@ struct hal_hw_txrx_ops {
 					       qdf_frag_t status_frag);
 	uint32_t (*hal_txmon_status_get_num_users)(void *tx_tlv_hdr,
 						   uint8_t *num_users);
-	QDF_STATUS (*hal_txmon_status_free_buffer)(qdf_frag_t status_frag,
-						   uint32_t end_offset);
 #endif /* QCA_MONITOR_2_0_SUPPORT */
 	void (*hal_reo_shared_qaddr_setup)(hal_soc_handle_t hal_soc_hdl);
 	void (*hal_reo_shared_qaddr_init)(hal_soc_handle_t hal_soc_hdl);

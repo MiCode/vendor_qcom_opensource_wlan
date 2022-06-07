@@ -326,34 +326,43 @@ hal_rx_fst_get_fse_size_be(void)
 
 #ifdef QCA_MONITOR_2_0_SUPPORT
 /**
- * hal_txmon_get_buffer_addr_generic_be() - api to get buffer address
+ * hal_txmon_is_mon_buf_addr_tlv_generic_be() - api to find mon buffer tlv
  * @tx_tlv: pointer to TLV header
- * @status: hal mon buffer address status
  *
- * Return: Address to qdf_frag_t
+ * Return: bool based on tlv tag matches monitor buffer address tlv
  */
-static inline qdf_frag_t
-hal_txmon_get_buffer_addr_generic_be(void *tx_tlv,
-				     struct hal_mon_buf_addr_status *status)
+static inline bool
+hal_txmon_is_mon_buf_addr_tlv_generic_be(void *tx_tlv_hdr)
 {
-	struct mon_buffer_addr *hal_buffer_addr =
-			(struct mon_buffer_addr *)((uint8_t *)tx_tlv +
-						   HAL_RX_TLV64_HDR_SIZE);
-	qdf_frag_t buf_addr = NULL;
+	uint32_t tlv_tag;
 
-	buf_addr = (qdf_frag_t)(uintptr_t)((hal_buffer_addr->buffer_virt_addr_31_0 |
-				((unsigned long long)hal_buffer_addr->buffer_virt_addr_63_32 <<
-				 32)));
+	tlv_tag = HAL_RX_GET_USER_TLV64_TYPE(tx_tlv_hdr);
 
-	/* qdf_frag_t is derived from buffer address tlv */
-	if (qdf_unlikely(status)) {
-		qdf_mem_copy(status,
-			     (uint8_t *)tx_tlv + HAL_RX_TLV64_HDR_SIZE,
-			     sizeof(struct hal_mon_buf_addr_status));
-		/* update hal_mon_buf_addr_status */
-	}
+	if (WIFIMON_BUFFER_ADDR_E == tlv_tag)
+		return true;
 
-	return buf_addr;
+	return false;
+}
+
+/**
+ * hal_txmon_populate_packet_info_generic_be() - api to populate packet info
+ * @tx_tlv: pointer to TLV header
+ * @packet_info: place holder for packet info
+ *
+ * Return: Address to void
+ */
+static inline void
+hal_txmon_populate_packet_info_generic_be(void *tx_tlv, void *packet_info)
+{
+	struct hal_mon_packet_info *pkt_info;
+	struct mon_buffer_addr *addr = (struct mon_buffer_addr *)tx_tlv;
+
+	pkt_info = (struct hal_mon_packet_info *)packet_info;
+	pkt_info->sw_cookie = (((uint64_t)addr->buffer_virt_addr_63_32 << 32) |
+			       (addr->buffer_virt_addr_31_0));
+	pkt_info->dma_length = addr->dma_length + 1;
+	pkt_info->msdu_continuation = addr->msdu_continuation;
+	pkt_info->truncated = addr->truncated;
 }
 
 #if defined(TX_MONITOR_WORD_MASK)
@@ -658,60 +667,6 @@ hal_txmon_status_get_num_users_generic_be(void *tx_tlv_hdr, uint8_t *num_users)
 }
 
 /**
- * hal_txmon_free_status_buffer() - api to free status buffer
- * @pdev_handle: DP_PDEV handle
- * @status_frag: qdf_frag_t buffer
- * @end_offset: end offset within buffer that has valid data
- *
- * Return status
- */
-static inline QDF_STATUS
-hal_txmon_status_free_buffer_generic_be(qdf_frag_t status_frag,
-					uint32_t end_offset)
-{
-	uint32_t tlv_tag, tlv_len;
-	uint32_t tlv_status = HAL_MON_TX_STATUS_PPDU_NOT_DONE;
-	uint8_t *tx_tlv;
-	uint8_t *tx_tlv_start;
-	qdf_frag_t frag_buf = NULL;
-	QDF_STATUS status = QDF_STATUS_E_ABORTED;
-
-	tx_tlv = (uint8_t *)status_frag;
-	tx_tlv_start = tx_tlv;
-	/* parse tlv and populate tx_ppdu_info */
-	do {
-		tlv_tag = HAL_RX_GET_USER_TLV64_TYPE(tx_tlv);
-		tlv_len = HAL_RX_GET_USER_TLV64_LEN(tx_tlv);
-
-		if (((tx_tlv - tx_tlv_start) + tlv_len) > end_offset)
-			return QDF_STATUS_E_ABORTED;
-
-		if (tlv_tag == WIFIMON_BUFFER_ADDR_E) {
-			frag_buf = hal_txmon_get_buffer_addr_generic_be(tx_tlv,
-									NULL);
-			if (frag_buf)
-				qdf_frag_free(frag_buf);
-
-			frag_buf = NULL;
-		}
-
-		if (WIFITX_FES_STATUS_END_E == tlv_tag ||
-		    WIFIRESPONSE_END_STATUS_E == tlv_tag ||
-		    WIFIDUMMY_E == tlv_tag) {
-			status = QDF_STATUS_SUCCESS;
-			break;
-		}
-
-		/* need api definition for hal_tx_status_get_next_tlv */
-		tx_tlv = hal_tx_status_get_next_tlv(tx_tlv);
-		if ((tx_tlv - tx_tlv_start) >= end_offset)
-			break;
-	} while (tlv_status == HAL_MON_TX_STATUS_PPDU_NOT_DONE);
-
-	return status;
-}
-
-/**
  * hal_tx_get_ppdu_info() - api to get tx ppdu info
  * @pdev_handle: DP_PDEV handle
  * @prot_ppdu_info: populate dp_ppdu_info protection
@@ -794,8 +749,8 @@ hal_txmon_status_parse_tlv_generic_be(void *data_ppdu_info,
 {
 	struct hal_tx_ppdu_info *ppdu_info;
 	struct hal_tx_status_info *tx_status_info;
+	struct hal_mon_packet_info *packet_info = NULL;
 	uint32_t tlv_tag, user_id, tlv_len;
-	qdf_frag_t frag_buf = NULL;
 	uint32_t status = HAL_MON_TX_STATUS_PPDU_NOT_DONE;
 	void *tx_tlv;
 
@@ -1043,21 +998,15 @@ hal_txmon_status_parse_tlv_generic_be(void *data_ppdu_info,
 	}
 	case WIFIMON_BUFFER_ADDR_E:/* DOWNSTREAM */
 	{
-		struct hal_mon_buf_addr_status buf_status = {0};
-
+		packet_info = &ppdu_info->packet_info;
 		status = HAL_MON_TX_BUFFER_ADDR;
 		/*
 		 * TODO: do we need a conversion api to convert
 		 * user_id from hw to get host user_index
 		 */
 		TXMON_HAL(ppdu_info, cur_usr_idx) = user_id;
-		frag_buf = hal_txmon_get_buffer_addr_generic_be(tx_tlv,
-								&buf_status);
-		TXMON_STATUS_INFO(tx_status_info,
-				  buffer) = (void *)frag_buf;
-		TXMON_STATUS_INFO(tx_status_info, offset) = 0;
-		TXMON_STATUS_INFO(tx_status_info,
-				  length) = buf_status.dma_length;
+
+		hal_txmon_populate_packet_info_generic_be(tx_tlv, packet_info);
 
 		SHOW_DEFINED(WIFIMON_BUFFER_ADDR_E);
 		break;
@@ -1591,10 +1540,9 @@ hal_txmon_status_parse_tlv_generic_be(void *data_ppdu_info,
 						   BA_TS_CTRL);
 		/* memcpy  ba bitmap */
 		qdf_mem_copy(TXMON_HAL_USER(ppdu_info, user_id, ba_bitmap),
-			     tx_tlv +
-			     HAL_TX_DESC_OFFSET_GET_64(tx_tlv,
-						       RX_FRAME_1K_BITMAP_ACK,
-						       BA_TS_BITMAP_31_0, 0),
+			     &HAL_SET_FLD_OFFSET_64(tx_tlv,
+						    RX_FRAME_1K_BITMAP_ACK,
+						    BA_TS_BITMAP_31_0, 0),
 			     4 << TXMON_HAL_USER(ppdu_info,
 						 user_id, ba_bitmap_sz));
 

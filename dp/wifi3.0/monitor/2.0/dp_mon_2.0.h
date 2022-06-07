@@ -136,7 +136,7 @@ struct dp_mon_desc_pool {
  * @filter_be: filters sent to fw
  * @tx_mon_mode: tx monitor mode
  * @tx_mon_filter_length: tx monitor filter length
- * @tx_capture: pointer to tx capture function
+ * @tx_monitor_be: pointer to tx monitor be structure
  * @tx_stats: tx monitor drop stats
  * @rx_mon_wq_lock: Rx mon workqueue lock
  * @rx_mon_workqueue: Rx mon workqueue
@@ -151,7 +151,7 @@ struct dp_mon_pdev_be {
 	struct dp_mon_filter_be **filter_be;
 	uint8_t tx_mon_mode;
 	uint8_t tx_mon_filter_length;
-	struct dp_pdev_tx_capture_be tx_capture_be;
+	struct dp_pdev_tx_monitor_be tx_monitor_be;
 	struct dp_tx_monitor_drop_stats tx_stats;
 	qdf_spinlock_t rx_mon_wq_lock;
 	qdf_workqueue_t *rx_mon_workqueue;
