@@ -1321,7 +1321,7 @@ void cdp_txrx_peer_flush_frags(ol_txrx_soc_handle soc, uint8_t vdev_id,
 							 peer_mac);
 }
 
-#if defined(WLAN_FEATURE_TSF_UPLINK_DELAY) || defined(QCA_PEER_EXT_STATS)
+#if defined(WLAN_FEATURE_TSF_UPLINK_DELAY) || defined(CONFIG_SAWF)
 /**
  * cdp_set_delta_tsf() - wrapper function to set delta_tsf
  * @soc: SOC TXRX handle

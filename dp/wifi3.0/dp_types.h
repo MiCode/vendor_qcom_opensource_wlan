@@ -3216,7 +3216,7 @@ struct dp_vdev {
 #ifdef WIFI_MONITOR_SUPPORT
 	struct dp_mon_vdev *monitor_vdev;
 #endif
-#if defined(WLAN_FEATURE_TSF_UPLINK_DELAY) || defined(QCA_PEER_EXT_STATS)
+#if defined(WLAN_FEATURE_TSF_UPLINK_DELAY) || defined(CONFIG_SAWF)
 	/* Delta between TQM clock and TSF clock */
 	uint32_t delta_tsf;
 #endif
