@@ -814,7 +814,7 @@ wlan_reg_is_afc_power_event_received(struct wlan_objmgr_pdev *pdev)
 static inline bool
 wlan_reg_is_afc_done(struct wlan_objmgr_pdev *pdev, qdf_freq_t freq)
 {
-	return false;
+	return true;
 }
 
 static inline QDF_STATUS
