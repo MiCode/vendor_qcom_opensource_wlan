@@ -525,6 +525,9 @@ static const struct reg_dmn_op_class_map_t
 {
 	const struct reg_dmn_op_class_map_t *class = NULL;
 
+	if (!country)
+		return global_op_class;
+
 	reg_debug_rl("Country %c%c 0x%x", country[0], country[1], country[2]);
 
 	switch (country[2]) {

@@ -4745,22 +4745,11 @@ reg_get_320_bonded_channel_state(struct wlan_objmgr_pdev *pdev,
 }
 #endif
 
-/**
- * reg_get_chan_state_for_320() - Get the channel state of a 320MHZ
- * bonded channel.
- * @pdev: Pointer to wlan_objmgr_pdev
- * @freq: Primary frequency
- * @ch_width: Channel width
- * bonded_chan_ptr_ptr: Pointer to bonded channel pointer
- * treat_nol_chan_as_disabled: Bool to treat nol chan as enabled/disabled
- * @in_pwr_type: Input 6g power type
- *
- * Return - Channel state
- */
 #ifdef WLAN_FEATURE_11BE
-static enum channel_state
+enum channel_state
 reg_get_chan_state_for_320(struct wlan_objmgr_pdev *pdev,
 			   uint16_t freq,
+			   qdf_freq_t band_center_320,
 			   enum phy_ch_width ch_width,
 			   const struct bonded_channel_freq
 			   **bonded_chan_ptr_ptr,
@@ -4776,7 +4765,7 @@ reg_get_chan_state_for_320(struct wlan_objmgr_pdev *pdev,
 
 	/* For now sending band center freq as 0 */
 	num_bonded_pairs =
-		reg_get_320_bonded_chan_array(pdev, freq, 0,
+		reg_get_320_bonded_chan_array(pdev, freq, band_center_320,
 					      bonded_chan_320mhz_list_freq,
 					      array_size, bonded_ch_ptr);
 	if (!num_bonded_pairs) {
@@ -4792,18 +4781,6 @@ reg_get_chan_state_for_320(struct wlan_objmgr_pdev *pdev,
 							     &punct_pattern,
 							     in_6g_pwr_type,
 							     treat_nol_chan_as_disabled);
-}
-#else
-static enum channel_state
-reg_get_chan_state_for_320(struct wlan_objmgr_pdev *pdev,
-			   uint16_t freq,
-			   enum phy_ch_width ch_width,
-			   const struct bonded_channel_freq
-			   **bonded_chan_ptr_ptr,
-			   enum supported_6g_pwr_types in_pwr_type,
-			   bool treat_nol_chan_as_disabled)
-{
-	return CHANNEL_STATE_INVALID;
 }
 #endif
 
@@ -5365,7 +5342,8 @@ reg_get_5g_bonded_channel_for_freq(struct wlan_objmgr_pdev *pdev,
 		return reg_get_channel_state_for_freq(pdev, freq);
 
 	if (reg_is_ch_width_320(ch_width)) {
-		return reg_get_chan_state_for_320(pdev, freq, ch_width,
+		return reg_get_chan_state_for_320(pdev, freq, 0,
+						  ch_width,
 						  bonded_chan_ptr_ptr,
 						  REG_CURRENT_PWR_MODE,
 						  true);
@@ -5396,7 +5374,7 @@ reg_get_5g_bonded_channel_for_pwrmode(struct wlan_objmgr_pdev *pdev,
 						      in_6g_pwr_mode);
 
 	if (reg_is_ch_width_320(ch_width))
-		return reg_get_chan_state_for_320(pdev, freq,
+		return reg_get_chan_state_for_320(pdev, freq, 0,
 						  ch_width,
 						  bonded_chan_ptr_ptr,
 						  in_6g_pwr_mode, true);
@@ -8976,11 +8954,46 @@ reg_get_eirp_for_non_sp(struct wlan_objmgr_pdev *pdev, qdf_freq_t freq,
 
 #ifdef CONFIG_AFC_SUPPORT
 /**
+ * reg_compute_6g_center_freq_from_cfi() - Given the IEEE value of the
+ * 6 GHz center frequency, find the 6 GHz center frequency.
+ * @ieee_6g_cfi: IEEE value of 6 GHz cfi
+ * Return: Center frequency in MHz
+ */
+static qdf_freq_t
+reg_compute_6g_center_freq_from_cfi(uint8_t ieee_6g_cfi)
+{
+	return (SIXG_START_FREQ + ieee_6g_cfi * FREQ_TO_CHAN_SCALE);
+}
+
+#ifdef WLAN_FEATURE_11BE
+/**
+ * reg_is_320_opclass: Find out if the opclass computed from freq and
+ * width of 320 is same as the input op_class.
+ * @freq: Frequency in MHz
+ * @in_opclass: Input Opclass number
+ * Return: true if opclass is 320 supported, false otherwise.
+ */
+static bool reg_is_320_opclass(qdf_freq_t freq, uint8_t in_opclass)
+{
+	uint8_t local_op_class =
+		reg_dmn_get_opclass_from_freq_width(NULL, freq, BW_320_MHZ,
+						    BIT(BEHAV_NONE));
+	return (in_opclass == local_op_class);
+}
+#else
+static inline bool reg_is_320_opclass(qdf_freq_t freq, uint8_t op_class)
+{
+	return false;
+}
+#endif
+
+/**
  * reg_find_eirp_in_afc_eirp_obj() - Get eirp power from the AFC eirp object
  * based on the channel center frequency and operating class
  * @pdev: Pointer to pdev
  * @eirp_obj: Pointer to eirp_obj
- * @freq: Frequency in mhz
+ * @freq: Frequency in MHz
+ * @cen320: 320 MHz band center frequency
  * @op_class: Operating class
  *
  * Return: EIRP power
@@ -8988,11 +9001,22 @@ reg_get_eirp_for_non_sp(struct wlan_objmgr_pdev *pdev, qdf_freq_t freq,
 static uint8_t reg_find_eirp_in_afc_eirp_obj(struct wlan_objmgr_pdev *pdev,
 					     struct chan_eirp_obj *eirp_obj,
 					     qdf_freq_t freq,
+					     qdf_freq_t cen320,
 					     uint8_t op_class)
 {
 	uint8_t k;
 	uint8_t subchannels[NUM_20_MHZ_CHAN_IN_320_MHZ_CHAN];
 	uint8_t nchans;
+
+	if (reg_is_320_opclass(freq, op_class)) {
+		qdf_freq_t cfi_freq =
+			reg_compute_6g_center_freq_from_cfi(eirp_obj->cfi);
+
+		if (cfi_freq == cen320)
+			return eirp_obj->eirp_power / EIRP_PWR_SCALE;
+
+		return 0;
+	}
 
 	nchans = reg_get_subchannels_for_opclass(eirp_obj->cfi,
 						 op_class,
@@ -9011,7 +9035,8 @@ static uint8_t reg_find_eirp_in_afc_eirp_obj(struct wlan_objmgr_pdev *pdev,
  * object based on the channel center frequency and operating class
  * @pdev: Pointer to pdev
  * @chan_obj: Pointer to chan_obj
- * @freq: Frequency in mhz
+ * @freq: Frequency in MHz
+ * @cen320: 320 MHz band center frequency
  * @op_class: Operating class
  *
  * Return: EIRP power
@@ -9019,6 +9044,7 @@ static uint8_t reg_find_eirp_in_afc_eirp_obj(struct wlan_objmgr_pdev *pdev,
 static uint8_t reg_find_eirp_in_afc_chan_obj(struct wlan_objmgr_pdev *pdev,
 					     struct afc_chan_obj *chan_obj,
 					     qdf_freq_t freq,
+					     qdf_freq_t cen320,
 					     uint8_t op_class)
 {
 	uint8_t j;
@@ -9031,7 +9057,8 @@ static uint8_t reg_find_eirp_in_afc_chan_obj(struct wlan_objmgr_pdev *pdev,
 		struct chan_eirp_obj *eirp_obj = &chan_obj->chan_eirp_info[j];
 
 		afc_eirp = reg_find_eirp_in_afc_eirp_obj(pdev, eirp_obj,
-							 freq, op_class);
+							 freq, cen320,
+							 op_class);
 
 		if (afc_eirp)
 			return afc_eirp;
@@ -9045,13 +9072,15 @@ static uint8_t reg_find_eirp_in_afc_chan_obj(struct wlan_objmgr_pdev *pdev,
  * corresponding EIRP values from the afc power info array. The minimum of found
  * EIRP and regulatory max EIRP is returned
  * @pdev: Pointer to pdev
- * @freq: Frequency in mhz
+ * @freq: Frequency in MHz
+ * @cen320: 320 MHz band center frequency
  * @bw: Bandwidth in mhz
  *
  * Return: EIRP
  */
 static uint8_t reg_get_sp_eirp(struct wlan_objmgr_pdev *pdev,
 			       qdf_freq_t freq,
+			       qdf_freq_t cen320,
 			       uint16_t bw)
 {
 	uint8_t i, op_class = 0, chan_num = 0, afc_eirp_pwr = 0;
@@ -9097,6 +9126,7 @@ static uint8_t reg_get_sp_eirp(struct wlan_objmgr_pdev *pdev,
 		afc_eirp_pwr = reg_find_eirp_in_afc_chan_obj(pdev,
 							     chan_obj,
 							     freq,
+							     cen320,
 							     op_class);
 		if (afc_eirp_pwr)
 			break;
@@ -9110,6 +9140,7 @@ static uint8_t reg_get_sp_eirp(struct wlan_objmgr_pdev *pdev,
 #else
 static uint8_t reg_get_sp_eirp(struct wlan_objmgr_pdev *pdev,
 			       qdf_freq_t freq,
+			       qdf_freq_t cen320,
 			       uint16_t bw)
 {
 	struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj;
@@ -9159,23 +9190,26 @@ reg_get_best_pwr_mode_from_eirp_list(uint8_t *eirp_list, uint8_t size)
 /**
  * reg_get_eirp_pwr() - Get eirp power based on the AP power mode
  * @pdev: Pointer to pdev
- * @freq: Frequency in mhz
- * @bw: Bandwidth in mhz
+ * @freq: Frequency in MHz
+ * @cen320: 320 MHz Band center frequency
+ * @bw: Bandwidth in MHz
  * @ap_pwr_type: AP power type
  *
  * Return: EIRP power
  */
 static uint8_t reg_get_eirp_pwr(struct wlan_objmgr_pdev *pdev, qdf_freq_t freq,
+				qdf_freq_t cen320,
 				uint16_t bw, enum reg_6g_ap_type ap_pwr_type)
 {
 	if (ap_pwr_type == REG_STANDARD_POWER_AP)
-		return reg_get_sp_eirp(pdev, freq, bw);
+		return reg_get_sp_eirp(pdev, freq, cen320, bw);
 
 	return reg_get_eirp_for_non_sp(pdev, freq, bw, ap_pwr_type);
 }
 
 enum reg_6g_ap_type reg_get_best_pwr_mode(struct wlan_objmgr_pdev *pdev,
 					  qdf_freq_t freq,
+					  qdf_freq_t cen320,
 					  uint16_t bw)
 {
 	uint8_t eirp_list[REG_MAX_SUPP_AP_TYPE + 1];
@@ -9184,7 +9218,8 @@ enum reg_6g_ap_type reg_get_best_pwr_mode(struct wlan_objmgr_pdev *pdev,
 	for (ap_pwr_type = REG_INDOOR_AP; ap_pwr_type <= REG_VERY_LOW_POWER_AP;
 	     ap_pwr_type++)
 		eirp_list[ap_pwr_type] =
-				reg_get_eirp_pwr(pdev, freq, bw, ap_pwr_type);
+				reg_get_eirp_pwr(pdev, freq, cen320, bw,
+						 ap_pwr_type);
 
 	return reg_get_best_pwr_mode_from_eirp_list(eirp_list,
 						    REG_MAX_SUPP_AP_TYPE + 1);

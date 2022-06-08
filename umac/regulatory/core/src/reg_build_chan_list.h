@@ -29,11 +29,24 @@
 
 #define CHAN_12_CENT_FREQ 2467
 #define CHAN_13_CENT_FREQ 2472
-#define REG_MAX_20M_SUB_CH   8
+
+#ifdef WLAN_FEATURE_11BE
+#define REG_MAX_20M_SUB_CH 16
+#else
+#define REG_MAX_20M_SUB_CH  8
+#endif
+
 #ifdef CONFIG_AFC_SUPPORT
 #define MIN_AFC_BW 2
+#ifdef WLAN_FEATURE_11BE
+#define MAX_AFC_BW 320
+#else
 #define MAX_AFC_BW 160
 #endif
+#endif
+
+#define HALF_IEEE_CH_SEP  2
+#define IEEE_20MHZ_CH_SEP 4
 
 #include "reg_priv_objs.h"
 /**

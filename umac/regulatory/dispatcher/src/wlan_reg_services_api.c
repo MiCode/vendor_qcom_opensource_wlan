@@ -1818,9 +1818,10 @@ qdf_export_symbol(wlan_reg_psd_2_eirp);
 
 enum reg_6g_ap_type
 wlan_reg_get_best_pwr_mode(struct wlan_objmgr_pdev *pdev, qdf_freq_t freq,
+			   qdf_freq_t cen320,
 			   uint16_t bw)
 {
-	return reg_get_best_pwr_mode(pdev, freq, bw);
+	return reg_get_best_pwr_mode(pdev, freq, cen320, bw);
 }
 #endif /* CONFIG_BAND_6GHZ */
 
@@ -1828,3 +1829,21 @@ enum phy_ch_width wlan_reg_find_chwidth_from_bw(uint16_t bw)
 {
 	return reg_find_chwidth_from_bw(bw);
 }
+
+#ifdef WLAN_FEATURE_11BE
+enum channel_state
+wlan_reg_get_chan_state_for_320(struct wlan_objmgr_pdev *pdev,
+				uint16_t freq,
+				qdf_freq_t center_320,
+				enum phy_ch_width ch_width,
+				const struct bonded_channel_freq
+				**bonded_chan_ptr_ptr,
+				enum supported_6g_pwr_types in_6g_pwr_type,
+				bool treat_nol_chan_as_disabled)
+{
+	return reg_get_chan_state_for_320(pdev, freq, center_320,
+					  ch_width, bonded_chan_ptr_ptr,
+					  in_6g_pwr_type,
+					  treat_nol_chan_as_disabled);
+}
+#endif

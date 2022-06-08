@@ -3828,6 +3828,43 @@ reg_fill_min_max_bw_for_afc_list(
 }
 
 /**
+ * reg_fill_subchan_centers() - Fill the subchannels for the given cfi.
+ * @nchans: Number of sub-channels
+ * @cfi: Center frequency index
+ * @subchannels: Array of subchannels to be filled
+ *
+ * eg: subchannels[0] = cfi - 6 : The second left hand channel is
+ *     4 MHz to the left of the previous channel.
+ *     subchannels[1] = cfi - 2 : The first left hand channel is 2 MHz
+ *     to the left of the CFI.
+ *     subchannels[2] = cfi + 2 : The first right hand channel is 2 MHz
+ *     to the right of the center (or CFI) as the distance between
+ *     two IEEE channels is 4 MHz.
+ *     subchannels[3] = cfi + 6 : The second right hand channel is 4 MHz to the
+ *     right the of previous channel
+ *
+ * Return: void
+ */
+static void
+reg_fill_subchan_centers(uint8_t nchans, uint8_t cfi, uint8_t *subchannels)
+{
+	uint8_t last_idx = nchans - 1;
+	uint8_t offset = HALF_IEEE_CH_SEP;
+	uint8_t i;
+
+	if (nchans == 1) {
+		subchannels[0] = cfi;
+		return;
+	}
+
+	for (i = nchans / 2; i < nchans; i++) {
+		subchannels[i] = cfi + offset;
+		subchannels[last_idx - i] = cfi - offset;
+		offset += IEEE_20MHZ_CH_SEP;
+	}
+}
+
+/**
  * reg_get_subchannels_for_opclass() - Get the list of subchannels based on the
  * the channel frequency index and opclass.
  * @cfi: Channel frequency index
@@ -3846,35 +3883,26 @@ uint8_t reg_get_subchannels_for_opclass(uint8_t cfi,
 	case 131:
 	case 136:
 		nchans = 1;
-		subchannels[0] = cfi;
 		break;
 	case 132:
 		nchans = 2;
-		subchannels[0] = cfi - 2;
-		subchannels[1] = cfi + 2;
 		break;
 	case 133:
 		nchans = 4;
-		subchannels[0] = cfi - 6;
-		subchannels[1] = cfi - 2;
-		subchannels[2] = cfi + 2;
-		subchannels[3] = cfi + 6;
 		break;
 	case 134:
 		nchans = 8;
-		subchannels[0] = cfi - 14;
-		subchannels[1] = cfi - 10;
-		subchannels[2] = cfi - 6;
-		subchannels[3] = cfi - 2;
-		subchannels[4] = cfi + 2;
-		subchannels[5] = cfi + 6;
-		subchannels[6] = cfi + 10;
-		subchannels[7] = cfi + 14;
 		break;
+	case 137:
+		nchans = 16;
+		break;
+
 	default:
 		nchans = 0;
 		break;
 	}
+
+	reg_fill_subchan_centers(nchans, cfi, subchannels);
 
 	return nchans;
 }
