@@ -24,6 +24,23 @@
 #define DP_RX_MON_PACKET_OFFSET 8
 #define DP_RX_MON_RX_HDR_OFFSET 8
 #define DP_GET_NUM_QWORDS(num)	((num) >> 3)
+#define DP_RX_MON_TLV_HDR_MARKER 0xFEED
+#define DP_RX_MON_TLV_HDR_MARKER_LEN 2
+#define DP_RX_MON_TLV_HDR_LEN 3
+#define DP_RX_MON_TLV_TOTAL_LEN 2
+#define DP_RX_MON_TLV_PF_ID 1
+#define DP_RX_MON_TLV_MSDU_CNT 2
+#define DP_RX_MON_MAX_MSDU 16
+#define DP_RX_MON_MAX_TLVS 1
+#define DP_RX_MON_PF_TLV_LEN (((DP_RX_MON_PF_TAG_LEN_PER_FRAG)\
+			       * (DP_RX_MON_MAX_MSDU) * 2)\
+			       + (DP_RX_MON_TLV_MSDU_CNT))
+#define DP_RX_MON_INDIV_TLV_LEN (DP_RX_MON_PF_TLV_LEN)
+#define DP_RX_MON_TLV_ROOM ((DP_RX_MON_INDIV_TLV_LEN)\
+			    + ((DP_RX_MON_TLV_HDR_LEN) * (DP_RX_MON_MAX_TLVS))\
+			    + (DP_RX_MON_TLV_HDR_MARKER_LEN)\
+			    + (DP_RX_MON_TLV_TOTAL_LEN))
+
 /*
  * dp_rx_mon_buffers_alloc() - allocate rx monitor buffers
  * @soc: DP soc handle
@@ -194,4 +211,17 @@ void dp_rx_mon_drain_wq(struct dp_pdev *pdev);
 void
 dp_mon_free_parent_nbuf(struct dp_mon_pdev *mon_pdev,
 			qdf_nbuf_t nbuf);
+#if !defined(WLAN_SUPPORT_RX_PROTOCOL_TYPE_TAG) &&\
+	!defined(WLAN_SUPPORT_RX_FLOW_TAG)
+void
+dp_rx_mon_pf_tag_to_buf_headroom_2_0(void *nbuf,
+				     struct hal_rx_ppdu_info *ppdu_info,
+				     struct dp_pdev *pdev, struct dp_soc *soc)
+{
+}
+
+void dp_rx_mon_shift_pf_tag_in_headroom(qdf_nbuf_t nbuf, struct dp_soc *soc)
+{
+}
+#endif /* WLAN_SUPPORT_RX_PROTOCOL_TYPE_TAG */
 #endif /* _DP_RX_MON_2_0_H_ */

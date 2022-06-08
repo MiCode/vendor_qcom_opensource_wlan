@@ -1548,3 +1548,27 @@ void dp_mon_cdp_ops_register_2_0(struct cdp_ops *ops)
 	ops->mon_ops = &dp_ops_mon_2_0;
 }
 #endif
+
+#if defined(WLAN_SUPPORT_RX_PROTOCOL_TYPE_TAG) ||\
+	defined(WLAN_SUPPORT_RX_FLOW_TAG)
+#if QCA_TEST_MON_PF_TAGS_STATS
+/** dp_mon_rx_update_rx_protocol_tag_stats() - Update mon protocols's
+ *					      statistics
+ * @pdev: pdev handle
+ * @protocol_index: Protocol index for which the stats should be incremented
+ * @ring_index: REO ring number from which this tag was received.
+ *
+ * Return: void
+ */
+void dp_mon_rx_update_rx_protocol_tag_stats(struct dp_pdev *pdev,
+					    uint16_t protocol_index)
+{
+	pdev->mon_proto_tag_stats[protocol_index].tag_ctr++;
+}
+#else
+void dp_mon_rx_update_rx_protocol_tag_stats(struct dp_pdev *pdev,
+					    uint16_t protocol_index)
+{
+}
+#endif
+#endif

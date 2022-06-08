@@ -769,4 +769,7 @@ void
 dp_rx_process_peer_based_pktlog(struct dp_soc *soc,
 				struct hal_rx_ppdu_info *ppdu_info,
 				qdf_nbuf_t status_nbuf, uint32_t pdev_id);
+
+uint32_t dp_mon_rx_add_tlv(uint8_t id, uint16_t len, void *value,
+			   qdf_nbuf_t mpdu_nbuf);
 #endif /* _DP_RX_MON_H_ */
