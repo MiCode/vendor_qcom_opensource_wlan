@@ -660,6 +660,18 @@ QDF_STATUS wlan_mlo_mgr_psoc_disable(struct wlan_objmgr_psoc *psoc);
  */
 QDF_STATUS wlan_mlo_mgr_update_mld_addr(struct qdf_mac_addr *old_mac,
 					struct qdf_mac_addr *new_mac);
+
+/**
+ * wlan_mlo_is_mld_ctx_exist() - check whether MLD exist with MLD MAC address
+ * @mldaddr: MLD MAC address
+ *
+ * API to check whether MLD is present with MLD MAC address.
+ *
+ * Return: true, if it is present
+ *         false, if it is not present
+ */
+bool wlan_mlo_is_mld_ctx_exist(struct qdf_mac_addr *mldaddr);
+
 #ifdef CONFIG_AP_PLATFORM
 /**
  * wlan_mlo_vdev_cmp_same_pdev() - Compare pdev of the given vdevs

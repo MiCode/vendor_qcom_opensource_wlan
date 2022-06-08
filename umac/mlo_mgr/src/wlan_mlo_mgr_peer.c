@@ -774,6 +774,13 @@ QDF_STATUS wlan_mlo_peer_create(struct wlan_objmgr_vdev *vdev,
 
 	/* Check resources of Partner VDEV */
 	if (wlan_vdev_mlme_get_opmode(vdev) == QDF_SAP_MODE) {
+		if (wlan_mlo_is_mld_ctx_exist(
+		    (struct qdf_mac_addr *)&link_peer->mldaddr[0])) {
+			mlo_err("MLD ID %d ML Peer " QDF_MAC_ADDR_FMT " is matching with one of the MLD address in the system",
+				ml_dev->mld_id,
+				QDF_MAC_ADDR_REF(link_peer->mldaddr));
+			return QDF_STATUS_E_FAILURE;
+		}
 		status = mlo_dev_get_link_vdevs(vdev, ml_dev,
 						ml_info, link_vdevs);
 		if (QDF_IS_STATUS_ERROR(status)) {
