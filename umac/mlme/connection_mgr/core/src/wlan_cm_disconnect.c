@@ -636,7 +636,7 @@ cm_handle_discon_req_in_non_connected_state(struct cnx_mgr *cm_ctx,
 		if (cm_roam_offload_enabled(wlan_vdev_get_psoc(cm_ctx->vdev)))
 			cm_flush_pending_request(cm_ctx, ROAM_REQ_PREFIX,
 						 false);
-		/* fallthrough */
+		fallthrough;
 	case WLAN_CM_SS_JOIN_ACTIVE:
 		/*
 		 * In join active/roaming state, there would be no pending
@@ -649,7 +649,7 @@ cm_handle_discon_req_in_non_connected_state(struct cnx_mgr *cm_ctx,
 		/* In the scan state abort the ongoing scan */
 		cm_vdev_scan_cancel(wlan_vdev_get_pdev(cm_ctx->vdev),
 				    cm_ctx->vdev);
-		/* fallthrough */
+		fallthrough;
 	case WLAN_CM_SS_JOIN_PENDING:
 		/*
 		 * There would be pending disconnect requests in the list, and

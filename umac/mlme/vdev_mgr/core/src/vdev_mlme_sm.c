@@ -1785,7 +1785,7 @@ static bool mlme_vdev_subst_up_active_event(void *ctx, uint16_t event,
 	case WLAN_VDEV_SM_EV_START_SUCCESS:
 		if (wlan_vdev_mlme_is_mlo_ap(vdev))
 			QDF_BUG(0);
-		/* fallthrough */
+		fallthrough;
 	case WLAN_VDEV_SM_EV_MLO_SYNC_COMPLETE:
 		mlme_vdev_update_beacon(vdev_mlme, BEACON_INIT,
 					event_data_len, event_data);
@@ -1808,7 +1808,7 @@ static bool mlme_vdev_subst_up_active_event(void *ctx, uint16_t event,
 		/* These events are not supported in STA mode */
 		if (mode == QDF_STA_MODE)
 			QDF_BUG(0);
-		/* fallthrough */
+		fallthrough;
 	case WLAN_VDEV_SM_EV_DOWN:
 		mlme_vdev_sm_transition_to(vdev_mlme, WLAN_VDEV_S_SUSPEND);
 		mlme_vdev_sm_deliver_event(vdev_mlme, event,
@@ -1831,7 +1831,7 @@ static bool mlme_vdev_subst_up_active_event(void *ctx, uint16_t event,
 		/* Reinit beacon, send template to FW(use ping-pong buffer) */
 		mlme_vdev_update_beacon(vdev_mlme, BEACON_UPDATE,
 					event_data_len, event_data);
-		/* fallthrough */
+		fallthrough;
 	case WLAN_VDEV_SM_EV_START:
 		/* notify that UP command is completed */
 		mlme_vdev_notify_up_complete(vdev_mlme,

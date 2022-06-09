@@ -575,7 +575,7 @@ static bool cm_subst_join_pending_event(void *ctx, uint16_t event,
 	case WLAN_CM_SM_EV_SCAN_FAILURE:
 		status = QDF_STATUS_E_FAILURE;
 		/* Fall through after setting status failure */
-		/* fallthrough */
+		fallthrough;
 	case WLAN_CM_SM_EV_SCAN_SUCCESS:
 		cm_connect_scan_resp(cm_ctx, data, status);
 		break;
