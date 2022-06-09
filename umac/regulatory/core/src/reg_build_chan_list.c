@@ -2004,49 +2004,11 @@ reg_set_flag_afc_not_done(uint32_t *chan_flags, bool is_set)
 		*chan_flags &= ~REGULATORY_CHAN_AFC_NOT_DONE;
 }
 
-/**
- * reg_update_6g_chan_for_outdoor() - Update channel state and flags for
- * outdoor
- * @pdev_priv: Regulatory pdev private object
- * @chan_info: Channel parameters
- * @chan_idx:  Channel index.
- *
- * Return: void
- */
-static void
-reg_update_6g_chan_for_outdoor(struct wlan_regulatory_pdev_priv_obj *pdev_priv,
-			       struct super_chan_info *chan_info)
-{
-	uint32_t *p_chan_flags;
-
-	if (pdev_priv->reg_afc_dev_deployment_type != AFC_DEPLOYMENT_OUTDOOR)
-		return;
-
-	if (chan_info->state_arr[REG_AP_SP] == CHANNEL_STATE_DISABLE)
-		return;
-
-	p_chan_flags = &chan_info->chan_flags_arr[REG_AP_SP];
-
-	if (pdev_priv->is_6g_afc_power_event_received) {
-		reg_set_flag_afc_not_done(p_chan_flags, false);
-		return;
-	}
-
-	reg_set_flag_afc_not_done(p_chan_flags, true);
-}
-
 #else
 static inline void
 reg_set_flag_afc_not_done(uint32_t *chan_flags, bool is_set)
 {
 }
-
-static inline void
-reg_update_6g_chan_for_outdoor(struct wlan_regulatory_pdev_priv_obj *pdev_priv,
-			       struct super_chan_info *chan_info)
-{
-}
-
 #endif
 
 /**
@@ -2397,14 +2359,15 @@ static void reg_update_sup_ch_entry_for_mode(
 	if (!mas_chan)
 		return;
 
+	/*
+	 * If AFC is invalid, copy from Regulatory SP channel list.
+	 * If AFC is valid, copy from AFC response channel list.
+	 */
 	if (reg_is_sp_supp_pwr_mode(supp_pwr_mode)) {
-		/* Add the entry to super channel list whether or not AFC
-		 * response is received. If AFC response is not received
-		 * mark the channel flag as REGULATORY_AFC_NOT_DONE
-		 */
-		reg_assign_afc_chan_entry_to_mas_chan(pdev_priv_obj,
-						      &mas_chan,
-						      chn_idx);
+		if (wlan_reg_is_afc_power_event_received(pdev))
+			reg_assign_afc_chan_entry_to_mas_chan(pdev_priv_obj,
+							      &mas_chan,
+							      chn_idx);
 	}
 
 	if (!mas_chan)
@@ -2415,25 +2378,22 @@ static void reg_update_sup_ch_entry_for_mode(
 	/*
 	 * Intersect the hardware frequency range with the
 	 * 6GHz channels.
+	 * If a channel is out of chip range, disable it.
 	 */
 	if (reg_is_chan_out_of_chip_range(&temp_reg_chan, pdev_priv_obj)) {
 		reg_dis_chan_state_and_flags(&temp_reg_chan.state,
 					     &temp_reg_chan.chan_flags);
-		return;
 	}
-
-	if (reg_is_chan_disabled_and_not_nol(&temp_reg_chan))
-		return;
 
 	super_chan_list = pdev_priv_obj->super_chan_list;
 	copy_enh_chan_info_from_reg_chan(&super_chan_list[chn_idx],
 					 supp_pwr_mode,
 					 &temp_reg_chan);
+	if (reg_is_chan_disabled_and_not_nol(&temp_reg_chan))
+		return;
+
 	reg_dis_6g_edge_chan_in_enh_chan(pdev, &super_chan_list[chn_idx],
 					 chn_idx, supp_pwr_mode);
-	reg_update_6g_chan_for_outdoor(pdev_priv_obj,
-				       &super_chan_list[chn_idx]);
-
 	reg_fill_best_pwr_mode(pdev_priv_obj, super_chan_list, chn_idx,
 			       supp_pwr_mode, temp_reg_chan.tx_power,
 			       max_eirp_pwr);
