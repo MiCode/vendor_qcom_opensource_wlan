@@ -719,7 +719,7 @@ _dp_srng_test_and_update_nf_params(struct dp_soc *soc,
 		switch (near_full_level) {
 		case DP_SRNG_THRESH_CRITICAL:
 			/* Currently not doing anything special here */
-			/* fall through */
+			fallthrough;
 		case DP_SRNG_THRESH_NEAR_FULL:
 			ring_near_full = 1;
 			*max_reap_limit *= DP_SRNG_PER_LOOP_NF_REAP_MULTIPLIER;
