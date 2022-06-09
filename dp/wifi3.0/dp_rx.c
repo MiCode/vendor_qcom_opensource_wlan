@@ -1741,11 +1741,8 @@ void dp_rx_flush_rx_cached(struct dp_peer *peer, bool drop)
 		return;
 
 	if (!peer->txrx_peer) {
-		if (!peer->sta_self_peer) {
-			qdf_err("txrx_peer NULL!!");
-			qdf_assert_always(0);
-		}
-
+		dp_err("txrx_peer NULL!! peer mac_addr("QDF_MAC_ADDR_FMT")",
+			QDF_MAC_ADDR_REF(peer->mac_addr.raw));
 		return;
 	}
 
