@@ -7320,6 +7320,15 @@ dp_print_pdev_tx_stats(struct dp_pdev *pdev)
 		       pdev->stats.tx_i.rcvd.num);
 	DP_PRINT_STATS("	Bytes = %llu",
 		       pdev->stats.tx_i.rcvd.bytes);
+	DP_PRINT_STATS("Received from Stack in FP:");
+	DP_PRINT_STATS("	Packets = %llu",
+		       pdev->stats.tx_i.rcvd_in_fast_xmit_flow);
+	DP_PRINT_STATS("Received from Stack per core:");
+	DP_PRINT_STATS("	Packets = %u %u %u %u",
+		       pdev->stats.tx_i.rcvd_per_core[0],
+		       pdev->stats.tx_i.rcvd_per_core[1],
+		       pdev->stats.tx_i.rcvd_per_core[2],
+		       pdev->stats.tx_i.rcvd_per_core[3]);
 	DP_PRINT_STATS("Processed:");
 	DP_PRINT_STATS("	Packets = %u",
 		       pdev->stats.tx_i.processed.num);
@@ -8659,6 +8668,11 @@ void dp_update_pdev_ingress_stats(struct dp_pdev *tgtobj,
 	DP_STATS_AGGR_PKT(tgtobj, srcobj, tx_i.nawds_mcast);
 
 	DP_STATS_AGGR_PKT(tgtobj, srcobj, tx_i.rcvd);
+	DP_STATS_AGGR(tgtobj, srcobj, tx_i.rcvd_in_fast_xmit_flow);
+	DP_STATS_AGGR(tgtobj, srcobj, tx_i.rcvd_per_core[0]);
+	DP_STATS_AGGR(tgtobj, srcobj, tx_i.rcvd_per_core[1]);
+	DP_STATS_AGGR(tgtobj, srcobj, tx_i.rcvd_per_core[2]);
+	DP_STATS_AGGR(tgtobj, srcobj, tx_i.rcvd_per_core[3]);
 	DP_STATS_AGGR_PKT(tgtobj, srcobj, tx_i.processed);
 	DP_STATS_AGGR_PKT(tgtobj, srcobj, tx_i.reinject_pkts);
 	DP_STATS_AGGR_PKT(tgtobj, srcobj, tx_i.inspect_pkts);

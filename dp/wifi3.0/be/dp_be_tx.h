@@ -46,6 +46,9 @@ struct __attribute__((__packed__)) dp_tx_comp_peer_id {
 	(((_var) & 0x30) >> 4)
 #define DP_TX_FLOW_OVERRIDE_ENABLE 0x1
 
+#define DP_TX_FAST_DESC_SIZE	24
+#define DP_TX_L3_L4_CSUM_ENABLE	0x1f
+
 /**
  * dp_tx_hw_enqueue_be() - Enqueue to TCL HW for transmit for BE target
  * @soc: DP Soc Handle
@@ -66,6 +69,22 @@ QDF_STATUS dp_tx_hw_enqueue_be(struct dp_soc *soc, struct dp_vdev *vdev,
 				uint16_t fw_metadata,
 				struct cdp_tx_exception_metadata *metadata,
 				struct dp_tx_msdu_info_s *msdu_info);
+
+/**
+ * dp_tx_hw_enqueue_be() - This is a fast send API to directly enqueue to HW
+ * @soc: DP Soc Handle
+ * @vdev_id: DP vdev ID
+ * @nbuf: network buffer to be transmitted
+ *
+ *  Gets the next free TCL HW DMA descriptor and sets up required parameters
+ *  from software Tx descriptor
+ *
+ * Return: NULL for success
+ *         nbuf for failure
+ */
+
+qdf_nbuf_t dp_tx_fast_send_be(struct cdp_soc_t *soc, uint8_t vdev_id,
+			      qdf_nbuf_t nbuf);
 
 /**
  * dp_tx_comp_get_params_from_hal_desc_be() - Get TX desc from HAL comp desc

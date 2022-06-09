@@ -589,6 +589,12 @@ struct cdp_cmn_ops {
 				    uint32_t value);
 
 	ol_txrx_tx_fp tx_send;
+
+	/* tx_fast_send will be called only in AP mode when all the
+	 * transmit path features are disabled including extended stats
+	 */
+	ol_txrx_tx_fast_fp tx_fast_send;
+
 	/**
 	 * txrx_get_os_rx_handles_from_vdev() - Return function, osif vdev
 	 *					to deliver pkt to stack.

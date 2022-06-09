@@ -120,150 +120,6 @@ uint8_t sec_type_map[MAX_CDP_SEC_TYPE] = {HAL_TX_ENCRYPT_TYPE_NO_CIPHER,
 					  HAL_TX_ENCRYPT_TYPE_WAPI_GCM_SM4};
 qdf_export_symbol(sec_type_map);
 
-#ifdef CONFIG_WLAN_SYSFS_MEM_STATS
-/**
- * dp_update_tx_desc_stats - Update the increase or decrease in
- * outstanding tx desc count
- * values on pdev and soc
- * @vdev: DP pdev handle
- *
- * Return: void
- */
-static inline void
-dp_update_tx_desc_stats(struct dp_pdev *pdev)
-{
-	int32_t tx_descs_cnt =
-		qdf_atomic_read(&pdev->num_tx_outstanding);
-	if (pdev->tx_descs_max < tx_descs_cnt)
-		pdev->tx_descs_max = tx_descs_cnt;
-	qdf_mem_tx_desc_cnt_update(pdev->num_tx_outstanding,
-				   pdev->tx_descs_max);
-}
-
-#else /* CONFIG_WLAN_SYSFS_MEM_STATS */
-
-static inline void
-dp_update_tx_desc_stats(struct dp_pdev *pdev)
-{
-}
-#endif /* CONFIG_WLAN_SYSFS_MEM_STATS */
-
-#ifdef QCA_TX_LIMIT_CHECK
-/**
- * dp_tx_limit_check - Check if allocated tx descriptors reached
- * soc max limit and pdev max limit
- * @vdev: DP vdev handle
- *
- * Return: true if allocated tx descriptors reached max configured value, else
- * false
- */
-static inline bool
-dp_tx_limit_check(struct dp_vdev *vdev)
-{
-	struct dp_pdev *pdev = vdev->pdev;
-	struct dp_soc *soc = pdev->soc;
-
-	if (qdf_atomic_read(&soc->num_tx_outstanding) >=
-			soc->num_tx_allowed) {
-		dp_tx_info("queued packets are more than max tx, drop the frame");
-		DP_STATS_INC(vdev, tx_i.dropped.desc_na.num, 1);
-		return true;
-	}
-
-	if (qdf_atomic_read(&pdev->num_tx_outstanding) >=
-			pdev->num_tx_allowed) {
-		dp_tx_info("queued packets are more than max tx, drop the frame");
-		DP_STATS_INC(vdev, tx_i.dropped.desc_na.num, 1);
-		DP_STATS_INC(vdev, tx_i.dropped.desc_na_exc_outstand.num, 1);
-		return true;
-	}
-	return false;
-}
-
-/**
- * dp_tx_exception_limit_check - Check if allocated tx exception descriptors
- * reached soc max limit
- * @vdev: DP vdev handle
- *
- * Return: true if allocated tx descriptors reached max configured value, else
- * false
- */
-static inline bool
-dp_tx_exception_limit_check(struct dp_vdev *vdev)
-{
-	struct dp_pdev *pdev = vdev->pdev;
-	struct dp_soc *soc = pdev->soc;
-
-	if (qdf_atomic_read(&soc->num_tx_exception) >=
-			soc->num_msdu_exception_desc) {
-		dp_info("exc packets are more than max drop the exc pkt");
-		DP_STATS_INC(vdev, tx_i.dropped.exc_desc_na.num, 1);
-		return true;
-	}
-
-	return false;
-}
-
-/**
- * dp_tx_outstanding_inc - Increment outstanding tx desc values on pdev and soc
- * @vdev: DP pdev handle
- *
- * Return: void
- */
-static inline void
-dp_tx_outstanding_inc(struct dp_pdev *pdev)
-{
-	struct dp_soc *soc = pdev->soc;
-
-	qdf_atomic_inc(&pdev->num_tx_outstanding);
-	qdf_atomic_inc(&soc->num_tx_outstanding);
-	dp_update_tx_desc_stats(pdev);
-}
-
-/**
- * dp_tx_outstanding__dec - Decrement outstanding tx desc values on pdev and soc
- * @vdev: DP pdev handle
- *
- * Return: void
- */
-static inline void
-dp_tx_outstanding_dec(struct dp_pdev *pdev)
-{
-	struct dp_soc *soc = pdev->soc;
-
-	qdf_atomic_dec(&pdev->num_tx_outstanding);
-	qdf_atomic_dec(&soc->num_tx_outstanding);
-	dp_update_tx_desc_stats(pdev);
-}
-
-#else //QCA_TX_LIMIT_CHECK
-static inline bool
-dp_tx_limit_check(struct dp_vdev *vdev)
-{
-	return false;
-}
-
-static inline bool
-dp_tx_exception_limit_check(struct dp_vdev *vdev)
-{
-	return false;
-}
-
-static inline void
-dp_tx_outstanding_inc(struct dp_pdev *pdev)
-{
-	qdf_atomic_inc(&pdev->num_tx_outstanding);
-	dp_update_tx_desc_stats(pdev);
-}
-
-static inline void
-dp_tx_outstanding_dec(struct dp_pdev *pdev)
-{
-	qdf_atomic_dec(&pdev->num_tx_outstanding);
-	dp_update_tx_desc_stats(pdev);
-}
-#endif //QCA_TX_LIMIT_CHECK
-
 #ifdef WLAN_FEATURE_DP_TX_DESC_HISTORY
 static inline enum dp_tx_event_type dp_tx_get_event_type(uint32_t flags)
 {
@@ -1288,6 +1144,7 @@ struct dp_tx_desc_s *dp_tx_prepare_desc_single(struct dp_vdev *vdev,
 	tx_desc->msdu_ext_desc = NULL;
 	tx_desc->pkt_offset = 0;
 	tx_desc->length = qdf_nbuf_headlen(nbuf);
+	tx_desc->shinfo_addr = skb_end_pointer(nbuf);
 
 	dp_tx_trace_pkt(soc, nbuf, tx_desc->id, vdev->vdev_id);
 
@@ -3616,6 +3473,8 @@ qdf_nbuf_t dp_tx_send(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
 	 *  to minimize lock contention for these resources.
 	 */
 	dp_tx_get_queue(vdev, nbuf, &msdu_info.tx_queue);
+	DP_STATS_INC(vdev, tx_i.rcvd_per_core[msdu_info.tx_queue.desc_pool_id],
+		     1);
 
 	/*
 	 * TCL H/W supports 2 DSCP-TID mapping tables.
@@ -5100,11 +4959,11 @@ void dp_tx_prefetch_next_nbuf_data(struct dp_tx_desc_s *next)
 		nbuf = next->nbuf;
 	if (nbuf) {
 		/* prefetch skb->next and first few bytes of skb->cb */
+		qdf_prefetch(next->shinfo_addr);
 		qdf_prefetch(nbuf);
 		/* prefetch skb fields present in different cachelines */
 		qdf_prefetch(&nbuf->len);
 		qdf_prefetch(&nbuf->users);
-		qdf_prefetch(skb_end_pointer(nbuf));
 	}
 }
 #else

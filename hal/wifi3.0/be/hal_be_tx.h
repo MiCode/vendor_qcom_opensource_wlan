@@ -403,9 +403,9 @@ static inline void hal_tx_desc_set_hlos_tid(void *desc,
  * @hw_desc: Hardware descriptor to be updated
  */
 static inline void hal_tx_desc_sync(void *hal_tx_desc_cached,
-				    void *hw_desc)
+				    void *hw_desc, uint8_t num_bytes)
 {
-	qdf_mem_copy(hw_desc, hal_tx_desc_cached, HAL_TX_DESC_LEN_BYTES);
+	qdf_mem_copy(hw_desc, hal_tx_desc_cached, num_bytes);
 }
 
 /**

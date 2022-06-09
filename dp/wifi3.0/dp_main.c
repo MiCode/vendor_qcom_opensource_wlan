@@ -6993,10 +6993,16 @@ static inline void dp_vdev_fetch_tx_handler(struct dp_vdev *vdev,
 	if (vdev->mesh_vdev)
 		ctx->tx = dp_tx_send_mesh;
 	else if ((wlan_cfg_is_tx_per_pkt_vdev_id_check_enabled(soc->wlan_cfg_ctx)) &&
-		 (vdev->opmode == wlan_op_mode_ap))
+		 (vdev->opmode == wlan_op_mode_ap)) {
 		ctx->tx = dp_tx_send_vdev_id_check;
-	else
+		ctx->tx_fast = dp_tx_send_vdev_id_check;
+	} else {
 		ctx->tx = dp_tx_send;
+		if (vdev->opmode == wlan_op_mode_ap)
+			ctx->tx_fast = soc->arch_ops.dp_tx_send_fast;
+		else
+			ctx->tx_fast = dp_tx_send;
+	}
 
 	/* Avoid check in regular exception Path */
 	if ((wlan_cfg_is_tx_per_pkt_vdev_id_check_enabled(soc->wlan_cfg_ctx)) &&
@@ -7021,6 +7027,7 @@ static inline void dp_vdev_register_tx_handler(struct dp_vdev *vdev,
 	dp_vdev_fetch_tx_handler(vdev, soc, &ctx);
 
 	txrx_ops->tx.tx = ctx.tx;
+	txrx_ops->tx.tx_fast = ctx.tx_fast;
 	txrx_ops->tx.tx_exception = ctx.tx_exception;
 
 	dp_info("Configure tx_vdev_id_chk_handler Feature Flag: %d and mode:%d for vdev_id:%d",

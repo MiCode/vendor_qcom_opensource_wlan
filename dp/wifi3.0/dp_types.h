@@ -594,6 +594,7 @@ struct dp_tx_desc_s {
 	uint8_t frm_type;
 	uint8_t pkt_offset;
 	uint8_t  pool_id;
+	unsigned char *shinfo_addr;
 	struct dp_tx_ext_desc_elem_s *msdu_ext_desc;
 	qdf_ktime_t timestamp;
 	struct hal_tx_desc_comp_s comp;
@@ -1847,6 +1848,10 @@ struct dp_arch_ops {
 	uint32_t (*dp_rx_process)(struct dp_intr *int_ctx,
 				  hal_ring_handle_t hal_ring_hdl,
 				  uint8_t reo_ring_num, uint32_t quota);
+
+	qdf_nbuf_t (*dp_tx_send_fast)(struct cdp_soc_t *soc_hdl,
+				      uint8_t vdev_id,
+				      qdf_nbuf_t nbuf);
 
 	QDF_STATUS (*dp_tx_desc_pool_init)(struct dp_soc *soc,
 					   uint32_t num_elem,
@@ -3147,6 +3152,12 @@ struct dp_vdev {
 	/* TBD: check alignment constraints */
 	uint16_t htt_tcl_metadata;
 
+	/* vdev lmac_id */
+	uint8_t lmac_id;
+
+	/* vdev bank_id */
+	uint8_t bank_id;
+
 	/* Mesh mode vdev */
 	uint32_t mesh_vdev;
 
@@ -3171,8 +3182,8 @@ struct dp_vdev {
 	/* AST hash value for BSS peer in HW valid for STA VAP*/
 	uint16_t bss_ast_hash;
 
-	/* vdev lmac_id */
-	int lmac_id;
+	/* AST hash index for BSS peer in HW valid for STA VAP*/
+	uint16_t bss_ast_idx;
 
 	bool multipass_en;
 
@@ -3278,6 +3289,12 @@ struct dp_vdev {
 	struct dp_tx_desc_pool_s *tx_desc;
 	struct dp_tx_ext_desc_pool_s *tx_ext_desc;
 
+	/* Capture timestamp of previous tx packet enqueued */
+	uint64_t prev_tx_enq_tstamp;
+
+	/* Capture timestamp of previous rx packet delivered */
+	uint64_t prev_rx_deliver_tstamp;
+
 	/* VDEV Stats */
 	struct cdp_vdev_stats stats;
 
@@ -3298,15 +3315,6 @@ struct dp_vdev {
 	/* SWAR for HW: Enable WEP bit in the AMSDU frames for RAW mode */
 	bool raw_mode_war;
 
-
-	/* AST hash index for BSS peer in HW valid for STA VAP*/
-	uint16_t bss_ast_idx;
-
-	/* Capture timestamp of previous tx packet enqueued */
-	uint64_t prev_tx_enq_tstamp;
-
-	/* Capture timestamp of previous rx packet delivered */
-	uint64_t prev_rx_deliver_tstamp;
 
 	/* 8021p PCP-TID mapping table ID */
 	uint8_t tidmap_tbl_id;

@@ -1743,6 +1743,8 @@ struct cdp_rx_stats {
  */
 struct cdp_tx_ingress_stats {
 	struct cdp_pkt_info rcvd;
+	uint64_t rcvd_in_fast_xmit_flow;
+	uint32_t rcvd_per_core[CDP_MAX_TX_DATA_RINGS];
 	struct cdp_pkt_info processed;
 	struct cdp_pkt_info reinject_pkts;
 	struct cdp_pkt_info inspect_pkts;

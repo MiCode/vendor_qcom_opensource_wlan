@@ -807,6 +807,15 @@ typedef qdf_nbuf_t (*ol_txrx_tx_fp)(struct cdp_soc_t *soc, uint8_t vdev_id,
 				    qdf_nbuf_t msdu_list);
 
 /**
+ * ol_txrx_tx_fast_fp - top-level fast transmit function
+ * @soc - dp soc handle
+ * @vdev_id - handle to the virtual device object
+ * @msdu_list - list of network buffers
+ */
+typedef qdf_nbuf_t (*ol_txrx_tx_fast_fp)(struct cdp_soc_t *soc, uint8_t vdev_id,
+					 qdf_nbuf_t msdu_list);
+
+/**
  * ol_txrx_tx_exc_fp - top-level transmit function on exception path
  * @soc - dp soc handle
  * @vdev_id - handle to the virtual device object
@@ -1033,6 +1042,7 @@ struct ol_txrx_ops {
 	/* tx function pointers - specified by txrx, stored by OS shim */
 	struct {
 		ol_txrx_tx_fp         tx;
+		ol_txrx_tx_fast_fp    tx_fast;
 		ol_txrx_tx_exc_fp     tx_exception;
 		ol_txrx_tx_free_ext_fp tx_free_ext;
 		ol_txrx_completion_fp tx_comp;
@@ -1069,6 +1079,7 @@ struct ol_txrx_ops {
  */
 struct ol_txrx_hardtart_ctxt {
 	ol_txrx_tx_fp         tx;
+	ol_txrx_tx_fast_fp    tx_fast;
 	ol_txrx_tx_exc_fp     tx_exception;
 };
 

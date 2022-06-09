@@ -716,6 +716,7 @@ static QDF_STATUS dp_vdev_attach_be(struct dp_soc *soc, struct dp_vdev *vdev)
 	be_vdev->vdev_id_check_en = DP_TX_VDEV_ID_CHECK_ENABLE;
 
 	be_vdev->bank_id = dp_tx_get_bank_profile(be_soc, be_vdev);
+	vdev->bank_id = be_vdev->bank_id;
 
 	if (be_vdev->bank_id == DP_BE_INVALID_BANK_ID) {
 		QDF_BUG(0);
@@ -1799,6 +1800,7 @@ void dp_initialize_arch_ops_be(struct dp_arch_ops *arch_ops)
 #ifndef QCA_HOST_MODE_WIFI_DISABLED
 	arch_ops->tx_hw_enqueue = dp_tx_hw_enqueue_be;
 	arch_ops->dp_rx_process = dp_rx_process_be;
+	arch_ops->dp_tx_send_fast = dp_tx_fast_send_be;
 	arch_ops->tx_comp_get_params_from_hal_desc =
 		dp_tx_comp_get_params_from_hal_desc_be;
 	arch_ops->dp_tx_process_htt_completion =
