@@ -785,6 +785,16 @@ struct dp_mon_ops {
 		(struct dp_soc *soc, struct dp_mon_pdev *mon_pdev);
 };
 
+/**
+ * struct dp_mon_soc_stats - monitor stats
+ * @frag_alloc: Number of frags allocated
+ * @frag_free: Number of frags freed
+ */
+struct dp_mon_soc_stats {
+	uint32_t frag_alloc;
+	uint32_t frag_free;
+};
+
 struct dp_mon_soc {
 	/* Holds all monitor related fields extracted from dp_soc */
 	/* Holds pointer to monitor ops */
@@ -828,6 +838,8 @@ struct dp_mon_soc {
 #ifdef WLAN_TX_PKT_CAPTURE_ENH
 	struct dp_soc_tx_capture dp_soc_tx_capt;
 #endif
+	/* monitor stats */
+	struct dp_mon_soc_stats stats;
 };
 
 #ifdef WLAN_TELEMETRY_STATS_SUPPORT

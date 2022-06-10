@@ -243,6 +243,7 @@ dp_mon_buffers_replenish(struct dp_soc *dp_soc,
 	union dp_mon_desc_list_elem_t *next;
 	void *mon_srng;
 	QDF_STATUS ret = QDF_STATUS_E_FAILURE;
+	struct dp_mon_soc *mon_soc = dp_soc->monitor_soc;
 
 	if (!num_req_buffers) {
 		dp_mon_debug("%pK: Received request for 0 buffers replenish",
@@ -318,6 +319,7 @@ dp_mon_buffers_replenish(struct dp_soc *dp_soc,
 		(*desc_list)->mon_desc.paddr = mon_desc.paddr;
 		(*desc_list)->mon_desc.magic = DP_MON_DESC_MAGIC;
 
+		mon_soc->stats.frag_alloc++;
 		hal_mon_buff_addr_info_set(dp_soc->hal_soc,
 					   mon_ring_entry,
 					   &((*desc_list)->mon_desc),
