@@ -449,7 +449,8 @@ target_if_cfr_init_pdev(struct wlan_objmgr_psoc *psoc,
 	} else if ((target_type == TARGET_TYPE_QCA6018) ||
 		   (target_type == TARGET_TYPE_QCN9000) ||
 		   (target_type == TARGET_TYPE_QCN6122) ||
-		   (target_type == TARGET_TYPE_QCA5018)) {
+		   (target_type == TARGET_TYPE_QCA5018) ||
+		   (target_type == TARGET_TYPE_QCN9224)) {
 		pa->is_cfr_capable = cfr_sc->is_cfr_capable;
 		return cfr_enh_init_pdev(psoc, pdev);
 	} else
@@ -475,7 +476,8 @@ target_if_cfr_deinit_pdev(struct wlan_objmgr_psoc *psoc,
 	} else if ((target_type == TARGET_TYPE_QCA6018) ||
 		   (target_type == TARGET_TYPE_QCN9000) ||
 		   (target_type == TARGET_TYPE_QCN6122) ||
-		   (target_type == TARGET_TYPE_QCA5018)) {
+		   (target_type == TARGET_TYPE_QCA5018) ||
+		   (target_type == TARGET_TYPE_QCN9224)) {
 		return cfr_enh_deinit_pdev(psoc, pdev);
 	} else
 		return QDF_STATUS_E_NOSUPPORT;
