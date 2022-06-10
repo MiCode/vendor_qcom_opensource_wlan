@@ -12793,6 +12793,9 @@ static struct cdp_sawf_ops dp_ops_sawf = {
 	.txrx_sawf_set_mov_avg_params = dp_sawf_set_mov_avg_params,
 	.txrx_sawf_set_sla_params = dp_sawf_set_sla_params,
 	.txrx_sawf_init_telemtery_params = dp_sawf_init_telemetry_params,
+	.telemetry_get_throughput_stats = dp_sawf_get_tx_stats,
+	.telemetry_get_mpdu_stats = dp_sawf_get_mpdu_sched_stats,
+	.telemetry_get_drop_stats = dp_sawf_get_drop_stats,
 #endif
 };
 #endif
