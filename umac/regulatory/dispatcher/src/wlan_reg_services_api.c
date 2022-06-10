@@ -1816,6 +1816,12 @@ QDF_STATUS wlan_reg_psd_2_eirp(struct wlan_objmgr_pdev *pdev,
 
 qdf_export_symbol(wlan_reg_psd_2_eirp);
 
+QDF_STATUS wlan_reg_eirp_2_psd(struct wlan_objmgr_pdev *pdev, uint16_t ch_bw,
+			       int16_t eirp, int16_t *psd)
+{
+	return reg_eirp_2_psd(pdev, ch_bw, eirp, psd);
+}
+
 enum reg_6g_ap_type
 wlan_reg_get_best_pwr_mode(struct wlan_objmgr_pdev *pdev, qdf_freq_t freq,
 			   qdf_freq_t cen320,

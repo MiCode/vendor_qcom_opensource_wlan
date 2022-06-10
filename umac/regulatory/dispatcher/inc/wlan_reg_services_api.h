@@ -2373,6 +2373,20 @@ QDF_STATUS wlan_reg_psd_2_eirp(struct wlan_objmgr_pdev *pdev,
 			       int16_t *eirp);
 
 /**
+ * wlan_reg_eirp_2_psd() - Calculate PSD poewr from EIRP and bandwidth
+ * @pdev: pdev pointer
+ * @ch_bw: Bandwidth of a channel in MHz (20/40/80/160/320 etc)
+ * @eirp:  EIRP power  in dBm
+ * @psd: Power Spectral Density in dBm/MHz
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS wlan_reg_eirp_2_psd(struct wlan_objmgr_pdev *pdev,
+			       uint16_t ch_bw,
+			       int16_t eirp,
+			       int16_t *psd);
+
+/**
  * wlan_reg_get_best_pwr_mode() - Get the best power mode based on input freq
  * and bandwidth. The mode that provides the best EIRP is the best power mode.
  * @pdev: Pointer to pdev
@@ -2405,6 +2419,14 @@ static inline QDF_STATUS wlan_reg_psd_2_eirp(struct wlan_objmgr_pdev *pdev,
 					     int16_t psd,
 					     uint16_t ch_bw,
 					     int16_t *eirp)
+{
+	return QDF_STATUS_E_FAILURE;
+}
+
+static inline QDF_STATUS wlan_reg_eirp_2_psd(struct wlan_objmgr_pdev *pdev,
+					     uint16_t ch_bw,
+					     int16_t eirp,
+					     int16_t *psd)
 {
 	return QDF_STATUS_E_FAILURE;
 }

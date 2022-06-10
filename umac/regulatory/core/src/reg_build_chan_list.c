@@ -4679,4 +4679,34 @@ QDF_STATUS reg_psd_2_eirp(struct wlan_objmgr_pdev *pdev,
 	reg_err("Invalid input bandwidth %hd", ch_bw);
 	return QDF_STATUS_E_FAILURE;
 }
+
+QDF_STATUS reg_eirp_2_psd(struct wlan_objmgr_pdev *pdev,
+			  uint16_t ch_bw,
+			  int16_t eirp,
+			  int16_t *psd)
+{
+	struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj;
+	int16_t ten_log10_bw;
+	uint8_t i;
+	uint8_t num_bws;
+
+	pdev_priv_obj = reg_get_pdev_obj(pdev);
+
+	if (!IS_VALID_PDEV_REG_OBJ(pdev_priv_obj)) {
+		reg_err("reg pdev private obj is NULL");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	/* EIRP = PSD + (10 * log10(CH_BW)) */
+	num_bws = QDF_ARRAY_SIZE(bw_to_10log10_map);
+	for (i = 0; i < num_bws; i++) {
+		if (ch_bw == bw_to_10log10_map[i].bw) {
+			ten_log10_bw = bw_to_10log10_map[i].ten_l_ten;
+			*psd = eirp - ten_log10_bw;
+			return QDF_STATUS_SUCCESS;
+		}
+	}
+	reg_err("Invalid input bandwidth %hd", ch_bw);
+	return QDF_STATUS_E_FAILURE;
+}
 #endif

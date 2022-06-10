@@ -209,6 +209,21 @@ QDF_STATUS reg_psd_2_eirp(struct wlan_objmgr_pdev *pdev,
 			  int16_t *eirp);
 
 /**
+ * reg_eirp_2_psd() - Calculate PSD from EIRP and bandwidth
+ * channel list
+ * @pdev: pdev pointer
+ * @ch_bw: Bandwdith of a channel in MHz (20/40/80/160/320 etc)
+ * @eirp:  EIRP power  in dBm
+ * @psd: Power Spectral Density in dBm/MHz
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS reg_eirp_2_psd(struct wlan_objmgr_pdev *pdev,
+			  uint16_t ch_bw,
+			  int16_t eirp,
+			  int16_t *psd);
+
+/**
  * reg_is_supp_pwr_mode_invalid - Indicates if the given 6G power mode is
  * one of the valid power modes enumerated by enum supported_6g_pwr_types
  * from REG_AP_LPI to REG_CLI_SUB_VLP.
@@ -255,6 +270,14 @@ static inline QDF_STATUS reg_psd_2_eirp(struct wlan_objmgr_pdev *pdev,
 					int16_t psd,
 					uint16_t ch_bw,
 					int16_t *eirp)
+{
+	return QDF_STATUS_E_FAILURE;
+}
+
+static inline QDF_STATUS reg_eirp_2_psd(struct wlan_objmgr_pdev *pdev,
+					uint16_t ch_bw,
+					int16_t eirp,
+					int16_t *psd)
 {
 	return QDF_STATUS_E_FAILURE;
 }
