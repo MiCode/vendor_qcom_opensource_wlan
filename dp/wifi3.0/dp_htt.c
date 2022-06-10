@@ -3154,10 +3154,16 @@ dp_htt_rx_addba_handler(struct dp_soc *soc, uint16_t peer_id,
 					       peer->vdev->vdev_id, 0,
 					       tid, 0, win_sz, 0xffff);
 
-	dp_info("PeerID %d BAW %d TID %d stat %d",
-		peer_id, win_sz, tid, status);
+	dp_addba_resp_tx_completion_wifi3(
+		(struct cdp_soc_t *)soc,
+		peer->mac_addr.raw, peer->vdev->vdev_id,
+		tid,
+		status);
 
 	dp_peer_unref_delete(peer, DP_MOD_ID_HTT);
+
+	dp_info("PeerID %d BAW %d TID %d stat %d",
+		peer_id, win_sz, tid, status);
 }
 
 /*
