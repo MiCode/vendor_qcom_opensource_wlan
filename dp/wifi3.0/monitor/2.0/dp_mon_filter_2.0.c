@@ -184,9 +184,6 @@ dp_rx_mon_word_mask_subscribe(uint32_t *msg_word,
 	if (!msg_word || !tlv_filter)
 		return;
 
-	/* word 14 */
-	msg_word += 3;
-	*msg_word = 0;
 	HTT_RX_RING_SELECTION_CFG_RX_MPDU_START_WORD_MASK_SET(*msg_word,
 			tlv_filter->rx_mpdu_start_wmask);
 
