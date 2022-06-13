@@ -1568,6 +1568,42 @@ scm_scan_update_scan_event(struct wlan_scan_obj *scan,
 	return QDF_STATUS_SUCCESS;
 }
 
+static
+void scm_update_last_scan_time_per_channel(struct wlan_objmgr_vdev *vdev,
+					   uint32_t chan_freq, uint32_t time)
+{
+	struct wlan_scan_obj *scan_obj;
+	struct chan_list_scan_info *chan_info;
+	bool chan_found = false;
+	uint8_t pdev_id;
+	int i;
+
+	scan_obj = wlan_vdev_get_scan_obj(vdev);
+	if (!scan_obj)
+		return;
+
+	pdev_id = wlan_scan_vdev_get_pdev_id(vdev);
+	chan_info = &scan_obj->pdev_info[pdev_id].chan_scan_info;
+
+	for (i = 0; i < chan_info->num_chan ; i++) {
+		if (chan_info->ch_scan_info[i].freq == chan_freq) {
+			chan_info->ch_scan_info[i].last_scan_time = time;
+			scm_debug("chan freq %d scan time %u\n",
+				  chan_freq, time);
+			chan_found = true;
+			break;
+		}
+	}
+
+	if (!chan_found) {
+		chan_info->ch_scan_info[chan_info->num_chan].freq = chan_freq;
+		chan_info->ch_scan_info[chan_info->num_chan].last_scan_time =
+									time;
+		chan_info->num_chan++;
+		scm_debug("chan freq %d scan time %u\n", chan_freq, time);
+	}
+}
+
 QDF_STATUS
 scm_scan_event_handler(struct scheduler_msg *msg)
 {
@@ -1605,6 +1641,11 @@ scm_scan_event_handler(struct scheduler_msg *msg)
 		  event->type, event->reason, event->chan_freq,
 		  event->requester, event->scan_id, event->scan_id,
 		  event->timestamp);
+
+	if (event->type == SCAN_EVENT_TYPE_FOREIGN_CHANNEL)
+		scm_update_last_scan_time_per_channel(
+			vdev, event->chan_freq, qdf_get_time_of_the_day_ms());
+
 	/*
 	 * NLO requests are never queued, so post NLO events
 	 * without checking for their presence in active queue.

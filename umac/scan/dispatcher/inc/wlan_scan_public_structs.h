@@ -939,6 +939,16 @@ struct chan_info {
 	enum scan_flags flags;
 };
 
+struct chan_list_info {
+	qdf_freq_t freq;
+	uint32_t last_scan_time;
+};
+
+struct chan_list_scan_info {
+	uint8_t num_chan;
+	struct chan_list_info ch_scan_info[NUM_CHANNELS];
+};
+
 /**
  * struct chan_list - list of frequencies to be scanned
  *  and their phymode

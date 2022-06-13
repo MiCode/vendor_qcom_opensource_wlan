@@ -1963,3 +1963,26 @@ QDF_STATUS scm_scan_update_mlme_by_bssinfo(struct wlan_objmgr_pdev *pdev,
 
 	return QDF_STATUS_E_INVAL;
 }
+
+uint32_t scm_get_last_scan_time_per_channel(struct wlan_objmgr_vdev *vdev,
+					    uint32_t freq)
+{
+	struct wlan_scan_obj *scan;
+	struct chan_list_scan_info *chan_info;
+	uint8_t pdev_id;
+	int i;
+
+	scan = wlan_vdev_get_scan_obj(vdev);
+	if (!scan)
+		return 0;
+
+	pdev_id = wlan_scan_vdev_get_pdev_id(vdev);
+	chan_info = &scan->pdev_info[pdev_id].chan_scan_info;
+
+	for (i = 0; i < chan_info->num_chan ; i++) {
+		if (chan_info->ch_scan_info[i].freq == freq)
+			return chan_info->ch_scan_info[i].last_scan_time;
+	}
+
+	return 0;
+}
