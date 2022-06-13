@@ -928,7 +928,64 @@ dp_tx_mon_generate_prot_frm(struct dp_pdev *pdev,
 }
 
 /**
- * dp_tx_mon_update_ppdu_info_status() - API to update frame as information
+ * dp_lite_mon_filter_subtype() - filter frames with subtype
+ * @mon_pdev_be: mon pdev Handle
+ * @ppdu_info: pointer to hal_tx_ppdu_info structure
+ *
+ * Return: QDF_STATUS
+ */
+static inline QDF_STATUS
+dp_lite_mon_filter_subtype(struct dp_mon_pdev_be *mon_pdev_be,
+			   struct hal_tx_ppdu_info *ppdu_info)
+{
+	struct dp_mon_pdev *mon_pdev = &mon_pdev_be->mon_pdev;
+	uint16_t frame_control;
+	struct dp_lite_mon_tx_config *lite_mon_tx_config =
+			mon_pdev_be->lite_mon_tx_config;
+	uint16_t mgmt_filter, ctrl_filter, data_filter, type, subtype;
+
+	if (!dp_lite_mon_is_tx_enabled(mon_pdev))
+		return QDF_STATUS_SUCCESS;
+
+	if (!TXMON_HAL_STATUS(ppdu_info, frame_control_info_valid)) {
+		dp_mon_err("Queue extension is invalid");
+		return QDF_STATUS_E_ABORTED;
+	}
+
+	frame_control = TXMON_HAL_STATUS(ppdu_info, frame_control);
+	qdf_spin_lock_bh(&lite_mon_tx_config->lite_mon_tx_lock);
+	mgmt_filter = lite_mon_tx_config->tx_config.mgmt_filter[DP_MON_FRM_FILTER_MODE_FP];
+	ctrl_filter = lite_mon_tx_config->tx_config.ctrl_filter[DP_MON_FRM_FILTER_MODE_FP];
+	data_filter = lite_mon_tx_config->tx_config.data_filter[DP_MON_FRM_FILTER_MODE_FP];
+	qdf_spin_unlock_bh(&lite_mon_tx_config->lite_mon_tx_lock);
+
+	type = (frame_control & FRAME_CONTROL_TYPE_MASK) >>
+		FRAME_CONTROL_TYPE_SHIFT;
+	subtype = (frame_control & FRAME_CONTROL_SUBTYPE_MASK) >>
+		FRAME_CONTROL_SUBTYPE_SHIFT;
+
+	switch (type) {
+	case FRAME_CTRL_TYPE_MGMT:
+		if (mgmt_filter >> subtype & 0x1)
+			return QDF_STATUS_SUCCESS;
+		else
+			return QDF_STATUS_E_ABORTED;
+	case FRAME_CTRL_TYPE_CTRL:
+		if (ctrl_filter >> subtype & 0x1)
+			return QDF_STATUS_SUCCESS;
+		else
+			return QDF_STATUS_E_ABORTED;
+	case FRAME_CTRL_TYPE_DATA:
+		/* Allowing all data frames */
+		return QDF_STATUS_SUCCESS;
+	default:
+		dp_mon_err("Unknown frame type in framecontrol\n");
+		return QDF_STATUS_E_INVAL;
+	}
+}
+
+/**
+ * dp_tx_mon_update_ppdu_info_status() - API to update fram as information
  * is stored only for that processing
  *
  * @pdev: pdev Handle
@@ -1065,6 +1122,12 @@ dp_tx_mon_update_ppdu_info_status(struct dp_pdev *pdev,
 		/* update the medium protection type */
 		break;
 	}
+	case HAL_MON_TX_QUEUE_EXTENSION:
+	{
+		status = dp_lite_mon_filter_subtype(mon_pdev_be,
+						    &tx_data_ppdu_info->hal_txmon);
+		break;
+	}
 	default:
 	{
 		/* return or break in default case */
@@ -1094,7 +1157,7 @@ QDF_STATUS dp_tx_mon_process_tlv_2_0(struct dp_pdev *pdev)
 	uint8_t *tx_tlv;
 	uint8_t *tx_tlv_start;
 	uint32_t tlv_status;
-	uint32_t status;
+	uint32_t status = QDF_STATUS_SUCCESS;
 	uint8_t num_users = 0;
 	uint8_t cur_frag_q_idx;
 	uint32_t end_offset = 0;
@@ -1150,7 +1213,8 @@ QDF_STATUS dp_tx_mon_process_tlv_2_0(struct dp_pdev *pdev)
 	}
 
 	/* iterate status buffer queue */
-	while (tx_cap_be->cur_frag_q_idx < tx_cap_be->last_frag_q_idx) {
+	while (tx_cap_be->cur_frag_q_idx < tx_cap_be->last_frag_q_idx &&
+	       status == QDF_STATUS_SUCCESS) {
 		/* get status buffer from frag_q_vec */
 		status_frag = tx_cap_be->frag_q_vec[cur_frag_q_idx].frag_buf;
 		end_offset = tx_cap_be->frag_q_vec[cur_frag_q_idx].end_offset;
@@ -1182,6 +1246,14 @@ QDF_STATUS dp_tx_mon_process_tlv_2_0(struct dp_pdev *pdev)
 							tx_tlv,
 							status_frag,
 							tlv_status);
+
+			if (status != QDF_STATUS_SUCCESS) {
+				dp_tx_mon_status_free_packet_buf(pdev,
+								 status_frag,
+								 end_offset);
+				break;
+			}
+
 			/* need api definition for hal_tx_status_get_next_tlv */
 			tx_tlv = hal_tx_status_get_next_tlv(tx_tlv);
 			if ((tx_tlv - tx_tlv_start) >= end_offset)

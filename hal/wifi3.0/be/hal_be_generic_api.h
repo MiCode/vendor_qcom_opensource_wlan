@@ -807,6 +807,7 @@ hal_txmon_status_parse_tlv_generic_be(void *data_ppdu_info,
 	}
 	case WIFITX_QUEUE_EXTENSION_E:/* DOWNSTREAM */
 	{
+		status = HAL_MON_TX_QUEUE_EXTENSION;
 		hal_txmon_parse_queue_exten(tx_tlv, ppdu_info);
 
 		SHOW_DEFINED(WIFITX_QUEUE_EXTENSION_E);
