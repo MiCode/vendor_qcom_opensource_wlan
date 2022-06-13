@@ -24,6 +24,7 @@
 #include <dp_mon.h>
 #include <dp_tx_mon_2.0.h>
 #include <dp_mon_2.0.h>
+#include <dp_lite_mon.h>
 
 #if defined(WLAN_TX_PKT_CAPTURE_ENH_BE) && defined(QCA_MONITOR_2_0_SUPPORT)
 /**
@@ -1361,7 +1362,8 @@ QDF_STATUS dp_tx_mon_process_status_tlv(struct dp_soc *soc,
 		goto free_status_buffer;
 	}
 
-	if (tx_cap_be->mode == TX_MON_BE_DISABLE)
+	if (tx_cap_be->mode == TX_MON_BE_DISABLE &&
+	    !dp_lite_mon_is_tx_enabled(mon_pdev))
 		goto free_status_buffer;
 
 	if (tx_cap_be->be_ppdu_id != mon_ring_desc->ppdu_id &&

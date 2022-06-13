@@ -529,12 +529,21 @@ dp_tx_mon_send_to_stack(struct dp_pdev *pdev, qdf_nbuf_t mpdu)
 		    0);
 	tx_capture_info.radiotap_done = 1;
 	tx_capture_info.mpdu_nbuf = mpdu;
-	dp_wdi_event_handler(WDI_EVENT_TX_PKT_CAPTURE,
-			     pdev->soc,
-			     &tx_capture_info,
-			     HTT_INVALID_PEER,
-			     WDI_NO_VAL,
-			     pdev->pdev_id);
+	if (!dp_lite_mon_is_tx_enabled(pdev->monitor_pdev)) {
+		dp_wdi_event_handler(WDI_EVENT_TX_PKT_CAPTURE,
+				     pdev->soc,
+				     &tx_capture_info,
+				     HTT_INVALID_PEER,
+				     WDI_NO_VAL,
+				     pdev->pdev_id);
+	} else {
+		dp_wdi_event_handler(WDI_EVENT_LITE_MON_TX,
+				     pdev->soc,
+				     &tx_capture_info,
+				     HTT_INVALID_PEER,
+				     WDI_NO_VAL,
+				     pdev->pdev_id);
+	}
 }
 
 /**
@@ -696,7 +705,8 @@ void dp_tx_mon_ppdu_process(void *context)
 		return;
 
 	tx_cap_be = &mon_pdev_be->tx_capture_be;
-	if (qdf_unlikely(TX_MON_BE_DISABLE == tx_cap_be->mode))
+	if (qdf_unlikely(TX_MON_BE_DISABLE == tx_cap_be->mode &&
+			 !dp_lite_mon_is_tx_enabled(mon_pdev)))
 		return;
 
 	/* take lock here */
