@@ -2524,40 +2524,48 @@ void reg_reset_reg_rules(struct reg_rule_info *reg_rules)
 	qdf_mem_zero(reg_rules, sizeof(*reg_rules));
 }
 
-#ifdef CONFIG_BAND_6GHZ
+#ifdef CONFIG_REG_CLIENT
 /**
- * reg_copy_6g_reg_rules() - Copy the 6G reg rules from PSOC to PDEV
- * @pdev_reg_rules: Pointer to pdev reg rules
- * @psoc_reg_rules: Pointer to psoc reg rules
+ * reg_get_num_reg_rules() - Get number of reg rules.
+ * @psoc_reg_rules: pointer to psoc reg rules
+ * @pdev_priv_obj: pointer to pdev priv object
  *
- * Return: void
+ * Return: int
  */
-static void reg_copy_6g_reg_rules(struct reg_rule_info *pdev_reg_rules,
-				  struct reg_rule_info *psoc_reg_rules)
+static int reg_get_num_reg_rules(
+				 struct reg_rule_info *psoc_reg_rules,
+				 struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj)
 {
-	uint32_t reg_rule_len_6g_ap, reg_rule_len_6g_client;
-	uint8_t i;
+	struct reg_rule_info *pdev_reg_rules;
 
-	for (i = 0; i < REG_CURRENT_MAX_AP_TYPE; i++) {
-		pdev_reg_rules->num_of_6g_ap_reg_rules[i] =
-			psoc_reg_rules->num_of_6g_ap_reg_rules[i];
-		reg_rule_len_6g_ap = psoc_reg_rules->num_of_6g_ap_reg_rules[i] *
-						sizeof(struct cur_reg_rule);
-		qdf_mem_copy(pdev_reg_rules->reg_rules_6g_ap[i],
-			     psoc_reg_rules->reg_rules_6g_ap[i],
-			     reg_rule_len_6g_ap);
-
-		pdev_reg_rules->num_of_6g_client_reg_rules[i] =
-			psoc_reg_rules->num_of_6g_client_reg_rules[i];
-		reg_rule_len_6g_client =
-			psoc_reg_rules->num_of_6g_client_reg_rules[i] *
-						sizeof(struct cur_reg_rule);
-		qdf_mem_copy(pdev_reg_rules->reg_rules_6g_client[i],
-			     psoc_reg_rules->reg_rules_6g_client[i],
-			     reg_rule_len_6g_client);
-	}
+	pdev_reg_rules = &pdev_priv_obj->reg_rules;
+	return pdev_reg_rules->num_of_reg_rules;
 }
+#else
+/**
+ * reg_get_num_reg_rules() - Get number of reg rules.
+ * @psoc_reg_rules: pointer to psoc reg rules
+ * @pdev_priv_obj: pointer to pdev priv object
+ *
+ * Return: int.
+ */
+static int reg_get_num_reg_rules(
+				 struct reg_rule_info *psoc_reg_rules,
+				 struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj)
+{
+	enum reg_6g_ap_type cur_6g_ap_pwr_type;
+	struct reg_rule_info *pdev_reg_rules;
 
+	cur_6g_ap_pwr_type = pdev_priv_obj->reg_cur_6g_ap_pwr_type;
+	pdev_reg_rules = &pdev_priv_obj->reg_rules;
+
+	return (pdev_reg_rules->num_of_reg_rules +
+		psoc_reg_rules->num_of_6g_ap_reg_rules[cur_6g_ap_pwr_type]);
+}
+#endif
+
+#ifdef CONFIG_BAND_6GHZ
+#ifdef CONFIG_REG_CLIENT
 /**
  * reg_append_6g_reg_rules_in_pdev() - Append the 6G reg rules to the reg rules
  * list in pdev so that all currently used reg rules are in one common list
@@ -2583,22 +2591,84 @@ static void reg_append_6g_reg_rules_in_pdev(
 		     pdev_reg_rules->num_of_6g_client_reg_rules[cur_pwr_type] *
 		     sizeof(struct cur_reg_rule));
 }
+#else /* CONFIG_REG_CLIENT */
+/**
+ * reg_append_6g_reg_rules_in_pdev() - Append 6 GHz reg rules to reg rules list
+ * @pdev_priv_obj: Pointer to pdev private object
+ *
+ * Append 6 GHz reg rules to the reg rules list in pdev so that all currently
+ * used reg rules are in one common list.
+ *
+ * Return: void
+ */
+static void reg_append_6g_reg_rules_in_pdev(
+			struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj)
+{
+	struct reg_rule_info *pdev_reg_rules;
+	enum reg_6g_ap_type cur_pwr_type;
+	uint8_t num_reg_rules;
 
+	cur_pwr_type = pdev_priv_obj->reg_cur_6g_ap_pwr_type;
+	pdev_reg_rules = &pdev_priv_obj->reg_rules;
+
+	num_reg_rules = pdev_reg_rules->num_of_reg_rules;
+	pdev_reg_rules->num_of_reg_rules +=
+		pdev_reg_rules->num_of_6g_ap_reg_rules[cur_pwr_type];
+
+	qdf_mem_copy(&pdev_reg_rules->reg_rules[num_reg_rules],
+		     pdev_reg_rules->reg_rules_6g_ap[cur_pwr_type],
+		     pdev_reg_rules->num_of_6g_ap_reg_rules[cur_pwr_type] *
+		     sizeof(struct cur_reg_rule));
+}
+#endif /* CONFIG_REG_CLIENT */
+
+/**
+ * reg_copy_6g_reg_rules() - Copy the 6GHz reg rules from PSOC to PDEV
+ * @pdev_reg_rules: Pointer to pdev reg rules
+ * @psoc_reg_rules: Pointer to psoc reg rules
+ *
+ * Return: void
+ */
+static void reg_copy_6g_reg_rules(struct reg_rule_info *pdev_reg_rules,
+				  struct reg_rule_info *psoc_reg_rules)
+{
+	uint32_t reg_rule_len_6g_ap, reg_rule_len_6g_client;
+	uint8_t i;
+
+	for (i = 0; i < REG_CURRENT_MAX_AP_TYPE; i++) {
+		pdev_reg_rules->num_of_6g_ap_reg_rules[i] =
+			psoc_reg_rules->num_of_6g_ap_reg_rules[i];
+		reg_rule_len_6g_ap = psoc_reg_rules->num_of_6g_ap_reg_rules[i] *
+			sizeof(struct cur_reg_rule);
+		qdf_mem_copy(pdev_reg_rules->reg_rules_6g_ap[i],
+			     psoc_reg_rules->reg_rules_6g_ap[i],
+			     reg_rule_len_6g_ap);
+
+		pdev_reg_rules->num_of_6g_client_reg_rules[i] =
+			psoc_reg_rules->num_of_6g_client_reg_rules[i];
+		reg_rule_len_6g_client =
+			psoc_reg_rules->num_of_6g_client_reg_rules[i] *
+			sizeof(struct cur_reg_rule);
+		qdf_mem_copy(pdev_reg_rules->reg_rules_6g_client[i],
+			     psoc_reg_rules->reg_rules_6g_client[i],
+			     reg_rule_len_6g_client);
+	}
+}
 #else /* CONFIG_BAND_6GHZ */
 static inline void reg_copy_6g_reg_rules(struct reg_rule_info *pdev_reg_rules,
 					 struct reg_rule_info *psoc_reg_rules)
 {
 }
 
-static inline void reg_append_6g_reg_rules_in_pdev(
+static inline void
+reg_append_6g_reg_rules_in_pdev(
 			struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj)
 {
 }
 #endif /* CONFIG_BAND_6GHZ */
 
-void reg_save_reg_rules_to_pdev(
-		struct reg_rule_info *psoc_reg_rules,
-		struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj)
+void reg_save_reg_rules_to_pdev(struct reg_rule_info *psoc_reg_rules,
+				struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj)
 {
 	uint32_t reg_rule_len;
 	struct reg_rule_info *pdev_reg_rules;
@@ -2609,14 +2679,15 @@ void reg_save_reg_rules_to_pdev(
 	reg_reset_reg_rules(pdev_reg_rules);
 
 	pdev_reg_rules->num_of_reg_rules = psoc_reg_rules->num_of_reg_rules;
-	if (!pdev_reg_rules->num_of_reg_rules) {
+
+	if (!reg_get_num_reg_rules(psoc_reg_rules, pdev_priv_obj)) {
 		qdf_spin_unlock_bh(&pdev_priv_obj->reg_rules_lock);
 		reg_err("no reg rules in psoc");
 		return;
 	}
 
 	reg_rule_len = pdev_reg_rules->num_of_reg_rules *
-		       sizeof(struct cur_reg_rule);
+		sizeof(struct cur_reg_rule);
 	qdf_mem_copy(pdev_reg_rules->reg_rules, psoc_reg_rules->reg_rules,
 		     reg_rule_len);
 
