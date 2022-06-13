@@ -2394,6 +2394,20 @@ enum reg_6g_ap_type reg_get_best_pwr_mode(struct wlan_objmgr_pdev *pdev,
 					  qdf_freq_t freq,
 					  qdf_freq_t cen320,
 					  uint16_t bw);
+
+/**
+ * reg_get_eirp_pwr() - Get eirp power based on the AP power mode
+ * @pdev: Pointer to pdev
+ * @freq: Frequency in MHz
+ * @cen320: 320 MHz Band center frequency
+ * @bw: Bandwidth in MHz
+ * @ap_pwr_type: AP power type
+ *
+ * Return: EIRP power
+ */
+uint8_t reg_get_eirp_pwr(struct wlan_objmgr_pdev *pdev, qdf_freq_t freq,
+			 qdf_freq_t cen320,
+			 uint16_t bw, enum reg_6g_ap_type ap_pwr_type);
 #endif /* CONFIG_BAND_6GHZ */
 
 /**
