@@ -174,7 +174,9 @@ dp_rx_wds_add_or_update_ast(struct dp_soc *soc,
 		ta_base_peer = dp_peer_get_ref_by_id(soc, ta_peer->peer_id,
 						     DP_MOD_ID_RX);
 		if (ta_base_peer) {
-			dp_wds_ext_peer_learn(soc, ta_base_peer);
+			if (ta_peer->vdev->opmode == wlan_op_mode_ap)
+				dp_wds_ext_peer_learn(soc, ta_base_peer);
+
 			ret = dp_peer_add_ast(soc, ta_base_peer, wds_src_mac,
 					      CDP_TXRX_AST_TYPE_WDS, flags);
 

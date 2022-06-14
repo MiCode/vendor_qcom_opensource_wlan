@@ -10282,7 +10282,8 @@ dp_set_vdev_param(struct cdp_soc_t *cdp_soc, uint8_t vdev_id,
 		break;
 #ifdef QCA_SUPPORT_WDS_EXTENDED
 	case CDP_CFG_WDS_EXT:
-		vdev->wds_ext_enabled = val.cdp_vdev_param_wds_ext;
+		if (vdev->opmode == wlan_op_mode_ap)
+			vdev->wds_ext_enabled = val.cdp_vdev_param_wds_ext;
 		break;
 #endif
 	case CDP_ENABLE_PEER_AUTHORIZE:
