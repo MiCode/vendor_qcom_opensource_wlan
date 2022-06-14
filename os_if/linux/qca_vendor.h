@@ -12062,7 +12062,8 @@ enum qca_wlan_vendor_attr_mdns_offload {
  * QCA_WLAN_VENDOR_ATTR_DIAG_IFINDEX,
  * QCA_WLAN_VENDOR_ATTR_DIAG_IS_RETRY_FRAME,
  * QCA_WLAN_VENDOR_ATTR_DIAG_FIRMWARE_TIMESTAMP,
- * QCA_WLAN_VENDOR_ATTR_DIAG_KERNEL_TIMESTAMP.
+ * QCA_WLAN_VENDOR_ATTR_DIAG_KERNEL_TIMESTAMP,
+ * QCA_WLAN_VENDOR_ATTR_DIAG_ASSOC_ID.
  *
  * @QCA_WLAN_VENDOR_DIAG_EVENT_TYPE_DEAUTH_RX: Diag event sent from
  * driver/userspace when device receives a deauthentication response. Uses the
@@ -12146,7 +12147,8 @@ enum qca_wlan_vendor_attr_mdns_offload {
  * QCA_WLAN_VENDOR_ATTR_DIAG_FREQ,
  * QCA_WLAN_VENDOR_ATTR_DIAG_IFINDEX,
  * QCA_WLAN_VENDOR_ATTR_DIAG_FIRMWARE_TIMESTAMP,
- * QCA_WLAN_VENDOR_ATTR_DIAG_KERNEL_TIMESTAMP.
+ * QCA_WLAN_VENDOR_ATTR_DIAG_KERNEL_TIMESTAMP,
+ * QCA_WLAN_VENDOR_ATTR_DIAG_BT_COEX_ACTIVE.
  *
  * @QCA_WLAN_VENDOR_DIAG_EVENT_TYPE_ROAM_SCORE_CURR_AP: Diag event sent from
  * driver/firmware to provide Roam information of the current AP. Uses the
@@ -12374,6 +12376,30 @@ enum qca_wlan_vendor_attr_mdns_offload {
  * QCA_WLAN_VENDOR_ATTR_DIAG_HOST_TIMESTAMP,
  * QCA_WLAN_VENDOR_ATTR_DIAG_IFINDEX,
  * QCA_WLAN_VENDOR_ATTR_DIAG_KERNEL_TIMESTAMP.
+ *
+ * @QCA_WLAN_VENDOR_DIAG_EVENT_TYPE_REASSOC_REQ: Diag event sent from driver
+ * /firmware to indicate Reassocation request. Uses the following attributes
+ * of enum qca_wlan_vendor_attr_diag:
+ * QCA_WLAN_VENDOR_ATTR_DIAG_KERNEL_TIMESTAMP,
+ * QCA_WLAN_VENDOR_ATTR_DIAG_BSSID,
+ * QCA_WLAN_VENDOR_ATTR_DIAG_RSSI,
+ * QCA_WLAN_VENDOR_ATTR_DIAG_SEQUENCE_NUMBER,
+ * QCA_WLAN_VENDOR_ATTR_DIAG_FRAME_TX_STATUS,
+ * QCA_WLAN_VENDOR_ATTR_DIAG_IFINDEX,
+ * QCA_WLAN_VENDOR_ATTR_DIAG_IS_RETRY_FRAME,
+ * QCA_WLAN_VENDOR_ATTR_DIAG_FIRMWARE_TIMESTAMP.
+ *
+ * @QCA_WLAN_VENDOR_DIAG_EVENT_TYPE_REASSOC_RES: Diag event sent from driver
+ * /firmware to indicate Reassocation response. Uses the following attributes
+ * of enum qca_wlan_vendor_attr_diag:
+ * QCA_WLAN_VENDOR_ATTR_DIAG_KERNEL_TIMESTAMP,
+ * QCA_WLAN_VENDOR_ATTR_DIAG_BSSID,
+ * QCA_WLAN_VENDOR_ATTR_DIAG_SEQUENCE_NUMBER,
+ * QCA_WLAN_VENDOR_ATTR_DIAG_STATUS_CODE,
+ * QCA_WLAN_VENDOR_ATTR_DIAG_ASSOC_ID,
+ * QCA_WLAN_VENDOR_ATTR_DIAG_IFINDEX,
+ * QCA_WLAN_VENDOR_ATTR_DIAG_IS_RETRY_FRAME,
+ * QCA_WLAN_VENDOR_ATTR_DIAG_FIRMWARE_TIMESTAMP.
  */
 enum qca_vendor_attr_diag_event_type {
 	QCA_WLAN_VENDOR_DIAG_EVENT_TYPE_CONNECTING = 0,
@@ -12413,6 +12439,8 @@ enum qca_vendor_attr_diag_event_type {
 	QCA_WLAN_VENDOR_DIAG_EVENT_TYPE_EAP_RESPONSE = 34,
 	QCA_WLAN_VENDOR_DIAG_EVENT_TYPE_EAP_SUCCESS = 35,
 	QCA_WLAN_VENDOR_DIAG_EVENT_TYPE_EAP_FAILURE = 36,
+	QCA_WLAN_VENDOR_DIAG_EVENT_TYPE_REASSOC_REQ = 37,
+	QCA_WLAN_VENDOR_DIAG_EVENT_TYPE_REASSOC_RES = 38,
 
 	/* keep last */
 	QCA_WLAN_VENDOR_DIAG_EVENT_TYPE_AFTER_LAST,
@@ -12657,6 +12685,10 @@ enum qca_roam_sub_reason {
  * attribute indicates the kernel timestamp. Driver uses ktime_get() API
  * (Time from boot but not the time spent in suspend) to send in microseconds
  * to userspace.
+ *
+ * @QCA_WLAN_VENDOR_ATTR_DIAG_ASSOC_ID: Optional u16 attribute. This attribute
+ * indicates the association id received in the (re)association response frame
+ * defined in IEEE Std 802.11-2020 Figure 9-91-AID field format.
  */
 enum qca_wlan_vendor_attr_diag {
 	QCA_WLAN_VENDOR_ATTR_DIAG_INVALID = 0,
@@ -12709,6 +12741,7 @@ enum qca_wlan_vendor_attr_diag {
 	QCA_WLAN_VENDOR_ATTR_DIAG_EAP_TYPE = 47,
 	QCA_WLAN_VENDOR_ATTR_DIAG_EAP_LEN = 48,
 	QCA_WLAN_VENDOR_ATTR_DIAG_KERNEL_TIMESTAMP = 49,
+	QCA_WLAN_VENDOR_ATTR_DIAG_ASSOC_ID = 50,
 
 	/* keep last */
 	QCA_WLAN_VENDOR_ATTR_DIAG_AFTER_LAST,
