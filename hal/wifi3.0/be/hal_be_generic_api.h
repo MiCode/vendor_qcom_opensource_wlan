@@ -32,6 +32,22 @@
  */
 #define SHOW_DEFINED(x) do {} while (0)
 
+#if defined(WLAN_FEATURE_TSF_UPLINK_DELAY) || defined(CONFIG_SAWF)
+static inline void
+hal_tx_comp_get_buffer_timestamp_be(void *desc,
+				    struct hal_tx_completion_status *ts)
+{
+	ts->buffer_timestamp = HAL_TX_DESC_GET(desc, WBM2SW_COMPLETION_RING_TX,
+					       BUFFER_TIMESTAMP);
+}
+#else /* !WLAN_FEATURE_TSF_UPLINK_DELAY || CONFIG_SAWF */
+static inline void
+hal_tx_comp_get_buffer_timestamp_be(void *desc,
+				    struct hal_tx_completion_status *ts)
+{
+}
+#endif /* WLAN_FEATURE_TSF_UPLINK_DELAY || CONFIG_SAWF */
+
 /**
  * hal_tx_comp_get_status() - TQM Release reason
  * @hal_desc: completion ring Tx status
@@ -104,6 +120,7 @@ hal_tx_comp_get_status_generic_be(void *desc, void *ts1,
 
 	ts->tsf = HAL_TX_DESC_GET(desc, UNIFIED_WBM_RELEASE_RING_6,
 			TX_RATE_STATS_INFO_TX_RATE_STATS);
+	hal_tx_comp_get_buffer_timestamp_be(desc, ts);
 }
 
 /**
