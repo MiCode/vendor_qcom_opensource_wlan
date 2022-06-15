@@ -1525,17 +1525,45 @@ void reg_set_dfs_region(struct wlan_objmgr_pdev *pdev,
 	reg_init_channel_map(dfs_reg);
 }
 
+static uint8_t reg_freq_to_chan_direct(qdf_freq_t freq)
+{
+	if (freq >= TWOG_CHAN_1_IN_MHZ && freq <= TWOG_CHAN_13_IN_MHZ)
+		return IEEE_2GHZ_CH1 +
+			(freq - TWOG_CHAN_1_IN_MHZ) / IEEE_CH_SEP;
+
+	if (freq == TWOG_CHAN_14_IN_MHZ)
+		return IEEE_2GHZ_CH14;
+
+	if (freq >= FIVEG_CHAN_36_IN_MHZ && freq <= FIVEG_CHAN_177_IN_MHZ)
+		return IEEE_5GHZ_CH36 +
+			(freq - FIVEG_CHAN_36_IN_MHZ) / IEEE_CH_SEP;
+
+	if (freq == SIXG_CHAN_2_IN_MHZ)
+		return IEEE_6GHZ_CH2;
+
+	if (freq >= SIXG_CHAN_1_IN_MHZ && freq <= SIXG_CHAN_233_IN_MHZ)
+		return IEEE_6GHZ_CH1 +
+			(freq - SIXG_CHAN_1_IN_MHZ) / IEEE_CH_SEP;
+
+	return 0;
+}
+
 static uint8_t
 reg_freq_to_chan_for_chlist(struct regulatory_channel *chan_list,
 			    qdf_freq_t freq,
 			    enum channel_enum num_chans)
 {
 	uint32_t count;
+	uint8_t chan_ieee;
 
 	if (num_chans > NUM_CHANNELS) {
 		reg_err_rl("invalid num_chans");
 		return 0;
 	}
+
+	chan_ieee = reg_freq_to_chan_direct(freq);
+	if (chan_ieee)
+		return chan_ieee;
 
 	for (count = 0; count < num_chans; count++) {
 		if (chan_list[count].center_freq >= freq)

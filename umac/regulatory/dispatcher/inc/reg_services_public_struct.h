@@ -1716,8 +1716,20 @@ struct reg_sched_payload {
 #define TWOG_CHAN_6_IN_MHZ         2437
 #define TWOG_CHAN_9_IN_MHZ         2452
 #define TWOG_CHAN_13_IN_MHZ        2472
+#define FIVEG_CHAN_36_IN_MHZ       5180
+#define FIVEG_CHAN_177_IN_MHZ      5885
+#define SIXG_CHAN_2_IN_MHZ         5935
+#define SIXG_CHAN_1_IN_MHZ         5955
+#define SIXG_CHAN_233_IN_MHZ       7115
 
-#define HT40_SEC_OFFSET            20
+#define HT40_SEC_OFFSET              20
+
+#define IEEE_2GHZ_CH1                 1
+#define IEEE_2GHZ_CH14               14
+#define IEEE_5GHZ_CH36               36
+#define IEEE_6GHZ_CH1                 1
+#define IEEE_6GHZ_CH2                 2
+#define IEEE_CH_SEP                   5
 
 /**
  * struct reg_ctl_params - reg ctl and regd info
