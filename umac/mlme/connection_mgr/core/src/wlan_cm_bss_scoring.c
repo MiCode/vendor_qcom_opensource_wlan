@@ -1589,14 +1589,16 @@ static int cm_calculate_eht_score(struct scan_cache_entry *entry,
 	struct weight_cfg *weight_config;
 	uint8_t partner_link_idx = cm_get_parter_link_index(entry);
 
+	weight_config = &score_config->weight_config;
+
 	if (!phy_config->eht_cap || !entry->ie_list.ehtcap)
-		return 0;
+		return cm_calculate_rssi_score(&score_config->rssi_score,
+					       entry->rssi_raw,
+					       weight_config->rssi_weightage);
 
 	/* TODO: get partner entry and return ml_score for that if it is
 	 *       non-zero
 	 */
-
-	weight_config = &score_config->weight_config;
 
 	joint_rssi = cm_get_joint_rssi(entry, weight_config, partner_link_idx);
 
