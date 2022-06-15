@@ -1747,6 +1747,11 @@ struct subelem_header {
 #define EHTOP_INFO_CHAN_WIDTH_IDX          0
 #define EHTOP_INFO_CHAN_WIDTH_BITS         3
 
+#define EHTOP_RX_MCS_NSS_MAP_IDX                       0
+#define EHTOP_RX_MCS_NSS_MAP_BITS                      4
+#define EHTOP_TX_MCS_NSS_MAP_IDX                       4
+#define EHTOP_TX_MCS_NSS_MAP_BITS                      4
+
 #define MAX_EHT_MCS_NSS_MAP_LEN 9
 
 /**
@@ -2691,6 +2696,8 @@ struct wlan_ext_cap_ie {
  * @scs_traffic_desc: SCS traffic description support
  * @max_mpdu_len: Maximum MPDU length
  * @max_a_mpdu_len_exponent_ext: Maximum A-MPDU Length Exponent Extension
+ * @eht_trs_support: EHT TRS SUPPORT
+ * @txop_return_support_txop_share_m2: TXOP Return Support in TXOP Share Mode 2
  * @reserved3: reserved bits
  * @reserved2: reserved bits
  * @support_320mhz_6ghz: support 320mhz in 6gz
@@ -2787,7 +2794,9 @@ struct wlan_ext_cap_ie {
  */
 struct wlan_eht_cap_info {
 #ifndef ANI_LITTLE_BIT_ENDIAN
-	uint16_t reserved:7;
+	uint16_t reserved:5;
+	uint16_t txop_return_support_txop_share_m2:1;
+	uint16_t eht_trs_support:1;
 	uint16_t max_a_mpdu_len_exponent_ext:1;
 	uint16_t max_mpdu_len:2;
 	uint16_t scs_traffic_desc:1;
@@ -2883,7 +2892,9 @@ struct wlan_eht_cap_info {
 	uint16_t scs_traffic_desc:1;
 	uint16_t max_mpdu_len:2;
 	uint16_t max_a_mpdu_len_exponent_ext:1;
-	uint16_t reserved:7;
+	uint16_t eht_trs_support:1;
+	uint16_t txop_return_support_txop_share_m2:1;
+	uint16_t reserved:5;
 
 	uint32_t reserved2:1;
 	uint32_t support_320mhz_6ghz:1;
