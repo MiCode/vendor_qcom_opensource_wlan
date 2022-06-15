@@ -199,18 +199,33 @@ util_parse_multi_link_ctrl(uint8_t *mlieseqpayload,
 	}
 
 	/* Check if MLD cap is present */
-	if (presence_bm & WLAN_ML_BV_CTRL_PBM_MLDCAP_P) {
+	if (presence_bm & WLAN_ML_BV_CTRL_PBM_MLDCAPANDOP_P) {
 		if (mlieseqpayloadlen <
 				(parsed_payload_len +
-				 WLAN_ML_BV_CINFO_MLDCAP_SIZE)) {
+				 WLAN_ML_BV_CINFO_MLDCAPANDOP_SIZE)) {
 			mlo_err_rl("ML seq payload len %zu insufficient for MLD cap size %u after parsed payload len %zu.",
 				   mlieseqpayloadlen,
-				   WLAN_ML_BV_CINFO_MLDCAP_SIZE,
+				   WLAN_ML_BV_CINFO_MLDCAPANDOP_SIZE,
 				   parsed_payload_len);
 			return QDF_STATUS_E_PROTO;
 		}
 
-		parsed_payload_len += WLAN_ML_BV_CINFO_MLDCAP_SIZE;
+		parsed_payload_len += WLAN_ML_BV_CINFO_MLDCAPANDOP_SIZE;
+	}
+
+	/* Check if MLD ID is present */
+	if (presence_bm & WLAN_ML_BV_CTRL_PBM_MLDID_P) {
+		if (mlieseqpayloadlen <
+				(parsed_payload_len +
+				 WLAN_ML_BV_CINFO_MLDID_SIZE)) {
+			mlo_err_rl("ML seq payload len %zu insufficient for MLD ID size %u after parsed payload len %zu.",
+				   mlieseqpayloadlen,
+				   WLAN_ML_BV_CINFO_MLDID_SIZE,
+				   parsed_payload_len);
+			return QDF_STATUS_E_PROTO;
+		}
+
+		parsed_payload_len += WLAN_ML_BV_CINFO_MLDID_SIZE;
 	}
 
 	exp_cinfo_len = parsed_payload_len - WLAN_ML_CTRL_SIZE;
@@ -3108,16 +3123,16 @@ util_get_bvmlie_mldcap(uint8_t *mlieseq, qdf_size_t mlieseqlen,
 			return QDF_STATUS_E_PROTO;
 	}
 
-	if (presencebitmap & WLAN_ML_BV_CTRL_PBM_MLDCAP_P) {
+	if (presencebitmap & WLAN_ML_BV_CTRL_PBM_MLDCAPANDOP_P) {
 		/* Check if the value indicated in the Common Info Length
 		 * subfield is sufficient to access the MLD capabilities.
 		 */
 		if (commoninfo_len < (mldcap_offset +
-				      WLAN_ML_BV_CINFO_MLDCAP_SIZE))
+				      WLAN_ML_BV_CINFO_MLDCAPANDOP_SIZE))
 			return QDF_STATUS_E_PROTO;
 
 		if ((sizeof(struct wlan_ie_multilink) + mldcap_offset +
-					WLAN_ML_BV_CINFO_MLDCAP_SIZE) >
+					WLAN_ML_BV_CINFO_MLDCAPANDOP_SIZE) >
 				mlieseqlen)
 			return QDF_STATUS_E_PROTO;
 
