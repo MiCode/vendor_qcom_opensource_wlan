@@ -1167,6 +1167,20 @@ bool dp_rx_mlo_igmp_handler(struct dp_soc *soc,
 		dp_rx_debug("Non mlo vdev");
 		goto send_pkt;
 	}
+
+	if (qdf_unlikely(vdev->wrap_vdev)) {
+		/* In the case of qwrap repeater send the original
+		 * packet on the interface where it received,
+		 * packet with dummy src on the mcast primary interface.
+		 */
+		qdf_nbuf_t nbuf_copy;
+
+		nbuf_copy = qdf_nbuf_copy(nbuf);
+		if (qdf_likely(nbuf_copy))
+			dp_rx_deliver_to_stack(soc, vdev, peer, nbuf_copy,
+					       NULL);
+	}
+
 	dp_rx_dummy_src_mac(vdev, nbuf);
 	dp_rx_deliver_to_stack(mcast_primary_vdev->pdev->soc,
 			       mcast_primary_vdev,

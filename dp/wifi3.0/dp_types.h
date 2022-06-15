@@ -3128,9 +3128,10 @@ struct dp_vdev {
 	struct cdp_vdev_stats stats;
 
 	/* Is this a proxySTA VAP */
-	bool proxysta_vdev;
-	/* Is isolation mode enabled */
-	bool isolation_vdev;
+	uint8_t proxysta_vdev : 1, /* Is this a proxySTA VAP */
+		wrap_vdev : 1, /* Is this a QWRAP AP VAP */
+		isolation_vdev : 1, /* Is this a QWRAP AP VAP */
+		reserved : 5; /* Reserved */
 
 #ifdef QCA_LL_TX_FLOW_CONTROL_V2
 	struct dp_tx_desc_pool_s *pool;

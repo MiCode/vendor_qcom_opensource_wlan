@@ -6546,6 +6546,7 @@ static QDF_STATUS dp_vdev_attach_wifi3(struct cdp_soc_t *cdp_soc,
 	vdev->drop_unenc = 1;
 	vdev->sec_type = cdp_sec_type_none;
 	vdev->multipass_en = false;
+	vdev->wrap_vdev = false;
 	dp_vdev_init_rx_eapol(vdev);
 	qdf_atomic_init(&vdev->ref_cnt);
 	for (i = 0; i < DP_MOD_ID_MAX; i++)
@@ -10315,6 +10316,9 @@ dp_set_vdev_param(struct cdp_soc_t *cdp_soc, uint8_t vdev_id,
 		dp_info("vdev_id %d drop 3 addr mcast :%d", vdev_id,
 			val.cdp_drop_3addr_mcast);
 		vdev->drop_3addr_mcast = val.cdp_drop_3addr_mcast;
+		break;
+	case CDP_ENABLE_WRAP:
+		vdev->wrap_vdev = val.cdp_vdev_param_wrap;
 		break;
 	default:
 		break;
