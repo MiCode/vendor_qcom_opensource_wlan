@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2012-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -33,6 +33,7 @@
 #include "wifi_pos_api.h"
 #include "wlan_cfg80211.h"
 #include "wlan_objmgr_psoc_obj.h"
+#include "wlan_osif_priv.h"
 #ifdef CNSS_GENL
 #ifdef CONFIG_CNSS_OUT_OF_TREE
 #include "cnss_nl.h"
@@ -1083,3 +1084,66 @@ int os_if_wifi_pos_populate_caps(struct wlan_objmgr_psoc *psoc,
 
 	return qdf_status_to_os_return(wifi_pos_populate_caps(psoc, caps));
 }
+
+#if defined(WIFI_POS_CONVERGED) && defined(WLAN_FEATURE_RTT_11AZ_SUPPORT)
+QDF_STATUS
+os_if_wifi_pos_initiate_pasn_auth(struct wlan_objmgr_vdev *vdev,
+				  struct wlan_pasn_request *pasn_peer,
+				  uint8_t num_pasn_peers,
+				  bool is_initiate_pasn)
+{
+	struct net_device *netdev;
+	struct cfg80211_pasn_params *pasn_params;
+	struct vdev_osif_priv *osif_priv;
+	int i, ret;
+	QDF_STATUS status = QDF_STATUS_SUCCESS;
+
+	osif_priv  = wlan_vdev_get_ospriv(vdev);
+	if (!osif_priv) {
+		osif_err("OSIF priv is NULL");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	netdev = osif_priv->wdev->netdev;
+
+	pasn_params = qdf_mem_malloc(sizeof(*pasn_params) +
+				     (num_pasn_peers *
+				      sizeof(struct pasn_peer)));
+	if (!pasn_params)
+		return QDF_STATUS_E_NOMEM;
+
+	pasn_params->action = (is_initiate_pasn ?
+			NL80211_PASN_ACTION_AUTH : NL80211_PASN_ACTION_DEAUTH);
+
+	pasn_params->num_pasn_peers = num_pasn_peers;
+	for (i = 0; i < num_pasn_peers; i++) {
+		qdf_mem_copy(pasn_params->peer[i].peer_addr,
+			     pasn_peer[i].peer_mac.bytes,
+			     QDF_MAC_ADDR_SIZE);
+		qdf_mem_copy(pasn_params->peer[i].src_addr,
+			     pasn_peer[i].self_mac.bytes,
+			     QDF_MAC_ADDR_SIZE);
+		if (pasn_peer[i].force_self_mac_usage)
+			pasn_params->peer[i].flags = PASN_PEER_USE_SRC_MAC;
+
+		osif_debug("PASN peer_mac[%d]:" QDF_MAC_ADDR_FMT " src_mac:" QDF_MAC_ADDR_FMT,
+			   i,
+			   QDF_MAC_ADDR_REF(pasn_params->peer[i].peer_addr),
+			   QDF_MAC_ADDR_REF(pasn_params->peer[i].src_addr));
+	}
+
+	osif_debug("action:%d num_pasn_peers:%d", pasn_params->action,
+		   pasn_params->num_pasn_peers);
+
+	ret = cfg80211_pasn_auth_request(netdev, pasn_params,
+					 qdf_mem_malloc_flags());
+	if (ret) {
+		status = qdf_status_from_os_return(ret);
+		osif_err("PASN Auth request failed");
+	}
+
+	qdf_mem_free(pasn_params);
+
+	return status;
+}
+#endif /* WIFI_POS_CONVERGED && WLAN_FEATURE_RTT_11AZ_SUPPORT */

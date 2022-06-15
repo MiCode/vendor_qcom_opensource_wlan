@@ -118,7 +118,7 @@ void wifi_pos_add_peer_to_list(struct wlan_objmgr_vdev *vdev,
 
 		wifi_pos_debug("Added %s peer: " QDF_MAC_ADDR_FMT " at idx[%d]",
 			       (req->peer_type == WLAN_WIFI_POS_PASN_SECURE_PEER) ? "secure" : "unsecure",
-			       QDF_MAC_ADDR_REF(mac_addr), i);
+			       QDF_MAC_ADDR_REF(dst_entry->peer_mac.bytes), i);
 
 		break;
 	}
@@ -211,11 +211,12 @@ void wifi_pos_move_peers_to_fail_list(struct wlan_objmgr_vdev *vdev,
 
 static QDF_STATUS
 wifi_pos_request_external_pasn_auth(struct wlan_objmgr_psoc *psoc,
-				    struct wlan_objmgr_vdev *vdev)
+				    struct wlan_objmgr_vdev *vdev,
+				    struct wlan_pasn_request *peer_list,
+				    uint8_t num_peers)
 {
 	struct wifi_pos_vdev_priv_obj *vdev_pos_obj;
 	struct wifi_pos_osif_ops *osif_cb;
-	struct wifi_pos_11az_context *pasn_context;
 	QDF_STATUS status;
 
 	if (wlan_vdev_mlme_get_opmode(vdev) != QDF_STA_MODE)
@@ -234,12 +235,39 @@ wifi_pos_request_external_pasn_auth(struct wlan_objmgr_psoc *psoc,
 		return QDF_STATUS_E_FAILURE;
 	}
 
-	pasn_context = &vdev_pos_obj->pasn_context;
+	status = osif_cb->osif_initiate_pasn_cb(vdev, peer_list,
+						num_peers, true);
+	if (QDF_IS_STATUS_ERROR(status))
+		wifi_pos_err("Initiate PASN auth failed");
 
-	status = osif_cb->osif_initiate_pasn_cb(vdev,
-						pasn_context->secure_peer_list,
-						pasn_context->num_secure_peers,
-						true);
+	return status;
+}
+
+static QDF_STATUS
+wifi_pos_request_flush_pasn_keys(struct wlan_objmgr_psoc *psoc,
+				 struct wlan_objmgr_vdev *vdev,
+				 struct wlan_pasn_request *peer_list,
+				 uint8_t num_peers)
+{
+	struct wifi_pos_vdev_priv_obj *vdev_pos_obj;
+	struct wifi_pos_osif_ops *osif_cb;
+	QDF_STATUS status;
+
+	osif_cb = wifi_pos_get_osif_callbacks(psoc);
+	if (!osif_cb || !osif_cb->osif_initiate_pasn_cb) {
+		wifi_pos_err("OSIF %s cb is NULL",
+			     !osif_cb ? "" : "PASN");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	vdev_pos_obj = wifi_pos_get_vdev_priv_obj(vdev);
+	if (!vdev_pos_obj) {
+		wifi_pos_err("Wifi pos vdev priv obj is null");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	status = osif_cb->osif_initiate_pasn_cb(vdev, peer_list, num_peers,
+						false);
 
 	return status;
 }
@@ -252,10 +280,13 @@ wifi_pos_check_and_initiate_pasn_authentication(struct wlan_objmgr_psoc *psoc,
 	struct qdf_mac_addr bcast_mac = QDF_MAC_ADDR_BCAST_INIT;
 	QDF_STATUS status;
 
-	if (pasn_ctx->num_pending_peer_creation)
+	if (pasn_ctx->num_pending_peer_creation ||
+	    !pasn_ctx->num_secure_peers)
 		return QDF_STATUS_SUCCESS;
 
-	status = wifi_pos_request_external_pasn_auth(psoc, vdev);
+	status = wifi_pos_request_external_pasn_auth(psoc, vdev,
+						     pasn_ctx->secure_peer_list,
+						     pasn_ctx->num_secure_peers);
 	if (QDF_IS_STATUS_ERROR(status)) {
 		wifi_pos_err("Initiate Pasn Authentication failed");
 		wifi_pos_move_peers_to_fail_list(vdev, &bcast_mac,
@@ -342,8 +373,11 @@ QDF_STATUS wifi_pos_handle_ranging_peer_create(struct wlan_objmgr_psoc *psoc,
 	}
 
 	/*
-	 * This condition occurs when firmware requests for PASN peer
-	 * create with all PASN peers which are already created.
+	 * If peer already exists for all the entries provided in the request,
+	 * then fw peer create will not be sent again. Just the secure list
+	 * will be updated and num_pending_peer_creation will be 0.
+	 * In this case initiate the PASN auth directly without waiting for
+	 * peer create response.
 	 */
 	pasn_context = &vdev_pos_obj->pasn_context;
 	status = wifi_pos_check_and_initiate_pasn_authentication(psoc, vdev,
@@ -383,7 +417,7 @@ wifi_pos_handle_ranging_peer_create_rsp(struct wlan_objmgr_psoc *psoc,
 		pasn_context->num_pending_peer_creation--;
 
 	wifi_pos_debug("Received peer create response for " QDF_MAC_ADDR_FMT " status:%d pending_count:%d",
-		       QDF_MAC_ADDR_REF(peer_mac.bytes), peer_create_status,
+		       QDF_MAC_ADDR_REF(peer_mac->bytes), peer_create_status,
 		       pasn_context->num_pending_peer_creation);
 	if (peer_create_status)
 		wifi_pos_move_peers_to_fail_list(vdev, peer_mac,
@@ -403,7 +437,10 @@ QDF_STATUS wifi_pos_handle_ranging_peer_delete(struct wlan_objmgr_psoc *psoc,
 {
 	struct wifi_pos_legacy_ops *legacy_cb;
 	struct wlan_objmgr_peer *peer;
+	struct wlan_pasn_request *del_peer_list;
+	struct wlan_objmgr_vdev *vdev;
 	bool no_fw_peer_delete;
+	uint8_t peer_count = 0, i;
 	QDF_STATUS status = QDF_STATUS_SUCCESS;
 
 	legacy_cb = wifi_pos_get_legacy_ops(psoc);
@@ -411,6 +448,10 @@ QDF_STATUS wifi_pos_handle_ranging_peer_delete(struct wlan_objmgr_psoc *psoc,
 		wifi_pos_err("legacy callback is not registered");
 		return QDF_STATUS_E_FAILURE;
 	}
+
+	del_peer_list = qdf_mem_malloc(sizeof(*del_peer_list) * total_entries);
+	if (!del_peer_list)
+		return QDF_STATUS_E_NOMEM;
 
 	for (i = 0; i < total_entries; i++) {
 		peer = wlan_objmgr_get_peer_by_mac(psoc, req[i].peer_mac.bytes,
@@ -421,9 +462,13 @@ QDF_STATUS wifi_pos_handle_ranging_peer_delete(struct wlan_objmgr_psoc *psoc,
 							req[i].control_flags);
 			wifi_pos_debug("Delete PASN Peer: " QDF_MAC_ADDR_FMT,
 				       QDF_MAC_ADDR_REF(req[i].peer_mac.bytes));
+
+			del_peer_list[peer_count] = req[i];
+			peer_count++;
+
 			status = legacy_cb->pasn_peer_delete_cb(
-						psoc, &req[i].peer_mac,
-						vdev_id, no_fw_peer_delete);
+					psoc, &req[i].peer_mac,
+					vdev_id, no_fw_peer_delete);
 
 			wlan_objmgr_peer_release_ref(peer,
 						     WLAN_WIFI_POS_CORE_ID);
@@ -439,5 +484,29 @@ QDF_STATUS wifi_pos_handle_ranging_peer_delete(struct wlan_objmgr_psoc *psoc,
 		}
 	}
 
-	return QDF_STATUS_SUCCESS;
+	if (!peer_count) {
+		wifi_pos_debug("No Peers to delete ");
+		goto no_peer;
+	}
+
+	vdev = wlan_objmgr_get_vdev_by_id_from_psoc(psoc, vdev_id,
+						    WLAN_WIFI_POS_CORE_ID);
+	if (!vdev) {
+		wifi_pos_err("Vdev object is null");
+		qdf_mem_free(del_peer_list);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	status = wifi_pos_request_flush_pasn_keys(psoc, vdev,
+						  del_peer_list,
+						  peer_count);
+	if (QDF_IS_STATUS_ERROR(status))
+		wifi_pos_err("Failed to indicate peer deauth to userspace");
+
+	wlan_objmgr_vdev_release_ref(vdev, WLAN_WIFI_POS_CORE_ID);
+
+no_peer:
+	qdf_mem_free(del_peer_list);
+
+	return status;
 }

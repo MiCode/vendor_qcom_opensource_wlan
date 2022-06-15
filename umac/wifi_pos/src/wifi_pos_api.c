@@ -30,6 +30,7 @@
 #include "wlan_objmgr_cmn.h"
 #include "wlan_objmgr_global_obj.h"
 #include "wlan_objmgr_psoc_obj.h"
+#include "wlan_objmgr_peer_obj.h"
 #include "wlan_lmac_if_def.h"
 
 struct wlan_lmac_if_wifi_pos_rx_ops *
@@ -611,4 +612,35 @@ QDF_STATUS wifi_pos_register_send_action(
 	wifi_pos_psoc->wifi_pos_send_action = handler;
 
 	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS
+wifi_pos_register_osif_callbacks(struct wlan_objmgr_psoc *psoc,
+				 struct wifi_pos_osif_ops *ops)
+{
+	struct wifi_pos_psoc_priv_obj *wifi_pos_obj =
+			wifi_pos_get_psoc_priv_obj(psoc);
+
+	if (!wifi_pos_obj) {
+		wifi_pos_err("wifi_pos priv obj is null");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	wifi_pos_obj->osif_cb = ops;
+
+	return QDF_STATUS_SUCCESS;
+}
+
+struct wifi_pos_osif_ops *
+wifi_pos_get_osif_callbacks(struct wlan_objmgr_psoc *psoc)
+{
+	struct wifi_pos_psoc_priv_obj *wifi_pos_obj =
+			wifi_pos_get_psoc_priv_obj(psoc);
+
+	if (!wifi_pos_obj) {
+		wifi_pos_err("wifi_pos priv obj is null");
+		return NULL;
+	}
+
+	return wifi_pos_obj->osif_cb;
 }
