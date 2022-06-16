@@ -497,6 +497,28 @@ util_parse_bvmlie_perstaprofile_stactrl(uint8_t *subelempayload,
 		parsed_payload_len += WLAN_BEACONINTERVAL_LEN;
 	}
 
+	/* Check TSF Offset present bit */
+	if (QDF_GET_BITS(stacontrol,
+			 WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_TSFOFFSETP_IDX,
+			 WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_TSFOFFSETP_BITS)) {
+		if (!completeprofile) {
+			mlo_err_rl("TSF offset is expected only for complete profiles");
+			return QDF_STATUS_E_PROTO;
+		}
+
+		if (subelempayloadlen <
+				(parsed_payload_len +
+				 WLAN_ML_TSF_OFFSET_SIZE)) {
+			mlo_err_rl("Length of subelement payload %zu octets not sufficient to contain TSF Offset of size %u octets after parsed payload length of %zu octets.",
+				   subelempayloadlen,
+				   WLAN_ML_TSF_OFFSET_SIZE,
+				   parsed_payload_len);
+			return QDF_STATUS_E_PROTO;
+		}
+
+		parsed_payload_len += WLAN_ML_TSF_OFFSET_SIZE;
+	}
+
 	/* Check DTIM Info present bit */
 	if (QDF_GET_BITS(stacontrol,
 			 WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_DTIMINFOP_IDX,

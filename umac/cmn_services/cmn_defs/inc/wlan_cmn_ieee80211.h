@@ -2237,17 +2237,20 @@ struct wlan_ml_bv_linfo_perstaprof {
 /* Beacon Interval Present */
 #define WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_BCNINTP_IDX             6
 #define WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_BCNINTP_BITS            1
+/* TSF Offset Present */
+#define WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_TSFOFFSETP_IDX          7
+#define WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_TSFOFFSETP_BITS         1
 /* DTIM Info Present */
-#define WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_DTIMINFOP_IDX           7
+#define WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_DTIMINFOP_IDX           8
 #define WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_DTIMINFOP_BITS          1
 /* NSTR Link Pair Present */
-#define WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_NSTRLINKPRP_IDX         8
+#define WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_NSTRLINKPRP_IDX         9
 #define WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_NSTRLINKPRP_BITS        1
 /* NSTR Bitmap Size */
-#define WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_NSTRBMSZ_IDX            9
+#define WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_NSTRBMSZ_IDX            10
 #define WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_NSTRBMSZ_BITS           1
 /* BSS Parameters Change Count Present */
-#define WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_BSSPARAMCHNGCNTP_IDX    10
+#define WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_BSSPARAMCHNGCNTP_IDX    11
 #define WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_BSSPARAMCHNGCNTP_BITS   1
 
 /* Definitions for subfields in STA Info field of Per-STA Profile subelement
@@ -2255,6 +2258,11 @@ struct wlan_ml_bv_linfo_perstaprof {
  */
 /* STA Info Length */
 #define WLAN_ML_BV_LINFO_PERSTAPROF_STAINFO_LENGTH_SIZE             1
+
+/* Size in octets of the TSF Offset in STA info field of Per-STA Profile
+ * subelement in Basic variant Multi-Link element Link Info field.
+ */
+#define WLAN_ML_TSF_OFFSET_SIZE             8
 
 /**
  * wlan_ml_bv_linfo_perstaprof_stactrl_nstrbmsz - Encoding for NSTR Bitmap Size
@@ -2299,6 +2307,7 @@ struct wlan_ml_bv_linfo_perstaprof_stainfo_dtiminfo {
 	(WLAN_ML_BV_LINFO_PERSTAPROF_STAINFO_LENGTH_SIZE + \
 	 QDF_MAC_ADDR_SIZE + \
 	 WLAN_BEACONINTERVAL_LEN + \
+	 WLAN_ML_TSF_OFFSET_SIZE + \
 	 sizeof(struct wlan_ml_bv_linfo_perstaprof_stainfo_dtiminfo) + \
 	 WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_NSTRBMSZ_MAX + \
 	 WLAN_ML_BSSPARAMCHNGCNT_SIZE)
