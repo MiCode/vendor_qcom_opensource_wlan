@@ -2155,14 +2155,14 @@ dp_peer_cal_clients_stats_update(struct dp_soc *soc,
 	struct dp_peer *tgt_peer = NULL;
 	struct dp_txrx_peer *txrx_peer = NULL;
 
+	dp_peer_update_telemetry_stats(peer);
+
 	if (!dp_peer_is_primary_link_peer(peer))
 		return;
 
 	tgt_peer = dp_get_tgt_peer_from_peer(peer);
 	if (!tgt_peer || !(tgt_peer->txrx_peer))
 		return;
-
-	dp_peer_update_telemetry_stats(peer);
 
 	txrx_peer = tgt_peer->txrx_peer;
 	peer_stats_intf.to_stack = txrx_peer->to_stack;
