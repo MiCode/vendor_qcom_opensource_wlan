@@ -1937,13 +1937,15 @@ void *dp_context_alloc_mem(struct dp_soc *soc, enum dp_ctxt_type ctxt_type,
 		goto dynamic_alloc;
 	}
 
-	ctxt_mem = soc->cdp_soc.ol_ops->dp_prealloc_get_context(ctxt_type);
+	ctxt_mem = soc->cdp_soc.ol_ops->dp_prealloc_get_context(ctxt_type,
+								ctxt_size);
 
 	if (ctxt_mem)
 		goto end;
 
 dynamic_alloc:
-	dp_info("Pre-alloc of ctxt failed. Dynamic allocation");
+	dp_info("Pre-alloc type %d, size %zu failed, need dynamic-alloc",
+		ctxt_type, ctxt_size);
 	ctxt_mem = qdf_mem_malloc(ctxt_size);
 end:
 	return ctxt_mem;
@@ -1959,12 +1961,12 @@ void dp_context_free_mem(struct dp_soc *soc, enum dp_ctxt_type ctxt_type,
 								ctxt_type,
 								vaddr);
 	} else {
-		dp_warn("dp_prealloc_get_context null!");
+		dp_warn("dp_prealloc_put_context null!");
 		status = QDF_STATUS_E_NOSUPPORT;
 	}
 
 	if (QDF_IS_STATUS_ERROR(status)) {
-		dp_info("Context not pre-allocated");
+		dp_info("Context type %d not pre-allocated", ctxt_type);
 		qdf_mem_free(vaddr);
 	}
 }
