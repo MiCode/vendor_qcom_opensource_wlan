@@ -568,7 +568,7 @@ void hif_cleanup_static_buf_to_target(struct hif_softc *scn);
 void hif_runtime_prevent_linkdown(struct hif_softc *scn, bool is_get);
 #else
 static inline
-void hif_runtime_prevent_linkdown(struct hif_softc * scn, bool is_get)
+void hif_runtime_prevent_linkdown(struct hif_softc *scn, bool is_get)
 {
 }
 #endif

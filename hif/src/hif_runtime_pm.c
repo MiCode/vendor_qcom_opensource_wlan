@@ -418,7 +418,7 @@ QDF_STATUS hif_rtpm_register(uint32_t id, void (*hif_rtpm_cbk)(void))
 		return QDF_STATUS_E_FAILURE;
 	}
 
-	if (id > HIF_RTPM_ID_MAX || gp_hif_rtpm_ctx->clients[id]) {
+	if (id >= HIF_RTPM_ID_MAX || gp_hif_rtpm_ctx->clients[id]) {
 		hif_err("Invalid client %d", id);
 		return QDF_STATUS_E_INVAL;
 	}
