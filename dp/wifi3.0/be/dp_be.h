@@ -236,6 +236,7 @@ struct dp_ppe_vp_profile {
  * @ppe_vp_tbl: PPE VP table
  * @ppe_vp_tbl_lock: PPE VP table lock
  * @num_ppe_vp_entries : Number of PPE VP entries
+ * @ipa_bank_id: TCL bank id used by IPA
  */
 struct dp_soc_be {
 	struct dp_soc soc;
@@ -275,6 +276,9 @@ struct dp_soc_be {
 		TAILQ_HEAD(, dp_peer) * bins;
 	} mld_peer_hash;
 #endif
+#endif
+#ifdef IPA_OFFLOAD
+	int8_t ipa_bank_id;
 #endif
 };
 

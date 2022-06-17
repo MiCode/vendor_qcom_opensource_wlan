@@ -1929,6 +1929,24 @@ static bool dp_reo_remap_config_be(struct dp_soc *soc,
 }
 #endif
 
+#ifdef IPA_OFFLOAD
+static int8_t dp_ipa_get_bank_id_be(struct dp_soc *soc)
+{
+	struct dp_soc_be *be_soc = dp_get_be_soc_from_dp_soc(soc);
+
+	return be_soc->ipa_bank_id;
+}
+
+static inline void dp_initialize_arch_ops_be_ipa(struct dp_arch_ops *arch_ops)
+{
+	arch_ops->ipa_get_bank_id = dp_ipa_get_bank_id_be;
+}
+#else /* !IPA_OFFLOAD */
+static inline void dp_initialize_arch_ops_be_ipa(struct dp_arch_ops *arch_ops)
+{
+}
+#endif /* IPA_OFFLOAD */
+
 void dp_initialize_arch_ops_be(struct dp_arch_ops *arch_ops)
 {
 #ifndef QCA_HOST_MODE_WIFI_DISABLED
@@ -1991,4 +2009,5 @@ void dp_initialize_arch_ops_be(struct dp_arch_ops *arch_ops)
 	arch_ops->print_mlo_ast_stats = dp_print_mlo_ast_stats_be;
 	arch_ops->peer_get_reo_hash = dp_peer_get_reo_hash_be;
 	arch_ops->reo_remap_config = dp_reo_remap_config_be;
+	dp_initialize_arch_ops_be_ipa(arch_ops);
 }

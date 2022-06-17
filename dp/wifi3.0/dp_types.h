@@ -1824,6 +1824,7 @@ enum dp_context_type {
  * @txrx_set_vdev_param: target specific ops while setting vdev params
  * @dp_srng_test_and_update_nf_params: Check if the srng is in near full state
  *				and set the near-full params.
+ * @ipa_get_bank_id: Get TCL bank id used by IPA
  */
 struct dp_arch_ops {
 	/* INIT/DEINIT Arch Ops */
@@ -1978,6 +1979,10 @@ struct dp_arch_ops {
 				     uint16_t peer_id);
 	void (*dp_partner_chips_unmap)(struct dp_soc *soc,
 				       uint16_t peer_id);
+
+#ifdef IPA_OFFLOAD
+	int8_t (*ipa_get_bank_id)(struct dp_soc *soc);
+#endif
 };
 
 /**
