@@ -17,6 +17,7 @@
  * PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include <qdf_types.h>
 #include "dp_ratetable.h"
 #include "qdf_module.h"
 #include "cdp_txrx_mon_struct.h"

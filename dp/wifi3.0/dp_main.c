@@ -13591,6 +13591,37 @@ void dp_deregister_packetdump_callback(struct cdp_soc_t *soc_hdl,
 }
 #endif
 
+#ifdef FEATURE_RX_LINKSPEED_ROAM_TRIGGER
+/**
+ * dp_set_bus_vote_lvl_high() - Take a vote on bus bandwidth from dp
+ * @soc_hdl: Datapath soc handle
+ * @high: whether the bus bw is high or not
+ *
+ * Return: void
+ */
+static void
+dp_set_bus_vote_lvl_high(ol_txrx_soc_handle soc_hdl, bool high)
+{
+	struct dp_soc *soc = cdp_soc_t_to_dp_soc(soc_hdl);
+
+	soc->high_throughput = high;
+}
+
+/**
+ * dp_get_bus_vote_lvl_high() - get bus bandwidth vote to dp
+ * @soc_hdl: Datapath soc handle
+ *
+ * Return: bool
+ */
+static bool
+dp_get_bus_vote_lvl_high(ol_txrx_soc_handle soc_hdl)
+{
+	struct dp_soc *soc = cdp_soc_t_to_dp_soc(soc_hdl);
+
+	return soc->high_throughput;
+}
+#endif
+
 #ifdef DP_PEER_EXTENDED_API
 static struct cdp_misc_ops dp_ops_misc = {
 #ifdef FEATURE_WLAN_TDLS
@@ -13630,6 +13661,10 @@ static struct cdp_misc_ops dp_ops_misc = {
 #ifdef CONNECTIVITY_PKTLOG
 	.register_pktdump_cb = dp_register_packetdump_callback,
 	.unregister_pktdump_cb = dp_deregister_packetdump_callback,
+#endif
+#ifdef FEATURE_RX_LINKSPEED_ROAM_TRIGGER
+	.set_bus_vote_lvl_high = dp_set_bus_vote_lvl_high,
+	.get_bus_vote_lvl_high = dp_get_bus_vote_lvl_high,
 #endif
 };
 #endif
@@ -15532,6 +15567,8 @@ static void dp_soc_cfg_init(struct dp_soc *soc)
 
 		soc->wlan_cfg_ctx->rxdma1_enable = 0;
 		soc->wlan_cfg_ctx->num_rxdma_dst_rings_per_pdev = 1;
+		/* use only MAC0 status ring */
+		soc->wlan_cfg_ctx->num_rxdma_status_rings_per_pdev = 1;
 		break;
 	case TARGET_TYPE_QCA8074:
 		wlan_cfg_set_raw_mode_war(soc->wlan_cfg_ctx, true);

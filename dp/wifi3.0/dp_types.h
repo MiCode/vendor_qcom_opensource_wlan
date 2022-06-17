@@ -2441,6 +2441,10 @@ struct dp_soc {
 	/* PPDU to link_id mapping parameters */
 	uint8_t link_id_offset;
 	uint8_t link_id_bits;
+#ifdef FEATURE_RX_LINKSPEED_ROAM_TRIGGER
+	/* A flag using to decide the switch of rx link speed  */
+	bool high_throughput;
+#endif
 };
 
 #ifdef IPA_OFFLOAD

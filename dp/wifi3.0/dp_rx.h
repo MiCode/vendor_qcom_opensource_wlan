@@ -279,6 +279,64 @@ bool dp_rx_deliver_special_frame(struct dp_soc *soc, struct dp_txrx_peer *peer,
 }
 #endif
 
+#ifdef FEATURE_RX_LINKSPEED_ROAM_TRIGGER
+/**
+ * dp_rx_data_is_specific() - Used to exclude specific frames
+ *                            not practical for getting rx
+ *                            stats like rate, mcs, nss, etc.
+ *
+ * @hal-soc_hdl: soc handler
+ * @rx_tlv_hdr: rx tlv header
+ * @nbuf: RX skb pointer
+ *
+ * Return: true - a specific frame  not suitable
+ *                for getting rx stats from it.
+ *         false - a common frame suitable for
+ *                 getting rx stats from it.
+ */
+static inline
+bool dp_rx_data_is_specific(hal_soc_handle_t hal_soc_hdl,
+			    uint8_t *rx_tlv_hdr,
+			    qdf_nbuf_t nbuf)
+{
+	if (qdf_unlikely(qdf_nbuf_is_da_mcbc(nbuf)))
+		return true;
+
+	if (!hal_rx_tlv_first_mpdu_get(hal_soc_hdl, rx_tlv_hdr))
+		return true;
+
+	if (!hal_rx_msdu_end_first_msdu_get(hal_soc_hdl, rx_tlv_hdr))
+		return true;
+
+	/* ARP, EAPOL is neither IPV6 ETH nor IPV4 ETH from L3 level */
+	if (qdf_likely(hal_rx_tlv_l3_type_get(hal_soc_hdl, rx_tlv_hdr) ==
+	    QDF_NBUF_TRAC_IPV4_ETH_TYPE)) {
+		if (qdf_nbuf_is_ipv4_dhcp_pkt(nbuf))
+			return true;
+	} else if (qdf_likely(hal_rx_tlv_l3_type_get(hal_soc_hdl, rx_tlv_hdr) ==
+		   QDF_NBUF_TRAC_IPV6_ETH_TYPE)) {
+		if (qdf_nbuf_is_ipv6_dhcp_pkt(nbuf))
+			return true;
+	} else {
+		return true;
+	}
+	return false;
+}
+#else
+static inline
+bool dp_rx_data_is_specific(hal_soc_handle_t hal_soc_hdl,
+			    uint8_t *rx_tlv_hdr,
+			    qdf_nbuf_t nbuf)
+
+{
+	/*
+	 * default return is true to make sure that rx stats
+	 * will not be handled when this feature is disabled
+	 */
+	return true;
+}
+#endif /* FEATURE_RX_LINKSPEED_ROAM_TRIGGER */
+
 #ifndef QCA_HOST_MODE_WIFI_DISABLED
 #ifdef DP_RX_DISABLE_NDI_MDNS_FORWARDING
 static inline

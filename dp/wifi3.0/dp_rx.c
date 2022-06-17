@@ -39,6 +39,9 @@
 #ifdef FEATURE_WDS
 #include "dp_txrx_wds.h"
 #endif
+#ifdef DP_RATETABLE_SUPPORT
+#include "dp_ratetable.h"
+#endif
 
 #ifdef DUP_RX_DESC_WAR
 void dp_rx_dump_info_and_assert(struct dp_soc *soc,
@@ -2073,6 +2076,70 @@ QDF_STATUS dp_rx_eapol_deliver_to_stack(struct dp_soc *soc,
 #define dp_rx_msdu_stats_update_prot_cnts(vdev_hdl, nbuf, txrx_peer)
 #endif
 
+#ifdef FEATURE_RX_LINKSPEED_ROAM_TRIGGER
+/**
+ * dp_rx_rates_stats_update() - update rate stats
+ * from rx msdu.
+ * @soc: datapath soc handle
+ * @nbuf: received msdu buffer
+ * @rx_tlv_hdr: rx tlv header
+ * @txrx_peer: datapath txrx_peer handle
+ * @sgi: Short Guard Interval
+ * @mcs: Modulation and Coding Set
+ * @nss: Number of Spatial Streams
+ * @bw: BandWidth
+ * @pkt_type: Corresponds to preamble
+ *
+ * To be precisely record rates, following factors are considered:
+ * Exclude specific frames, ARP, DHCP, ssdp, etc.
+ * Make sure to affect rx throughput as least as possible.
+ *
+ * Return: void
+ */
+static void
+dp_rx_rates_stats_update(struct dp_soc *soc, qdf_nbuf_t nbuf,
+			 uint8_t *rx_tlv_hdr, struct dp_txrx_peer *txrx_peer,
+			 uint32_t sgi, uint32_t mcs,
+			 uint32_t nss, uint32_t bw, uint32_t pkt_type)
+{
+	uint32_t rix;
+	uint16_t ratecode;
+	uint32_t avg_rx_rate;
+	uint32_t ratekbps;
+	enum cdp_punctured_modes punc_mode = NO_PUNCTURE;
+
+	if (soc->high_throughput ||
+	    dp_rx_data_is_specific(soc->hal_soc, rx_tlv_hdr, nbuf)) {
+		return;
+	}
+
+	DP_PEER_EXTD_STATS_UPD(txrx_peer, rx.rx_rate, mcs);
+
+	/* here pkt_type corresponds to preamble */
+	ratekbps = dp_getrateindex(sgi,
+				   mcs,
+				   nss,
+				   pkt_type,
+				   bw,
+				   punc_mode,
+				   &rix,
+				   &ratecode);
+	DP_PEER_EXTD_STATS_UPD(txrx_peer, rx.last_rx_rate, ratekbps);
+	avg_rx_rate =
+		dp_ath_rate_lpf(txrx_peer->stats.extd_stats.rx.avg_rx_rate,
+				ratekbps);
+	DP_PEER_EXTD_STATS_UPD(txrx_peer, rx.avg_rx_rate, avg_rx_rate);
+}
+#else
+static void
+dp_rx_rates_stats_update(struct dp_soc *soc, qdf_nbuf_t nbuf,
+			 uint8_t *rx_tlv_hdr, struct dp_txrx_peer *txrx_peer,
+			 uint32_t sgi, uint32_t mcs,
+			 uint32_t nss, uint32_t bw, uint32_t pkt_type)
+{
+}
+#endif /* FEATURE_RX_LINKSPEED_ROAM_TRIGGER */
+
 #ifndef QCA_ENHANCED_STATS_SUPPORT
 /**
  * dp_rx_msdu_extd_stats_update(): Update Rx extended path stats for peer
@@ -2141,6 +2208,9 @@ void dp_rx_msdu_extd_stats_update(struct dp_soc *soc, qdf_nbuf_t nbuf,
 		DP_PEER_EXTD_STATS_INC(txrx_peer,
 				       rx.pkt_type[pkt_type].mcs_count[dst_mcs_idx],
 				       1);
+
+	dp_rx_rates_stats_update(soc, nbuf, rx_tlv_hdr, txrx_peer,
+				 sgi, mcs, nss, bw, pkt_type);
 }
 #else
 static inline

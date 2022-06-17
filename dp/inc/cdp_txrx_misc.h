@@ -994,4 +994,57 @@ cdp_set_peer_txq_flush_config(ol_txrx_soc_handle soc, uint8_t vdev_id,
 	return 0;
 }
 #endif /* WLAN_FEATURE_PEER_TXQ_FLUSH_CONF */
+#ifdef FEATURE_RX_LINKSPEED_ROAM_TRIGGER
+/**
+ * cdp_set_bus_vote_lvl() - have a vote on bus bandwidth lvl
+ * @soc: datapath soc handle
+ * @high: whether TPUT level is high or not
+ *
+ * Return: void
+ */
+static inline void
+cdp_set_bus_vote_lvl_high(ol_txrx_soc_handle soc, bool high)
+{
+	if (!soc || !soc->ops || !soc->ops->misc_ops ||
+	    !soc->ops->misc_ops->set_bus_vote_lvl_high) {
+		dp_cdp_debug("Invalid Instance:");
+		return;
+	}
+
+	soc->ops->misc_ops->set_bus_vote_lvl_high(soc, high);
+}
+
+/**
+ * cdp_get_bus_vote_lvl() - get bus bandwidth lvl from dp
+ * @soc: datapath soc handle
+ *
+ * Return: bool, whether TPUT level is high or not
+ */
+static inline bool
+cdp_get_bus_lvl_high(ol_txrx_soc_handle soc)
+{
+	if (!soc || !soc->ops || !soc->ops->misc_ops ||
+	    !soc->ops->misc_ops->get_bus_vote_lvl_high) {
+		dp_cdp_debug("Invalid Instance:");
+		return false;
+	}
+
+	return soc->ops->misc_ops->get_bus_vote_lvl_high(soc);
+}
+#else
+static inline void
+cdp_set_bus_vote_lvl_high(ol_txrx_soc_handle soc, bool high)
+{
+}
+
+static inline bool
+cdp_get_bus_lvl_high(ol_txrx_soc_handle soc)
+{
+	/*
+	 * default bus lvl is high to
+	 * make sure not affect tput
+	 */
+	return true;
+}
+#endif
 #endif /* _CDP_TXRX_MISC_H_ */

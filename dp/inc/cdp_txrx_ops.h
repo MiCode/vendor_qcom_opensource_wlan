@@ -1513,6 +1513,10 @@ struct ol_if_ops {
  * @set_tx_flush_pending: Configures the ac/tid to be flushed and policy
  *			  to flush.
  *
+ * set_bus_vote_lvl_high: The bus lvl is set to high or low based on tput
+ * get_bus_vote_lvl_high: Get bus lvl to determine whether or not get
+ *                        rx rate stats
+ *
  * Function pointers for miscellaneous soc/pdev/vdev related operations.
  */
 struct cdp_misc_ops {
@@ -1609,6 +1613,10 @@ struct cdp_misc_ops {
 					 uint8_t vdev_id, uint8_t *addr,
 					 uint8_t ac, uint32_t tid,
 					 enum cdp_peer_txq_flush_policy policy);
+#endif
+#ifdef FEATURE_RX_LINKSPEED_ROAM_TRIGGER
+	void (*set_bus_vote_lvl_high)(struct cdp_soc_t *soc_hdl, bool high);
+	bool (*get_bus_vote_lvl_high)(struct cdp_soc_t *soc_hdl);
 #endif
 };
 
