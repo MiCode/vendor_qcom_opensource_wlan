@@ -4798,7 +4798,7 @@ static bool dp_txrx_ppdu_stats_handler(struct dp_soc *soc,
 
 	return free_buf;
 }
-#else
+#elif (!defined(REMOVE_PKT_LOG))
 static bool dp_txrx_ppdu_stats_handler(struct dp_soc *soc,
 				       uint8_t pdev_id, qdf_nbuf_t htt_t2h_msg)
 {

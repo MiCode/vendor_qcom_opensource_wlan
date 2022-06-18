@@ -1190,7 +1190,8 @@ dp_cpu_ring_map[DP_NSS_CPU_RING_MAP_MAX][WLAN_CFG_INT_NUM_CONTEXTS_MAX];
 int
 dp_htt_get_ppdu_sniffer_ampdu_tlv_bitmap(uint32_t bitmap);
 
-#ifdef WDI_EVENT_ENABLE
+#if (defined(DP_CON_MON) || defined(WDI_EVENT_ENABLE)) &&\
+	(!defined(REMOVE_PKT_LOG))
 void dp_pkt_log_init(struct cdp_soc_t *soc_hdl, uint8_t pdev_id, void *scn);
 #else
 static inline void
