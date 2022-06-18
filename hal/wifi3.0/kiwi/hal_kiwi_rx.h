@@ -116,13 +116,13 @@ void hal_rx_get_bb_info_kiwi(void *rx_tlv,
 	struct hal_rx_ppdu_info *ppdu_info  = ppdu_info_hdl;
 
 	ppdu_info->cfr_info.bb_captured_channel =
-	  HAL_RX_GET(rx_tlv, RXPCU_PPDU_END_INFO, BB_CAPTURED_CHANNEL);
+	  HAL_RX_GET_64(rx_tlv, RXPCU_PPDU_END_INFO, BB_CAPTURED_CHANNEL);
 
 	ppdu_info->cfr_info.bb_captured_timeout =
-	  HAL_RX_GET(rx_tlv, RXPCU_PPDU_END_INFO, BB_CAPTURED_TIMEOUT);
+	  HAL_RX_GET_64(rx_tlv, RXPCU_PPDU_END_INFO, BB_CAPTURED_TIMEOUT);
 
 	ppdu_info->cfr_info.bb_captured_reason =
-	  HAL_RX_GET(rx_tlv, RXPCU_PPDU_END_INFO, BB_CAPTURED_REASON);
+	  HAL_RX_GET_64(rx_tlv, RXPCU_PPDU_END_INFO, BB_CAPTURED_REASON);
 }
 
 static inline
