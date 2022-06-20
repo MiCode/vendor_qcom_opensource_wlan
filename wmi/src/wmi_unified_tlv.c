@@ -19322,14 +19322,18 @@ static void populate_tlv_service(uint32_t *wmi_service)
 	wmi_service[wmi_service_igmp_offload_support] =
 			WMI_SERVICE_IGMP_OFFLOAD_SUPPORT;
 #endif
-#ifdef WLAN_FEATURE_11AX
+
 #ifdef FEATURE_WLAN_TDLS
+#ifdef WLAN_FEATURE_11AX
 	wmi_service[wmi_service_tdls_ax_support] =
 			WMI_SERVICE_11AX_TDLS_SUPPORT;
 	wmi_service[wmi_service_tdls_6g_support] =
 			WMI_SERVICE_TDLS_6GHZ_SUPPORT;
 #endif
+	wmi_service[wmi_service_tdls_wideband_support] =
+			WMI_SERVICE_TDLS_WIDEBAND_SUPPORT;
 #endif
+
 #ifdef WLAN_SUPPORT_TWT
 	wmi_service[wmi_service_twt_bcast_req_support] =
 			WMI_SERVICE_BROADCAST_TWT_REQUESTER;
