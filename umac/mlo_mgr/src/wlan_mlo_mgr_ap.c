@@ -303,7 +303,7 @@ uint16_t mlo_ap_ml_peerid_alloc(void)
 	if (i == mlo_ctx->max_mlo_peer_id)
 		return MLO_INVALID_PEER_ID;
 
-	mlo_debug(" ML peer id %d is allocated", i + 1);
+	mlo_debug(" ML peee id %d is allocated", i + 1);
 
 	return i + 1;
 }
@@ -312,13 +312,11 @@ void mlo_ap_ml_peerid_free(uint16_t mlo_peer_id)
 {
 	struct mlo_mgr_context *mlo_ctx = wlan_objmgr_get_mlo_ctx();
 
-	if ((mlo_peer_id == 0) || (mlo_peer_id == MLO_INVALID_PEER_ID)) {
-		mlo_err(" ML peer id %d is invalid", mlo_peer_id);
+	if (mlo_peer_id == MLO_INVALID_PEER_ID)
 		return;
-	}
 
 	if (mlo_peer_id > mlo_ctx->max_mlo_peer_id) {
-		mlo_err(" ML peer id %d is invalid", mlo_peer_id);
+		mlo_err(" ML peee id %d is invalid", mlo_peer_id);
 		QDF_BUG(0);
 		return;
 	}
@@ -329,7 +327,7 @@ void mlo_ap_ml_peerid_free(uint16_t mlo_peer_id)
 
 	ml_peerid_lock_release(mlo_ctx);
 
-	mlo_debug(" ML peer id %d is freed", mlo_peer_id);
+	mlo_debug(" ML peee id %d is freed", mlo_peer_id);
 }
 
 void mlo_ap_vdev_quiet_set(struct wlan_objmgr_vdev *vdev)

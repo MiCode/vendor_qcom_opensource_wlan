@@ -325,14 +325,6 @@ wlan_mlo_peer_deauth_init(struct wlan_mlo_peer_context *ml_peer)
 			continue;
 
 		link_peer = peer_entry->link_peer;
-		/* Skip Deauth if PMF is enabled for the station */
-		if ((i == 0) &&
-		    (wlan_crypto_is_pmf_enabled(wlan_peer_get_vdev(link_peer),
-					       link_peer))) {
-			mlo_peer_lock_release(ml_peer);
-			return;
-		}
-
 		if (wlan_objmgr_peer_try_get_ref(link_peer, WLAN_MLO_MGR_ID) !=
 						QDF_STATUS_SUCCESS)
 			continue;
@@ -346,13 +338,18 @@ wlan_mlo_peer_deauth_init(struct wlan_mlo_peer_context *ml_peer)
 			continue;
 
 		/* Prepare and queue message */
-		if (i == 0)
-			mlo_link_peer_deauth_init(ml_dev, link_peers[i]);
-		else
-			mlo_link_peer_disconnect_notify(ml_dev, link_peers[i]);
-	}
+		if (i == 0) {
+			/* Skip Deauth if PMF is enabled for the station */
+			if (wlan_crypto_is_pmf_enabled(
+					wlan_peer_get_vdev(link_peers[i]),
+					link_peers[i]))
+				break;
 
-	return;
+			mlo_link_peer_deauth_init(ml_dev, link_peers[i]);
+		} else {
+			mlo_link_peer_disconnect_notify(ml_dev, link_peers[i]);
+		}
+	}
 }
 
 void
@@ -828,18 +825,7 @@ QDF_STATUS wlan_mlo_peer_create(struct wlan_objmgr_vdev *vdev,
 		ml_peer->mlpeer_state = ML_PEER_CREATED;
 		ml_peer->max_links = ml_info->num_partner_links;
 		ml_peer->primary_umac_psoc_id = ML_PRIMARY_UMAC_ID_INVAL;
-
 		ml_peer->mlo_peer_id = mlo_ap_ml_peerid_alloc();
-		if (ml_peer->mlo_peer_id == MLO_INVALID_PEER_ID) {
-			mlo_err("MLD ID %d ML Peer " QDF_MAC_ADDR_FMT " invalid ml peer id",
-				ml_dev->mld_id,
-				QDF_MAC_ADDR_REF
-				(ml_peer->peer_mld_addr.bytes));
-			mlo_peer_free(ml_peer);
-			mlo_dev_release_link_vdevs(link_vdevs);
-			return QDF_STATUS_E_RESOURCES;
-		}
-
 		qdf_copy_macaddr((struct qdf_mac_addr *)&ml_peer->peer_mld_addr,
 				 (struct qdf_mac_addr *)&link_peer->mldaddr[0]);
 		/* Allocate AID */
@@ -864,16 +850,7 @@ QDF_STATUS wlan_mlo_peer_create(struct wlan_objmgr_vdev *vdev,
 	/* Populate Link peer pointer, peer MAC address,
 	 * MLD address. HW link ID, update ref count
 	 */
-	status = mlo_peer_attach_link_peer(ml_peer, link_peer, NULL);
-	if (QDF_IS_STATUS_ERROR(status)) {
-		mlo_err("MLD ID %d ML Peer " QDF_MAC_ADDR_FMT " link peer attach failed",
-			ml_dev->mld_id,
-			QDF_MAC_ADDR_REF
-			(ml_peer->peer_mld_addr.bytes));
-		mlo_peer_free(ml_peer);
-		mlo_dev_release_link_vdevs(link_vdevs);
-		return status;
-	}
+	mlo_peer_attach_link_peer(ml_peer, link_peer, NULL);
 
 	/* Allocate Primary UMAC */
 	mlo_peer_allocate_primary_umac(ml_dev, ml_peer, link_vdevs);
@@ -893,8 +870,6 @@ QDF_STATUS wlan_mlo_peer_create(struct wlan_objmgr_vdev *vdev,
 				ml_dev->mld_id,
 				QDF_MAC_ADDR_REF(ml_peer->peer_mld_addr.bytes));
 			mlo_reset_link_peer(ml_peer, link_peer);
-			wlan_objmgr_peer_release_ref(link_peer,
-						     WLAN_MLO_MGR_ID);
 			mlo_peer_free(ml_peer);
 			mlo_dev_release_link_vdevs(link_vdevs);
 			return status;
