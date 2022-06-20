@@ -5097,6 +5097,42 @@ dp_rx_delba_ind_handler(void *soc_handle, uint16_t peer_id,
 }
 
 #ifdef DP_PEER_EXTENDED_API
+/**
+ * dp_peer_set_bw() - Set bandwidth and mpdu retry count threshold for peer
+ * @soc: DP soc handle
+ * @txrx_peer: Core txrx_peer handle
+ * @set_bw: enum of bandwidth to be set for this peer connection
+ *
+ * Return: None
+ */
+static void dp_peer_set_bw(struct dp_soc *soc, struct dp_txrx_peer *txrx_peer,
+			   enum cdp_peer_bw set_bw)
+{
+	if (!txrx_peer)
+		return;
+
+	txrx_peer->bw = set_bw;
+
+	switch (set_bw) {
+	case CDP_160_MHZ:
+	case CDP_320_MHZ:
+		txrx_peer->mpdu_retry_threshold =
+				soc->wlan_cfg_ctx->mpdu_retry_threshold_2;
+		break;
+	case CDP_20_MHZ:
+	case CDP_40_MHZ:
+	case CDP_80_MHZ:
+	default:
+		txrx_peer->mpdu_retry_threshold =
+				soc->wlan_cfg_ctx->mpdu_retry_threshold_1;
+		break;
+	}
+
+	dp_info("Peer id: %u: BW: %u, mpdu retry threshold: %u",
+		txrx_peer->peer_id, txrx_peer->bw,
+		txrx_peer->mpdu_retry_threshold);
+}
+
 #ifdef WLAN_FEATURE_11BE_MLO
 QDF_STATUS dp_register_peer(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
 			    struct ol_txrx_desc_type *sta_desc)
@@ -5113,6 +5149,8 @@ QDF_STATUS dp_register_peer(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
 	qdf_spin_lock_bh(&peer->peer_info_lock);
 	peer->state = OL_TXRX_PEER_STATE_CONN;
 	qdf_spin_unlock_bh(&peer->peer_info_lock);
+
+	dp_peer_set_bw(soc, peer->txrx_peer, sta_desc->bw);
 
 	dp_rx_flush_rx_cached(peer, false);
 
@@ -5184,6 +5222,8 @@ QDF_STATUS dp_register_peer(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
 	qdf_spin_lock_bh(&peer->peer_info_lock);
 	peer->state = OL_TXRX_PEER_STATE_CONN;
 	qdf_spin_unlock_bh(&peer->peer_info_lock);
+
+	dp_peer_set_bw(soc, peer->txrx_peer, sta_desc->bw);
 
 	dp_rx_flush_rx_cached(peer, false);
 

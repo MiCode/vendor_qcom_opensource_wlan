@@ -3840,9 +3840,8 @@ struct dp_peer_stats {
  * @stats: Peer stats
  * @delay_stats: Peer delay stats
  * @jitter_stats: Peer jitter stats
- * @mpdu_retry_threshold_1: MPDU retry threshold 1 to increment tx bad count
- * @mpdu_retry_threshold_1: MPDU retry threshold 2 to increment tx bad count
-
+ * @bw: bandwidth of peer connection
+ * @mpdu_retry_threshold: MPDU retry threshold to increment tx bad count
  */
 struct dp_txrx_peer {
 	/* Core TxRx Peer */
@@ -3898,8 +3897,10 @@ struct dp_txrx_peer {
 #ifdef CONFIG_SAWF
 	struct dp_peer_sawf_stats *sawf_stats;
 #endif
-	uint8_t mpdu_retry_threshold_1;
-	uint8_t mpdu_retry_threshold_2;
+#ifdef DP_PEER_EXTENDED_API
+	enum cdp_peer_bw bw;
+	uint8_t mpdu_retry_threshold;
+#endif
 };
 
 /* Peer structure for data path state */
