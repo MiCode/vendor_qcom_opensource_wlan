@@ -46,11 +46,39 @@ bool mlo_ap_vdev_attach(struct wlan_objmgr_vdev *vdev,
  * @vdev_count: vdev count
  * @wlan_vdev_list: vdev list
  *
+ * This API gets all partner vdev's which have WLAN_VDEV_FEXT2_MLO bit
+ * set.
+ *
+ * It takes references for all vdev's with bit set in the list. Callers
+ * of this API should properly release references before destroying the
+ * list.
+ *
  * Return: None
  */
 void mlo_ap_get_vdev_list(struct wlan_objmgr_vdev *vdev,
 			  uint16_t *vdev_count,
 			  struct wlan_objmgr_vdev **wlan_vdev_list);
+
+/**
+ * mlo_ap_get_partner_vdev_list_from_mld() - get partner vdev from MLD
+ *                                           vdev_list without checking
+ *                                           WLAN_VDEV_FEXT2_MLO bit
+ * @vdev: vdev pointer
+ * @vdev_count: vdev count
+ * @wlan_vdev_list: vdev list
+ *
+ * This API gets all partner vdev's irrespective of WLAN_VDEV_FEXT2_MLO
+ * bit. Ideally, it copies all partners of the MLD with references.
+ *
+ * It takes references for all vdev's in the list. The callers of this
+ * API should properly release references before destroying the list.
+ *
+ * Return: None
+ */
+void mlo_ap_get_partner_vdev_list_from_mld(
+		struct wlan_objmgr_vdev *vdev,
+		uint16_t *vdev_count,
+		struct wlan_objmgr_vdev **wlan_vdev_list);
 
 /**
  * mlo_ap_link_sync_wait_notify() - notify the mlo manager, once vdev
