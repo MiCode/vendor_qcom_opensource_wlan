@@ -76,8 +76,8 @@
 #define MGMT_RX_REO_EGRESS_FRAME_DEBUG_INFO_PER_LINK_SNAPSHOTS_MAX_SIZE   (94)
 #define MGMT_RX_REO_EGRESS_FRAME_DEBUG_INFO_SNAPSHOT_MAX_SIZE     (22)
 
-#define MGMT_RX_REO_INGRESS_FRAME_DEBUG_INFO_BOARDER_MAX_SIZE   (783)
-#define MGMT_RX_REO_INGRESS_FRAME_DEBUG_INFO_FLAG_MAX_SIZE   (11)
+#define MGMT_RX_REO_INGRESS_FRAME_DEBUG_INFO_BOARDER_MAX_SIZE   (785)
+#define MGMT_RX_REO_INGRESS_FRAME_DEBUG_INFO_FLAG_MAX_SIZE   (13)
 #define MGMT_RX_REO_INGRESS_FRAME_DEBUG_INFO_WAIT_COUNT_MAX_SIZE   (69)
 #define MGMT_RX_REO_INGRESS_FRAME_DEBUG_INFO_PER_LINK_SNAPSHOTS_MAX_SIZE   (94)
 #define MGMT_RX_REO_INGRESS_FRAME_DEBUG_INFO_SNAPSHOT_MAX_SIZE     (22)
@@ -462,6 +462,9 @@ struct mgmt_rx_reo_sim_context {
  * @shared_snapshots: snapshots shared b/w host and target
  * @host_snapshot: host snapshot
  * @cpu_id: CPU index
+ * @reo_required: Indicates whether reorder is required for the current frame.
+ * If reorder is not required, current frame will just be used for updating the
+ * wait count of frames already part of the reorder list.
  */
 struct reo_ingress_debug_frame_info {
 	uint8_t link_id;
@@ -489,6 +492,7 @@ struct reo_ingress_debug_frame_info {
 			[MAX_MLO_LINKS][MGMT_RX_REO_SHARED_SNAPSHOT_MAX];
 	struct mgmt_rx_reo_snapshot_params host_snapshot[MAX_MLO_LINKS];
 	int cpu_id;
+	bool reo_required;
 };
 
 /**
@@ -694,6 +698,9 @@ struct mgmt_rx_reo_context {
  * @is_parallel_rx: Indicates that this frame is received in parallel to the
  * last frame which is delivered to the upper layer.
  * @pkt_ctr_delta: Packet counter delta of the current and last frame
+ * @reo_required: Indicates whether reorder is required for the current frame.
+ * If reorder is not required, current frame will just be used for updating the
+ * wait count of frames already part of the reorder list.
  */
 struct mgmt_rx_reo_frame_descriptor {
 	enum mgmt_rx_reo_frame_descriptor_type type;
@@ -713,6 +720,7 @@ struct mgmt_rx_reo_frame_descriptor {
 	struct mgmt_rx_reo_snapshot_params host_snapshot[MAX_MLO_LINKS];
 	bool is_parallel_rx;
 	int pkt_ctr_delta;
+	bool reo_required;
 };
 
 /**

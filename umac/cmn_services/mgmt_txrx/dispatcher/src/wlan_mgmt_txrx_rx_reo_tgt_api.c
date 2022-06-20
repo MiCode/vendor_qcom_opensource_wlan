@@ -141,12 +141,7 @@ tgt_mgmt_rx_reo_enter_algo_without_buffer(
 	desc.list_insertion_pos = -1;
 	desc.frame_type = IEEE80211_FC0_TYPE_MGT;
 	desc.frame_subtype = 0xFF;
-
-	/** If REO is not required for this descriptor,
-	 *  no need to proceed further
-	 */
-	if (!is_mgmt_rx_reo_required(pdev, &desc))
-		return  QDF_STATUS_SUCCESS;
+	desc.reo_required = is_mgmt_rx_reo_required(pdev, &desc);
 
 	/* Enter the REO algorithm */
 	status = wlan_mgmt_rx_reo_algo_entry(pdev, &desc, &is_frm_queued);
@@ -273,18 +268,33 @@ QDF_STATUS tgt_mgmt_rx_reo_frame_handler(
 	desc.frame_type = frame_type;
 	desc.frame_subtype = frame_subtype;
 
-	/* If REO is not required for this frame, process it right away */
 	if (frame_type != IEEE80211_FC0_TYPE_MGT ||
 	    !is_mgmt_rx_reo_required(pdev, &desc)) {
+		desc.reo_required = false;
+		status = wlan_mgmt_rx_reo_algo_entry(pdev, &desc, &is_queued);
+
+		if (QDF_IS_STATUS_ERROR(status)) {
+			mgmt_rx_reo_err("Failure in executing REO algorithm");
+			goto cleanup;
+		}
+
+		qdf_assert_always(!is_queued);
+
 		return tgt_mgmt_txrx_process_rx_frame(pdev, buf,
 						      mgmt_rx_params);
+	} else {
+		desc.reo_required = true;
+		status = wlan_mgmt_rx_reo_algo_entry(pdev, &desc, &is_queued);
+
+		qdf_assert_always(QDF_IS_STATUS_ERROR(status) || is_queued);
+
+		/**
+		 *  If frame is queued, we shouldn't free up params and
+		 *  buf pointers.
+		 */
+		if (is_queued)
+			return status;
 	}
-
-	status = wlan_mgmt_rx_reo_algo_entry(pdev, &desc, &is_queued);
-
-	/* If frame is queued, we shouldn't free up params and buf pointers */
-	if (is_queued)
-		return status;
 cleanup:
 	qdf_nbuf_free(buf);
 	free_mgmt_rx_event_params(mgmt_rx_params);

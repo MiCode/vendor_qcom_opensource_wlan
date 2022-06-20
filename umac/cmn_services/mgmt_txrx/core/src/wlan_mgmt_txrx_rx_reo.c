@@ -2248,7 +2248,8 @@ mgmt_rx_reo_update_list(struct mgmt_rx_reo_list *reo_list,
 	new_frame_global_ts = mgmt_rx_reo_get_global_ts(frame_desc->rx_params);
 
 	/* Prepare the list entry before acquiring lock */
-	if (frame_desc->type == MGMT_RX_REO_FRAME_DESC_HOST_CONSUMED_FRAME) {
+	if (frame_desc->type == MGMT_RX_REO_FRAME_DESC_HOST_CONSUMED_FRAME &&
+	    frame_desc->reo_required) {
 		status = mgmt_rx_reo_prepare_list_entry(frame_desc, &new_entry);
 		if (QDF_IS_STATUS_ERROR(status)) {
 			mgmt_rx_reo_err("Failed to prepare list entry");
@@ -2301,7 +2302,7 @@ mgmt_rx_reo_update_list(struct mgmt_rx_reo_list *reo_list,
 		qdf_assert_always(!list_insertion_pos);
 
 	if (frame_desc->type == MGMT_RX_REO_FRAME_DESC_HOST_CONSUMED_FRAME &&
-	    !frame_desc->is_stale) {
+	    !frame_desc->is_stale && frame_desc->reo_required) {
 		if (least_greater_entry_found) {
 			status = mgmt_rx_reo_update_wait_count(
 					&new_entry->wait_count,
@@ -2399,15 +2400,6 @@ exit_free_entry:
 
 	if (!*is_queued)
 		return status;
-
-	if (frame_desc->type == MGMT_RX_REO_FRAME_DESC_HOST_CONSUMED_FRAME) {
-		if (least_greater_entry_found)
-			mgmt_rx_reo_debug("Inserting new entry %pK before %pK",
-					  new_entry, least_greater_entry);
-		else
-			mgmt_rx_reo_debug("Inserting new entry %pK at the tail",
-					  new_entry);
-	}
 
 	return status;
 }
@@ -2775,6 +2767,7 @@ mgmt_rx_reo_log_ingress_frame(struct mgmt_rx_reo_context *reo_ctx,
 	cur_frame_debug_info->list_size_rx = desc->list_size_rx;
 	cur_frame_debug_info->list_insertion_pos = desc->list_insertion_pos;
 	cur_frame_debug_info->cpu_id = qdf_get_smp_processor_id();
+	cur_frame_debug_info->reo_required = desc->reo_required;
 
 	ingress_frame_debug_info->next_index++;
 	ingress_frame_debug_info->next_index %=
@@ -2864,7 +2857,7 @@ mgmt_rx_reo_debug_print_ingress_frame_info(struct mgmt_rx_reo_context *reo_ctx,
 	boarder = ingress_frame_debug_info->boarder;
 
 	mgmt_rx_reo_alert_no_fl("%s", boarder);
-	mgmt_rx_reo_alert_no_fl("|%5s|%5s|%6s|%6s|%9s|%4s|%5s|%10s|%10s|%10s|%5s|%10s|%11s|%11s|%11s|%4s|%3s|%69s|%94s|%94s|%94s|%94s|%94s|%94s|",
+	mgmt_rx_reo_alert_no_fl("|%5s|%5s|%6s|%6s|%9s|%4s|%5s|%10s|%10s|%10s|%5s|%10s|%11s|%13s|%11s|%4s|%3s|%69s|%94s|%94s|%94s|%94s|%94s|%94s|",
 				"Index", "CPU", "D.type", "F.type", "F.subtype",
 				"Link", "SeqNo", "Global ts",
 				"Start ts", "End ts", "Dur", "Last ts",
@@ -2887,6 +2880,7 @@ mgmt_rx_reo_debug_print_ingress_frame_info(struct mgmt_rx_reo_context *reo_ctx,
 		char flag_error = ' ';
 		char flag_zero_wait_count_rx = ' ';
 		char flag_immediate_delivery = ' ';
+		char flag_reo_required = ' ';
 		int64_t ts_last_released_frame = -1;
 		uint8_t link;
 
@@ -2914,9 +2908,13 @@ mgmt_rx_reo_debug_print_ingress_frame_info(struct mgmt_rx_reo_context *reo_ctx,
 		if (info->immediate_delivery)
 			flag_immediate_delivery = 'I';
 
-		snprintf(flags, sizeof(flags), "%c %c %c %c %c %c", flag_error,
+		if (!info->reo_required)
+			flag_reo_required = 'N';
+
+		snprintf(flags, sizeof(flags), "%c %c %c %c %c %c %c", flag_error,
 			 flag_stale, flag_parallel_rx, flag_queued,
-			 flag_zero_wait_count_rx, flag_immediate_delivery);
+			 flag_zero_wait_count_rx, flag_immediate_delivery,
+			 flag_reo_required);
 		snprintf(wait_count, sizeof(wait_count),
 			 "%9llx(%8x, %8x, %8x, %8x, %8x, %8x)",
 			 info->wait_count.total_count,
@@ -2967,7 +2965,7 @@ mgmt_rx_reo_debug_print_ingress_frame_info(struct mgmt_rx_reo_context *reo_ctx,
 				 fw_forwaded, host);
 		}
 
-		mgmt_rx_reo_alert_no_fl("|%5u|%5d|%6u|%6x|%9x|%4u|%5u|%10u|%10u|%10u|%5u|%10lld|%11llu|%11s|%11llu|%4d|%3d|%69s|%70s|%70s|%70s|%70s|%70s|%70s|",
+		mgmt_rx_reo_alert_no_fl("|%5u|%5d|%6u|%6x|%9x|%4u|%5u|%10u|%10u|%10u|%5u|%10lld|%11llu|%13s|%11llu|%4d|%3d|%69s|%70s|%70s|%70s|%70s|%70s|%70s|",
 					entry, info->cpu_id, info->desc_type,
 					info->frame_type, info->frame_subtype,
 					info->link_id,
