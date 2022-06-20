@@ -736,10 +736,6 @@ static void dp_ipa_wdi_tx_alt_pipe_params(struct dp_soc *soc,
 					  struct dp_ipa_resources *ipa_res,
 					  qdf_ipa_wdi_pipe_setup_info_t *tx)
 {
-	struct tcl_data_cmd *tcl_desc_ptr;
-	uint8_t *desc_addr;
-	uint32_t desc_size;
-
 	QDF_IPA_WDI_SETUP_INFO_CLIENT(tx) = IPA_CLIENT_WLAN2_CONS1;
 
 	QDF_IPA_WDI_SETUP_INFO_TRANSFER_RING_BASE_PA(tx) =
@@ -770,20 +766,6 @@ static void dp_ipa_wdi_tx_alt_pipe_params(struct dp_soc *soc,
 		ipa_res->tx_alt_ring_num_alloc_buffer;
 
 	QDF_IPA_WDI_SETUP_INFO_PKT_OFFSET(tx) = 0;
-
-	/* Preprogram TCL descriptor */
-	desc_addr =
-		(uint8_t *)QDF_IPA_WDI_SETUP_INFO_DESC_FORMAT_TEMPLATE(tx);
-	desc_size = sizeof(struct tcl_data_cmd);
-	HAL_TX_DESC_SET_TLV_HDR(desc_addr, HAL_TX_TCL_DATA_TAG, desc_size);
-	tcl_desc_ptr = (struct tcl_data_cmd *)
-		(QDF_IPA_WDI_SETUP_INFO_DESC_FORMAT_TEMPLATE(tx) + 1);
-	tcl_desc_ptr->buf_addr_info.return_buffer_manager =
-				HAL_WBM_SW4_BM_ID(soc->wbm_sw0_bm_id);
-	tcl_desc_ptr->addrx_en = 1;	/* Address X search enable in ASE */
-	tcl_desc_ptr->addry_en = 1;	/* Address X search enable in ASE */
-	tcl_desc_ptr->encap_type = HAL_TX_ENCAP_TYPE_ETHERNET;
-	tcl_desc_ptr->packet_offset = 0;	/* padding for alignment */
 }
 
 static void
@@ -791,10 +773,6 @@ dp_ipa_wdi_tx_alt_pipe_smmu_params(struct dp_soc *soc,
 				   struct dp_ipa_resources *ipa_res,
 				   qdf_ipa_wdi_pipe_setup_info_smmu_t *tx_smmu)
 {
-	struct tcl_data_cmd *tcl_desc_ptr;
-	uint8_t *desc_addr;
-	uint32_t desc_size;
-
 	QDF_IPA_WDI_SETUP_INFO_SMMU_CLIENT(tx_smmu) = IPA_CLIENT_WLAN2_CONS1;
 
 	qdf_mem_copy(&QDF_IPA_WDI_SETUP_INFO_SMMU_TRANSFER_RING_BASE(tx_smmu),
@@ -822,20 +800,6 @@ dp_ipa_wdi_tx_alt_pipe_smmu_params(struct dp_soc *soc,
 	QDF_IPA_WDI_SETUP_INFO_SMMU_NUM_PKT_BUFFERS(tx_smmu) =
 		ipa_res->tx_alt_ring_num_alloc_buffer;
 	QDF_IPA_WDI_SETUP_INFO_SMMU_PKT_OFFSET(tx_smmu) = 0;
-
-	/* Preprogram TCL descriptor */
-	desc_addr = (uint8_t *)QDF_IPA_WDI_SETUP_INFO_SMMU_DESC_FORMAT_TEMPLATE(
-			tx_smmu);
-	desc_size = sizeof(struct tcl_data_cmd);
-	HAL_TX_DESC_SET_TLV_HDR(desc_addr, HAL_TX_TCL_DATA_TAG, desc_size);
-	tcl_desc_ptr = (struct tcl_data_cmd *)
-		(QDF_IPA_WDI_SETUP_INFO_SMMU_DESC_FORMAT_TEMPLATE(tx_smmu) + 1);
-	tcl_desc_ptr->buf_addr_info.return_buffer_manager =
-					HAL_WBM_SW4_BM_ID(soc->wbm_sw0_bm_id);
-	tcl_desc_ptr->addrx_en = 1;	/* Address X search enable in ASE */
-	tcl_desc_ptr->addry_en = 1;	/* Address Y search enable in ASE */
-	tcl_desc_ptr->encap_type = HAL_TX_ENCAP_TYPE_ETHERNET;
-	tcl_desc_ptr->packet_offset = 0;	/* padding for alignment */
 }
 
 static void dp_ipa_setup_tx_alt_pipe(struct dp_soc *soc,
@@ -1901,10 +1865,6 @@ static void dp_ipa_wdi_tx_params(struct dp_soc *soc,
 				 qdf_ipa_wdi_pipe_setup_info_t *tx,
 				 bool over_gsi)
 {
-	struct tcl_data_cmd *tcl_desc_ptr;
-	uint8_t *desc_addr;
-	uint32_t desc_size;
-
 	if (over_gsi)
 		QDF_IPA_WDI_SETUP_INFO_CLIENT(tx) = IPA_CLIENT_WLAN2_CONS;
 	else
@@ -1938,25 +1898,6 @@ static void dp_ipa_wdi_tx_params(struct dp_soc *soc,
 		ipa_res->tx_num_alloc_buffer;
 
 	QDF_IPA_WDI_SETUP_INFO_PKT_OFFSET(tx) = 0;
-
-	/* Preprogram TCL descriptor */
-	desc_addr =
-		(uint8_t *)QDF_IPA_WDI_SETUP_INFO_DESC_FORMAT_TEMPLATE(tx);
-	desc_size = sizeof(struct tcl_data_cmd);
-#ifndef DP_BE_WAR
-	/* TODO - KIWI does not have these fields */
-	HAL_TX_DESC_SET_TLV_HDR(desc_addr, HAL_TX_TCL_DATA_TAG, desc_size);
-#endif
-	tcl_desc_ptr = (struct tcl_data_cmd *)
-		(QDF_IPA_WDI_SETUP_INFO_DESC_FORMAT_TEMPLATE(tx) + 1);
-	tcl_desc_ptr->buf_addr_info.return_buffer_manager =
-		HAL_RX_BUF_RBM_SW2_BM(soc->wbm_sw0_bm_id);
-#ifndef DP_BE_WAR
-	/* TODO - KIWI does not have these fields */
-	tcl_desc_ptr->addrx_en = 1;	/* Address X search enable in ASE */
-	tcl_desc_ptr->encap_type = HAL_TX_ENCAP_TYPE_ETHERNET;
-	tcl_desc_ptr->packet_offset = 2;	/* padding for alignment */
-#endif
 }
 
 static void dp_ipa_wdi_rx_params(struct dp_soc *soc,
@@ -2006,10 +1947,6 @@ dp_ipa_wdi_tx_smmu_params(struct dp_soc *soc,
 			  bool over_gsi,
 			  qdf_ipa_wdi_hdl_t hdl)
 {
-	struct tcl_data_cmd *tcl_desc_ptr;
-	uint8_t *desc_addr;
-	uint32_t desc_size;
-
 	if (over_gsi) {
 		if (hdl == DP_IPA_HDL_FIRST)
 			QDF_IPA_WDI_SETUP_INFO_SMMU_CLIENT(tx_smmu) =
@@ -2048,24 +1985,6 @@ dp_ipa_wdi_tx_smmu_params(struct dp_soc *soc,
 		ipa_res->tx_num_alloc_buffer;
 	QDF_IPA_WDI_SETUP_INFO_SMMU_PKT_OFFSET(tx_smmu) = 0;
 
-	/* Preprogram TCL descriptor */
-	desc_addr = (uint8_t *)QDF_IPA_WDI_SETUP_INFO_SMMU_DESC_FORMAT_TEMPLATE(
-			tx_smmu);
-	desc_size = sizeof(struct tcl_data_cmd);
-#ifndef DP_BE_WAR
-	/* TODO - KIWI does not have these fields */
-	HAL_TX_DESC_SET_TLV_HDR(desc_addr, HAL_TX_TCL_DATA_TAG, desc_size);
-#endif
-	tcl_desc_ptr = (struct tcl_data_cmd *)
-		(QDF_IPA_WDI_SETUP_INFO_SMMU_DESC_FORMAT_TEMPLATE(tx_smmu) + 1);
-	tcl_desc_ptr->buf_addr_info.return_buffer_manager =
-		HAL_RX_BUF_RBM_SW2_BM(soc->wbm_sw0_bm_id);
-#ifndef DP_BE_WAR
-	/* TODO - KIWI does not have these fields */
-	tcl_desc_ptr->addrx_en = 1;	/* Address X search enable in ASE */
-	tcl_desc_ptr->encap_type = HAL_TX_ENCAP_TYPE_ETHERNET;
-	tcl_desc_ptr->packet_offset = 2;	/* padding for alignment */
-#endif
 }
 
 static void
