@@ -818,24 +818,6 @@ struct cdp_ctrl_ops {
 						   uint8_t *rssi);
 #endif
 
-#ifdef WLAN_SUPPORT_SCS
-	QDF_STATUS
-		(*txrx_enable_scs_params) (
-			   struct cdp_soc_t *soc, struct qdf_mac_addr
-			   *macaddr,
-			   uint8_t vdev_id,
-			   bool is_active);
-
-	QDF_STATUS
-		(*txrx_record_scs_params) (
-			   struct cdp_soc_t *soc, struct qdf_mac_addr
-			   *macaddr,
-			   uint8_t vdev_id,
-			   struct cdp_scs_params *scs_params,
-			   uint8_t entry_ctr,
-			   uint8_t scs_sessions);
-#endif
-
 #ifdef WLAN_SUPPORT_MSCS
 	QDF_STATUS
 		(*txrx_record_mscs_params) (
@@ -1470,6 +1452,11 @@ struct ol_if_ops {
 				       uint8_t pdev_id, uint8_t vdev_id,
 				       enum cdp_tx_filter_action cmd,
 				       uint8_t *peer_mac);
+#endif
+#ifdef WLAN_SUPPORT_SCS
+	bool (*peer_scs_rule_match)(struct cdp_ctrl_objmgr_psoc *psoc,
+				    uint8_t vdev_id, uint32_t rule_id,
+				    uint8_t *peer_mac);
 #endif
 };
 
