@@ -1201,7 +1201,6 @@ void dp_pktlogmod_exit(struct dp_pdev *pdev)
 {
 	struct dp_soc *soc = pdev->soc;
 	struct hif_opaque_softc *scn = soc->hif_handle;
-	struct dp_mon_soc *mon_soc = soc->monitor_soc;
 	struct dp_mon_pdev *mon_pdev = pdev->monitor_pdev;
 
 	if (!scn) {
