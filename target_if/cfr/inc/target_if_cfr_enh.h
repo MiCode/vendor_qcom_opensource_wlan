@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2019-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -96,15 +97,15 @@
 /* Max 37 users in MU case for Waikiki */
 #define WAIKIKI_CFR_MU_USERS 37
 
-#define WAIKIKI_MAX_HEADER_LENGTH_WORDS 87
+#define WAIKIKI_MAX_HEADER_LENGTH_WORDS 88
 
-#define WAIKIKI_MAX_DATA_LENGTH_BYTES 64128
+#define WAIKIKI_MAX_DATA_LENGTH_BYTES 65536
 
 /* Max size :
- * sizeof(csi_cfr_header) + 348 bytes(cfr header) + 64128 bytes(cfr payload)
+ * sizeof(csi_cfr_header) + 352 bytes(cfr header) + 65536 bytes(cfr payload)
  * where cfr_header size = rtt upload header len + freeze_tlv len +
- *                         uplink user setup info + alignment bytes
- *                       = 16bytes + 32bytes + (8bytes * 37users) + 4bytes
+ *                         uplink user setup info + alignment/reserved bytes
+ *                       = 16bytes + 32bytes + (8bytes * 37users) + 8bytes
  */
 #define STREAMFS_MAX_SUBBUF_WAIKIKI \
 	(sizeof(struct csi_cfr_header) + \
