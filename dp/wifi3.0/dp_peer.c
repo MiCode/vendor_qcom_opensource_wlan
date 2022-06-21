@@ -50,6 +50,7 @@ uint64_t reo_qdesc_history_idx;
 struct reo_qdesc_event reo_qdesc_history[REO_QDESC_HISTORY_SIZE];
 #endif
 
+#ifdef FEATURE_AST
 #ifdef BYPASS_OL_OPS
 /*
  * dp_add_wds_entry_wrapper() - Add new AST entry for the wds station
@@ -182,6 +183,7 @@ static void dp_del_wds_entry_wrapper(struct dp_soc *soc,
 						type,
 						delete_in_fw);
 }
+#endif
 #endif
 
 #ifdef FEATURE_WDS
@@ -2218,6 +2220,40 @@ void dp_peer_ast_set_type(struct dp_soc *soc,
 {
 	ast_entry->type = type;
 }
+
+void dp_peer_ast_send_wds_del(struct dp_soc *soc,
+			      struct dp_ast_entry *ast_entry,
+			      struct dp_peer *peer)
+{
+	bool delete_in_fw = false;
+
+	QDF_TRACE(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_TRACE,
+		  "%s: ast_entry->type: %d pdevid: %u vdev: %u mac_addr: "QDF_MAC_ADDR_FMT" next_hop: %u peer_id: %uM\n",
+		  __func__, ast_entry->type, ast_entry->pdev_id,
+		  ast_entry->vdev_id,
+		  QDF_MAC_ADDR_REF(ast_entry->mac_addr.raw),
+		  ast_entry->next_hop, ast_entry->peer_id);
+
+	/*
+	 * If peer state is logical delete, the peer is about to get
+	 * teared down with a peer delete command to firmware,
+	 * which will cleanup all the wds ast entries.
+	 * So, no need to send explicit wds ast delete to firmware.
+	 */
+	if (ast_entry->next_hop) {
+		if (peer && dp_peer_state_cmp(peer,
+					      DP_PEER_STATE_LOGICAL_DELETE))
+			delete_in_fw = false;
+		else
+			delete_in_fw = true;
+
+		dp_del_wds_entry_wrapper(soc,
+					 ast_entry->vdev_id,
+					 ast_entry->mac_addr.raw,
+					 ast_entry->type,
+					 delete_in_fw);
+	}
+}
 #else
 void dp_peer_free_ast_entry(struct dp_soc *soc,
 			    struct dp_ast_entry *ast_entry)
@@ -2267,6 +2303,15 @@ struct dp_ast_entry *dp_peer_ast_hash_find_soc(struct dp_soc *soc,
 	return NULL;
 }
 
+static inline
+QDF_STATUS dp_peer_host_add_map_ast(struct dp_soc *soc, uint16_t peer_id,
+				    uint8_t *mac_addr, uint16_t hw_peer_id,
+				    uint8_t vdev_id, uint16_t ast_hash,
+				    uint8_t is_wds)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
 struct dp_ast_entry *dp_peer_ast_hash_find_by_pdevid(struct dp_soc *soc,
 						     uint8_t *ast_mac_addr,
 						     uint8_t pdev_id)
@@ -2307,45 +2352,17 @@ uint8_t dp_peer_ast_get_pdev_id(struct dp_soc *soc,
 }
 
 uint8_t dp_peer_ast_get_next_hop(struct dp_soc *soc,
-				struct dp_ast_entry *ast_entry)
+				 struct dp_ast_entry *ast_entry)
 {
 	return 0xff;
 }
-#endif
 
 void dp_peer_ast_send_wds_del(struct dp_soc *soc,
 			      struct dp_ast_entry *ast_entry,
 			      struct dp_peer *peer)
 {
-	bool delete_in_fw = false;
-
-	QDF_TRACE(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_TRACE,
-		  "%s: ast_entry->type: %d pdevid: %u vdev: %u mac_addr: "QDF_MAC_ADDR_FMT" next_hop: %u peer_id: %uM\n",
-		  __func__, ast_entry->type, ast_entry->pdev_id,
-		  ast_entry->vdev_id,
-		  QDF_MAC_ADDR_REF(ast_entry->mac_addr.raw),
-		  ast_entry->next_hop, ast_entry->peer_id);
-
-	/*
-	 * If peer state is logical delete, the peer is about to get
-	 * teared down with a peer delete command to firmware,
-	 * which will cleanup all the wds ast entries.
-	 * So, no need to send explicit wds ast delete to firmware.
-	 */
-	if (ast_entry->next_hop) {
-		if (peer && dp_peer_state_cmp(peer,
-					      DP_PEER_STATE_LOGICAL_DELETE))
-			delete_in_fw = false;
-		else
-			delete_in_fw = true;
-
-		dp_del_wds_entry_wrapper(soc,
-					 ast_entry->vdev_id,
-					 ast_entry->mac_addr.raw,
-					 ast_entry->type,
-					 delete_in_fw);
-	}
 }
+#endif
 
 #ifdef WLAN_FEATURE_MULTI_AST_DEL
 void dp_peer_ast_send_multi_wds_del(
