@@ -546,13 +546,42 @@ struct wlan_mlo_peer_t2lm_policy {
 #endif /* WLAN_FEATURE_11BE */
 
 /**
- * struct wlan_mlo_peer_eml_caps - peer EML capabilities
- * @emlsr_support: eMLSR Support
- * @transition_timeout: Transition Timeout
+ * struct wlan_mlo_eml_cap - EML capabilities of MLD
+ * @emlsr_supp: eMLSR Support
+ * @emlsr_pad_delay: eMLSR Padding Delay
+ * @emlsr_trans_delay: eMLSR transition delay
+ * @emlmr_supp: eMLMR Support
+ * @emlmr_delay: eMLMR Delay
+ * @trans_timeout: Transition Timeout
+ * @reserved: Reserved
  */
-struct wlan_mlo_peer_eml_caps {
-	bool emlsr_support;
-	uint16_t transition_timeout;
+struct wlan_mlo_eml_cap {
+	uint16_t emlsr_supp:1,
+		 emlsr_pad_delay:3,
+		 emlsr_trans_delay:3,
+		 emlmr_supp:1,
+		 emlmr_delay:3,
+		 trans_timeout:4,
+		 reserved:1;
+};
+
+/**
+ * struct wlan_mlo_mld_cap - MLD capabilities of MLD
+ * @max_simult_link: Maximum number of simultaneous links
+ * @srs_support: SRS support
+ * @tid2link_neg_support: TID to Link Negotiation Support
+ * @str_freq_sep: Frequency separation suggested by STR non-AP MLD
+ *                OR Type of AP-MLD
+ * @aar_support: AAR Support
+ * @reserved: Reserved
+ */
+struct wlan_mlo_mld_cap {
+	uint16_t max_simult_link:4,
+		 srs_support:1,
+		 tid2link_neg_support:2,
+		 str_freq_sep:5,
+		 aar_support:1,
+		 reserved:3;
 };
 
 /*
@@ -605,7 +634,7 @@ struct wlan_mlo_peer_context {
 #ifdef WLAN_FEATURE_11BE
 	struct wlan_mlo_peer_t2lm_policy t2lm_policy;
 #endif
-	struct wlan_mlo_peer_eml_caps eml_caps;
+	struct wlan_mlo_eml_cap mlpeer_emlcap;
 };
 
 /*

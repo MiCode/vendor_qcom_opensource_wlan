@@ -257,8 +257,9 @@ uint8_t *peer_assoc_add_mlo_params(uint8_t *buf_ptr,
 	mlo_params->mld_peer_id = req->mlo_params.ml_peer_id;
 
 	mlo_params->ieee_link_id = req->mlo_params.ieee_link_id;
-	mlo_params->emlsr_trans_timeout_us =
-			req->mlo_params.emlsr_trans_timeout;
+	mlo_params->emlsr_trans_timeout_us = req->mlo_params.trans_timeout_us;
+	mlo_params->emlsr_trans_delay_us = req->mlo_params.emlsr_trans_delay_us;
+	mlo_params->emlsr_padding_delay_us = req->mlo_params.emlsr_pad_delay_us;
 
 	return buf_ptr + sizeof(wmi_peer_assoc_mlo_params);
 }

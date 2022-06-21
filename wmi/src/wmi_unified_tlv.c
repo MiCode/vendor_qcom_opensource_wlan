@@ -13215,6 +13215,59 @@ static QDF_STATUS extract_mac_phy_cap_service_ready_ext_tlv(
 	return QDF_STATUS_SUCCESS;
 }
 
+#ifdef WLAN_FEATURE_11BE_MLO
+/**
+ * extract_mac_phy_emlcap() - API to extract EML Capabilities
+ * @param: host ext2 mac phy capabilities
+ * @mac_phy_caps: ext mac phy capabilities
+ *
+ * Return: void
+ */
+static void extract_mac_phy_emlcap(struct wlan_psoc_host_mac_phy_caps_ext2 *param,
+				   WMI_MAC_PHY_CAPABILITIES_EXT *mac_phy_caps)
+{
+	if (!param || !mac_phy_caps)
+		return;
+
+	param->emlcap.emlsr_supp = WMI_SUPPORT_EMLSR_GET(mac_phy_caps->eml_capability);
+	param->emlcap.emlsr_pad_delay = WMI_EMLSR_PADDING_DELAY_GET(mac_phy_caps->eml_capability);
+	param->emlcap.emlsr_trans_delay = WMI_EMLSR_TRANSITION_DELAY_GET(mac_phy_caps->eml_capability);
+	param->emlcap.emlmr_supp = WMI_SUPPORT_EMLMR_GET(mac_phy_caps->eml_capability);
+	param->emlcap.emlmr_delay = WMI_EMLMR_DELAY_GET(mac_phy_caps->eml_capability);
+	param->emlcap.trans_timeout = WMI_TRANSITION_TIMEOUT_GET(mac_phy_caps->eml_capability);
+}
+
+/**
+ * extract_mac_phy_mldcap() - API to extract MLD Capabilities
+ * @param: host ext2 mac phy capabilities
+ * @mac_phy_caps: ext mac phy capabilities
+ *
+ * Return: void
+ */
+static void extract_mac_phy_mldcap(struct wlan_psoc_host_mac_phy_caps_ext2 *param,
+				   WMI_MAC_PHY_CAPABILITIES_EXT *mac_phy_caps)
+{
+	if (!param || !mac_phy_caps)
+		return;
+
+	param->mldcap.max_simult_link = WMI_MAX_NUM_SIMULTANEOUS_LINKS_GET(mac_phy_caps->mld_capability);
+	param->mldcap.srs_support = WMI_SUPPORT_SRS_GET(mac_phy_caps->mld_capability);
+	param->mldcap.tid2link_neg_support = WMI_TID_TO_LINK_NEGOTIATION_GET(mac_phy_caps->mld_capability);
+	param->mldcap.str_freq_sep = WMI_FREQ_SEPERATION_STR_GET(mac_phy_caps->mld_capability);
+	param->mldcap.aar_support = WMI_SUPPORT_AAR_GET(mac_phy_caps->mld_capability);
+}
+#else
+static void extract_mac_phy_emlcap(struct wlan_psoc_host_mac_phy_caps_ext2 *param,
+				   WMI_MAC_PHY_CAPABILITIES_EXT *mac_phy_caps)
+{
+}
+
+static void extract_mac_phy_mldcap(struct wlan_psoc_host_mac_phy_caps_ext2 *param,
+				   WMI_MAC_PHY_CAPABILITIES_EXT *mac_phy_caps)
+{
+}
+#endif
+
 /**
  * extract_mac_phy_cap_ehtcaps- api to extract eht mac phy caps
  * @param param: host ext2 mac phy capabilities
@@ -13309,6 +13362,7 @@ static void extract_mac_phy_cap_ehtcaps(
 {
 }
 #endif
+
 static QDF_STATUS extract_mac_phy_cap_service_ready_ext2_tlv(
 			wmi_unified_t wmi_handle,
 			uint8_t *event, uint8_t hw_mode_id, uint8_t phy_id,
@@ -13345,6 +13399,8 @@ static QDF_STATUS extract_mac_phy_cap_service_ready_ext2_tlv(
 			mac_phy_caps->wireless_modes_ext);
 
 	extract_mac_phy_cap_ehtcaps(param, mac_phy_caps);
+	extract_mac_phy_emlcap(param, mac_phy_caps);
+	extract_mac_phy_mldcap(param, mac_phy_caps);
 
 	return QDF_STATUS_SUCCESS;
 }
