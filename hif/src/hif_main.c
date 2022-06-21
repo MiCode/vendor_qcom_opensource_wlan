@@ -362,6 +362,11 @@ static const struct qwlan_hw qwlan_hw_list[] = {
 		.id = KIWI_V1,
 		.subid = 0xE,
 		.name = "KIWI_V1",
+	},
+	{
+		.id = MANGO_V1,
+		.subid = 0xF,
+		.name = "MANGO_V1",
 	}
 };
 
@@ -1612,6 +1617,12 @@ int hif_get_device_type(uint32_t device_id,
 		*hif_type = HIF_TYPE_KIWI;
 		*target_type = TARGET_TYPE_KIWI;
 		hif_info(" *********** KIWI *************");
+		break;
+
+	case MANGO_DEVICE_ID:
+		*hif_type = HIF_TYPE_MANGO;
+		*target_type = TARGET_TYPE_MANGO;
+		hif_info(" *********** MANGO *************");
 		break;
 
 	case QCA8074V2_DEVICE_ID:

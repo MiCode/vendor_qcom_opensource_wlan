@@ -3668,6 +3668,7 @@ static bool hif_is_pld_based_target(struct hif_pci_softc *sc,
 	case AR6320_DEVICE_ID:
 	case QCN7605_DEVICE_ID:
 	case KIWI_DEVICE_ID:
+	case MANGO_DEVICE_ID:
 		return true;
 	}
 	return false;
@@ -3696,6 +3697,7 @@ static void hif_pci_init_reg_windowing_support(struct hif_pci_softc *sc,
 	case TARGET_TYPE_QCA6490:
 	case TARGET_TYPE_QCA6390:
 	case TARGET_TYPE_KIWI:
+	case TARGET_TYPE_MANGO:
 		sc->use_register_windowing = true;
 		qdf_spinlock_create(&sc->register_access_lock);
 		sc->register_window = 0;
@@ -3917,7 +3919,8 @@ int hif_pci_addr_in_boundary(struct hif_softc *scn, uint32_t offset)
 	    tgt_info->target_type == TARGET_TYPE_QCA6490 ||
 	    tgt_info->target_type == TARGET_TYPE_QCN7605 ||
 	    tgt_info->target_type == TARGET_TYPE_QCA8074 ||
-	    tgt_info->target_type == TARGET_TYPE_KIWI) {
+	    tgt_info->target_type == TARGET_TYPE_KIWI ||
+	    tgt_info->target_type == TARGET_TYPE_MANGO) {
 		/*
 		 * Need to consider offset's memtype for QCA6290/QCA8074,
 		 * also mem_len and DRAM_BASE_ADDRESS/DRAM_SIZE need to be

@@ -440,6 +440,7 @@ static void hal_target_based_configure(struct hal_soc *hal)
 #endif
 #ifdef QCA_WIFI_KIWI
 	case TARGET_TYPE_KIWI:
+	case TARGET_TYPE_MANGO:
 		hal->use_register_windowing = true;
 		hal_kiwi_attach(hal);
 		break;

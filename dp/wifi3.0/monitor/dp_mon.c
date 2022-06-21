@@ -4917,6 +4917,7 @@ QDF_STATUS dp_mon_soc_cfg_init(struct dp_soc *soc)
 	case TARGET_TYPE_QCA6490:
 	case TARGET_TYPE_QCA6750:
 	case TARGET_TYPE_KIWI:
+	case TARGET_TYPE_MANGO:
 		/* do nothing */
 		break;
 	case TARGET_TYPE_QCA8074:
@@ -4978,6 +4979,7 @@ static void dp_mon_pdev_per_target_config(struct dp_pdev *pdev)
 	target_type = hal_get_target_type(soc->hal_soc);
 	switch (target_type) {
 	case TARGET_TYPE_KIWI:
+	case TARGET_TYPE_MANGO:
 		mon_pdev->is_tlv_hdr_64_bit = true;
 		break;
 	default:
@@ -5595,6 +5597,7 @@ void dp_mon_ops_register(struct dp_soc *soc)
 	case TARGET_TYPE_QCA6490:
 	case TARGET_TYPE_QCA6750:
 	case TARGET_TYPE_KIWI:
+	case TARGET_TYPE_MANGO:
 	case TARGET_TYPE_QCA8074:
 	case TARGET_TYPE_QCA8074V2:
 	case TARGET_TYPE_QCA6018:
@@ -5653,6 +5656,7 @@ void dp_mon_cdp_ops_register(struct dp_soc *soc)
 	case TARGET_TYPE_QCA6490:
 	case TARGET_TYPE_QCA6750:
 	case TARGET_TYPE_KIWI:
+	case TARGET_TYPE_MANGO:
 	case TARGET_TYPE_QCA8074:
 	case TARGET_TYPE_QCA8074V2:
 	case TARGET_TYPE_QCA6018:

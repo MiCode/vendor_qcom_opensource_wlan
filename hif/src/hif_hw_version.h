@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2012-2018, 2020-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -40,6 +40,7 @@
 #define WCN3990_v2_1                    0x40010002
 #define WCN3998                         0x40030001
 #define AR900B_REV_2                    0x1
+#define MANGO_V1                        0xDEADBEEF	// TODO Define this
 
 struct qwlan_hw {
 	u32 id;

@@ -80,6 +80,7 @@ typedef void *hif_handle_t;
 #define HIF_TYPE_KIWI 26
 #define HIF_TYPE_QCN9224 27
 #define HIF_TYPE_QCA9574 28
+#define HIF_TYPE_MANGO 29
 
 #define DMA_COHERENT_MASK_DEFAULT   37
 
