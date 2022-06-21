@@ -4575,20 +4575,22 @@ reg_get_band_cen_from_bandstart(uint16_t bw, qdf_freq_t bandstart)
  * considered as "disabled".
  * @pdev: Pointer to struct wlan_objmgr_pdev
  * @freq: Primary frequency
- * treat_nol_chan_as_disabled: Flag to treat nol chan as enabled/disabled
+ * @treat_nol_chan_as_disabled: Flag to treat nol chan as enabled/disabled
+ * @in_6g_pwr_type: Input 6g power type
  *
  * Return - Channel state
  */
 static enum channel_state
 reg_get_20mhz_channel_state_based_on_nol(struct wlan_objmgr_pdev *pdev,
 					 qdf_freq_t freq,
-					 bool treat_nol_chan_as_disabled)
+					 bool treat_nol_chan_as_disabled,
+					 enum supported_6g_pwr_types in_6g_pwr_type)
 {
 	if (treat_nol_chan_as_disabled)
 		return  reg_get_channel_state_for_pwrmode(pdev, freq,
-							  REG_CURRENT_PWR_MODE);
+							  in_6g_pwr_type);
 	return reg_get_nol_channel_state(pdev, freq,
-					 REG_CURRENT_PWR_MODE);
+					 in_6g_pwr_type);
 }
 
 /**
@@ -4705,9 +4707,10 @@ reg_get_320_bonded_channel_state(struct wlan_objmgr_pdev *pdev,
 
 	while (startchan_cfreq <= endchan_cfreq) {
 		temp_chan_state =
-			reg_get_20mhz_channel_state_based_on_nol(pdev,
-								 startchan_cfreq,
-								 treat_nol_chan_as_disabled);
+		    reg_get_20mhz_channel_state_based_on_nol(pdev,
+							     startchan_cfreq,
+							     treat_nol_chan_as_disabled,
+							     REG_CURRENT_PWR_MODE);
 
 		if (reg_is_state_allowed(temp_chan_state)) {
 			max_cont_bw += SUB_CHAN_BW;
@@ -4724,7 +4727,8 @@ reg_get_320_bonded_channel_state(struct wlan_objmgr_pdev *pdev,
 	prim_chan_state =
 		reg_get_20mhz_channel_state_based_on_nol(pdev,
 							 freq,
-							 treat_nol_chan_as_disabled);
+							 treat_nol_chan_as_disabled,
+							 REG_CURRENT_PWR_MODE);
 
 	/* After iterating through all the subchannels, if the final channel
 	 * state is invalid/disable, it means all our subchannels are not
@@ -4817,7 +4821,8 @@ reg_get_320_bonded_channel_state_for_pwrmode(struct wlan_objmgr_pdev *pdev,
 		temp_chan_state =
 			reg_get_20mhz_channel_state_based_on_nol(pdev,
 								 startchan_cfreq,
-								 treat_nol_chan_as_disabled);
+								 treat_nol_chan_as_disabled,
+								 in_6g_pwr_type);
 
 		if (reg_is_state_allowed(temp_chan_state)) {
 			max_cont_bw += SUB_CHAN_BW;
@@ -4833,7 +4838,8 @@ reg_get_320_bonded_channel_state_for_pwrmode(struct wlan_objmgr_pdev *pdev,
 
 	prim_chan_state =
 		reg_get_20mhz_channel_state_based_on_nol(pdev, freq,
-							 treat_nol_chan_as_disabled);
+							 treat_nol_chan_as_disabled,
+							 in_6g_pwr_type);
 
 	/* After iterating through all the subchannels, if the final channel
 	 * state is invalid/disable, it means all our subchannels are not
