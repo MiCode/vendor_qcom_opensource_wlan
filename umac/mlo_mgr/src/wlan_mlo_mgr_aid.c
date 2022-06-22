@@ -175,16 +175,25 @@ static uint16_t _wlan_mlo_peer_alloc_aid(
 		uint8_t link_ix)
 {
 	uint16_t assoc_id = (uint16_t)-1;
-	uint16_t start_aid, aid_end1, aid_end2;
+	uint16_t start_aid, aid_end1, aid_end2, tot_aid;
 
 	start_aid = ml_aid_mgr->start_aid;
-	aid_end1 = ml_aid_mgr->max_aid / AID_NUM_BUCKET;
+	if (start_aid > ml_aid_mgr->max_aid) {
+		mlo_err("MAX AID %d is less than start aid %d ",
+			ml_aid_mgr->max_aid, start_aid);
+		return assoc_id;
+	}
+
+	tot_aid = ml_aid_mgr->max_aid - start_aid;
+	aid_end1 = tot_aid / AID_NUM_BUCKET;
 	aid_end2 = aid_end1 + aid_end1;
 
 	mlo_debug("Start = %d E1 = %d E2 = %d max = %d", start_aid, aid_end1,
 		  aid_end2, ml_aid_mgr->max_aid);
 	if ((start_aid > aid_end1) || (aid_end1 > aid_end2)) {
-		mlo_err("MAX AID configured incorrectly");
+		assoc_id = wlan_mlo_alloc_aid(ml_aid_mgr, start_aid,
+					      ml_aid_mgr->max_aid, link_ix,
+					      is_mlo_peer);
 		return assoc_id;
 	}
 	mlo_debug("T2LM peer = %d", t2lm_peer);
@@ -809,38 +818,41 @@ void wlan_vdev_mlme_aid_mgr_max_aid_set(struct wlan_objmgr_vdev *vdev,
 	struct wlan_vdev_aid_mgr *vdev_aid_mgr;
 	struct wlan_ml_vdev_aid_mgr *ml_aid_mgr;
 	struct wlan_mlo_dev_context *ml_dev;
-	uint16_t j, vap_max_aid = 0;
+	uint16_t j, max_sta_count = 0;
+	uint16_t aidmgr_sta_count = 0;
 
 	aid_mgr = wlan_vdev_mlme_get_aid_mgr(vdev);
 	if (!aid_mgr || !max_aid)
 		return;
 
-	aid_mgr->max_aid = max_aid;
 	mlo_debug("VDEV mgr max aid %d", max_aid);
 
+	aid_mgr->max_aid = max_aid;
 	ml_dev = vdev->mlo_dev_ctx;
 	if (ml_dev) {
 		ml_aid_mgr = ml_dev->ap_ctx->ml_aid_mgr;
 		if (!ml_aid_mgr)
 			return;
 
-		/* Derive higher start_aid */
+		/* Derive lower max_aid */
 		for (j = 0; j < WLAN_UMAC_MLO_MAX_VDEVS; j++) {
 			vdev_aid_mgr = ml_aid_mgr->aid_mgr[j];
 			if (!vdev_aid_mgr)
 				continue;
 
-			if (!vap_max_aid) {
-				vap_max_aid = vdev_aid_mgr->max_aid;
+			aidmgr_sta_count = vdev_aid_mgr->max_aid -
+					   vdev_aid_mgr->start_aid;
+			if (!max_sta_count) {
+				max_sta_count = aidmgr_sta_count;
 				continue;
 			}
 
-			if (vap_max_aid > vdev_aid_mgr->max_aid)
-				vap_max_aid = vdev_aid_mgr->max_aid;
+			if (max_sta_count > aidmgr_sta_count)
+				max_sta_count = aidmgr_sta_count;
 		}
 
-		ml_aid_mgr->max_aid = vap_max_aid;
-		mlo_debug("MLO mgr max aid %d", vap_max_aid);
+		ml_aid_mgr->max_aid = ml_aid_mgr->start_aid + max_sta_count;
+		mlo_debug("MLO mgr max aid %d", ml_aid_mgr->max_aid);
 	}
 }
 
