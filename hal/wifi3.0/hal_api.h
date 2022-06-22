@@ -1029,28 +1029,14 @@ QDF_STATUS hal_construct_srng_shadow_regs(void *hal_soc);
 QDF_STATUS hal_set_one_shadow_config(void *hal_soc, int ring_type,
 				     int ring_num);
 /**
- * hal_get_shadow_config() - retrieve the config table for shadow cfg v2
+ * hal_get_shadow_config() - retrieve the config table
  * @hal_soc: hal handle
  * @shadow_config: will point to the table after
  * @num_shadow_registers_configured: will contain the number of valid entries
  */
-extern void
-hal_get_shadow_config(void *hal_soc,
-		      struct pld_shadow_reg_v2_cfg **shadow_config,
-		      int *num_shadow_registers_configured);
-
-#ifdef CONFIG_SHADOW_V3
-/**
- * hal_get_shadow_v3_config() - retrieve the config table for shadow cfg v3
- * @hal_soc: hal handle
- * @shadow_config: will point to the table after
- * @num_shadow_registers_configured: will contain the number of valid entries
- */
-extern void
-hal_get_shadow_v3_config(void *hal_soc,
-			 struct pld_shadow_reg_v3_cfg **shadow_config,
-			 int *num_shadow_registers_configured);
-#endif
+extern void hal_get_shadow_config(void *hal_soc,
+				  struct pld_shadow_reg_v2_cfg **shadow_config,
+				  int *num_shadow_registers_configured);
 
 #ifdef WLAN_FEATURE_NEAR_FULL_IRQ
 /**
