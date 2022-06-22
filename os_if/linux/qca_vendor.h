@@ -571,6 +571,11 @@
  *
  *	The attributes used with this command are defined in
  *	enum qca_wlan_vendor_attr_mcc_quota.
+ *
+ * @QCA_NL80211_VENDOR_SUBCMD_DRIVER_READY: Event indicating to the
+ *	user space that the driver is ready for operations again after
+ *	recovering from internal failures. This occurs following a failure
+ *	that was indicated by @QCA_NL80211_VENDOR_SUBCMD_HANG.
  */
 
 enum qca_nl80211_vendor_subcmds {
@@ -812,6 +817,7 @@ enum qca_nl80211_vendor_subcmds {
 	QCA_NL80211_VENDOR_SUBCMD_ROAM_EVENTS = 203,
 	QCA_NL80211_VENDOR_SUBCMD_RATEMASK_CONFIG = 204,
 	QCA_NL80211_VENDOR_SUBCMD_MCC_QUOTA = 205,
+	QCA_NL80211_VENDOR_SUBCMD_DRIVER_READY = 214,
 };
 
 enum qca_wlan_vendor_tos {
