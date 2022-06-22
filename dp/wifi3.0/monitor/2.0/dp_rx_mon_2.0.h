@@ -171,8 +171,10 @@ static inline void dp_rx_mon_process_ppdu(void *context)
  * @pdev: DP pdev
  * @ppdu_info: PPDU info
  * @mpdu: mpdu buf
+ *
+ * Return: SUCCESS or Failure
  */
-void
+QDF_STATUS
 dp_rx_mon_handle_full_mon(struct dp_pdev *pdev,
 			  struct hal_rx_ppdu_info *ppdu_info,
 			  qdf_nbuf_t mpdu);

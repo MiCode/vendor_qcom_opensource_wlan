@@ -37,6 +37,9 @@
 #define DP_MON_MSDU_LOGGING 0
 #define DP_MON_MPDU_LOGGING 1
 
+#define DP_MON_DECAP_FORMAT_INVALID 0xff
+#define DP_MON_MIN_FRAGS_FOR_RESTITCH 2
+
 /* monitor frame filter modes */
 enum dp_mon_frm_filter_mode {
 	/* mode filter pass */
