@@ -587,10 +587,10 @@ struct cdp_cmn_ops {
 		 (ol_txrx_soc_handle soc, uint8_t vdev_id,
 		  u_int8_t newmac[][QDF_MAC_ADDR_SIZE], uint16_t mac_cnt,
 		  bool limit);
-	uint16_t (*get_peer_id)(ol_txrx_soc_handle soc,
-				uint8_t vdev_id,
-				uint8_t *mac);
 #ifdef QCA_SUPPORT_WDS_EXTENDED
+	uint16_t (*get_wds_ext_peer_id)(ol_txrx_soc_handle soc,
+					uint8_t vdev_id,
+					uint8_t *mac);
 	QDF_STATUS (*set_wds_ext_peer_rx)(ol_txrx_soc_handle soc,
 					  uint8_t vdev_id,
 					  uint8_t *mac,

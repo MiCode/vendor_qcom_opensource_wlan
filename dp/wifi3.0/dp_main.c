@@ -10066,12 +10066,6 @@ static QDF_STATUS dp_get_vdev_param(struct cdp_soc_t *cdp_soc, uint8_t vdev_id,
 		val->cdp_vdev_param_peer_authorize =
 			    vdev->peer_authorize;
 		break;
-	case CDP_TX_ENCAP_TYPE:
-		val->cdp_vdev_param_tx_encap = vdev->tx_encap_type;
-		break;
-	case CDP_ENABLE_CIPHER:
-		val->cdp_vdev_param_cipher_en = vdev->sec_type;
-		break;
 #ifdef WLAN_SUPPORT_MESH_LATENCY
 	case CDP_ENABLE_PEER_TID_LATENCY:
 		val->cdp_vdev_param_peer_tid_latency_enable =
@@ -12524,8 +12518,8 @@ static struct cdp_cmn_ops dp_ops_cmn = {
 	.set_vlan_groupkey = dp_set_vlan_groupkey,
 #endif
 	.get_peer_mac_list = dp_get_peer_mac_list,
-	.get_peer_id = dp_get_peer_id,
 #ifdef QCA_SUPPORT_WDS_EXTENDED
+	.get_wds_ext_peer_id = dp_wds_ext_get_peer_id,
 	.set_wds_ext_peer_rx = dp_wds_ext_set_peer_rx,
 #endif /* QCA_SUPPORT_WDS_EXTENDED */
 
@@ -14367,7 +14361,10 @@ uint16_t dp_get_peer_mac_list(ol_txrx_soc_handle soc, uint8_t vdev_id,
 	return new_mac_cnt;
 }
 
-uint16_t dp_get_peer_id(ol_txrx_soc_handle soc, uint8_t vdev_id, uint8_t *mac)
+#ifdef QCA_SUPPORT_WDS_EXTENDED
+uint16_t dp_wds_ext_get_peer_id(ol_txrx_soc_handle soc,
+				uint8_t vdev_id,
+				uint8_t *mac)
 {
 	struct dp_peer *peer = dp_peer_find_hash_find((struct dp_soc *)soc,
 						       mac, 0, vdev_id,
@@ -14384,7 +14381,6 @@ uint16_t dp_get_peer_id(ol_txrx_soc_handle soc, uint8_t vdev_id, uint8_t *mac)
 	return peer_id;
 }
 
-#ifdef QCA_SUPPORT_WDS_EXTENDED
 QDF_STATUS dp_wds_ext_set_peer_rx(ol_txrx_soc_handle soc,
 				  uint8_t vdev_id,
 				  uint8_t *mac,
