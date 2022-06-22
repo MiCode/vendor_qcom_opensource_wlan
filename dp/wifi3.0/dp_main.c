@@ -15199,7 +15199,6 @@ static void dp_soc_cfg_init(struct dp_soc *soc)
 		wlan_cfg_set_reo_dst_ring_size(soc->wlan_cfg_ctx,
 					       REO_DST_RING_SIZE_QCA6290);
 		soc->ast_override_support = 1;
-		soc->per_tid_basize_max_tid = 8;
 
 		if (soc->cdp_soc.ol_ops->get_con_mode &&
 		    soc->cdp_soc.ol_ops->get_con_mode() ==
