@@ -404,13 +404,6 @@ QDF_STATUS mlo_peer_free_aid(struct wlan_mlo_dev_context *ml_dev,
 	if (!ml_aid_mgr)
 		return QDF_STATUS_E_INVAL;
 
-	if (!ml_peer->assoc_id) {
-		mlo_info("MLD ID %d ML Peer " QDF_MAC_ADDR_FMT " ML assoc id is 0",
-			 ml_dev->mld_id,
-			 QDF_MAC_ADDR_REF(ml_peer->peer_mld_addr.bytes));
-		return status;
-	}
-
 	wlan_mlo_peer_free_aid(ml_aid_mgr, 0xff, ml_peer->assoc_id);
 
 	return status;
