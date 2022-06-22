@@ -2069,6 +2069,18 @@ struct cdp_mesh_latency_ops {
 };
 #endif
 
+#ifdef WLAN_SUPPORT_SCS
+/**
+ * struct cdp_scs_ops - data path ops for SCS
+ * @scs_peer_lookup_n_rule_match : Handler for peer lookup and scs rule match
+ */
+struct cdp_scs_ops {
+	bool (*scs_peer_lookup_n_rule_match)(struct cdp_soc_t *soc,
+					     uint32_t rule_id,
+					     uint8_t *dst_mac_addr);
+};
+#endif
+
 #ifdef CONFIG_SAWF_DEF_QUEUES
 struct cdp_sawf_ops {
 	QDF_STATUS
@@ -2163,6 +2175,9 @@ struct cdp_ops {
 #endif
 #ifdef CONFIG_SAWF_DEF_QUEUES
 	struct cdp_sawf_ops  *sawf_ops;
+#endif
+#ifdef WLAN_SUPPORT_SCS
+	struct cdp_scs_ops   *scs_ops;
 #endif
 };
 #endif
