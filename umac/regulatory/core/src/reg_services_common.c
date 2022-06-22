@@ -1584,6 +1584,7 @@ uint8_t reg_freq_to_chan(struct wlan_objmgr_pdev *pdev,
 						   NUM_6GHZ_CHANNELS);
 		if (chan)
 			break;
+		input_6g_pwr_mode++;
 	}
 
 	return chan;
