@@ -2253,6 +2253,19 @@ __qdf_nbuf_get_queue_mapping(struct sk_buff *skb)
 }
 
 /**
+ * __qdf_nbuf_set_queue_mapping() - get the queue mapping set by linux kernel
+ *
+ * @buf: sk buff
+ * @val: queue_id
+ *
+ */
+static inline void
+__qdf_nbuf_set_queue_mapping(struct sk_buff *skb, uint16_t val)
+{
+	skb_set_queue_mapping(skb, val);
+}
+
+/**
  * __qdf_nbuf_set_timestamp() - set the timestamp for frame
  *
  * @buf: sk buff

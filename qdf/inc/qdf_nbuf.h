@@ -4258,6 +4258,12 @@ qdf_nbuf_get_queue_mapping(qdf_nbuf_t buf)
 	return __qdf_nbuf_get_queue_mapping(buf);
 }
 
+static inline void
+qdf_nbuf_set_queue_mapping(qdf_nbuf_t buf, uint16_t val)
+{
+	__qdf_nbuf_set_queue_mapping(buf, val);
+}
+
 static inline uint8_t *
 qdf_nbuf_get_priv_ptr(qdf_nbuf_t buf)
 {

@@ -3327,15 +3327,12 @@ qdf_nbuf_t dp_tx_send(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
 	if (qdf_unlikely(!vdev))
 		return nbuf;
 
-	dp_verbose_debug("skb "QDF_MAC_ADDR_FMT,
-			 QDF_MAC_ADDR_REF(nbuf->data));
-
 	/*
 	 * Set Default Host TID value to invalid TID
 	 * (TID override disabled)
 	 */
 	msdu_info.tid = HTT_TX_EXT_TID_INVALID;
-	DP_STATS_INC_PKT(vdev, tx_i.rcvd, 1, qdf_nbuf_len(nbuf));
+	DP_STATS_INC_PKT(vdev, tx_i.rcvd, 1, qdf_nbuf_headlen(nbuf));
 
 	if (qdf_unlikely(vdev->mesh_vdev)) {
 		qdf_nbuf_t nbuf_mesh = dp_tx_extract_mesh_meta_data(vdev, nbuf,
@@ -4863,6 +4860,7 @@ void dp_tx_prefetch_next_nbuf_data(struct dp_tx_desc_s *next)
 		/* prefetch skb fields present in different cachelines */
 		qdf_prefetch(&nbuf->len);
 		qdf_prefetch(&nbuf->users);
+		qdf_prefetch(skb_end_pointer(nbuf));
 	}
 }
 #else
