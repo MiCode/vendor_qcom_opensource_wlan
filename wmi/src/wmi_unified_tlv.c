@@ -16486,6 +16486,10 @@ send_rtt_pasn_auth_status_cmd_tlv(wmi_unified_t wmi_handle,
 		WMI_CHAR_ARRAY_TO_MAC_ADDR(data->auth_status[i].self_mac.bytes,
 					   &auth_status_tlv->source_mac_addr);
 		auth_status_tlv->status = data->auth_status[i].status;
+		wmi_debug("peer_mac: " QDF_MAC_ADDR_FMT " self_mac:" QDF_MAC_ADDR_FMT " status:%d",
+			  QDF_MAC_ADDR_REF(data->auth_status[i].peer_mac.bytes),
+			  QDF_MAC_ADDR_REF(data->auth_status[i].self_mac.bytes),
+			  auth_status_tlv->status);
 
 		buf_ptr += sizeof(wmi_rtt_pasn_auth_status_param);
 	}

@@ -155,6 +155,17 @@ void wifi_pos_update_pasn_peer_count(struct wlan_objmgr_vdev *vdev,
 				     bool is_increment);
 
 /**
+ * wifi_pos_cleanup_pasn_peers  - Delete all PASN peer objects for
+ * given vdev
+ * @vdev: Pointer to vdev object
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+wifi_pos_cleanup_pasn_peers(struct wlan_objmgr_psoc *psoc,
+			    struct wlan_objmgr_vdev *vdev);
+
+/**
  * wifi_pos_vdev_delete_all_ranging_peers() - Delete all ranging peers
  * associated with given vdev id
  * @psoc: Psoc pointer
@@ -176,6 +187,26 @@ wifi_pos_vdev_delete_all_ranging_peers(struct wlan_objmgr_vdev *vdev);
 QDF_STATUS
 wifi_pos_vdev_delete_all_ranging_peers_rsp(struct wlan_objmgr_psoc *psoc,
 					   uint8_t vdev_id);
+
+/**
+ * wifi_pos_is_delete_all_peer_in_progress() - Check if delete all
+ * pasn peers command is already in progress for a given vdev
+ * @vdev: Vdev object pointer
+ *
+ * Return: True if delete all pasn peer is in progress
+ */
+bool wifi_pos_is_delete_all_peer_in_progress(struct wlan_objmgr_vdev *vdev);
+
+/**
+ * wifi_pos_set_delete_all_peer_in_progress() - API to set/unset delete all
+ * ranging peers is in progress
+ * @vdev: Pointer to vdev object
+ * @flag: value to indicate set or unset the flag
+ *
+ * Return: None
+ */
+void wifi_pos_set_delete_all_peer_in_progress(struct wlan_objmgr_vdev *vdev,
+					      bool flag);
 #else
 static inline
 QDF_STATUS wifi_pos_handle_ranging_peer_create(struct wlan_objmgr_psoc *psoc,
@@ -238,5 +269,23 @@ wifi_pos_vdev_delete_all_ranging_peers(struct wlan_objmgr_vdev *vdev)
 {
 	return QDF_STATUS_SUCCESS;
 }
+
+static inline
+bool wifi_pos_is_delete_all_peer_in_progress(struct wlan_objmgr_vdev *vdev)
+{
+	return false;
+}
+
+static inline QDF_STATUS
+wifi_pos_cleanup_pasn_peers(struct wlan_objmgr_psoc *psoc,
+			    struct wlan_objmgr_vdev *vdev)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static inline
+void wifi_pos_set_delete_all_peer_in_progress(struct wlan_objmgr_vdev *vdev,
+					      bool flag)
+{}
 #endif /* WIFI_POS_CONVERGED && WLAN_FEATURE_RTT_11AZ_SUPPORT */
 #endif /* _WIFI_POS_PASN_API_H_ */

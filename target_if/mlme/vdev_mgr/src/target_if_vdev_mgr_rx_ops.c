@@ -164,6 +164,7 @@ void target_if_vdev_mgr_rsp_timer_cb(void *arg)
 	} else if (qdf_atomic_test_bit(PEER_DELETE_ALL_RESPONSE_BIT,
 				&vdev_rsp->rsp_status)) {
 		peer_del_all_rsp.vdev_id = vdev_id;
+		peer_del_all_rsp.peer_type_bitmap = vdev_rsp->peer_type_bitmap;
 		rsp_pos = PEER_DELETE_ALL_RESPONSE_BIT;
 		recovery_reason = QDF_VDEV_PEER_DELETE_ALL_RESPONSE_TIMED_OUT;
 		target_if_vdev_mgr_rsp_timer_stop(psoc, vdev_rsp, rsp_pos);

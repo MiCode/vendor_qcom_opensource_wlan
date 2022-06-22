@@ -1093,9 +1093,14 @@ os_if_wifi_pos_initiate_pasn_auth(struct wlan_objmgr_vdev *vdev,
 				  bool is_initiate_pasn)
 {
 	struct net_device *netdev;
-	struct cfg80211_pasn_params *pasn_params;
 	struct vdev_osif_priv *osif_priv;
-	int i, ret;
+	struct sk_buff *skb;
+	struct nlattr *attr, *nest_attr;
+	enum qca_wlan_vendor_pasn_action action;
+	int i;
+	int index = QCA_NL80211_VENDOR_SUBCMD_PASN_AUTH_STATUS_INDEX;
+	uint16_t record_size;
+	uint32_t len;
 	QDF_STATUS status = QDF_STATUS_SUCCESS;
 
 	osif_priv  = wlan_vdev_get_ospriv(vdev);
@@ -1106,43 +1111,79 @@ os_if_wifi_pos_initiate_pasn_auth(struct wlan_objmgr_vdev *vdev,
 
 	netdev = osif_priv->wdev->netdev;
 
-	pasn_params = qdf_mem_malloc(sizeof(*pasn_params) +
-				     (num_pasn_peers *
-				      sizeof(struct pasn_peer)));
-	if (!pasn_params)
+	len = NLMSG_HDRLEN;
+	/* QCA_WLAN_VENDOR_ATTR_PASN_ACTION */
+	len += nla_total_size(sizeof(u32));
+
+	/*
+	 * size of nest containing
+	 * QCA_WLAN_VENDOR_ATTR_PASN_PEER_MAC_ADDR
+	 * QCA_WLAN_VENDOR_ATTR_PASN_PEER_SRC_ADDR
+	 */
+	record_size = nla_total_size(2 * nla_total_size(ETH_ALEN));
+
+	/* QCA_WLAN_VENDOR_ATTR_PASN_PEERS nest */
+	len += nla_total_size(num_pasn_peers * record_size);
+
+	skb = wlan_cfg80211_vendor_event_alloc(osif_priv->wdev->wiphy,
+					       osif_priv->wdev, len,
+					       index, GFP_ATOMIC);
+	if (!skb)
 		return QDF_STATUS_E_NOMEM;
 
-	pasn_params->action = (is_initiate_pasn ?
-			NL80211_PASN_ACTION_AUTH : NL80211_PASN_ACTION_DEAUTH);
+	action = is_initiate_pasn ?
+		 QCA_WLAN_VENDOR_PASN_ACTION_AUTH :
+		 QCA_WLAN_VENDOR_PASN_ACTION_DELETE_SECURE_RANGING_CONTEXT;
+	if (nla_put_u32(skb, QCA_WLAN_VENDOR_ATTR_PASN_ACTION, action)) {
+		osif_err("NLA put failed");
+		goto nla_put_failure;
+	}
 
-	pasn_params->num_pasn_peers = num_pasn_peers;
+	attr = nla_nest_start(skb, QCA_WLAN_VENDOR_ATTR_PASN_PEERS);
+	if (!attr) {
+		osif_err("NLA nest failed");
+		status = QDF_STATUS_E_FAILURE;
+		goto nla_put_failure;
+	}
+
 	for (i = 0; i < num_pasn_peers; i++) {
-		qdf_mem_copy(pasn_params->peer[i].peer_addr,
-			     pasn_peer[i].peer_mac.bytes,
-			     QDF_MAC_ADDR_SIZE);
-		qdf_mem_copy(pasn_params->peer[i].src_addr,
-			     pasn_peer[i].self_mac.bytes,
-			     QDF_MAC_ADDR_SIZE);
-		if (pasn_peer[i].force_self_mac_usage)
-			pasn_params->peer[i].flags = PASN_PEER_USE_SRC_MAC;
+		osif_debug("PASN peer_mac[%d]:" QDF_MAC_ADDR_FMT "src_mac:" QDF_MAC_ADDR_FMT, i,
+			   QDF_MAC_ADDR_REF(pasn_peer[i].peer_mac.bytes),
+			   QDF_MAC_ADDR_REF(pasn_peer[i].self_mac.bytes));
+		nest_attr = nla_nest_start(skb, i);
+		if (!nest_attr) {
+			osif_err("NLA nest failed for iter:%d", i);
+			status = QDF_STATUS_E_FAILURE;
+			goto nla_put_failure;
+		}
 
-		osif_debug("PASN peer_mac[%d]:" QDF_MAC_ADDR_FMT " src_mac:" QDF_MAC_ADDR_FMT,
-			   i,
-			   QDF_MAC_ADDR_REF(pasn_params->peer[i].peer_addr),
-			   QDF_MAC_ADDR_REF(pasn_params->peer[i].src_addr));
+		if (nla_put(skb, QCA_WLAN_VENDOR_ATTR_PASN_PEER_MAC_ADDR,
+			    ETH_ALEN, pasn_peer[i].peer_mac.bytes)) {
+			osif_err("NLA put failed");
+			status = QDF_STATUS_E_FAILURE;
+			goto nla_put_failure;
+		}
+
+		if (pasn_peer[i].force_self_mac_usage &&
+		    nla_put(skb, QCA_WLAN_VENDOR_ATTR_PASN_PEER_SRC_ADDR,
+			    ETH_ALEN, pasn_peer[i].self_mac.bytes)) {
+			osif_err("NLA put failed");
+			status = QDF_STATUS_E_FAILURE;
+			goto nla_put_failure;
+		}
+
+		nla_nest_end(skb, nest_attr);
 	}
+	nla_nest_end(skb, attr);
 
-	osif_debug("action:%d num_pasn_peers:%d", pasn_params->action,
-		   pasn_params->num_pasn_peers);
+	osif_debug("action:%d num_pasn_peers:%d", action, num_pasn_peers);
 
-	ret = cfg80211_pasn_auth_request(netdev, pasn_params,
-					 qdf_mem_malloc_flags());
-	if (ret) {
-		status = qdf_status_from_os_return(ret);
-		osif_err("PASN Auth request failed");
-	}
+	wlan_cfg80211_vendor_event(skb, GFP_ATOMIC);
 
-	qdf_mem_free(pasn_params);
+	return status;
+
+nla_put_failure:
+	wlan_cfg80211_vendor_free_skb(skb);
 
 	return status;
 }

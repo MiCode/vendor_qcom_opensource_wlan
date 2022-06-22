@@ -37,9 +37,7 @@ struct wifi_pos_osif_ops {
 					    uint8_t num_pasn_peers,
 					    bool is_initiate_pasn);
 };
-#endif
 
-#if defined(WIFI_POS_CONVERGED) && defined(WLAN_FEATURE_RTT_11AZ_SUPPORT)
 /**
  * osif_wifi_pos_register_ops() - Register Wifi-Pos module OS_IF callbacks
  * @psoc: Pointer to PSOC obj

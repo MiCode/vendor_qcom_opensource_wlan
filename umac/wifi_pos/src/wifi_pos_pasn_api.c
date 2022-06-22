@@ -177,7 +177,7 @@ void wifi_pos_move_peers_to_fail_list(struct wlan_objmgr_vdev *vdev,
 	uint8_t i;
 	struct wifi_pos_vdev_priv_obj *vdev_pos_obj;
 	struct wifi_pos_11az_context *pasn_context;
-	struct wlan_pasn_request *secure_list, *unsecure_list, *list;
+	struct wlan_pasn_request *secure_list, *unsecure_list, *list = NULL;
 	struct qdf_mac_addr entry_to_copy;
 
 	if (wlan_vdev_mlme_get_opmode(vdev) != QDF_STA_MODE)
@@ -201,7 +201,12 @@ void wifi_pos_move_peers_to_fail_list(struct wlan_objmgr_vdev *vdev,
 		if (peer_type == WLAN_WIFI_POS_PASN_SECURE_PEER)
 			list = pasn_context->secure_peer_list;
 		else if (peer_type == WLAN_WIFI_POS_PASN_UNSECURE_PEER)
-			list = pasn_context->secure_peer_list;
+			list = pasn_context->unsecure_peer_list;
+
+		if (!list) {
+			wifi_pos_err("No Valid list exists");
+			return;
+		}
 
 		for (i = 0; i < WLAN_MAX_11AZ_PEERS; i++) {
 			/*
@@ -478,6 +483,7 @@ wifi_pos_handle_ranging_peer_create_rsp(struct wlan_objmgr_psoc *psoc,
 	wifi_pos_debug("Received peer create response for " QDF_MAC_ADDR_FMT " status:%d pending_count:%d",
 		       QDF_MAC_ADDR_REF(peer_mac->bytes), peer_create_status,
 		       pasn_context->num_pending_peer_creation);
+
 	if (peer_create_status) {
 		wifi_pos_move_peers_to_fail_list(vdev, peer_mac,
 						 WLAN_WIFI_POS_PASN_PEER_TYPE_MAX);
@@ -700,15 +706,55 @@ bool wifi_pos_is_ltf_keyseed_required_for_peer(struct wlan_objmgr_peer *peer)
 }
 
 static
-void wifi_pos_delete_objmgr_ranging_peer(struct wlan_objmgr_vdev *vdev,
+void wifi_pos_delete_objmgr_ranging_peer(struct wlan_objmgr_psoc *psoc,
 					 void *object, void *arg)
 {
 	struct wlan_objmgr_peer *peer = object;
+	struct wlan_objmgr_vdev *vdev = arg;
+	uint8_t vdev_id, peer_vdev_id;
+	enum wlan_peer_type peer_type;
 	QDF_STATUS status;
+
+	if (!peer) {
+		wifi_pos_err("Peer is NULL");
+		return;
+	}
+
+	peer_type = wlan_peer_get_peer_type(peer);
+	if (peer_type != WLAN_PEER_RTT_PASN)
+		return;
+
+	if (!vdev) {
+		wifi_pos_err("VDEV is NULL");
+		return;
+	}
+
+	vdev_id = wlan_vdev_get_id(vdev);
+	peer_vdev_id = wlan_vdev_get_id(wlan_peer_get_vdev(peer));
+	if (vdev_id != peer_vdev_id)
+		return;
 
 	status = wlan_objmgr_peer_obj_delete(peer);
 	if (QDF_IS_STATUS_ERROR(status))
 		wifi_pos_err("Failed to delete peer");
+
+	wifi_pos_update_pasn_peer_count(vdev, false);
+}
+
+QDF_STATUS
+wifi_pos_cleanup_pasn_peers(struct wlan_objmgr_psoc *psoc,
+			    struct wlan_objmgr_vdev *vdev)
+{
+	QDF_STATUS status;
+
+	wifi_pos_debug("Iterate and delete PASN peers");
+	status = wlan_objmgr_iterate_obj_list(psoc, WLAN_PEER_OP,
+					      wifi_pos_delete_objmgr_ranging_peer,
+					      vdev, 0, WLAN_WIFI_POS_CORE_ID);
+	if (QDF_IS_STATUS_ERROR(status))
+		wifi_pos_err("Delete objmgr peers failed");
+
+	return status;
 }
 
 QDF_STATUS
@@ -729,11 +775,6 @@ wifi_pos_vdev_delete_all_ranging_peers(struct wlan_objmgr_vdev *vdev)
 		return QDF_STATUS_SUCCESS;
 
 	vdev_pos_obj->is_delete_all_pasn_peer_in_progress = true;
-	status = wlan_objmgr_iterate_peerobj_list(vdev,
-						  wifi_pos_delete_objmgr_ranging_peer,
-						  NULL, WLAN_WIFI_POS_CORE_ID);
-	if (QDF_IS_STATUS_ERROR(status))
-		wifi_pos_err("Delete objmgr peers failed");
 
 	vdev_mlme = wlan_vdev_mlme_get_cmpt_obj(vdev);
 	if (!vdev_mlme) {
@@ -774,6 +815,12 @@ wifi_pos_vdev_delete_all_ranging_peers_rsp(struct wlan_objmgr_psoc *psoc,
 		return QDF_STATUS_E_FAILURE;
 	}
 
+	status = wifi_pos_cleanup_pasn_peers(psoc, vdev);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		wlan_objmgr_vdev_release_ref(vdev, WLAN_WIFI_POS_CORE_ID);
+		return status;
+	}
+
 	vdev_pos_obj->is_delete_all_pasn_peer_in_progress = false;
 
 	legacy_cb = wifi_pos_get_legacy_ops(psoc);
@@ -790,4 +837,31 @@ wifi_pos_vdev_delete_all_ranging_peers_rsp(struct wlan_objmgr_psoc *psoc,
 	wlan_objmgr_vdev_release_ref(vdev, WLAN_WIFI_POS_CORE_ID);
 
 	return status;
+}
+
+bool wifi_pos_is_delete_all_peer_in_progress(struct wlan_objmgr_vdev *vdev)
+{
+	struct wifi_pos_vdev_priv_obj *vdev_pos_obj;
+
+	vdev_pos_obj = wifi_pos_get_vdev_priv_obj(vdev);
+	if (!vdev_pos_obj) {
+		wifi_pos_err("Wifi pos vdev priv obj is null");
+		return false;
+	}
+
+	return vdev_pos_obj->is_delete_all_pasn_peer_in_progress;
+}
+
+void wifi_pos_set_delete_all_peer_in_progress(struct wlan_objmgr_vdev *vdev,
+					      bool flag)
+{
+	struct wifi_pos_vdev_priv_obj *vdev_pos_obj;
+
+	vdev_pos_obj = wifi_pos_get_vdev_priv_obj(vdev);
+	if (!vdev_pos_obj) {
+		wifi_pos_err("Wifi pos vdev priv obj is null");
+		return;
+	}
+
+	vdev_pos_obj->is_delete_all_pasn_peer_in_progress = flag;
 }
