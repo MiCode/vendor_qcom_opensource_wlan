@@ -2084,6 +2084,9 @@ struct cdp_tx_indication_info {
 	struct cdp_tx_indication_mpdu_info mpdu_info;
 	qdf_nbuf_t mpdu_nbuf;
 	struct cdp_tx_completion_ppdu *ppdu_desc;
+#ifdef QCA_SUPPORT_LITE_MONITOR
+	ol_osif_vdev_handle osif_vdev;
+#endif
 };
 
 /**
