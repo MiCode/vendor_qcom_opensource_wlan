@@ -175,6 +175,9 @@ dp_tx_mon_process_2_0(struct dp_soc *soc, struct dp_intr *int_ctx,
 
 #define HE_DATA_CNT	6
 
+#define INITIATOR_WINDOW 0
+#define RESPONSE_WINDOW 1
+
 #define FRAME_CONTROL_TYPE_MASK  0x0C
 #define FRAME_CONTROL_TYPE_SHIFT 2
 
@@ -496,6 +499,8 @@ struct dp_txmon_frag_vec {
  * @last_data_ppdu_info: last tx monitor data ppdu info
  * @prot_status_info: protection status info
  * @data_status_info: data status info
+ * @last_tsft: last received tsft
+ * @last_ppdu_timestamp: last received ppdu_timestamp
  * @last_frag_q_idx: last index of frag buffer
  * @cur_frag_q_idx: current index of frag buffer
  * @status_frag_queue: array of status frag queue to hold 64 status buffer
@@ -528,6 +533,9 @@ struct dp_pdev_tx_monitor_be {
 
 	struct hal_tx_status_info prot_status_info;
 	struct hal_tx_status_info data_status_info;
+
+	uint64_t last_tsft;
+	uint32_t last_ppdu_timestamp;
 
 	uint8_t last_frag_q_idx;
 	uint8_t cur_frag_q_idx;

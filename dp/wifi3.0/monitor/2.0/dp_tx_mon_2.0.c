@@ -589,7 +589,6 @@ dp_config_enh_tx_monitor_2_0(struct dp_pdev *pdev, uint8_t val)
 	switch (val) {
 	case TX_MON_BE_DISABLE:
 	{
-		/* TODO: send HTT msg to configure TLV based on mode */
 		tx_mon_be->mode = TX_MON_BE_DISABLE;
 		mon_pdev_be->tx_mon_mode = 0;
 		mon_pdev_be->tx_mon_filter_length = DMA_LENGTH_64B;
@@ -597,9 +596,10 @@ dp_config_enh_tx_monitor_2_0(struct dp_pdev *pdev, uint8_t val)
 	}
 	case TX_MON_BE_FULL_CAPTURE:
 	{
-		/* TODO: send HTT msg to configure TLV based on mode */
 		qdf_mem_zero(&tx_mon_be->stats,
 			     sizeof(struct dp_tx_monitor_drop_stats));
+		tx_mon_be->last_tsft = 0;
+		tx_mon_be->last_ppdu_timestamp = 0;
 		tx_mon_be->mode = TX_MON_BE_FULL_CAPTURE;
 		mon_pdev_be->tx_mon_mode = 1;
 		mon_pdev_be->tx_mon_filter_length = DEFAULT_DMA_LENGTH;
@@ -607,7 +607,6 @@ dp_config_enh_tx_monitor_2_0(struct dp_pdev *pdev, uint8_t val)
 	}
 	case TX_MON_BE_PEER_FILTER:
 	{
-		/* TODO: send HTT msg to configure TLV based on mode */
 		tx_mon_be->mode = TX_MON_BE_PEER_FILTER;
 		mon_pdev_be->tx_mon_mode = 2;
 		mon_pdev_be->tx_mon_filter_length = DMA_LENGTH_256B;
@@ -615,7 +614,6 @@ dp_config_enh_tx_monitor_2_0(struct dp_pdev *pdev, uint8_t val)
 	}
 	default:
 	{
-		/* TODO: do we need to set to disable ? */
 		return QDF_STATUS_E_INVAL;
 	}
 	}
@@ -741,6 +739,62 @@ dp_tx_mon_send_per_usr_mpdu(struct dp_pdev *pdev,
 	}
 }
 
+#define PHY_MEDIUM_MHZ	960
+#define PHY_TIMESTAMP_WRAP (0xFFFFFFFF / PHY_MEDIUM_MHZ)
+
+/**
+ * dp_populate_tsft_from_phy_timestamp() - API to get tsft from phy timestamp
+ * @pdev: pdev Handle
+ * @ppdu_info: ppdi_info Handle
+ *
+ * Return: QDF_STATUS
+ */
+static QDF_STATUS
+dp_populate_tsft_from_phy_timestamp(struct dp_pdev *pdev,
+				    struct dp_tx_ppdu_info *ppdu_info)
+{
+	struct dp_mon_pdev *mon_pdev = pdev->monitor_pdev;
+	struct dp_mon_pdev_be *mon_pdev_be =
+			dp_get_be_mon_pdev_from_dp_mon_pdev(mon_pdev);
+	struct dp_pdev_tx_monitor_be *tx_mon_be =
+			&mon_pdev_be->tx_monitor_be;
+	uint64_t tsft = 0;
+	uint32_t ppdu_timestamp = 0;
+
+	tsft = TXMON_PPDU_COM(ppdu_info, tsft);
+	ppdu_timestamp = TXMON_PPDU_COM(ppdu_info, ppdu_timestamp);
+
+	if (tsft && ppdu_timestamp) {
+		/* update tsft and ppdu timestamp */
+		tx_mon_be->last_tsft = tsft;
+		tx_mon_be->last_ppdu_timestamp = ppdu_timestamp;
+	} else if (!tx_mon_be->last_ppdu_timestamp || !tx_mon_be->last_tsft) {
+		return QDF_STATUS_E_EMPTY;
+	}
+
+	if (!tsft && ppdu_timestamp) {
+		/* response window */
+		uint32_t cur_usec = ppdu_timestamp / PHY_MEDIUM_MHZ;
+		uint32_t last_usec = (tx_mon_be->last_ppdu_timestamp /
+				      PHY_MEDIUM_MHZ);
+		uint32_t diff = 0;
+
+		if (last_usec < cur_usec) {
+			diff = cur_usec - last_usec;
+			tsft = tx_mon_be->last_tsft + diff;
+		} else {
+			diff = (PHY_TIMESTAMP_WRAP - last_usec) + cur_usec;
+			tsft = tx_mon_be->last_tsft + diff;
+		}
+		TXMON_PPDU_COM(ppdu_info, tsft) = tsft;
+		/* update tsft and ppdu timestamp */
+		tx_mon_be->last_tsft = tsft;
+		tx_mon_be->last_ppdu_timestamp = ppdu_timestamp;
+	}
+
+	return QDF_STATUS_SUCCESS;
+}
+
 /**
  * dp_tx_mon_update_radiotap() - API to update radiotap information
  * @pdev: pdev Handle
@@ -752,6 +806,11 @@ static void
 dp_tx_mon_update_radiotap(struct dp_pdev *pdev,
 			  struct dp_tx_ppdu_info *ppdu_info)
 {
+	struct dp_mon_pdev *mon_pdev = pdev->monitor_pdev;
+	struct dp_mon_pdev_be *mon_pdev_be =
+			dp_get_be_mon_pdev_from_dp_mon_pdev(mon_pdev);
+	struct dp_pdev_tx_monitor_be *tx_mon_be =
+			&mon_pdev_be->tx_monitor_be;
 	uint32_t usr_idx = 0;
 	uint32_t num_users = 0;
 
@@ -764,6 +823,13 @@ dp_tx_mon_update_radiotap(struct dp_pdev *pdev,
 	if (qdf_unlikely(TXMON_PPDU_COM(ppdu_info, chan_freq) == 0))
 		TXMON_PPDU_COM(ppdu_info, chan_freq) =
 				pdev->operating_channel.freq;
+
+	if (QDF_STATUS_SUCCESS !=
+	    dp_populate_tsft_from_phy_timestamp(pdev, ppdu_info)) {
+		/* free the ppdu_info */
+		dp_tx_mon_free_ppdu_info(ppdu_info, tx_mon_be);
+		return;
+	}
 
 	for (usr_idx = 0; usr_idx < num_users; usr_idx++) {
 		qdf_nbuf_queue_t *mpdu_q = NULL;

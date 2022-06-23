@@ -297,12 +297,14 @@ dp_tx_mon_enqueue_mpdu_nbuf(struct dp_pdev *pdev,
  * dp_tx_mon_generate_cts2self_frm() - API to generate cts2self frame
  * @pdev: pdev Handle
  * @tx_ppdu_info: pointer to tx ppdu info structure
+ * @window_flag: frame generated window
  *
  * Return: void
  */
 static void
 dp_tx_mon_generate_cts2self_frm(struct dp_pdev *pdev,
-				struct dp_tx_ppdu_info *tx_ppdu_info)
+				struct dp_tx_ppdu_info *tx_ppdu_info,
+				uint8_t window_flag)
 {
 	/* allocate and populate CTS/ CTS2SELF frame */
 	/* enqueue 802.11 payload to per user mpdu_q */
@@ -348,9 +350,15 @@ dp_tx_mon_generate_cts2self_frm(struct dp_pdev *pdev,
 	wh_min->i_dur[1] = (duration_le & 0xFF00) >> 8;
 	wh_min->i_dur[0] = (duration_le & 0xFF);
 
-	qdf_mem_copy(wh_min->i_addr1,
-		     TXMON_STATUS_INFO(tx_status_info, addr1),
-		     QDF_MAC_ADDR_SIZE);
+	if (window_flag == INITIATOR_WINDOW) {
+		qdf_mem_copy(wh_min->i_addr1,
+			     TXMON_STATUS_INFO(tx_status_info, addr1),
+			     QDF_MAC_ADDR_SIZE);
+	} else {
+		qdf_mem_copy(wh_min->i_addr1,
+			     TXMON_STATUS_INFO(tx_status_info, addr2),
+			     QDF_MAC_ADDR_SIZE);
+	}
 
 	qdf_nbuf_set_pktlen(mpdu_nbuf, sizeof(*wh_min));
 	dp_tx_mon_enqueue_mpdu_nbuf(pdev, tx_ppdu_info, 0, mpdu_nbuf);
@@ -361,12 +369,14 @@ dp_tx_mon_generate_cts2self_frm(struct dp_pdev *pdev,
  * dp_tx_mon_generate_rts_frm() - API to generate rts frame
  * @pdev: pdev Handle
  * @tx_ppdu_info: pointer to tx ppdu info structure
+ * @window_flag: frame generated window
  *
  * Return: void
  */
 static void
 dp_tx_mon_generate_rts_frm(struct dp_pdev *pdev,
-			   struct dp_tx_ppdu_info *tx_ppdu_info)
+			   struct dp_tx_ppdu_info *tx_ppdu_info,
+			   uint8_t window_flag)
 {
 	/* allocate and populate RTS frame */
 	/* enqueue 802.11 payload to per user mpdu_q */
@@ -413,12 +423,22 @@ dp_tx_mon_generate_rts_frm(struct dp_pdev *pdev,
 
 	if (!tx_status_info->protection_addr)
 		tx_status_info = &tx_mon_be->data_status_info;
-	qdf_mem_copy(wh_min->i_addr1,
-		     TXMON_STATUS_INFO(tx_status_info, addr1),
-		     QDF_MAC_ADDR_SIZE);
-	qdf_mem_copy(wh_min->i_addr2,
-		     TXMON_STATUS_INFO(tx_status_info, addr2),
-		     QDF_MAC_ADDR_SIZE);
+
+	if (window_flag == INITIATOR_WINDOW) {
+		qdf_mem_copy(wh_min->i_addr1,
+			     TXMON_STATUS_INFO(tx_status_info, addr1),
+			     QDF_MAC_ADDR_SIZE);
+		qdf_mem_copy(wh_min->i_addr2,
+			     TXMON_STATUS_INFO(tx_status_info, addr2),
+			     QDF_MAC_ADDR_SIZE);
+	} else {
+		qdf_mem_copy(wh_min->i_addr1,
+			     TXMON_STATUS_INFO(tx_status_info, addr2),
+			     QDF_MAC_ADDR_SIZE);
+		qdf_mem_copy(wh_min->i_addr2,
+			     TXMON_STATUS_INFO(tx_status_info, addr1),
+			     QDF_MAC_ADDR_SIZE);
+	}
 
 	qdf_nbuf_set_pktlen(mpdu_nbuf, sizeof(*wh_min));
 	dp_tx_mon_enqueue_mpdu_nbuf(pdev, tx_ppdu_info, 0, mpdu_nbuf);
@@ -429,12 +449,14 @@ dp_tx_mon_generate_rts_frm(struct dp_pdev *pdev,
  * dp_tx_mon_generate_ack_frm() - API to generate ack frame
  * @pdev: pdev Handle
  * @tx_ppdu_info: pointer to tx ppdu info structure
+ * @window_flag: frame generated window
  *
  * Return: void
  */
 static void
 dp_tx_mon_generate_ack_frm(struct dp_pdev *pdev,
-			   struct dp_tx_ppdu_info *tx_ppdu_info)
+			   struct dp_tx_ppdu_info *tx_ppdu_info,
+			   uint8_t window_flag)
 {
 	/* allocate and populate ACK frame */
 	/* enqueue 802.11 payload to per user mpdu_q */
@@ -473,9 +495,17 @@ dp_tx_mon_generate_ack_frm(struct dp_pdev *pdev,
 	wh_addr1->i_fc[1] = 0;
 	wh_addr1->i_fc[0] = (IEEE80211_FC0_VERSION_0 | IEEE80211_FC0_TYPE_CTL |
 			     IEEE80211_FC0_SUBTYPE_ACK);
-	qdf_mem_copy(wh_addr1->i_addr1,
-		     TXMON_STATUS_INFO(tx_status_info, addr1),
-		     QDF_MAC_ADDR_SIZE);
+
+	if (window_flag == INITIATOR_WINDOW) {
+		qdf_mem_copy(wh_addr1->i_addr1,
+			     TXMON_STATUS_INFO(tx_status_info, addr1),
+			     QDF_MAC_ADDR_SIZE);
+	} else {
+		qdf_mem_copy(wh_addr1->i_addr1,
+			     TXMON_STATUS_INFO(tx_status_info, addr2),
+			     QDF_MAC_ADDR_SIZE);
+	}
+
 	/* set duration zero for ack frame */
 	*(u_int16_t *)(&wh_addr1->i_dur) = qdf_cpu_to_le16(0x0000);
 
@@ -649,12 +679,14 @@ dp_tx_mon_generate_4addr_qos_null_frm(struct dp_pdev *pdev,
  * dp_tx_mon_generate_mu_block_ack_frm() - API to generate MU block ack frame
  * @pdev: pdev Handle
  * @tx_ppdu_info: pointer to tx ppdu info structure
+ * @window_flag: frame generated window
  *
  * Return: void
  */
 static void
 dp_tx_mon_generate_mu_block_ack_frm(struct dp_pdev *pdev,
-				    struct dp_tx_ppdu_info *tx_ppdu_info)
+				    struct dp_tx_ppdu_info *tx_ppdu_info,
+				    uint8_t window_flag)
 {
 	/* allocate and populate MU block ack frame */
 	/* enqueue 802.11 payload to per user mpdu_q */
@@ -757,12 +789,14 @@ dp_tx_mon_generate_mu_block_ack_frm(struct dp_pdev *pdev,
  * dp_tx_mon_generate_block_ack_frm() - API to generate block ack frame
  * @pdev: pdev Handle
  * @tx_ppdu_info: pointer to tx ppdu info structure
+ * @window_flag: frame generated window
  *
  * Return: void
  */
 static void
 dp_tx_mon_generate_block_ack_frm(struct dp_pdev *pdev,
-				 struct dp_tx_ppdu_info *tx_ppdu_info)
+				 struct dp_tx_ppdu_info *tx_ppdu_info,
+				 uint8_t window_flag)
 {
 	/* allocate and populate block ack frame */
 	/* enqueue 802.11 payload to per user mpdu_q */
@@ -845,12 +879,21 @@ dp_tx_mon_generate_block_ack_frm(struct dp_pdev *pdev,
 	/* duration */
 	*(u_int16_t *)(&wh_addr2->i_aidordur) = qdf_cpu_to_le16(0x0020);
 
-	qdf_mem_copy(wh_addr2->i_addr2,
-		     TXMON_STATUS_INFO(tx_status_info, addr2),
-		     QDF_MAC_ADDR_SIZE);
-	qdf_mem_copy(wh_addr2->i_addr1,
-		     TXMON_STATUS_INFO(tx_status_info, addr1),
-		     QDF_MAC_ADDR_SIZE);
+	if (window_flag) {
+		qdf_mem_copy(wh_addr2->i_addr2,
+			     TXMON_STATUS_INFO(tx_status_info, addr2),
+			     QDF_MAC_ADDR_SIZE);
+		qdf_mem_copy(wh_addr2->i_addr1,
+			     TXMON_STATUS_INFO(tx_status_info, addr1),
+			     QDF_MAC_ADDR_SIZE);
+	} else {
+		qdf_mem_copy(wh_addr2->i_addr2,
+			     TXMON_STATUS_INFO(tx_status_info, addr1),
+			     QDF_MAC_ADDR_SIZE);
+		qdf_mem_copy(wh_addr2->i_addr1,
+			     TXMON_STATUS_INFO(tx_status_info, addr2),
+			     QDF_MAC_ADDR_SIZE);
+	}
 
 	frm = (uint8_t *)&wh_addr2[1];
 	/* BA control */
@@ -1009,12 +1052,14 @@ dp_tx_mon_generate_prot_frm(struct dp_pdev *pdev,
 	case TXMON_MEDIUM_RTS_11AC_STATIC_BW:
 	case TXMON_MEDIUM_RTS_11AC_DYNAMIC_BW:
 	{
-		dp_tx_mon_generate_rts_frm(pdev, tx_ppdu_info);
+		dp_tx_mon_generate_rts_frm(pdev, tx_ppdu_info,
+					   INITIATOR_WINDOW);
 		break;
 	}
 	case TXMON_MEDIUM_CTS2SELF:
 	{
-		dp_tx_mon_generate_cts2self_frm(pdev, tx_ppdu_info);
+		dp_tx_mon_generate_cts2self_frm(pdev, tx_ppdu_info,
+						INITIATOR_WINDOW);
 		break;
 	}
 	case TXMON_MEDIUM_QOS_NULL_NO_ACK_3ADDR:
@@ -1132,7 +1177,7 @@ dp_tx_mon_generated_response_frm(struct dp_pdev *pdev,
 						  IEEE80211_FC0_SUBTYPE_SHIFT));
 		TXMON_PPDU_COM(tx_ppdu_info,
 			       frame_control_info_valid) = 1;
-		dp_tx_mon_generate_ack_frm(pdev, tx_ppdu_info);
+		dp_tx_mon_generate_ack_frm(pdev, tx_ppdu_info, RESPONSE_WINDOW);
 		break;
 	}
 	case TXMON_GEN_RESP_SELFGEN_CTS:
@@ -1144,7 +1189,8 @@ dp_tx_mon_generated_response_frm(struct dp_pdev *pdev,
 						  IEEE80211_FC0_SUBTYPE_SHIFT));
 		TXMON_PPDU_COM(tx_ppdu_info,
 			       frame_control_info_valid) = 1;
-		dp_tx_mon_generate_cts2self_frm(pdev, tx_ppdu_info);
+		dp_tx_mon_generate_cts2self_frm(pdev, tx_ppdu_info,
+						RESPONSE_WINDOW);
 		break;
 	}
 	case TXMON_GEN_RESP_SELFGEN_BA:
@@ -1156,7 +1202,8 @@ dp_tx_mon_generated_response_frm(struct dp_pdev *pdev,
 						  IEEE80211_FC0_SUBTYPE_SHIFT));
 		TXMON_PPDU_COM(tx_ppdu_info,
 			       frame_control_info_valid) = 1;
-		dp_tx_mon_generate_block_ack_frm(pdev, tx_ppdu_info);
+		dp_tx_mon_generate_block_ack_frm(pdev, tx_ppdu_info,
+						 RESPONSE_WINDOW);
 		break;
 	}
 	case TXMON_GEN_RESP_SELFGEN_MBA:
@@ -1235,18 +1282,6 @@ dp_tx_mon_update_ppdu_info_status(struct dp_pdev *pdev,
 	}
 	case HAL_MON_RX_RESPONSE_REQUIRED_INFO:
 	{
-		/*
-		 * start of Response window
-		 *
-		 * response window start and follow with
-		 * RTS(sta) - cts(AP)
-		 * BlockAckReq(sta) - BlockAck(AP)
-		 */
-		tx_status_info = &tx_mon_be->data_status_info;
-		if (TXMON_STATUS_INFO(tx_status_info, reception_type) ==
-		    TXMON_RESP_CTS)
-			dp_tx_mon_generate_cts2self_frm(pdev,
-							tx_data_ppdu_info);
 		break;
 	}
 	case HAL_MON_TX_FES_STATUS_START_PROT:
@@ -1272,7 +1307,8 @@ dp_tx_mon_update_ppdu_info_status(struct dp_pdev *pdev,
 	case HAL_MON_RX_FRAME_BITMAP_ACK:
 	{
 		/* this comes for each user */
-		dp_tx_mon_generate_ack_frm(pdev, tx_data_ppdu_info);
+		dp_tx_mon_generate_ack_frm(pdev, tx_data_ppdu_info,
+					   INITIATOR_WINDOW);
 		break;
 	}
 	case HAL_MON_RX_FRAME_BITMAP_BLOCK_ACK_256:
@@ -1287,10 +1323,12 @@ dp_tx_mon_update_ppdu_info_status(struct dp_pdev *pdev,
 
 		if (TXMON_PPDU_HAL(tx_data_ppdu_info, num_users))
 			dp_tx_mon_generate_block_ack_frm(pdev,
-							 tx_data_ppdu_info);
+							 tx_data_ppdu_info,
+							 INITIATOR_WINDOW);
 		else
 			dp_tx_mon_generate_mu_block_ack_frm(pdev,
-							    tx_data_ppdu_info);
+							    tx_data_ppdu_info,
+							    INITIATOR_WINDOW);
 
 		break;
 	}

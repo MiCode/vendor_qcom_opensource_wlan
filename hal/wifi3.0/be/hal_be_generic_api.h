@@ -2090,14 +2090,14 @@ hal_txmon_status_parse_tlv_generic_be(void *data_ppdu_info,
 					      MACTX_VHT_SIG_A_MACTX_VHT_SIG_A_INFO_DETAILS,
 					      N_STS);
 		/* if it is SU */
-		nss_su = nss_comb & 0x7;
+		nss_su = (nss_comb & 0x7) + 1;
 		/* partial aid - applicable only for SU */
 		partial_aid = (nss_comb >> 3) & 0x1F;
 		/* if it is MU */
-		nss_mu[0] = nss_comb & 0x7;
-		nss_mu[1] = (nss_comb >> 3) & 0x7;
-		nss_mu[2] = (nss_comb >> 6) & 0x7;
-		nss_mu[3] = (nss_comb >> 9) & 0x7;
+		nss_mu[0] = (nss_comb & 0x7) + 1;
+		nss_mu[1] = ((nss_comb >> 3) & 0x7) + 1;
+		nss_mu[2] = ((nss_comb >> 6) & 0x7) + 1;
+		nss_mu[3] = ((nss_comb >> 9) & 0x7) + 1;
 
 		sgi = HAL_TX_DESC_GET_64(tx_tlv,
 					 MACTX_VHT_SIG_A_MACTX_VHT_SIG_A_INFO_DETAILS,
@@ -2127,25 +2127,34 @@ hal_txmon_status_parse_tlv_generic_be(void *data_ppdu_info,
 			TXMON_HAL_STATUS(ppdu_info, mcs) = mcs;
 			TXMON_HAL_STATUS(ppdu_info, nss) =
 						nss_su & VHT_SIG_SU_NSS_MASK;
+
+			TXMON_HAL_USER(ppdu_info, user_id,
+				       vht_flag_values3[0]) = ((mcs << 4) |
+							       nss_su);
 		} else {
 			TXMON_HAL_STATUS(ppdu_info, reception_type) =
 						HAL_RX_TYPE_MU_MIMO;
 			TXMON_HAL_USER(ppdu_info, user_id, mcs) = mcs;
 			TXMON_HAL_USER(ppdu_info, user_id, nss) =
 						nss_su & VHT_SIG_SU_NSS_MASK;
+
+			TXMON_HAL_USER(ppdu_info, user_id,
+				       vht_flag_values3[0]) = ((mcs << 4) |
+							       nss_su);
+			TXMON_HAL_USER(ppdu_info, user_id,
+				       vht_flag_values3[1]) = ((mcs << 4) |
+							       nss_mu[1]);
+			TXMON_HAL_USER(ppdu_info, user_id,
+				       vht_flag_values3[2]) = ((mcs << 4) |
+							       nss_mu[2]);
+			TXMON_HAL_USER(ppdu_info, user_id,
+				       vht_flag_values3[3]) = ((mcs << 4) |
+							       nss_mu[3]);
 		}
 
 		/* TODO: loop over multiple user */
 		TXMON_HAL_USER(ppdu_info, user_id,
 			       vht_flag_values2) = bandwidth;
-		TXMON_HAL_USER(ppdu_info, user_id,
-			       vht_flag_values3[0]) = (mcs << 4) | nss_su;
-		TXMON_HAL_USER(ppdu_info, user_id,
-			       vht_flag_values3[1]) = (mcs << 4) | nss_mu[1];
-		TXMON_HAL_USER(ppdu_info, user_id,
-			       vht_flag_values3[2]) = (mcs << 4) | nss_mu[2];
-		TXMON_HAL_USER(ppdu_info, user_id,
-			       vht_flag_values3[3]) = (mcs << 4) | nss_mu[3];
 		TXMON_HAL_USER(ppdu_info, user_id,
 			       vht_flag_values4) = coding;
 		TXMON_HAL_USER(ppdu_info, user_id,
@@ -2499,6 +2508,11 @@ hal_txmon_status_parse_tlv_generic_be(void *data_ppdu_info,
 	case WIFITRIGGER_RESPONSE_TX_DONE_E:
 	{
 		SHOW_DEFINED(WIFITRIGGER_RESPONSE_TX_DONE_E);
+		break;
+	}
+	case WIFIFW2SW_MON_E:
+	{
+		SHOW_DEFINED(WIFIFW2SW_MON_E);
 		break;
 	}
 	}
