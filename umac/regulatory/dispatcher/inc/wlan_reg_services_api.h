@@ -2445,9 +2445,10 @@ static inline QDF_STATUS wlan_reg_eirp_2_psd(struct wlan_objmgr_pdev *pdev,
 	return QDF_STATUS_E_FAILURE;
 }
 
-uint8_t wlan_reg_get_eirp_pwr(struct wlan_objmgr_pdev *pdev, qdf_freq_t freq,
-			      qdf_freq_t cen320, uint16_t bw,
-			      enum reg_6g_ap_type ap_pwr_type)
+static inline uint8_t wlan_reg_get_eirp_pwr(struct wlan_objmgr_pdev *pdev,
+					    qdf_freq_t freq,
+					    qdf_freq_t cen320, uint16_t bw,
+					    enum reg_6g_ap_type ap_pwr_type)
 {
 	return 0;
 }
