@@ -165,6 +165,8 @@ struct wlan_srng_cfg {
  *				interrupt mapped to each NAPI/INTR context
  * @int_host2txmon_ring_mask: Bitmap of Tx monitor source ring interrupt
  *				mapped to each NAPI/INTR context
+ * @int_umac_reset_intr_mask: Bitmap of UMAC reset interrupt mapped to each
+ * NAPI/INTR context
  * @int_ce_ring_mask: Bitmap of CE interrupts mapped to each NAPI/Intr context
  * @lro_enabled: enable/disable lro feature
  * @rx_hash: Enable hash based steering of rx packets
@@ -303,6 +305,7 @@ struct wlan_cfg_dp_soc_ctxt {
 	uint8_t int_rx_ring_near_full_irq_2_mask[WLAN_CFG_INT_NUM_CONTEXTS];
 	uint8_t int_tx_ring_near_full_irq_mask[WLAN_CFG_INT_NUM_CONTEXTS];
 	uint8_t int_host2txmon_ring_mask[WLAN_CFG_INT_NUM_CONTEXTS];
+	uint8_t int_umac_reset_intr_mask[WLAN_CFG_INT_NUM_CONTEXTS];
 	int hw_macid[MAX_PDEV_CNT];
 	int hw_macid_pdev_id_map[MAX_NUM_LMAC_HW];
 	int base_hw_macid;
@@ -906,6 +909,16 @@ int wlan_cfg_get_reo_status_ring_mask(struct wlan_cfg_dp_soc_ctxt *cfg, int
 int wlan_cfg_get_ce_ring_mask(struct wlan_cfg_dp_soc_ctxt *wlan_cfg_ctx,
 		int context);
 
+/**
+ * wlan_cfg_get_umac_reset_intr_mask() - Get UMAC reset interrupt mask
+ * mapped to an interrupt context
+ * @wlan_cfg_ctx - Configuration Handle
+ * @context - Numerical ID identifying the Interrupt/NAPI context
+ *
+ * Return: int_umac_reset_intr_mask[context]
+ */
+int wlan_cfg_get_umac_reset_intr_mask(struct wlan_cfg_dp_soc_ctxt *cfg,
+				      int context);
 /**
  * wlan_cfg_get_max_clients() - Return maximum number of peers/stations
  *				supported by device

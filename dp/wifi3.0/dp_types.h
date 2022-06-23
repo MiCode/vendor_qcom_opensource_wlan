@@ -952,6 +952,7 @@ struct dp_intr {
 
 	/* Interrupt Stats for individual masks */
 	struct dp_intr_stats intr_stats;
+	uint8_t umac_reset_intr_mask;  /* UMAC reset interrupt mask */
 };
 
 #define REO_DESC_FREELIST_SIZE 64

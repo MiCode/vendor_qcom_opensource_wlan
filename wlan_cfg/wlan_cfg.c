@@ -93,6 +93,8 @@
 #define WLAN_CFG_HOST2RXDMA_RING_MASK_2 0x4
 #define WLAN_CFG_HOST2RXDMA_RING_MASK_3 0x0
 
+#define WLAN_CFG_UMAC_RESET_INTR_MASK_0 0x1
+
 struct dp_int_mask_assignment {
 	uint8_t tx_ring_mask[WLAN_CFG_INT_NUM_CONTEXTS];
 	uint8_t rx_ring_mask[WLAN_CFG_INT_NUM_CONTEXTS];
@@ -109,6 +111,7 @@ struct dp_int_mask_assignment {
 	uint8_t tx_ring_near_full_irq_mask[WLAN_CFG_INT_NUM_CONTEXTS];
 	uint8_t host2txmon_ring_mask[WLAN_CFG_INT_NUM_CONTEXTS];
 	uint8_t tx_mon_ring_mask[WLAN_CFG_INT_NUM_CONTEXTS];
+	uint8_t umac_reset_intr_mask[WLAN_CFG_INT_NUM_CONTEXTS];
 };
 
 #if defined(WLAN_MAX_PDEVS) && (WLAN_MAX_PDEVS == 1)
@@ -853,6 +856,8 @@ static struct dp_int_mask_assignment dp_mask_assignment[NUM_INTERRUPT_COMBINATIO
 		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 		/* tx mon ring masks */
 		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		/* umac reset mask */
+		{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
 	},
 	/* Interrupt assignment for 1 MSI combination */
 	{
@@ -926,6 +931,9 @@ static struct dp_int_mask_assignment dp_mask_assignment[NUM_INTERRUPT_COMBINATIO
 		{ WLAN_CFG_TX_MON_RING_MASK_0 |
 		  WLAN_CFG_TX_MON_RING_MASK_1,
 		  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		/* umac reset mask */
+		{WLAN_CFG_UMAC_RESET_INTR_MASK_0, 0, 0, 0, 0, 0, 0, 0,
+		 0, 0, 0, 0, 0, 0, 0, 0},
 	},
 	/* Interrupt assignment for 2 MSI combination */
 	{
@@ -999,6 +1007,9 @@ static struct dp_int_mask_assignment dp_mask_assignment[NUM_INTERRUPT_COMBINATIO
 		{ WLAN_CFG_TX_MON_RING_MASK_0,
 		  WLAN_CFG_TX_MON_RING_MASK_1,
 		  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		/* umac reset mask */
+		{0, WLAN_CFG_UMAC_RESET_INTR_MASK_0, 0, 0, 0, 0, 0, 0,
+		 0, 0, 0, 0, 0, 0, 0, 0},
 	},
 	/* Interrupt assignment for 3 MSI combination */
 	{
@@ -1080,6 +1091,9 @@ static struct dp_int_mask_assignment dp_mask_assignment[NUM_INTERRUPT_COMBINATIO
 		{ WLAN_CFG_TX_MON_RING_MASK_0,
 		  WLAN_CFG_TX_MON_RING_MASK_1,
 		  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		/* umac reset mask */
+		{0, 0, WLAN_CFG_UMAC_RESET_INTR_MASK_0, 0, 0, 0, 0, 0,
+		 0, 0, 0, 0, 0, 0, 0, 0},
 	},
 	/* Interrupt assignment for 4 MSI combination */
 	{
@@ -1153,6 +1167,9 @@ static struct dp_int_mask_assignment dp_mask_assignment[NUM_INTERRUPT_COMBINATIO
 		{ WLAN_CFG_TX_MON_RING_MASK_0,
 		  WLAN_CFG_TX_MON_RING_MASK_1,
 		  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		/* umac reset mask */
+		{0, 0, 0, WLAN_CFG_UMAC_RESET_INTR_MASK_0, 0, 0, 0, 0,
+		 0, 0, 0, 0, 0, 0, 0, 0},
 	},
 	/* Interrupt assignment for 5 MSI combination */
 	{
@@ -1234,6 +1251,9 @@ static struct dp_int_mask_assignment dp_mask_assignment[NUM_INTERRUPT_COMBINATIO
 		{ WLAN_CFG_TX_MON_RING_MASK_0,
 		  WLAN_CFG_TX_MON_RING_MASK_1,
 		  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		/* umac reset mask */
+		{0, 0, 0, 0, WLAN_CFG_UMAC_RESET_INTR_MASK_0, 0, 0, 0,
+		 0, 0, 0, 0, 0, 0, 0, 0},
 	},
 	/* Interrupt assignment for 6 MSI combination */
 	{
@@ -1308,6 +1328,9 @@ static struct dp_int_mask_assignment dp_mask_assignment[NUM_INTERRUPT_COMBINATIO
 		{ WLAN_CFG_TX_MON_RING_MASK_0,
 		  WLAN_CFG_TX_MON_RING_MASK_1,
 		  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		/* umac reset mask */
+		{0, 0, 0, 0, 0, WLAN_CFG_UMAC_RESET_INTR_MASK_0, 0, 0,
+		 0, 0, 0, 0, 0, 0, 0, 0},
 	},
 	/* Interrupt assignment for 7 MSI combination */
 	{
@@ -1390,6 +1413,9 @@ static struct dp_int_mask_assignment dp_mask_assignment[NUM_INTERRUPT_COMBINATIO
 		{ WLAN_CFG_TX_MON_RING_MASK_0,
 		  WLAN_CFG_TX_MON_RING_MASK_1,
 		  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		/* umac reset mask */
+		{0, 0, 0, 0, 0, 0, WLAN_CFG_UMAC_RESET_INTR_MASK_0, 0,
+		 0, 0, 0, 0, 0, 0, 0, 0},
 	},
 	/* Interrupt assignment for 8 MSI combination */
 	{
@@ -1472,6 +1498,9 @@ static struct dp_int_mask_assignment dp_mask_assignment[NUM_INTERRUPT_COMBINATIO
 		{ WLAN_CFG_TX_MON_RING_MASK_0,
 		  WLAN_CFG_TX_MON_RING_MASK_1,
 		  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		/* umac reset mask */
+		{0, 0, 0, 0, 0, 0, 0, WLAN_CFG_UMAC_RESET_INTR_MASK_0,
+		 0, 0, 0, 0, 0, 0, 0, 0},
 	},
 	/* Interrupt assignment for 9 MSI combination */
 	{
@@ -1554,6 +1583,9 @@ static struct dp_int_mask_assignment dp_mask_assignment[NUM_INTERRUPT_COMBINATIO
 		{ WLAN_CFG_TX_MON_RING_MASK_0,
 		  WLAN_CFG_TX_MON_RING_MASK_1,
 		  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		/* umac reset mask */
+		{0, 0, 0, 0, 0, 0, 0, 0,
+		 WLAN_CFG_UMAC_RESET_INTR_MASK_0, 0, 0, 0, 0, 0, 0, 0},
 	},
 	/* Interrupt assignment for 10 MSI combination */
 	{
@@ -1636,6 +1668,9 @@ static struct dp_int_mask_assignment dp_mask_assignment[NUM_INTERRUPT_COMBINATIO
 		{ WLAN_CFG_TX_MON_RING_MASK_0,
 		  WLAN_CFG_TX_MON_RING_MASK_1,
 		  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		/* umac reset mask */
+		{0, 0, 0, 0, 0, 0, 0, 0,
+		 0, WLAN_CFG_UMAC_RESET_INTR_MASK_0, 0, 0, 0, 0, 0, 0},
 	},
 	/* Interrupt assignment for 11 MSI combination */
 	{
@@ -1718,6 +1753,9 @@ static struct dp_int_mask_assignment dp_mask_assignment[NUM_INTERRUPT_COMBINATIO
 		{ WLAN_CFG_TX_MON_RING_MASK_0,
 		  WLAN_CFG_TX_MON_RING_MASK_1,
 		  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		/* umac reset mask */
+		{0, 0, 0, 0, 0, 0, 0, 0,
+		 0, 0, WLAN_CFG_UMAC_RESET_INTR_MASK_0, 0, 0, 0, 0, 0},
 	},
 	/* Interrupt assignment for 12 MSI combination */
 	{
@@ -1791,6 +1829,9 @@ static struct dp_int_mask_assignment dp_mask_assignment[NUM_INTERRUPT_COMBINATIO
 		  WLAN_CFG_TX_MON_RING_MASK_0,
 		  WLAN_CFG_TX_MON_RING_MASK_1,
 		  0, 0, 0, 0, 0, 0},
+		/* umac reset mask */
+		{0, 0, 0, 0, 0, 0, 0, 0,
+		 0, 0, 0, WLAN_CFG_UMAC_RESET_INTR_MASK_0, 0, 0, 0, 0},
 	},
 	/* Interrupt assignment for 13 MSI combination */
 	{
@@ -1864,6 +1905,9 @@ static struct dp_int_mask_assignment dp_mask_assignment[NUM_INTERRUPT_COMBINATIO
 		  WLAN_CFG_TX_MON_RING_MASK_0,
 		  WLAN_CFG_TX_MON_RING_MASK_1,
 		  0, 0, 0, 0, 0, 0},
+		/* umac reset mask */
+		{0, 0, 0, 0, 0, 0, 0, 0,
+		 0, 0, 0, 0, WLAN_CFG_UMAC_RESET_INTR_MASK_0, 0, 0, 0},
 	},
 	/* Interrupt assignment for 14 MSI combination */
 	{
@@ -1937,6 +1981,9 @@ static struct dp_int_mask_assignment dp_mask_assignment[NUM_INTERRUPT_COMBINATIO
 		  WLAN_CFG_TX_MON_RING_MASK_0,
 		  WLAN_CFG_TX_MON_RING_MASK_1,
 		  0, 0, 0, 0, 0, 0},
+		/* umac reset mask */
+		{0, 0, 0, 0, 0, 0, 0, 0,
+		 0, 0, 0, 0, 0, WLAN_CFG_UMAC_RESET_INTR_MASK_0, 0, 0},
 	},
 	/* Interrupt assignment for 15 MSI combination */
 	{
@@ -2010,6 +2057,9 @@ static struct dp_int_mask_assignment dp_mask_assignment[NUM_INTERRUPT_COMBINATIO
 		  WLAN_CFG_TX_MON_RING_MASK_0,
 		  WLAN_CFG_TX_MON_RING_MASK_1,
 		  0, 0, 0, 0, 0, 0},
+		/* umac reset mask */
+		{0, 0, 0, 0, 0, 0, 0, 0,
+		 0, 0, 0, 0, 0, 0, WLAN_CFG_UMAC_RESET_INTR_MASK_0, 0},
 	},
 	/* Interrupt assignment for 16 MSI combination */
 	{
@@ -2083,6 +2133,9 @@ static struct dp_int_mask_assignment dp_mask_assignment[NUM_INTERRUPT_COMBINATIO
 		  WLAN_CFG_TX_MON_RING_MASK_0,
 		  WLAN_CFG_TX_MON_RING_MASK_1,
 		  0, 0, 0, 0, 0},
+		/* umac reset mask */
+		{0, 0, 0, 0, 0, 0, 0, 0,
+		 0, 0, 0, 0, 0, 0, 0, WLAN_CFG_UMAC_RESET_INTR_MASK_0},
 	},
 };
 #endif
@@ -2312,6 +2365,8 @@ void wlan_cfg_fill_interrupt_mask(struct wlan_cfg_dp_soc_ctxt *wlan_cfg_ctx,
 			wlan_cfg_ctx->int_host2rxdma_mon_ring_mask[i] =
 				dp_mask_assignment[interrupt_index].host2rxdma_mon_ring_mask[i];
 		}
+		wlan_cfg_ctx->int_umac_reset_intr_mask[i] =
+		    dp_mask_assignment[interrupt_index].umac_reset_intr_mask[i];
 	}
 }
 #endif
@@ -3082,6 +3137,12 @@ uint32_t wlan_cfg_max_alloc_size(struct wlan_cfg_dp_soc_ctxt *cfg)
 int wlan_cfg_per_pdev_tx_ring(struct wlan_cfg_dp_soc_ctxt *cfg)
 {
 	return cfg->per_pdev_tx_ring;
+}
+
+int wlan_cfg_get_umac_reset_intr_mask(struct wlan_cfg_dp_soc_ctxt *cfg,
+				      int context)
+{
+	return cfg->int_umac_reset_intr_mask[context];
 }
 
 uint32_t

@@ -3265,6 +3265,7 @@ static void dp_soc_interrupt_detach(struct cdp_soc_t *txrx_soc)
 		soc->intr_ctx[i].tx_ring_near_full_mask = 0;
 		soc->intr_ctx[i].tx_mon_ring_mask = 0;
 		soc->intr_ctx[i].host2txmon_ring_mask = 0;
+		soc->intr_ctx[i].umac_reset_intr_mask = 0;
 
 		hif_event_history_deinit(soc->hif_handle, i);
 		qdf_lro_deinit(soc->intr_ctx[i].lro_ctx);
@@ -3336,6 +3337,8 @@ static QDF_STATUS dp_soc_interrupt_attach(struct cdp_soc_t *txrx_soc)
 							    i);
 		int host2txmon_ring_mask =
 			wlan_cfg_get_host2txmon_ring_mask(soc->wlan_cfg_ctx, i);
+		int umac_reset_intr_mask =
+			wlan_cfg_get_umac_reset_intr_mask(soc->wlan_cfg_ctx, i);
 
 		soc->intr_ctx[i].dp_intr_id = i;
 		soc->intr_ctx[i].tx_ring_mask = tx_mask;
@@ -3356,6 +3359,7 @@ static QDF_STATUS dp_soc_interrupt_attach(struct cdp_soc_t *txrx_soc)
 						tx_ring_near_full_mask;
 		soc->intr_ctx[i].tx_mon_ring_mask = tx_mon_ring_mask;
 		soc->intr_ctx[i].host2txmon_ring_mask = host2txmon_ring_mask;
+		soc->intr_ctx[i].umac_reset_intr_mask = umac_reset_intr_mask;
 
 		soc->intr_ctx[i].soc = soc;
 
