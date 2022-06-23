@@ -4164,8 +4164,9 @@ int dp_addba_resp_tx_completion_wifi3(struct cdp_soc_t *cdp_soc,
 	qdf_spin_lock_bh(&rx_tid->tid_lock);
 	if (status) {
 		rx_tid->num_addba_rsp_failed++;
-		dp_rx_tid_update_wifi3(peer, tid, 1,
-				       IEEE80211_SEQ_MAX, false);
+		if (rx_tid->hw_qdesc_vaddr_unaligned)
+			dp_rx_tid_update_wifi3(peer, tid, 1,
+					       IEEE80211_SEQ_MAX, false);
 		rx_tid->ba_status = DP_RX_BA_INACTIVE;
 		qdf_spin_unlock_bh(&rx_tid->tid_lock);
 		dp_err("RxTid- %d addba rsp tx completion failed", tid);
