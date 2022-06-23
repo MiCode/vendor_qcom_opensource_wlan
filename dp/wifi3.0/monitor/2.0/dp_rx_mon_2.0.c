@@ -845,7 +845,7 @@ dp_rx_mon_flush_status_buf_queue(struct dp_pdev *pdev)
 		dp_mon_buffers_replenish(soc, &soc->rxdma_mon_buf_ring[0],
 					 rx_mon_desc_pool,
 					 work_done,
-					 &desc_list, &tail);
+					 &desc_list, &tail, NULL);
 	}
 }
 
@@ -878,7 +878,7 @@ dp_rx_mon_handle_flush_n_trucated_ppdu(struct dp_soc *soc,
 	dp_mon_buffers_replenish(soc, &soc->rxdma_mon_buf_ring[0],
 				 rx_mon_desc_pool,
 				 work_done,
-				 &desc_list, &tail);
+				 &desc_list, &tail, NULL);
 }
 
 uint8_t dp_rx_mon_process_tlv_status(struct dp_pdev *pdev,
@@ -1296,7 +1296,7 @@ dp_rx_mon_process_status_tlv(struct dp_pdev *pdev)
 		dp_mon_buffers_replenish(soc, &soc->rxdma_mon_buf_ring[0],
 					 rx_mon_desc_pool,
 					 work_done,
-					 &desc_list, &tail);
+					 &desc_list, &tail, NULL);
 	}
 
 	ppdu_info->rx_status.tsft = ppdu_info->rx_status.tsft +
@@ -1589,7 +1589,7 @@ dp_rx_mon_buffers_alloc(struct dp_soc *soc, uint32_t size)
 	return dp_mon_buffers_replenish(soc, mon_buf_ring,
 					rx_mon_desc_pool,
 					size,
-					&desc_list, &tail);
+					&desc_list, &tail, NULL);
 }
 
 #ifdef QCA_ENHANCED_STATS_SUPPORT

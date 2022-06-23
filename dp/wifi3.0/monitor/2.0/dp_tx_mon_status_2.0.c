@@ -26,6 +26,8 @@
 #include <dp_mon_2.0.h>
 #include <dp_lite_mon.h>
 
+#define MAX_PPDU_INFO_LIST_DEPTH 64
+
 /**
  * dp_tx_mon_status_free_packet_buf() - API to free packet buffer
  * @pdev: pdev Handle
@@ -103,6 +105,9 @@ dp_tx_mon_status_free_packet_buf(struct dp_pdev *pdev,
 						     &mon_desc_list_ref->tail,
 						     mon_desc);
 
+			tx_mon_be->stats.pkt_buf_recv++;
+			tx_mon_be->stats.pkt_buf_free++;
+
 			/* free buffer, mapped to descriptor */
 			qdf_frag_free(packet_buffer);
 		}
@@ -140,6 +145,7 @@ dp_tx_mon_status_queue_free(struct dp_pdev *pdev,
 		end_offset = tx_mon_be->frag_q_vec[i].end_offset;
 		dp_tx_mon_status_free_packet_buf(pdev, status_frag, end_offset,
 						 mon_desc_list_ref);
+		tx_mon_be->stats.status_buf_free++;
 		qdf_frag_free(status_frag);
 		tx_mon_be->frag_q_vec[i].frag_buf = NULL;
 		tx_mon_be->frag_q_vec[i].end_offset = 0;
@@ -946,6 +952,8 @@ dp_tx_mon_generate_data_frm(struct dp_pdev *pdev,
 	if (!mpdu_nbuf)
 		QDF_BUG(0);
 
+	tx_mon_be->stats.pkt_buf_processed++;
+
 	/* add function to either copy or add frag to frag_list */
 	qdf_nbuf_add_frag(pdev->soc->osdev,
 			  TXMON_STATUS_INFO(tx_status_info, buffer),
@@ -1320,6 +1328,7 @@ dp_tx_mon_update_ppdu_info_status(struct dp_pdev *pdev,
 			qdf_assert_always(0);
 
 		qdf_assert_always(mon_desc->buf_addr);
+		tx_mon_be->stats.pkt_buf_recv++;
 
 		if (!mon_desc->unmapped) {
 			qdf_mem_unmap_page(pdev->soc->osdev,
@@ -1401,10 +1410,10 @@ dp_tx_mon_process_tlv_2_0(struct dp_pdev *pdev,
 	struct hal_tx_status_info *tx_status_data;
 	qdf_frag_t status_frag = NULL;
 	uint32_t end_offset = 0;
-	uint8_t *tx_tlv;
-	uint8_t *tx_tlv_start;
 	uint32_t tlv_status;
 	uint32_t status = QDF_STATUS_SUCCESS;
+	uint8_t *tx_tlv;
+	uint8_t *tx_tlv_start;
 	uint8_t num_users = 0;
 	uint8_t cur_frag_q_idx;
 	bool schedule_wrq = false;
@@ -1513,6 +1522,7 @@ dp_tx_mon_process_tlv_2_0(struct dp_pdev *pdev,
 		 * free status buffer after parsing
 		 * is status_frag mapped to mpdu if so make sure
 		 */
+		tx_mon_be->stats.status_buf_free++;
 		qdf_frag_free(status_frag);
 		tx_mon_be->frag_q_vec[cur_frag_q_idx].frag_buf = NULL;
 		tx_mon_be->frag_q_vec[cur_frag_q_idx].end_offset = 0;
@@ -1689,10 +1699,12 @@ dp_tx_mon_process_status_tlv(struct dp_soc *soc,
 	    tx_mon_be->last_frag_q_idx) {
 		if (tx_mon_be->be_end_reason_bitmap &
 		    (1 << HAL_MON_FLUSH_DETECTED)) {
+			tx_mon_be->stats.ppdu_info_drop_flush++;
 			dp_tx_mon_status_queue_free(pdev, tx_mon_be,
 						    mon_desc_list_ref);
 		} else if (tx_mon_be->be_end_reason_bitmap &
 			   (1 << HAL_MON_PPDU_TRUNCATED)) {
+			tx_mon_be->stats.ppdu_info_drop_trunc++;
 			dp_tx_mon_status_queue_free(pdev, tx_mon_be,
 						    mon_desc_list_ref);
 		} else {
@@ -1721,6 +1733,16 @@ dp_tx_mon_process_status_tlv(struct dp_soc *soc,
 	tx_mon_be->last_frag_q_idx++;
 
 	if (mon_ring_desc->end_reason == HAL_MON_END_OF_PPDU) {
+		/* drop processing of tlv, if ppdu info list exceed threshold */
+		if ((tx_mon_be->defer_ppdu_info_list_depth +
+		     tx_mon_be->tx_ppdu_info_list_depth) >
+		    MAX_PPDU_INFO_LIST_DEPTH) {
+			tx_mon_be->stats.ppdu_info_drop_th++;
+			dp_tx_mon_status_queue_free(pdev, tx_mon_be,
+						    mon_desc_list_ref);
+			return QDF_STATUS_E_PENDING;
+		}
+
 		if (dp_tx_mon_process_tlv_2_0(pdev,
 					      mon_desc_list_ref) !=
 		    QDF_STATUS_SUCCESS)
@@ -1733,6 +1755,7 @@ dp_tx_mon_process_status_tlv(struct dp_soc *soc,
 free_status_buffer:
 	dp_tx_mon_status_free_packet_buf(pdev, status_frag, end_offset,
 					 mon_desc_list_ref);
+	tx_mon_be->stats.status_buf_free++;
 	qdf_frag_free(status_frag);
 
 	return QDF_STATUS_E_NOMEM;
@@ -1781,6 +1804,7 @@ dp_tx_mon_process_status_tlv(struct dp_soc *soc,
 
 	dp_tx_mon_status_free_packet_buf(pdev, status_frag, end_offset,
 					 mon_desc_list_ref);
+	tx_mon_be->stats.status_buf_free++;
 	qdf_frag_free(status_frag);
 
 	return QDF_STATUS_E_INVAL;

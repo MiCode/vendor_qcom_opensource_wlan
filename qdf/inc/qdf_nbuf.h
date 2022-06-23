@@ -4202,6 +4202,11 @@ static inline uint32_t qdf_nbuf_get_nr_frags(qdf_nbuf_t nbuf)
 	return __qdf_nbuf_get_nr_frags(nbuf);
 }
 
+static inline uint32_t qdf_nbuf_get_nr_frags_in_fraglist(qdf_nbuf_t nbuf)
+{
+	return __qdf_nbuf_get_nr_frags_in_fraglist(nbuf);
+}
+
 static inline qdf_size_t qdf_nbuf_headlen(qdf_nbuf_t buf)
 {
 	return __qdf_nbuf_headlen(buf);

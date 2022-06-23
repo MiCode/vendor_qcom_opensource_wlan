@@ -33,6 +33,67 @@
 #include "dp_ratetable.h"
 #endif
 
+#define MAX_TX_MONITOR_STUCK 50
+
+#ifdef TXMON_DEBUG
+/*
+ * dp_tx_mon_debug_statu() - API to display tx monitor status
+ * @tx_mon_be - pointer to dp_pdev_tx_monitor_be
+ * @work_done - tx monitor work done
+ *
+ * Return: void
+ */
+static inline void
+dp_tx_mon_debug_status(struct dp_pdev_tx_monitor_be *tx_mon_be,
+		       uint32_t work_done)
+{
+	if (tx_mon_be->mode && !work_done)
+		tx_mon_be->stats.tx_mon_stuck++;
+	else if (tx_mon_be->mode && work_done)
+		tx_mon_be->stats.tx_mon_stuck = 0;
+
+	if (tx_mon_be->stats.tx_mon_stuck > MAX_TX_MONITOR_STUCK) {
+		dp_mon_warn("Tx monitor block got stuck!!!!!");
+		tx_mon_be->stats.tx_mon_stuck = 0;
+		tx_mon_be->stats.total_tx_mon_stuck++;
+	}
+
+	dp_mon_debug_rl("tx_ppdu_info[%u :D %u] STATUS[R %llu: F %llu] PKT_BUF[R %llu: F %llu : P %llu : S %llu]",
+			tx_mon_be->tx_ppdu_info_list_depth,
+			tx_mon_be->defer_ppdu_info_list_depth,
+			tx_mon_be->stats.status_buf_recv,
+			tx_mon_be->stats.status_buf_free,
+			tx_mon_be->stats.pkt_buf_recv,
+			tx_mon_be->stats.pkt_buf_free,
+			tx_mon_be->stats.pkt_buf_processed,
+			tx_mon_be->stats.pkt_buf_to_stack);
+}
+
+#else
+/*
+ * dp_tx_mon_debug_statu() - API to display tx monitor status
+ * @tx_mon_be - pointer to dp_pdev_tx_monitor_be
+ * @work_done - tx monitor work done
+ *
+ * Return: void
+ */
+static inline void
+dp_tx_mon_debug_status(struct dp_pdev_tx_monitor_be *tx_mon_be,
+		       uint32_t work_done)
+{
+	if (tx_mon_be->mode && !work_done)
+		tx_mon_be->stats.tx_mon_stuck++;
+	else if (tx_mon_be->mode && work_done)
+		tx_mon_be->stats.tx_mon_stuck = 0;
+
+	if (tx_mon_be->stats.tx_mon_stuck > MAX_TX_MONITOR_STUCK) {
+		dp_mon_warn("Tx monitor block got stuck!!!!!");
+		tx_mon_be->stats.tx_mon_stuck = 0;
+		tx_mon_be->stats.total_tx_mon_stuck++;
+	}
+}
+#endif
+
 static inline uint32_t
 dp_tx_mon_srng_process_2_0(struct dp_soc *soc, struct dp_intr *int_ctx,
 			   uint32_t mac_id, uint32_t quota)
@@ -49,6 +110,7 @@ dp_tx_mon_srng_process_2_0(struct dp_soc *soc, struct dp_intr *int_ctx,
 	struct dp_pdev_tx_monitor_be *tx_mon_be = NULL;
 	struct dp_mon_desc_pool *tx_mon_desc_pool = &mon_soc_be->tx_desc_mon;
 	struct dp_tx_mon_desc_list mon_desc_list;
+	uint32_t replenish_cnt = 0;
 
 	if (!pdev) {
 		dp_mon_err("%pK: pdev is null for mac_id = %d", soc, mac_id);
@@ -110,6 +172,12 @@ dp_tx_mon_srng_process_2_0(struct dp_soc *soc, struct dp_intr *int_ctx,
 				    hal_mon_tx_desc.tlv_drop_count,
 				    hal_mon_tx_desc.end_of_ppdu_dropped);
 
+			tx_mon_be->stats.ppdu_drop_cnt +=
+				hal_mon_tx_desc.ppdu_drop_count;
+			tx_mon_be->stats.mpdu_drop_cnt +=
+				hal_mon_tx_desc.mpdu_drop_count;
+			tx_mon_be->stats.tlv_drop_cnt +=
+				hal_mon_tx_desc.tlv_drop_count;
 			work_done++;
 			hal_srng_dst_get_next(hal_soc, mon_dst_srng);
 			continue;
@@ -168,9 +236,12 @@ dp_tx_mon_srng_process_2_0(struct dp_soc *soc, struct dp_intr *int_ctx,
 			continue;
 		}
 
+		tx_mon_be->stats.status_buf_recv++;
+
 		if ((hal_mon_tx_desc.end_reason == HAL_MON_FLUSH_DETECTED) ||
 		    (hal_mon_tx_desc.end_reason == HAL_MON_PPDU_TRUNCATED)) {
 			tx_mon_be->be_ppdu_id = hal_mon_tx_desc.ppdu_id;
+
 			dp_tx_mon_update_end_reason(mon_pdev,
 						    hal_mon_tx_desc.ppdu_id,
 						    hal_mon_tx_desc.end_reason);
@@ -178,6 +249,8 @@ dp_tx_mon_srng_process_2_0(struct dp_soc *soc, struct dp_intr *int_ctx,
 			dp_tx_mon_status_free_packet_buf(pdev, status_frag,
 							 end_offset,
 							 &mon_desc_list);
+
+			tx_mon_be->stats.status_buf_free++;
 			qdf_frag_free(status_frag);
 
 			work_done++;
@@ -201,11 +274,16 @@ dp_tx_mon_srng_process_2_0(struct dp_soc *soc, struct dp_intr *int_ctx,
 					 tx_mon_desc_pool,
 					 mon_desc_list.tx_mon_reap_cnt,
 					 &mon_desc_list.desc_list,
-					 &mon_desc_list.tail);
+					 &mon_desc_list.tail,
+					 &replenish_cnt);
 	}
 	qdf_spin_unlock_bh(&mon_pdev->mon_lock);
 	dp_mon_debug("mac_id: %d, work_done:%d tx_monitor_reap_cnt:%d",
 		     mac_id, work_done, mon_desc_list.tx_mon_reap_cnt);
+
+	tx_mon_be->stats.total_tx_mon_reap_cnt += mon_desc_list.tx_mon_reap_cnt;
+	tx_mon_be->stats.totat_tx_mon_replenish_cnt += replenish_cnt;
+	dp_tx_mon_debug_status(tx_mon_be, work_done);
 
 	return work_done;
 }
@@ -309,10 +387,29 @@ dp_tx_mon_buffers_alloc(struct dp_soc *soc, uint32_t size)
 	return dp_mon_buffers_replenish(soc, mon_buf_ring,
 					tx_mon_desc_pool,
 					size,
-					&desc_list, &tail);
+					&desc_list, &tail, NULL);
 }
 
 #ifdef WLAN_TX_PKT_CAPTURE_ENH_BE
+
+/*
+ * dp_tx_mon_nbuf_get_num_frag() - get total number of fragments
+ * @buf: Network buf instance
+ *
+ * Return: number of fragments
+ */
+static inline
+uint32_t dp_tx_mon_nbuf_get_num_frag(qdf_nbuf_t nbuf)
+{
+	uint32_t num_frag = 0;
+
+	if (qdf_unlikely(!nbuf))
+		return num_frag;
+
+	num_frag = qdf_nbuf_get_nr_frags_in_fraglist(nbuf);
+
+	return num_frag;
+}
 
 /*
  * dp_tx_mon_free_usr_mpduq() - API to free user mpduq
@@ -327,12 +424,19 @@ void dp_tx_mon_free_usr_mpduq(struct dp_tx_ppdu_info *tx_ppdu_info,
 			      struct dp_pdev_tx_monitor_be *tx_mon_be)
 {
 	qdf_nbuf_queue_t *mpdu_q;
+	uint32_t num_frag = 0;
+	qdf_nbuf_t buf = NULL;
 
 	if (qdf_unlikely(!tx_ppdu_info))
 		return;
 
 	mpdu_q = &TXMON_PPDU_USR(tx_ppdu_info, usr_idx, mpdu_q);
-	qdf_nbuf_queue_free(mpdu_q);
+
+	while ((buf = qdf_nbuf_queue_remove(mpdu_q)) != NULL) {
+		num_frag += dp_tx_mon_nbuf_get_num_frag(buf);
+		qdf_nbuf_free(buf);
+	}
+	tx_mon_be->stats.pkt_buf_free += num_frag;
 }
 
 /*
@@ -349,9 +453,16 @@ void dp_tx_mon_free_ppdu_info(struct dp_tx_ppdu_info *tx_ppdu_info,
 
 	for (; user < TXMON_PPDU_HAL(tx_ppdu_info, num_users); user++) {
 		qdf_nbuf_queue_t *mpdu_q;
+		uint32_t num_frag = 0;
+		qdf_nbuf_t buf = NULL;
 
 		mpdu_q = &TXMON_PPDU_USR(tx_ppdu_info, user, mpdu_q);
-		qdf_nbuf_queue_free(mpdu_q);
+
+		while ((buf = qdf_nbuf_queue_remove(mpdu_q)) != NULL) {
+			num_frag += dp_tx_mon_nbuf_get_num_frag(buf);
+			qdf_nbuf_free(buf);
+		}
+		tx_mon_be->stats.pkt_buf_free += num_frag;
 	}
 
 	TXMON_PPDU_HAL(tx_ppdu_info, is_used) = 0;
@@ -424,7 +535,39 @@ struct dp_tx_ppdu_info *dp_tx_mon_get_ppdu_info(struct dp_pdev *pdev,
  */
 void dp_print_pdev_tx_monitor_stats_2_0(struct dp_pdev *pdev)
 {
+	struct dp_mon_pdev *mon_pdev = pdev->monitor_pdev;
+	struct dp_mon_pdev_be *mon_pdev_be =
+			dp_get_be_mon_pdev_from_dp_mon_pdev(mon_pdev);
+	struct dp_pdev_tx_monitor_be *tx_mon_be =
+			&mon_pdev_be->tx_monitor_be;
+	struct dp_tx_monitor_drop_stats stats = {0};
+
+	qdf_mem_copy(&stats, &tx_mon_be->stats,
+		     sizeof(struct dp_tx_monitor_drop_stats));
+
 	/* TX monitor stats needed for beryllium */
+	DP_PRINT_STATS("\n\tTX Capture BE stats mode[%d]:", tx_mon_be->mode);
+	DP_PRINT_STATS("\tbuffer pending : %u", tx_mon_be->last_frag_q_idx);
+	DP_PRINT_STATS("\treplenish count: %llu",
+		       stats.totat_tx_mon_replenish_cnt);
+	DP_PRINT_STATS("\treap count     : %llu", stats.total_tx_mon_reap_cnt);
+	DP_PRINT_STATS("\tmonitor stuck  : %u", stats.total_tx_mon_stuck);
+	DP_PRINT_STATS("\tStatus buffer");
+	DP_PRINT_STATS("\t\treceived  : %llu", stats.status_buf_recv);
+	DP_PRINT_STATS("\t\tfree      : %llu", stats.status_buf_free);
+	DP_PRINT_STATS("\tPacket buffer");
+	DP_PRINT_STATS("\t\treceived  : %llu", stats.pkt_buf_recv);
+	DP_PRINT_STATS("\t\tfree      : %llu", stats.pkt_buf_free);
+	DP_PRINT_STATS("\t\tprocessed : %llu", stats.pkt_buf_processed);
+	DP_PRINT_STATS("\t\tto stack  : %llu", stats.pkt_buf_to_stack);
+	DP_PRINT_STATS("\tppdu info");
+	DP_PRINT_STATS("\t\tthreshold : %llu", stats.ppdu_info_drop_th);
+	DP_PRINT_STATS("\t\tflush     : %llu", stats.ppdu_info_drop_flush);
+	DP_PRINT_STATS("\t\ttruncated : %llu", stats.ppdu_info_drop_trunc);
+	DP_PRINT_STATS("\tDrop stats");
+	DP_PRINT_STATS("\t\tppdu drop : %llu", stats.ppdu_drop_cnt);
+	DP_PRINT_STATS("\t\tmpdu drop : %llu", stats.mpdu_drop_cnt);
+	DP_PRINT_STATS("\t\ttlv drop : %llu", stats.tlv_drop_cnt);
 }
 
 /*
@@ -455,6 +598,8 @@ dp_config_enh_tx_monitor_2_0(struct dp_pdev *pdev, uint8_t val)
 	case TX_MON_BE_FULL_CAPTURE:
 	{
 		/* TODO: send HTT msg to configure TLV based on mode */
+		qdf_mem_zero(&tx_mon_be->stats,
+			     sizeof(struct dp_tx_monitor_drop_stats));
 		tx_mon_be->mode = TX_MON_BE_FULL_CAPTURE;
 		mon_pdev_be->tx_mon_mode = 1;
 		mon_pdev_be->tx_mon_filter_length = DEFAULT_DMA_LENGTH;
@@ -464,7 +609,7 @@ dp_config_enh_tx_monitor_2_0(struct dp_pdev *pdev, uint8_t val)
 	{
 		/* TODO: send HTT msg to configure TLV based on mode */
 		tx_mon_be->mode = TX_MON_BE_PEER_FILTER;
-		mon_pdev_be->tx_mon_mode = 1;
+		mon_pdev_be->tx_mon_mode = 2;
 		mon_pdev_be->tx_mon_filter_length = DMA_LENGTH_256B;
 		break;
 	}
@@ -526,16 +671,22 @@ static void dp_fill_lite_mon_vdev(struct cdp_tx_indication_info *tx_cap_info,
  * dp_tx_mon_send_to_stack() - API to send to stack
  * @pdev: pdev Handle
  * @mpdu: pointer to mpdu
+ * @num_frag: number of frag in mpdu
  *
  * Return: void
  */
 static void
-dp_tx_mon_send_to_stack(struct dp_pdev *pdev, qdf_nbuf_t mpdu)
+dp_tx_mon_send_to_stack(struct dp_pdev *pdev, qdf_nbuf_t mpdu,
+			uint32_t num_frag)
 {
 	struct dp_mon_pdev *mon_pdev = pdev->monitor_pdev;
 	struct dp_mon_pdev_be *mon_pdev_be =
 			dp_get_be_mon_pdev_from_dp_mon_pdev(mon_pdev);
+	struct dp_pdev_tx_monitor_be *tx_mon_be =
+			&mon_pdev_be->tx_monitor_be;
 	struct cdp_tx_indication_info tx_capture_info = {0};
+
+	tx_mon_be->stats.pkt_buf_to_stack += num_frag;
 
 	tx_capture_info.radiotap_done = 1;
 	tx_capture_info.mpdu_nbuf = mpdu;
@@ -578,13 +729,15 @@ dp_tx_mon_send_per_usr_mpdu(struct dp_pdev *pdev,
 	usr_mpdu_q = &TXMON_PPDU_USR(ppdu_info, user_idx, mpdu_q);
 
 	while ((buf = qdf_nbuf_queue_remove(usr_mpdu_q)) != NULL) {
+		uint32_t num_frag = dp_tx_mon_nbuf_get_num_frag(buf);
+
 		ppdu_info->hal_txmon.rx_status.rx_user_status =
 				&ppdu_info->hal_txmon.rx_user_status[user_idx];
 
 		qdf_nbuf_update_radiotap(&ppdu_info->hal_txmon.rx_status,
 					 buf, qdf_nbuf_headroom(buf));
 
-		dp_tx_mon_send_to_stack(pdev, buf);
+		dp_tx_mon_send_to_stack(pdev, buf, num_frag);
 	}
 }
 
@@ -845,6 +998,9 @@ dp_config_enh_tx_core_monitor_2_0(struct dp_pdev *pdev, uint8_t val)
 	}
 	case TX_MON_BE_FRM_WRK_FULL_CAPTURE:
 	{
+		tx_mon_be->mode = val;
+		qdf_mem_zero(&tx_mon_be->stats,
+			     sizeof(struct dp_tx_monitor_drop_stats));
 		tx_mon_be->mode = val;
 		mon_pdev_be->tx_mon_mode = 1;
 		mon_pdev_be->tx_mon_filter_length = DEFAULT_DMA_LENGTH;

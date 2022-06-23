@@ -57,6 +57,7 @@
 #define dp_mon_debug(params...) QDF_TRACE_DEBUG(QDF_MODULE_ID_MON, params)
 #define dp_mon_warn(params...) QDF_TRACE_WARN(QDF_MODULE_ID_MON, params)
 
+#define dp_mon_warn_rl(params...) QDF_TRACE_WARN_RL(QDF_MODULE_ID_MON, params)
 #define dp_mon_debug_rl(params...) QDF_TRACE_DEBUG_RL(QDF_MODULE_ID_MON, params)
 #define dp_mon_info_rl(params...) \
 	__QDF_TRACE_RL(QDF_TRACE_LEVEL_INFO_HIGH, QDF_MODULE_ID_MON, ## params)

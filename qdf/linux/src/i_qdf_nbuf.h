@@ -1094,6 +1094,25 @@ static inline size_t __qdf_nbuf_get_nr_frags(struct sk_buff *skb)
 	return skb_shinfo(skb)->nr_frags;
 }
 
+/**
+ * __qdf_nbuf_get_nr_frags_in_fraglist() - return the number of fragments
+ * @skb: sk buff
+ *
+ * This API returns a total number of fragments from the fraglist
+ * Return: total number of fragments
+ */
+static inline uint32_t __qdf_nbuf_get_nr_frags_in_fraglist(struct sk_buff *skb)
+{
+	uint32_t num_frag = 0;
+	struct sk_buff *list = NULL;
+
+	num_frag = skb_shinfo(skb)->nr_frags;
+	skb_walk_frags(skb, list)
+		num_frag += skb_shinfo(list)->nr_frags;
+
+	return num_frag;
+}
+
 /*
  * qdf_nbuf_pool_delete() implementation - do nothing in linux
  */

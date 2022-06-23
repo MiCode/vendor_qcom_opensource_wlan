@@ -223,7 +223,8 @@ dp_mon_buffers_replenish(struct dp_soc *dp_soc,
 			 struct dp_mon_desc_pool *mon_desc_pool,
 			 uint32_t num_req_buffers,
 			 union dp_mon_desc_list_elem_t **desc_list,
-			 union dp_mon_desc_list_elem_t **tail)
+			 union dp_mon_desc_list_elem_t **tail,
+			 uint32_t *replenish_cnt_ref)
 {
 	uint32_t num_alloc_desc;
 	uint16_t num_desc_to_free = 0;
@@ -321,6 +322,8 @@ dp_mon_buffers_replenish(struct dp_soc *dp_soc,
 	}
 
 	hal_srng_access_end(dp_soc->hal_soc, mon_srng);
+	if (replenish_cnt_ref)
+		*replenish_cnt_ref += count;
 
 free_desc:
 	/*
@@ -812,7 +815,8 @@ QDF_STATUS dp_tx_mon_refill_buf_ring_2_0(struct dp_intr *int_ctx)
 	if (num_entries_avail)
 		dp_mon_buffers_replenish(soc, tx_mon_buf_ring,
 					 &mon_soc_be->tx_desc_mon,
-					 num_entries_avail, &desc_list, &tail);
+					 num_entries_avail, &desc_list, &tail,
+					 NULL);
 
 	return QDF_STATUS_SUCCESS;
 }
@@ -844,7 +848,8 @@ QDF_STATUS dp_rx_mon_refill_buf_ring_2_0(struct dp_intr *int_ctx)
 	if (num_entries_avail)
 		dp_mon_buffers_replenish(soc, rx_mon_buf_ring,
 					 &mon_soc_be->rx_desc_mon,
-					 num_entries_avail, &desc_list, &tail);
+					 num_entries_avail, &desc_list, &tail,
+					 NULL);
 
 	return QDF_STATUS_SUCCESS;
 }
