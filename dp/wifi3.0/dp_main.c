@@ -5261,6 +5261,50 @@ static inline void dp_soc_rx_history_detach(struct dp_soc *soc)
 }
 #endif
 
+#ifdef WLAN_FEATURE_DP_MON_STATUS_RING_HISTORY
+/**
+ * dp_soc_mon_status_ring_history_attach() - Attach the monitor status
+ *					     buffer record history.
+ * @soc: DP soc handle
+ *
+ * This function allocates memory to track the event for a monitor
+ * status buffer, before its parsed and freed.
+ *
+ * Return: None
+ */
+static void dp_soc_mon_status_ring_history_attach(struct dp_soc *soc)
+{
+	soc->mon_status_ring_history = dp_context_alloc_mem(soc,
+				DP_MON_STATUS_BUF_HIST_TYPE,
+				sizeof(struct dp_mon_status_ring_history));
+	if (!soc->mon_status_ring_history) {
+		dp_err("Failed to alloc memory for mon status ring history");
+		return;
+	}
+}
+
+/**
+ * dp_soc_mon_status_ring_history_detach() - Detach the monitor status buffer
+ *					     record history.
+ * @soc: DP soc handle
+ *
+ * Return: None
+ */
+static void dp_soc_mon_status_ring_history_detach(struct dp_soc *soc)
+{
+	dp_context_free_mem(soc, DP_MON_STATUS_BUF_HIST_TYPE,
+			    soc->mon_status_ring_history);
+}
+#else
+static void dp_soc_mon_status_ring_history_attach(struct dp_soc *soc)
+{
+}
+
+static void dp_soc_mon_status_ring_history_detach(struct dp_soc *soc)
+{
+}
+#endif
+
 #ifdef WLAN_FEATURE_DP_TX_DESC_HISTORY
 /**
  * dp_soc_tx_history_attach() - Attach the ring history record buffers
@@ -5931,6 +5975,7 @@ static void dp_soc_detach(struct cdp_soc_t *txrx_soc)
 	wlan_cfg_soc_detach(soc->wlan_cfg_ctx);
 	dp_soc_tx_hw_desc_history_detach(soc);
 	dp_soc_tx_history_detach(soc);
+	dp_soc_mon_status_ring_history_detach(soc);
 	dp_soc_rx_history_detach(soc);
 
 	if (!dp_monitor_modularized_enable()) {
@@ -13920,6 +13965,7 @@ dp_soc_attach(struct cdp_ctrl_objmgr_psoc *ctrl_psoc,
 
 	dp_soc_tx_hw_desc_history_attach(soc);
 	dp_soc_rx_history_attach(soc);
+	dp_soc_mon_status_ring_history_attach(soc);
 	dp_soc_tx_history_attach(soc);
 	wlan_set_srng_cfg(&soc->wlan_srng_cfg);
 	soc->wlan_cfg_ctx = wlan_cfg_soc_attach(soc->ctrl_psoc);
