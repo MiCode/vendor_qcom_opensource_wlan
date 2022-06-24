@@ -178,26 +178,6 @@ QDF_STATUS
 dp_rx_mon_handle_full_mon(struct dp_pdev *pdev,
 			  struct hal_rx_ppdu_info *ppdu_info,
 			  qdf_nbuf_t mpdu);
-#ifdef QCA_RSSI_DB2DBM
-/**
- * dp_mon_rx_stats_update_rssi_dbm_params_2_0() - update rssi calibration
- *					parameters in rx stats
- * @mon_pdev: monitor pdev
- */
-void
-dp_mon_rx_stats_update_rssi_dbm_params_2_0(struct dp_soc *soc,
-					   struct dp_mon_pdev *mon_pdev);
-#else
-/**
- * dp_mon_rx_stats_update_rssi_dbm_params_2_0() - update rssi calibration
- *					parameters in rx stats
- * @mon_pdev: monitor pdev
- */
-static inline void
-dp_mon_rx_stats_update_rssi_dbm_params_2_0(struct dp_soc *soc,
-					   struct dp_mon_pdev *mon_pdev)
-{ }
-#endif
 
 /**
  * dp_rx_mon_drain_wq() - Drain monitor buffers from rxmon workqueue
