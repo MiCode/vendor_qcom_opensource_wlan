@@ -656,7 +656,8 @@ dp_rx_cookie_reset_invalid_bit(hal_ring_desc_t ring_desc)
 
 #endif /* QCA_HOST_MODE_WIFI_DISABLED */
 
-#ifdef RX_DESC_MULTI_PAGE_ALLOC
+#if defined(RX_DESC_MULTI_PAGE_ALLOC) && \
+	defined(DP_WAR_VALIDATE_RX_ERR_MSDU_COOKIE)
 /**
  * dp_rx_is_sw_cookie_valid() - check whether SW cookie valid
  * @soc: dp soc ref

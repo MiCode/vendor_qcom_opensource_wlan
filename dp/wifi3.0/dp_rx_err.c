@@ -2388,7 +2388,6 @@ dp_rx_err_process(struct dp_intr *int_ctx, struct dp_soc *soc,
 
 		hal_rx_reo_buf_paddr_get(soc->hal_soc, ring_desc, &hbi);
 		link_desc_va = dp_rx_cookie_2_link_desc_va(soc, &hbi);
-		num_msdus = 0;
 		hal_rx_msdu_list_get(soc->hal_soc, link_desc_va, &msdu_list,
 				     &num_msdus);
 		if (!num_msdus ||
