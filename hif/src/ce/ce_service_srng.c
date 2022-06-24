@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -1008,6 +1008,35 @@ static void ce_prepare_shadow_register_v2_cfg_srng(struct hif_softc *scn,
 			      num_shadow_registers_configured);
 }
 
+#ifdef CONFIG_SHADOW_V3
+static void ce_prepare_shadow_register_v3_cfg_srng(struct hif_softc *scn,
+		struct pld_shadow_reg_v3_cfg **shadow_config,
+		int *num_shadow_registers_configured)
+{
+	if (!scn->hal_soc) {
+		hif_err("hal not initialized: not initializing shadow config");
+		return;
+	}
+
+	hal_get_shadow_v3_config(scn->hal_soc, shadow_config,
+				 num_shadow_registers_configured);
+
+	if (*num_shadow_registers_configured != 0) {
+		hif_err("hal shadow register configuration allready constructed");
+
+		/* return with original configuration*/
+		return;
+	}
+	hal_construct_srng_shadow_regs(scn->hal_soc);
+	ce_construct_shadow_config_srng(scn);
+	hal_set_shadow_regs(scn->hal_soc);
+	hal_construct_shadow_regs(scn->hal_soc);
+	/* get updated configuration */
+	hal_get_shadow_v3_config(scn->hal_soc, shadow_config,
+				 num_shadow_registers_configured);
+}
+#endif
+
 #ifdef HIF_CE_LOG_INFO
 /**
  * ce_get_index_info_srng(): Get CE index info
@@ -1062,6 +1091,10 @@ static struct ce_ops ce_service_srng = {
 	.ce_send_entries_done_nolock = ce_send_entries_done_nolock_srng,
 	.ce_prepare_shadow_register_v2_cfg =
 		ce_prepare_shadow_register_v2_cfg_srng,
+#ifdef CONFIG_SHADOW_V3
+	.ce_prepare_shadow_register_v3_cfg =
+		ce_prepare_shadow_register_v3_cfg_srng,
+#endif
 #ifdef HIF_CE_LOG_INFO
 	.ce_get_index_info =
 		ce_get_index_info_srng,

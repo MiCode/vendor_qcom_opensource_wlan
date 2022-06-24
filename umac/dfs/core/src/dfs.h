@@ -765,6 +765,7 @@ struct dfs_state {
  * @nol_start_us:     NOL start time in us.
  * @nol_timeout_ms:   NOL timeout value in msec.
  * @nol_timer:        Per element NOL timer.
+ * @nol_timer_completion_work: workqueue to process the nol timeout
  * @nol_next:         Next element pointer.
  */
 struct dfs_nolelem {
@@ -775,6 +776,7 @@ struct dfs_nolelem {
 	uint64_t       nol_start_us;
 	uint32_t       nol_timeout_ms;
 	qdf_hrtimer_data_t    nol_timer;
+	qdf_work_t     nol_timer_completion_work;
 	struct dfs_nolelem *nol_next;
 };
 
@@ -1337,6 +1339,7 @@ struct wlan_dfs_priv {
  * @cur_dfs_index: index of the current dfs object using the Agile Engine.
  *                 It is used to index struct wlan_dfs_priv dfs_priv[] array.
  * @dfs_precac_timer: agile precac timer
+ * @dfs_precac_completion_work: workqueue to process the precac timeout.
  * @dfs_precac_timer_running: precac timer running flag
  * @ocac_status: Off channel CAC complete status
  * @dfs_nol_ctx: dfs NOL data for all radios.
@@ -1354,7 +1357,8 @@ struct dfs_soc_priv_obj {
 	struct wlan_dfs_priv dfs_priv[WLAN_UMAC_MAX_PDEVS];
 	uint8_t num_dfs_privs;
 	uint8_t cur_agile_dfs_index;
-	qdf_timer_t     dfs_precac_timer;
+	qdf_hrtimer_data_t    dfs_precac_timer;
+	qdf_work_t     dfs_precac_completion_work;
 	uint8_t dfs_precac_timer_running;
 	bool precac_state_started;
 	bool ocac_status;
@@ -2959,6 +2963,22 @@ void dfs_complete_deferred_tasks(struct wlan_dfs *dfs);
  */
 void dfs_process_cac_completion(void *context);
 
+/**
+ * dfs_process_precac_completion() - Process DFS preCAC completion event.
+ * @dfs_soc_obj: Pointer to dfs_soc_obj object.
+ *
+ * Return: void.
+ */
+void dfs_process_precac_completion(void *context);
+
+/**
+ * dfs_process_noltimeout_completion() - Process NOL timeout completion event.
+ * @dfs_nolelem: Pointer to dfs_nolelem object.
+ *
+ * Return: void.
+ */
+void dfs_process_noltimeout_completion(void *context);
+
 #ifdef WLAN_DFS_TRUE_160MHZ_SUPPORT
 /**
  * dfs_is_true_160mhz_supported() - Find if true 160MHz is supported.
@@ -3112,4 +3132,14 @@ dfs_restart_rcac_on_nol_expiry(struct wlan_dfs *dfs)
 	return false;
 }
 #endif
+
+/**
+ * dfs_chan_to_ch_width: Outputs the channel width in MHz of the given input
+ * dfs_channel.
+ *
+ * chan: Pointer to the input dfs_channel structure.
+ *
+ * Return: Channel width in MHz. (uint16) -EINVAL on invalid channel.
+ */
+uint16_t dfs_chan_to_ch_width(struct dfs_channel *chan);
 #endif  /* _DFS_H_ */

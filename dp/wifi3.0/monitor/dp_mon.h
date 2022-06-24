@@ -471,9 +471,9 @@ void dp_pktlogmod_exit(struct dp_pdev *handle)
  *
  * @pdev: DP pdev object
  *
- * Return: void
+ * Return: QDF_STATUS
  */
-void dp_vdev_set_monitor_mode_buf_rings(struct dp_pdev *pdev);
+QDF_STATUS dp_vdev_set_monitor_mode_buf_rings(struct dp_pdev *pdev);
 
 /**
  * dp_vdev_set_monitor_mode_rings () - set monitor mode rings
@@ -489,7 +489,7 @@ QDF_STATUS dp_vdev_set_monitor_mode_rings(struct dp_pdev *pdev,
 					  uint8_t delayed_replenish);
 
 #else
-static inline void
+static inline QDF_STATUS
 dp_vdev_set_monitor_mode_buf_rings(struct dp_pdev *pdev)
 {
 }
@@ -652,7 +652,7 @@ struct dp_mon_ops {
 #if defined(DP_CON_MON) && !defined(REMOVE_PKT_LOG)
 	void (*mon_pktlogmod_exit)(struct dp_pdev *pdev);
 #endif
-	void (*mon_vdev_set_monitor_mode_buf_rings)(struct dp_pdev *pdev);
+	QDF_STATUS (*mon_vdev_set_monitor_mode_buf_rings)(struct dp_pdev *pdev);
 	QDF_STATUS (*mon_vdev_set_monitor_mode_rings)(struct dp_pdev *pdev,
 						      uint8_t delayed_replenish);
 	void (*mon_neighbour_peers_detach)(struct dp_pdev *pdev);
@@ -665,8 +665,10 @@ struct dp_mon_ops {
 	bool (*mon_vdev_timer_stop)(struct dp_soc *soc);
 	void (*mon_vdev_timer_deinit)(struct dp_soc *soc);
 	void (*mon_reap_timer_init)(struct dp_soc *soc);
-	void (*mon_reap_timer_start)(struct dp_soc *soc);
-	bool (*mon_reap_timer_stop)(struct dp_soc *soc);
+	bool (*mon_reap_timer_start)(struct dp_soc *soc,
+				     enum cdp_mon_reap_source source);
+	bool (*mon_reap_timer_stop)(struct dp_soc *soc,
+				    enum cdp_mon_reap_source source);
 	void (*mon_reap_timer_deinit)(struct dp_soc *soc);
 #ifdef QCA_MCOPY_SUPPORT
 	QDF_STATUS (*mon_mcopy_check_deliver)(struct dp_pdev *pdev,
@@ -806,6 +808,11 @@ struct dp_mon_soc {
 	qdf_timer_t mon_reap_timer;
 	uint8_t reap_timer_init;
 
+	qdf_spinlock_t reap_timer_lock;
+
+	/* Bitmap to record trigger sources of the reap timer */
+	qdf_bitmap(mon_reap_src_bitmap, CDP_MON_REAP_SOURCE_NUM);
+
 	qdf_timer_t mon_vdev_timer;
 	uint8_t mon_vdev_timer_state;
 
@@ -823,6 +830,17 @@ struct dp_mon_soc {
 #endif
 };
 
+#ifdef WLAN_TELEMETRY_STATS_SUPPORT
+#define MAX_CONSUMPTION_TIME 5 /* in sec */
+struct dp_mon_peer_airtime_consumption {
+	uint32_t consumption;
+	struct {
+		uint32_t avg_consumption_per_sec[MAX_CONSUMPTION_TIME];
+		uint8_t idx;
+	} avg_consumption;
+};
+#endif
+
 /**
  * struct dp_mon_peer_stats - Monitor peer stats
  */
@@ -830,6 +848,9 @@ struct dp_mon_peer_stats {
 #ifdef QCA_ENHANCED_STATS_SUPPORT
 	dp_mon_peer_tx_stats tx;
 	dp_mon_peer_rx_stats rx;
+#ifdef WLAN_TELEMETRY_STATS_SUPPORT
+	struct dp_mon_peer_airtime_consumption airtime_consumption;
+#endif
 #endif
 };
 
@@ -973,7 +994,6 @@ struct  dp_mon_pdev {
 	bool tx_sniffer_enable;
 	/* mirror copy mode */
 	enum m_copy_mode mcopy_mode;
-	bool enable_reap_timer_non_pkt;
 	bool bpr_enable;
 	/* Pdev level flag to check peer based pktlog enabled or
 	 * disabled
@@ -1046,7 +1066,6 @@ struct  dp_mon_pdev {
 	bool reset_scan_spcl_vap_stats_enable;
 #endif
 	bool is_tlv_hdr_64_bit;
-	enum dp_mon_filter_mode current_filter_mode;
 
 	/* Invalid monitor peer to account for stats in mcopy mode */
 	struct dp_mon_peer *invalid_mon_peer;
@@ -1275,21 +1294,6 @@ static inline bool dp_soc_is_full_mon_enable(struct dp_pdev *pdev)
 {
 	return (pdev->soc->monitor_soc->full_mon_mode &&
 		pdev->monitor_pdev->monitor_configured) ? true : false;
-}
-
-/*
- * dp_mon_is_enable_reap_timer_non_pkt() - check if mon reap timer is
- * enabled by non-pkt log or not
- * @pdev: point to dp pdev
- *
- * Return: true if mon reap timer is enabled by non-pkt log
- */
-static inline bool dp_mon_is_enable_reap_timer_non_pkt(struct dp_pdev *pdev)
-{
-	if (qdf_unlikely(!pdev || !pdev->monitor_pdev))
-		return false;
-
-	return pdev->monitor_pdev->enable_reap_timer_non_pkt;
 }
 
 /*
@@ -2344,11 +2348,13 @@ dp_tx_mon_process(struct dp_soc *soc, struct dp_intr *int_ctx,
 static inline
 uint32_t dp_tx_mon_buf_refill(struct dp_intr *int_ctx)
 {
+	return 0;
 }
 
 static inline
 uint32_t dp_rx_mon_buf_refill(struct dp_intr *int_ctx)
 {
+	return 0;
 }
 #endif
 
@@ -3211,20 +3217,20 @@ static inline void dp_monitor_pktlogmod_exit(struct dp_pdev *pdev) {}
 #endif
 
 static inline
-void dp_monitor_vdev_set_monitor_mode_buf_rings(struct dp_pdev *pdev)
+QDF_STATUS dp_monitor_vdev_set_monitor_mode_buf_rings(struct dp_pdev *pdev)
 {
 	struct dp_mon_ops *monitor_ops;
 	struct dp_mon_soc *mon_soc = pdev->soc->monitor_soc;
 
 	if (!mon_soc) {
 		dp_mon_debug("monitor soc is NULL");
-		return;
+		return QDF_STATUS_E_FAILURE;
 	}
 
 	monitor_ops = mon_soc->mon_ops;
 	if (!monitor_ops || !monitor_ops->mon_vdev_set_monitor_mode_buf_rings) {
 		dp_mon_debug("callback not registered");
-		return;
+		return QDF_STATUS_E_FAILURE;
 	}
 
 	return monitor_ops->mon_vdev_set_monitor_mode_buf_rings(pdev);
@@ -3312,28 +3318,44 @@ void dp_monitor_reap_timer_deinit(struct dp_soc *soc)
 	monitor_ops->mon_reap_timer_deinit(soc);
 }
 
-static inline
-void dp_monitor_reap_timer_start(struct dp_soc *soc)
+/**
+ * dp_monitor_reap_timer_start() - start reap timer of monitor status ring
+ * @soc: point to soc
+ * @source: trigger source
+ *
+ * Return: true if timer-start is performed, false otherwise.
+ */
+static inline bool
+dp_monitor_reap_timer_start(struct dp_soc *soc,
+			    enum cdp_mon_reap_source source)
 {
 	struct dp_mon_ops *monitor_ops;
 	struct dp_mon_soc *mon_soc = soc->monitor_soc;
 
 	if (!mon_soc) {
 		dp_mon_debug("monitor soc is NULL");
-		return;
+		return false;
 	}
 
 	monitor_ops = mon_soc->mon_ops;
 	if (!monitor_ops || !monitor_ops->mon_reap_timer_start) {
 		dp_mon_debug("callback not registered");
-		return;
+		return false;
 	}
 
-	monitor_ops->mon_reap_timer_start(soc);
+	return monitor_ops->mon_reap_timer_start(soc, source);
 }
 
-static inline
-bool dp_monitor_reap_timer_stop(struct dp_soc *soc)
+/**
+ * dp_monitor_reap_timer_stop() - stop reap timer of monitor status ring
+ * @soc: point to soc
+ * @source: trigger source
+ *
+ * Return: true if timer-stop is performed, false otherwise.
+ */
+static inline bool
+dp_monitor_reap_timer_stop(struct dp_soc *soc,
+			   enum cdp_mon_reap_source source)
 {
 	struct dp_mon_ops *monitor_ops;
 	struct dp_mon_soc *mon_soc = soc->monitor_soc;
@@ -3349,7 +3371,7 @@ bool dp_monitor_reap_timer_stop(struct dp_soc *soc)
 		return false;
 	}
 
-	return monitor_ops->mon_reap_timer_stop(soc);
+	return monitor_ops->mon_reap_timer_stop(soc, source);
 }
 
 static inline
@@ -3523,45 +3545,19 @@ static inline void dp_monitor_vdev_delete(struct dp_soc *soc,
 
 #ifdef DP_POWER_SAVE
 /*
- * dp_monitor_pktlog_reap_pending_frames() - reap pending frames
+ * dp_monitor_reap_timer_suspend() - Stop monitor reap timer
+ * and reap any pending frames in ring
  * @pdev: point to dp pdev
  *
  * Return: void
  */
-static inline void dp_monitor_pktlog_reap_pending_frames(struct dp_pdev *pdev)
+static inline void
+dp_monitor_reap_timer_suspend(struct dp_soc *soc)
 {
-	struct dp_soc *soc;
-
-	if (qdf_unlikely(!pdev || !pdev->monitor_pdev))
-		return;
-
-	soc = pdev->soc;
-
-	if (((pdev->monitor_pdev->rx_pktlog_mode != DP_RX_PKTLOG_DISABLED) ||
-	     dp_mon_is_enable_reap_timer_non_pkt(pdev))) {
-		if (dp_monitor_reap_timer_stop(soc))
-			dp_monitor_service_mon_rings(soc, DP_MON_REAP_BUDGET);
-	}
+	if (dp_monitor_reap_timer_stop(soc, CDP_MON_REAP_SOURCE_ANY))
+		dp_monitor_service_mon_rings(soc, DP_MON_REAP_BUDGET);
 }
 
-/*
- * dp_monitor_pktlog_start_reap_timer() - start reap timer
- * @pdev: point to dp pdev
- *
- * Return: void
- */
-static inline void dp_monitor_pktlog_start_reap_timer(struct dp_pdev *pdev)
-{
-	struct dp_soc *soc;
-
-	if (qdf_unlikely(!pdev || !pdev->monitor_pdev))
-		return;
-
-	soc = pdev->soc;
-	if (((pdev->monitor_pdev->rx_pktlog_mode != DP_RX_PKTLOG_DISABLED) ||
-	     dp_mon_is_enable_reap_timer_non_pkt(pdev)))
-		dp_monitor_reap_timer_start(soc);
-}
 #endif
 
 /*
@@ -3977,13 +3973,13 @@ QDF_STATUS dp_pdev_get_rx_mon_stats(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
 /*
  * dp_enable_mon_reap_timer() - enable/disable reap timer
  * @soc_hdl: Datapath soc handle
- * @pdev_id: id of objmgr pdev
+ * @source: trigger source of the timer
  * @enable: Enable/Disable reap timer of monitor status ring
  *
- * Return: none
+ * Return: true if a timer-start/stop is performed, false otherwise.
  */
-void dp_enable_mon_reap_timer(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
-			      bool enable);
+bool dp_enable_mon_reap_timer(struct cdp_soc_t *soc_hdl,
+			      enum cdp_mon_reap_source source, bool enable);
 
 /*
  * dp_monitor_lite_mon_disable_rx() - disables rx lite mon
@@ -4015,6 +4011,11 @@ dp_monitor_lite_mon_disable_rx(struct dp_pdev *pdev)
 #ifndef QCA_SUPPORT_LITE_MONITOR
 static inline void
 dp_lite_mon_disable_rx(struct dp_pdev *pdev)
+{
+}
+
+static inline void
+dp_lite_mon_disable_tx(struct dp_pdev *pdev)
 {
 }
 
@@ -4085,6 +4086,34 @@ dp_lite_mon_rx_mpdu_process(struct dp_pdev *pdev,
 			    uint8_t user)
 {
 	return QDF_STATUS_E_FAILURE;
+}
+#endif
+
+#ifdef WLAN_TELEMETRY_STATS_SUPPORT
+static inline
+void dp_monitor_peer_telemetry_stats(struct dp_peer *peer,
+				     struct cdp_peer_telemetry_stats *stats)
+{
+	struct dp_mon_peer_stats *mon_peer_stats = NULL;
+	uint8_t idx = 0;
+	uint32_t consumption = 0;
+
+	if (qdf_unlikely(!peer->monitor_peer))
+		return;
+
+	mon_peer_stats = &peer->monitor_peer->stats;
+	for (idx = 0; idx < MAX_CONSUMPTION_TIME; idx++)
+		consumption +=
+			mon_peer_stats->airtime_consumption.avg_consumption.avg_consumption_per_sec[idx];
+	/* consumption is in micro seconds, convert it to seconds and
+	 * then calculate %age per 5 sec
+	 */
+	stats->airtime_consumption = ((consumption * 100) / (MAX_CONSUMPTION_TIME * 1000000));
+	stats->tx_mpdu_retried = mon_peer_stats->tx.retries;
+	stats->tx_mpdu_total = mon_peer_stats->tx.tx_mpdus_tried;
+	stats->rx_mpdu_retried = mon_peer_stats->rx.mpdu_retry_cnt;
+	stats->rx_mpdu_total = mon_peer_stats->rx.rx_mpdus;
+	stats->snr = CDP_SNR_OUT(mon_peer_stats->rx.avg_snr);
 }
 #endif
 #endif /* _DP_MON_H_ */

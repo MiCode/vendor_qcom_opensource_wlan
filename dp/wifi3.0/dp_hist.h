@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -40,4 +41,5 @@ void dp_accumulate_hist_stats(struct cdp_hist_stats *src_hist_stats,
 			      struct cdp_hist_stats *dst_hist_stats);
 void dp_copy_hist_stats(struct cdp_hist_stats *src_hist_stats,
 			struct cdp_hist_stats *dst_hist_stats);
+const char *dp_hist_tx_hw_delay_str(uint8_t index);
 #endif /* __DP_HIST_H_ */

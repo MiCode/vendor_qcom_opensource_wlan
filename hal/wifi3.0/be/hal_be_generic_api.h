@@ -28,6 +28,11 @@
 #include <hal_be_api_mon.h>
 
 /**
+ * Debug macro to print the TLV header tag
+ */
+#define SHOW_DEFINED(x) do {} while (0)
+
+/**
  * hal_tx_comp_get_status() - TQM Release reason
  * @hal_desc: completion ring Tx status
  *
@@ -316,7 +321,7 @@ hal_txmon_get_buffer_addr_generic_be(void *tx_tlv,
 {
 	struct mon_buffer_addr *hal_buffer_addr =
 			(struct mon_buffer_addr *)((uint8_t *)tx_tlv +
-						   HAL_RX_TLV32_HDR_SIZE);
+						   HAL_RX_TLV64_HDR_SIZE);
 	qdf_frag_t buf_addr = NULL;
 
 	buf_addr = (qdf_frag_t)(uintptr_t)((hal_buffer_addr->buffer_virt_addr_31_0 |
@@ -326,7 +331,7 @@ hal_txmon_get_buffer_addr_generic_be(void *tx_tlv,
 	/* qdf_frag_t is derived from buffer address tlv */
 	if (qdf_unlikely(status)) {
 		qdf_mem_copy(status,
-			     (uint8_t *)tx_tlv + HAL_RX_TLV32_HDR_SIZE,
+			     (uint8_t *)tx_tlv + HAL_RX_TLV64_HDR_SIZE,
 			     sizeof(struct hal_mon_buf_addr_status));
 		/* update hal_mon_buf_addr_status */
 	}
@@ -365,7 +370,74 @@ hal_txmon_parse_tx_fes_setup(void *tx_tlv,
 	hal_tx_fes_setup_t *tx_fes_setup = (hal_tx_fes_setup_t *)tx_tlv;
 
 	tx_ppdu_info->num_users = tx_fes_setup->number_of_users;
+	if (tx_ppdu_info->num_users == 0)
+		tx_ppdu_info->num_users = 1;
+	tx_ppdu_info->ppdu_id = tx_fes_setup->schedule_id;
 }
+
+/**
+ * hal_txmon_parse_pcu_ppdu_setup_init() - parse pcu_ppdu_setup_init tlv
+ *
+ * @tx_tlv: pointer to pcu_ppdu_setup_init tlv header
+ * @data_status_info: pointer to data hal_tx_status_info
+ * @prot_status_info: pointer to protection hal_tx_status_info
+ *
+ * Return: void
+ */
+static inline void
+hal_txmon_parse_pcu_ppdu_setup_init(void *tx_tlv,
+				    struct hal_tx_status_info *data_status_info,
+				    struct hal_tx_status_info *prot_status_info)
+{
+}
+
+/**
+ * hal_txmon_parse_peer_entry() - parse peer entry tlv
+ *
+ * @tx_tlv: pointer to peer_entry tlv header
+ * @user_id: user_id
+ * @tx_ppdu_info: pointer to hal_tx_ppdu_info
+ * @tx_status_info: pointer to hal_tx_status_info
+ *
+ * Return: void
+ */
+static inline void
+hal_txmon_parse_peer_entry(void *tx_tlv,
+			   uint8_t user_id,
+			   struct hal_tx_ppdu_info *tx_ppdu_info,
+			   struct hal_tx_status_info *tx_status_info)
+{
+}
+
+/**
+ * hal_txmon_parse_queue_exten() - parse queue exten tlv
+ *
+ * @tx_tlv: pointer to queue exten tlv header
+ * @tx_ppdu_info: pointer to hal_tx_ppdu_info
+ *
+ * Return: void
+ */
+static inline void
+hal_txmon_parse_queue_exten(void *tx_tlv,
+			    struct hal_tx_ppdu_info *tx_ppdu_info)
+{
+}
+
+/**
+ * hal_txmon_parse_mpdu_start() - parse mpdu start tlv
+ *
+ * @tx_tlv: pointer to mpdu start tlv header
+ * @user_id: user id
+ * @tx_ppdu_info: pointer to hal_tx_ppdu_info
+ *
+ * Return: void
+ */
+static inline void
+hal_txmon_parse_mpdu_start(void *tx_tlv, uint8_t user_id,
+			   struct hal_tx_ppdu_info *tx_ppdu_info)
+{
+}
+
 #else
 /**
  * hal_txmon_get_num_users() - get num users from tx_fes_setup tlv
@@ -395,9 +467,80 @@ static inline void
 hal_txmon_parse_tx_fes_setup(void *tx_tlv,
 			     struct hal_tx_ppdu_info *tx_ppdu_info)
 {
-	tx_ppdu_info->num_users = HAL_TX_DESC_GET_64(tx_tlv,
-						     TX_FES_SETUP,
-						     NUMBER_OF_USERS);
+	uint32_t num_users = 0;
+	uint32_t ppdu_id = 0;
+
+	num_users = HAL_TX_DESC_GET_64(tx_tlv, TX_FES_SETUP, NUMBER_OF_USERS);
+	ppdu_id = HAL_TX_DESC_GET_64(tx_tlv, TX_FES_SETUP, SCHEDULE_ID);
+
+	if (num_users == 0)
+		num_users = 1;
+
+	tx_ppdu_info->num_users = num_users;
+	tx_ppdu_info->ppdu_id = ppdu_id;
+}
+
+/**
+ * hal_txmon_parse_pcu_ppdu_setup_init() - parse pcu_ppdu_setup_init tlv
+ *
+ * @tx_tlv: pointer to pcu_ppdu_setup_init tlv header
+ * @data_status_info: pointer to data hal_tx_status_info
+ * @prot_status_info: pointer to protection hal_tx_status_info
+ *
+ * Return: void
+ */
+static inline void
+hal_txmon_parse_pcu_ppdu_setup_init(void *tx_tlv,
+				    struct hal_tx_status_info *data_status_info,
+				    struct hal_tx_status_info *prot_status_info)
+{
+}
+
+/**
+ * hal_txmon_parse_peer_entry() - parse peer entry tlv
+ *
+ * @tx_tlv: pointer to peer_entry tlv header
+ * @user_id: user_id
+ * @tx_ppdu_info: pointer to hal_tx_ppdu_info
+ * @tx_status_info: pointer to hal_tx_status_info
+ *
+ * Return: void
+ */
+static inline void
+hal_txmon_parse_peer_entry(void *tx_tlv,
+			   uint8_t user_id,
+			   struct hal_tx_ppdu_info *tx_ppdu_info,
+			   struct hal_tx_status_info *tx_status_info)
+{
+}
+
+/**
+ * hal_txmon_parse_queue_exten() - parse queue exten tlv
+ *
+ * @tx_tlv: pointer to queue exten tlv header
+ * @tx_ppdu_info: pointer to hal_tx_ppdu_info
+ *
+ * Return: void
+ */
+static inline void
+hal_txmon_parse_queue_exten(void *tx_tlv,
+			    struct hal_tx_ppdu_info *tx_ppdu_info)
+{
+}
+
+/**
+ * hal_txmon_parse_mpdu_start() - parse mpdu start tlv
+ *
+ * @tx_tlv: pointer to mpdu start tlv header
+ * @user_id: user id
+ * @tx_ppdu_info: pointer to hal_tx_ppdu_info
+ *
+ * Return: void
+ */
+static inline void
+hal_txmon_parse_mpdu_start(void *tx_tlv, uint8_t user_id,
+			   struct hal_tx_ppdu_info *tx_ppdu_info)
+{
 }
 #endif
 
@@ -421,12 +564,14 @@ hal_txmon_status_get_num_users_generic_be(void *tx_tlv_hdr, uint8_t *num_users)
 	user_id = HAL_RX_GET_USER_TLV32_USERID(tx_tlv_hdr);
 	tlv_len = HAL_RX_GET_USER_TLV32_LEN(tx_tlv_hdr);
 
-	tx_tlv = (uint8_t *)tx_tlv_hdr + HAL_RX_TLV32_HDR_SIZE;
+	tx_tlv = (uint8_t *)tx_tlv_hdr + HAL_RX_TLV64_HDR_SIZE;
 	/* window starts with either initiator or response */
 	switch (tlv_tag) {
 	case WIFITX_FES_SETUP_E:
 	{
 		*num_users = hal_txmon_get_num_users(tx_tlv);
+		if (*num_users == 0)
+			*num_users = 1;
 
 		tlv_status = HAL_MON_TX_FES_SETUP;
 		break;
@@ -436,6 +581,8 @@ hal_txmon_status_get_num_users_generic_be(void *tx_tlv_hdr, uint8_t *num_users)
 		*num_users = HAL_TX_DESC_GET_64(tx_tlv,
 						RX_RESPONSE_REQUIRED_INFO,
 						RESPONSE_STA_COUNT);
+		if (*num_users == 0)
+			*num_users = 1;
 		tlv_status = HAL_MON_RX_RESPONSE_REQUIRED_INFO;
 		break;
 	}
@@ -535,6 +682,7 @@ hal_tx_get_ppdu_info(void *data_info, void *prot_info, uint32_t tlv_tag)
 	case WIFITQM_MPDU_GLOBAL_START_E:/* DOWNSTREAM */
 	case WIFITX_WUR_DATA_E:/* DOWNSTREAM */
 	case WIFISCHEDULER_END_E:/* DOWNSTREAM */
+	case WIFITX_FES_STATUS_START_PPDU_E:/* UPSTREAM */
 	{
 		return data_info;
 	}
@@ -552,6 +700,7 @@ hal_tx_get_ppdu_info(void *data_info, void *prot_info, uint32_t tlv_tag)
 		TXMON_HAL(prot_ppdu_info, prot_tlv_status) = tlv_tag;
 		return prot_info;
 	} else {
+		TXMON_HAL(prot_ppdu_info, prot_tlv_status) = tlv_tag;
 		return data_info;
 	}
 
@@ -577,26 +726,119 @@ hal_txmon_status_parse_tlv_generic_be(void *data_ppdu_info,
 				      void *tx_tlv_hdr,
 				      qdf_frag_t status_frag)
 {
-	struct hal_tx_ppdu_info *tx_ppdu_info;
+	struct hal_tx_ppdu_info *ppdu_info;
 	struct hal_tx_status_info *tx_status_info;
 	uint32_t tlv_tag, user_id, tlv_len;
 	qdf_frag_t frag_buf = NULL;
 	uint32_t status = HAL_MON_TX_STATUS_PPDU_NOT_DONE;
 	void *tx_tlv;
 
-	tlv_tag = HAL_RX_GET_USER_TLV32_TYPE(tx_tlv_hdr);
-	user_id = HAL_RX_GET_USER_TLV32_USERID(tx_tlv_hdr);
-	tlv_len = HAL_RX_GET_USER_TLV32_LEN(tx_tlv_hdr);
+	tlv_tag = HAL_RX_GET_USER_TLV64_TYPE(tx_tlv_hdr);
+	/* user_id start with 1, decrement by 1 to start from 0 */
+	user_id = HAL_RX_GET_USER_TLV64_USERID(tx_tlv_hdr) - 1;
+	tlv_len = HAL_RX_GET_USER_TLV64_LEN(tx_tlv_hdr);
 
-	tx_tlv = (uint8_t *)tx_tlv_hdr + HAL_RX_TLV32_HDR_SIZE;
-
-	tx_ppdu_info = hal_tx_get_ppdu_info(data_ppdu_info,
-					    prot_ppdu_info, tlv_tag);
-	tx_status_info = (tx_ppdu_info->is_data ? data_status_info :
-			  prot_status_info);
+	tx_tlv = (uint8_t *)tx_tlv_hdr + HAL_RX_TLV64_HDR_SIZE;
 
 	/* parse tlv and populate tx_ppdu_info */
+	ppdu_info = hal_tx_get_ppdu_info(data_ppdu_info,
+					 prot_ppdu_info, tlv_tag);
+	tx_status_info = (ppdu_info->is_data ? data_status_info :
+			  prot_status_info);
+
+	user_id = user_id > ppdu_info->num_users ? 0 : ppdu_info->num_users;
+
 	switch (tlv_tag) {
+	/* start of initiator FES window */
+	case WIFITX_FES_SETUP_E:/* DOWNSTREAM */
+	{
+		/* initiator PPDU window start */
+		hal_txmon_parse_tx_fes_setup(tx_tlv, ppdu_info);
+
+		status = HAL_MON_TX_FES_SETUP;
+		SHOW_DEFINED(WIFITX_FES_SETUP_E);
+		break;
+	}
+	/* end of initiator FES window */
+	case WIFITX_FES_STATUS_END_E:/* UPSTREAM */
+	{
+		/* initiator PPDU window end */
+		status = HAL_MON_TX_FES_STATUS_END;
+		SHOW_DEFINED(WIFITX_FES_STATUS_END_E);
+		break;
+	}
+	/* response window open */
+	case WIFIRX_RESPONSE_REQUIRED_INFO_E:/* UPSTREAM */
+	{
+		status = HAL_MON_RX_RESPONSE_REQUIRED_INFO;
+		SHOW_DEFINED(WIFIRX_RESPONSE_REQUIRED_INFO_E);
+		break;
+	}
+	/* Response window close */
+	case WIFIRESPONSE_END_STATUS_E:/* UPSTREAM */
+	{
+		/* response PPDU window end */
+		status = HAL_MON_RESPONSE_END_STATUS_INFO;
+		SHOW_DEFINED(WIFIRESPONSE_END_STATUS_E);
+		break;
+	}
+	case WIFITX_FLUSH_E:/* DOWNSTREAM */
+	{
+		SHOW_DEFINED(WIFITX_FLUSH_E);
+		break;
+	}
+
+	/* Downstream tlv */
+	case WIFIPCU_PPDU_SETUP_INIT_E:/* DOWNSTREAM */
+	{
+		hal_txmon_parse_pcu_ppdu_setup_init(tx_tlv, data_status_info,
+						    prot_status_info);
+
+		status = HAL_MON_TX_PCU_PPDU_SETUP_INIT;
+		SHOW_DEFINED(WIFIPCU_PPDU_SETUP_INIT_E);
+		break;
+	}
+	case WIFITX_PEER_ENTRY_E:/* DOWNSTREAM */
+	{
+		hal_txmon_parse_peer_entry(tx_tlv, user_id,
+					   ppdu_info, tx_status_info);
+		SHOW_DEFINED(WIFITX_PEER_ENTRY_E);
+		break;
+	}
+	case WIFITX_QUEUE_EXTENSION_E:/* DOWNSTREAM */
+	{
+		hal_txmon_parse_queue_exten(tx_tlv, ppdu_info);
+
+		SHOW_DEFINED(WIFITX_QUEUE_EXTENSION_E);
+		break;
+	}
+	/* payload and data frame handling */
+	case WIFITX_MPDU_START_E:/* DOWNSTREAM */
+	{
+		hal_txmon_parse_mpdu_start(tx_tlv, user_id, ppdu_info);
+
+		status = HAL_MON_TX_MPDU_START;
+		SHOW_DEFINED(WIFITX_MPDU_START_E);
+		break;
+	}
+	case WIFITX_MSDU_START_E:/* DOWNSTREAM */
+	{
+		/* compacted */
+		/* we expect frame to be 802.11 frame type */
+		status = HAL_MON_TX_MSDU_START;
+		SHOW_DEFINED(WIFITX_MSDU_START_E);
+		break;
+	}
+	case WIFITX_DATA_E:/* DOWNSTREAM */
+	{
+		/*
+		 * reference of the status buffer will be held in
+		 * dp_tx_update_ppdu_info_status()
+		 */
+		status = HAL_MON_TX_DATA;
+		SHOW_DEFINED(WIFITX_DATA_E);
+		break;
+	}
 	case WIFIMON_BUFFER_ADDR_E:
 	{
 		frag_buf = hal_txmon_get_buffer_addr_generic_be(tx_tlv, NULL);
@@ -604,11 +846,637 @@ hal_txmon_status_parse_tlv_generic_be(void *data_ppdu_info,
 			qdf_frag_free(frag_buf);
 		frag_buf = NULL;
 		status = HAL_MON_TX_BUFFER_ADDR;
+
+		SHOW_DEFINED(WIFIMON_BUFFER_ADDR_E);
+		break;
+	}
+	case WIFITX_MPDU_END_E:/* DOWNSTREAM */
+	{
+		/* no tlv content */
+		SHOW_DEFINED(WIFITX_MPDU_END_E);
+		break;
+	}
+	case WIFITX_MSDU_END_E:/* DOWNSTREAM */
+	{
+		/* no tlv content */
+		SHOW_DEFINED(WIFITX_MSDU_END_E);
+		break;
+	}
+	case WIFITX_LAST_MPDU_FETCHED_E:/* DOWNSTREAM */
+	{
+		/* no tlv content */
+		SHOW_DEFINED(WIFITX_LAST_MPDU_FETCHED_E);
+		break;
+	}
+	case WIFITX_LAST_MPDU_END_E:/* DOWNSTREAM */
+	{
+		/* no tlv content */
+		SHOW_DEFINED(WIFITX_LAST_MPDU_END_E);
+		break;
+	}
+	case WIFICOEX_TX_REQ_E:/* DOWNSTREAM */
+	{
+		/*
+		 * transmitting power
+		 * minimum transmitting power
+		 * desired nss
+		 * tx chain mask
+		 * desired bw
+		 * duration of transmit and response
+		 *
+		 * since most of the field we are deriving from other tlv
+		 * we don't need to enable this in our tlv.
+		 */
+		SHOW_DEFINED(WIFICOEX_TX_REQ_E);
+		break;
+	}
+	case WIFITX_RAW_OR_NATIVE_FRAME_SETUP_E:/* DOWNSTREAM */
+	{
+		/* user tlv */
+		/*
+		 * All Tx monitor will have 802.11 hdr
+		 * we don't need to enable this TLV
+		 */
+		SHOW_DEFINED(WIFITX_RAW_OR_NATIVE_FRAME_SETUP_E);
+		break;
+	}
+	case WIFINDP_PREAMBLE_DONE_E:/* DOWNSTREAM */
+	{
+		/*
+		 * no tlv content
+		 *
+		 * TLV that indicates to TXPCU that preamble phase for the NDP
+		 * frame transmission is now over
+		 */
+		SHOW_DEFINED(WIFINDP_PREAMBLE_DONE_E);
+		break;
+	}
+	case WIFISCH_CRITICAL_TLV_REFERENCE_E:/* DOWNSTREAM */
+	{
+		/*
+		 * no tlv content
+		 *
+		 * TLV indicates to the SCH that all timing critical TLV
+		 * has been passed on to the transmit path
+		 */
+		SHOW_DEFINED(WIFISCH_CRITICAL_TLV_REFERENCE_E);
+		break;
+	}
+	case WIFITX_LOOPBACK_SETUP_E:/* DOWNSTREAM */
+	{
+		/*
+		 * Loopback specific setup info - not needed for Tx monitor
+		 */
+		SHOW_DEFINED(WIFITX_LOOPBACK_SETUP_E);
+		break;
+	}
+	case WIFITX_FES_SETUP_COMPLETE_E:/* DOWNSTREAM */
+	{
+		/*
+		 * no tlv content
+		 *
+		 * TLV indicates that other modules besides the scheduler can
+		 * now also start generating TLV's
+		 * prevent colliding or generating TLV's out of order
+		 */
+		SHOW_DEFINED(WIFITX_FES_SETUP_COMPLETE_E);
+		break;
+	}
+	case WIFITQM_MPDU_GLOBAL_START_E:/* DOWNSTREAM */
+	{
+		/*
+		 * no tlv content
+		 *
+		 * TLV indicates to SCH that a burst of MPDU info will
+		 * start to come in over the TLV
+		 */
+		SHOW_DEFINED(WIFITQM_MPDU_GLOBAL_START_E);
+		break;
+	}
+	case WIFITX_WUR_DATA_E:/* DOWNSTREAM */
+	{
+		SHOW_DEFINED(WIFITX_WUR_DATA_E);
+		break;
+	}
+	case WIFISCHEDULER_END_E:/* DOWNSTREAM */
+	{
+		/*
+		 * no tlv content
+		 *
+		 * TLV indicates END of all TLV's within the scheduler TLV
+		 */
+		SHOW_DEFINED(WIFISCHEDULER_END_E);
+		break;
+	}
+
+	/* Upstream tlv */
+	case WIFIPDG_TX_REQ_E:
+	{
+		SHOW_DEFINED(WIFIPDG_TX_REQ_E);
+		break;
+	}
+	case WIFITX_FES_STATUS_START_E:
+	{
+		/*
+		 * TLV indicating that first transmission on the medium
+		 */
+		status = HAL_MON_TX_FES_STATUS_START;
+		SHOW_DEFINED(WIFITX_FES_STATUS_START_E);
+		break;
+	}
+	case WIFITX_FES_STATUS_PROT_E:
+	{
+		/*
+		 * generated by TXPCU to indicate the result of having
+		 * received of the expected protection frame
+		 */
+
+		status = HAL_MON_TX_FES_STATUS_PROT;
+		SHOW_DEFINED(WIFITX_FES_STATUS_PROT_E);
 		break;
 	}
 	case WIFITX_FES_STATUS_START_PROT_E:
 	{
-		TXMON_HAL(tx_ppdu_info, prot_tlv_status) = tlv_tag;
+		status = HAL_MON_TX_FES_STATUS_START_PROT;
+		SHOW_DEFINED(WIFITX_FES_STATUS_START_PROT_E);
+		break;
+	}
+	case WIFIPROT_TX_END_E:
+	{
+		/*
+		 * no tlv content
+		 *
+		 * generated by TXPCU the moment that protection frame
+		 * transmission has finished on the medium
+		 */
+		SHOW_DEFINED(WIFIPROT_TX_END_E);
+		break;
+	}
+	case WIFITX_FES_STATUS_START_PPDU_E:
+	{
+		status = HAL_MON_TX_FES_STATUS_START_PPDU;
+		SHOW_DEFINED(WIFITX_FES_STATUS_START_PPDU_E);
+		break;
+	}
+	case WIFITX_FES_STATUS_USER_PPDU_E:
+	{
+		/* user tlv */
+		status = HAL_MON_TX_FES_STATUS_USER_PPDU;
+		SHOW_DEFINED(WIFITX_FES_STATUS_USER_PPDU_E);
+		break;
+	}
+	case WIFIPPDU_TX_END_E:
+	{
+		/*
+		 * no tlv content
+		 *
+		 * generated by TXPCU the moment that PPDU transmission has
+		 * finished on the medium
+		 */
+		SHOW_DEFINED(WIFIPPDU_TX_END_E);
+		break;
+	}
+
+	case WIFITX_FES_STATUS_USER_RESPONSE_E:
+	{
+		/*
+		 * TLV contains the FES transmit result of the each
+		 * of the MAC users. TLV are forwarded to HWSCH
+		 */
+		SHOW_DEFINED(WIFITX_FES_STATUS_USER_RESPONSE_E);
+		break;
+	}
+	case WIFITX_FES_STATUS_ACK_OR_BA_E:
+	{
+		/* user tlv */
+		/*
+		 * TLV generated by RXPCU and provide information related to
+		 * the received BA or ACK frame
+		 */
+		SHOW_DEFINED(WIFITX_FES_STATUS_ACK_OR_BA_E);
+		break;
+	}
+	case WIFITX_FES_STATUS_1K_BA_E:
+	{
+		/* user tlv */
+		/*
+		 * TLV generated by RXPCU and providing information related
+		 * to the received BA frame in case of 512/1024 bitmaps
+		 */
+		SHOW_DEFINED(WIFITX_FES_STATUS_1K_BA_E);
+		break;
+	}
+	case WIFIRECEIVED_RESPONSE_USER_7_0_E:
+	{
+		SHOW_DEFINED(WIFIRECEIVED_RESPONSE_USER_7_0_E);
+		break;
+	}
+	case WIFIRECEIVED_RESPONSE_USER_15_8_E:
+	{
+		SHOW_DEFINED(WIFIRECEIVED_RESPONSE_USER_15_8_E);
+		break;
+	}
+	case WIFIRECEIVED_RESPONSE_USER_23_16_E:
+	{
+		SHOW_DEFINED(WIFIRECEIVED_RESPONSE_USER_23_16_E);
+		break;
+	}
+	case WIFIRECEIVED_RESPONSE_USER_31_24_E:
+	{
+		SHOW_DEFINED(WIFIRECEIVED_RESPONSE_USER_31_24_E);
+		break;
+	}
+	case WIFIRECEIVED_RESPONSE_USER_36_32_E:
+	{
+		/*
+		 * RXPCU generates this TLV when it receives a response frame
+		 * that TXPCU pre-announced it was waiting for and in
+		 * RXPCU_SETUP TLV, TLV generated before the
+		 * RECEIVED_RESPONSE_INFO TLV.
+		 *
+		 * received info user fields are there which is not needed
+		 * for TX monitor
+		 */
+		SHOW_DEFINED(WIFIRECEIVED_RESPONSE_USER_36_32_E);
+		break;
+	}
+
+	case WIFITXPCU_BUFFER_STATUS_E:
+	{
+		SHOW_DEFINED(WIFITXPCU_BUFFER_STATUS_E);
+		break;
+	}
+	case WIFITXPCU_USER_BUFFER_STATUS_E:
+	{
+		/*
+		 * WIFITXPCU_USER_BUFFER_STATUS_E - user tlv
+		 * for TX monitor we aren't interested in this tlv
+		 */
+		SHOW_DEFINED(WIFITXPCU_USER_BUFFER_STATUS_E);
+		break;
+	}
+	case WIFITXDMA_STOP_REQUEST_E:
+	{
+		/*
+		 * no tlv content
+		 *
+		 * TLV is destined to TXDMA and informs TXDMA to stop
+		 * pushing data into the transmit path.
+		 */
+		SHOW_DEFINED(WIFITXDMA_STOP_REQUEST_E);
+		break;
+	}
+	case WIFITX_CBF_INFO_E:
+	{
+		/*
+		 * After NDPA + NDP is received, RXPCU sends the TX_CBF_INFO to
+		 * TXPCU to respond the CBF frame
+		 *
+		 * compressed beamforming pkt doesn't has mac header
+		 * Tx monitor not interested in this pkt.
+		 */
+		SHOW_DEFINED(WIFITX_CBF_INFO_E);
+		break;
+	}
+	case WIFITX_MPDU_COUNT_TRANSFER_END_E:
+	{
+		/*
+		 * no tlv content
+		 *
+		 * TLV indicates that TXPCU has finished generating the
+		 * TQM_UPDATE_TX_MPDU_COUNT TLV for all users
+		 */
+		SHOW_DEFINED(WIFITX_MPDU_COUNT_TRANSFER_END_E);
+		break;
+	}
+	case WIFIPDG_RESPONSE_E:
+	{
+		/*
+		 * most of the feilds are already covered in
+		 * other TLV
+		 * This is generated by TX_PCU to PDG to calculate
+		 * all the PHY header info.
+		 *
+		 * some useful fields like min transmit power,
+		 * rate used for transmitting packet is present.
+		 */
+		SHOW_DEFINED(WIFIPDG_RESPONSE_E);
+		break;
+	}
+	case WIFIPDG_TRIG_RESPONSE_E:
+	{
+		/* no tlv content */
+		SHOW_DEFINED(WIFIPDG_TRIG_RESPONSE_E);
+		break;
+	}
+	case WIFIRECEIVED_TRIGGER_INFO_E:
+	{
+		/*
+		 * TLV generated by RXPCU to inform the scheduler that
+		 * a trigger frame has been received
+		 */
+		SHOW_DEFINED(WIFIRECEIVED_TRIGGER_INFO_E);
+		break;
+	}
+	case WIFIOFDMA_TRIGGER_DETAILS_E:
+	{
+		SHOW_DEFINED(WIFIOFDMA_TRIGGER_DETAILS_E);
+		break;
+	}
+	case WIFIRX_FRAME_BITMAP_ACK_E:
+	{
+		/* user tlv */
+		status = HAL_MON_RX_FRAME_BITMAP_ACK;
+		SHOW_DEFINED(WIFIRX_FRAME_BITMAP_ACK_E);
+		break;
+	}
+	case WIFIRX_FRAME_1K_BITMAP_ACK_E:
+	{
+		/* user tlv */
+		status = HAL_MON_RX_FRAME_BITMAP_BLOCK_ACK_1K;
+		SHOW_DEFINED(WIFIRX_FRAME_1K_BITMAP_ACK_E);
+		break;
+	}
+	case WIFIRESPONSE_START_STATUS_E:
+	{
+		/*
+		 * TLV indicates which HW response the TXPCU
+		 * started generating
+		 *
+		 * HW generated frames like
+		 * ACK frame - handled
+		 * CTS frame - handled
+		 * BA frame - handled
+		 * MBA frame - handled
+		 * CBF frame - no frame header
+		 * Trigger response - TODO
+		 * NDP LMR - no frame header
+		 */
+		SHOW_DEFINED(WIFIRESPONSE_START_STATUS_E);
+		break;
+	}
+	case WIFIRX_START_PARAM_E:
+	{
+		/*
+		 * RXPCU send this TLV after PHY RX detected a frame
+		 * in the medium
+		 *
+		 * TX monitor not interested in this TLV
+		 */
+		SHOW_DEFINED(WIFIRX_START_PARAM_E);
+		break;
+	}
+	case WIFIRXPCU_EARLY_RX_INDICATION_E:
+	{
+		/*
+		 * early indication of pkt type and mcs rate
+		 * already captured in other tlv
+		 */
+		SHOW_DEFINED(WIFIRXPCU_EARLY_RX_INDICATION_E);
+		break;
+	}
+	case WIFIRX_PM_INFO_E:
+	{
+		SHOW_DEFINED(WIFIRX_PM_INFO_E);
+		break;
+	}
+
+	/* Active window */
+	case WIFITX_FLUSH_REQ_E:
+	{
+		SHOW_DEFINED(WIFITX_FLUSH_REQ_E);
+		break;
+	}
+	case WIFICOEX_TX_STATUS_E:
+	{
+		/* duration are retrieved from coex tx status */
+		status = HAL_MON_COEX_TX_STATUS;
+		SHOW_DEFINED(WIFICOEX_TX_STATUS_E);
+		break;
+	}
+	case WIFIR2R_STATUS_END_E:
+	{
+		SHOW_DEFINED(WIFIR2R_STATUS_END_E);
+		break;
+	}
+	case WIFIRX_PREAMBLE_E:
+	{
+		SHOW_DEFINED(WIFIRX_PREAMBLE_E);
+		break;
+	}
+	case WIFIMACTX_SERVICE_E:
+	{
+		SHOW_DEFINED(WIFIMACTX_SERVICE_E);
+		break;
+	}
+
+	case WIFIMACTX_U_SIG_EHT_SU_MU_E:
+	{
+		SHOW_DEFINED(WIFIMACTX_U_SIG_EHT_SU_MU_E);
+		break;
+	}
+	case WIFIMACTX_U_SIG_EHT_TB_E:
+	{
+		/* TODO: no radiotap info available */
+		SHOW_DEFINED(WIFIMACTX_U_SIG_EHT_TB_E);
+		break;
+	}
+	case WIFIMACTX_EHT_SIG_USR_OFDMA_E:
+	{
+		SHOW_DEFINED(WIFIMACTX_EHT_SIG_USR_OFDMA_E);
+		break;
+	}
+	case WIFIMACTX_EHT_SIG_USR_MU_MIMO_E:
+	{
+		SHOW_DEFINED(WIFIMACTX_EHT_SIG_USR_MU_MIMO_E);
+		break;
+	}
+	case WIFIMACTX_EHT_SIG_USR_SU_E:
+	{
+		SHOW_DEFINED(WIFIMACTX_EHT_SIG_USR_SU_E);
+		/* TODO: no radiotap info available */
+		break;
+	}
+
+	case WIFIMACTX_HE_SIG_A_SU_E:
+	{
+		SHOW_DEFINED(WIFIMACTX_HE_SIG_A_SU_E);
+		break;
+	}
+	case WIFIMACTX_HE_SIG_A_MU_DL_E:
+	{
+		SHOW_DEFINED(WIFIMACTX_HE_SIG_A_MU_DL_E);
+		break;
+	}
+	case WIFIMACTX_HE_SIG_A_MU_UL_E:
+	{
+		SHOW_DEFINED(WIFIMACTX_HE_SIG_A_MU_UL_E);
+		break;
+	}
+	case WIFIMACTX_HE_SIG_B1_MU_E:
+	{
+		status = HAL_MON_MACTX_HE_SIG_B1_MU;
+		SHOW_DEFINED(WIFIMACTX_HE_SIG_B1_MU_E);
+		break;
+	}
+	case WIFIMACTX_HE_SIG_B2_MU_E:
+	{
+		/* user tlv */
+		status = HAL_MON_MACTX_HE_SIG_B2_MU;
+		SHOW_DEFINED(WIFIMACTX_HE_SIG_B2_MU_E);
+		break;
+	}
+	case WIFIMACTX_HE_SIG_B2_OFDMA_E:
+	{
+		/* user tlv */
+		status = HAL_MON_MACTX_HE_SIG_B2_OFDMA;
+		SHOW_DEFINED(WIFIMACTX_HE_SIG_B2_OFDMA_E);
+		break;
+	}
+	case WIFIMACTX_L_SIG_A_E:
+	{
+		status = HAL_MON_MACTX_L_SIG_A;
+		SHOW_DEFINED(WIFIMACTX_L_SIG_A_E);
+		break;
+	}
+	case WIFIMACTX_L_SIG_B_E:
+	{
+		status = HAL_MON_MACTX_L_SIG_B;
+		SHOW_DEFINED(WIFIMACTX_L_SIG_B_E);
+		break;
+	}
+	case WIFIMACTX_HT_SIG_E:
+	{
+		status = HAL_MON_MACTX_HT_SIG;
+		SHOW_DEFINED(WIFIMACTX_HT_SIG_E);
+		break;
+	}
+	case WIFIMACTX_VHT_SIG_A_E:
+	{
+		status = HAL_MON_MACTX_VHT_SIG_A;
+		SHOW_DEFINED(WIFIMACTX_VHT_SIG_A_E);
+		break;
+	}
+	case WIFIMACTX_VHT_SIG_B_MU160_E:
+	{
+		SHOW_DEFINED(WIFIMACTX_VHT_SIG_B_MU160_E);
+		break;
+	}
+	case WIFIMACTX_VHT_SIG_B_MU80_E:
+	{
+		SHOW_DEFINED(WIFIMACTX_VHT_SIG_B_MU80_E);
+		break;
+	}
+	case WIFIMACTX_VHT_SIG_B_MU40_E:
+	{
+		SHOW_DEFINED(WIFIMACTX_VHT_SIG_B_MU40_E);
+		break;
+	}
+	case WIFIMACTX_VHT_SIG_B_MU20_E:
+	{
+		SHOW_DEFINED(WIFIMACTX_VHT_SIG_B_MU20_E);
+		break;
+	}
+	case WIFIMACTX_VHT_SIG_B_SU160_E:
+	{
+		SHOW_DEFINED(WIFIMACTX_VHT_SIG_B_SU160_E);
+		break;
+	}
+	case WIFIMACTX_VHT_SIG_B_SU80_E:
+	{
+		SHOW_DEFINED(WIFIMACTX_VHT_SIG_B_SU80_E);
+		break;
+	}
+	case WIFIMACTX_VHT_SIG_B_SU40_E:
+	{
+		SHOW_DEFINED(WIFIMACTX_VHT_SIG_B_SU40_E);
+		break;
+	}
+	case WIFIMACTX_VHT_SIG_B_SU20_E:
+	{
+		SHOW_DEFINED(WIFIMACTX_VHT_SIG_B_SU20_E);
+		break;
+	}
+	case WIFIPHYTX_PPDU_HEADER_INFO_REQUEST_E:
+	{
+		SHOW_DEFINED(WIFIPHYTX_PPDU_HEADER_INFO_REQUEST_E);
+		break;
+	}
+	case WIFIMACTX_USER_DESC_PER_USER_E:
+	{
+		status = HAL_MON_MACTX_USER_DESC_PER_USER;
+		SHOW_DEFINED(WIFIMACTX_USER_DESC_PER_USER_E);
+		break;
+	}
+	case WIFIMACTX_USER_DESC_COMMON_E:
+	{
+		SHOW_DEFINED(WIFIMACTX_USER_DESC_COMMON_E);
+		break;
+	}
+	case WIFIMACTX_PHY_DESC_E:
+	{
+		status = HAL_MON_MACTX_PHY_DESC;
+		SHOW_DEFINED(WIFIMACTX_PHY_DESC_E);
+		break;
+	}
+	case WIFICOEX_RX_STATUS_E:
+	{
+		SHOW_DEFINED(WIFICOEX_RX_STATUS_E);
+		break;
+	}
+	case WIFIRX_PPDU_ACK_REPORT_E:
+	{
+		SHOW_DEFINED(WIFIRX_PPDU_ACK_REPORT_E);
+		break;
+	}
+	case WIFIRX_PPDU_NO_ACK_REPORT_E:
+	{
+		SHOW_DEFINED(WIFIRX_PPDU_NO_ACK_REPORT_E);
+		break;
+	}
+	case WIFITXPCU_PHYTX_OTHER_TRANSMIT_INFO32_E:
+	{
+		SHOW_DEFINED(WIFITXPCU_PHYTX_OTHER_TRANSMIT_INFO32_E);
+		break;
+	}
+	case WIFITXPCU_PHYTX_DEBUG32_E:
+	{
+		SHOW_DEFINED(WIFITXPCU_PHYTX_DEBUG32_E);
+		break;
+	}
+	case WIFITXPCU_PREAMBLE_DONE_E:
+	{
+		SHOW_DEFINED(WIFITXPCU_PREAMBLE_DONE_E);
+		break;
+	}
+	case WIFIRX_PHY_SLEEP_E:
+	{
+		SHOW_DEFINED(WIFIRX_PHY_SLEEP_E);
+		break;
+	}
+	case WIFIRX_FRAME_BITMAP_REQ_E:
+	{
+		SHOW_DEFINED(WIFIRX_FRAME_BITMAP_REQ_E);
+		break;
+	}
+	case WIFIRXPCU_TX_SETUP_CLEAR_E:
+	{
+		SHOW_DEFINED(WIFIRXPCU_TX_SETUP_CLEAR_E);
+		break;
+	}
+	case WIFIRX_TRIG_INFO_E:
+	{
+		SHOW_DEFINED(WIFIRX_TRIG_INFO_E);
+		break;
+	}
+	case WIFIEXPECTED_RESPONSE_E:
+	{
+		SHOW_DEFINED(WIFIEXPECTED_RESPONSE_E);
+		break;
+	}
+	case WIFITRIGGER_RESPONSE_TX_DONE_E:
+	{
+		SHOW_DEFINED(WIFITRIGGER_RESPONSE_TX_DONE_E);
 		break;
 	}
 	}

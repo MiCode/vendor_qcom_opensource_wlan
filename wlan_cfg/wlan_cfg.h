@@ -172,7 +172,8 @@ struct wlan_srng_cfg {
  * @lro_enabled: enable/disable LRO feature
  * @sg_enabled: enable disable scatter gather feature
  * @gro_enabled: enable disable GRO feature
- * @force_gro_enabled: force enable GRO feature
+ * @tc_based_dynamic_gro: enable/disable tc based dynamic gro
+ * @tc_ingress_prio: ingress prio to be checked for dynamic gro
  * @ipa_enabled: Flag indicating if IPA is enabled
  * @ol_tx_csum_enabled: Flag indicating if TX csum is enabled
  * @ol_rx_csum_enabled: Flag indicating if Rx csum is enabled
@@ -252,6 +253,10 @@ struct wlan_srng_cfg {
  * @vdev_stats_hw_offload_timer: HW vdev stats timer duration
  * @txmon_hw_support: TxMON HW support
  * @num_rxdma_status_rings_per_pdev: Num RXDMA status rings
+ * @mpdu_retry_threshold_1: MPDU retry threshold 1 to increment tx bad count
+ * @mpdu_retry_threshold_2: MPDU retry threshold 2 to increment tx bad count
+ * napi_scale_factor: scaling factor to be used for napi polls
+ * @notify_frame_support: flag indicating capability to mark notify frames
  */
 struct wlan_cfg_dp_soc_ctxt {
 	int num_int_ctxts;
@@ -306,7 +311,8 @@ struct wlan_cfg_dp_soc_ctxt {
 	bool lro_enabled;
 	bool sg_enabled;
 	bool gro_enabled;
-	bool force_gro_enabled;
+	bool tc_based_dynamic_gro;
+	uint32_t tc_ingress_prio;
 	bool ipa_enabled;
 	bool ol_tx_csum_enabled;
 	bool ol_rx_csum_enabled;
@@ -363,6 +369,7 @@ struct wlan_cfg_dp_soc_ctxt {
 	uint8_t *rx_toeplitz_hash_key;
 	uint8_t pktlog_buffer_size;
 	uint8_t is_rx_fisa_enabled;
+	bool is_rx_fisa_lru_del_enabled;
 	bool is_tso_desc_attach_defer;
 	uint32_t delayed_replenish_entries;
 	uint32_t reo_rings_mapping;
@@ -420,6 +427,10 @@ struct wlan_cfg_dp_soc_ctxt {
 #ifdef CONFIG_SAWF
 	bool sawf_enabled;
 #endif
+	uint8_t mpdu_retry_threshold_1;
+	uint8_t mpdu_retry_threshold_2;
+	uint8_t napi_scale_factor;
+	uint8_t notify_frame_support;
 };
 
 /**
@@ -1669,6 +1680,16 @@ void wlan_cfg_fill_interrupt_mask(struct wlan_cfg_dp_soc_ctxt *wlan_cfg_ctx,
 bool wlan_cfg_is_rx_fisa_enabled(struct wlan_cfg_dp_soc_ctxt *cfg);
 
 /**
+ * wlan_cfg_is_rx_fisa_lru_del_enabled() - Get Rx FISA LRU del enabled flag
+ *
+ *
+ * @cfg: soc configuration context
+ *
+ * Return: true if enabled, false otherwise.
+ */
+bool wlan_cfg_is_rx_fisa_lru_del_enabled(struct wlan_cfg_dp_soc_ctxt *cfg);
+
+/**
  * wlan_cfg_is_rx_buffer_pool_enabled() - Get RX buffer pool enabled flag
  *
  *
@@ -2138,5 +2159,15 @@ wlan_cfg_get_tx_capt_max_mem(struct wlan_cfg_dp_soc_ctxt *cfg)
 	return cfg->tx_capt_max_mem_allowed;
 }
 #endif /* WLAN_TX_PKT_CAPTURE_ENH */
+
+/**
+ * wlan_cfg_get_napi_scale_factor() - Get napi scale factor
+ *
+ *
+ * @cfg: soc configuration context
+ *
+ * Return: napi scale factor
+ */
+uint8_t wlan_cfg_get_napi_scale_factor(struct wlan_cfg_dp_soc_ctxt *cfg);
 
 #endif /*__WLAN_CFG_H*/

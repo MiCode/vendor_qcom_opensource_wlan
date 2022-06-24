@@ -35,6 +35,30 @@
 #define DP_MON_MSDU_LOGGING 0
 #define DP_MON_MPDU_LOGGING 1
 
+/* monitor frame filter modes */
+enum dp_mon_frm_filter_mode {
+	/* mode filter pass */
+	DP_MON_FRM_FILTER_MODE_FP = 0,
+	/* mode monitor direct */
+	DP_MON_FRM_FILTER_MODE_MD = 1,
+	/* mode monitor other */
+	DP_MON_FRM_FILTER_MODE_MO = 2,
+	/* mode filter pass monitor other */
+	DP_MON_FRM_FILTER_MODE_FP_MO = 3,
+};
+
+/* mpdu filter categories */
+enum dp_mpdu_filter_category {
+	/* category filter pass */
+	DP_MPDU_FILTER_CATEGORY_FP = 0,
+	/* category monitor direct */
+	DP_MPDU_FILTER_CATEGORY_MD = 1,
+	/* category monitor other */
+	DP_MPDU_FILTER_CATEGORY_MO = 2,
+	/* category filter pass monitor override */
+	DP_MPDU_FILTER_CATEGORY_FP_MO = 3,
+};
+
 /**
  * struct dp_mon_filter_be - Monitor TLV filter
  * @rx_tlv_filter: Rx MON TLV filter
@@ -258,20 +282,36 @@ QDF_STATUS dp_mon_buffers_replenish(struct dp_soc *dp_soc,
 				union dp_mon_desc_list_elem_t **tail);
 
 /**
- * dp_mon_filter_show_filter_be() - Show the set filters
- * @mode: The filter modes
- * @tlv_filter: tlv filter
- */
-void dp_mon_filter_show_filter_be(enum dp_mon_filter_mode mode,
-				  struct dp_mon_filter_be *filter);
-
-/**
  * dp_mon_filter_show_tx_filter_be() - Show the set filters
  * @mode: The filter modes
  * @tlv_filter: tlv filter
  */
 void dp_mon_filter_show_tx_filter_be(enum dp_mon_filter_mode mode,
 				     struct dp_mon_filter_be *filter);
+
+/**
+ * dp_mon_filter_show_rx_filter_be() - Show the set filters
+ * @mode: The filter modes
+ * @tlv_filter: tlv filter
+ */
+void dp_mon_filter_show_rx_filter_be(enum dp_mon_filter_mode mode,
+				     struct dp_mon_filter_be *filter);
+
+/**
+ * dp_vdev_set_monitor_mode_buf_rings_tx_2_0() - Add buffers to tx ring
+ * @pdev: Pointer to dp_pdev object
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS dp_vdev_set_monitor_mode_buf_rings_tx_2_0(struct dp_pdev *pdev);
+
+/**
+ * dp_vdev_set_monitor_mode_buf_rings_rx_2_0() - Add buffers to rx ring
+ * @pdev: Pointer to dp_pdev object
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS dp_vdev_set_monitor_mode_buf_rings_rx_2_0(struct dp_pdev *pdev);
 
 #ifdef QCA_ENHANCED_STATS_SUPPORT
 /**

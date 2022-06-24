@@ -26,6 +26,7 @@
 #include <wlan_cmn.h>
 #include <reg_services_public_struct.h>
 #include <wlan_objmgr_psoc_obj.h>
+#include <wlan_objmgr_pdev_obj.h>
 #include "reg_priv_objs.h"
 #include "reg_utils.h"
 #include "reg_db.h"
@@ -1096,6 +1097,35 @@ reg_find_opclass_absent_in_ctry_opclss_tables(struct wlan_objmgr_pdev *pdev,
 	}
 }
 
+static bool
+reg_is_country_opclass_global(struct wlan_objmgr_pdev *pdev)
+{
+	struct wlan_lmac_if_reg_tx_ops *reg_tx_ops;
+	struct wlan_objmgr_psoc *psoc;
+	uint8_t opclass_tbl_idx;
+
+	psoc = wlan_pdev_get_psoc(pdev);
+	if (!psoc) {
+		reg_err("psoc is NULL");
+		return false;
+	}
+
+	reg_tx_ops = reg_get_psoc_tx_ops(psoc);
+	if (!reg_tx_ops) {
+		reg_err("reg_tx_ops is NULL");
+		return false;
+	}
+
+	if (reg_tx_ops->get_opclass_tbl_idx) {
+		reg_tx_ops->get_opclass_tbl_idx(pdev, &opclass_tbl_idx);
+
+		if (opclass_tbl_idx == OP_CLASS_GLOBAL)
+			return true;
+	}
+
+	return false;
+}
+
 void reg_freq_width_to_chan_op_class_auto(struct wlan_objmgr_pdev *pdev,
 					  qdf_freq_t freq,
 					  uint16_t chan_width,
@@ -1111,7 +1141,7 @@ void reg_freq_width_to_chan_op_class_auto(struct wlan_objmgr_pdev *pdev,
 	} else if (reg_is_5dot9_ghz_freq(pdev, freq)) {
 		global_tbl_lookup = true;
 	} else {
-		global_tbl_lookup = false;
+		global_tbl_lookup = reg_is_country_opclass_global(pdev);
 	}
 
 	*op_class = 0;
@@ -1194,7 +1224,7 @@ void reg_freq_to_chan_op_class(struct wlan_objmgr_pdev *pdev,
 	enum channel_enum chan_enum;
 	struct regulatory_channel *cur_chan_list;
 	struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj;
-	struct ch_params chan_params;
+	struct ch_params chan_params = {0};
 
 	pdev_priv_obj = reg_get_pdev_obj(pdev);
 
@@ -1533,7 +1563,7 @@ static bool reg_is_chan_supported(struct wlan_objmgr_pdev *pdev,
 {
 	struct reg_channel_list chan_list;
 	qdf_freq_t center_320;
-	struct ch_params ch_params;
+	struct ch_params ch_params = {0};
 
 	center_320 = (ch_width == CH_WIDTH_320MHZ) ? cfi_freq : 0;
 	reg_fill_channel_list(pdev,
@@ -1555,7 +1585,7 @@ static bool reg_is_chan_supported(struct wlan_objmgr_pdev *pdev,
 				  qdf_freq_t cfi_freq,
 				  enum phy_ch_width ch_width)
 {
-	struct ch_params ch_params;
+	struct ch_params ch_params = {0};
 
 	ch_params.ch_width = ch_width;
 	reg_set_channel_params_for_freq(pdev, pri_freq, 0, &ch_params, true);

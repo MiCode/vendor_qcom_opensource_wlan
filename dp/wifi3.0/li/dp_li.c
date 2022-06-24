@@ -508,23 +508,6 @@ static void dp_tx_implicit_rbm_set_li(struct dp_soc *soc,
 {
 }
 
-static void dp_peer_get_reo_hash_li(struct dp_vdev *vdev,
-				    struct cdp_peer_setup_info *setup_info,
-				    enum cdp_host_reo_dest_ring *reo_dest,
-				    bool *hash_based,
-				    uint8_t *lmac_peer_id_msb)
-{
-	dp_vdev_get_default_reo_hash(vdev, reo_dest, hash_based);
-}
-
-static bool dp_reo_remap_config_li(struct dp_soc *soc,
-				   uint32_t *remap0,
-				   uint32_t *remap1,
-				   uint32_t *remap2)
-{
-	return dp_reo_remap_config(soc, remap0, remap1, remap2);
-}
-
 static QDF_STATUS dp_txrx_set_vdev_param_li(struct dp_soc *soc,
 					    struct dp_vdev *vdev,
 					    enum cdp_vdev_param_type param,
@@ -539,6 +522,40 @@ dp_rx_intrabss_handle_nawds_li(struct dp_soc *soc, struct dp_txrx_peer *ta_peer,
 			       struct cdp_tid_rx_stats *tid_stats)
 {
 	return false;
+}
+
+static struct dp_peer *dp_find_peer_by_destmac_li(struct dp_soc *soc,
+						  uint8_t *dest_mac,
+						  uint8_t vdev_id)
+{
+	struct dp_peer *peer = NULL;
+	struct dp_ast_entry *ast_entry = NULL;
+	uint16_t peer_id;
+
+	qdf_spin_lock_bh(&soc->ast_lock);
+	ast_entry = dp_peer_ast_hash_find_by_vdevid(soc, dest_mac, vdev_id);
+
+	if (!ast_entry) {
+		qdf_spin_unlock_bh(&soc->ast_lock);
+		dp_err("NULL ast entry");
+		return NULL;
+	}
+
+	peer_id = ast_entry->peer_id;
+	qdf_spin_unlock_bh(&soc->ast_lock);
+
+	if (peer_id == HTT_INVALID_PEER)
+		return NULL;
+
+	peer = dp_peer_get_ref_by_id(soc, peer_id,
+				     DP_MOD_ID_SAWF);
+	return peer;
+}
+
+static void dp_get_rx_hash_key_li(struct dp_soc *soc,
+				  struct cdp_lro_hash_config *lro_hash)
+{
+	dp_get_rx_hash_key_bytes(lro_hash);
 }
 
 void dp_initialize_arch_ops_li(struct dp_arch_ops *arch_ops)
@@ -576,6 +593,7 @@ void dp_initialize_arch_ops_li(struct dp_arch_ops *arch_ops)
 	arch_ops->txrx_vdev_detach = dp_vdev_detach_li;
 	arch_ops->txrx_peer_map_attach = dp_peer_map_attach_li;
 	arch_ops->txrx_peer_map_detach = dp_peer_map_detach_li;
+	arch_ops->get_rx_hash_key = dp_get_rx_hash_key_li;
 	arch_ops->dp_rx_desc_cookie_2_va =
 			dp_rx_desc_cookie_2_va_li;
 	arch_ops->dp_rx_intrabss_handle_nawds = dp_rx_intrabss_handle_nawds_li;
@@ -584,12 +602,11 @@ void dp_initialize_arch_ops_li(struct dp_arch_ops *arch_ops)
 					dp_rx_peer_metadata_peer_id_get_li;
 	arch_ops->soc_cfg_attach = dp_soc_cfg_attach_li;
 	arch_ops->tx_implicit_rbm_set = dp_tx_implicit_rbm_set_li;
-	arch_ops->peer_get_reo_hash = dp_peer_get_reo_hash_li;
-	arch_ops->reo_remap_config = dp_reo_remap_config_li;
 	arch_ops->txrx_set_vdev_param = dp_txrx_set_vdev_param_li;
 	arch_ops->txrx_print_peer_stats = dp_print_peer_txrx_stats_li;
 	arch_ops->dp_peer_rx_reorder_queue_setup =
 					dp_peer_rx_reorder_queue_setup_li;
+	arch_ops->dp_find_peer_by_destmac = dp_find_peer_by_destmac_li;
 }
 
 #ifdef QCA_DP_TX_HW_SW_NBUF_DESC_PREFETCH

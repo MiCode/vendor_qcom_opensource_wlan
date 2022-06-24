@@ -733,7 +733,16 @@ enum txrx_direction {
 };
 
 /**
- * cdp_capabilities- DP capabilities
+ * enum cdp_capabilities- DP capabilities
+ * @CDP_CFG_DP_TSO: TSO capability
+ * @CDP_CFG_DP_LRO: LRO capability
+ * @CDP_CFG_DP_SG: Scatter Gather capability
+ * @CDP_CFG_DP_GRO: GRO capability
+ * @CDP_CFG_DP_OL_TX_CSUM: Hardware based TX checksum capability
+ * @CDP_CFG_DP_OL_RX_CSUM: Hardware based RX checksum capability
+ * @CDP_CFG_DP_RAWMODE: RAW mode capability
+ * @CDP_CFG_DP_PEER_FLOW_CTRL: Peer flow-control capability
+ * @CDP_CFG_DP_MARK_NOTIFY_FRAME_SUPPORT: mark notify frames capability
  */
 enum cdp_capabilities {
 	CDP_CFG_DP_TSO,
@@ -744,6 +753,7 @@ enum cdp_capabilities {
 	CDP_CFG_DP_OL_RX_CSUM,
 	CDP_CFG_DP_RAWMODE,
 	CDP_CFG_DP_PEER_FLOW_CTRL,
+	CDP_CFG_DP_MARK_NOTIFY_FRAME_SUPPORT,
 };
 
 /**
@@ -2415,6 +2425,8 @@ struct cdp_rx_stats_ppdu_user {
  * @sig_b_sym: Number of symbols of HE-SIG-B
  * @sig_b_comp: Compression mode of HE-SIG-B
  * @he_crc: CRC for HE-SIG contents
+ * @usr_nss_sum: Sum of user nss
+ * @usr_ru_tones_sum: Sum of user ru_tones
  */
 struct cdp_rx_indication_ppdu {
 	uint32_t ppdu_id;
@@ -2510,6 +2522,8 @@ struct cdp_rx_indication_ppdu {
 		 sig_b_comp:1,
 		 he_crc:4;
 #endif
+	uint8_t usr_nss_sum;
+	uint32_t usr_ru_tones_sum;
 };
 
 /**
@@ -2626,7 +2640,8 @@ struct cdp_monitor_filter {
  * @cfg_dp_tso_enable: get TSO enable config
  * @cfg_dp_lro_enable: get LRO enable config
  * @cfg_dp_gro_enable: get GRO enable config
- * @cfg_dp_force_gro_enable: get Force GRO enable config
+ * @cfg_dp_tc_based_dyn_gro_enable: get TC based dynamic gro enable config
+ * @cfg_dp_tc_ingress_prio: priority value to be checked for tc filters
  * @cfg_dp_tx_flow_start_queue_offset: get DP TX flow start queue offset
  * @cfg_dp_tx_flow_stop_queue_threshold: get DP TX flow stop queue threshold
  * @cfg_dp_ipa_uc_tx_buf_size: get IPA TX buf size config
@@ -2649,7 +2664,8 @@ enum cdp_dp_cfg {
 	cfg_dp_tso_enable,
 	cfg_dp_lro_enable,
 	cfg_dp_gro_enable,
-	cfg_dp_force_gro_enable,
+	cfg_dp_tc_based_dyn_gro_enable,
+	cfg_dp_tc_ingress_prio,
 	cfg_dp_sg_enable,
 	cfg_dp_tx_flow_start_queue_offset,
 	cfg_dp_tx_flow_stop_queue_threshold,
@@ -2691,12 +2707,16 @@ struct cdp_flow_stats {
 /**
  * cdp_flow_stats - Per-Flow (5-tuple) statistics
  * @msdu_count: number of rx msdus matching this flow
+ * @mon_msdu_count: number of msdus matching this flow in mon path
  *
  * HW also includes msdu_byte_count and timestamp, which
  * are not currently tracked in SW.
  */
 struct cdp_flow_stats {
 	uint32_t msdu_count;
+#ifdef QCA_TEST_MON_PF_TAGS_STATS
+	uint32_t mon_msdu_count;
+#endif
 };
 #endif
 

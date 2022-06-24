@@ -617,10 +617,14 @@ struct mlo_link_info {
  * struct mlo_partner_info – mlo partner link info
  * @num_partner_links: no. of partner links
  * @partner_link_info: per partner link info
+ * @t2lm_enable_val: enum wlan_t2lm_enable
  */
 struct mlo_partner_info {
 	uint8_t num_partner_links;
 	struct mlo_link_info partner_link_info[WLAN_UMAC_MLO_MAX_VDEVS];
+#ifdef WLAN_FEATURE_T2LM
+	enum wlan_t2lm_enable t2lm_enable_val;
+#endif
 };
 
 /*

@@ -1043,6 +1043,20 @@ struct cdp_tid_stats {
 };
 
 /*
+ * struct cdp_tid_stats_intf
+ * @ingress_stack: Total packets received from linux stack
+ * @osif_drop: drops in osif layer
+ * @tx_total: total of per ring transmit counters per tid
+ * @rx_total: total of per ring receive counters per tid
+ */
+struct cdp_tid_stats_intf {
+	uint64_t ingress_stack;
+	uint64_t osif_drop;
+	struct cdp_tid_tx_stats tx_total[CDP_MAX_DATA_TIDS];
+	struct cdp_tid_rx_stats rx_total[CDP_MAX_DATA_TIDS];
+};
+
+/*
  * struct cdp_delay_tx_stats: Tx delay stats
  * @tx_swq_delay: software enqueue delay
  * @hwtx_delay: HW enque to completion delay
@@ -1366,6 +1380,8 @@ struct protocol_trace_count {
  * @su_be_ppdu_cnt: SU Tx packet count
  * @mu_be_ppdu_cnt: MU Tx packet count
  * @punc_bw[MAX_PUNCTURED_MODE]: MSDU count for punctured BW
+ * @release_src_not_tqm: Counter to keep track of release source is not TQM
+ *			 in TX completion status processing
  */
 struct cdp_tx_stats {
 	struct cdp_pkt_info comp_pkt;
@@ -1483,6 +1499,7 @@ struct cdp_tx_stats {
 	struct cdp_pkt_type mu_be_ppdu_cnt[TXRX_TYPE_MU_MAX];
 	uint32_t punc_bw[MAX_PUNCTURED_MODE];
 #endif
+	uint32_t release_src_not_tqm;
 };
 
 /* struct cdp_rx_stats - rx Level Stats
@@ -2611,6 +2628,36 @@ struct cdp_soc_stats {
 	} mec;
 };
 
+#ifdef WLAN_TELEMETRY_STATS_SUPPORT
+/**
+ * struct cdp_pdev_telemetry_stats- Structure to hold pdev telemetry stats
+ * @tx_mpdu_failed: Tx mpdu failed
+ * @tx_mpdu_total: Total tx mpdus
+ */
+struct cdp_pdev_telemetry_stats {
+	uint32_t tx_mpdu_failed;
+	uint32_t tx_mpdu_total;
+};
+
+/**
+ * struct cdp_peer_telemetry_stats- Structure to hold peer telemetry stats
+ * @tx_mpdu_retried: Tx mpdus retried
+ * @tx_mpdu_total: Total tx mpdus
+ * @rx_mpdu_retried: Rx mpdus retried
+ * @rx_mpdu_total: Total rx mpdus
+ * @airtime_consumption: airtime consumption of that peer
+ * @snr: peer average snr
+ */
+struct cdp_peer_telemetry_stats {
+	uint32_t tx_mpdu_retried;
+	uint32_t tx_mpdu_total;
+	uint32_t rx_mpdu_retried;
+	uint32_t rx_mpdu_total;
+	uint8_t airtime_consumption;
+	uint8_t snr;
+};
+#endif
+
 /* struct cdp_pdev_stats - pdev stats
  * @msdu_not_done: packets dropped because msdu done bit not set
  * @mec:Multicast Echo check
@@ -2653,6 +2700,7 @@ struct cdp_soc_stats {
  * @ppdu_drop: stats counter for ppdu_desc drop once threshold reached
  * @ppdu_wrap_drop: stats counter for ppdu desc drop on wrap around
  * @peer_unauth_rx_pkt_drop: stats counter for drops due to unauthorized peer
+ * @telemetry_stats: pdev telemetry stats
  */
 struct cdp_pdev_stats {
 	struct {
@@ -2736,6 +2784,9 @@ struct cdp_pdev_stats {
 	} rx_refill_buff_pool;
 
 	uint32_t peer_unauth_rx_pkt_drop;
+#ifdef WLAN_TELEMETRY_STATS_SUPPORT
+	struct cdp_pdev_telemetry_stats telemetry_stats;
+#endif
 };
 
 /* struct cdp_peer_hmwds_ast_add_status - hmwds peer ast add status

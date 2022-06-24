@@ -283,8 +283,8 @@ static int init_deinit_service_ready_event_handler(ol_scn_t scn_handle,
 
 	if (wmi_service_enabled(wmi_handle,
 				wmi_service_mgmt_rx_reo_supported))
-		wlan_psoc_nif_fw_ext_cap_set(psoc,
-					     WLAN_SOC_F_MGMT_RX_REO_CAPABLE);
+		wlan_psoc_nif_feat_cap_set(psoc,
+					   WLAN_SOC_F_MGMT_RX_REO_CAPABLE);
 
 	target_if_lteu_cfg_enable(psoc, tgt_hdl, event);
 
@@ -761,6 +761,17 @@ static int init_deinit_ready_event_handler(ol_scn_t scn_handle,
 		target_if_err("agile capability disabled in HW");
 	else
 		info->wlan_res_cfg.agile_capability = ready_ev.agile_capability;
+
+	if (ready_ev.num_max_active_vdevs) {
+		if (ready_ev.num_max_active_vdevs <
+		    info->wlan_res_cfg.num_max_active_vdevs) {
+			target_if_err("unexpected num_max_active_vdevs fw %d host %d",
+				      ready_ev.num_max_active_vdevs,
+				      info->wlan_res_cfg.num_max_active_vdevs);
+			info->wlan_res_cfg.num_max_active_vdevs =
+					ready_ev.num_max_active_vdevs;
+		}
+	}
 
 	/* Indicate to the waiting thread that the ready
 	 * event was received

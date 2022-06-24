@@ -147,5 +147,12 @@ static inline void mlo_setup_init(void)
 static inline void mlo_setup_deinit(void)
 {
 }
+
+static inline bool
+mlo_vdevs_check_single_soc(struct wlan_objmgr_vdev **wlan_vdev_list,
+			   uint8_t vdev_count)
+{
+	return true;
+}
 #endif /* WLAN_MLO_MULTI_CHIP */
 #endif /* _WLAN_MLO_MGR_SETUP_H_ */

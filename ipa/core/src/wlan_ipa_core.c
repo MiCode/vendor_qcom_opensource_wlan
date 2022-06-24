@@ -2394,6 +2394,7 @@ static QDF_STATUS wlan_ipa_send_msg(qdf_netdev_t net_dev,
 	QDF_IPA_SET_META_MSG_TYPE(&meta, type);
 	strlcpy(QDF_IPA_WLAN_MSG_NAME(msg), net_dev->name, IPA_RESOURCE_NAME_MAX);
 	qdf_mem_copy(QDF_IPA_WLAN_MSG_MAC_ADDR(msg), mac_addr, QDF_NET_ETH_LEN);
+	QDF_IPA_WLAN_MSG_NETDEV_IF_ID(msg) = net_dev->ifindex;
 
 	ipa_debug("%s: Evt: %d", QDF_IPA_WLAN_MSG_NAME(msg), QDF_IPA_MSG_META_MSG_TYPE(&meta));
 
@@ -3100,6 +3101,7 @@ static QDF_STATUS __wlan_ipa_wlan_evt(qdf_netdev_t net_dev, uint8_t device_mode,
 	strlcpy(QDF_IPA_WLAN_MSG_NAME(msg), net_dev->name,
 		IPA_RESOURCE_NAME_MAX);
 	qdf_mem_copy(QDF_IPA_WLAN_MSG_MAC_ADDR(msg), mac_addr, QDF_NET_ETH_LEN);
+	QDF_IPA_WLAN_MSG_NETDEV_IF_ID(msg) = net_dev->ifindex;
 
 	ipa_debug("%s: Evt: %d", QDF_IPA_WLAN_MSG_NAME(msg),
 		  QDF_IPA_MSG_META_MSG_TYPE(&meta));
@@ -4376,6 +4378,7 @@ static QDF_STATUS wlan_ipa_uc_send_evt(qdf_netdev_t net_dev,
 	qdf_str_lcopy(QDF_IPA_WLAN_MSG_NAME(msg), net_dev->name,
 		      IPA_RESOURCE_NAME_MAX);
 	qdf_mem_copy(QDF_IPA_WLAN_MSG_MAC_ADDR(msg), mac_addr, QDF_NET_ETH_LEN);
+	QDF_IPA_WLAN_MSG_NETDEV_IF_ID(msg) = net_dev->ifindex;
 
 	if (qdf_ipa_send_msg(&meta, msg, wlan_ipa_msg_free_fn)) {
 		ipa_err("%s: Evt: %d fail",

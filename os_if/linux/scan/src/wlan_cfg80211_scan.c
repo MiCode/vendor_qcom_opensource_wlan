@@ -529,36 +529,42 @@ int wlan_cfg80211_sched_scan_start(struct wlan_objmgr_vdev *vdev,
 
 	/* Filling per profile  params */
 	for (i = 0; i < req->networks_cnt; i++) {
-		req->networks_list[i].ssid.length =
-			request->match_sets[i].ssid.ssid_len;
+		struct cfg80211_match_set *user_req = &request->match_sets[i];
+		struct pno_nw_type *tgt_req = &req->networks_list[i];
 
-		if ((!req->networks_list[i].ssid.length) ||
-		    (req->networks_list[i].ssid.length > WLAN_SSID_MAX_LEN)) {
+		tgt_req->ssid.length = user_req->ssid.ssid_len;
+
+		if (!tgt_req->ssid.length ||
+		    tgt_req->ssid.length > WLAN_SSID_MAX_LEN) {
 			osif_err(" SSID Len %d is not correct for network %d",
-				 req->networks_list[i].ssid.length, i);
+				 tgt_req->ssid.length, i);
 			ret = -EINVAL;
 			goto error;
 		}
 
-		qdf_mem_copy(req->networks_list[i].ssid.ssid,
-			request->match_sets[i].ssid.ssid,
-			req->networks_list[i].ssid.length);
-		req->networks_list[i].authentication = 0;   /*eAUTH_TYPE_ANY */
-		req->networks_list[i].encryption = 0;       /*eED_ANY */
-		req->networks_list[i].bc_new_type = 0;    /*eBCAST_UNKNOWN */
+		qdf_mem_copy(tgt_req->ssid.ssid, user_req->ssid.ssid,
+			     tgt_req->ssid.length);
+		tgt_req->authentication = 0;   /*eAUTH_TYPE_ANY */
+		tgt_req->encryption = 0;       /*eED_ANY */
+		tgt_req->bc_new_type = 0;    /*eBCAST_UNKNOWN */
+
 
 		/*Copying list of valid channel into request */
 		for (j = 0; j < num_chan; j++)
-			req->networks_list[i].pno_chan_list.chan[j].freq =
-								valid_ch[j];
-		req->networks_list[i].pno_chan_list.num_chan = num_chan;
+			tgt_req->pno_chan_list.chan[j].freq = valid_ch[j];
+		tgt_req->pno_chan_list.num_chan = num_chan;
 
-		if (ucfg_is_6ghz_pno_scan_optimization_supported(psoc))
-			ucfg_scan_pno_add_all_valid_6g_channels(vdev, req,
-								&num_chan);
+		if (ucfg_is_6ghz_pno_scan_optimization_supported(psoc)) {
+			uint32_t short_ssid =
+				wlan_construct_shortssid(tgt_req->ssid.ssid,
+							 tgt_req->ssid.length);
 
-		req->networks_list[i].rssi_thresh =
-			request->match_sets[i].rssi_thold;
+			ucfg_scan_add_flags_to_pno_chan_list(vdev, req,
+							     &num_chan,
+							     short_ssid, i);
+		}
+
+		tgt_req->rssi_thresh = user_req->rssi_thold;
 	}
 
 	/* set scan to passive if no SSIDs are specified in the request */
@@ -835,6 +841,7 @@ static QDF_STATUS wlan_scan_request_dequeue(
  * @netdev: Net device
  * @req : Scan request
  * @aborted : true scan aborted false scan success
+ * @osif_priv: OS private structure
  *
  * This function notifies scan done to cfg80211
  *
@@ -842,14 +849,23 @@ static QDF_STATUS wlan_scan_request_dequeue(
  */
 void wlan_cfg80211_scan_done(struct net_device *netdev,
 			     struct cfg80211_scan_request *req,
-			     bool aborted)
+			     bool aborted, struct pdev_osif_priv *osif_priv)
 {
 	struct cfg80211_scan_info info = {
 		.aborted = aborted
 	};
+	bool driver_internal_netdev_state;
 
-	if (netdev->flags & IFF_UP)
+	driver_internal_netdev_state = netdev->flags & IFF_UP;
+	if (osif_priv->osif_check_netdev_state)
+		driver_internal_netdev_state =
+			osif_priv->osif_check_netdev_state(netdev);
+
+	if (driver_internal_netdev_state)
 		cfg80211_scan_done(req, &info);
+	else
+		osif_debug("scan done callback has been dropped :%s",
+			   (netdev)->name);
 }
 #elif (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 14, 0))
 /**
@@ -857,6 +873,7 @@ void wlan_cfg80211_scan_done(struct net_device *netdev,
  * @netdev: Net device
  * @req : Scan request
  * @aborted : true scan aborted false scan success
+ * @osif_priv - OS private structure
  *
  * This function notifies scan done to cfg80211
  *
@@ -864,10 +881,19 @@ void wlan_cfg80211_scan_done(struct net_device *netdev,
  */
 void wlan_cfg80211_scan_done(struct net_device *netdev,
 			     struct cfg80211_scan_request *req,
-			     bool aborted)
+			     bool aborted, struct pdev_osif_priv *osif_priv)
 {
-	if (netdev->flags & IFF_UP)
+	bool driver_internal_net_state;
+
+	driver_internal_netdev_state = netdev->flags & IFF_UP;
+	if (osif_priv->osif_check_netdev_state)
+		driver_internal_net_state =
+			osif_priv->osif_check_netdev_state(netdev);
+
+	if (driver_internal_netdev_state)
 		cfg80211_scan_done(req, aborted);
+	else
+		osif_debug("scan request has been dropped :%s", (netdev)->name);
 }
 #endif
 
@@ -1076,6 +1102,7 @@ static void wlan_cfg80211_scan_done_callback(
 		return;
 
 	pdev = wlan_vdev_get_pdev(vdev);
+	osif_priv = wlan_pdev_get_ospriv(pdev);
 	status = wlan_scan_request_dequeue(
 			pdev, scan_id, &req, &source, &netdev,
 			&scan_start_timestamp);
@@ -1116,7 +1143,7 @@ static void wlan_cfg80211_scan_done_callback(
 	 * scan done event will be posted
 	 */
 	if (NL_SCAN == source)
-		wlan_cfg80211_scan_done(netdev, req, !success);
+		wlan_cfg80211_scan_done(netdev, req, !success, osif_priv);
 	else
 		wlan_vendor_scan_callback(req, !success);
 
@@ -1130,7 +1157,6 @@ static void wlan_cfg80211_scan_done_callback(
 		       util_scan_get_ev_reason_name(event->reason),
 		       event->reason, unique_bss_count);
 allow_suspend:
-	osif_priv = wlan_pdev_get_ospriv(pdev);
 	qdf_mutex_acquire(&osif_priv->osif_scan->scan_req_q_lock);
 	if (qdf_list_empty(&osif_priv->osif_scan->scan_req_q)) {
 		struct wlan_objmgr_psoc *psoc;
@@ -1335,7 +1361,7 @@ void wlan_cfg80211_cleanup_scan_queue(struct wlan_objmgr_pdev *pdev,
 		source = scan_req->source;
 		if (NL_SCAN == source)
 			wlan_cfg80211_scan_done(scan_req->dev, req,
-						aborted);
+						aborted, osif_priv);
 		else
 			wlan_vendor_scan_callback(req, aborted);
 

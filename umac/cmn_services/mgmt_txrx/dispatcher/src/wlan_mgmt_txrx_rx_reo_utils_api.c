@@ -205,6 +205,12 @@ wlan_mgmt_rx_reo_detach(struct wlan_objmgr_pdev *pdev)
 
 qdf_export_symbol(wlan_mgmt_rx_reo_detach);
 
+uint16_t
+wlan_mgmt_rx_reo_get_pkt_ctr_delta_thresh(struct wlan_objmgr_psoc *psoc)
+{
+	return cfg_get(psoc, CFG_MGMT_RX_REO_PKT_CTR_DELTA_THRESH);
+}
+
 #ifndef WLAN_MGMT_RX_REO_SIM_SUPPORT
 bool
 wlan_mgmt_rx_reo_is_feature_enabled_at_psoc(struct wlan_objmgr_psoc *psoc)
@@ -217,8 +223,7 @@ wlan_mgmt_rx_reo_is_feature_enabled_at_psoc(struct wlan_objmgr_psoc *psoc)
 	if (!cfg_get(psoc, CFG_MGMT_RX_REO_ENABLE))
 		return false;
 
-	return wlan_psoc_nif_fw_ext_cap_get(psoc,
-					    WLAN_SOC_F_MGMT_RX_REO_CAPABLE);
+	return wlan_psoc_nif_feat_cap_get(psoc, WLAN_SOC_F_MGMT_RX_REO_CAPABLE);
 }
 
 qdf_export_symbol(wlan_mgmt_rx_reo_is_feature_enabled_at_psoc);
@@ -275,17 +280,25 @@ wlan_mgmt_rx_reo_is_simulation_in_progress(void)
 }
 
 QDF_STATUS
-wlan_mgmt_rx_reo_print_ingress_frame_debug_info(void)
+wlan_mgmt_rx_reo_print_ingress_frame_stats(void)
 {
-	return mgmt_rx_reo_print_ingress_frame_debug_info();
+	return mgmt_rx_reo_print_ingress_frame_stats();
 }
-
-qdf_export_symbol(wlan_mgmt_rx_reo_print_ingress_frame_debug_info);
 
 QDF_STATUS
-wlan_mgmt_rx_reo_print_egress_frame_debug_info(void)
+wlan_mgmt_rx_reo_print_ingress_frame_info(uint16_t num_frames)
 {
-	return mgmt_rx_reo_print_egress_frame_debug_info();
+	return mgmt_rx_reo_print_ingress_frame_info(num_frames);
 }
 
-qdf_export_symbol(wlan_mgmt_rx_reo_print_egress_frame_debug_info);
+QDF_STATUS
+wlan_mgmt_rx_reo_print_egress_frame_stats(void)
+{
+	return mgmt_rx_reo_print_egress_frame_stats();
+}
+
+QDF_STATUS
+wlan_mgmt_rx_reo_print_egress_frame_info(uint16_t num_frames)
+{
+	return mgmt_rx_reo_print_egress_frame_info(num_frames);
+}

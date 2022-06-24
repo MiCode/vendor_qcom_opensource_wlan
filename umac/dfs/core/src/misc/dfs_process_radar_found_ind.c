@@ -215,102 +215,40 @@ dfs_radar_add_channel_list_to_nol_for_freq(struct wlan_dfs *dfs,
 	return QDF_STATUS_SUCCESS;
 }
 #endif
+
 /**
- * dfs_radar_chan_for_80()- Find frequency offsets for 80MHz
+ * dfs_find_20mhz_subchans_from_offsets()- Find frequency offsets
+ * that aligns with 20MHz sub-channel centers.
+ *
  * @freq_offset: freq offset
  * @center_freq: center frequency
- *
+ * @ch_width: Channel Width value: 20/40/80/160/320MHz.
  * Find frequency offsets for 80MHz
  *
  * Return: None
  */
-static void dfs_radar_chan_for_80(struct freqs_offsets *freq_offset,
-				  uint32_t center_freq)
+static void
+dfs_find_20mhz_subchans_from_offsets(struct freqs_offsets *freq_offset,
+				     uint32_t center_freq,
+				     uint16_t ch_width)
 {
-	int i;
+	uint16_t first_chan20_cen = center_freq - (ch_width / 2) + BW_10;
+	uint16_t i, j;
+	uint8_t num_20mhz_subchans = ch_width / BW_20;
 
 	for (i = 0; i < DFS_NUM_FREQ_OFFSET; i++) {
-		if (freq_offset->offset[i] < DFS_OFFSET_SECOND_LOWER)
-			freq_offset->freq[i] =
-				DFS_THIRD_LOWER_CHANNEL(center_freq);
-		else if ((freq_offset->offset[i] > DFS_OFFSET_SECOND_LOWER) &&
-			 (freq_offset->offset[i] < DFS_OFFSET_FIRST_LOWER))
-			freq_offset->freq[i] =
-				DFS_SECOND_LOWER_CHANNEL(center_freq);
-		else if ((freq_offset->offset[i] > DFS_OFFSET_FIRST_LOWER) &&
-			 (freq_offset->offset[i] < 0))
-			freq_offset->freq[i] =
-				DFS_FIRST_LOWER_CHANNEL(center_freq);
-		else if ((freq_offset->offset[i] > 0) &&
-			  (freq_offset->offset[i] < DFS_OFFSET_FIRST_UPPER))
-			freq_offset->freq[i] =
-				DFS_FIRST_UPPER_CHANNEL(center_freq);
-		else if ((freq_offset->offset[i] > DFS_OFFSET_FIRST_UPPER) &&
-			 (freq_offset->offset[i] < DFS_OFFSET_SECOND_UPPER))
-			freq_offset->freq[i] =
-				DFS_SECOND_UPPER_CHANNEL(center_freq);
-		else if (freq_offset->offset[i] > DFS_OFFSET_SECOND_UPPER)
-			freq_offset->freq[i] =
-				DFS_THIRD_UPPER_CHANNEL(center_freq);
-	}
-}
+		uint16_t radar_found_freq =
+					center_freq + freq_offset->offset[i];
+		uint16_t chan20_cen = first_chan20_cen;
 
-/**
- * dfs_radar_chan_for_40()- Find frequency offsets for 40MHz
- * @freq_offset: freq offset
- * @center_freq: center frequency
- *
- * Find frequency offsets for 40MHz
- *
- * Return: None
- */
-static void dfs_radar_chan_for_40(struct freqs_offsets *freq_offset,
-				  uint32_t center_freq)
-{
-	int i;
-
-	for (i = 0; i < DFS_NUM_FREQ_OFFSET; i++) {
-		if (freq_offset->offset[i] < DFS_OFFSET_FIRST_LOWER)
-			freq_offset->freq[i] =
-				DFS_SECOND_LOWER_CHANNEL(center_freq);
-		else if ((freq_offset->offset[i] > DFS_OFFSET_FIRST_LOWER) &&
-			 (freq_offset->offset[i] < 0))
-			freq_offset->freq[i] =
-				DFS_FIRST_LOWER_CHANNEL(center_freq);
-		else if ((freq_offset->offset[i] > 0) &&
-			 (freq_offset->offset[i] < DFS_OFFSET_FIRST_UPPER))
-			freq_offset->freq[i] =
-				DFS_FIRST_UPPER_CHANNEL(center_freq);
-		else if (freq_offset->offset[i] > DFS_OFFSET_FIRST_UPPER)
-			freq_offset->freq[i] =
-				DFS_SECOND_UPPER_CHANNEL(center_freq);
-	}
-}
-
-/**
- * dfs_radar_chan_for_20()- Find frequency offsets for 20MHz
- * @freq_offset: freq offset
- * @center_freq: center frequency
- *
- * Find frequency offsets for 20MHz
- *
- * Return: None
- */
-static void dfs_radar_chan_for_20(struct freqs_offsets *freq_offset,
-				  uint32_t center_freq)
-{
-	int i;
-
-	for (i = 0; i < DFS_NUM_FREQ_OFFSET; i++) {
-		if (freq_offset->offset[i] <= DFS_20MZ_OFFSET_LOWER)
-			freq_offset->freq[i] =
-				DFS_20MHZ_LOWER_CHANNEL(center_freq);
-		else if ((freq_offset->offset[i] > DFS_20MZ_OFFSET_LOWER) &&
-			  (freq_offset->offset[i] < DFS_20MZ_OFFSET_UPPER))
-			freq_offset->freq[i] = center_freq;
-		else if (freq_offset->offset[i] >= DFS_20MZ_OFFSET_UPPER)
-			freq_offset->freq[i] =
-				DFS_20MHZ_UPPER_CHANNEL(center_freq);
+		for (j = 0; j < num_20mhz_subchans; j++) {
+			if ((radar_found_freq > chan20_cen - BW_10) &&
+			    (radar_found_freq < chan20_cen + BW_10)) {
+				freq_offset->freq[i] = chan20_cen;
+				break;
+			}
+			chan20_cen += BW_20;
+		}
 	}
 }
 
@@ -410,6 +348,7 @@ dfs_find_radar_affected_subchans_for_freq(struct wlan_dfs *dfs,
 	uint8_t n_cur_subchans;
 	struct dfs_channel *curchan = dfs->dfs_curchan;
 	struct freqs_offsets freq_offset;
+	uint16_t ch_width;
 
 	qdf_mem_zero(&freq_offset, sizeof(freq_offset));
 	flag = curchan->dfs_ch_flags;
@@ -425,35 +364,23 @@ dfs_find_radar_affected_subchans_for_freq(struct wlan_dfs *dfs,
 		 radar_found->freq_offset, radar_found->is_chirp,
 		 flag, freq_center);
 
-	if ((WLAN_IS_CHAN_A(curchan)) ||
-	    WLAN_IS_CHAN_MODE_20(curchan)) {
-		if (radar_found->is_chirp ||
-		    (sidx && !(abs(sidx) % DFS_BOUNDARY_SIDX))) {
-			freq_offset.offset[LEFT_CH] -= DFS_CHIRP_OFFSET;
-			freq_offset.offset[RIGHT_CH] += DFS_CHIRP_OFFSET;
-		}
-		dfs_radar_chan_for_20(&freq_offset, freq_center);
-	} else if (WLAN_IS_CHAN_MODE_40(curchan)) {
-		if (radar_found->is_chirp || !(abs(sidx) % DFS_BOUNDARY_SIDX)) {
-			freq_offset.offset[LEFT_CH] -= DFS_CHIRP_OFFSET;
-			freq_offset.offset[RIGHT_CH] += DFS_CHIRP_OFFSET;
-		}
-		dfs_radar_chan_for_40(&freq_offset, freq_center);
-	} else if (WLAN_IS_CHAN_MODE_80(curchan) ||
-			WLAN_IS_CHAN_MODE_160(curchan) ||
-			WLAN_IS_CHAN_MODE_80_80(curchan) ||
-			WLAN_IS_CHAN_MODE_320(curchan)) {
-		if (radar_found->is_chirp || !(abs(sidx) % DFS_BOUNDARY_SIDX)) {
-			freq_offset.offset[LEFT_CH] -= DFS_CHIRP_OFFSET;
-			freq_offset.offset[RIGHT_CH] += DFS_CHIRP_OFFSET;
-		}
-		dfs_radar_chan_for_80(&freq_offset, freq_center);
+	if ((WLAN_IS_CHAN_A(curchan)) || WLAN_IS_CHAN_MODE_20(curchan)) {
+		freq_offset.offset[CENTER_CH] = freq_center;
 	} else {
-		dfs_err(dfs, WLAN_DEBUG_DFS,
-			"channel flag=%d is invalid", flag);
-		return 0;
-	}
+		ch_width = dfs_chan_to_ch_width(curchan);
+		if (ch_width == BW_INVALID) {
+			dfs_err(dfs, WLAN_DEBUG_DFS,
+				"channel flag=%d is invalid", flag);
+			return 0;
+		}
 
+		if (radar_found->is_chirp || !(abs(sidx) % DFS_BOUNDARY_SIDX)) {
+			freq_offset.offset[LEFT_CH] -= DFS_CHIRP_OFFSET;
+			freq_offset.offset[RIGHT_CH] += DFS_CHIRP_OFFSET;
+		}
+		dfs_find_20mhz_subchans_from_offsets(&freq_offset, freq_center,
+						     ch_width);
+	}
 	n_cur_subchans =
 	    dfs_get_bonding_channels_for_freq(dfs, curchan,
 					      radar_found->segment_id,
@@ -585,7 +512,12 @@ void dfs_get_320mhz_bonding_channels(uint16_t center_freq, uint16_t *freq_list,
 {
 	uint16_t chwidth = 320;
 
-	*nchannels = 16;
+	/*
+	 * In 5Ghz band, the 320Mhz channel is always 80Mhz punctured
+	 * to the right. Therefore, it is actually a 240Mhz channel and
+	 * has twelve 20Mhz subchannels.
+	 */
+	*nchannels = NUM_CHANNELS_240MHZ;
 	dfs_calc_bonding_freqs(center_freq, chwidth, freq_list);
 }
 #else

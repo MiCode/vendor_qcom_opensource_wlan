@@ -244,6 +244,13 @@ dp_mon_buffers_replenish(struct dp_soc *dp_soc,
 	void *mon_srng;
 	QDF_STATUS ret = QDF_STATUS_E_FAILURE;
 
+	if (!num_req_buffers) {
+		dp_mon_debug("%pK: Received request for 0 buffers replenish",
+			     dp_soc);
+		ret = QDF_STATUS_E_INVAL;
+		goto free_desc;
+	}
+
 	mon_srng = dp_mon_srng->hal_srng;
 
 	hal_srng_access_start(dp_soc->hal_soc, mon_srng);
@@ -391,10 +398,9 @@ QDF_STATUS dp_mon_desc_pool_alloc(uint32_t pool_size,
 	return QDF_STATUS_SUCCESS;
 }
 
-static
-void dp_vdev_set_monitor_mode_buf_rings_2_0(struct dp_pdev *pdev)
+QDF_STATUS dp_vdev_set_monitor_mode_buf_rings_rx_2_0(struct dp_pdev *pdev)
 {
-	int tx_mon_max_entries, rx_mon_max_entries;
+	int rx_mon_max_entries;
 	struct wlan_cfg_dp_soc_ctxt *soc_cfg_ctx;
 	struct dp_soc *soc = pdev->soc;
 	struct dp_mon_soc *mon_soc = soc->monitor_soc;
@@ -403,49 +409,106 @@ void dp_vdev_set_monitor_mode_buf_rings_2_0(struct dp_pdev *pdev)
 
 	if (!mon_soc_be) {
 		dp_mon_err("DP MON SOC is NULL");
-		return;
+		return QDF_STATUS_E_FAILURE;
 	}
 
 	soc_cfg_ctx = soc->wlan_cfg_ctx;
 	rx_mon_max_entries = wlan_cfg_get_dp_soc_rx_mon_buf_ring_size(soc_cfg_ctx);
-	tx_mon_max_entries = wlan_cfg_get_dp_soc_tx_mon_buf_ring_size(soc_cfg_ctx);
 
 	hal_set_low_threshold(soc->rxdma_mon_buf_ring[0].hal_srng,
 			      rx_mon_max_entries >> 2);
 	status = htt_srng_setup(soc->htt_handle, 0,
 				soc->rxdma_mon_buf_ring[0].hal_srng,
 				RXDMA_MONITOR_BUF);
+
 	if (status != QDF_STATUS_SUCCESS) {
-		dp_err("Failed to send htt srng setup message for Rx mon buf ring");
-		return;
+		dp_mon_err("Failed to send htt srng setup message for Rx mon buf ring");
+		return status;
 	}
+
+	if (mon_soc_be->rx_mon_ring_fill_level < rx_mon_max_entries) {
+		status = dp_rx_mon_buffers_alloc(soc,
+						 (rx_mon_max_entries -
+						 mon_soc_be->rx_mon_ring_fill_level));
+		if (status != QDF_STATUS_SUCCESS) {
+			dp_mon_err("%pK: Rx mon buffers allocation failed", soc);
+			return status;
+		}
+		mon_soc_be->rx_mon_ring_fill_level +=
+				(rx_mon_max_entries -
+				mon_soc_be->rx_mon_ring_fill_level);
+	}
+
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS dp_vdev_set_monitor_mode_buf_rings_tx_2_0(struct dp_pdev *pdev)
+{
+	int tx_mon_max_entries;
+	struct wlan_cfg_dp_soc_ctxt *soc_cfg_ctx;
+	struct dp_soc *soc = pdev->soc;
+	struct dp_mon_soc *mon_soc = soc->monitor_soc;
+	struct dp_mon_soc_be *mon_soc_be =
+		dp_get_be_mon_soc_from_dp_mon_soc(mon_soc);
+	QDF_STATUS status;
+
+	if (!mon_soc_be) {
+		dp_mon_err("DP MON SOC is NULL");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	soc_cfg_ctx = soc->wlan_cfg_ctx;
+	tx_mon_max_entries =
+		wlan_cfg_get_dp_soc_tx_mon_buf_ring_size(soc_cfg_ctx);
 
 	hal_set_low_threshold(mon_soc_be->tx_mon_buf_ring.hal_srng,
 			      tx_mon_max_entries >> 2);
 	status = htt_srng_setup(soc->htt_handle, 0,
 				mon_soc_be->tx_mon_buf_ring.hal_srng,
 				TX_MONITOR_BUF);
+
 	if (status != QDF_STATUS_SUCCESS) {
-		dp_err("Failed to send htt srng setup message for Tx mon buf ring");
-		return;
+		dp_mon_err("Failed to send htt srng setup message for Tx mon buf ring");
+		return status;
 	}
 
-	if (dp_rx_mon_buffers_alloc(soc,
-				    (rx_mon_max_entries - mon_soc_be->rx_mon_ring_fill_level))) {
-		dp_mon_err("%pK: Rx mon buffers allocation failed", soc);
-		return;
+	if (mon_soc_be->tx_mon_ring_fill_level < tx_mon_max_entries) {
+		status = dp_tx_mon_buffers_alloc(soc,
+						 (tx_mon_max_entries -
+						 mon_soc_be->tx_mon_ring_fill_level));
+		if (status != QDF_STATUS_SUCCESS) {
+			dp_mon_err("%pK: Tx mon buffers allocation failed", soc);
+			return status;
+		}
+		mon_soc_be->tx_mon_ring_fill_level +=
+				(tx_mon_max_entries -
+				mon_soc_be->tx_mon_ring_fill_level);
 	}
 
-	if (dp_tx_mon_buffers_alloc(soc,
-				    (tx_mon_max_entries - mon_soc_be->tx_mon_ring_fill_level))) {
-		dp_mon_err("%pK: Tx mon buffers allocation failed", soc);
-		return;
+	return QDF_STATUS_SUCCESS;
+}
+
+static
+QDF_STATUS dp_vdev_set_monitor_mode_buf_rings_2_0(struct dp_pdev *pdev)
+{
+	int status;
+	struct dp_soc *soc = pdev->soc;
+
+	status = dp_vdev_set_monitor_mode_buf_rings_rx_2_0(pdev);
+	if (status != QDF_STATUS_SUCCESS) {
+		dp_mon_err("%pK: Rx monitor extra buffer allocation failed",
+			   soc);
+		return status;
 	}
 
-	mon_soc_be->tx_mon_ring_fill_level +=
-				(tx_mon_max_entries - mon_soc_be->tx_mon_ring_fill_level);
-	mon_soc_be->rx_mon_ring_fill_level +=
-				(rx_mon_max_entries - mon_soc_be->rx_mon_ring_fill_level);
+	status = dp_vdev_set_monitor_mode_buf_rings_tx_2_0(pdev);
+	if (status != QDF_STATUS_SUCCESS) {
+		dp_mon_err("%pK: Tx monitor extra buffer allocation failed",
+			   soc);
+		return status;
+	}
+
+	return QDF_STATUS_SUCCESS;
 }
 
 static
@@ -908,6 +971,9 @@ QDF_STATUS dp_mon_soc_init_2_0(struct dp_soc *soc)
 		goto fail;
 	}
 
+	mon_soc_be->tx_mon_ring_fill_level = DP_MON_RING_FILL_LEVEL_DEFAULT;
+	mon_soc_be->rx_mon_ring_fill_level = DP_MON_RING_FILL_LEVEL_DEFAULT;
+
 	mon_soc_be->is_dp_mon_soc_initialized = true;
 	return QDF_STATUS_SUCCESS;
 fail:
@@ -929,9 +995,6 @@ QDF_STATUS dp_mon_soc_attach_2_0(struct dp_soc *soc)
 		dp_mon_err("DP MON SOC is NULL");
 		return QDF_STATUS_E_FAILURE;
 	}
-
-	mon_soc_be->tx_mon_ring_fill_level = DP_MON_RING_FILL_LEVEL_DEFAULT;
-	mon_soc_be->rx_mon_ring_fill_level = DP_MON_RING_FILL_LEVEL_DEFAULT;
 
 	entries = wlan_cfg_get_dp_soc_rx_mon_buf_ring_size(soc_cfg_ctx);
 	qdf_print("%s:%d rx mon buf entries: %d", __func__, __LINE__, entries);
@@ -1299,6 +1362,21 @@ dp_mon_pdev_params_rssi_dbm_conv(struct cdp_soc_t *cdp_soc,
 }
 #endif
 
+#if defined(WDI_EVENT_ENABLE) &&\
+	(defined(QCA_ENHANCED_STATS_SUPPORT) || !defined(REMOVE_PKT_LOG))
+static inline
+void dp_mon_ppdu_stats_handler_register(struct dp_mon_soc *mon_soc)
+{
+	mon_soc->mon_ops->mon_ppdu_stats_ind_handler =
+					dp_ppdu_stats_ind_handler;
+}
+#else
+static inline
+void dp_mon_ppdu_stats_handler_register(struct dp_mon_soc *mon_soc)
+{
+}
+#endif
+
 static void dp_mon_register_intr_ops_2_0(struct dp_soc *soc)
 {
 	struct dp_mon_soc *mon_soc = soc->monitor_soc;
@@ -1308,6 +1386,7 @@ static void dp_mon_register_intr_ops_2_0(struct dp_soc *soc)
 	mon_soc->mon_ops->tx_mon_refill_buf_ring =
 			NULL,
 	mon_soc->mon_rx_process = dp_rx_mon_process_2_0;
+	dp_mon_ppdu_stats_handler_register(mon_soc);
 }
 
 /**
@@ -1359,10 +1438,6 @@ dp_mon_register_feature_ops_2_0(struct dp_soc *soc)
 	mon_ops->mon_print_pdev_tx_capture_stats = NULL;
 	mon_ops->mon_config_enh_tx_capture = dp_config_enh_tx_core_capture_2_0;
 	mon_ops->mon_tx_peer_filter = NULL;
-#endif
-#if defined(WDI_EVENT_ENABLE) &&\
-	(defined(QCA_ENHANCED_STATS_SUPPORT) || !defined(REMOVE_PKT_LOG))
-	mon_ops->mon_ppdu_stats_ind_handler = dp_ppdu_stats_ind_handler;
 #endif
 #ifdef WLAN_RX_PKT_CAPTURE_ENH
 	mon_ops->mon_config_enh_rx_capture = NULL;
@@ -1553,7 +1628,7 @@ struct cdp_mon_ops dp_ops_mon_2_0 = {
 	.config_full_mon_mode = NULL,
 	.soc_config_full_mon_mode = NULL,
 	.get_mon_pdev_rx_stats = dp_pdev_get_rx_mon_stats,
-	.txrx_enable_mon_reap_timer = dp_enable_mon_reap_timer,
+	.txrx_enable_mon_reap_timer = NULL,
 #ifdef QCA_SUPPORT_LITE_MONITOR
 	.txrx_set_lite_mon_config = dp_lite_mon_set_config,
 	.txrx_get_lite_mon_config = dp_lite_mon_get_config,

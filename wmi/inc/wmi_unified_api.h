@@ -934,6 +934,18 @@ QDF_STATUS
 wmi_unified_peer_flush_tids_send(wmi_unified_t wmi_handle,
 				 uint8_t peer_addr[QDF_MAC_ADDR_SIZE],
 				 struct peer_flush_params *param);
+#ifdef WLAN_FEATURE_PEER_TXQ_FLUSH_CONF
+/**
+ * wmi_unified_peer_txq_flush_config_send() - peer txq flush policy config in fw
+ * @wmi_handle: wmi handle
+ * @pr: peer txq flush config parameters
+ *
+ * Return: QDF_STATUS_SUCCESS on success and QDF_STATUS_E_FAILURE for failure
+ */
+QDF_STATUS
+wmi_unified_peer_txq_flush_config_send(wmi_unified_t wmi_handle,
+				       struct peer_txq_flush_config_params *pr);
+#endif
 
 /**
  * wmi_unified_peer_delete_all_send() - send PEER delete all command to fw
@@ -2916,6 +2928,18 @@ QDF_STATUS
 wmi_extract_mgmt_rx_params(wmi_unified_t wmi_handle, void *evt_buf,
 			   struct mgmt_rx_event_params *hdr, uint8_t **bufp);
 
+/**
+ * wmi_extract_mgmt_rx_ext_params() - extract extended rx params from event
+ * @wmi_handle: wmi handle
+ * @evt_buf: pointer to event buffer
+ * @params: Pointer to hold ext params
+ *
+ * Return: QDF_STATUS_SUCCESS on success and QDF_STATUS_E_FAILURE for failure
+ */
+QDF_STATUS
+wmi_extract_mgmt_rx_ext_params(wmi_unified_t wmi_handle, void *evt_buf,
+			       struct mgmt_rx_event_ext_params *params);
+
 #ifdef WLAN_MGMT_RX_REO_SUPPORT
 /**
  * wmi_extract_mgmt_rx_fw_consumed() - extract MGMT Rx FW consumed event
@@ -4777,4 +4801,16 @@ wmi_extract_pktlog_decode_info_event(wmi_unified_t wmi_handle,
 QDF_STATUS wmi_unified_pn_mgmt_rxfilter_send_cmd(
 		struct wmi_unified *wmi_handle,
 		struct vdev_pn_mgmt_rxfilter_params *params);
+
+/**
+ * wmi_extract_pdev_telemetry_stats_tlv - extract pdev telemetry stats
+ * @wmi_handle: wmi handle
+ * @evt_buf: pointer to event buffer
+ * @pdev stats: Pointer to hold pdev telemetry stats
+ *
+ * Return: QDF_STATUS_SUCCESS for success or error code
+ */
+QDF_STATUS wmi_extract_pdev_telemetry_stats(
+		wmi_unified_t wmi_handle, void *evt_buf,
+		struct wmi_host_pdev_telemetry_stats *pdev_stats);
 #endif /* _WMI_UNIFIED_API_H_ */

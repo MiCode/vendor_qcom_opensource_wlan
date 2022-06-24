@@ -32,6 +32,7 @@
 #include <qca_vendor.h>
 #include <qdf_nbuf.h>
 #include "qal_devcfg.h"
+#include "wlan_osif_features.h"
 
 #define osif_alert(params...) \
 	QDF_TRACE_FATAL(QDF_MODULE_ID_OS_IF, params)

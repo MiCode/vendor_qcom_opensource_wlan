@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2017-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -443,6 +444,7 @@ void wlan_config_sched_scan_plans_to_wiphy(struct wiphy *wiphy,
  * @netdev: Net device
  * @req : Scan request
  * @aborted : true scan aborted false scan success
+ * @osif_priv: OS private structure
  *
  * This function notifies scan done to cfg80211
  *
@@ -450,7 +452,7 @@ void wlan_config_sched_scan_plans_to_wiphy(struct wiphy *wiphy,
  */
 void wlan_cfg80211_scan_done(struct net_device *netdev,
 			     struct cfg80211_scan_request *req,
-			     bool aborted);
+			     bool aborted, struct pdev_osif_priv *osif_priv);
 
 /**
  * convert_nl_scan_priority_to_internal() - Convert NL80211 based scan prioirty

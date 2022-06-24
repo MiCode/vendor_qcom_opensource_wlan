@@ -2805,6 +2805,26 @@ dp_rx_mlo_peer_map_handler(struct dp_soc *soc, uint16_t peer_id,
 }
 #endif
 
+#ifdef DP_RX_UDP_OVER_PEER_ROAM
+void dp_rx_reset_roaming_peer(struct dp_soc *soc, uint8_t vdev_id,
+			      uint8_t *peer_mac_addr)
+{
+	struct dp_vdev *vdev = NULL;
+
+	vdev = dp_vdev_get_ref_by_id(soc, vdev_id, DP_MOD_ID_HTT);
+	if (vdev) {
+		if (qdf_mem_cmp(vdev->roaming_peer_mac.raw, peer_mac_addr,
+				QDF_MAC_ADDR_SIZE) == 0) {
+			vdev->roaming_peer_status =
+						WLAN_ROAM_PEER_AUTH_STATUS_NONE;
+			qdf_mem_zero(vdev->roaming_peer_mac.raw,
+				     QDF_MAC_ADDR_SIZE);
+		}
+		dp_vdev_unref_delete(soc, vdev, DP_MOD_ID_HTT);
+	}
+}
+#endif
+
 /**
  * dp_rx_peer_map_handler() - handle peer map event from firmware
  * @soc_handle - genereic soc handle
@@ -2928,6 +2948,8 @@ dp_rx_peer_map_handler(struct dp_soc *soc, uint16_t peer_id,
 		err = dp_peer_map_ast(soc, peer, peer_mac_addr, hw_peer_id,
 				      vdev_id, ast_hash, is_wds);
 	}
+
+	dp_rx_reset_roaming_peer(soc, vdev_id, peer_mac_addr);
 
 	return err;
 }
@@ -4271,12 +4293,25 @@ static void dp_check_ba_buffersize(struct dp_peer *peer,
 				   uint16_t buffersize)
 {
 	struct dp_rx_tid *rx_tid = NULL;
+	struct dp_soc *soc = peer->vdev->pdev->soc;
+	uint16_t max_ba_window;
+
+	max_ba_window = hal_get_rx_max_ba_window(soc->hal_soc, tid);
+	dp_info("Input buffersize %d, max dp allowed %d",
+		buffersize, max_ba_window);
+	/* Adjust BA window size, restrict it to max DP allowed */
+	buffersize = QDF_MIN(buffersize, max_ba_window);
+
+	dp_info(QDF_MAC_ADDR_FMT" per_tid_basize_max_tid %d tid %d buffersize %d hw_buffer_size %d",
+		peer->mac_addr.raw,
+		soc->per_tid_basize_max_tid, tid, buffersize,
+		peer->hw_buffer_size);
 
 	rx_tid = &peer->rx_tid[tid];
-	if (peer->vdev->pdev->soc->per_tid_basize_max_tid &&
-	    tid < peer->vdev->pdev->soc->per_tid_basize_max_tid) {
+	if (soc->per_tid_basize_max_tid &&
+	    tid < soc->per_tid_basize_max_tid) {
 		rx_tid->ba_win_size = buffersize;
-		return;
+		goto out;
 	} else {
 		if (peer->active_ba_session_cnt == 0) {
 			rx_tid->ba_win_size = buffersize;
@@ -4294,9 +4329,53 @@ static void dp_check_ba_buffersize(struct dp_peer *peer,
 					peer->hw_buffer_size = 64;
 					peer->kill_256_sessions = 1;
 				}
+			} else if (buffersize <= 1024) {
+				/**
+				 * Above checks are only for HK V2
+				 * Set incoming buffer size for others
+				 */
+				rx_tid->ba_win_size = buffersize;
+			} else {
+				dp_err("Invalid buffer size %d", buffersize);
+				qdf_assert_always(0);
 			}
 		}
 	}
+
+out:
+	dp_info("rx_tid->ba_win_size %d peer->hw_buffer_size %d peer->kill_256_sessions %d",
+		rx_tid->ba_win_size,
+		peer->hw_buffer_size,
+		peer->kill_256_sessions);
+}
+
+QDF_STATUS dp_rx_tid_update_ba_win_size(struct cdp_soc_t *cdp_soc,
+					uint8_t *peer_mac, uint16_t vdev_id,
+					uint8_t tid, uint16_t buffersize)
+{
+	struct dp_rx_tid *rx_tid = NULL;
+	struct dp_peer *peer;
+
+	peer = dp_peer_get_tgt_peer_hash_find((struct dp_soc *)cdp_soc,
+					      peer_mac, 0, vdev_id,
+					      DP_MOD_ID_CDP);
+	if (!peer) {
+		dp_peer_debug("%pK: Peer is NULL!\n", cdp_soc);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	rx_tid = &peer->rx_tid[tid];
+
+	qdf_spin_lock_bh(&rx_tid->tid_lock);
+	rx_tid->ba_win_size = buffersize;
+	qdf_spin_unlock_bh(&rx_tid->tid_lock);
+
+	dp_info("peer "QDF_MAC_ADDR_FMT", tid %d, update BA win size to %d",
+		QDF_MAC_ADDR_REF(peer->mac_addr.raw), tid, buffersize);
+
+	dp_peer_unref_delete(peer, DP_MOD_ID_CDP);
+
+	return QDF_STATUS_SUCCESS;
 }
 
 #define DP_RX_BA_SESSION_DISABLE  1

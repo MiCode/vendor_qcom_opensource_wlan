@@ -160,6 +160,20 @@ wmi_unified_peer_flush_tids_send(wmi_unified_t wmi_handle,
 	return QDF_STATUS_E_FAILURE;
 }
 
+#ifdef WLAN_FEATURE_PEER_TXQ_FLUSH_CONF
+QDF_STATUS
+wmi_unified_peer_txq_flush_config_send(wmi_unified_t wmi_handle,
+				       struct peer_txq_flush_config_params *pr)
+{
+	struct wmi_ops *ops = wmi_handle->ops;
+
+	if (ops->send_peer_txq_flush_config_cmd)
+		return ops->send_peer_txq_flush_config_cmd(wmi_handle, pr);
+
+	return QDF_STATUS_E_FAILURE;
+}
+#endif
+
 QDF_STATUS wmi_unified_peer_delete_send(wmi_unified_t wmi_handle,
 					uint8_t peer_addr[QDF_MAC_ADDR_SIZE],
 					struct peer_delete_cmd_params *param)
@@ -2045,6 +2059,17 @@ wmi_extract_mgmt_rx_params(wmi_unified_t wmi_handle, void *evt_buf,
 	return QDF_STATUS_E_FAILURE;
 }
 
+QDF_STATUS
+wmi_extract_mgmt_rx_ext_params(wmi_unified_t wmi_handle, void *evt_buf,
+			       struct mgmt_rx_event_ext_params *params)
+{
+	if (wmi_handle->ops->extract_mgmt_rx_ext_params)
+		return wmi_handle->ops->extract_mgmt_rx_ext_params(
+				wmi_handle, evt_buf, params);
+
+	return QDF_STATUS_E_FAILURE;
+}
+
 #ifdef WLAN_MGMT_RX_REO_SUPPORT
 QDF_STATUS wmi_extract_mgmt_rx_fw_consumed(wmi_unified_t wmi_handle,
 					   void *evt_buf,
@@ -3849,5 +3874,24 @@ wmi_extract_pktlog_decode_info_event(wmi_unified_t wmi_handle,
 					wmi_handle, evt_buf, pdev_id,
 					software_image, chip_info,
 					pktlog_json_version);
+	return QDF_STATUS_E_FAILURE;
+}
+
+/**
+ * wmi_extract_pdev_telemetry_stats_tlv - extract pdev telemetry stats
+ * @wmi_handle: wmi handle
+ * @evt_buf: pointer to event buffer
+ * @pdev stats: Pointer to hold pdev telemetry stats
+ *
+ * Return: QDF_STATUS_SUCCESS for success or error code
+ */
+QDF_STATUS wmi_extract_pdev_telemetry_stats(
+		wmi_unified_t wmi_handle, void *evt_buf,
+		struct wmi_host_pdev_telemetry_stats *pdev_stats)
+{
+	if (wmi_handle->ops->extract_pdev_telemetry_stats)
+		return wmi_handle->ops->extract_pdev_telemetry_stats(
+			wmi_handle, evt_buf, pdev_stats);
+
 	return QDF_STATUS_E_FAILURE;
 }

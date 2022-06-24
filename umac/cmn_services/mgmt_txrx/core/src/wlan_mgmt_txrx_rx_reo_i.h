@@ -595,6 +595,7 @@ struct reo_egress_frame_stats {
  * @wrap_aroud: Flag to indicate whether wrap around occurred when logging
  * debug information to @frame_list
  * @stats: Stats related to incoming frames
+ * @boarder: boarder string
  */
 struct reo_ingress_debug_info {
 	struct reo_ingress_debug_frame_info
@@ -602,6 +603,7 @@ struct reo_ingress_debug_info {
 	int next_index;
 	bool wrap_aroud;
 	struct reo_ingress_frame_stats stats;
+	char boarder[MGMT_RX_REO_INGRESS_FRAME_DEBUG_INFO_BOARDER_MAX_SIZE + 1];
 };
 
 /**
@@ -612,6 +614,7 @@ struct reo_ingress_debug_info {
  * @wrap_aroud: Flag to indicate whether wrap around occurred when logging
  * debug information to @frame_list
  * @stats: Stats related to outgoing frames
+ * @boarder: boarder string
  */
 struct reo_egress_debug_info {
 	struct reo_egress_debug_frame_info
@@ -619,6 +622,7 @@ struct reo_egress_debug_info {
 	int next_index;
 	bool wrap_aroud;
 	struct reo_egress_frame_stats stats;
+	char boarder[MGMT_RX_REO_EGRESS_FRAME_DEBUG_INFO_BOARDER_MAX_SIZE + 1];
 };
 #endif /* WLAN_MGMT_RX_REO_DEBUG_SUPPORT */
 
@@ -689,6 +693,7 @@ struct mgmt_rx_reo_context {
  * @host_snapshot: host snapshot
  * @is_parallel_rx: Indicates that this frame is received in parallel to the
  * last frame which is delivered to the upper layer.
+ * @pkt_ctr_delta: Packet counter delta of the current and last frame
  */
 struct mgmt_rx_reo_frame_descriptor {
 	enum mgmt_rx_reo_frame_descriptor_type type;
@@ -707,6 +712,7 @@ struct mgmt_rx_reo_frame_descriptor {
 			[MAX_MLO_LINKS][MGMT_RX_REO_SHARED_SNAPSHOT_MAX];
 	struct mgmt_rx_reo_snapshot_params host_snapshot[MAX_MLO_LINKS];
 	bool is_parallel_rx;
+	int pkt_ctr_delta;
 };
 
 /**
@@ -865,7 +871,7 @@ bool
 mgmt_rx_reo_is_simulation_in_progress(void);
 
 /**
- * mgmt_rx_reo_print_ingress_frame_debug_info() - Helper API to print
+ * mgmt_rx_reo_print_ingress_frame_stats() - Helper API to print
  * stats related to incoming management frames
  *
  * This API prints stats related to management frames entering management
@@ -874,10 +880,22 @@ mgmt_rx_reo_is_simulation_in_progress(void);
  * Return: QDF_STATUS
  */
 QDF_STATUS
-mgmt_rx_reo_print_ingress_frame_debug_info(void);
+mgmt_rx_reo_print_ingress_frame_stats(void);
 
 /**
- * mgmt_rx_reo_print_egress_frame_debug_info() - Helper API to print
+ * mgmt_rx_reo_print_ingress_frame_info() - Print the debug information
+ * about the latest frames entered the reorder module
+ * @num_frames: Number of frames for which the debug information is to be
+ * printed. If @num_frames is 0, then debug information about all the frames
+ * in the ring buffer will be  printed.
+ *
+ * Return: QDF_STATUS of operation
+ */
+QDF_STATUS
+mgmt_rx_reo_print_ingress_frame_info(uint16_t num_frames);
+
+/**
+ * mgmt_rx_reo_print_egress_frame_stats() - Helper API to print
  * stats related to outgoing management frames
  *
  * This API prints stats related to management frames exiting management
@@ -886,7 +904,19 @@ mgmt_rx_reo_print_ingress_frame_debug_info(void);
  * Return: QDF_STATUS
  */
 QDF_STATUS
-mgmt_rx_reo_print_egress_frame_debug_info(void);
+mgmt_rx_reo_print_egress_frame_stats(void);
+
+/**
+ * mgmt_rx_reo_print_egress_frame_info() - Print the debug information
+ * about the latest frames leaving the reorder module
+ * @num_frames: Number of frames for which the debug information is to be
+ * printed. If @num_frames is 0, then debug information about all the frames
+ * in the ring buffer will be  printed.
+ *
+ * Return: QDF_STATUS of operation
+ */
+QDF_STATUS
+mgmt_rx_reo_print_egress_frame_info(uint16_t num_frames);
 
 #ifdef WLAN_MGMT_RX_REO_SIM_SUPPORT
 /**
@@ -1019,11 +1049,10 @@ static inline bool is_mgmt_rx_reo_required(
 			struct mgmt_rx_reo_frame_descriptor *desc)
 {
 	/**
-	 * NOTE: Implementing a simple policy based on INI and WMI serive bit
-	 * for now. Finer policies like checking whether this pdev has
-	 * any MLO VAPs or checking the frame type can be implemented later.
+	 * NOTE: Implementing a simple policy based on the number of MLO vdevs
+	 * in the given pdev.
 	 */
-	return wlan_mgmt_rx_reo_is_feature_enabled_at_pdev(pdev);
+	return  wlan_pdev_get_mlo_vdev_count(pdev);
 }
 
 /**

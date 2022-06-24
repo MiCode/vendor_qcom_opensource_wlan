@@ -1624,7 +1624,7 @@ void dp_rx_compute_delay(struct dp_vdev *vdev, qdf_nbuf_t nbuf)
 		&vdev->pdev->stats.tid_stats.tid_rx_stats[ring_id][tid];
 
 	dp_update_delay_stats(NULL, rstats, to_stack, tid,
-			      CDP_DELAY_STATS_REAP_STACK, ring_id);
+			      CDP_DELAY_STATS_REAP_STACK, ring_id, false);
 	/*
 	 * Update interframe delay stats calculated at deliver_data_ol point.
 	 * Value of vdev->prev_rx_deliver_tstamp will be 0 for 1st frame, so
@@ -1633,7 +1633,7 @@ void dp_rx_compute_delay(struct dp_vdev *vdev, qdf_nbuf_t nbuf)
 	 * of vdev->prev_rx_deliver_tstamp.
 	 */
 	dp_update_delay_stats(NULL, rstats, interframe_delay, tid,
-			      CDP_DELAY_STATS_RX_INTERFRAME, ring_id);
+			      CDP_DELAY_STATS_RX_INTERFRAME, ring_id, false);
 	vdev->prev_rx_deliver_tstamp = current_ts;
 }
 
@@ -1741,11 +1741,8 @@ void dp_rx_flush_rx_cached(struct dp_peer *peer, bool drop)
 		return;
 
 	if (!peer->txrx_peer) {
-		if (!peer->sta_self_peer) {
-			qdf_err("txrx_peer NULL!!");
-			qdf_assert_always(0);
-		}
-
+		dp_err("txrx_peer NULL!! peer mac_addr("QDF_MAC_ADDR_FMT")",
+			QDF_MAC_ADDR_REF(peer->mac_addr.raw));
 		return;
 	}
 
@@ -2269,6 +2266,49 @@ dp_rx_desc_nbuf_len_sanity_check(struct dp_soc *soc, uint32_t pkt_len) { }
 #endif
 
 #ifdef DP_RX_PKT_NO_PEER_DELIVER
+#ifdef DP_RX_UDP_OVER_PEER_ROAM
+/**
+ * dp_rx_is_udp_allowed_over_roam_peer() - check if udp data received
+ *					   during roaming
+ * @vdev: dp_vdev pointer
+ * @rx_tlv_hdr: rx tlv header
+ * @nbuf: pkt skb pointer
+ *
+ * This function will check if rx udp data is received from authorised
+ * roamed peer before peer map indication is received from FW after
+ * roaming. This is needed for VoIP scenarios in which packet loss
+ * expected during roaming is minimal.
+ *
+ * Return: bool
+ */
+static bool dp_rx_is_udp_allowed_over_roam_peer(struct dp_vdev *vdev,
+						uint8_t *rx_tlv_hdr,
+						qdf_nbuf_t nbuf)
+{
+	char *hdr_desc;
+	struct ieee80211_frame *wh = NULL;
+
+	hdr_desc = hal_rx_desc_get_80211_hdr(vdev->pdev->soc->hal_soc,
+					     rx_tlv_hdr);
+	wh = (struct ieee80211_frame *)hdr_desc;
+
+	if (vdev->roaming_peer_status ==
+	    WLAN_ROAM_PEER_AUTH_STATUS_AUTHENTICATED &&
+	    !qdf_mem_cmp(vdev->roaming_peer_mac.raw, wh->i_addr2,
+	    QDF_MAC_ADDR_SIZE) && (qdf_nbuf_is_ipv4_udp_pkt(nbuf) ||
+	    qdf_nbuf_is_ipv6_udp_pkt(nbuf)))
+		return true;
+
+	return false;
+}
+#else
+static bool dp_rx_is_udp_allowed_over_roam_peer(struct dp_vdev *vdev,
+						uint8_t *rx_tlv_hdr,
+						qdf_nbuf_t nbuf)
+{
+	return false;
+}
+#endif
 /**
  * dp_rx_deliver_to_stack_no_peer() - try deliver rx data even if
  *				      no corresbonding peer found
@@ -2316,7 +2356,8 @@ void dp_rx_deliver_to_stack_no_peer(struct dp_soc *soc, qdf_nbuf_t nbuf)
 	qdf_nbuf_set_pktlen(nbuf, pkt_len);
 	qdf_nbuf_pull_head(nbuf, soc->rx_pkt_tlv_size + l2_hdr_offset);
 
-	if (dp_rx_is_special_frame(nbuf, frame_mask)) {
+	if (dp_rx_is_special_frame(nbuf, frame_mask) ||
+	    dp_rx_is_udp_allowed_over_roam_peer(vdev, rx_tlv_hdr, nbuf)) {
 		qdf_nbuf_set_exc_frame(nbuf, 1);
 		if (QDF_STATUS_SUCCESS !=
 		    vdev->osif_rx(vdev->osif_vdev, nbuf))

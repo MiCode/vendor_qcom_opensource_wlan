@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2013-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -591,6 +592,11 @@ struct ce_ops {
 			    int *num_shadow_registers_configured);
 	int (*ce_get_index_info)(struct hif_softc *scn, void *ce_state,
 				 struct ce_index *info);
+#ifdef CONFIG_SHADOW_V3
+	void (*ce_prepare_shadow_register_v3_cfg)(struct hif_softc *scn,
+			    struct pld_shadow_reg_v3_cfg **shadow_config,
+			    int *num_shadow_registers_configured);
+#endif
 };
 
 int hif_ce_bus_early_suspend(struct hif_softc *scn);

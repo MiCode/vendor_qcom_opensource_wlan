@@ -284,7 +284,7 @@ void hal_set_ba_aging_timeout_be(hal_soc_handle_t hal_soc_hdl, uint8_t ac,
 }
 qdf_export_symbol(hal_set_ba_aging_timeout_be);
 
-static inline void
+static void
 hal_reo_cmd_set_descr_addr_be(uint32_t *reo_desc,
 			      enum hal_reo_cmd_type type,
 			      uint32_t paddr_lo,
@@ -322,7 +322,7 @@ hal_reo_cmd_set_descr_addr_be(uint32_t *reo_desc,
 	}
 }
 
-static inline int
+static int
 hal_reo_cmd_queue_stats_be(hal_ring_handle_t  hal_ring_hdl,
 			   hal_soc_handle_t hal_soc_hdl,
 			   struct hal_reo_cmd_params *cmd)
@@ -333,9 +333,8 @@ hal_reo_cmd_queue_stats_be(hal_ring_handle_t  hal_ring_hdl,
 	hal_srng_access_start(hal_soc_hdl, hal_ring_hdl);
 	reo_desc = hal_srng_src_get_next(hal_soc, hal_ring_hdl);
 	if (!reo_desc) {
-		QDF_TRACE(QDF_MODULE_ID_TXRX, QDF_TRACE_LEVEL_DEBUG,
-			  "%s: Out of cmd ring entries", __func__);
-		hal_srng_access_end(hal_soc, hal_ring_hdl);
+		hal_srng_access_end_reap(hal_soc, hal_ring_hdl);
+		hal_warn_rl("Out of cmd ring entries");
 		return -EBUSY;
 	}
 
@@ -361,23 +360,15 @@ hal_reo_cmd_queue_stats_be(hal_ring_handle_t  hal_ring_hdl,
 	HAL_DESC_64_SET_FIELD(reo_desc, REO_GET_QUEUE_STATS, CLEAR_STATS,
 			      cmd->u.stats_params.clear);
 
-	if (hif_pm_runtime_get(hal_soc->hif_handle,
-			       RTPM_ID_HAL_REO_CMD, true) == 0) {
-		hal_srng_access_end(hal_soc_hdl, hal_ring_hdl);
-		hif_pm_runtime_put(hal_soc->hif_handle,
-				   RTPM_ID_HAL_REO_CMD);
-	} else {
-		hal_srng_access_end_reap(hal_soc_hdl, hal_ring_hdl);
-		hal_srng_set_event(hal_ring_hdl, HAL_SRNG_FLUSH_EVENT);
-		hal_srng_inc_flush_cnt(hal_ring_hdl);
-	}
+	hal_srng_access_end_v1(hal_soc_hdl, hal_ring_hdl, RTPM_ID_HAL_REO_CMD,
+			       true);
 
 	val = reo_desc[CMD_HEADER_DW_OFFSET];
 	return HAL_GET_FIELD(UNIFORM_REO_CMD_HEADER, REO_CMD_NUMBER,
 				     val);
 }
 
-static inline int
+static int
 hal_reo_cmd_flush_queue_be(hal_ring_handle_t hal_ring_hdl,
 			   hal_soc_handle_t hal_soc_hdl,
 			   struct hal_reo_cmd_params *cmd)
@@ -388,9 +379,8 @@ hal_reo_cmd_flush_queue_be(hal_ring_handle_t hal_ring_hdl,
 	hal_srng_access_start(hal_soc_hdl, hal_ring_hdl);
 	reo_desc = hal_srng_src_get_next(hal_soc, hal_ring_hdl);
 	if (!reo_desc) {
-		QDF_TRACE(QDF_MODULE_ID_TXRX, QDF_TRACE_LEVEL_DEBUG,
-			  "%s: Out of cmd ring entries", __func__);
-		hal_srng_access_end(hal_soc, hal_ring_hdl);
+		hal_srng_access_end_reap(hal_soc, hal_ring_hdl);
+		hal_warn_rl("Out of cmd ring entries");
 		return -EBUSY;
 	}
 
@@ -422,13 +412,14 @@ hal_reo_cmd_flush_queue_be(hal_ring_handle_t hal_ring_hdl,
 				      cmd->u.fl_queue_params.index);
 	}
 
-	hal_srng_access_end(hal_soc, hal_ring_hdl);
+	hal_srng_access_end_v1(hal_soc_hdl, hal_ring_hdl, RTPM_ID_HAL_REO_CMD,
+			       false);
 	val = reo_desc[CMD_HEADER_DW_OFFSET];
 	return HAL_GET_FIELD(UNIFORM_REO_CMD_HEADER, REO_CMD_NUMBER,
 				     val);
 }
 
-static inline int
+static int
 hal_reo_cmd_flush_cache_be(hal_ring_handle_t hal_ring_hdl,
 			   hal_soc_handle_t hal_soc_hdl,
 			   struct hal_reo_cmd_params *cmd)
@@ -449,8 +440,8 @@ hal_reo_cmd_flush_cache_be(hal_ring_handle_t hal_ring_hdl,
 	if (cp->block_use_after_flush) {
 		index = hal_find_zero_bit(hal_soc->reo_res_bitmap);
 		if (index > 3) {
-			qdf_print("No blocking resource available!");
-			hal_srng_access_end(hal_soc, hal_ring_hdl);
+			hal_srng_access_end_reap(hal_soc, hal_ring_hdl);
+			hal_warn_rl("No blocking resource available!");
 			return -EBUSY;
 		}
 		hal_soc->index = index;
@@ -458,7 +449,7 @@ hal_reo_cmd_flush_cache_be(hal_ring_handle_t hal_ring_hdl,
 
 	reo_desc = hal_srng_src_get_next(hal_soc, hal_ring_hdl);
 	if (!reo_desc) {
-		hal_srng_access_end(hal_soc, hal_ring_hdl);
+		hal_srng_access_end_reap(hal_soc, hal_ring_hdl);
 		hal_srng_dump(hal_ring_handle_to_hal_srng(hal_ring_hdl));
 		return -EBUSY;
 	}
@@ -505,23 +496,15 @@ hal_reo_cmd_flush_cache_be(hal_ring_handle_t hal_ring_hdl,
 	HAL_DESC_64_SET_FIELD(reo_desc, REO_FLUSH_CACHE, FLUSH_ENTIRE_CACHE,
 			      cp->flush_entire_cache);
 
-	if (hif_pm_runtime_get(hal_soc->hif_handle,
-			       RTPM_ID_HAL_REO_CMD, true) == 0) {
-		hal_srng_access_end(hal_soc_hdl, hal_ring_hdl);
-		hif_pm_runtime_put(hal_soc->hif_handle,
-				   RTPM_ID_HAL_REO_CMD);
-	} else {
-		hal_srng_access_end_reap(hal_soc_hdl, hal_ring_hdl);
-		hal_srng_set_event(hal_ring_hdl, HAL_SRNG_FLUSH_EVENT);
-		hal_srng_inc_flush_cnt(hal_ring_hdl);
-	}
+	hal_srng_access_end_v1(hal_soc_hdl, hal_ring_hdl, RTPM_ID_HAL_REO_CMD,
+			       false);
 
 	val = reo_desc[CMD_HEADER_DW_OFFSET];
 	return HAL_GET_FIELD(UNIFORM_REO_CMD_HEADER, REO_CMD_NUMBER,
 				     val);
 }
 
-static inline int
+static int
 hal_reo_cmd_unblock_cache_be(hal_ring_handle_t hal_ring_hdl,
 			     hal_soc_handle_t hal_soc_hdl,
 			     struct hal_reo_cmd_params *cmd)
@@ -544,9 +527,8 @@ hal_reo_cmd_unblock_cache_be(hal_ring_handle_t hal_ring_hdl,
 
 	reo_desc = hal_srng_src_get_next(hal_soc, hal_ring_hdl);
 	if (!reo_desc) {
-		QDF_TRACE(QDF_MODULE_ID_TXRX, QDF_TRACE_LEVEL_DEBUG,
-			  "%s: Out of cmd ring entries", __func__);
-		hal_srng_access_end(hal_soc, hal_ring_hdl);
+		hal_srng_access_end_reap(hal_soc, hal_ring_hdl);
+		hal_warn_rl("Out of cmd ring entries");
 		return -EBUSY;
 	}
 
@@ -580,7 +562,7 @@ hal_reo_cmd_unblock_cache_be(hal_ring_handle_t hal_ring_hdl,
 				     val);
 }
 
-static inline int
+static int
 hal_reo_cmd_flush_timeout_list_be(hal_ring_handle_t hal_ring_hdl,
 				  hal_soc_handle_t hal_soc_hdl,
 				  struct hal_reo_cmd_params *cmd)
@@ -591,9 +573,8 @@ hal_reo_cmd_flush_timeout_list_be(hal_ring_handle_t hal_ring_hdl,
 	hal_srng_access_start(hal_soc_hdl, hal_ring_hdl);
 	reo_desc = hal_srng_src_get_next(hal_soc, hal_ring_hdl);
 	if (!reo_desc) {
-		QDF_TRACE(QDF_MODULE_ID_TXRX, QDF_TRACE_LEVEL_DEBUG,
-			  "%s: Out of cmd ring entries", __func__);
-		hal_srng_access_end(hal_soc, hal_ring_hdl);
+		hal_srng_access_end_reap(hal_soc, hal_ring_hdl);
+		hal_warn_rl("Out of cmd ring entries");
 		return -EBUSY;
 	}
 
@@ -629,7 +610,7 @@ hal_reo_cmd_flush_timeout_list_be(hal_ring_handle_t hal_ring_hdl,
 				     val);
 }
 
-static inline int
+static int
 hal_reo_cmd_update_rx_queue_be(hal_ring_handle_t hal_ring_hdl,
 			       hal_soc_handle_t hal_soc_hdl,
 			       struct hal_reo_cmd_params *cmd)
@@ -643,9 +624,8 @@ hal_reo_cmd_update_rx_queue_be(hal_ring_handle_t hal_ring_hdl,
 	hal_srng_access_start(hal_soc_hdl, hal_ring_hdl);
 	reo_desc = hal_srng_src_get_next(hal_soc, hal_ring_hdl);
 	if (!reo_desc) {
-		QDF_TRACE(QDF_MODULE_ID_TXRX, QDF_TRACE_LEVEL_DEBUG,
-			  "%s: Out of cmd ring entries", __func__);
-		hal_srng_access_end(hal_soc, hal_ring_hdl);
+		hal_srng_access_end_reap(hal_soc, hal_ring_hdl);
+		hal_warn_rl("Out of cmd ring entries");
 		return -EBUSY;
 	}
 
@@ -832,17 +812,8 @@ hal_reo_cmd_update_rx_queue_be(hal_ring_handle_t hal_ring_hdl,
 	HAL_DESC_64_SET_FIELD(reo_desc, REO_UPDATE_RX_REO_QUEUE,
 			      PN_127_96, p->pn_127_96);
 
-	if (hif_pm_runtime_get(hal_soc->hif_handle,
-			       RTPM_ID_HAL_REO_CMD, false) == 0) {
-		hal_srng_access_end(hal_soc_hdl, hal_ring_hdl);
-		hif_pm_runtime_put(hal_soc->hif_handle,
-				   RTPM_ID_HAL_REO_CMD);
-	} else {
-		hal_srng_access_end_reap(hal_soc_hdl, hal_ring_hdl);
-		hal_srng_set_event(hal_ring_hdl, HAL_SRNG_FLUSH_EVENT);
-		hal_srng_inc_flush_cnt(hal_ring_hdl);
-	}
-
+	hal_srng_access_end_v1(hal_soc_hdl, hal_ring_hdl, RTPM_ID_HAL_REO_CMD,
+			       false);
 	val = reo_desc[CMD_HEADER_DW_OFFSET];
 	return HAL_GET_FIELD(UNIFORM_REO_CMD_HEADER, REO_CMD_NUMBER,
 				     val);

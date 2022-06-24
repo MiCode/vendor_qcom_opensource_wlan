@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -110,6 +110,69 @@ void wlan_vdev_mlme_aid_mgr_max_aid_set(struct wlan_objmgr_vdev *vdev,
  */
 QDF_STATUS wlan_vdev_mlme_set_start_aid(struct wlan_objmgr_vdev *vdev,
 					uint16_t start_aid);
+
+/**
+ * wlan_vdev_mlme_get_start_aid() - set VDEV start AID
+ * @vdev: vdev pointer
+ *
+ * This function sets start AID for the VDEV
+ *
+ * Return: start AID
+ */
+uint16_t wlan_vdev_mlme_get_start_aid(struct wlan_objmgr_vdev *vdev);
+
+/**
+ * wlan_mlo_vdev_init_mbss_aid_mgr() - Assigns tx vdev aid mgr to a VDEV
+ * @ml_dev: MLO DEV context
+ * @vdev: VDEV
+ * @tx_vdev: Transmit VDEV
+ *
+ * This function assigns Tx VDEV's AID mgr to non-Tx VDEV
+ *
+ * Return: SUCCESS if assigned successfully
+ */
+QDF_STATUS wlan_mlo_vdev_init_mbss_aid_mgr(struct wlan_mlo_dev_context *ml_dev,
+					   struct wlan_objmgr_vdev *vdev,
+					   struct wlan_objmgr_vdev *tx_vdev);
+
+/**
+ * wlan_mlo_vdev_deinit_mbss_aid_mgr() - Resets aid mgr to a non-Tx VDEV
+ * @mldev: MLO DEV context
+ * @vdev: VDEV
+ * @tx_vdev: Transmit VDEV
+ *
+ * This function resets AID mgr of non-Tx VDEV
+ *
+ * Return: SUCCESS if reset successfully
+ */
+QDF_STATUS wlan_mlo_vdev_deinit_mbss_aid_mgr(struct wlan_mlo_dev_context *mldev,
+					     struct wlan_objmgr_vdev *vdev,
+					     struct wlan_objmgr_vdev *tx_vdev);
+
+/**
+ * wlan_mlme_vdev_init_mbss_aid_mgr() - Assigns tx vdev aid mgr to a VDEV
+ * @vdev: VDEV
+ * @tx_vdev: Transmit VDEV
+ *
+ * This function assigns Tx VDEV's AID mgr to non-Tx VDEV
+ *
+ * Return: SUCCESS if assigned successfully
+ */
+QDF_STATUS wlan_mlme_vdev_init_mbss_aid_mgr(struct wlan_objmgr_vdev *vdev,
+					    struct wlan_objmgr_vdev *tx_vdev);
+
+/**
+ * wlan_mlme_vdev_deinit_mbss_aid_mgr() - Resets aid mgr to a non-Tx VDEV
+ * @vdev: VDEV
+ * @tx_vdev: Transmit VDEV
+ *
+ * This function resets AID mgr of non-Tx VDEV
+ *
+ * Return: SUCCESS if reset successfully
+ */
+QDF_STATUS wlan_mlme_vdev_deinit_mbss_aid_mgr(struct wlan_objmgr_vdev *vdev,
+					      struct wlan_objmgr_vdev *tx_vdev);
+
 /**
  * wlan_vdev_aid_mgr_init() - VDEV AID mgr init
  * @max_aid: max AID

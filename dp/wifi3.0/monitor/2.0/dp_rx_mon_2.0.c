@@ -35,6 +35,131 @@
 #include "dp_lite_mon.h"
 #endif
 
+#define F_MASK 0xFFFF
+
+#ifdef QCA_TEST_MON_PF_TAGS_STATS
+
+/**
+ * dp_mon_rx_pf_update_stats() - update protocol flow tags stats
+ *
+ * @pdev: pdev
+ * @flow_idx: Protocol index for which the stats should be incremented
+ * @cce_metadata: Cached CCE metadata value received from MSDU_END TLV
+ *
+ * Return: void
+ */
+static void
+dp_rx_mon_pf_update_stats(struct dp_pdev *dp_pdev, uint32_t flow_idx,
+			  uint16_t cce_metadata)
+{
+	dp_mon_rx_update_rx_flow_tag_stats(pdev, flow_idx);
+	dp_mon_rx_update_rx_err_protocol_tag_stats(pdev, cce_metadata);
+	dp_mon_rx_update_rx_protocol_tag_stats(pdev, cce_metada,
+					       MAX_REO_DEST_RINGS);
+}
+
+#else
+static void
+dp_rx_mon_pf_update_stats(struct dp_pdev *dp_pdev, uint32_t flow_idx,
+			  uint16_t cce_metadata)
+{
+}
+#endif
+
+void
+dp_rx_mon_shift_pf_tag_in_headroom(qdf_nbuf_t nbuf, struct dp_soc *soc)
+{
+	if (qdf_unlikely(!soc)) {
+		dp_mon_err("Soc[%pK] Null. Can't update pftag to nbuf headroom",
+			   soc);
+		qdf_assert_always(0);
+	}
+
+	if (!wlan_cfg_is_rx_mon_protocol_flow_tag_enabled(soc->wlan_cfg_ctx))
+		return;
+
+	if (qdf_unlikely(!nbuf))
+		return;
+
+	if (qdf_unlikely(qdf_nbuf_headroom(nbuf) <
+			 (DP_RX_MON_TOT_PF_TAG_LEN * 2))) {
+		dp_mon_err("Headroom[%d] < 2 *DP_RX_MON_PF_TAG_TOT_LEN[%lu]",
+			   qdf_nbuf_headroom(nbuf), DP_RX_MON_TOT_PF_TAG_LEN);
+		return;
+	}
+
+	qdf_nbuf_push_head(nbuf, DP_RX_MON_TOT_PF_TAG_LEN);
+	qdf_mem_copy(qdf_nbuf_data(nbuf), qdf_nbuf_head(nbuf),
+		     DP_RX_MON_TOT_PF_TAG_LEN);
+	qdf_nbuf_pull_head(nbuf, DP_RX_MON_TOT_PF_TAG_LEN);
+}
+
+void
+dp_rx_mon_pf_tag_to_buf_headroom_2_0(void *nbuf,
+				     struct hal_rx_ppdu_info *ppdu_info,
+				     struct dp_pdev *pdev, struct dp_soc *soc)
+{
+	uint8_t *nbuf_head = NULL;
+	uint8_t user_id;
+	struct hal_rx_mon_msdu_info *msdu_info;
+	uint16_t flow_id;
+	uint16_t cce_metadata;
+	uint16_t protocol_tag;
+	uint32_t flow_tag;
+
+	if (qdf_unlikely(!soc)) {
+		dp_mon_err("Soc[%pK] Null. Can't update pftag to nbuf headroom",
+			   soc);
+		qdf_assert_always(0);
+	}
+
+	if (!wlan_cfg_is_rx_mon_protocol_flow_tag_enabled(soc->wlan_cfg_ctx))
+		return;
+
+	if (qdf_unlikely(!nbuf))
+		return;
+
+	/* Headroom must be double of PF_TAG_SIZE as we copy it 1stly to head */
+	if (qdf_unlikely(qdf_nbuf_headroom(nbuf) <
+			 (DP_RX_MON_TOT_PF_TAG_LEN * 2))) {
+		dp_mon_err("Headroom[%d] < 2 * DP_RX_MON_PF_TAG_TOT_LEN[%lu]",
+			   qdf_nbuf_headroom(nbuf), DP_RX_MON_TOT_PF_TAG_LEN);
+		return;
+	}
+
+	user_id = ppdu_info->user_id;
+	if (qdf_unlikely(user_id > HAL_MAX_UL_MU_USERS)) {
+		dp_mon_debug("Invalid user_id user_id: %d pdev: %pK", user_id, pdev);
+		return;
+	}
+
+	msdu_info = &ppdu_info->msdu[user_id];
+	flow_id = ppdu_info->rx_msdu_info[user_id].flow_idx;
+	cce_metadata = ppdu_info->rx_msdu_info[user_id].cce_metadata -
+		       RX_PROTOCOL_TAG_START_OFFSET;
+
+	if (qdf_unlikely(cce_metadata > RX_PROTOCOL_TAG_MAX - 1)) {
+		dp_mon_debug("Invalid user_id cce_metadata: %d pdev: %pK", cce_metadata, pdev);
+		return;
+	}
+
+	protocol_tag = pdev->rx_proto_tag_map[cce_metadata].tag;
+	flow_tag = ppdu_info->rx_msdu_info[user_id].fse_metadata & F_MASK;
+
+	if (msdu_info->msdu_index >= QDF_NBUF_MAX_FRAGS) {
+		dp_mon_err("msdu_index causes overflow in headroom");
+		return;
+	}
+
+	dp_rx_mon_pf_update_stats(pdev, flow_id, cce_metadata);
+
+	nbuf_head = qdf_nbuf_head(nbuf);
+	nbuf_head += (msdu_info->msdu_index * DP_RX_MON_PF_TAG_SIZE);
+	*((uint16_t *)nbuf_head) = protocol_tag;
+	nbuf_head += sizeof(uint16_t);
+	*((uint16_t *)nbuf_head) = flow_tag;
+}
+
 /**
  * dp_rx_mon_free_ppdu_info () - Free PPDU info
  * @pdev: DP pdev
@@ -162,6 +287,11 @@ dp_rx_mon_process_ppdu_info(struct dp_pdev *pdev,
 				}
 			} else {
 				if (mpdu_meta->full_pkt) {
+					if (qdf_unlikely(mpdu_meta->truncated)) {
+						qdf_nbuf_free(mpdu);
+						continue;
+					}
+
 					dp_rx_mon_handle_full_mon(pdev,
 								  ppdu_info, mpdu);
 				} else {
@@ -177,6 +307,9 @@ dp_rx_mon_process_ppdu_info(struct dp_pdev *pdev,
 					dp_mon_err("failed to update radiotap pdev: %pK",
 						   pdev);
 				}
+
+				dp_rx_mon_shift_pf_tag_in_headroom(mpdu,
+								   pdev->soc);
 
 				/* Deliver MPDU to osif layer */
 				status = dp_rx_mon_deliver_mpdu(mon_pdev,
@@ -290,7 +423,7 @@ dp_rx_mon_handle_full_mon(struct dp_pdev *pdev,
 	struct ieee80211_qoscntl *qos;
 	void *hdr_frag_addr;
 	uint32_t hdr_frag_size, frag_page_offset, pad_byte_pholder,
-		 total_msdu_len, msdu_len;
+		 msdu_len;
 	qdf_nbuf_t head_msdu, msdu_cur;
 	void *frag_addr;
 	bool prev_msdu_end_received = false;
@@ -370,7 +503,7 @@ dp_rx_mon_handle_full_mon(struct dp_pdev *pdev,
 	decap_hdr_pull_bytes = DP_RX_MON_DECAP_HDR_SIZE;
 
 	amsdu_pad = 0;
-	total_msdu_len = 0;
+	tot_msdu_len = 0;
 	tot_msdu_len = 0;
 
 	/*
@@ -387,7 +520,7 @@ dp_rx_mon_handle_full_mon(struct dp_pdev *pdev,
 	/* Adjust page frag offset to point to 802.11 header */
 	qdf_nbuf_trim_add_frag_size(head_msdu, 0, -(hdr_frag_size - mpdu_buf_len), 0);
 
-	msdu_meta = (struct hal_rx_mon_msdu_info *)(qdf_nbuf_get_frag_addr(mpdu, 1) - DP_RX_MON_PACKET_OFFSET + 2);
+	msdu_meta = (struct hal_rx_mon_msdu_info *)(qdf_nbuf_get_frag_addr(mpdu, 1) - DP_RX_MON_PACKET_OFFSET + DP_RX_MON_NONRAW_L2_HDR_PAD_BYTE);
 
 	msdu_len = msdu_meta->msdu_len;
 
@@ -398,7 +531,7 @@ dp_rx_mon_handle_full_mon(struct dp_pdev *pdev,
 
 	frag_size = qdf_nbuf_get_frag_size_by_idx(head_msdu, 1);
 	pad_byte_pholder =
-		RX_MONITOR_BUFFER_SIZE - frag_size;
+		RX_MONITOR_BUFFER_SIZE - (frag_size + DP_RX_MON_PACKET_OFFSET + DP_RX_MON_NONRAW_L2_HDR_PAD_BYTE);
 
 	if (msdu_meta->first_buffer && msdu_meta->last_buffer) {
 		/* MSDU with single bufffer */
@@ -417,10 +550,11 @@ dp_rx_mon_handle_full_mon(struct dp_pdev *pdev,
 			amsdu_pad = 0;
 		}
 	} else {
-		total_msdu_len = msdu_len;
+		tot_msdu_len = frag_size;
 		amsdu_pad = 0;
 	}
 
+	pad_byte_pholder = 0;
 	for (msdu_cur = mpdu; msdu_cur;) {
 		/* frag_iter will start from 0 for second skb onwards */
 		if (msdu_cur == mpdu)
@@ -457,11 +591,14 @@ dp_rx_mon_handle_full_mon(struct dp_pdev *pdev,
 				hdr_frag_size = qdf_nbuf_get_frag_size_by_idx(msdu_cur, frag_iter);
 				/* Adjust page frag offset to point to llc/snap header */
 				qdf_nbuf_trim_add_frag_size(msdu_cur, frag_iter, -(hdr_frag_size - msdu_llc_len), 0);
+				prev_msdu_end_received = false;
 				continue;
 			}
 
 			frag_addr =
-				qdf_nbuf_get_frag_addr(msdu_cur, frag_iter) - 8;
+				qdf_nbuf_get_frag_addr(msdu_cur, frag_iter) -
+						       (DP_RX_MON_PACKET_OFFSET +
+						       DP_RX_MON_NONRAW_L2_HDR_PAD_BYTE);
 			msdu_meta = (struct hal_rx_mon_msdu_info *)frag_addr;
 
 			/*
@@ -486,7 +623,8 @@ dp_rx_mon_handle_full_mon(struct dp_pdev *pdev,
 			 * to accommodate amsdu pad byte
 			 */
 			pad_byte_pholder =
-				RX_MONITOR_BUFFER_SIZE - frag_size;
+				RX_MONITOR_BUFFER_SIZE - (frag_size + (DP_RX_MON_PACKET_OFFSET +
+							  DP_RX_MON_NONRAW_L2_HDR_PAD_BYTE));
 			/*
 			 * We will come here only only three condition:
 			 * 1. Msdu with single Buffer
@@ -511,13 +649,17 @@ dp_rx_mon_handle_full_mon(struct dp_pdev *pdev,
 
 			if (msdu_meta->first_buffer) {
 				/* Adjust page frag offset to point to 802.11 header */
-				hdr_frag_size = qdf_nbuf_get_frag_size_by_idx(msdu_cur, frag_iter - 1);
-				qdf_nbuf_trim_add_frag_size(msdu_cur, frag_iter - 1, -(hdr_frag_size - msdu_llc_len), 0);
+				hdr_frag_size = qdf_nbuf_get_frag_size_by_idx(msdu_cur, frag_iter-1);
+				qdf_nbuf_trim_add_frag_size(msdu_cur, frag_iter - 1, -(hdr_frag_size - (msdu_llc_len + amsdu_pad)), 0);
 
 				/* Adjust page frag offset to appropriate after decap header */
 				frag_page_offset =
-					(decap_hdr_pull_bytes);
-				qdf_nbuf_move_frag_page_offset(msdu_cur, frag_iter, frag_page_offset);
+					(decap_hdr_pull_bytes + l2_hdr_offset);
+				if (frag_size > (decap_hdr_pull_bytes + l2_hdr_offset)) {
+					qdf_nbuf_move_frag_page_offset(msdu_cur, frag_iter, frag_page_offset);
+					frag_size = frag_size - (l2_hdr_offset + decap_hdr_pull_bytes);
+				}
+
 
 				/*
 				 * Calculate new page offset and create hole
@@ -576,7 +718,6 @@ dp_rx_mon_handle_full_mon(struct dp_pdev *pdev,
 		}
 	}
 }
-
 
 /**
  * dp_rx_mon_flush_status_buf_queue () - Flush status buffer queue
@@ -866,6 +1007,9 @@ uint8_t dp_rx_mon_process_tlv_status(struct dp_pdev *pdev,
 
 			buf_info->frag_len = packet_info->dma_length;
 		}
+
+		if (qdf_unlikely(packet_info->truncated))
+			mpdu_info->truncated = true;
 	}
 	break;
 	case HAL_TLV_STATUS_MSDU_END:
@@ -897,6 +1041,8 @@ uint8_t dp_rx_mon_process_tlv_status(struct dp_pdev *pdev,
 		last_buf_info->reception_type = msdu_info->reception_type;
 		last_buf_info->msdu_len = msdu_info->msdu_len;
 
+		dp_rx_mon_pf_tag_to_buf_headroom_2_0(nbuf, ppdu_info, pdev,
+						     soc);
 		/* reset msdu info for next msdu for same user */
 		qdf_mem_zero(msdu_info, sizeof(msdu_info));
 
@@ -1053,8 +1199,57 @@ dp_rx_mon_process_status_tlv(struct dp_pdev *pdev)
 					 &desc_list, &tail);
 	}
 
+	ppdu_info->rx_status.tsft = ppdu_info->rx_status.tsft +
+				    pdev->timestamp.mlo_offset_lo_us +
+				    ((uint64_t)pdev->timestamp.mlo_offset_hi_us
+				    << 32);
+
 	return ppdu_info;
 }
+
+/**
+ * dp_rx_mon_update_peer_id() - Update sw_peer_id with link peer_id
+ *
+ * @pdev: DP pdev handle
+ * @ppdu_info: HAL PPDU Info buffer
+ *
+ * Return: none
+ */
+#ifdef WLAN_FEATURE_11BE_MLO
+#define DP_PEER_ID_MASK 0x3FFF
+static inline
+void dp_rx_mon_update_peer_id(struct dp_pdev *pdev,
+			      struct hal_rx_ppdu_info *ppdu_info)
+{
+	uint32_t i;
+	uint16_t peer_id;
+	struct dp_soc *soc = pdev->soc;
+	uint32_t num_users = ppdu_info->com_info.num_users;
+
+	for (i = 0; i < num_users; i++) {
+		peer_id = ppdu_info->rx_user_status[i].sw_peer_id;
+		if (peer_id == HTT_INVALID_PEER)
+			continue;
+		/*
+		+---------------------------------------------------------------------+
+		| 15 | 14 | 13 | 12 | 11 | 10 | 9 | 8 | 7 | 6 | 5 | 4 | 3 | 2 | 1 | 0 |
+		+---------------------------------------------------------------------+
+		| CHIP ID | ML |                     PEER ID                          |
+		+---------------------------------------------------------------------+
+		*/
+		peer_id &= DP_PEER_ID_MASK;
+		peer_id = dp_get_link_peer_id_by_lmac_id(soc, peer_id,
+							 pdev->lmac_id);
+		ppdu_info->rx_user_status[i].sw_peer_id = peer_id;
+	}
+}
+#else
+static inline
+void dp_rx_mon_update_peer_id(struct dp_pdev *pdev,
+			      struct hal_rx_ppdu_info *ppdu_info)
+{
+}
+#endif
 
 static inline uint32_t
 dp_rx_mon_srng_process_2_0(struct dp_soc *soc, struct dp_intr *int_ctx,
@@ -1173,9 +1368,14 @@ dp_rx_mon_srng_process_2_0(struct dp_soc *soc, struct dp_intr *int_ctx,
 
 		ppdu_info = dp_rx_mon_process_status_tlv(pdev);
 
+		if (ppdu_info)
+			dp_rx_mon_update_peer_id(pdev, ppdu_info);
+
 		/* Call enhanced stats update API */
 		if (mon_pdev->enhanced_stats_en && ppdu_info)
 			dp_rx_handle_ppdu_stats(soc, pdev, ppdu_info);
+		else if (dp_cfr_rcc_mode_status(pdev) && ppdu_info)
+			dp_rx_handle_cfr(soc, pdev, ppdu_info);
 
 		/* Call API to add PPDU info workqueue */
 		status = dp_rx_mon_add_ppdu_info_to_wq(mon_pdev, ppdu_info);

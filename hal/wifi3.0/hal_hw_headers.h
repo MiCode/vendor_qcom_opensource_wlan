@@ -381,6 +381,22 @@ uint32_t hal_get_reo_qdesc_size(hal_soc_handle_t hal_soc_hdl,
 }
 
 /**
+ * hal_get_rx_max_ba_window - Get RX max BA window size per target
+ * @hal_soc: Opaque HAL SOC handle
+ * @tid: TID number
+ *
+ * Return: Max RX BA window size
+ */
+static inline
+uint16_t hal_get_rx_max_ba_window(hal_soc_handle_t hal_soc_hdl,
+				  int tid)
+{
+	struct hal_soc *hal_soc = (struct hal_soc *)hal_soc_hdl;
+
+	return hal_soc->ops->hal_get_rx_max_ba_window(tid);
+}
+
+/**
  * hal_get_idle_link_bm_id() - Get idle link BM id from chid_id
  * @chip_id: mlo chip_id
  *

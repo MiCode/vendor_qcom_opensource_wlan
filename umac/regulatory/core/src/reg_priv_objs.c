@@ -125,6 +125,7 @@ QDF_STATUS wlan_regulatory_psoc_obj_created_notification(
 	reg_set_5dot9_ghz_chan_in_master_mode(soc_reg_obj);
 	soc_reg_obj->retain_nol_across_regdmn_update = false;
 	soc_reg_obj->is_ext_tpc_supported = false;
+	soc_reg_obj->sta_sap_scc_on_indoor_channel = true;
 
 	for (i = 0; i < MAX_STA_VDEV_CNT; i++)
 		soc_reg_obj->vdev_ids_11d[i] = INVALID_VDEV_ID;
@@ -239,7 +240,7 @@ reg_init_def_client_type(struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj)
 static void
 reg_init_6g_vars(struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj)
 {
-	pdev_priv_obj->reg_cur_6g_ap_pwr_type = REG_INDOOR_AP;
+	reg_set_ap_pwr_type(pdev_priv_obj);
 	pdev_priv_obj->reg_rnr_tpe_usable = false;
 	pdev_priv_obj->reg_unspecified_ap_usable = false;
 	reg_init_def_client_type(pdev_priv_obj);
@@ -357,6 +358,8 @@ QDF_STATUS wlan_regulatory_pdev_obj_created_notification(
 	reg_cap_ptr = psoc_priv_obj->reg_cap;
 	pdev_priv_obj->force_ssc_disable_indoor_channel =
 		psoc_priv_obj->force_ssc_disable_indoor_channel;
+	pdev_priv_obj->sta_sap_scc_on_indoor_channel =
+		psoc_priv_obj->sta_sap_scc_on_indoor_channel;
 
 	for (cnt = 0; cnt < PSOC_MAX_PHY_REG_CAP; cnt++) {
 		if (!reg_cap_ptr) {

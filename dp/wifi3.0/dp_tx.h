@@ -918,6 +918,22 @@ dp_tx_hw_desc_update_evt(uint8_t *hal_tx_desc_cached,
 
 #if defined(WLAN_FEATURE_TSF_UPLINK_DELAY) || defined(CONFIG_SAWF)
 /**
+ * dp_tx_compute_hw_delay_us() - Compute hardware Tx completion delay
+ * @ts: Tx completion status
+ * @delta_tsf: Difference between TSF clock and qtimer
+ * @delay_us: Delay in microseconds
+ *
+ * Return: QDF_STATUS_SUCCESS   : Success
+ *         QDF_STATUS_E_INVAL   : Tx completion status is invalid or
+ *                                delay_us is NULL
+ *         QDF_STATUS_E_FAILURE : Error in delay calculation
+ */
+QDF_STATUS
+dp_tx_compute_hw_delay_us(struct hal_tx_completion_status *ts,
+			  uint32_t delta_tsf,
+			  uint32_t *delay_us);
+
+/**
  * dp_set_delta_tsf() - Set delta_tsf to dp_soc structure
  * @soc_hdl: cdp soc pointer
  * @vdev_id: vdev id
@@ -975,7 +991,7 @@ bool dp_tx_pkt_tracepoints_enabled(void)
 static inline
 void dp_tx_desc_set_timestamp(struct dp_tx_desc_s *tx_desc)
 {
-	tx_desc->timestamp = qdf_system_ticks();
+	tx_desc->timestamp_tick = qdf_system_ticks();
 }
 
 /**
@@ -1024,7 +1040,7 @@ bool dp_tx_desc_set_ktimestamp(struct dp_vdev *vdev,
 	    qdf_unlikely(dp_tx_pkt_tracepoints_enabled()) ||
 	    qdf_unlikely(vdev->pdev->soc->peerstats_enabled) ||
 	    qdf_unlikely(dp_is_vdev_tx_delay_stats_enabled(vdev))) {
-		tx_desc->timestamp = qdf_ktime_to_ms(qdf_ktime_real_get());
+		tx_desc->timestamp = qdf_ktime_real_get();
 		return true;
 	}
 	return false;
@@ -1038,7 +1054,7 @@ bool dp_tx_desc_set_ktimestamp(struct dp_vdev *vdev,
 	    qdf_unlikely(vdev->pdev->soc->wlan_cfg_ctx->pext_stats_enabled) ||
 	    qdf_unlikely(dp_tx_pkt_tracepoints_enabled()) ||
 	    qdf_unlikely(vdev->pdev->soc->peerstats_enabled)) {
-		tx_desc->timestamp = qdf_ktime_to_ms(qdf_ktime_real_get());
+		tx_desc->timestamp = qdf_ktime_real_get();
 		return true;
 	}
 	return false;

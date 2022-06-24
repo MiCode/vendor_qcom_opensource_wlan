@@ -249,6 +249,17 @@ static inline struct wlan_mlo_dev_context
 	return NULL;
 }
 
+bool wlan_mlo_is_mld_ctx_exist(struct qdf_mac_addr *mldaddr)
+{
+	struct wlan_mlo_dev_context *mld_ctx = NULL;
+
+	mld_ctx = wlan_mlo_get_mld_ctx_by_mldaddr(mldaddr);
+	if (mld_ctx)
+		return true;
+
+	return false;
+}
+
 static QDF_STATUS mlo_ap_ctx_deinit(struct wlan_mlo_dev_context *ml_dev)
 {
 	wlan_mlo_vdev_aid_mgr_deinit(ml_dev);

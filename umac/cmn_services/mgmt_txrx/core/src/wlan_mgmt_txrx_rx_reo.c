@@ -697,7 +697,7 @@ mgmt_rx_reo_snapshots_check_sanity
 		if (!mgmt_rx_reo_compare_global_timestamps_gte
 					(mac_hw_ss->global_timestamp,
 					 fw_forwarded_ss->global_timestamp)) {
-			mgmt_rx_reo_err("MAC HW SS < FW forwarded SS");
+			mgmt_rx_reo_err("TS: MAC HW SS < FW forwarded SS");
 			status = QDF_STATUS_E_INVAL;
 			goto fail;
 		}
@@ -705,7 +705,7 @@ mgmt_rx_reo_snapshots_check_sanity
 		if (!mgmt_rx_reo_compare_pkt_ctrs_gte
 					(mac_hw_ss->mgmt_pkt_ctr,
 					 fw_forwarded_ss->mgmt_pkt_ctr)) {
-			mgmt_rx_reo_err("MAC HW SS < FW forwarded SS");
+			mgmt_rx_reo_err("PKT CTR: MAC HW SS < FW forwarded SS");
 			status = QDF_STATUS_E_INVAL;
 			goto fail;
 		}
@@ -715,7 +715,7 @@ mgmt_rx_reo_snapshots_check_sanity
 		if (!mgmt_rx_reo_compare_global_timestamps_gte
 					(mac_hw_ss->global_timestamp,
 					 fw_consumed_ss->global_timestamp)) {
-			mgmt_rx_reo_err("MAC HW SS < FW consumed SS");
+			mgmt_rx_reo_err("TS: MAC HW SS < FW consumed SS");
 			status = QDF_STATUS_E_INVAL;
 			goto fail;
 		}
@@ -723,7 +723,7 @@ mgmt_rx_reo_snapshots_check_sanity
 		if (!mgmt_rx_reo_compare_pkt_ctrs_gte
 					(mac_hw_ss->mgmt_pkt_ctr,
 					 fw_consumed_ss->mgmt_pkt_ctr)) {
-			mgmt_rx_reo_err("MAC HW SS < FW consumed SS");
+			mgmt_rx_reo_err("PKT CTR: MAC HW SS < FW consumed SS");
 			status = QDF_STATUS_E_INVAL;
 			goto fail;
 		}
@@ -733,7 +733,7 @@ mgmt_rx_reo_snapshots_check_sanity
 		if (!mgmt_rx_reo_compare_global_timestamps_gte
 					(mac_hw_ss->global_timestamp,
 					 host_ss->global_timestamp)) {
-			mgmt_rx_reo_err("MAC HW SS < host SS");
+			mgmt_rx_reo_err("TS: MAC HW SS < host SS");
 			status = QDF_STATUS_E_INVAL;
 			goto fail;
 		}
@@ -741,7 +741,7 @@ mgmt_rx_reo_snapshots_check_sanity
 		if (!mgmt_rx_reo_compare_pkt_ctrs_gte
 					(mac_hw_ss->mgmt_pkt_ctr,
 					 host_ss->mgmt_pkt_ctr)) {
-			mgmt_rx_reo_err("MAC HW SS < host SS");
+			mgmt_rx_reo_err("PKT CTR: MAC HW SS < host SS");
 			status = QDF_STATUS_E_INVAL;
 			goto fail;
 		}
@@ -750,7 +750,7 @@ mgmt_rx_reo_snapshots_check_sanity
 			if (!mgmt_rx_reo_compare_global_timestamps_gte
 					(fw_forwarded_ss->global_timestamp,
 					 host_ss->global_timestamp)) {
-				mgmt_rx_reo_err("FW forwarded < host SS");
+				mgmt_rx_reo_err("TS: FW forwarded < host SS");
 				status = QDF_STATUS_E_INVAL;
 				goto fail;
 			}
@@ -758,7 +758,7 @@ mgmt_rx_reo_snapshots_check_sanity
 			if (!mgmt_rx_reo_compare_pkt_ctrs_gte
 					(fw_forwarded_ss->mgmt_pkt_ctr,
 					 host_ss->mgmt_pkt_ctr)) {
-				mgmt_rx_reo_err("FW forwarded < host SS");
+				mgmt_rx_reo_err("CTR: FW forwarded < host SS");
 				status = QDF_STATUS_E_INVAL;
 				goto fail;
 			}
@@ -768,7 +768,7 @@ mgmt_rx_reo_snapshots_check_sanity
 			if (!mgmt_rx_reo_compare_global_timestamps_gte
 					(fw_consumed_ss->global_timestamp,
 					 host_ss->global_timestamp)) {
-				mgmt_rx_reo_err("FW consumed < host SS");
+				mgmt_rx_reo_err("TS: FW consumed < host SS");
 				status = QDF_STATUS_E_INVAL;
 				goto fail;
 			}
@@ -776,7 +776,7 @@ mgmt_rx_reo_snapshots_check_sanity
 			if (!mgmt_rx_reo_compare_pkt_ctrs_gte
 					(fw_consumed_ss->mgmt_pkt_ctr,
 					 host_ss->mgmt_pkt_ctr)) {
-				mgmt_rx_reo_err("FW consumed < host SS");
+				mgmt_rx_reo_err("CTR: FW consumed < host SS");
 				status = QDF_STATUS_E_INVAL;
 				goto fail;
 			}
@@ -789,7 +789,7 @@ mgmt_rx_reo_snapshots_check_sanity
 			    !mgmt_rx_reo_compare_global_timestamps_gte
 					(fw_forwarded_ss->global_timestamp,
 					 host_ss->global_timestamp)) {
-				mgmt_rx_reo_err("FW consumed/forwarded < host");
+				mgmt_rx_reo_err("TS: FW consumed/forwarded < host");
 				status = QDF_STATUS_E_INVAL;
 				goto fail;
 			}
@@ -800,7 +800,7 @@ mgmt_rx_reo_snapshots_check_sanity
 			    !mgmt_rx_reo_compare_pkt_ctrs_gte
 					(fw_forwarded_ss->mgmt_pkt_ctr,
 					 host_ss->mgmt_pkt_ctr)) {
-				mgmt_rx_reo_err("FW consumed/forwarded < host");
+				mgmt_rx_reo_err("CTR: FW consumed/forwarded < host");
 				status = QDF_STATUS_E_INVAL;
 				goto fail;
 			}
@@ -1276,7 +1276,7 @@ mgmt_rx_reo_list_display(struct mgmt_rx_reo_list *reo_list)
 
 #ifdef WLAN_MGMT_RX_REO_DEBUG_SUPPORT
 /**
- * mgmt_rx_reo_print_egress_frame_stats() - API to print the stats
+ * mgmt_rx_reo_debug_print_egress_frame_stats() - API to print the stats
  * related to frames going out of the reorder module
  * @reo_ctx: Pointer to reorder context
  *
@@ -1286,7 +1286,7 @@ mgmt_rx_reo_list_display(struct mgmt_rx_reo_list *reo_list)
  * Return: QDF_STATUS
  */
 static QDF_STATUS
-mgmt_rx_reo_print_egress_frame_stats(struct mgmt_rx_reo_context *reo_ctx)
+mgmt_rx_reo_debug_print_egress_frame_stats(struct mgmt_rx_reo_context *reo_ctx)
 {
 	struct reo_egress_frame_stats *stats;
 	uint8_t link_id;
@@ -1499,8 +1499,8 @@ mgmt_rx_reo_log_egress_frame_after_delivery(
 }
 
 /**
- * mgmt_rx_reo_print_egress_frame_info() - Print the debug information about the
- * latest frames leaving the reorder module
+ * mgmt_rx_reo_debug_print_egress_frame_info() - Print the debug information
+ * about the latest frames leaving the reorder module
  * @reo_ctx: management rx reorder context
  * @num_frames: Number of frames for which the debug information is to be
  * printed. If @num_frames is 0, then debug information about all the frames
@@ -1509,8 +1509,8 @@ mgmt_rx_reo_log_egress_frame_after_delivery(
  * Return: QDF_STATUS of operation
  */
 static QDF_STATUS
-mgmt_rx_reo_print_egress_frame_info(struct mgmt_rx_reo_context *reo_ctx,
-				    uint16_t num_frames)
+mgmt_rx_reo_debug_print_egress_frame_info(struct mgmt_rx_reo_context *reo_ctx,
+					  uint16_t num_frames)
 {
 	struct reo_egress_debug_info *egress_frame_debug_info;
 	int start_index;
@@ -1560,13 +1560,7 @@ mgmt_rx_reo_print_egress_frame_info(struct mgmt_rx_reo_context *reo_ctx,
 	if (!num_entries_to_print)
 		return QDF_STATUS_SUCCESS;
 
-	boarder = qdf_mem_malloc
-		(MGMT_RX_REO_EGRESS_FRAME_DEBUG_INFO_BOARDER_MAX_SIZE + 1);
-	if (!boarder)
-		return QDF_STATUS_E_NOMEM;
-
-	qdf_mem_set(boarder,
-		    MGMT_RX_REO_EGRESS_FRAME_DEBUG_INFO_BOARDER_MAX_SIZE, '-');
+	boarder = egress_frame_debug_info->boarder;
 
 	mgmt_rx_reo_alert_no_fl("%s", boarder);
 	mgmt_rx_reo_alert_no_fl("|%3s|%5s|%4s|%5s|%10s|%11s|%11s|%11s|%11s|%5s|%7s|%5s|%4s|%69s|%69s|%94s|%94s|%94s|%94s|%94s|%94s|",
@@ -1683,7 +1677,7 @@ mgmt_rx_reo_print_egress_frame_info(struct mgmt_rx_reo_context *reo_ctx,
 }
 #else
 /**
- * mgmt_rx_reo_print_egress_frame_stats() - API to print the stats
+ * mgmt_rx_reo_debug_print_egress_frame_stats() - API to print the stats
  * related to frames going out of the reorder module
  * @reo_ctx: Pointer to reorder context
  *
@@ -1693,7 +1687,7 @@ mgmt_rx_reo_print_egress_frame_info(struct mgmt_rx_reo_context *reo_ctx,
  * Return: QDF_STATUS
  */
 static QDF_STATUS
-mgmt_rx_reo_print_egress_frame_stats(struct mgmt_rx_reo_context *reo_ctx)
+mgmt_rx_reo_debug_print_egress_frame_stats(struct mgmt_rx_reo_context *reo_ctx)
 {
 	return QDF_STATUS_SUCCESS;
 }
@@ -1734,14 +1728,14 @@ mgmt_rx_reo_log_egress_frame_after_delivery(
 }
 
 /**
- * mgmt_rx_reo_print_egress_frame_info() - Print debug information about the
- * latest frames leaving the reorder module
+ * mgmt_rx_reo_debug_print_egress_frame_info() - Print debug information about
+ * the latest frames leaving the reorder module
  * @reo_ctx: management rx reorder context
  *
  * Return: QDF_STATUS of operation
  */
 static QDF_STATUS
-mgmt_rx_reo_print_egress_frame_info(struct mgmt_rx_reo_context *reo_ctx)
+mgmt_rx_reo_debug_print_egress_frame_info(struct mgmt_rx_reo_context *reo_ctx)
 {
 	return QDF_STATUS_SUCCESS;
 }
@@ -2362,8 +2356,24 @@ mgmt_rx_reo_update_list(struct mgmt_rx_reo_list *reo_list,
 				mgmt_rx_reo_get_link_id(frame_desc->rx_params);
 			wait_count = &cur_entry->wait_count;
 			if (wait_count->per_link_count[frame_link_id]) {
-				wait_count->per_link_count[frame_link_id]--;
-				wait_count->total_count--;
+				uint32_t old_wait_count;
+				uint32_t new_wait_count;
+				uint32_t wait_count_diff;
+				uint16_t pkt_ctr_delta;
+
+				pkt_ctr_delta = frame_desc->pkt_ctr_delta;
+				old_wait_count =
+				      wait_count->per_link_count[frame_link_id];
+				new_wait_count =
+				     qdf_min(old_wait_count - pkt_ctr_delta,
+					     (uint32_t)0);
+				wait_count_diff = old_wait_count -
+						  new_wait_count;
+
+				wait_count->per_link_count[frame_link_id] =
+								new_wait_count;
+				wait_count->total_count -= wait_count_diff;
+
 				if (wait_count->total_count == 0)
 					cur_entry->status &=
 						~MGMT_RX_REO_STATUS_WAIT_FOR_FRAME_ON_OTHER_LINKS;
@@ -2438,19 +2448,34 @@ mgmt_rx_reo_list_init(struct mgmt_rx_reo_list *reo_list)
  * wlan_mgmt_rx_reo_update_host_snapshot() - Update Host snapshot with the MGMT
  * Rx REO parameters.
  * @pdev: pdev extracted from the WMI event
- * @reo_params: MGMT Rx REO parameters received in the WMI event
+ * @desc: pointer to frame descriptor
  *
  * Return: QDF_STATUS of operation
  */
 static QDF_STATUS
 wlan_mgmt_rx_reo_update_host_snapshot(struct wlan_objmgr_pdev *pdev,
-				      struct mgmt_rx_reo_params *reo_params)
+				      struct mgmt_rx_reo_frame_descriptor *desc)
 {
 	struct mgmt_rx_reo_pdev_info *rx_reo_pdev_ctx;
 	struct mgmt_rx_reo_snapshot_params *host_ss;
+	struct mgmt_rx_reo_params *reo_params;
+	int pkt_ctr_delta;
+	struct wlan_objmgr_psoc *psoc;
+	uint16_t pkt_ctr_delta_thresh;
 
+	if (!desc) {
+		mgmt_rx_reo_err("Mgmt Rx REO frame descriptor null");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	if (!desc->rx_params) {
+		mgmt_rx_reo_err("Mgmt Rx params null");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	reo_params = desc->rx_params->reo_params;
 	if (!reo_params) {
-		mgmt_rx_reo_err("Mgmt Rx REO params are NULL");
+		mgmt_rx_reo_err("Mgmt Rx REO params NULL");
 		return QDF_STATUS_E_NULL_VALUE;
 	}
 
@@ -2460,6 +2485,8 @@ wlan_mgmt_rx_reo_update_host_snapshot(struct wlan_objmgr_pdev *pdev,
 		return QDF_STATUS_E_FAILURE;
 	}
 
+	psoc = wlan_pdev_get_psoc(pdev);
+
 	/* FW should send valid REO parameters */
 	if (!reo_params->valid) {
 		mgmt_rx_reo_err("Mgmt Rx REO params is invalid");
@@ -2468,28 +2495,70 @@ wlan_mgmt_rx_reo_update_host_snapshot(struct wlan_objmgr_pdev *pdev,
 
 	host_ss = &rx_reo_pdev_ctx->host_snapshot;
 
+	if (!host_ss->valid) {
+		desc->pkt_ctr_delta = 1;
+		goto update_host_ss;
+	}
+
+	if (mgmt_rx_reo_compare_pkt_ctrs_gte(host_ss->mgmt_pkt_ctr,
+					     reo_params->mgmt_pkt_ctr)) {
+		mgmt_rx_reo_err("Cur frame ctr > last frame ctr for link = %u",
+				reo_params->link_id);
+		goto failure_debug;
+	}
+
+	pkt_ctr_delta = mgmt_rx_reo_subtract_pkt_ctrs(reo_params->mgmt_pkt_ctr,
+						      host_ss->mgmt_pkt_ctr);
+	qdf_assert_always(pkt_ctr_delta > 0);
+	desc->pkt_ctr_delta = pkt_ctr_delta;
+
+	if (pkt_ctr_delta == 1)
+		goto update_host_ss;
+
 	/*
 	 * Under back pressure scenarios, FW may drop management Rx frame
 	 * WMI events. So holes in the management packet counter is expected.
-	 * Add a debug print to track the holes.
+	 * Add a debug print and optional assert to track the holes.
 	 */
-	if (!(mgmt_rx_reo_subtract_pkt_ctrs(reo_params->mgmt_pkt_ctr,
-					    host_ss->mgmt_pkt_ctr) == 1))
-		mgmt_rx_reo_debug("Pkt ctr gap: link=%u, prev=%u cur=%u ts =%u",
-				  reo_params->link_id, host_ss->mgmt_pkt_ctr,
-				  reo_params->mgmt_pkt_ctr,
-				  reo_params->global_timestamp);
+	mgmt_rx_reo_debug("pkt_ctr_delta = %u", pkt_ctr_delta);
+	mgmt_rx_reo_debug("Cur frame valid = %u, pkt_ctr = %u, ts =%u",
+			  reo_params->valid, reo_params->mgmt_pkt_ctr,
+			  reo_params->global_timestamp);
+	mgmt_rx_reo_debug("Last frame valid = %u, pkt_ctr = %u, ts =%u",
+			  host_ss->valid, host_ss->mgmt_pkt_ctr,
+			  host_ss->global_timestamp);
 
+	pkt_ctr_delta_thresh = wlan_mgmt_rx_reo_get_pkt_ctr_delta_thresh(psoc);
+
+	if (pkt_ctr_delta_thresh && pkt_ctr_delta > pkt_ctr_delta_thresh) {
+		mgmt_rx_reo_err("pkt ctr delta %u > thresh %u for link %u",
+				pkt_ctr_delta, pkt_ctr_delta_thresh,
+				reo_params->link_id);
+		goto failure_debug;
+	}
+
+update_host_ss:
 	host_ss->valid = true;
 	host_ss->global_timestamp = reo_params->global_timestamp;
 	host_ss->mgmt_pkt_ctr = reo_params->mgmt_pkt_ctr;
 
 	return QDF_STATUS_SUCCESS;
+
+failure_debug:
+	mgmt_rx_reo_err("Cur frame valid = %u, pkt_ctr = %u, ts =%u",
+			reo_params->valid, reo_params->mgmt_pkt_ctr,
+			reo_params->global_timestamp);
+	mgmt_rx_reo_err("Last frame vailid = %u, pkt_ctr = %u, ts =%u",
+			host_ss->valid, host_ss->mgmt_pkt_ctr,
+			host_ss->global_timestamp);
+	qdf_assert_always(0);
+
+	return QDF_STATUS_E_FAILURE;
 }
 
 #ifdef WLAN_MGMT_RX_REO_DEBUG_SUPPORT
 /**
- * mgmt_rx_reo_print_ingress_frame_stats() - API to print the stats
+ * mgmt_rx_reo_debug_print_ingress_frame_stats() - API to print the stats
  * related to frames going into the reorder module
  * @reo_ctx: Pointer to reorder context
  *
@@ -2499,7 +2568,7 @@ wlan_mgmt_rx_reo_update_host_snapshot(struct wlan_objmgr_pdev *pdev,
  * Return: QDF_STATUS
  */
 static QDF_STATUS
-mgmt_rx_reo_print_ingress_frame_stats(struct mgmt_rx_reo_context *reo_ctx)
+mgmt_rx_reo_debug_print_ingress_frame_stats(struct mgmt_rx_reo_context *reo_ctx)
 {
 	struct reo_ingress_frame_stats *stats;
 	uint8_t link_id;
@@ -2731,8 +2800,8 @@ mgmt_rx_reo_log_ingress_frame(struct mgmt_rx_reo_context *reo_ctx,
 }
 
 /**
- * mgmt_rx_reo_print_ingress_frame_info() - Print the debug information about
- * the latest frames entered the reorder module
+ * mgmt_rx_reo_debug_print_ingress_frame_info() - Print the debug information
+ * about the latest frames entered the reorder module
  * @reo_ctx: management rx reorder context
  * @num_frames: Number of frames for which the debug information is to be
  * printed. If @num_frames is 0, then debug information about all the frames
@@ -2741,8 +2810,8 @@ mgmt_rx_reo_log_ingress_frame(struct mgmt_rx_reo_context *reo_ctx,
  * Return: QDF_STATUS of operation
  */
 static QDF_STATUS
-mgmt_rx_reo_print_ingress_frame_info(struct mgmt_rx_reo_context *reo_ctx,
-				     uint16_t num_frames)
+mgmt_rx_reo_debug_print_ingress_frame_info(struct mgmt_rx_reo_context *reo_ctx,
+					   uint16_t num_frames)
 {
 	struct reo_ingress_debug_info *ingress_frame_debug_info;
 	int start_index;
@@ -2792,13 +2861,7 @@ mgmt_rx_reo_print_ingress_frame_info(struct mgmt_rx_reo_context *reo_ctx,
 	if (!num_entries_to_print)
 		return QDF_STATUS_SUCCESS;
 
-	boarder = qdf_mem_malloc
-		(MGMT_RX_REO_INGRESS_FRAME_DEBUG_INFO_BOARDER_MAX_SIZE + 1);
-	if (!boarder)
-		return QDF_STATUS_E_NOMEM;
-
-	qdf_mem_set(boarder,
-		    MGMT_RX_REO_INGRESS_FRAME_DEBUG_INFO_BOARDER_MAX_SIZE, '-');
+	boarder = ingress_frame_debug_info->boarder;
 
 	mgmt_rx_reo_alert_no_fl("%s", boarder);
 	mgmt_rx_reo_alert_no_fl("|%5s|%5s|%6s|%6s|%9s|%4s|%5s|%10s|%10s|%10s|%5s|%10s|%11s|%11s|%11s|%4s|%3s|%69s|%94s|%94s|%94s|%94s|%94s|%94s|",
@@ -2931,7 +2994,7 @@ mgmt_rx_reo_print_ingress_frame_info(struct mgmt_rx_reo_context *reo_ctx,
 }
 #else
 /**
- * mgmt_rx_reo_print_ingress_frame_stats() - API to print the stats
+ * mgmt_rx_reo_debug_print_ingress_frame_stats() - API to print the stats
  * related to frames going into the reorder module
  * @reo_ctx: Pointer to reorder context
  *
@@ -2941,7 +3004,7 @@ mgmt_rx_reo_print_ingress_frame_info(struct mgmt_rx_reo_context *reo_ctx,
  * Return: QDF_STATUS
  */
 static QDF_STATUS
-mgmt_rx_reo_print_ingress_frame_stats(struct mgmt_rx_reo_context *reo_ctx)
+mgmt_rx_reo_debug_print_ingress_frame_stats(struct mgmt_rx_reo_context *reo_ctx)
 {
 	return QDF_STATUS_SUCCESS;
 }
@@ -2965,14 +3028,14 @@ mgmt_rx_reo_log_ingress_frame(struct mgmt_rx_reo_context *reo_ctx,
 }
 
 /**
- * mgmt_rx_reo_print_ingress_frame_info() - Print debug information about
+ * mgmt_rx_reo_debug_print_ingress_frame_info() - Print debug information about
  * the latest frames entering the reorder module
  * @reo_ctx: management rx reorder context
  *
  * Return: QDF_STATUS of operation
  */
 static QDF_STATUS
-mgmt_rx_reo_print_ingress_frame_info(struct mgmt_rx_reo_context *reo_ctx)
+mgmt_rx_reo_debug_print_ingress_frame_info(struct mgmt_rx_reo_context *reo_ctx)
 {
 	return QDF_STATUS_SUCCESS;
 }
@@ -3099,9 +3162,7 @@ wlan_mgmt_rx_reo_algo_entry(struct wlan_objmgr_pdev *pdev,
 		qdf_assert_always(desc->rx_params->reo_params->duration_us);
 
 	/* Update the Host snapshot */
-	ret = wlan_mgmt_rx_reo_update_host_snapshot(
-						pdev,
-						desc->rx_params->reo_params);
+	ret = wlan_mgmt_rx_reo_update_host_snapshot(pdev, desc);
 	if (QDF_IS_STATUS_ERROR(ret))
 		goto failure;
 
@@ -4755,6 +4816,11 @@ mgmt_rx_reo_init_context(void)
 	qdf_timer_mod(&reo_context->reo_list.ageout_timer,
 		      MGMT_RX_REO_AGEOUT_TIMER_PERIOD_MS);
 
+	qdf_mem_set(reo_context->ingress_frame_debug_info.boarder,
+		    MGMT_RX_REO_INGRESS_FRAME_DEBUG_INFO_BOARDER_MAX_SIZE, '-');
+	qdf_mem_set(reo_context->egress_frame_debug_info.boarder,
+		    MGMT_RX_REO_EGRESS_FRAME_DEBUG_INFO_BOARDER_MAX_SIZE, '-');
+
 	return QDF_STATUS_SUCCESS;
 
 error_reo_list_deinit:
@@ -5016,7 +5082,7 @@ mgmt_rx_reo_is_simulation_in_progress(void)
 
 #ifdef WLAN_MGMT_RX_REO_DEBUG_SUPPORT
 QDF_STATUS
-mgmt_rx_reo_print_ingress_frame_debug_info(void)
+mgmt_rx_reo_print_ingress_frame_stats(void)
 {
 	struct mgmt_rx_reo_context *reo_context;
 	QDF_STATUS status;
@@ -5027,13 +5093,29 @@ mgmt_rx_reo_print_ingress_frame_debug_info(void)
 		return QDF_STATUS_E_NULL_VALUE;
 	}
 
-	status = mgmt_rx_reo_print_ingress_frame_stats(reo_context);
+	status = mgmt_rx_reo_debug_print_ingress_frame_stats(reo_context);
 	if (QDF_IS_STATUS_ERROR(status)) {
 		mgmt_rx_reo_err("Failed to print ingress frame stats");
 		return status;
 	}
 
-	status = mgmt_rx_reo_print_ingress_frame_info(reo_context, 0);
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS
+mgmt_rx_reo_print_ingress_frame_info(uint16_t num_frames)
+{
+	struct mgmt_rx_reo_context *reo_context;
+	QDF_STATUS status;
+
+	reo_context = mgmt_rx_reo_get_context();
+	if (!reo_context) {
+		mgmt_rx_reo_err("reo context is null");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	status = mgmt_rx_reo_debug_print_ingress_frame_info(reo_context,
+							    num_frames);
 	if (QDF_IS_STATUS_ERROR(status)) {
 		mgmt_rx_reo_err("Failed to print ingress frame info");
 		return status;
@@ -5043,7 +5125,7 @@ mgmt_rx_reo_print_ingress_frame_debug_info(void)
 }
 
 QDF_STATUS
-mgmt_rx_reo_print_egress_frame_debug_info(void)
+mgmt_rx_reo_print_egress_frame_stats(void)
 {
 	struct mgmt_rx_reo_context *reo_context;
 	QDF_STATUS status;
@@ -5054,13 +5136,29 @@ mgmt_rx_reo_print_egress_frame_debug_info(void)
 		return QDF_STATUS_E_NULL_VALUE;
 	}
 
-	status = mgmt_rx_reo_print_egress_frame_stats(reo_context);
+	status = mgmt_rx_reo_debug_print_egress_frame_stats(reo_context);
 	if (QDF_IS_STATUS_ERROR(status)) {
 		mgmt_rx_reo_err("Failed to print egress frame stats");
 		return status;
 	}
 
-	status = mgmt_rx_reo_print_egress_frame_info(reo_context, 0);
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS
+mgmt_rx_reo_print_egress_frame_info(uint16_t num_frames)
+{
+	struct mgmt_rx_reo_context *reo_context;
+	QDF_STATUS status;
+
+	reo_context = mgmt_rx_reo_get_context();
+	if (!reo_context) {
+		mgmt_rx_reo_err("reo context is null");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	status = mgmt_rx_reo_debug_print_egress_frame_info(reo_context,
+							   num_frames);
 	if (QDF_IS_STATUS_ERROR(status)) {
 		mgmt_rx_reo_err("Failed to print egress frame info");
 		return status;
@@ -5070,13 +5168,25 @@ mgmt_rx_reo_print_egress_frame_debug_info(void)
 }
 #else
 QDF_STATUS
-mgmt_rx_reo_print_ingress_frame_debug_info(void)
+mgmt_rx_reo_print_ingress_frame_stats(void)
 {
 	return QDF_STATUS_SUCCESS;
 }
 
 QDF_STATUS
-mgmt_rx_reo_print_egress_frame_debug_info(void)
+mgmt_rx_reo_print_ingress_frame_info(uint16_t num_frames)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS
+mgmt_rx_reo_print_egress_frame_stats(void)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS
+mgmt_rx_reo_print_egress_frame_info(uint16_t num_frames)
 {
 	return QDF_STATUS_SUCCESS;
 }

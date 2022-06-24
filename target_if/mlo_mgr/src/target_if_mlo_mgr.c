@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -106,8 +106,12 @@ target_if_mlo_register_event_handler(struct wlan_objmgr_psoc *psoc)
 			wmi_mlo_link_set_active_resp_eventid,
 			target_if_mlo_link_set_active_resp_handler,
 			WMI_RX_WORK_CTX);
-	if (QDF_IS_STATUS_ERROR(status))
-		target_if_err("Failed to register mlo link set active resp cb");
+	if (QDF_IS_STATUS_ERROR(status)) {
+		target_if_err("Register mlo link set active resp cb errcode %d",
+			      status);
+		if (status ==  QDF_STATUS_E_NOSUPPORT)
+			status = QDF_STATUS_SUCCESS;
+	}
 
 	return status;
 }

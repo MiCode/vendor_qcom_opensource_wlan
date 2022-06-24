@@ -254,9 +254,7 @@ void mlo_mld_clear_mlo_cap(struct wlan_objmgr_vdev *vdev)
 	for (i =  0; i < WLAN_UMAC_MLO_MAX_VDEVS; i++) {
 		if (!mlo_dev_ctx->wlan_vdev_list[i])
 			continue;
-		wlan_vdev_mlme_feat_ext2_cap_clear(
-				mlo_dev_ctx->wlan_vdev_list[i],
-				WLAN_VDEV_FEXT2_MLO);
+		wlan_vdev_mlme_clear_mlo_vdev(mlo_dev_ctx->wlan_vdev_list[i]);
 		wlan_vdev_mlme_feat_ext2_cap_clear(
 				mlo_dev_ctx->wlan_vdev_list[i],
 				WLAN_VDEV_FEXT2_MLO_STA_LINK);
@@ -462,6 +460,7 @@ QDF_STATUS mlo_connect(struct wlan_objmgr_vdev *vdev,
 		} else {
 			mlo_err("Failed to allocate orig connect req");
 			copied_conn_req_lock_release(sta_ctx);
+			mlo_dev_lock_release(mlo_dev_ctx);
 			return QDF_STATUS_E_NOMEM;
 		}
 
@@ -581,7 +580,7 @@ mlo_send_link_connect(struct wlan_objmgr_vdev *vdev,
 			&ssid.length);
 
 	if (!ml_parnter_info->num_partner_links) {
-		mlo_err("No patner info in connect resp");
+		mlo_err("No partner info in connect resp");
 		return;
 	}
 
@@ -592,8 +591,7 @@ mlo_send_link_connect(struct wlan_objmgr_vdev *vdev,
 		if (!mlo_dev_ctx->wlan_vdev_list[i] ||
 		    (mlo_dev_ctx->wlan_vdev_list[i] == vdev))
 			continue;
-		wlan_vdev_mlme_feat_ext2_cap_set(mlo_dev_ctx->wlan_vdev_list[i],
-						 WLAN_VDEV_FEXT2_MLO);
+		wlan_vdev_mlme_set_mlo_vdev(mlo_dev_ctx->wlan_vdev_list[i]);
 		wlan_vdev_mlme_feat_ext2_cap_set(mlo_dev_ctx->wlan_vdev_list[i],
 						 WLAN_VDEV_FEXT2_MLO_STA_LINK);
 		wlan_vdev_set_link_id(
@@ -622,7 +620,7 @@ mlo_send_link_connect(struct wlan_objmgr_vdev *vdev,
 	uint8_t j = 0;
 
 	if (!ml_parnter_info->num_partner_links) {
-		mlo_err("No patner info in connect resp");
+		mlo_err("No partner info in connect resp");
 		return;
 	}
 
@@ -759,9 +757,9 @@ static inline
 QDF_STATUS mlo_post_disconnect_msg(struct scheduler_msg *msg)
 {
 	return scheduler_post_message(
-			QDF_MODULE_ID_SYS,
-			QDF_MODULE_ID_SYS,
-			QDF_MODULE_ID_SYS,
+			QDF_MODULE_ID_OS_IF,
+			QDF_MODULE_ID_SCAN,
+			QDF_MODULE_ID_OS_IF,
 			msg);
 }
 #else
@@ -783,35 +781,42 @@ void mlo_handle_sta_link_connect_failure(struct wlan_objmgr_vdev *vdev,
 	struct wlan_mlo_dev_context *mlo_dev_ctx = vdev->mlo_dev_ctx;
 	struct scheduler_msg msg = {0};
 	QDF_STATUS ret;
+	struct wlan_objmgr_vdev *assoc_vdev;
 
 	if (!mlo_dev_ctx) {
 		mlo_err("ML dev ctx is NULL");
 		return;
 	}
 
-	if (vdev != mlo_get_assoc_link_vdev(mlo_dev_ctx)) {
+	assoc_vdev = mlo_get_assoc_link_vdev(mlo_dev_ctx);
+	if (!assoc_vdev) {
+		mlo_err("Assoc Vdev is NULL");
+		return;
+	}
+
+	if (vdev != assoc_vdev) {
 		mlo_update_connected_links(vdev, 0);
 		if (rsp->reason == CM_NO_CANDIDATE_FOUND ||
 		    rsp->reason == CM_HW_MODE_FAILURE ||
 		    rsp->reason == CM_SER_FAILURE) {
 			ret = wlan_objmgr_vdev_try_get_ref(
-					vdev, WLAN_MLO_MGR_ID);
+					assoc_vdev, WLAN_MLO_MGR_ID);
 			if (QDF_IS_STATUS_ERROR(ret)) {
 				mlo_err("Failed to get ref vdev_id %d",
-					wlan_vdev_get_id(vdev));
+					wlan_vdev_get_id(assoc_vdev));
 				return;
 			}
 			/* Since these failures happen in same context. use
 			 * scheduler to avoid deadlock by deferring context
 			 */
-			msg.bodyptr = vdev;
+			msg.bodyptr = assoc_vdev;
 			msg.callback = ml_activate_disconnect_req_sched_cb;
 			msg.flush_callback =
 				ml_activate_disconnect_req_flush_cb;
 			mlo_post_disconnect_msg(&msg);
 			if (QDF_IS_STATUS_ERROR(ret)) {
 				wlan_objmgr_vdev_release_ref(
-						vdev,
+						assoc_vdev,
 						WLAN_MLO_MGR_ID);
 				return;
 			}
@@ -1193,7 +1198,7 @@ void mlo_sta_link_handle_pending_connect(struct wlan_objmgr_vdev *vdev)
 
 	if (sta_ctx->connect_req->ml_parnter_info.num_partner_links) {
 		partner_info = sta_ctx->connect_req->ml_parnter_info;
-		wlan_vdev_mlme_feat_ext2_cap_set(vdev, WLAN_VDEV_FEXT2_MLO);
+		wlan_vdev_mlme_set_mlo_vdev(vdev);
 		wlan_vdev_mlme_feat_ext2_cap_clear(
 				vdev, WLAN_VDEV_FEXT2_MLO_STA_LINK);
 		mlo_clear_connect_req_links_bmap(vdev);
@@ -1205,8 +1210,7 @@ void mlo_sta_link_handle_pending_connect(struct wlan_objmgr_vdev *vdev)
 					&partner_link_info.link_addr);
 			if (tmp_vdev) {
 				mlo_update_connect_req_links(tmp_vdev, 1);
-				wlan_vdev_mlme_feat_ext2_cap_set(
-						tmp_vdev, WLAN_VDEV_FEXT2_MLO);
+				wlan_vdev_mlme_set_mlo_vdev(tmp_vdev);
 				wlan_vdev_mlme_feat_ext2_cap_set(
 						tmp_vdev,
 						WLAN_VDEV_FEXT2_MLO_STA_LINK);
@@ -1240,6 +1244,8 @@ void mlo_sta_link_disconn_notify(struct wlan_objmgr_vdev *vdev,
 	if (mlo_is_mld_disconnected(vdev)) {
 		if (sta_ctx->connect_req) {
 			assoc_vdev = mlo_get_assoc_link_vdev(mlo_dev_ctx);
+			if (!assoc_vdev)
+				return;
 			mlo_sta_link_handle_pending_connect(assoc_vdev);
 		}
 	}

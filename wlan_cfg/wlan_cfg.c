@@ -2023,9 +2023,10 @@ wlan_cfg_soc_attach(struct cdp_ctrl_objmgr_psoc *psoc)
 	gro_bit_set = cfg_get(psoc, CFG_DP_GRO);
 	if (gro_bit_set & DP_GRO_ENABLE_BIT_SET) {
 		wlan_cfg_ctx->gro_enabled = true;
-		if (gro_bit_set & DP_FORCE_USE_GRO_BIT_SET)
-			wlan_cfg_ctx->force_gro_enabled = true;
+		if (gro_bit_set & DP_TC_BASED_DYNAMIC_GRO)
+			wlan_cfg_ctx->tc_based_dynamic_gro = true;
 	}
+	wlan_cfg_ctx->tc_ingress_prio = cfg_get(psoc, CFG_DP_TC_INGRESS_PRIO);
 	wlan_cfg_ctx->ol_tx_csum_enabled = cfg_get(psoc, CFG_DP_OL_TX_CSUM);
 	wlan_cfg_ctx->ol_rx_csum_enabled = cfg_get(psoc, CFG_DP_OL_RX_CSUM);
 	wlan_cfg_ctx->rawmode_enabled = cfg_get(psoc, CFG_DP_RAWMODE);
@@ -2103,6 +2104,8 @@ wlan_cfg_soc_attach(struct cdp_ctrl_objmgr_psoc *psoc)
 	wlan_cfg_ctx->mon_drop_thresh =
 		cfg_get(psoc, CFG_DP_RXDMA_MONITOR_RX_DROP_THRESHOLD);
 	wlan_cfg_ctx->is_rx_fisa_enabled = cfg_get(psoc, CFG_DP_RX_FISA_ENABLE);
+	wlan_cfg_ctx->is_rx_fisa_lru_del_enabled =
+				cfg_get(psoc, CFG_DP_RX_FISA_LRU_DEL_ENABLE);
 	wlan_cfg_ctx->reo_rings_mapping = cfg_get(psoc, CFG_DP_REO_RINGS_MAP);
 	wlan_cfg_ctx->pext_stats_enabled = cfg_get(psoc, CFG_DP_PEER_EXT_STATS);
 	wlan_cfg_ctx->is_rx_buff_pool_enabled =
@@ -2146,7 +2149,13 @@ wlan_cfg_soc_attach(struct cdp_ctrl_objmgr_psoc *psoc)
 	wlan_cfg_ctx->num_rxdma_status_rings_per_pdev =
 					NUM_RXDMA_RINGS_PER_PDEV;
 	wlan_soc_tx_capt_cfg_attach(psoc, wlan_cfg_ctx);
+	wlan_cfg_ctx->mpdu_retry_threshold_1 =
+			cfg_get(psoc, CFG_DP_MPDU_RETRY_THRESHOLD_1);
+	wlan_cfg_ctx->mpdu_retry_threshold_2 =
+			cfg_get(psoc, CFG_DP_MPDU_RETRY_THRESHOLD_2);
 
+	wlan_cfg_ctx->napi_scale_factor = cfg_get(psoc,
+						  CFG_DP_NAPI_SCALE_FACTOR);
 	return wlan_cfg_ctx;
 }
 
@@ -2918,6 +2927,8 @@ wlan_cfg_get_dp_caps(struct wlan_cfg_dp_soc_ctxt *cfg,
 		return cfg->rawmode_enabled;
 	case CDP_CFG_DP_PEER_FLOW_CTRL:
 		return cfg->peer_flow_ctrl_enabled;
+	case CDP_CFG_DP_MARK_NOTIFY_FRAME_SUPPORT:
+		return cfg->notify_frame_support;
 	default:
 		return false;
 	}
@@ -2987,8 +2998,18 @@ bool wlan_cfg_is_rx_fisa_enabled(struct wlan_cfg_dp_soc_ctxt *cfg)
 {
 	return (bool)(cfg->is_rx_fisa_enabled);
 }
+
+bool wlan_cfg_is_rx_fisa_lru_del_enabled(struct wlan_cfg_dp_soc_ctxt *cfg)
+{
+	return cfg->is_rx_fisa_lru_del_enabled;
+}
 #else
 bool wlan_cfg_is_rx_fisa_enabled(struct wlan_cfg_dp_soc_ctxt *cfg)
+{
+	return false;
+}
+
+bool wlan_cfg_is_rx_fisa_lru_del_enabled(struct wlan_cfg_dp_soc_ctxt *cfg)
 {
 	return false;
 }
@@ -3384,3 +3405,8 @@ bool wlan_cfg_get_txmon_hw_support(struct wlan_cfg_dp_soc_ctxt *cfg)
 }
 
 qdf_export_symbol(wlan_cfg_get_txmon_hw_support);
+
+uint8_t wlan_cfg_get_napi_scale_factor(struct wlan_cfg_dp_soc_ctxt *cfg)
+{
+	return cfg->napi_scale_factor;
+}

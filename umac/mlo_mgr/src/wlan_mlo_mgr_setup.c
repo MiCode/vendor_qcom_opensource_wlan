@@ -486,12 +486,12 @@ QDF_STATUS mlo_link_teardown_link(struct wlan_objmgr_psoc *psoc,
 	QDF_STATUS status;
 	struct mlo_mgr_context *mlo_ctx = wlan_objmgr_get_mlo_ctx();
 
+	if (!mlo_ctx)
+		return QDF_STATUS_E_FAILURE;
+
 	qdf_debug("Teardown req with num_soc %d num_link %d",
 		  mlo_ctx->setup_info.num_soc,
 		  mlo_ctx->setup_info.num_links);
-
-	if (!mlo_ctx)
-		return QDF_STATUS_E_FAILURE;
 
 	if (!mlo_ctx->setup_info.num_soc)
 		return QDF_STATUS_SUCCESS;

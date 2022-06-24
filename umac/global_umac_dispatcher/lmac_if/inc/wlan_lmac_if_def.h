@@ -1026,6 +1026,7 @@ struct wlan_lmac_if_ftm_rx_ops {
  * @unregister_11d_new_cc_handler:  pointer to unregister 11d cc event handler
  * @send_ctl_info: call-back function to send CTL info to firmware
  * @set_tpc_power: send transmit power control info to firmware
+ * @get_opclass_tbl_idx: Get opclass table index value
  * @send_afc_ind: send AFC indication info to firmware.
  * @register_afc_event_handler: pointer to register afc event handler
  * @unregister_afc_event_handler: pointer to unregister afc event handler
@@ -1070,6 +1071,8 @@ struct wlan_lmac_if_reg_tx_ops {
 	QDF_STATUS (*set_tpc_power)(struct wlan_objmgr_psoc *psoc,
 				    uint8_t vdev_id,
 				    struct reg_tpc_power_info *param);
+	QDF_STATUS (*get_opclass_tbl_idx)(struct wlan_objmgr_pdev *pdev,
+					  uint8_t *opclass_tbl_idx);
 #ifdef CONFIG_AFC_SUPPORT
 	QDF_STATUS (*send_afc_ind)(struct wlan_objmgr_psoc *psoc,
 				   uint8_t pdev_id,
@@ -2141,7 +2144,7 @@ struct wlan_lmac_if_dfs_rx_ops {
 	QDF_STATUS (*dfs_set_postnol_freq)(struct wlan_objmgr_pdev *pdev,
 					   qdf_freq_t postnol_freq);
 	QDF_STATUS (*dfs_set_postnol_mode)(struct wlan_objmgr_pdev *pdev,
-					   uint8_t postnol_mode);
+					   uint16_t postnol_mode);
 	QDF_STATUS (*dfs_set_postnol_cfreq2)(struct wlan_objmgr_pdev *pdev,
 					     qdf_freq_t postnol_cfreq2);
 	QDF_STATUS (*dfs_get_postnol_freq)(struct wlan_objmgr_pdev *pdev,

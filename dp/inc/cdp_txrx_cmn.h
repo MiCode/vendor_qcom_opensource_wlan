@@ -708,6 +708,32 @@ cdp_peer_delete(ol_txrx_soc_handle soc, uint8_t vdev_id,
 	soc->ops->cmn_drv_ops->txrx_peer_delete(soc, vdev_id, peer_mac, bitmap);
 }
 
+#ifdef DP_RX_UDP_OVER_PEER_ROAM
+static inline void
+cdp_update_roaming_peer_in_vdev(ol_txrx_soc_handle soc, uint8_t vdev_id,
+				uint8_t *peer_mac, uint32_t auth_status)
+{
+	if (!soc || !soc->ops) {
+		QDF_TRACE(QDF_MODULE_ID_CDP, QDF_TRACE_LEVEL_DEBUG,
+			  "%s: Invalid Instance:", __func__);
+		QDF_BUG(0);
+		return;
+	}
+
+	if (!soc->ops->cmn_drv_ops ||
+	    !soc->ops->cmn_drv_ops->txrx_update_roaming_peer)
+		return;
+
+	soc->ops->cmn_drv_ops->txrx_update_roaming_peer(soc, vdev_id,
+							peer_mac, auth_status);
+}
+#else
+static inline void
+cdp_update_roaming_peer_in_vdev(ol_txrx_soc_handle soc, uint8_t vdev_id,
+				uint8_t *peer_mac, uint32_t auth_status)
+{
+}
+#endif
 /**
  * cdp_peer_detach_sync() - peer detach sync callback
  * @soc: datapath soc handle
@@ -1305,6 +1331,36 @@ cdp_tso_soc_detach(ol_txrx_soc_handle soc)
 		return 0;
 
 	return soc->ops->cmn_drv_ops->txrx_tso_soc_detach(soc);
+}
+
+/**
+ * cdp_tid_update_ba_win_size() - Update the DP tid BA window size
+ * @soc: soc handle
+ * @peer_mac: mac address of peer handle
+ * @vdev_id: id of vdev handle
+ * @tid: tid
+ * @buffersize: BA window size
+ *
+ * Return: success/failure of tid update
+ */
+static inline QDF_STATUS
+cdp_tid_update_ba_win_size(ol_txrx_soc_handle soc,
+			   uint8_t *peer_mac, uint16_t vdev_id, uint8_t tid,
+			   uint16_t buffersize)
+{
+	if (!soc || !soc->ops) {
+		dp_cdp_debug("Invalid Instance:");
+		QDF_BUG(0);
+		return 0;
+	}
+
+	if (!soc->ops->cmn_drv_ops ||
+	    !soc->ops->cmn_drv_ops->tid_update_ba_win_size)
+		return 0;
+
+	return soc->ops->cmn_drv_ops->tid_update_ba_win_size(soc, peer_mac,
+							     vdev_id, tid,
+							     buffersize);
 }
 
 /**
@@ -2245,6 +2301,8 @@ cdp_get_dp_capabilities(struct cdp_soc_t *soc, enum cdp_capabilities dp_caps)
 	if (soc && soc->ops && soc->ops->cmn_drv_ops &&
 	    soc->ops->cmn_drv_ops->get_dp_capabilities)
 		return soc->ops->cmn_drv_ops->get_dp_capabilities(soc, dp_caps);
+
+	qdf_err("invalid instance");
 	return false;
 }
 
@@ -2616,9 +2674,8 @@ cdp_rx_get_pending(ol_txrx_soc_handle soc)
 		return 0;
 }
 
-#ifdef QCA_SUPPORT_WDS_EXTENDED
 static inline uint16_t
-cdp_wds_ext_get_peer_id(ol_txrx_soc_handle soc, uint8_t vdev_id, uint8_t *mac)
+cdp_get_peer_id(ol_txrx_soc_handle soc, uint8_t vdev_id, uint8_t *mac)
 {
 	if (!soc || !soc->ops) {
 		dp_cdp_debug("Invalid Instance");
@@ -2627,13 +2684,14 @@ cdp_wds_ext_get_peer_id(ol_txrx_soc_handle soc, uint8_t vdev_id, uint8_t *mac)
 	}
 
 	if (!soc->ops->cmn_drv_ops ||
-	    !soc->ops->cmn_drv_ops->get_wds_ext_peer_id)
+	    !soc->ops->cmn_drv_ops->get_peer_id)
 		return 0;
 
-	return soc->ops->cmn_drv_ops->get_wds_ext_peer_id
+	return soc->ops->cmn_drv_ops->get_peer_id
 			(soc, vdev_id, mac);
 }
 
+#ifdef QCA_SUPPORT_WDS_EXTENDED
 static inline QDF_STATUS
 cdp_wds_ext_set_peer_rx(ol_txrx_soc_handle soc, uint8_t vdev_id,
 			uint8_t *mac, ol_txrx_rx_fp rx,
@@ -2779,24 +2837,25 @@ void cdp_set_rtpm_tput_policy_requirement(ol_txrx_soc_handle soc,
  * @pdev_id: id of objmgr pdev
  * @enable: enable/disable reap timer of monitor status ring
  *
- * Return: none
+ * Return: true if timer start/stop is performed, false otherwise.
  */
-static inline void
-cdp_enable_mon_reap_timer(ol_txrx_soc_handle soc, uint8_t pdev_id,
+static inline bool
+cdp_enable_mon_reap_timer(ol_txrx_soc_handle soc,
+			  enum cdp_mon_reap_source source,
 			  bool enable)
 {
 	if (!soc || !soc->ops) {
 		QDF_TRACE(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_FATAL,
 			  "%s invalid instance", __func__);
 		QDF_BUG(0);
-		return;
+		return false;
 	}
 
 	if (!soc->ops->mon_ops ||
 	    !soc->ops->mon_ops->txrx_enable_mon_reap_timer)
-		return;
+		return false;
 
-	return soc->ops->mon_ops->txrx_enable_mon_reap_timer(soc, pdev_id,
+	return soc->ops->mon_ops->txrx_enable_mon_reap_timer(soc, source,
 							     enable);
 }
 #endif /* _CDP_TXRX_CMN_H_ */

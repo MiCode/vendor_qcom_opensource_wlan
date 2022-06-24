@@ -20,6 +20,7 @@
 #include "wlan_cmn.h"
 #include "wlan_mlo_mgr_peer.h"
 #include <wlan_mlo_mgr_ap.h>
+#include <wlan_mlo_mgr_setup.h>
 #include <wlan_utility.h>
 #include <wlan_reg_services_api.h>
 
@@ -359,13 +360,20 @@ QDF_STATUS mlo_peer_allocate_primary_umac(
 		return QDF_STATUS_SUCCESS;
 	}
 
-	/* If MLD is single chip MLO then assoc link becomes primary UMAC */
-	/*
-	 * if (ml_dev->single_chip_mlo) {
-	 *	mlo_peer_assign_primary_umac(ml_peer, peer_entry);
-	 *	return QDF_STATUS_SUCCESS;
-	 * }
+	/* Select assoc peer's PSOC as primary UMAC in Multi-chip solution,
+	 * 1) for single link MLO connection
+	 * 2) if MLD is single chip MLO
 	 */
+	if ((ml_peer->max_links == 1) ||
+	    (mlo_vdevs_check_single_soc(link_vdevs, ml_peer->max_links))) {
+		mlo_peer_assign_primary_umac(ml_peer, peer_entry);
+		mlo_info("MLD ID %d Assoc peer " QDF_MAC_ADDR_FMT " primary umac soc %d ",
+			 ml_dev->mld_id,
+			 QDF_MAC_ADDR_REF(ml_peer->peer_mld_addr.bytes),
+			 ml_peer->primary_umac_psoc_id);
+
+		return QDF_STATUS_SUCCESS;
+	}
 
 	if (mlo_ctx->mlo_is_force_primary_umac) {
 		for (i = 0; i < WLAN_UMAC_MLO_MAX_VDEVS; i++) {

@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2019-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -145,7 +145,8 @@ struct hal_rx_fst *
 hal_rx_fst_attach(hal_soc_handle_t hal_soc_hdl,
 		  qdf_device_t qdf_dev,
 		  uint64_t *hal_fst_base_paddr, uint16_t max_entries,
-		  uint16_t max_search, uint8_t *hash_key);
+		  uint16_t max_search, uint8_t *hash_key,
+		  uint64_t fst_cmem_base);
 
 /**
  * hal_rx_fst_detach() - De-init the Rx flow search table from HW
@@ -156,8 +157,8 @@ hal_rx_fst_attach(hal_soc_handle_t hal_soc_hdl,
  *
  * Return:
  */
-void hal_rx_fst_detach(hal_soc_handle_t hal_soc_hdl,
-		       struct hal_rx_fst *rx_fst, qdf_device_t qdf_dev);
+void hal_rx_fst_detach(hal_soc_handle_t hal_soc_hdl, struct hal_rx_fst *rx_fst,
+		       qdf_device_t qdf_dev, uint64_t fst_cmem_base);
 
 /**
  * hal_rx_insert_flow_entry() - Add a flow into the FST table

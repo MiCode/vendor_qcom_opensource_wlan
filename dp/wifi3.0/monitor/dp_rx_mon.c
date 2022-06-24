@@ -523,6 +523,7 @@ dp_rx_populate_cdp_indication_ppdu_user(struct dp_pdev *pdev,
 		    cdp_rx_ppdu->u.ppdu_type == HAL_RX_TYPE_MU_MIMO) {
 			if (rx_user_status->mu_ul_info_valid) {
 				rx_stats_peruser->nss = rx_user_status->nss;
+				cdp_rx_ppdu->usr_nss_sum += rx_stats_peruser->nss;
 				rx_stats_peruser->mcs = rx_user_status->mcs;
 				rx_stats_peruser->mu_ul_info_valid =
 					rx_user_status->mu_ul_info_valid;
@@ -530,6 +531,8 @@ dp_rx_populate_cdp_indication_ppdu_user(struct dp_pdev *pdev,
 					rx_user_status->ofdma_ru_start_index;
 				rx_stats_peruser->ofdma_ru_width =
 					rx_user_status->ofdma_ru_width;
+				cdp_rx_ppdu->usr_ru_tones_sum +=
+					rx_stats_peruser->ofdma_ru_width;
 				rx_stats_peruser->user_index = i;
 				ru_size = rx_user_status->ofdma_ru_size;
 				/*
@@ -820,6 +823,48 @@ static inline uint8_t dp_get_bw_offset_frm_bw(struct dp_soc *soc,
 }
 #endif
 
+#ifdef WLAN_TELEMETRY_STATS_SUPPORT
+static void
+dp_ppdu_desc_user_rx_time_update(struct dp_pdev *pdev,
+				 struct dp_peer *peer,
+				 struct cdp_rx_indication_ppdu *ppdu_desc,
+				 struct cdp_rx_stats_ppdu_user *user)
+{
+	uint32_t nss_ru_width_sum = 0;
+	struct dp_mon_peer *mon_peer = NULL;
+	uint16_t rx_time_us;
+
+	if (!pdev || !ppdu_desc || !user || !peer)
+		return;
+
+	mon_peer = peer->monitor_peer;
+	if (qdf_unlikely(!mon_peer))
+		return;
+
+	nss_ru_width_sum = ppdu_desc->usr_nss_sum * ppdu_desc->usr_ru_tones_sum;
+	if (!nss_ru_width_sum)
+		nss_ru_width_sum = 1;
+
+	if (ppdu_desc->u.ppdu_type == HAL_RX_TYPE_MU_OFDMA ||
+	    ppdu_desc->u.ppdu_type == HAL_RX_TYPE_MU_MIMO) {
+		rx_time_us = (ppdu_desc->duration *
+				user->nss * user->ofdma_ru_width) / nss_ru_width_sum;
+	} else {
+		rx_time_us = ppdu_desc->duration;
+	}
+
+	DP_STATS_INC(mon_peer, airtime_consumption.consumption,
+		     rx_time_us);
+}
+#else
+static inline void
+dp_ppdu_desc_user_rx_time_update(struct dp_pdev *pdev,
+				 struct dp_peer *peer,
+				 struct cdp_rx_indication_ppdu *ppdu_desc,
+				 struct cdp_rx_stats_ppdu_user *user)
+{ }
+#endif
+
 static void dp_rx_stats_update(struct dp_pdev *pdev,
 			       struct cdp_rx_indication_ppdu *ppdu)
 {
@@ -1024,6 +1069,7 @@ static void dp_rx_stats_update(struct dp_pdev *pdev,
 
 		dp_send_stats_event(pdev, peer, ppdu_user->peer_id);
 
+		dp_ppdu_desc_user_rx_time_update(pdev, peer, ppdu, ppdu_user);
 		dp_peer_unref_delete(peer, DP_MOD_ID_RX_PPDU_STATS);
 	}
 }

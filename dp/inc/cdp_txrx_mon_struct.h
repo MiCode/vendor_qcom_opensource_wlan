@@ -30,6 +30,9 @@
 
 #define CDP_LITE_MON_PEER_MAX 16
 
+#define CDP_MON_FRM_TYPE_MAX 3
+#define CDP_MON_FRM_FILTER_MODE_MAX 4
+
 #define CDP_LITE_MON_LEN_64B 0x40
 #define CDP_LITE_MON_LEN_128B 0x80
 #define CDP_LITE_MON_LEN_256B 0x100
@@ -39,20 +42,6 @@
 
 /* This should align with nac mac type enumerations in ieee80211_ioctl.h */
 #define CDP_LITE_MON_PEER_MAC_TYPE_CLIENT 2
-
-/* lite mon filter modes */
-enum cdp_lite_mon_filter_mode {
-	/* mode filter pass */
-	CDP_LITE_MON_MODE_FP = 0,
-	/* mode monitor direct */
-	CDP_LITE_MON_MODE_MD = 1,
-	/* mode monitor other */
-	CDP_LITE_MON_MODE_MO = 2,
-	/* mode filter pass monitor other */
-	CDP_LITE_MON_MODE_FP_MO = 3,
-	/* max filter modes */
-	CDP_LITE_MON_MODE_MAX = 4,
-};
 
 /* lite mon frame levels */
 enum cdp_lite_mon_level {
@@ -64,18 +53,6 @@ enum cdp_lite_mon_level {
 	CDP_LITE_MON_LEVEL_MPDU = 2,
 	/* level ppdu */
 	CDP_LITE_MON_LEVEL_PPDU = 3,
-};
-
-/* lite mon frame types */
-enum cdp_lite_mon_frm_type {
-	/* frm type mgmt */
-	CDP_LITE_MON_FRM_TYPE_MGMT = 0,
-	/* frm type ctrl */
-	CDP_LITE_MON_FRM_TYPE_CTRL = 1,
-	/* frm type data */
-	CDP_LITE_MON_FRM_TYPE_DATA = 2,
-	/* max frame types */
-	CDP_LITE_MON_FRM_TYPE_MAX = 3,
 };
 
 /* lite mon peer action */
@@ -411,6 +388,8 @@ enum cdp_mon_phyrx_abort_reason_code {
  * @dest_ppdu_drop: Number of ppdu dropped from monitor destination ring
  * @mon_link_desc_invalid: msdu link desc invalid count
  * @mon_rx_desc_invalid: rx_desc invalid count
+ * @mpdu_ppdu_id_mismatch_drop: mpdu's ppdu id did not match destination
+ *  ring ppdu id
  * @rx_undecoded_count: Received undecoded frame count
  * @rx_undecoded_error: Rx undecoded errors
  */
@@ -444,6 +423,7 @@ struct cdp_pdev_mon_stats {
 	uint32_t mon_link_desc_invalid;
 	uint32_t mon_rx_desc_invalid;
 	uint32_t mon_nbuf_sanity_err;
+	uint32_t mpdu_ppdu_id_mismatch_drop;
 #ifdef QCA_UNDECODED_METADATA_SUPPORT
 	uint32_t rx_undecoded_count;
 	uint32_t rx_undecoded_error[CDP_PHYRX_ERR_MAX];
@@ -469,10 +449,10 @@ struct cdp_lite_mon_filter_config {
 	uint8_t disable;
 	uint8_t level;
 	uint8_t metadata;
-	uint16_t mgmt_filter[CDP_LITE_MON_MODE_MAX];
-	uint16_t ctrl_filter[CDP_LITE_MON_MODE_MAX];
-	uint16_t data_filter[CDP_LITE_MON_MODE_MAX];
-	uint16_t len[CDP_LITE_MON_FRM_TYPE_MAX];
+	uint16_t mgmt_filter[CDP_MON_FRM_FILTER_MODE_MAX];
+	uint16_t ctrl_filter[CDP_MON_FRM_FILTER_MODE_MAX];
+	uint16_t data_filter[CDP_MON_FRM_FILTER_MODE_MAX];
+	uint16_t len[CDP_MON_FRM_TYPE_MAX];
 	uint8_t debug;
 	uint8_t vdev_id;
 };
@@ -564,5 +544,24 @@ struct cdp_rssi_db2dbm_param_dp {
 	bool rssi_dbm_info_present;
 	struct cdp_rssi_temp_off_param_dp temp_off_param;
 	struct cdp_rssi_dbm_conv_param_dp rssi_dbm_param;
+};
+
+/*
+ * enum cdp_mon_reap_source: trigger source of the reap timer of
+ * monitor status ring
+ * @CDP_MON_REAP_SOURCE_PKTLOG: pktlog
+ * @CDP_MON_REAP_SOURCE_CFR: CFR
+ * @CDP_MON_REAP_SOURCE_EMESH: easy mesh
+ * @CDP_MON_REAP_SOURCE_NUM: total number of the sources
+ * @CDP_MON_REAP_SOURCE_ANY: any of the sources
+ */
+enum cdp_mon_reap_source {
+	CDP_MON_REAP_SOURCE_PKTLOG,
+	CDP_MON_REAP_SOURCE_CFR,
+	CDP_MON_REAP_SOURCE_EMESH,
+
+	/* keep last */
+	CDP_MON_REAP_SOURCE_NUM,
+	CDP_MON_REAP_SOURCE_ANY,
 };
 #endif

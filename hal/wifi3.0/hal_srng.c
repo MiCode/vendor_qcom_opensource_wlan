@@ -351,12 +351,25 @@ void hal_get_shadow_config(void *hal_soc,
 {
 	struct hal_soc *hal = (struct hal_soc *)hal_soc;
 
-	*shadow_config = hal->shadow_config;
+	*shadow_config = &hal->shadow_config[0].v2;
 	*num_shadow_registers_configured =
 		hal->num_shadow_registers_configured;
 }
-
 qdf_export_symbol(hal_get_shadow_config);
+
+#ifdef CONFIG_SHADOW_V3
+void hal_get_shadow_v3_config(void *hal_soc,
+			      struct pld_shadow_reg_v3_cfg **shadow_config,
+			      int *num_shadow_registers_configured)
+{
+	struct hal_soc *hal = (struct hal_soc *)hal_soc;
+
+	*shadow_config = &hal->shadow_config[0].v3;
+	*num_shadow_registers_configured =
+		hal->num_shadow_registers_configured;
+}
+qdf_export_symbol(hal_get_shadow_v3_config);
+#endif
 
 static bool hal_validate_shadow_register(struct hal_soc *hal,
 					 uint32_t *destination,
@@ -1351,7 +1364,7 @@ static inline void hal_srng_hw_init(struct hal_soc *hal,
 		hal_srng_dst_hw_init(hal, srng);
 }
 
-#ifdef CONFIG_SHADOW_V2
+#if defined(CONFIG_SHADOW_V2) || defined(CONFIG_SHADOW_V3)
 #define ignore_shadow false
 #define CHECK_SHADOW_REGISTERS true
 #else
@@ -1771,11 +1784,39 @@ void hal_set_low_threshold(hal_ring_handle_t hal_ring_hdl,
 }
 qdf_export_symbol(hal_set_low_threshold);
 
+#ifdef FEATURE_RUNTIME_PM
+void
+hal_srng_rtpm_access_end(hal_soc_handle_t hal_soc_hdl,
+			 hal_ring_handle_t hal_ring_hdl,
+			 wlan_rtpm_dbgid rtpm_dbgid,
+			 bool is_critical_ctx)
+{
+	struct hal_soc *hal_soc = (struct hal_soc *)hal_soc_hdl;
+
+	if (qdf_unlikely(!hal_ring_hdl)) {
+		qdf_print("Error: Invalid hal_ring\n");
+		return;
+	}
+
+	if (hif_pm_runtime_get(hal_soc->hif_handle,
+			       rtpm_dbgid, is_critical_ctx) == 0) {
+		hal_srng_access_end(hal_soc_hdl, hal_ring_hdl);
+		hif_pm_runtime_put(hal_soc->hif_handle,
+				   rtpm_dbgid);
+	} else {
+		hal_srng_access_end_reap(hal_soc_hdl, hal_ring_hdl);
+		hal_srng_set_event(hal_ring_hdl, HAL_SRNG_FLUSH_EVENT);
+		hal_srng_inc_flush_cnt(hal_ring_hdl);
+	}
+}
+
+qdf_export_symbol(hal_srng_rtpm_access_end);
+#endif /* FEATURE_RUNTIME_PM */
+
 #ifdef FORCE_WAKE
 void hal_set_init_phase(hal_soc_handle_t soc, bool init_phase)
 {
 	struct hal_soc *hal_soc = (struct hal_soc *)soc;
-
 	hal_soc->init_phase = init_phase;
 }
 #endif /* FORCE_WAKE */

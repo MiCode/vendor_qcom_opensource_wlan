@@ -597,6 +597,7 @@ enum element_ie {
  * @WLAN_EXTN_ELEMID_MULTI_LINK: Multi-Link IE
  * @WLAN_EXTN_ELEMID_EHTCAP: EHT Capabilities IE
  * @WLAN_EXTN_ELEMID_T2LM: TID-to-link mapping IE
+ * @WLAN_EXTN_ELEMID_MULTI_LINK_TRAFFIC_IND: Multi-link Traffic Indication IE
  */
 enum extn_element_ie {
 	WLAN_EXTN_ELEMID_HECAP       = 35,
@@ -617,6 +618,7 @@ enum extn_element_ie {
 	WLAN_EXTN_ELEMID_EHTCAP      = 108,
 #endif
 	WLAN_EXTN_ELEMID_T2LM        = 109,
+	WLAN_EXTN_ELEMID_MULTI_LINK_TRAFFIC_IND = 110,
 };
 
 /**
@@ -1628,6 +1630,8 @@ struct subelem_header {
 #define EHTCAP_MAC_SCS_TRAFFIC_DESC_BITS                1
 #define EHTCAP_MAC_MAX_MPDU_LEN_IDX                     6
 #define EHTCAP_MAC_MAX_MPDU_LEN_BITS                    2
+#define EHTCAP_MAC_MAX_A_MPDU_LEN_IDX                   8
+#define EHTCAP_MAC_MAX_A_MPDU_LEN_BITS                  1
 
 #define EHTCAP_PHY_320MHZIN6GHZ_IDX                     1
 #define EHTCAP_PHY_320MHZIN6GHZ_BITS                    1
@@ -1725,6 +1729,14 @@ struct subelem_header {
 #define EHTCAP_PPET_RU_INDEX_BITMASK_IDX  4
 #define EHTCAP_PPET_RU_INDEX_BITMASK_BITS 5
 
+#define EHTOP_INFO_PRESENT_IDX             0
+#define EHTOP_INFO_PRESENT_BITS            1
+#define EHTOP_PARAM_DISABLED_SC_BITMAP_PRESENT_IDX       1
+#define EHTOP_PARAM_DISABLED_SC_BITMAP_PRESENT_BITS      1
+
+#define EHTOP_INFO_CHAN_WIDTH_IDX          0
+#define EHTOP_INFO_CHAN_WIDTH_BITS         3
+
 #define MAX_EHT_MCS_NSS_MAP_LEN 9
 
 /**
@@ -1773,29 +1785,29 @@ struct wlan_ie_ehtcaps {
  * @elem_id: EHT caps IE
  * @elem_len: EHT caps IE len
  * @elem_id_extn: EHT caps extension id
- * @width: EHT BSS Channel Width
- * @reserved1: Reserved bits
- * @ccfs: EHT Channel Centre Frequency Segment information
- * @disable_sub_chan_bitmap_present: Flag to indicate disable subchannel
- *                                   bitmap present
- * @reserved2: Reserved bits
- * @disable_sub_chan_bitmap: Bitmap to indicate 20MHz subchannel is punctured
- *                           or not
+ * @ehtop_param: EHT Operation Parameters
+ * @control: Control field in EHT Operation Information
+ * @ccfs0: EHT Channel Centre Frequency Segment0 information
+ * @ccfs1: EHT Channel Centre Frequency Segment1 information
+ * @disabled_sub_chan_bitmap: Bitmap to indicate 20MHz subchannel is punctured
+ *                            or not
  */
 struct wlan_ie_ehtops {
 	uint8_t elem_id;
 	uint8_t elem_len;
 	uint8_t elem_id_extn;
-	uint8_t width:3,
-		reserved1:5;
-	uint8_t ccfs;
-	uint8_t disable_sub_chan_bitmap_present:1,
-		reserved2:7;
-	uint8_t disable_sub_chan_bitmap[2];
+	uint8_t ehtop_param;
+	uint8_t control;
+	uint8_t ccfs0;
+	uint8_t ccfs1;
+	uint8_t disabled_sub_chan_bitmap[2];
 } qdf_packed;
 
 #ifdef WLAN_FEATURE_11BE_MLO
 #define WLAN_MLO_MAX_VDEVS 2
+
+/* Size in octets of the BSS Parameters Change Count (sub)field */
+#define WLAN_ML_BSSPARAMCHNGCNT_SIZE                    1
 
 /**
  * struct wlan_ie_multilink - Fixed fields in Multi-Link IE
@@ -1849,11 +1861,14 @@ struct wlan_ml_probe_req {
  * variants.
  */
 
-/* Below fields and subfields have been transitioned to D1.4, and rest will
- * be checked and transitioned to D1.4 separately.
- * 1. Presence bitmap subfield.
- * 2. Common info length subfield of common info field.
- * 3. STA info length subfield in STA Info field.
+/* The below fields and subfields have been transitioned to D1.5, and the rest
+ * will be checked and transitioned to D1.5 separately:
+ * 1. Presence bitmap subfield in the Multi-Link Control field.
+ * 2. Common Info Length subfield of Common Info field.
+ * 3. STA Control field in Per-STA Profile subelement in Basic variant
+ *    Multi-Link element Link Info field.
+ * 4. STA Info Length subfield in STA Info field in Per-STA Profile subelement
+ *    in Basic variant Multi-Link element Link Info field.
  */
 
 /* Size in octets of Multi-Link element Control field */
@@ -1924,11 +1939,6 @@ enum wlan_ml_variant {
 #define WLAN_ML_BV_CINFO_LINKIDINFO_LINKID_IDX                      0
 #define WLAN_ML_BV_CINFO_LINKIDINFO_LINKID_BITS                     4
 
-/* Size in octets of BSS Parameters Change Count subfield in Basic variant
- * Multi-Link element Common Info field.
- */
-#define WLAN_ML_BV_CINFO_BSSPARAMCHNGCNT_SIZE                       1
-
 /* Size in octets of Medium Synchronization Delay Information subfield in Basic
  * variant Multi-Link element Common Info field.
  */
@@ -1953,34 +1963,32 @@ enum wlan_ml_variant {
 #define WLAN_ML_BV_CINFO_EMLCAP_SIZE                                2
 
 /* Definitions for sub-sub fields in EML Capabilities subfield in Basic variant
- * Multi-Link element Common Info field. Any unused bits are reserved.
+ * Multi-Link element Common Info field as per IEEE P802.11be/D1.5.
+ * Any unused bits are reserved.
  */
 /* EMLSR Support */
 #define WLAN_ML_BV_CINFO_EMLCAP_EMLSRSUPPORT_IDX                    0
 #define WLAN_ML_BV_CINFO_EMLCAP_EMLSRSUPPORT_BITS                   1
 /* EMLSR Delay */
-#define WLAN_ML_BV_CINFO_EMLCAP_EMLSRDELAY_IDX                      1
-#define WLAN_ML_BV_CINFO_EMLCAP_EMLSRDELAY_BITS                     3
+#define WLAN_ML_BV_CINFO_EMLCAP_EMLSR_PADDINGDELAY_IDX              1
+#define WLAN_ML_BV_CINFO_EMLCAP_EMLSR_PADDINGDELAY_BITS             3
+/* EMLSR Transition Delay */
+#define WLAN_ML_BV_CINFO_EMLCAP_EMLSRTRANSDELAY_IDX                 4
+#define WLAN_ML_BV_CINFO_EMLCAP_EMLSRTRANSDELAY_BITS                3
 /* EMLMR Support */
-#define WLAN_ML_BV_CINFO_EMLCAP_EMLMRSUPPORT_IDX                    4
+#define WLAN_ML_BV_CINFO_EMLCAP_EMLMRSUPPORT_IDX                    7
 #define WLAN_ML_BV_CINFO_EMLCAP_EMLMRSUPPORT_BITS                   1
 /* EMLMR Delay */
-#define WLAN_ML_BV_CINFO_EMLCAP_EMLMRDELAY_IDX                      5
+#define WLAN_ML_BV_CINFO_EMLCAP_EMLMRDELAY_IDX                      8
 #define WLAN_ML_BV_CINFO_EMLCAP_EMLMRDELAY_BITS                     3
 /* Transition Timeout */
-#define WLAN_ML_BV_CINFO_EMLCAP_TRANSTIMEOUT_IDX                    8
+#define WLAN_ML_BV_CINFO_EMLCAP_TRANSTIMEOUT_IDX                    11
 #define WLAN_ML_BV_CINFO_EMLCAP_TRANSTIMEOUT_BITS                   4
-/* EMLMR Rx NSS */
-#define WLAN_ML_BV_CINFO_EMLCAP_EMLMRRXNSS_IDX                      16
-#define WLAN_ML_BV_CINFO_EMLCAP_EMLMRRXNSS_BITS                     4
-/* EMLMR Tx NSS */
-#define WLAN_ML_BV_CINFO_EMLCAP_EMLMRTXNSS_IDX                      20
-#define WLAN_ML_BV_CINFO_EMLCAP_EMLMRTXNSS_BITS                     4
 
 /**
- * wlan_ml_bv_cinfo_emlcap_emlsrdelay - Encoding for EMLSR Delay sub-sub field
- * in EML Capabilities subfield in Basic variant Multi-Link element Common Info
- * field.
+ * wlan_ml_bv_cinfo_emlcap_emlsr_padding_delay - Encoding for EMLSR Padding
+ * Delay sub field in EML Capabilities subfield in Basic variant Multi-Link
+ * element Common Info field.
  * Note: In case of holes in the enumeration, scheme for invalid value
  * determination should be changed.
  * @WLAN_ML_BV_CINFO_EMLCAP_EMLSRDELAY_0US: EMLSR delay of 0 us
@@ -1991,13 +1999,41 @@ enum wlan_ml_variant {
  * @WLAN_ML_BV_CINFO_EMLCAP_EMLSRDELAY_INVALIDSTART: Start of invalid value
  * range
  */
-enum wlan_ml_bv_cinfo_emlcap_emlsrdelay {
+enum wlan_ml_bv_cinfo_emlcap_emlsr_padding_delay {
 	WLAN_ML_BV_CINFO_EMLCAP_EMLSRDELAY_0US = 0,
 	WLAN_ML_BV_CINFO_EMLCAP_EMLSRDELAY_32US = 1,
 	WLAN_ML_BV_CINFO_EMLCAP_EMLSRDELAY_64US = 2,
 	WLAN_ML_BV_CINFO_EMLCAP_EMLSRDELAY_128US = 3,
 	WLAN_ML_BV_CINFO_EMLCAP_EMLSRDELAY_256US = 4,
 	WLAN_ML_BV_CINFO_EMLCAP_EMLSRDELAY_INVALIDSTART,
+};
+
+/**
+ * wlan_ml_bv_cinfo_emlsr_transition_delay - Encoding for EMLSR
+ * Transition delay in EML Capabilities subfield in Basic variant
+ * Multi-Link element Common Info field.
+ * @WLAN_ML_BV_CINFO_EMLCAP_EMLSRTRANSDELAY_0US: EMLSR transition delay of 0 us
+ * @WLAN_ML_BV_CINFO_EMLCAP_EMLSRTRANSDELAY_16US: EMLSR transition delay of
+ * 16 us
+ * @WLAN_ML_BV_CINFO_EMLCAP_EMLSRTRANSDELAY_32US: EMLSR transition delay of
+ * 32 us
+ * @WLAN_ML_BV_CINFO_EMLCAP_EMLSRTRANSDELAY_64US: EMLSR transition delay of
+ * 64 us
+ * @WLAN_ML_BV_CINFO_EMLCAP_EMLSRTRANSDELAY_128US: EMLSR transition delay of
+ * 128 us
+ * @WLAN_ML_BV_CINFO_EMLCAP_EMLSRTRANSDELAY_256US: EMLSR transition delay of
+ * 256 us
+ * @WLAN_ML_BV_CINFO_EMLCAP_EMLSRTRANSDELAY_INVALIDSTART: Start of invalid
+ * value range
+ */
+enum wlan_ml_bv_cinfo_emlsr_transition_delay {
+	WLAN_ML_BV_CINFO_EMLCAP_EMLSRTRANSDELAY_0US = 0,
+	WLAN_ML_BV_CINFO_EMLCAP_EMLSRTRANSDELAY_16US = 1,
+	WLAN_ML_BV_CINFO_EMLCAP_EMLSRTRANSDELAY_32US = 2,
+	WLAN_ML_BV_CINFO_EMLCAP_EMLSRTRANSDELAY_64US = 3,
+	WLAN_ML_BV_CINFO_EMLCAP_EMLSRTRANSDELAY_128US = 4,
+	WLAN_ML_BV_CINFO_EMLCAP_EMLSRTRANSDELAY_256US = 5,
+	WLAN_ML_BV_CINFO_EMLCAP_EMLSRTRANSDELAY_INVALIDSTART,
 };
 
 /**
@@ -2089,7 +2125,7 @@ enum wlan_ml_bv_cinfo_emlcap_transtimeout {
 	(WLAN_ML_BV_CINFO_LENGTH_SIZE + \
 	 QDF_MAC_ADDR_SIZE + \
 	 WLAN_ML_BV_CINFO_LINKIDINFO_SIZE + \
-	 WLAN_ML_BV_CINFO_BSSPARAMCHNGCNT_SIZE + \
+	 WLAN_ML_BSSPARAMCHNGCNT_SIZE + \
 	 WLAN_ML_BV_CINFO_MEDMSYNCDELAYINFO_SIZE + \
 	 WLAN_ML_BV_CINFO_EMLCAP_SIZE + \
 	 WLAN_ML_BV_CINFO_MLDCAP_SIZE)
@@ -2165,6 +2201,9 @@ struct wlan_ml_bv_linfo_perstaprof {
 /* NSTR Bitmap Size */
 #define WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_NSTRBMSZ_IDX            9
 #define WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_NSTRBMSZ_BITS           1
+/* BSS Parameters Change Count Present */
+#define WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_BSSPARAMCHNGCNTP_IDX    10
+#define WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_BSSPARAMCHNGCNTP_BITS   1
 
 /* Definitions for subfields in STA Info field of Per-STA Profile subelement
  * in Basic variant Multi-Link element Link Info field.
@@ -2216,7 +2255,8 @@ struct wlan_ml_bv_linfo_perstaprof_stainfo_dtiminfo {
 	 QDF_MAC_ADDR_SIZE + \
 	 WLAN_BEACONINTERVAL_LEN + \
 	 sizeof(struct wlan_ml_bv_linfo_perstaprof_stainfo_dtiminfo) + \
-	 WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_NSTRBMSZ_MAX)
+	 WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_NSTRBMSZ_MAX + \
+	 WLAN_ML_BSSPARAMCHNGCNT_SIZE)
 
 /* End of definitions related to Basic variant Multi-Link element Link Info
  * field.
@@ -2243,6 +2283,9 @@ struct wlan_ml_bv_linfo_perstaprof_stainfo_dtiminfo {
 /* BSS Parameters Change Count */
 #define WLAN_RNR_NBRAPINFO_TBTTINFO_MLDPARAMS_BSSPARAMCHANGECNT_IDX      12
 #define WLAN_RNR_NBRAPINFO_TBTTINFO_MLDPARAMS_BSSPARAMCHANGECNT_BITS     8
+/* All Updates Included */
+#define WLAN_RNR_NBRAPINFO_TBTTINFO_MLDPARAMS_ALLUPDATESINC_IDX          20
+#define WLAN_RNR_NBRAPINFO_TBTTINFO_MLDPARAMS_ALLUPDATESINC_BITS         1
 
 /*
  * End of definitions related to MLO specific aspects of Reduced Neighbor Report
@@ -2285,6 +2328,25 @@ struct wlan_ie_tid_to_link_mapping {
 /* Link mapping presence indicator */
 #define WLAN_T2LM_CONTROL_LINK_MAPPING_PRESENCE_INDICATOR_IDX   8
 #define WLAN_T2LM_CONTROL_LINK_MAPPING_PRESENCE_INDICATOR_BITS  8
+
+/**
+ * struct wlan_ie_multi_link_traffic_indication - Multi-link traffic indication
+ * element
+ * @elem_id: Multi-link traffic indication IE
+ * @elem_len: Multi-link traffic indication IE length
+ * @elem_id_extn: Multi-link traffic indication extension ID
+ * @ml_traffic_ind_control: Multi-link traffic indication control
+ * @per_link_traffic_ind_list: Indicates the per-link traffic indication. Each
+ *                             bit in the per_link_traffic_ind_list corresponds
+ *                             to a link of the MLD.
+ */
+struct wlan_ie_multi_link_traffic_indication {
+	uint8_t elem_id;
+	uint8_t elem_len;
+	uint8_t elem_id_extn;
+	uint16_t ml_traffic_ind_control;
+	uint16_t per_link_traffic_ind_list[];
+} qdf_packed;
 #endif /* WLAN_FEATURE_T2LM */
 
 /**
@@ -2521,106 +2583,112 @@ struct wlan_ext_cap_ie {
 
 /**
  * struct wlan_eht_cap_info - struct for eht capabilities information
- * EPCS_pri_access: EPCS priority access support
- * eht_om_ctl: EHT OM control support
- * triggered_txop_sharing_mode1: Triggered TXOP sharing support mode 1 support
- * triggered_txop_sharing_mode2: Triggered TXOP sharing mode 2 support
- * restricted_twt: Restricted TWT support
- * scs_traffic_desc: SCS traffic description support
- * max_mpdu_len: Maximum MPDU length
- * reserved3: reserved bits
- * reserved2: reserved bits
- * support_320mhz_6ghz: support 320mhz in 6gz
- * ru_242tone_wt_20mhz: Support For 242-tone RU In BW Wider Than 20 MHz
- * ndp_4x_eht_ltf_3dot2_us_gi: NDP With 4 EHT-LTF And 3.2 μs GI
- * partial_bw_mu_mimo: Partial Bandwidth UL MU-MIMO
- * su_beamformer: SU Beamformer
- * su_beamformee: SU Beamformer
- * bfee_ss_le_80mhz: Beamformee SS (≤ 80 MHz)
- * bfee_ss_160mhz: Beamformee SS (= 160 MHz)
- * bfee_ss_320mhz: Beamformee SS (= 320 MHz)
- * num_sounding_dim_le_80mhz: Number Of Sounding Dimensions (≤ 80 MHz)
- * num_sounding_dim_160mhz: Number Of Sounding Dimensions (= 160 MHz)
- * num_sounding_dim_320mhz: Number Of Sounding Dimensions (= 320 MHz)
- * ng_16_su_feedback: Ng = 16 SU Feedback
- * ng_16_mu_feedback: Ng = 16 MU Feedback
- * cb_sz_4_2_su_feedback: Codebook Size SU Feedback
- * cb_sz_7_5_su_feedback: Codebook Size SU Feedback
- * trig_su_bforming_feedback: Triggered SU Beamforming Feedback
- * trig_mu_bforming_partial_bw_feedback: Triggered MU Partial
+ * @EPCS_pri_access: EPCS priority access support
+ * @eht_om_ctl: EHT OM control support
+ * @triggered_txop_sharing_mode1: Triggered TXOP sharing support mode 1 support
+ * @triggered_txop_sharing_mode2: Triggered TXOP sharing mode 2 support
+ * @restricted_twt: Restricted TWT support
+ * @scs_traffic_desc: SCS traffic description support
+ * @max_mpdu_len: Maximum MPDU length
+ * @max_a_mpdu_len_exponent_ext: Maximum A-MPDU Length Exponent Extension
+ * @reserved3: reserved bits
+ * @reserved2: reserved bits
+ * @support_320mhz_6ghz: support 320mhz in 6gz
+ * @ru_242tone_wt_20mhz: Support For 242-tone RU In BW Wider Than 20 MHz
+ * @ndp_4x_eht_ltf_3dot2_us_gi: NDP With 4 EHT-LTF And 3.2 μs GI
+ * @partial_bw_mu_mimo: Partial Bandwidth UL MU-MIMO
+ * @su_beamformer: SU Beamformer
+ * @su_beamformee: SU Beamformer
+ * @bfee_ss_le_80mhz: Beamformee SS (≤ 80 MHz)
+ * @bfee_ss_160mhz: Beamformee SS (= 160 MHz)
+ * @bfee_ss_320mhz: Beamformee SS (= 320 MHz)
+ * @num_sounding_dim_le_80mhz: Number Of Sounding Dimensions (≤ 80 MHz)
+ * @num_sounding_dim_160mhz: Number Of Sounding Dimensions (= 160 MHz)
+ * @num_sounding_dim_320mhz: Number Of Sounding Dimensions (= 320 MHz)
+ * @ng_16_su_feedback: Ng = 16 SU Feedback
+ * @ng_16_mu_feedback: Ng = 16 MU Feedback
+ * @cb_sz_4_2_su_feedback: Codebook Size SU Feedback
+ * @cb_sz_7_5_su_feedback: Codebook Size SU Feedback
+ * @trig_su_bforming_feedback: Triggered SU Beamforming Feedback
+ * @trig_mu_bforming_partial_bw_feedback: Triggered MU Partial
    Beamforming Feedback
- * triggered_cqi_feedback: Triggered SU Beamforming Feedback
- * partial_bw_dl_mu_mimo: Partial Bandwidth DL MU-MIMO
- * psr_based_sr: PSR-based SR Support
- * power_boost_factor: Power Boost Factor Support
- * eht_mu_ppdu_4x_ltf_0_8_us_gi: EHT MU PPDU With 4 EHT-LTF And 0.8 μs GI
- * max_nc: Max Nc
- * non_trig_cqi_feedback: Non-Triggered CQI Feedback
- * tx_1024_4096_qam_lt_242_tone_ru: Tx 1024-QAM And 4096-QAM < 242-tone
+ * @triggered_cqi_feedback: Triggered SU Beamforming Feedback
+ * @partial_bw_dl_mu_mimo: Partial Bandwidth DL MU-MIMO
+ * @psr_based_sr: PSR-based SR Support
+ * @power_boost_factor: Power Boost Factor Support
+ * @eht_mu_ppdu_4x_ltf_0_8_us_gi: EHT MU PPDU With 4 EHT-LTF And 0.8 μs GI
+ * @max_nc: Max Nc
+ * @non_trig_cqi_feedback: Non-Triggered CQI Feedback
+ * @tx_1024_4096_qam_lt_242_tone_ru: Tx 1024-QAM And 4096-QAM < 242-tone
    RU Support
- * rx_1024_4096_qam_lt_242_tone_ru: Rx 1024-QAM And 4096-QAM < 242-tone
+ * @rx_1024_4096_qam_lt_242_tone_ru: Rx 1024-QAM And 4096-QAM < 242-tone
    RU Support
- * ppet_present: PPE Thresholds Present
- * common_nominal_pkt_padding: Common Nominal Packet Padding
- * max_num_eht_ltf: Maximum Number Of Supported EHT-LTFs
- * mcs_15: Support Of MCS 15
- * eht_dup_6ghz: Support Of EHT DUP In 6 GHz
- * op_sta_rx_ndp_wider_bw_20mhz: Support For 20 MHz Operating STA
+ * @ppet_present: PPE Thresholds Present
+ * @common_nominal_pkt_padding: Common Nominal Packet Padding
+ * @max_num_eht_ltf: Maximum Number Of Supported EHT-LTFs
+ * @mcs_15: Support Of MCS 15
+ * @eht_dup_6ghz: Support Of EHT DUP In 6 GHz
+ * @op_sta_rx_ndp_wider_bw_20mhz: Support For 20 MHz Operating STA
    Receiving NDP With Wider Bandwidth
- * non_ofdma_ul_mu_mimo_le_80mhz: Non-OFDMA UL MU-MIMO (BW ≤ 80 MHz)
- * non_ofdma_ul_mu_mimo_160mhz: Non-OFDMA UL MU-MIMO (BW ≤ 160 MHz)
- * non_ofdma_ul_mu_mimo_320mhz: Non-OFDMA UL MU-MIMO (BW ≤ 320 MHz)
- * mu_bformer_le_80mhz: MU Beamformer (BW ≤ 80 MHz)
- * mu_bformer_160mhz: MU Beamformer (BW ≤ 160 MHz)
- * mu_bformer_320mhz: MU Beamformer (BW ≤ 320 MHz)
- * tb_sounding_feedback_rl: TB sounding feedback rate limit
- * rx_1k_qam_in_wider_bw_dl_ofdma: Rx 1024-QAM in wider bandwidth DL
+ * @non_ofdma_ul_mu_mimo_le_80mhz: Non-OFDMA UL MU-MIMO (BW ≤ 80 MHz)
+ * @non_ofdma_ul_mu_mimo_160mhz: Non-OFDMA UL MU-MIMO (BW ≤ 160 MHz)
+ * @non_ofdma_ul_mu_mimo_320mhz: Non-OFDMA UL MU-MIMO (BW ≤ 320 MHz)
+ * @mu_bformer_le_80mhz: MU Beamformer (BW ≤ 80 MHz)
+ * @mu_bformer_160mhz: MU Beamformer (BW ≤ 160 MHz)
+ * @mu_bformer_320mhz: MU Beamformer (BW ≤ 320 MHz)
+ * @tb_sounding_feedback_rl: TB sounding feedback rate limit
+ * @rx_1k_qam_in_wider_bw_dl_ofdma: Rx 1024-QAM in wider bandwidth DL
  *                                 OFDMA support
- * rx_4k_qam_in_wider_bw_dl_ofdma: Rx 4096-QAM in wider bandwidth DL
+ * @rx_4k_qam_in_wider_bw_dl_ofdma: Rx 4096-QAM in wider bandwidth DL
  *                                 OFDMA support
- * reserved3: reserved bits
- * bw_20_rx_max_nss_for_mcs_0_to_7: Max Rx NSS for MCS 0 to 7 (BW = 20MHz)
- * bw_20_tx_max_nss_for_mcs_0_to_7: Max Tx NSS for MCS 0 to 7 (BW = 20MHz)
- * bw_20_rx_max_nss_for_mcs_8_and_9: Max Rx NSS for MCS 8 and 9 (BW = 20MHz)
- * bw_20_tx_max_nss_for_mcs_8_and_9: Max Tx NSS for MCS 8 and 9 (BW = 20MHz)
- * bw_20_rx_max_nss_for_mcs_10_and_11: Max Rx NSS for MCS 10 and 11 (BW = 20MHz)
- * bw_20_tx_max_nss_for_mcs_10_and_11: Max Tx NSS for MCS 10 and 11 (BW = 20MHz)
- * bw_20_rx_max_nss_for_mcs_12_and_13: Max Rx NSS for MCS 12 and 13 (BW = 20MHz)
- * bw_20_tx_max_nss_for_mcs_12_and_13: Max Tx NSS for MCS 12 and 13 (BW = 20MHz)
- * bw_le_80_rx_max_nss_for_mcs_0_to_9: Max Rx NSS for MCS 0 to 9 (BW <= 80MHz)
- * bw_le_80_tx_max_nss_for_mcs_0_to_9: Max Tx NSS for MCS 0 to 9 (BW <= 80MHz)
- * bw_le_80_rx_max_nss_for_mcs_10_and_11: Max Rx NSS for MCS 10 and 11
+ * @reserved3: reserved bits
+ * @bw_20_rx_max_nss_for_mcs_0_to_7: Max Rx NSS for MCS 0 to 7 (BW = 20MHz)
+ * @bw_20_tx_max_nss_for_mcs_0_to_7: Max Tx NSS for MCS 0 to 7 (BW = 20MHz)
+ * @bw_20_rx_max_nss_for_mcs_8_and_9: Max Rx NSS for MCS 8 and 9 (BW = 20MHz)
+ * @bw_20_tx_max_nss_for_mcs_8_and_9: Max Tx NSS for MCS 8 and 9 (BW = 20MHz)
+ * @bw_20_rx_max_nss_for_mcs_10_and_11: Max Rx NSS for MCS 10 and 11
+ *                                      (BW = 20MHz)
+ * @bw_20_tx_max_nss_for_mcs_10_and_11: Max Tx NSS for MCS 10 and 11
+ *                                      (BW = 20MHz)
+ * @bw_20_rx_max_nss_for_mcs_12_and_13: Max Rx NSS for MCS 12 and 13
+ *                                      (BW = 20MHz)
+ * @bw_20_tx_max_nss_for_mcs_12_and_13: Max Tx NSS for MCS 12 and 13
+ *                                      (BW = 20MHz)
+ * @bw_le_80_rx_max_nss_for_mcs_0_to_9: Max Rx NSS for MCS 0 to 9 (BW <= 80MHz)
+ * @bw_le_80_tx_max_nss_for_mcs_0_to_9: Max Tx NSS for MCS 0 to 9 (BW <= 80MHz)
+ * @bw_le_80_rx_max_nss_for_mcs_10_and_11: Max Rx NSS for MCS 10 and 11
  *                                        (BW <= 80MHz)
- * bw_le_80_tx_max_nss_for_mcs_10_and_11: Max Tx NSS for MCS 10 and 11
+ * @bw_le_80_tx_max_nss_for_mcs_10_and_11: Max Tx NSS for MCS 10 and 11
  *                                        (BW <= 80MHz)
- * bw_le_80_rx_max_nss_for_mcs_12_and_13: Max Rx NSS for MCS 12 and 13
+ * @bw_le_80_rx_max_nss_for_mcs_12_and_13: Max Rx NSS for MCS 12 and 13
  *                                        (BW <= 80MHz)
- * bw_le_80_tx_max_nss_for_mcs_12_and_13: Max Tx NSS for MCS 12 and 13
+ * @bw_le_80_tx_max_nss_for_mcs_12_and_13: Max Tx NSS for MCS 12 and 13
  *                                        (BW <= 80MHz)
- * bw_160_rx_max_nss_for_mcs_0_to_9: Max Rx NSS for MCS 0 to 9 (BW = 160MHz)
- * bw_160_tx_max_nss_for_mcs_0_to_9: Max Tx NSS for MCS 0 to 9 (BW = 160MHz)
- * bw_160_rx_max_nss_for_mcs_10_and_11: Max Rx NSS for MCS 10 and 11
+ * @bw_160_rx_max_nss_for_mcs_0_to_9: Max Rx NSS for MCS 0 to 9 (BW = 160MHz)
+ * @bw_160_tx_max_nss_for_mcs_0_to_9: Max Tx NSS for MCS 0 to 9 (BW = 160MHz)
+ * @bw_160_rx_max_nss_for_mcs_10_and_11: Max Rx NSS for MCS 10 and 11
  *                                      (BW = 160MHz)
- * bw_160_tx_max_nss_for_mcs_10_and_11: Max Tx NSS for MCS 10 and 11
+ * @bw_160_tx_max_nss_for_mcs_10_and_11: Max Tx NSS for MCS 10 and 11
  *                                      (BW = 160MHz)
- * bw_160_rx_max_nss_for_mcs_12_and_13: Max Rx NSS for MCS 12 and 13
+ * @bw_160_rx_max_nss_for_mcs_12_and_13: Max Rx NSS for MCS 12 and 13
  *                                      (BW = 160MHz)
- * bw_160_tx_max_nss_for_mcs_12_and_13: Max Tx NSS for MCS 12 and 13
+ * @bw_160_tx_max_nss_for_mcs_12_and_13: Max Tx NSS for MCS 12 and 13
  *                                      (BW = 160MHz)
- * bw_320_rx_max_nss_for_mcs_0_to_9: Max Rx NSS for MCS 0 to 9 (BW = 320MHz)
- * bw_320_tx_max_nss_for_mcs_0_to_9: Max Tx NSS for MCS 0 to 9 (BW = 320MHz)
- * bw_320_rx_max_nss_for_mcs_10_and_11: Max Rx NSS for MCS 10 and 11
+ * @bw_320_rx_max_nss_for_mcs_0_to_9: Max Rx NSS for MCS 0 to 9 (BW = 320MHz)
+ * @bw_320_tx_max_nss_for_mcs_0_to_9: Max Tx NSS for MCS 0 to 9 (BW = 320MHz)
+ * @bw_320_rx_max_nss_for_mcs_10_and_11: Max Rx NSS for MCS 10 and 11
  *                                      (BW = 320MHz)
- * bw_320_tx_max_nss_for_mcs_10_and_11: Max Tx NSS for MCS 10 and 11
+ * @bw_320_tx_max_nss_for_mcs_10_and_11: Max Tx NSS for MCS 10 and 11
  *                                      (BW = 320MHz)
- * bw_320_rx_max_nss_for_mcs_12_and_13: Max Rx NSS for MCS 12 and 13
+ * @bw_320_rx_max_nss_for_mcs_12_and_13: Max Rx NSS for MCS 12 and 13
  *                                      (BW = 320MHz)
- * bw_320_tx_max_nss_for_mcs_12_and_13: Max Tx NSS for MCS 12 and 13
+ * @bw_320_tx_max_nss_for_mcs_12_and_13: Max Tx NSS for MCS 12 and 13
  *                                      (BW = 320MHz)
  */
 struct wlan_eht_cap_info {
 #ifndef ANI_LITTLE_BIT_ENDIAN
-	uint16_t reserved:8;
+	uint16_t reserved:7;
+	uint16_t max_a_mpdu_len_exponent_ext:1;
 	uint16_t max_mpdu_len:2;
 	uint16_t scs_traffic_desc:1;
 	uint16_t restricted_twt:1;
@@ -2714,7 +2782,8 @@ struct wlan_eht_cap_info {
 	uint16_t restricted_twt:1;
 	uint16_t scs_traffic_desc:1;
 	uint16_t max_mpdu_len:2;
-	uint16_t reserved:8;
+	uint16_t max_a_mpdu_len_exponent_ext:1;
+	uint16_t reserved:7;
 
 	uint32_t reserved2:1;
 	uint32_t support_320mhz_6ghz:1;
@@ -2797,101 +2866,106 @@ struct wlan_eht_cap_info {
 
 /**
  * wlan_eht_cap_info_network_endian - struct for eht capabilities information
- * epcs_pri_access: EPCS priority access support
- * eht_om_ctl: EHT OM control support
- * triggered_txop_sharing_mode1: Triggered TXOP sharing mode 1 support
- * triggered_txop_sharing_mode2: Triggered TXOP sharing mode 2 support
- * restricted_twt: Restricted TWT support
- * scs_traffic_desc: SCS traffic description support
- * max_mpdu_len: Maximum MPDU length
- * reserved3: reserved bits
- * reserved2: reserved bits
- * support_320mhz_6ghz: support 320mhz in 6gz
- * ru_242tone_wt_20mhz: Support For 242-tone RU In BW Wider Than 20 MHz
- * ndp_4x_eht_ltf_3dot2_us_gi: NDP With 4 EHT-LTF And 3.2 μs GI
- * partial_bw_mu_mimo: Partial Bandwidth UL MU-MIMO
- * su_beamformer: SU Beamformer
- * su_beamformee: SU Beamformer
- * bfee_ss_le_80mhz: Beamformee SS (≤ 80 MHz)
- * bfee_ss_160mhz: Beamformee SS (= 160 MHz)
- * bfee_ss_320mhz: Beamformee SS (= 320 MHz)
- * num_sounding_dim_le_80mhz: Number Of Sounding Dimensions (≤ 80 MHz)
- * num_sounding_dim_160mhz: Number Of Sounding Dimensions (= 160 MHz)
- * num_sounding_dim_320mhz: Number Of Sounding Dimensions (= 320 MHz)
- * ng_16_su_feedback: Ng = 16 SU Feedback
- * ng_16_mu_feedback: Ng = 16 MU Feedback
- * cb_sz_4_2_su_feedback: Codebook Size SU Feedback
- * cb_sz_7_5_su_feedback: Codebook Size SU Feedback
- * trig_su_bforming_feedback: Triggered SU Beamforming Feedback
- * trig_mu_bforming_partial_bw_feedback: Triggered MU Partial
+ * @epcs_pri_access: EPCS priority access support
+ * @eht_om_ctl: EHT OM control support
+ * @triggered_txop_sharing_mode1: Triggered TXOP sharing mode 1 support
+ * @triggered_txop_sharing_mode2: Triggered TXOP sharing mode 2 support
+ * @restricted_twt: Restricted TWT support
+ * @scs_traffic_desc: SCS traffic description support
+ * @max_mpdu_len: Maximum MPDU length
+ * @max_a_mpdu_len_exponent_ext: Maximum A-MPDU Length Exponent Extension
+ * @reserved3: reserved bits
+ * @reserved2: reserved bits
+ * @support_320mhz_6ghz: support 320mhz in 6gz
+ * @ru_242tone_wt_20mhz: Support For 242-tone RU In BW Wider Than 20 MHz
+ * @ndp_4x_eht_ltf_3dot2_us_gi: NDP With 4 EHT-LTF And 3.2 μs GI
+ * @partial_bw_mu_mimo: Partial Bandwidth UL MU-MIMO
+ * @su_beamformer: SU Beamformer
+ * @su_beamformee: SU Beamformer
+ * @bfee_ss_le_80mhz: Beamformee SS (≤ 80 MHz)
+ * @bfee_ss_160mhz: Beamformee SS (= 160 MHz)
+ * @bfee_ss_320mhz: Beamformee SS (= 320 MHz)
+ * @num_sounding_dim_le_80mhz: Number Of Sounding Dimensions (≤ 80 MHz)
+ * @num_sounding_dim_160mhz: Number Of Sounding Dimensions (= 160 MHz)
+ * @num_sounding_dim_320mhz: Number Of Sounding Dimensions (= 320 MHz)
+ * @ng_16_su_feedback: Ng = 16 SU Feedback
+ * @ng_16_mu_feedback: Ng = 16 MU Feedback
+ * @cb_sz_4_2_su_feedback: Codebook Size SU Feedback
+ * @cb_sz_7_5_su_feedback: Codebook Size SU Feedback
+ * @trig_su_bforming_feedback: Triggered SU Beamforming Feedback
+ * @trig_mu_bforming_partial_bw_feedback: Triggered MU Partial
    Beamforming Feedback
- * triggered_cqi_feedback: Triggered SU Beamforming Feedback
- * partial_bw_dl_mu_mimo: Partial Bandwidth DL MU-MIMO
- * psr_based_sr: PSR-based SR Support
- * power_boost_factor: Power Boost Factor Support
- * eht_mu_ppdu_4x_ltf_0_8_us_gi: EHT MU PPDU With 4 EHT-LTF And 0.8 μs GI
- * max_nc: Max Nc
- * non_trig_cqi_feedback: Non-Triggered CQI Feedback
- * tx_1024_4096_qam_lt_242_tone_ru: Tx 1024-QAM And 4096-QAM < 242-tone
+ * @triggered_cqi_feedback: Triggered SU Beamforming Feedback
+ * @partial_bw_dl_mu_mimo: Partial Bandwidth DL MU-MIMO
+ * @psr_based_sr: PSR-based SR Support
+ * @power_boost_factor: Power Boost Factor Support
+ * @eht_mu_ppdu_4x_ltf_0_8_us_gi: EHT MU PPDU With 4 EHT-LTF And 0.8 μs GI
+ * @max_nc: Max Nc
+ * @non_trig_cqi_feedback: Non-Triggered CQI Feedback
+ * @tx_1024_4096_qam_lt_242_tone_ru: Tx 1024-QAM And 4096-QAM < 242-tone
    RU Support
- * rx_1024_4096_qam_lt_242_tone_ru: Rx 1024-QAM And 4096-QAM < 242-tone
+ * @rx_1024_4096_qam_lt_242_tone_ru: Rx 1024-QAM And 4096-QAM < 242-tone
    RU Support
- * ppet_present: PPE Thresholds Present
- * common_nominal_pkt_padding: Common Nominal Packet Padding
- * max_num_eht_ltf: Maximum Number Of Supported EHT-LTFs
- * mcs_15: Support Of MCS 15
- * eht_dup_6ghz: Support Of EHT DUP In 6 GHz
- * op_sta_rx_ndp_wider_bw_20mhz: Support For 20 MHz Operating STA
+ * @ppet_present: PPE Thresholds Present
+ * @common_nominal_pkt_padding: Common Nominal Packet Padding
+ * @max_num_eht_ltf: Maximum Number Of Supported EHT-LTFs
+ * @mcs_15: Support Of MCS 15
+ * @eht_dup_6ghz: Support Of EHT DUP In 6 GHz
+ * @op_sta_rx_ndp_wider_bw_20mhz: Support For 20 MHz Operating STA
    Receiving NDP With Wider Bandwidth
- * non_ofdma_ul_mu_mimo_le_80mhz: Non-OFDMA UL MU-MIMO (BW ≤ 80 MHz)
- * non_ofdma_ul_mu_mimo_160mhz: Non-OFDMA UL MU-MIMO (BW ≤ 160 MHz)
- * non_ofdma_ul_mu_mimo_320mhz: Non-OFDMA UL MU-MIMO (BW ≤ 320 MHz)
- * mu_bformer_le_80mhz: MU Beamformer (BW ≤ 80 MHz)
- * mu_bformer_160mhz: MU Beamformer (BW ≤ 160 MHz)
- * mu_bformer_320mhz: MU Beamformer (BW ≤ 320 MHz)
- * tb_sounding_feedback_rl: TB sounding feedback rate limit
- * rx_1k_qam_in_wider_bw_dl_ofdma: Rx 1024-QAM in wider bandwidth DL
+ * @non_ofdma_ul_mu_mimo_le_80mhz: Non-OFDMA UL MU-MIMO (BW ≤ 80 MHz)
+ * @non_ofdma_ul_mu_mimo_160mhz: Non-OFDMA UL MU-MIMO (BW ≤ 160 MHz)
+ * @non_ofdma_ul_mu_mimo_320mhz: Non-OFDMA UL MU-MIMO (BW ≤ 320 MHz)
+ * @mu_bformer_le_80mhz: MU Beamformer (BW ≤ 80 MHz)
+ * @mu_bformer_160mhz: MU Beamformer (BW ≤ 160 MHz)
+ * @mu_bformer_320mhz: MU Beamformer (BW ≤ 320 MHz)
+ * @tb_sounding_feedback_rl: TB sounding feedback rate limit
+ * @rx_1k_qam_in_wider_bw_dl_ofdma: Rx 1024-QAM in wider bandwidth DL
  *                                 OFDMA support
- * rx_4k_qam_in_wider_bw_dl_ofdma: Rx 4096-QAM in wider bandwidth DL
+ * @rx_4k_qam_in_wider_bw_dl_ofdma: Rx 4096-QAM in wider bandwidth DL
  *                                 OFDMA support
- * reserved3: reserved bits
- * bw_20_rx_max_nss_for_mcs_0_to_7: Max Rx NSS for MCS 0 to 7 (BW = 20MHz)
- * bw_20_tx_max_nss_for_mcs_0_to_7: Max Tx NSS for MCS 0 to 7 (BW = 20MHz)
- * bw_20_rx_max_nss_for_mcs_8_and_9: Max Rx NSS for MCS 8 and 9 (BW = 20MHz)
- * bw_20_tx_max_nss_for_mcs_8_and_9: Max Tx NSS for MCS 8 and 9 (BW = 20MHz
- * bw_20_rx_max_nss_for_mcs_10_and_11: Max Rx NSS for MCS 10 and 11 (BW = 20MHz)
- * bw_20_tx_max_nss_for_mcs_10_and_11: Max Tx NSS for MCS 10 and 11 (BW = 20MHz)
- * bw_20_rx_max_nss_for_mcs_12_and_13: Max Rx NSS for MCS 12 and 13 (BW = 20MHz)
- * bw_20_tx_max_nss_for_mcs_12_and_13: Max Tx NSS for MCS 12 and 13 (BW = 20MHz)
- * bw_le_80_rx_max_nss_for_mcs_0_to_9: Max Rx NSS for MCS 0 to 9 (BW <= 80MHz)
- * bw_le_80_tx_max_nss_for_mcs_0_to_9: Max Tx NSS for MCS 0 to 9 (BW <= 80MHz)
- * bw_le_80_rx_max_nss_for_mcs_10_and_11: Max Rx NSS for MCS 10 and 11
+ * @reserved3: reserved bits
+ * @bw_20_rx_max_nss_for_mcs_0_to_7: Max Rx NSS for MCS 0 to 7 (BW = 20MHz)
+ * @bw_20_tx_max_nss_for_mcs_0_to_7: Max Tx NSS for MCS 0 to 7 (BW = 20MHz)
+ * @bw_20_rx_max_nss_for_mcs_8_and_9: Max Rx NSS for MCS 8 and 9 (BW = 20MHz)
+ * @bw_20_tx_max_nss_for_mcs_8_and_9: Max Tx NSS for MCS 8 and 9 (BW = 20MHz
+ * @bw_20_rx_max_nss_for_mcs_10_and_11: Max Rx NSS for MCS 10 and 11
+ *                                      (BW = 20MHz)
+ * @bw_20_tx_max_nss_for_mcs_10_and_11: Max Tx NSS for MCS 10 and 11
+ *                                      (BW = 20MHz)
+ * @bw_20_rx_max_nss_for_mcs_12_and_13: Max Rx NSS for MCS 12 and 13
+ *                                      (BW = 20MHz)
+ * @bw_20_tx_max_nss_for_mcs_12_and_13: Max Tx NSS for MCS 12 and 13
+ *                                      (BW = 20MHz)
+ * @bw_le_80_rx_max_nss_for_mcs_0_to_9: Max Rx NSS for MCS 0 to 9 (BW <= 80MHz)
+ * @bw_le_80_tx_max_nss_for_mcs_0_to_9: Max Tx NSS for MCS 0 to 9 (BW <= 80MHz)
+ * @bw_le_80_rx_max_nss_for_mcs_10_and_11: Max Rx NSS for MCS 10 and 11
  *                                        (BW <= 80MHz)
- * bw_le_80_tx_max_nss_for_mcs_10_and_11: Max Tx NSS for MCS 10 and 11
+ * @bw_le_80_tx_max_nss_for_mcs_10_and_11: Max Tx NSS for MCS 10 and 11
  *                                        (BW <= 80MHz)
- * bw_le_80_rx_max_nss_for_mcs_12_and_13: Max Rx NSS for MCS 12 and 13
+ * @bw_le_80_rx_max_nss_for_mcs_12_and_13: Max Rx NSS for MCS 12 and 13
  *                                        (BW <= 80MHz)
- * bw_le_80_tx_max_nss_for_mcs_12_and_13: Max Tx NSS for MCS 12 and 13
+ * @bw_le_80_tx_max_nss_for_mcs_12_and_13: Max Tx NSS for MCS 12 and 13
  *                                        (BW <= 80MHz)
- * bw_160_rx_max_nss_for_mcs_0_to_9: Max Rx NSS for MCS 0 to 9 (BW = 160MHz)
- * bw_160_tx_max_nss_for_mcs_0_to_9: Max Tx NSS for MCS 0 to 9 (BW = 160MHz)
- * bw_160_rx_max_nss_for_mcs_10_and_11: Max Rx NSS for MCS 10 and 11
+ * @bw_160_rx_max_nss_for_mcs_0_to_9: Max Rx NSS for MCS 0 to 9 (BW = 160MHz)
+ * @bw_160_tx_max_nss_for_mcs_0_to_9: Max Tx NSS for MCS 0 to 9 (BW = 160MHz)
+ * @bw_160_rx_max_nss_for_mcs_10_and_11: Max Rx NSS for MCS 10 and 11
  *                                      (BW = 160MHz)
- * bw_160_tx_max_nss_for_mcs_10_and_11: Max Tx NSS for MCS 10 and 11
+ * @bw_160_tx_max_nss_for_mcs_10_and_11: Max Tx NSS for MCS 10 and 11
  *                                      (BW = 160MHz)
- * bw_160_rx_max_nss_for_mcs_12_and_13: Max Rx NSS for MCS 12 and 13
+ * @bw_160_rx_max_nss_for_mcs_12_and_13: Max Rx NSS for MCS 12 and 13
  *                                      (BW = 160MHz)
- * bw_160_tx_max_nss_for_mcs_12_and_13: Max Tx NSS for MCS 12 and 13
+ * @bw_160_tx_max_nss_for_mcs_12_and_13: Max Tx NSS for MCS 12 and 13
  *                                      (BW = 160MHz)
- * bw_320_rx_max_nss_for_mcs_0_to_9: Max Rx NSS for MCS 0 to 9 (BW = 320MHz)
- * bw_320_tx_max_nss_for_mcs_0_to_9: Max Tx NSS for MCS 0 to 9 (BW = 320MHz)
- * bw_320_rx_max_nss_for_mcs_10_and_11: Max Rx NSS for MCS 10 and 11
+ * @bw_320_rx_max_nss_for_mcs_0_to_9: Max Rx NSS for MCS 0 to 9 (BW = 320MHz)
+ * @bw_320_tx_max_nss_for_mcs_0_to_9: Max Tx NSS for MCS 0 to 9 (BW = 320MHz)
+ * @bw_320_rx_max_nss_for_mcs_10_and_11: Max Rx NSS for MCS 10 and 11
  *                                      (BW = 320MHz)
- * bw_320_tx_max_nss_for_mcs_10_and_11: Max Tx NSS for MCS 10 and 11
+ * @bw_320_tx_max_nss_for_mcs_10_and_11: Max Tx NSS for MCS 10 and 11
  *                                      (BW = 320MHz)
- * bw_320_rx_max_nss_for_mcs_12_and_13: Max Rx NSS for MCS 12 and 13
+ * @bw_320_rx_max_nss_for_mcs_12_and_13: Max Rx NSS for MCS 12 and 13
  *                                      (BW = 320MHz)
- * bw_320_tx_max_nss_for_mcs_12_and_13: Max Tx NSS for MCS 12 and 13
+ * @bw_320_tx_max_nss_for_mcs_12_and_13: Max Tx NSS for MCS 12 and 13
  *                                      (BW = 320MHz)
  */
 struct wlan_eht_cap_info_network_endian {
@@ -2902,7 +2976,8 @@ struct wlan_eht_cap_info_network_endian {
 	uint16_t restricted_twt:1;
 	uint16_t scs_traffic_desc:1;
 	uint16_t max_mpdu_len:2;
-	uint16_t reserved:8;
+	uint16_t max_a_mpdu_len_exponent_ext:1;
+	uint16_t reserved:7;
 
 	uint32_t reserved2:1;
 	uint32_t support_320mhz_6ghz:1;

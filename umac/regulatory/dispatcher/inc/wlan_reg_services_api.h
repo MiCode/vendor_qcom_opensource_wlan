@@ -754,6 +754,15 @@ wlan_reg_get_6g_afc_mas_chan_list(struct wlan_objmgr_pdev *pdev,
 bool wlan_reg_is_afc_power_event_received(struct wlan_objmgr_pdev *pdev);
 
 /**
+ * wlan_reg_is_afc_done() - Check if AFC response enables the given frequency.
+ * @pdev: pdev ptr
+ * @freq: given frequency.
+ *
+ * Return: True if frequency is enabled, false otherwise.
+ */
+bool wlan_reg_is_afc_done(struct wlan_objmgr_pdev *pdev, qdf_freq_t freq);
+
+/**
  * wlan_reg_get_afc_req_id() - Get the AFC request ID
  * @pdev: pdev pointer
  * @req_id: Pointer to request id
@@ -795,6 +804,17 @@ wlan_reg_is_noaction_on_afc_pwr_evt(struct wlan_objmgr_pdev *pdev);
 QDF_STATUS
 wlan_reg_get_afc_dev_deploy_type(struct wlan_objmgr_pdev *pdev,
 				 enum reg_afc_dev_deploy_type *afc_dev_type);
+
+/**
+ * wlan_reg_is_sta_connect_allowed() - Check if STA connection allowed
+ * @pdev: pdev pointer
+ * @root_ap_pwr_mode: power mode of the Root AP.
+ *
+ * Return : True if STA Vap connection is allowed.
+ */
+bool
+wlan_reg_is_sta_connect_allowed(struct wlan_objmgr_pdev *pdev,
+				enum reg_6g_ap_type root_ap_pwr_mode);
 #else
 static inline bool
 wlan_reg_is_afc_power_event_received(struct wlan_objmgr_pdev *pdev)
@@ -802,11 +822,24 @@ wlan_reg_is_afc_power_event_received(struct wlan_objmgr_pdev *pdev)
 	return false;
 }
 
+static inline bool
+wlan_reg_is_afc_done(struct wlan_objmgr_pdev *pdev, qdf_freq_t freq)
+{
+	return true;
+}
+
 static inline QDF_STATUS
 wlan_reg_get_6g_afc_chan_list(struct wlan_objmgr_pdev *pdev,
 			      struct regulatory_channel *chan_list)
 {
 	return QDF_STATUS_E_NOSUPPORT;
+}
+
+static inline bool
+wlan_reg_is_sta_connect_allowed(struct wlan_objmgr_pdev *pdev,
+				enum reg_6g_ap_type root_ap_pwr_mode)
+{
+	return true;
 }
 #endif
 
@@ -1101,6 +1134,14 @@ bool wlan_reg_is_us(uint8_t *country);
  */
 bool wlan_reg_is_etsi(uint8_t *country);
 
+
+/**
+ * wlan_reg_ctry_support_vlp() - Country supports VLP or not
+ * @country: The country information
+ *
+ * Return: true or false
+ */
+bool wlan_reg_ctry_support_vlp(uint8_t *country);
 
 /**
  * wlan_reg_set_country() - Set the current regulatory country
@@ -1482,6 +1523,26 @@ bool wlan_reg_is_punc_bitmap_valid(enum phy_ch_width bw,
 				   uint16_t puncture_bitmap);
 
 /**
+ * wlan_reg_extract_puncture_by_bw() - generate new puncture bitmap from
+ *                                     original puncture bitmap and bandwidth
+ *                                     based on new bandwidth
+ * @ori_bw: original bandwidth
+ * @ori_puncture_bitmap: original puncture bitmap
+ * @freq: frequency of primary channel
+ * @cen320_freq: center frequency of 320 MHZ if channel width is 320
+ * @new_bw new bandwidth
+ * @new_puncture_bitmap: output of puncture bitmap
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS wlan_reg_extract_puncture_by_bw(enum phy_ch_width ori_bw,
+					   uint16_t ori_puncture_bitmap,
+					   qdf_freq_t freq,
+					   qdf_freq_t cen320_freq,
+					   enum phy_ch_width new_bw,
+					   uint16_t *new_puncture_bitmap);
+
+/**
  * wlan_reg_set_create_punc_bitmap() - set is_create_punc_bitmap of ch_params
  * @ch_params: ch_params to set
  * @is_create_punc_bitmap: is create punc bitmap
@@ -1517,6 +1578,16 @@ void wlan_reg_fill_channel_list_for_pwrmode(
 				bool treat_nol_chan_as_disabled);
 #endif
 #else
+static inline
+QDF_STATUS wlan_reg_extract_puncture_by_bw(enum phy_ch_width ori_bw,
+					   uint16_t ori_puncture_bitmap,
+					   qdf_freq_t freq,
+					   enum phy_ch_width new_bw,
+					   uint16_t *new_puncture_bitmap)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
 static inline void wlan_reg_set_create_punc_bitmap(struct ch_params *ch_params,
 						   bool is_create_punc_bitmap)
 {

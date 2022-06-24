@@ -107,7 +107,7 @@ dp_rx_mon_handle_status_buf_done(struct dp_pdev *pdev,
 		dp_err_rl("Monitor status ring: DMA is not done "
 			     "for nbuf: %pK", status_nbuf);
 		mon_pdev->rx_mon_stats.tlv_tag_status_err++;
-		return DP_MON_STATUS_NO_DMA;
+		return DP_MON_STATUS_REPLENISH;
 	}
 
 	mon_pdev->rx_mon_stats.status_buf_done_war++;
@@ -414,6 +414,7 @@ dp_rx_mon_status_process_tlv(struct dp_soc *soc, struct dp_intr *int_ctx,
 			} while ((tlv_status == HAL_TLV_STATUS_PPDU_NOT_DONE) ||
 				 (tlv_status == HAL_TLV_STATUS_HEADER) ||
 				 (tlv_status == HAL_TLV_STATUS_MPDU_END) ||
+				 (tlv_status == HAL_TLV_STATUS_MPDU_START) ||
 				 (tlv_status == HAL_TLV_STATUS_MSDU_END));
 		}
 		if (mon_pdev->dp_peer_based_pktlog) {

@@ -985,6 +985,7 @@ static void hal_rx_dump_msdu_end_tlv_9224(void *msduend,
 		  "sa_is_valid: %d "
 		  "da_is_valid: %d "
 		  "da_is_mcbc: %d "
+		  "tkip_mic_err: %d "
 		  "l3_header_padding: %d "
 		  "first_msdu: %d "
 		  "last_msdu: %d "
@@ -1010,6 +1011,7 @@ static void hal_rx_dump_msdu_end_tlv_9224(void *msduend,
 		  msdu_end->sa_is_valid,
 		  msdu_end->da_is_valid,
 		  msdu_end->da_is_mcbc,
+		  msdu_end->tkip_mic_err,
 		  msdu_end->l3_header_padding,
 		  msdu_end->first_msdu,
 		  msdu_end->last_msdu,
@@ -1642,6 +1644,11 @@ static void hal_reo_setup_9224(struct hal_soc *soc, void *reoparams)
 	hal_reo_shared_qaddr_init((hal_soc_handle_t)soc);
 }
 
+static uint16_t hal_get_rx_max_ba_window_qcn9224(int tid)
+{
+	return HAL_RX_BA_WINDOW_1024;
+}
+
 /**
  * hal_qcn9224_get_reo_qdesc_size()- Get the reo queue descriptor size
  *			  from the give Block-Ack window size
@@ -1652,9 +1659,8 @@ static uint32_t hal_qcn9224_get_reo_qdesc_size(uint32_t ba_window_size, int tid)
 	/* Hardcode the ba_window_size to HAL_RX_MAX_BA_WINDOW for
 	 * NON_QOS_TID until HW issues are resolved.
 	 */
-#define HAL_RX_MAX_BA_WINDOW_BE 1024
 	if (tid != HAL_NON_QOS_TID)
-		ba_window_size = HAL_RX_MAX_BA_WINDOW_BE;
+		ba_window_size = hal_get_rx_max_ba_window_qcn9224(tid);
 
 	/* Return descriptor size corresponding to window size of 2 since
 	 * we set ba_window_size to 2 while setting up REO descriptors as
@@ -1778,6 +1784,8 @@ static void hal_hw_txrx_ops_attach_qcn9224(struct hal_soc *hal_soc)
 					hal_rx_get_rx_fragment_number_be,
 	hal_soc->ops->hal_rx_msdu_end_da_is_mcbc_get =
 					hal_rx_tlv_da_is_mcbc_get_be;
+	hal_soc->ops->hal_rx_msdu_end_is_tkip_mic_err =
+					hal_rx_tlv_is_tkip_mic_err_get_be;
 	hal_soc->ops->hal_rx_msdu_end_sa_is_valid_get =
 					hal_rx_tlv_sa_is_valid_get_be;
 	hal_soc->ops->hal_rx_msdu_end_sa_idx_get = hal_rx_tlv_sa_idx_get_be;
@@ -1934,6 +1942,8 @@ static void hal_hw_txrx_ops_attach_qcn9224(struct hal_soc *hal_soc)
 	hal_soc->ops->hal_reo_shared_qaddr_cache_clear = hal_reo_shared_qaddr_cache_clear_be;
 #endif
 	/* Overwrite the default BE ops */
+	hal_soc->ops->hal_get_rx_max_ba_window =
+					hal_get_rx_max_ba_window_qcn9224;
 	hal_soc->ops->hal_get_reo_qdesc_size = hal_qcn9224_get_reo_qdesc_size;
 	/* TX MONITOR */
 #ifdef QCA_MONITOR_2_0_SUPPORT

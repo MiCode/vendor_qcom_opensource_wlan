@@ -423,12 +423,15 @@ static void reg_modify_chan_list_for_indoor_channels(
 			     chan_list[chan_enum].chan_flags)) {
 				chan_list[chan_enum].state =
 					CHANNEL_STATE_DFS;
-				chan_list[chan_enum].chan_flags |=
-					REGULATORY_CHAN_NO_IR;
+				if (!(pdev_priv_obj->
+				      sta_sap_scc_on_indoor_channel &&
+				      reg_is_5ghz_ch_freq(
+					    chan_list[chan_enum].center_freq)))
+					chan_list[chan_enum].chan_flags |=
+							REGULATORY_CHAN_NO_IR;
 			}
 		}
 	}
-
 	if (pdev_priv_obj->force_ssc_disable_indoor_channel &&
 	    pdev_priv_obj->sap_state) {
 		for (chan_enum = 0; chan_enum < NUM_CHANNELS; chan_enum++) {
@@ -680,6 +683,42 @@ reg_modify_chan_list_for_japan(struct wlan_objmgr_pdev *pdev)
 }
 #endif
 
+#ifdef CONFIG_AFC_SUPPORT
+/**
+ * reg_modify_chan_list_for_outdoor() - Set the channel flag for the
+ * enabled SP channels as REGULATORY_CHAN_AFC_NOT_DONE.
+ * @pdev_priv_obj: Regulatory pdev private object.
+ *
+ * Return: void
+ */
+static void
+reg_modify_chan_list_for_outdoor(struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj)
+{
+	struct regulatory_channel *sp_chan_list;
+	int i;
+
+	sp_chan_list =  pdev_priv_obj->mas_chan_list_6g_ap[REG_STANDARD_POWER_AP];
+	if (pdev_priv_obj->reg_afc_dev_deployment_type != AFC_DEPLOYMENT_OUTDOOR)
+		return;
+
+	if (pdev_priv_obj->is_6g_afc_power_event_received)
+		return;
+
+	if (!pdev_priv_obj->is_6g_channel_list_populated)
+		return;
+
+	for (i = 0; i < NUM_6GHZ_CHANNELS; i++) {
+		if (sp_chan_list[i].state == CHANNEL_STATE_ENABLE)
+			sp_chan_list[i].chan_flags |= REGULATORY_CHAN_AFC_NOT_DONE;
+	}
+}
+#else
+static inline void
+reg_modify_chan_list_for_outdoor(struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj)
+{
+}
+#endif
+
 /**
  * reg_modify_chan_list_for_freq_range() - Modify channel list for the given low
  * and high frequency range.
@@ -773,10 +812,25 @@ static void reg_propagate_6g_mas_channel_list(
 		mas_chan_params->is_6g_channel_list_populated;
 	pdev_priv_obj->reg_6g_superid =
 		mas_chan_params->reg_6g_superid;
-	pdev_priv_obj->reg_cur_6g_ap_pwr_type = REG_INDOOR_AP;
 	pdev_priv_obj->reg_6g_thresh_priority_freq =
 				mas_chan_params->reg_6g_thresh_priority_freq;
+	reg_set_ap_pwr_type(pdev_priv_obj);
 }
+
+#ifdef CONFIG_AFC_SUPPORT
+void reg_set_ap_pwr_type(struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj)
+{
+	if (pdev_priv_obj->reg_afc_dev_deployment_type == AFC_DEPLOYMENT_OUTDOOR)
+		pdev_priv_obj->reg_cur_6g_ap_pwr_type = REG_STANDARD_POWER_AP;
+	else
+		pdev_priv_obj->reg_cur_6g_ap_pwr_type = REG_INDOOR_AP;
+}
+#else
+void reg_set_ap_pwr_type(struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj)
+{
+	pdev_priv_obj->reg_cur_6g_ap_pwr_type = REG_INDOOR_AP;
+}
+#endif /* CONFIG_AFC_SUPPORT */
 #else
 static inline void reg_propagate_6g_mas_channel_list(
 		struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj,
@@ -1416,6 +1470,21 @@ reg_intersect_6g_afc_chan_list(struct wlan_regulatory_pdev_priv_obj
 			afc_chan_list[i].psd_eirp =
 				QDF_MIN((int16_t)sp_chan_list[i].psd_eirp,
 					(int16_t)afc_mas_chan_list[i].psd_eirp);
+			 afc_chan_list[i].chan_flags &=
+				 ~REGULATORY_CHAN_AFC_NOT_DONE;
+		} else if ((pdev_priv_obj->reg_afc_dev_deployment_type ==
+			    AFC_DEPLOYMENT_OUTDOOR) &&
+			   (sp_chan_list[i].chan_flags &
+			    REGULATORY_CHAN_AFC_NOT_DONE)) {
+			/* This is for the SP channels supported by
+			 * regulatory list that are mot supported by AFC i.e.
+			 * SP channel list - AFC Channel list.
+			 */
+			afc_chan_list[i].tx_power = sp_chan_list[i].tx_power;
+			afc_chan_list[i].psd_eirp = sp_chan_list[i].psd_eirp;
+			afc_chan_list[i].chan_flags &= ~REGULATORY_CHAN_DISABLED;
+			afc_chan_list[i].chan_flags |= REGULATORY_CHAN_AFC_NOT_DONE;
+			afc_chan_list[i].state = CHANNEL_STATE_ENABLE;
 		}
 	}
 }
@@ -1843,23 +1912,6 @@ reg_modify_chan_list_for_avoid_chan_ext(struct wlan_regulatory_pdev_priv_obj
 
 #ifdef CONFIG_BAND_6GHZ
 /**
- * reg_is_supp_pwr_mode_invalid - Indicates if the given 6G power mode is
- * one of the valid power modes enumerated by enum supported_6g_pwr_types
- * from REG_AP_LPI to REG_CLI_SUB_VLP.
- *
- * Note: REG_BEST_PWR_MODE and REG_CURRENT_PWR_MODE are not valid 6G power
- * modes.
- *
- * Return: True for any valid power mode from REG_AP_LPI tp REG_CLI_SUB_VLP.
- * False otherwise.
- */
-static inline bool
-reg_is_supp_pwr_mode_invalid(enum supported_6g_pwr_types supp_pwr_mode)
-{
-	return (supp_pwr_mode < REG_AP_LPI || supp_pwr_mode > REG_CLI_SUB_VLP);
-}
-
-/**
  * reg_dis_chan_state_and_flags() - Disable the input channel state
  * and chan_flags
  * @state: Channel state
@@ -1890,7 +1942,7 @@ static void reg_init_super_chan_entry(
 
 	chan_info = &pdev_priv_obj->super_chan_list[chan_idx];
 
-	for (pwr_type = REG_AP_LPI; pwr_type <= REG_CLI_SUB_VLP;
+	for (pwr_type = REG_CURRENT_PWR_MODE; pwr_type <= REG_CLI_SUB_VLP;
 	     pwr_type++)
 		reg_dis_chan_state_and_flags(&chan_info->state_arr[pwr_type],
 					     &chan_info->chan_flags_arr
@@ -1934,6 +1986,68 @@ static bool reg_is_edge_chan_disable_needed(struct wlan_objmgr_psoc *psoc,
 
 	return is_lower_edge_disable || is_upper_edge_disable;
 }
+
+#ifdef CONFIG_AFC_SUPPORT
+/**
+ * reg_set_flag_afc_not_done() - Set channel flag REGULATORY_CHAN_AFC_NOT_DONE
+ * @chan_flags: Channel flags
+ * @is_set:     boolean to set/unset the flag
+ *
+ * Return: void
+ */
+static inline void
+reg_set_flag_afc_not_done(uint32_t *chan_flags, bool is_set)
+{
+	if (is_set)
+		*chan_flags |= REGULATORY_CHAN_AFC_NOT_DONE;
+	else
+		*chan_flags &= ~REGULATORY_CHAN_AFC_NOT_DONE;
+}
+
+/**
+ * reg_update_6g_chan_for_outdoor() - Update channel state and flags for
+ * outdoor
+ * @pdev_priv: Regulatory pdev private object
+ * @chan_info: Channel parameters
+ * @chan_idx:  Channel index.
+ *
+ * Return: void
+ */
+static void
+reg_update_6g_chan_for_outdoor(struct wlan_regulatory_pdev_priv_obj *pdev_priv,
+			       struct super_chan_info *chan_info)
+{
+	uint32_t *p_chan_flags;
+
+	if (pdev_priv->reg_afc_dev_deployment_type != AFC_DEPLOYMENT_OUTDOOR)
+		return;
+
+	if (chan_info->state_arr[REG_AP_SP] == CHANNEL_STATE_DISABLE)
+		return;
+
+	p_chan_flags = &chan_info->chan_flags_arr[REG_AP_SP];
+
+	if (pdev_priv->is_6g_afc_power_event_received) {
+		reg_set_flag_afc_not_done(p_chan_flags, false);
+		return;
+	}
+
+	reg_set_flag_afc_not_done(p_chan_flags, true);
+}
+
+#else
+static inline void
+reg_set_flag_afc_not_done(uint32_t *chan_flags, bool is_set)
+{
+}
+
+static inline void
+reg_update_6g_chan_for_outdoor(struct wlan_regulatory_pdev_priv_obj *pdev_priv,
+			       struct super_chan_info *chan_info)
+{
+}
+
+#endif
 
 /**
  * reg_dis_6g_edge_chan_in_enh_chan() - Disable the 6g edge
@@ -2275,16 +2389,13 @@ static void reg_update_sup_ch_entry_for_mode(
 		return;
 
 	if (reg_is_sp_supp_pwr_mode(supp_pwr_mode)) {
-		if (wlan_reg_is_afc_power_event_received(pdev))
-			reg_assign_afc_chan_entry_to_mas_chan(pdev_priv_obj,
-							      &mas_chan,
-							      chn_idx);
-		else
-			/*
-			 * Disable the SP channels if AFC power event
-			 * is not received
-			 */
-			return;
+		/* Add the entry to super channel list whether or not AFC
+		 * response is received. If AFC response is not received
+		 * mark the channel flag as REGULATORY_AFC_NOT_DONE
+		 */
+		reg_assign_afc_chan_entry_to_mas_chan(pdev_priv_obj,
+						      &mas_chan,
+						      chn_idx);
 	}
 
 	if (!mas_chan)
@@ -2311,6 +2422,9 @@ static void reg_update_sup_ch_entry_for_mode(
 					 &temp_reg_chan);
 	reg_dis_6g_edge_chan_in_enh_chan(pdev, &super_chan_list[chn_idx],
 					 chn_idx, supp_pwr_mode);
+	reg_update_6g_chan_for_outdoor(pdev_priv_obj,
+				       &super_chan_list[chn_idx]);
+
 	reg_fill_best_pwr_mode(pdev_priv_obj, super_chan_list, chn_idx,
 			       supp_pwr_mode, temp_reg_chan.tx_power,
 			       max_eirp_pwr);
@@ -2365,16 +2479,6 @@ static void reg_init_pdev_super_chan_list(
 static inline void
 reg_compute_super_chan_list(struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj)
 {
-}
-
-static inline bool
-reg_is_supp_pwr_mode_invalid(enum supported_6g_pwr_types supp_pwr_mode)
-{
-	/* Super channel entry and 6G power modes are invalid
-	 * for non-6G chipsets.
-	 */
-
-	return true;
 }
 #endif /* CONFIG_BAND_6GHZ */
 
@@ -2600,6 +2704,7 @@ void reg_propagate_mas_chan_list_to_pdev(struct wlan_objmgr_psoc *psoc,
 
 	reg_update_max_phymode_chwidth_for_pdev(pdev);
 	reg_update_channel_ranges(pdev);
+	reg_modify_chan_list_for_outdoor(pdev_priv_obj);
 	reg_compute_pdev_current_chan_list(pdev_priv_obj);
 
 	if (reg_tx_ops->fill_umac_legacy_chanlist) {
@@ -3114,7 +3219,7 @@ reg_modify_max_bw_for_240mhz_5g_chans(struct cur_regulatory_info *regulat_info,
 	const struct bonded_channel_freq *bonded_ch_ptr;
 
 	bonded_ch_ptr = reg_get_bonded_chan_entry(FREQ_5500_MHZ,
-						  CH_WIDTH_320MHZ);
+						  CH_WIDTH_320MHZ, 0);
 	if (!reg_is_chip_cc_11be_cap(regulat_info->psoc,
 				     regulat_info->phy_id,
 				     regulat_info->max_bw_5g))
@@ -3521,12 +3626,18 @@ static void reg_disable_afc_mas_chan_list_channels(
 
 	for (chan_idx = 0; chan_idx < NUM_6GHZ_CHANNELS; chan_idx++) {
 		if (afc_mas_chan_list[chan_idx].state == CHANNEL_STATE_ENABLE) {
-			afc_mas_chan_list[chan_idx].state =
-							CHANNEL_STATE_DISABLE;
-			afc_mas_chan_list[chan_idx].chan_flags |=
-						REGULATORY_CHAN_DISABLED;
-			afc_mas_chan_list[chan_idx].psd_eirp = 0;
-			afc_mas_chan_list[chan_idx].tx_power = 0;
+			if (pdev_priv_obj->reg_afc_dev_deployment_type ==
+			    AFC_DEPLOYMENT_OUTDOOR) {
+				afc_mas_chan_list[chan_idx].chan_flags |=
+						REGULATORY_CHAN_AFC_NOT_DONE;
+			} else {
+				afc_mas_chan_list[chan_idx].state =
+						CHANNEL_STATE_DISABLE;
+				afc_mas_chan_list[chan_idx].chan_flags |=
+					REGULATORY_CHAN_DISABLED;
+				afc_mas_chan_list[chan_idx].psd_eirp = 0;
+				afc_mas_chan_list[chan_idx].tx_power = 0;
+			}
 		}
 	}
 
@@ -3543,11 +3654,13 @@ static void reg_free_expiry_afc_info(struct afc_regulatory_info *afc_info)
  * reg_disable_sp_entries_in_supr_chan_entry() - Disable the SP entries in the
  * super channel list
  * @chan_info: Pointer to chan_info
+ * @reg_afc_dev_type: AFC device deployment type
  *
  * Return: void
  */
 static void reg_disable_sp_entries_in_supr_chan_entry(
-		struct super_chan_info *chan_info)
+				struct super_chan_info *chan_info,
+				enum reg_afc_dev_deploy_type reg_afc_dev_type)
 {
 	uint8_t j;
 	static enum supported_6g_pwr_types list_of_sp_lists[] = {
@@ -3563,8 +3676,17 @@ static void reg_disable_sp_entries_in_supr_chan_entry(
 		if (reg_is_supp_pwr_mode_invalid(idx))
 			continue;
 
-		reg_dis_chan_state_and_flags(&chan_info->state_arr[idx],
-					     &chan_info->chan_flags_arr[idx]);
+		if (chan_info->state_arr[idx] == CHANNEL_STATE_DISABLE)
+			continue;
+
+		if (reg_afc_dev_type == AFC_DEPLOYMENT_OUTDOOR)
+			reg_set_flag_afc_not_done(
+					&chan_info->chan_flags_arr[idx],
+					true);
+		else
+			reg_dis_chan_state_and_flags(
+					&chan_info->state_arr[idx],
+					&chan_info->chan_flags_arr[idx]);
 	}
 }
 
@@ -3586,8 +3708,9 @@ reg_disable_sp_channels_in_super_chan_list(
 	for (i = 0; i < NUM_6GHZ_CHANNELS; i++) {
 		struct super_chan_info *chan_info =
 						&super_chan_list[i];
-
-		reg_disable_sp_entries_in_supr_chan_entry(chan_info);
+		reg_disable_sp_entries_in_supr_chan_entry(
+				chan_info,
+				pdev_priv_obj->reg_afc_dev_deployment_type);
 	}
 }
 
@@ -3657,6 +3780,7 @@ reg_process_afc_expiry_event(struct afc_regulatory_info *afc_info)
 		reg_afc_start(pdev, pdev_priv_obj->afc_request_id);
 		break;
 	case REG_AFC_EXPIRY_EVENT_SWITCH_TO_LPI:
+	case REG_AFC_EXPIRY_EVENT_STOP_TX:
 		pdev_priv_obj->is_6g_afc_power_event_received = false;
 		reg_disable_afc_mas_chan_list_channels(pdev_priv_obj);
 		reg_disable_sp_channels_in_super_chan_list(pdev_priv_obj);

@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2017-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -28,11 +28,13 @@
 #define _DFS_PROCESS_RADAR_FOUND_IND_H_
 #include "dfs_partial_offload_radar.h"
 
-#define BW_20   20
-#define BW_40   40
-#define BW_80   80
-#define BW_160 160
-#define BW_320 320
+#define BW_INVALID    0
+#define BW_10        10
+#define BW_20        20
+#define BW_40        40
+#define BW_80        80
+#define BW_160      160
+#define BW_320      320
 /**
  * dfs_false_radarfound_reset_vars () - Reset dfs radar detection related
  * variables and queues after processing radar and disabling phyerror reception.
@@ -115,6 +117,8 @@ dfs_flush_additional_pulses(struct wlan_dfs *dfs)
 #define NUM_CHANNELS_160MHZ  8
 /* Number of 20MHz sub-channels in 320 MHz segment */
 #define NUM_CHANNELS_320MHZ 16
+/* Number of 20MHz sub-channels in 240 MHz (320-80) segment */
+#define NUM_CHANNELS_240MHZ 12
 
 #ifdef WLAN_FEATURE_11BE
 #define MAX_20MHZ_SUBCHANS NUM_CHANNELS_320MHZ

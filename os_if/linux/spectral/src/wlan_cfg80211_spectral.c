@@ -33,6 +33,7 @@
 #include <wlan_cfg80211_spectral.h>
 #include <spectral_ioctl.h>
 #include <wlan_objmgr_vdev_obj.h>
+#include "wlan_osif_features.h"
 
 const struct nla_policy spectral_scan_policy[
 		QCA_WLAN_VENDOR_ATTR_SPECTRAL_SCAN_CONFIG_MAX + 1] = {

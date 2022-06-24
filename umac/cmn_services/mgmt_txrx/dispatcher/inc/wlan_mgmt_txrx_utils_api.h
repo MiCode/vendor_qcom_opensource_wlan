@@ -804,6 +804,16 @@ struct frame_pn_params {
 };
 
 /**
+ * struct mgmt_rx_event_ext_params - Host mgmt extended params
+ * @ba_win_size: Block-Ack window size
+ * @reo_win_size: Reo win size
+ */
+struct mgmt_rx_event_ext_params {
+	uint16_t ba_win_size;
+	uint16_t reo_win_size;
+};
+
+/**
  * struct mgmt_rx_event_params - host mgmt header params
  * @chan_freq: channel frequency on which this frame is received
  * @channel: channel on which this frame is received
@@ -827,6 +837,7 @@ struct frame_pn_params {
  *             (win specific, will be removed in phase 4)
  * @reo_params: Pointer to MGMT Rx REO params
  * @pn_params: Frame PN params
+ * @ext_params: Extended params
  */
 struct mgmt_rx_event_params {
 	uint32_t    chan_freq;
@@ -847,6 +858,7 @@ struct mgmt_rx_event_params {
 	struct mgmt_rx_reo_params *reo_params;
 #endif
 	struct frame_pn_params pn_params;
+	struct mgmt_rx_event_ext_params *ext_params;
 };
 
 #ifdef WLAN_MGMT_RX_REO_SUPPORT
@@ -867,14 +879,25 @@ struct mgmt_rx_event_params *alloc_mgmt_rx_event_params(void)
 		return NULL;
 	}
 
+	rx_params->ext_params =
+		qdf_mem_malloc(sizeof(struct mgmt_rx_event_ext_params));
+
+	if (!rx_params->ext_params) {
+		qdf_mem_free(rx_params->reo_params);
+		qdf_mem_free(rx_params);
+		return NULL;
+	}
+
 	return rx_params;
 }
 
 static inline void
 free_mgmt_rx_event_params(struct mgmt_rx_event_params *rx_params)
 {
-	if (rx_params)
+	if (rx_params) {
+		qdf_mem_free(rx_params->ext_params);
 		qdf_mem_free(rx_params->reo_params);
+	}
 
 	qdf_mem_free(rx_params);
 }
@@ -888,10 +911,25 @@ struct mgmt_rx_event_params *alloc_mgmt_rx_event_params(void)
 	if (!rx_params)
 		return NULL;
 
+	rx_params->ext_params =
+		qdf_mem_malloc(sizeof(struct mgmt_rx_event_ext_params));
+
+	if (!rx_params->ext_params) {
+		qdf_mem_free(rx_params);
+		return NULL;
+	}
+
 	return rx_params;
 }
 
-#define free_mgmt_rx_event_params(rx_params) qdf_mem_free((rx_params))
+static inline void
+free_mgmt_rx_event_params(struct mgmt_rx_event_params *rx_params)
+{
+	if (rx_params)
+		qdf_mem_free(rx_params->ext_params);
+
+	qdf_mem_free(rx_params);
+}
 #endif
 
 /**

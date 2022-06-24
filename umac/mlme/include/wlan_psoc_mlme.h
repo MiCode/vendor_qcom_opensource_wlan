@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2019-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -27,8 +28,11 @@
 #ifdef FEATURE_VDEV_OPS_WAKELOCK
 #include <target_if_psoc_wake_lock.h>
 #endif
+
 /* Max RNR size given max vaps are 16 */
-#define MAX_RNR_SIZE 256
+#define MAX_RNR_SIZE (16 * 16 /* 11be compatible tbtt_info length */ \
+			+ 4   /* Neighbor AP info field length */    \
+			+ 2   /* RNR header bytes */)
 
 /**
  * struct wlan_rnr_global_cache - RNR cache buffer per soc

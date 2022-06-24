@@ -1491,6 +1491,7 @@ dp_rx_reo_err_entry_process(struct dp_soc *soc,
 	uint8_t rx_desc_pool_id;
 	struct dp_txrx_peer *txrx_peer = NULL;
 	dp_txrx_ref_handle txrx_ref_handle = NULL;
+	hal_ring_handle_t hal_ring_hdl = soc->reo_exception_ring.hal_srng;
 
 	peer_id = dp_rx_peer_metadata_peer_id_get(soc,
 					mpdu_desc_info->peer_meta_data);
@@ -1506,12 +1507,26 @@ more_msdu_link_desc:
 						msdu_list.sw_cookie[i]);
 
 		qdf_assert_always(rx_desc);
-
-		rx_desc_pool_id = rx_desc->pool_id;
-		/* all buffers from a MSDU link belong to same pdev */
-		pdev = dp_get_pdev_for_lmac_id(soc, rx_desc_pool_id);
-
 		nbuf = rx_desc->nbuf;
+
+		/*
+		 * this is a unlikely scenario where the host is reaping
+		 * a descriptor which it already reaped just a while ago
+		 * but is yet to replenish it back to HW.
+		 * In this case host will dump the last 128 descriptors
+		 * including the software descriptor rx_desc and assert.
+		 */
+		if (qdf_unlikely(!rx_desc->in_use) ||
+		    qdf_unlikely(!nbuf)) {
+			DP_STATS_INC(soc, rx.err.hal_reo_dest_dup, 1);
+			dp_info_rl("Reaping rx_desc not in use!");
+			dp_rx_dump_info_and_assert(soc, hal_ring_hdl,
+						   ring_desc, rx_desc);
+			/* ignore duplicate RX desc and continue to process */
+			/* Pop out the descriptor */
+			continue;
+		}
+
 		ret = dp_rx_desc_paddr_sanity_check(rx_desc,
 						    msdu_list.paddr[i]);
 		if (!ret) {
@@ -1519,6 +1534,10 @@ more_msdu_link_desc:
 			rx_desc->in_err_state = 1;
 			continue;
 		}
+
+		rx_desc_pool_id = rx_desc->pool_id;
+		/* all buffers from a MSDU link belong to same pdev */
+		pdev = dp_get_pdev_for_lmac_id(soc, rx_desc_pool_id);
 
 		rx_desc_pool = &soc->rx_desc_buf[rx_desc_pool_id];
 		dp_ipa_rx_buf_smmu_mapping_lock(soc);
@@ -2665,6 +2684,7 @@ dp_rx_wbm_err_process(struct dp_intr *int_ctx, struct dp_soc *soc,
 	struct dp_srng *dp_rxdma_srng;
 	struct rx_desc_pool *rx_desc_pool;
 	uint8_t *rx_tlv_hdr;
+	bool is_tkip_mic_err;
 	qdf_nbuf_t nbuf_head = NULL;
 	qdf_nbuf_t nbuf_tail = NULL;
 	qdf_nbuf_t nbuf, next;
@@ -3062,6 +3082,20 @@ done:
 					break;
 
 				case HAL_RXDMA_ERR_DECRYPT:
+					/* All the TKIP-MIC failures are treated as Decrypt Errors
+					 * for QCN9224 Targets
+					 */
+					is_tkip_mic_err = hal_rx_msdu_end_is_tkip_mic_err(hal_soc, rx_tlv_hdr);
+
+					if (is_tkip_mic_err && txrx_peer) {
+						dp_rx_process_mic_error(soc, nbuf,
+									rx_tlv_hdr,
+									txrx_peer);
+						DP_PEER_PER_PKT_STATS_INC(txrx_peer,
+									  rx.err.mic_err,
+									  1);
+						break;
+					}
 
 					if (txrx_peer) {
 						DP_PEER_PER_PKT_STATS_INC(txrx_peer,

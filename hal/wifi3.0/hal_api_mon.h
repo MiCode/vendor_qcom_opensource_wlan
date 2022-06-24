@@ -279,6 +279,7 @@ struct hal_rx_mon_msdu_info {
  * @mpdu_start_received: MPDU start received
  * @full_pkt: Full MPDU received
  * @first_rx_hdr_rcvd: First rx_hdr received
+ * @truncated: truncated MPDU
  */
 struct hal_rx_mon_mpdu_info {
 	uint8_t decap_type;
@@ -289,6 +290,7 @@ struct hal_rx_mon_mpdu_info {
 	bool mpdu_start_received;
 	bool full_pkt;
 	bool first_rx_hdr_rcvd;
+	bool truncated;
 };
 
 /**

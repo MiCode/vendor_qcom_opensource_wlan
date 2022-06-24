@@ -63,6 +63,9 @@ static void dp_soc_cfg_attach_be(struct dp_soc *soc)
 
 	/* this is used only when dmac mode is enabled */
 	soc->num_rx_refill_buf_rings = 1;
+
+	soc->wlan_cfg_ctx->notify_frame_support =
+				DP_MARK_NOTIFY_FRAME_SUPPORT;
 }
 
 qdf_size_t dp_get_context_size_be(enum dp_context_type context_type)
@@ -144,6 +147,35 @@ void dp_cc_wbm_sw_en_cfg(struct hal_hw_cc_config *cc_cfg)
 }
 #endif
 
+#if defined(WLAN_SUPPORT_RX_FISA)
+static QDF_STATUS dp_fisa_fst_cmem_addr_init(struct dp_soc *soc)
+{
+	dp_info("cmem base 0x%llx, total size 0x%llx avail_size 0x%llx",
+		soc->cmem_base, soc->cmem_total_size, soc->cmem_avail_size);
+	/* get CMEM for cookie conversion */
+	if (soc->cmem_avail_size < DP_CMEM_FST_SIZE) {
+		dp_err("cmem_size 0x%llx bytes < 16K", soc->cmem_avail_size);
+		return QDF_STATUS_E_NOMEM;
+	}
+
+	soc->fst_cmem_size = DP_CMEM_FST_SIZE;
+
+	soc->fst_cmem_base = soc->cmem_base +
+			     (soc->cmem_total_size - soc->cmem_avail_size);
+	soc->cmem_avail_size -= soc->fst_cmem_size;
+
+	dp_info("fst_cmem_base 0x%llx, fst_cmem_size 0x%llx",
+		soc->fst_cmem_base, soc->fst_cmem_size);
+
+	return QDF_STATUS_SUCCESS;
+}
+#else /* !WLAN_SUPPORT_RX_FISA */
+static QDF_STATUS dp_fisa_fst_cmem_addr_init(struct dp_soc *soc)
+{
+	return QDF_STATUS_SUCCESS;
+}
+#endif
+
 /**
  * dp_cc_reg_cfg_init() - initialize and configure HW cookie
 			  conversion register
@@ -209,17 +241,40 @@ static inline QDF_STATUS dp_hw_cc_cmem_addr_init(struct dp_soc *soc)
 {
 	struct dp_soc_be *be_soc = dp_get_be_soc_from_dp_soc(soc);
 
-	dp_info("cmem base 0x%llx, size 0x%llx",
-		soc->cmem_base, soc->cmem_size);
+	dp_info("cmem base 0x%llx, total size 0x%llx avail_size 0x%llx",
+		soc->cmem_base, soc->cmem_total_size, soc->cmem_avail_size);
 	/* get CMEM for cookie conversion */
-	if (soc->cmem_size < DP_CC_PPT_MEM_SIZE) {
-		dp_err("cmem_size %llu bytes < 4K", soc->cmem_size);
+	if (soc->cmem_avail_size < DP_CC_PPT_MEM_SIZE) {
+		dp_err("cmem_size 0x%llx bytes < 4K", soc->cmem_avail_size);
 		return QDF_STATUS_E_RESOURCES;
 	}
 	be_soc->cc_cmem_base = (uint32_t)(soc->cmem_base +
 					  DP_CC_MEM_OFFSET_IN_CMEM);
 
+	soc->cmem_avail_size -= DP_CC_PPT_MEM_SIZE;
+
+	dp_info("cc_cmem_base 0x%x, cmem_avail_size 0x%llx",
+		be_soc->cc_cmem_base, soc->cmem_avail_size);
 	return QDF_STATUS_SUCCESS;
+}
+
+static QDF_STATUS dp_get_cmem_allocation(struct dp_soc *soc,
+					 uint8_t for_feature)
+{
+	QDF_STATUS status = QDF_STATUS_E_NOMEM;
+
+	switch (for_feature) {
+	case COOKIE_CONVERSION:
+		status = dp_hw_cc_cmem_addr_init(soc);
+		break;
+	case FISA_FST:
+		status = dp_fisa_fst_cmem_addr_init(soc);
+		break;
+	default:
+		dp_err("Invalid CMEM request");
+	}
+
+	return status;
 }
 
 #else
@@ -236,6 +291,13 @@ static inline QDF_STATUS dp_hw_cc_cmem_addr_init(struct dp_soc *soc)
 {
 	return QDF_STATUS_SUCCESS;
 }
+
+static QDF_STATUS dp_get_cmem_allocation(struct dp_soc *soc,
+					 uint8_t for_feature)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
 #endif
 
 QDF_STATUS
@@ -346,6 +408,10 @@ dp_hw_cookie_conversion_init(struct dp_soc_be *be_soc,
 				     DP_CC_PPT_ENTRY_HW_APEND_BITS_4K_ALIGNED));
 
 		ppt_index = ppt_id_start + i;
+
+		if (ppt_index >= DP_CC_PPT_MAX_ENTRIES)
+			qdf_assert_always(0);
+
 		spt_desc[i].ppt_index = ppt_index;
 
 		be_soc->page_desc_base[ppt_index].page_v_addr =
@@ -469,6 +535,12 @@ static void dp_mlo_init_ptnr_list(struct dp_vdev *vdev)
 		    WLAN_MAX_MLO_CHIPS * WLAN_MAX_MLO_LINKS_PER_SOC,
 		    CDP_INVALID_VDEV_ID);
 }
+
+static void dp_get_rx_hash_key_be(struct dp_soc *soc,
+				  struct cdp_lro_hash_config *lro_hash)
+{
+	dp_mlo_get_rx_hash_key(soc, lro_hash);
+}
 #else
 static inline void
 dp_mlo_mcast_init(struct dp_soc *soc, struct dp_vdev *vdev)
@@ -482,6 +554,12 @@ dp_mlo_mcast_deinit(struct dp_soc *soc, struct dp_vdev *vdev)
 
 static void dp_mlo_init_ptnr_list(struct dp_vdev *vdev)
 {
+}
+
+static void dp_get_rx_hash_key_be(struct dp_soc *soc,
+				  struct cdp_lro_hash_config *lro_hash)
+{
+	dp_get_rx_hash_key_bytes(lro_hash);
 }
 #endif
 
@@ -510,7 +588,7 @@ static QDF_STATUS dp_soc_attach_be(struct dp_soc *soc,
 
 	soc->wbm_sw0_bm_id = hal_tx_get_wbm_sw0_bm_id();
 
-	qdf_status = dp_hw_cc_cmem_addr_init(soc);
+	qdf_status = dp_get_cmem_allocation(soc, COOKIE_CONVERSION);
 	if (!QDF_IS_STATUS_SUCCESS(qdf_status))
 		goto fail;
 
@@ -526,6 +604,10 @@ static QDF_STATUS dp_soc_attach_be(struct dp_soc *soc,
 		if (!QDF_IS_STATUS_SUCCESS(qdf_status))
 			goto fail;
 	}
+
+	qdf_status = dp_get_cmem_allocation(soc, FISA_FST);
+	if (!QDF_IS_STATUS_SUCCESS(qdf_status))
+		goto fail;
 
 	for (i = 0; i < MAX_RXDESC_POOLS; i++) {
 		num_entries =
@@ -1527,77 +1609,6 @@ static void dp_tx_implicit_rbm_set_be(struct dp_soc *soc,
 }
 #endif
 
-#ifdef WLAN_MLO_MULTI_CHIP
-static void dp_peer_get_reo_hash_be(struct dp_vdev *vdev,
-				    struct cdp_peer_setup_info *setup_info,
-				    enum cdp_host_reo_dest_ring *reo_dest,
-				    bool *hash_based,
-				    uint8_t *lmac_peer_id_msb)
-{
-	struct dp_soc *soc = vdev->pdev->soc;
-	struct dp_soc_be *be_soc = dp_get_be_soc_from_dp_soc(soc);
-	uint8_t default_rx_ring_id;
-	uint8_t chip_id;
-
-	if (!be_soc->mlo_enabled)
-		return dp_vdev_get_default_reo_hash(vdev, reo_dest,
-						    hash_based);
-
-	chip_id = be_soc->mlo_chip_id;
-	default_rx_ring_id =
-		wlan_cfg_mlo_default_rx_ring_get_by_chip_id(soc->wlan_cfg_ctx,
-							    chip_id);
-	*reo_dest = hal_reo_ring_remap_value_get_be(default_rx_ring_id);
-	*hash_based = wlan_cfg_is_rx_hash_enabled(soc->wlan_cfg_ctx);
-	*lmac_peer_id_msb =
-		wlan_cfg_mlo_lmac_peer_id_msb_get_by_chip_id(soc->wlan_cfg_ctx,
-							     chip_id);
-}
-
-static bool dp_reo_remap_config_be(struct dp_soc *soc,
-				   uint32_t *remap0,
-				   uint32_t *remap1,
-				   uint32_t *remap2)
-{
-	uint8_t rx_ring_mask;
-	struct dp_soc_be *be_soc = dp_get_be_soc_from_dp_soc(soc);
-
-	if (!be_soc->mlo_enabled)
-		return dp_reo_remap_config(soc, remap0, remap1, remap2);
-
-	rx_ring_mask =
-		wlan_cfg_mlo_rx_ring_map_get_by_chip_id(soc->wlan_cfg_ctx, 0);
-	*remap0 = hal_reo_ix_remap_value_get_be(soc->hal_soc, rx_ring_mask);
-
-	rx_ring_mask =
-		wlan_cfg_mlo_rx_ring_map_get_by_chip_id(soc->wlan_cfg_ctx, 1);
-	*remap1 = hal_reo_ix_remap_value_get_be(soc->hal_soc, rx_ring_mask);
-
-	rx_ring_mask =
-		wlan_cfg_mlo_rx_ring_map_get_by_chip_id(soc->wlan_cfg_ctx, 2);
-	*remap2 = hal_reo_ix_remap_value_get_be(soc->hal_soc, rx_ring_mask);
-
-	return true;
-}
-#else
-static void dp_peer_get_reo_hash_be(struct dp_vdev *vdev,
-				    struct cdp_peer_setup_info *setup_info,
-				    enum cdp_host_reo_dest_ring *reo_dest,
-				    bool *hash_based,
-				    uint8_t *lmac_peer_id_msb)
-{
-	dp_vdev_get_default_reo_hash(vdev, reo_dest, hash_based);
-}
-
-static bool dp_reo_remap_config_be(struct dp_soc *soc,
-				   uint32_t *remap0,
-				   uint32_t *remap1,
-				   uint32_t *remap2)
-{
-	return dp_reo_remap_config(soc, remap0, remap1, remap2);
-}
-#endif
-
 QDF_STATUS dp_txrx_set_vdev_param_be(struct dp_soc *soc,
 				     struct dp_vdev *vdev,
 				     enum cdp_vdev_param_type param,
@@ -1665,6 +1676,22 @@ static QDF_STATUS dp_peer_map_attach_be(struct dp_soc *soc)
 	dp_soc_max_peer_id_set(soc);
 
 	return QDF_STATUS_SUCCESS;
+}
+
+static struct dp_peer *dp_find_peer_by_destmac_be(struct dp_soc *soc,
+						  uint8_t *dest_mac,
+						  uint8_t vdev_id)
+{
+	struct dp_peer *peer = NULL;
+
+	peer = dp_peer_find_hash_find(soc, dest_mac, 0,
+				      vdev_id, DP_MOD_ID_SAWF);
+	if (!peer) {
+		dp_err("Invalid peer");
+		return NULL;
+	}
+
+	return peer;
 }
 
 #ifdef WLAN_FEATURE_11BE_MLO
@@ -1742,12 +1769,12 @@ void dp_initialize_arch_ops_be(struct dp_arch_ops *arch_ops)
 					dp_rx_peer_metadata_peer_id_get_be;
 	arch_ops->soc_cfg_attach = dp_soc_cfg_attach_be;
 	arch_ops->tx_implicit_rbm_set = dp_tx_implicit_rbm_set_be;
-	arch_ops->peer_get_reo_hash = dp_peer_get_reo_hash_be;
-	arch_ops->reo_remap_config = dp_reo_remap_config_be;
 	arch_ops->txrx_set_vdev_param = dp_txrx_set_vdev_param_be;
 	dp_initialize_arch_ops_be_mlo(arch_ops);
 	arch_ops->dp_peer_rx_reorder_queue_setup =
 					dp_peer_rx_reorder_queue_setup_be;
 	arch_ops->txrx_print_peer_stats = dp_print_peer_txrx_stats_be;
+	arch_ops->dp_find_peer_by_destmac = dp_find_peer_by_destmac_be;
 	dp_init_near_full_arch_ops_be(arch_ops);
+	arch_ops->get_rx_hash_key = dp_get_rx_hash_key_be;
 }

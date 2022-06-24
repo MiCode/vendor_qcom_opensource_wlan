@@ -27,16 +27,16 @@
  * enum mgmt_rx_reo_shared_snapshot_id - Represents the management
  * rx-reorder snapshots shared between host and target in the host DDR.
  * These snapshots are written by FW/HW and read by Host.
- * @MGMT_RX_REO_SHARED_SNAPSHOT_MAC_HW: MAC HW snapshot
  * @MGMT_RX_REO_SHARED_SNAPSHOT_FW_CONSUMED: FW consumed snapshot
  * @MGMT_RX_REO_SHARED_SNAPSHOT_FW_FORWADED: FW forwarded snapshot
+ * @MGMT_RX_REO_SHARED_SNAPSHOT_MAC_HW: MAC HW snapshot
  * @MGMT_RX_REO_SHARED_SNAPSHOT_MAX: Max number of snapshots
  * @MGMT_RX_REO_SHARED_SNAPSHOT_INVALID: Invalid snapshot
  */
 enum mgmt_rx_reo_shared_snapshot_id {
-	MGMT_RX_REO_SHARED_SNAPSHOT_MAC_HW = 0,
-	MGMT_RX_REO_SHARED_SNAPSHOT_FW_CONSUMED = 1,
-	MGMT_RX_REO_SHARED_SNAPSHOT_FW_FORWADED = 2,
+	MGMT_RX_REO_SHARED_SNAPSHOT_FW_CONSUMED = 0,
+	MGMT_RX_REO_SHARED_SNAPSHOT_FW_FORWADED = 1,
+	MGMT_RX_REO_SHARED_SNAPSHOT_MAC_HW = 2,
 	MGMT_RX_REO_SHARED_SNAPSHOT_MAX = 3,
 	MGMT_RX_REO_SHARED_SNAPSHOT_INVALID,
 };

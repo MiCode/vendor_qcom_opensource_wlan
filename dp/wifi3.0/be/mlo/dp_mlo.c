@@ -48,6 +48,13 @@ dp_mlo_ctxt_attach_wifi3(struct cdp_ctrl_mlo_mgr *ctrl_ctxt)
 		return NULL;
 	}
 
+	qdf_get_random_bytes(mlo_ctxt->toeplitz_hash_ipv4,
+			     (sizeof(mlo_ctxt->toeplitz_hash_ipv4[0]) *
+			      LRO_IPV4_SEED_ARR_SZ));
+	qdf_get_random_bytes(mlo_ctxt->toeplitz_hash_ipv6,
+			     (sizeof(mlo_ctxt->toeplitz_hash_ipv6[0]) *
+			      LRO_IPV6_SEED_ARR_SZ));
+
 	qdf_spinlock_create(&mlo_ctxt->ml_soc_list_lock);
 	return dp_mlo_ctx_to_cdp(mlo_ctxt);
 }
@@ -135,12 +142,14 @@ static QDF_STATUS dp_partner_soc_rx_hw_cc_init(struct dp_mlo_ctxt *mlo_ctxt,
 	struct dp_soc *partner_soc;
 	struct dp_soc_be *be_partner_soc;
 	uint8_t pool_id;
-	QDF_STATUS qdf_status;
+	QDF_STATUS qdf_status = QDF_STATUS_SUCCESS;
 
 	for (i = 0; i < WLAN_MAX_MLO_CHIPS; i++) {
 		partner_soc = dp_mlo_get_soc_ref_by_chip_id(mlo_ctxt, i);
-		if (!partner_soc)
+		if (!partner_soc) {
+			dp_err("partner_soc is NULL");
 			continue;
+		}
 
 		be_partner_soc = dp_get_be_soc_from_dp_soc(partner_soc);
 
@@ -319,6 +328,8 @@ void dp_clr_mlo_ptnr_list(struct dp_soc *soc, struct dp_vdev *vdev)
 				continue;
 
 			pr_soc = dp_mlo_get_soc_ref_by_chip_id(dp_mlo, i);
+			if (!pr_soc)
+				continue;
 			pr_soc_be = dp_get_be_soc_from_dp_soc(pr_soc);
 			pr_vdev = dp_vdev_get_ref_by_id(pr_soc,
 						vdev_be->partner_vdev_list[i][j],
@@ -516,27 +527,40 @@ dp_link_peer_hash_find_by_chip_id(struct dp_soc *soc,
 
 qdf_export_symbol(dp_link_peer_hash_find_by_chip_id);
 
+void dp_mlo_get_rx_hash_key(struct dp_soc *soc,
+			    struct cdp_lro_hash_config *lro_hash)
+{
+	struct dp_soc_be *be_soc = dp_get_be_soc_from_dp_soc(soc);
+	struct dp_mlo_ctxt *ml_ctxt = be_soc->ml_ctxt;
+
+	if (!be_soc->mlo_enabled || !ml_ctxt)
+		return dp_get_rx_hash_key_bytes(lro_hash);
+
+	qdf_mem_copy(lro_hash->toeplitz_hash_ipv4, ml_ctxt->toeplitz_hash_ipv4,
+		     (sizeof(lro_hash->toeplitz_hash_ipv4[0]) *
+		      LRO_IPV4_SEED_ARR_SZ));
+	qdf_mem_copy(lro_hash->toeplitz_hash_ipv6, ml_ctxt->toeplitz_hash_ipv6,
+		     (sizeof(lro_hash->toeplitz_hash_ipv6[0]) *
+		      LRO_IPV6_SEED_ARR_SZ));
+}
+
 struct dp_soc *
-dp_rx_replensih_soc_get(struct dp_soc *soc, uint8_t reo_ring_num)
+dp_rx_replensih_soc_get(struct dp_soc *soc, uint8_t chip_id)
 {
 	struct dp_soc_be *be_soc = dp_get_be_soc_from_dp_soc(soc);
 	struct dp_mlo_ctxt *mlo_ctxt = be_soc->ml_ctxt;
-	uint8_t chip_id;
-	uint8_t rx_ring_mask;
+	struct dp_soc *replenish_soc;
 
 	if (!be_soc->mlo_enabled || !mlo_ctxt)
 		return soc;
 
-	for (chip_id = 0; chip_id < WLAN_MAX_MLO_CHIPS; chip_id++) {
-		rx_ring_mask =
-			wlan_cfg_mlo_rx_ring_map_get_by_chip_id
-					(soc->wlan_cfg_ctx, chip_id);
-
-		if (rx_ring_mask & (1 << reo_ring_num))
-			return dp_mlo_get_soc_ref_by_chip_id(mlo_ctxt, chip_id);
+	replenish_soc = dp_mlo_get_soc_ref_by_chip_id(mlo_ctxt, chip_id);
+	if (qdf_unlikely(!replenish_soc)) {
+		dp_alert("replenish SOC is NULL");
+		qdf_assert_always(0);
 	}
 
-	return soc;
+	return replenish_soc;
 }
 
 #ifdef WLAN_MCAST_MLO

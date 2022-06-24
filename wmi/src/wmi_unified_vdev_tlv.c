@@ -136,6 +136,40 @@ extract_tbttoffset_num_vdevs_tlv(struct wmi_unified *wmi_handle, void *evt_buf,
 }
 
 static QDF_STATUS
+send_peer_filter_set_tx_cmd_tlv(struct wmi_unified *wmi_handle,
+				uint8_t macaddr[],
+				struct set_tx_peer_filter *param)
+{
+	wmi_peer_tx_filter_cmd_fixed_param *cmd;
+	wmi_buf_t buf;
+	uint32_t len = sizeof(*cmd);
+
+	buf = wmi_buf_alloc(wmi_handle, len);
+	if (!buf)
+		return QDF_STATUS_E_FAILURE;
+
+	cmd = (wmi_peer_tx_filter_cmd_fixed_param *)wmi_buf_data(buf);
+	WMITLV_SET_HDR(&cmd->tlv_header,
+		       WMITLV_TAG_STRUC_wmi_peer_tx_filter_cmd_fixed_param,
+		       WMITLV_GET_STRUCT_TLVLEN(
+		       wmi_peer_tx_filter_cmd_fixed_param));
+
+	cmd->vdev_id = param->vdev_id;
+	cmd->action = param->action;
+	WMI_CHAR_ARRAY_TO_MAC_ADDR(macaddr, &cmd->addr);
+
+	wmi_mtrace(WMI_PEER_TX_FILTER_CMDID, cmd->vdev_id, 0);
+	if (wmi_unified_cmd_send(wmi_handle, buf, len,
+				 WMI_PEER_TX_FILTER_CMDID)) {
+		wmi_err("Failed to set neighbour rx param");
+		wmi_buf_free(buf);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	return QDF_STATUS_SUCCESS;
+}
+
+static QDF_STATUS
 send_vdev_set_neighbour_rx_cmd_tlv(struct wmi_unified *wmi_handle,
 				   uint8_t macaddr[QDF_MAC_ADDR_SIZE],
 				   struct set_neighbour_rx_params *param)
@@ -420,4 +454,5 @@ void wmi_vdev_attach_tlv(struct wmi_unified *wmi_handle)
 	wmi_ops->send_beacon_send_cmd = send_beacon_send_cmd_tlv;
 	wmi_ops->send_vdev_config_ratemask_cmd =
 				send_vdev_config_ratemask_cmd_tlv;
+	wmi_ops->send_peer_filter_set_tx_cmd = send_peer_filter_set_tx_cmd_tlv;
 }

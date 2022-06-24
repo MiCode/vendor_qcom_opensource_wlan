@@ -815,11 +815,11 @@ struct hal_tx_status_info {
 	uint32_t offset;
 	uint32_t length;
 
+	uint8_t protection_addr;
 	uint8_t addr1[QDF_MAC_ADDR_SIZE];
 	uint8_t addr2[QDF_MAC_ADDR_SIZE];
 	uint8_t addr3[QDF_MAC_ADDR_SIZE];
 	uint8_t addr4[QDF_MAC_ADDR_SIZE];
-
 };
 
 struct hal_tx_ppdu_info {
@@ -1026,9 +1026,9 @@ hal_rx_parse_u_sig_mu(struct hal_soc *hal_soc, void *rx_tlv,
 			QDF_MON_STATUS_USIG_DISREGARD_KNOWN |
 			QDF_MON_STATUS_USIG_PPDU_TYPE_N_COMP_MODE_KNOWN |
 			QDF_MON_STATUS_USIG_VALIDATE_KNOWN |
-			QDF_MON_STATUS_USIG_MU_VALIDATE1_SHIFT |
+			QDF_MON_STATUS_USIG_MU_VALIDATE1_KNOWN |
 			QDF_MON_STATUS_USIG_MU_PUNCTURE_CH_INFO_KNOWN |
-			QDF_MON_STATUS_USIG_MU_VALIDATE2_SHIFT |
+			QDF_MON_STATUS_USIG_MU_VALIDATE2_KNOWN |
 			QDF_MON_STATUS_USIG_MU_EHT_SIG_MCS_KNOWN |
 			QDF_MON_STATUS_USIG_MU_NUM_EHT_SIG_SYM_KNOWN |
 			QDF_MON_STATUS_USIG_CRC_KNOWN |
@@ -1774,6 +1774,7 @@ hal_rx_status_get_mon_buf_addr(uint8_t *rx_tlv,
 					    (addr->buffer_virt_addr_31_0));
 	ppdu_info->packet_info.dma_length = addr->dma_length;
 	ppdu_info->packet_info.msdu_continuation = addr->msdu_continuation;
+	ppdu_info->packet_info.truncated = addr->truncated;
 
 }
 #else
@@ -2923,9 +2924,11 @@ hal_rx_status_get_tlv_info_generic_be(void *rx_tlv_hdr, void *ppduinfo,
 		return HAL_TLV_STATUS_MON_BUF_ADDR;
 	case 0:
 		return HAL_TLV_STATUS_PPDU_DONE;
+	case WIFIRX_STATUS_BUFFER_DONE_E:
+		return HAL_TLV_STATUS_PPDU_NOT_DONE;
 
 	default:
-		qdf_debug("unhandled tlv tag %d", tlv_tag);
+		hal_debug("unhandled tlv tag %d", tlv_tag);
 	}
 
 	qdf_trace_hex_dump(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_DEBUG,

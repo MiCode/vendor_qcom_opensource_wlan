@@ -1,6 +1,7 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
  * Copyright (c) 2002-2006, Atheros Communications Inc.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -859,3 +860,33 @@ uint8_t dfs_get_agile_detector_id(struct wlan_dfs *dfs)
 	return dfs->dfs_agile_detector_id;
 }
 #endif
+
+/**
+ * dfs_chan_to_ch_width: Outputs the channel width in MHz of the given input
+ * dfs_channel.
+ * @chan: Pointer to the input dfs_channel structure.
+ *
+ * Return: Channel width in MHz. BW_INVALID(0MHz) on invalid channel.
+ */
+uint16_t dfs_chan_to_ch_width(struct dfs_channel *chan)
+{
+	uint16_t ch_width;
+
+	if (!chan)
+		return BW_INVALID;
+
+	if (WLAN_IS_CHAN_MODE_320(chan))
+		ch_width = BW_320;
+	else if (WLAN_IS_CHAN_MODE_160(chan))
+		ch_width = BW_160;
+	else if (WLAN_IS_CHAN_MODE_80(chan))
+		ch_width = BW_80;
+	else if (WLAN_IS_CHAN_MODE_40(chan))
+		ch_width = BW_40;
+	else if (WLAN_IS_CHAN_MODE_20(chan))
+		ch_width = BW_20;
+	else
+		ch_width = BW_INVALID;
+
+	return ch_width;
+}

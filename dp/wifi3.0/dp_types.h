@@ -76,7 +76,12 @@
 
 #if defined(WLAN_MAX_PDEVS) && (WLAN_MAX_PDEVS == 1)
 #define WLAN_DP_RESET_MON_BUF_RING_FILTER
+#define MAX_TXDESC_POOLS 6
+#else
+#define MAX_TXDESC_POOLS 4
 #endif
+
+#define MAX_RXDESC_POOLS 4
 
 /* Max no. of VDEV per PSOC */
 #ifdef WLAN_PSOC_MAX_VDEVS
@@ -91,9 +96,6 @@
 #else
 #define DP_PDEV_MAX_VDEVS 17
 #endif
-
-#define MAX_TXDESC_POOLS 6
-#define MAX_RXDESC_POOLS 4
 
 #define EXCEPTION_DEST_RING_ID 0
 #define MAX_IDLE_SCATTER_BUFS 16
@@ -245,6 +247,7 @@ enum dp_mod_id {
 	DP_MOD_ID_MSCS,
 	DP_MOD_ID_TX,
 	DP_MOD_ID_SAWF,
+	DP_MOD_ID_REINJECT,
 	DP_MOD_ID_MAX,
 };
 
@@ -562,6 +565,7 @@ struct dp_tx_desc_s {
 	uint16_t length;
 #ifdef DP_TX_TRACKING
 	uint32_t magic;
+	uint64_t timestamp_tick;
 #endif
 	uint16_t flags;
 	uint32_t id;
@@ -577,7 +581,7 @@ struct dp_tx_desc_s {
 	uint8_t pkt_offset;
 	uint8_t  pool_id;
 	struct dp_tx_ext_desc_elem_s *msdu_ext_desc;
-	uint64_t timestamp;
+	qdf_ktime_t timestamp;
 	struct hal_tx_desc_comp_s comp;
 };
 
@@ -989,7 +993,7 @@ struct reo_desc_deferred_freelist_node {
 struct reo_cmd_event_record {
 	enum hal_reo_cmd_type cmd_type;
 	uint8_t cmd_return_status;
-	uint32_t timestamp;
+	uint64_t timestamp;
 };
 
 /**
@@ -1712,13 +1716,6 @@ struct dp_arch_ops {
 	void (*txrx_peer_map_detach)(struct dp_soc *soc);
 	QDF_STATUS (*dp_rxdma_ring_sel_cfg)(struct dp_soc *soc);
 	void (*soc_cfg_attach)(struct dp_soc *soc);
-	void (*peer_get_reo_hash)(struct dp_vdev *vdev,
-				  struct cdp_peer_setup_info *setup_info,
-				  enum cdp_host_reo_dest_ring *reo_dest,
-				  bool *hash_based,
-				  uint8_t *lmac_peer_id_msb);
-	bool (*reo_remap_config)(struct dp_soc *soc, uint32_t *remap0,
-				 uint32_t *remap1, uint32_t *remap2);
 
 	/* TX RX Arch Ops */
 	QDF_STATUS (*tx_hw_enqueue)(struct dp_soc *soc, struct dp_vdev *vdev,
@@ -1807,6 +1804,8 @@ struct dp_arch_ops {
 						   enum dp_mod_id mod_id,
 						   uint8_t vdev_id);
 #endif
+	void (*get_rx_hash_key)(struct dp_soc *soc,
+				struct cdp_lro_hash_config *lro_hash);
 	void (*txrx_print_peer_stats)(struct cdp_peer_stats *peer_stats,
 				      enum peer_stats_type stats_type);
 	/* Dp peer reorder queue setup */
@@ -1814,6 +1813,9 @@ struct dp_arch_ops {
 						     struct dp_peer *peer,
 						     int tid,
 						     uint32_t ba_window_size);
+	struct dp_peer *(*dp_find_peer_by_destmac)(struct dp_soc *soc,
+						   uint8_t *dest_mac_addr,
+						   uint8_t vdev_id);
 };
 
 /**
@@ -2250,7 +2252,7 @@ struct dp_soc {
 	struct dp_rx_fst *rx_fst;
 #ifdef WLAN_SUPPORT_RX_FISA
 	uint8_t fisa_enable;
-
+	uint8_t fisa_lru_del_enable;
 	/**
 	 * Params used for controlling the fisa aggregation dynamically
 	 */
@@ -2258,6 +2260,13 @@ struct dp_soc {
 		qdf_atomic_t skip_fisa;
 		uint8_t fisa_force_flush[MAX_REO_DEST_RINGS];
 	} skip_fisa_param;
+
+	/**
+	 * CMEM address and size for FST in CMEM, This is the address
+	 * shared during init time.
+	 */
+	uint64_t fst_cmem_base;
+	uint64_t fst_cmem_size;
 #endif
 #endif /* WLAN_SUPPORT_RX_FLOW_TAG || WLAN_SUPPORT_RX_FISA */
 	/* SG supported for msdu continued packets from wbm release ring */
@@ -2340,7 +2349,9 @@ struct dp_soc {
 	/* CMEM buffer target reserved for host usage */
 	uint64_t cmem_base;
 	/* CMEM size in bytes */
-	uint64_t cmem_size;
+	uint64_t cmem_total_size;
+	/* CMEM free size in bytes */
+	uint64_t cmem_avail_size;
 
 	/* SOC level feature flags */
 	struct dp_soc_features features;
@@ -2542,9 +2553,17 @@ struct rx_protocol_tag_map {
 	uint16_t tag;
 };
 
+/**
+ * rx_protocol_tag_stats - protocol statistics
+ * @tag_ctr: number of rx msdus matching this tag
+ * @mon_tag_ctr: number of msdus matching this tag in mon path
+ */
 #ifdef WLAN_SUPPORT_RX_TAG_STATISTICS
 struct rx_protocol_tag_stats {
 	uint32_t tag_ctr;
+#ifdef QCA_TEST_MON_PF_TAGS_STATS
+	uint32_t mon_tag_ctr;
+#endif
 };
 #endif /* WLAN_SUPPORT_RX_TAG_STATISTICS */
 
@@ -2910,6 +2929,15 @@ struct dp_pdev {
 
 struct dp_peer;
 
+#ifdef DP_RX_UDP_OVER_PEER_ROAM
+#define WLAN_ROAM_PEER_AUTH_STATUS_NONE 0x0
+/**
+ * This macro is equivalent to macro ROAM_AUTH_STATUS_AUTHENTICATED used
+ * in connection mgr
+ */
+#define WLAN_ROAM_PEER_AUTH_STATUS_AUTHENTICATED 0x2
+#endif
+
 /* VDEV structure for data path state */
 struct dp_vdev {
 	/* OS device abstraction */
@@ -3207,6 +3235,10 @@ struct dp_vdev {
 	/* hw tx delay stats enable */
 	uint8_t hw_tx_delay_stats_enabled;
 #endif
+#ifdef DP_RX_UDP_OVER_PEER_ROAM
+	uint32_t roaming_peer_status;
+	union dp_align_mac_addr roaming_peer_mac;
+#endif
 };
 
 enum {
@@ -3453,6 +3485,8 @@ typedef void *dp_txrx_ref_handle;
  * @last_tx_ts: last timestamp in jiffies when tx comp occurred
  * @avg_sojourn_msdu[CDP_DATA_TID_MAX]: Avg sojourn msdu stat
  * @protocol_trace_cnt: per-peer protocol counter
+ * @release_src_not_tqm: Counter to keep track of release source is not TQM
+ *			 in TX completion status processing
  */
 struct dp_peer_per_pkt_tx_stats {
 	struct cdp_pkt_info ucast;
@@ -3490,6 +3524,7 @@ struct dp_peer_per_pkt_tx_stats {
 #ifdef VDEV_PEER_PROTOCOL_COUNT
 	struct protocol_trace_count protocol_trace_cnt[CDP_TRACE_MAX];
 #endif
+	uint32_t release_src_not_tqm;
 };
 
 /**
@@ -3793,6 +3828,9 @@ struct dp_peer_stats {
  * @stats: Peer stats
  * @delay_stats: Peer delay stats
  * @jitter_stats: Peer jitter stats
+ * @mpdu_retry_threshold_1: MPDU retry threshold 1 to increment tx bad count
+ * @mpdu_retry_threshold_1: MPDU retry threshold 2 to increment tx bad count
+
  */
 struct dp_txrx_peer {
 	/* Core TxRx Peer */
@@ -3848,6 +3886,8 @@ struct dp_txrx_peer {
 #ifdef CONFIG_SAWF
 	struct dp_peer_sawf_stats *sawf_stats;
 #endif
+	uint8_t mpdu_retry_threshold_1;
+	uint8_t mpdu_retry_threshold_2;
 };
 
 /* Peer structure for data path state */

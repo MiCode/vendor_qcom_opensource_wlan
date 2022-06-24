@@ -41,7 +41,7 @@
 /* Macro For NYSM value received in VHT TLV */
 #define VHT_SGI_NYSM 3
 
-#define INVALID_WBM_RING_NUM 0xFF
+#define INVALID_WBM_RING_NUM 0xF
 
 /* struct htt_dbgfs_cfg - structure to maintain required htt data
  * @msg_word: htt msg sent to upper layer
@@ -493,12 +493,15 @@ void dp_monitor_reap_timer_deinit(struct dp_soc *soc)
 }
 
 static inline
-void dp_monitor_reap_timer_start(struct dp_soc *soc)
+bool dp_monitor_reap_timer_start(struct dp_soc *soc,
+				 enum cdp_mon_reap_source source)
 {
+	return false;
 }
 
 static inline
-bool dp_monitor_reap_timer_stop(struct dp_soc *soc)
+bool dp_monitor_reap_timer_stop(struct dp_soc *soc,
+				enum cdp_mon_reap_source source)
 {
 	return false;
 }
@@ -1580,6 +1583,8 @@ void dp_update_vdev_stats_on_peer_unmap(struct dp_vdev *vdev,
 		_tgtobj->tx.tx_success_twt.bytes += \
 					_srcobj->tx.tx_success_twt.bytes; \
 		_tgtobj->tx.last_tx_ts = _srcobj->tx.last_tx_ts; \
+		_tgtobj->tx.release_src_not_tqm += \
+					_srcobj->tx.release_src_not_tqm; \
 		for (i = 0; i < QDF_PROTO_SUBTYPE_MAX; i++) { \
 			_tgtobj->tx.no_ack_count[i] += \
 					_srcobj->tx.no_ack_count[i];\
@@ -2002,6 +2007,21 @@ QDF_STATUS dp_set_addba_response(struct cdp_soc_t *cdp_soc,
 int dp_delba_process_wifi3(struct cdp_soc_t *cdp_soc, uint8_t *peer_mac,
 			   uint16_t vdev_id, int tid,
 			   uint16_t reasoncode);
+
+/**
+ * dp_rx_tid_update_ba_win_size() - Update the DP tid BA window size
+ * @soc: soc handle
+ * @peer_mac: mac address of peer handle
+ * @vdev_id: id of vdev handle
+ * @tid: tid
+ * @buffersize: BA window size
+ *
+ * Return: success/failure of tid update
+ */
+QDF_STATUS dp_rx_tid_update_ba_win_size(struct cdp_soc_t *cdp_soc,
+					uint8_t *peer_mac, uint16_t vdev_id,
+					uint8_t tid, uint16_t buffersize);
+
 /*
  * dp_delba_tx_completion_wifi3() -  Handle delba tx completion
  *
@@ -2104,11 +2124,14 @@ bool dp_check_pdev_exists(struct dp_soc *soc, struct dp_pdev *data);
  * @tid: tid value
  * @mode: type of tx delay mode
  * @ring id: ring number
+ * @delay_in_us: flag to indicate whether the delay is in ms or us
+ *
  * Return: none
  */
 void dp_update_delay_stats(struct cdp_tid_tx_stats *tstats,
 			   struct cdp_tid_rx_stats *rstats, uint32_t delay,
-			   uint8_t tid, uint8_t mode, uint8_t ring_id);
+			   uint8_t tid, uint8_t mode, uint8_t ring_id,
+			   bool delay_in_us);
 
 /**
  * dp_print_ring_stats(): Print tail and head pointer
@@ -2764,7 +2787,18 @@ void dp_pdev_print_tid_stats(struct dp_pdev *pdev);
  * Return:void
  */
 void dp_pdev_print_rx_error_stats(struct dp_pdev *pdev);
-#endif /* CONFIG_WIN */
+#endif /* QCA_ENH_V3_STATS_SUPPORT */
+
+/**
+ * dp_pdev_get_tid_stats(): Get accumulated pdev level tid_stats
+ * @soc_hdl: soc handle
+ * @pdev_id: id of dp_pdev handle
+ * @tid_stats: Pointer for cdp_tid_stats_intf
+ *
+ * Return: QDF_STATUS_SUCCESS or QDF_STATUS_E_INVAL
+ */
+QDF_STATUS dp_pdev_get_tid_stats(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
+				 struct cdp_tid_stats_intf *tid_stats);
 
 void dp_soc_set_txrx_ring_map(struct dp_soc *soc);
 
@@ -3174,12 +3208,8 @@ static inline QDF_STATUS dp_soc_swlm_detach(struct dp_soc *soc)
 }
 #endif /* !WLAN_DP_FEATURE_SW_LATENCY_MGR */
 
-#ifdef QCA_SUPPORT_WDS_EXTENDED
 /**
- * dp_wds_ext_get_peer_id(): function to get peer id by mac
- * This API is called from control path when wds extended
- * device is created, hence it also updates wds extended
- * peer state to up, which will be referred in rx processing.
+ * dp_get_peer_id(): function to get peer id by mac
  * @soc: Datapath soc handle
  * @vdev_id: vdev id
  * @mac: Peer mac address
@@ -3187,10 +3217,9 @@ static inline QDF_STATUS dp_soc_swlm_detach(struct dp_soc *soc)
  * return: valid peer id on success
  *         HTT_INVALID_PEER on failure
  */
-uint16_t dp_wds_ext_get_peer_id(ol_txrx_soc_handle soc,
-				uint8_t vdev_id,
-				uint8_t *mac);
+uint16_t dp_get_peer_id(ol_txrx_soc_handle soc, uint8_t vdev_id, uint8_t *mac);
 
+#ifdef QCA_SUPPORT_WDS_EXTENDED
 /**
  * dp_wds_ext_set_peer_state(): function to set peer state
  * @soc: Datapath soc handle
@@ -3545,4 +3574,43 @@ static inline void dp_pdev_clear_tx_delay_stats(struct dp_soc *soc)
 {
 }
 #endif
+
+static inline void
+dp_get_rx_hash_key_bytes(struct cdp_lro_hash_config *lro_hash)
+{
+	qdf_get_random_bytes(lro_hash->toeplitz_hash_ipv4,
+			     (sizeof(lro_hash->toeplitz_hash_ipv4[0]) *
+			      LRO_IPV4_SEED_ARR_SZ));
+	qdf_get_random_bytes(lro_hash->toeplitz_hash_ipv6,
+			     (sizeof(lro_hash->toeplitz_hash_ipv6[0]) *
+			      LRO_IPV6_SEED_ARR_SZ));
+}
+
+#ifdef WLAN_TELEMETRY_STATS_SUPPORT
+/*
+ * dp_get_pdev_telemetry_stats- API to get pdev telemetry stats
+ * @soc_hdl: soc handle
+ * @pdev_id: id of pdev handle
+ * @stats: pointer to pdev telemetry stats
+ *
+ * Return: QDF_STATUS_SUCCESS: Success
+ *         QDF_STATUS_E_FAILURE: Error
+ */
+QDF_STATUS
+dp_get_pdev_telemetry_stats(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
+			    struct cdp_pdev_telemetry_stats *stats);
+
+/*
+ * dp_get_peer_telemetry_stats- API to get peer telemetry stats
+ * @soc_hdl: soc handle
+ * @addr: peer mac
+ * @stats: pointer to peer telemetry stats
+ *
+ * Return: QDF_STATUS_SUCCESS: Success
+ *         QDF_STATUS_E_FAILURE: Error
+ */
+QDF_STATUS
+dp_get_peer_telemetry_stats(struct cdp_soc_t *soc_hdl, uint8_t *addr,
+			    struct cdp_peer_telemetry_stats *stats);
+#endif /* WLAN_TELEMETRY_STATS_SUPPORT */
 #endif /* #ifndef _DP_INTERNAL_H_ */

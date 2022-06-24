@@ -312,15 +312,11 @@
 
 #define WLAN_CFG_RXDMA_BUF_RING_SIZE 1024
 #define WLAN_CFG_RXDMA_BUF_RING_SIZE_MIN 1024
-#if defined(WLAN_MAX_PDEVS) && (WLAN_MAX_PDEVS == 1)
-#define WLAN_CFG_RXDMA_BUF_RING_SIZE_MAX 1024
-#else
 #define WLAN_CFG_RXDMA_BUF_RING_SIZE_MAX 4096
-#endif
 
 #define WLAN_CFG_RXDMA_REFILL_RING_SIZE 4096
 #define WLAN_CFG_RXDMA_REFILL_RING_SIZE_MIN 16
-#define WLAN_CFG_RXDMA_REFILL_RING_SIZE_MAX 4096
+#define WLAN_CFG_RXDMA_REFILL_RING_SIZE_MAX 8192
 
 #define WLAN_CFG_TX_DESC_LIMIT_0 0
 #define WLAN_CFG_TX_DESC_LIMIT_0_MIN 4096
@@ -346,7 +342,7 @@
 #define WLAN_CFG_RXDMA_MONITOR_BUF_RING_SIZE_MIN 16
 #define WLAN_CFG_RXDMA_MONITOR_BUF_RING_SIZE_MAX 8192
 
-#define WLAN_CFG_TX_MONITOR_BUF_RING_SIZE 8192
+#define WLAN_CFG_TX_MONITOR_BUF_RING_SIZE 4096
 #define WLAN_CFG_TX_MONITOR_BUF_RING_SIZE_MIN 16
 #define WLAN_CFG_TX_MONITOR_BUF_RING_SIZE_MAX 8192
 
@@ -356,7 +352,7 @@
 
 #define WLAN_CFG_TX_MONITOR_DST_RING_SIZE 2048
 #define WLAN_CFG_TX_MONITOR_DST_RING_SIZE_MIN 48
-#define WLAN_CFG_TX_MONITOR_DST_RING_SIZE_MAX 4096
+#define WLAN_CFG_TX_MONITOR_DST_RING_SIZE_MAX 8192
 
 #define WLAN_CFG_RXDMA_MONITOR_STATUS_RING_SIZE 1024
 #define WLAN_CFG_RXDMA_MONITOR_STATUS_RING_SIZE_MIN 16
@@ -462,6 +458,14 @@
 #define WLAN_CFG_TX_CAPT_MAX_MEM_MIN 0
 #define WLAN_CFG_TX_CAPT_MAX_MEM_MAX 512
 #define WLAN_CFG_TX_CAPT_MAX_MEM_DEFAULT 0
+
+#define CFG_DP_MPDU_RETRY_THRESHOLD_MIN 0
+#define CFG_DP_MPDU_RETRY_THRESHOLD_MAX 255
+#define CFG_DP_MPDU_RETRY_THRESHOLD 0
+
+#define WLAN_CFG_DP_NAPI_SCALE_FACTOR 0
+#define WLAN_CFG_DP_NAPI_SCALE_FACTOR_MIN 0
+#define WLAN_CFG_DP_NAPI_SCALE_FACTOR_MAX 4
 
 /*
  * <ini>
@@ -876,7 +880,8 @@
 #define WLAN_CFG_GRO_ENABLE_MAX 3
 #define WLAN_CFG_GRO_ENABLE_DEFAULT 0
 #define DP_GRO_ENABLE_BIT_SET     BIT(0)
-#define DP_FORCE_USE_GRO_BIT_SET  BIT(1)
+#define DP_TC_BASED_DYNAMIC_GRO   BIT(1)
+
 /*
  * <ini>
  * CFG_DP_GRO - Enable the GRO feature standalonely
@@ -886,9 +891,9 @@
  *
  * This ini entry is used to enable/disable GRO feature standalonely.
  * Value 0: Disable GRO feature
- * Value 1: Enable Dynamic GRO feature, TC rule can control GRO
- *          behavior of STA mode
- * Value 3: Enable GRO feature forcibly
+ * Value 1: Enable GRO feature always
+ * Value 3: Enable GRO dynamic feature where TC rule can control GRO
+ *          behavior
  *
  * Usage: External
  *
@@ -900,6 +905,17 @@
 		WLAN_CFG_GRO_ENABLE_MAX, \
 		WLAN_CFG_GRO_ENABLE_DEFAULT, \
 		CFG_VALUE_OR_DEFAULT, "DP GRO Enable")
+
+#define WLAN_CFG_TC_INGRESS_PRIO_MIN 0
+#define WLAN_CFG_TC_INGRESS_PRIO_MAX 0xFFFF
+#define WLAN_CFG_TC_INGRESS_PRIO_DEFAULT 0
+
+#define CFG_DP_TC_INGRESS_PRIO \
+		CFG_INI_UINT("tc_ingress_prio", \
+		WLAN_CFG_TC_INGRESS_PRIO_MIN, \
+		WLAN_CFG_TC_INGRESS_PRIO_MAX, \
+		WLAN_CFG_TC_INGRESS_PRIO_DEFAULT, \
+		CFG_VALUE_OR_DEFAULT, "DP tc ingress prio")
 
 #define CFG_DP_OL_TX_CSUM \
 	CFG_INI_BOOL("dp_offload_tx_csum_support", false, \
@@ -1234,6 +1250,27 @@
 	CFG_INI_BOOL("dp_rx_fisa_enable", true, \
 		     "Enable/Disable DP Rx FISA")
 
+/*
+ * <ini>
+ * dp_rx_fisa_lru_del_enable - Control Rx datapath FISA
+ * @Min: 0
+ * @Max: 1
+ * @Default: 1
+ *
+ * This ini is used to enable DP Rx FISA lru deletion feature
+ *
+ * Related: dp_rx_fisa_enable
+ *
+ * Supported Feature: STA,P2P and SAP IPA disabled terminating
+ *
+ * Usage: Internal
+ *
+ * </ini>
+ */
+#define CFG_DP_RX_FISA_LRU_DEL_ENABLE \
+	CFG_INI_BOOL("dp_rx_fisa_lru_del_enable", true, \
+		     "Enable/Disable DP Rx FISA LRU deletion")
+
 #define CFG_DP_RXDMA_MONITOR_RX_DROP_THRESHOLD \
 		CFG_INI_UINT("mon_drop_thresh", \
 		WLAN_CFG_RXDMA_MONITOR_RX_DROP_THRESH_SIZE_MIN, \
@@ -1283,6 +1320,14 @@
 #define CFG_DP_PEER_EXT_STATS \
 		CFG_INI_BOOL("peer_ext_stats", \
 		false, "Peer extended stats")
+
+#define CFG_DP_NAPI_SCALE_FACTOR \
+		CFG_INI_UINT("dp_napi_scale_factor", \
+		WLAN_CFG_DP_NAPI_SCALE_FACTOR_MIN, \
+		WLAN_CFG_DP_NAPI_SCALE_FACTOR_MAX, \
+		WLAN_CFG_DP_NAPI_SCALE_FACTOR, \
+		CFG_VALUE_OR_DEFAULT, "NAPI scale factor for DP")
+
 /*
  * <ini>
  * legacy_mode_csum_disable - Disable csum offload for legacy 802.11abg modes
@@ -1624,6 +1669,55 @@
 #define CFG_DP_MLO_CONFIG
 #endif
 
+/*
+ * <ini>
+ * dp_mpdu_retry_threshold_1 - threshold to increment mpdu success with retries
+ * @Min: 0
+ * @Max: 255
+ * @Default: 0
+ *
+ * This ini entry is used to set first threshold to increment the value of
+ * mpdu_success_with_retries
+ *
+ * Usage: Internal
+ *
+ * </ini>
+ */
+#define CFG_DP_MPDU_RETRY_THRESHOLD_1 \
+		CFG_INI_UINT("dp_mpdu_retry_threshold_1", \
+		CFG_DP_MPDU_RETRY_THRESHOLD_MIN, \
+		CFG_DP_MPDU_RETRY_THRESHOLD_MAX, \
+		CFG_DP_MPDU_RETRY_THRESHOLD, \
+		CFG_VALUE_OR_DEFAULT, "DP mpdu retry threshold 1")
+
+/*
+ * <ini>
+ * dp_mpdu_retry_threshold_2 - threshold to increment mpdu success with retries
+ * @Min: 0
+ * @Max: 255
+ * @Default: 0
+ *
+ * This ini entry is used to set second threshold to increment the value of
+ * mpdu_success_with_retries
+ *
+ * Usage: Internal
+ *
+ * </ini>
+ */
+#define CFG_DP_MPDU_RETRY_THRESHOLD_2 \
+		CFG_INI_UINT("dp_mpdu_retry_threshold_2", \
+		CFG_DP_MPDU_RETRY_THRESHOLD_MIN, \
+		CFG_DP_MPDU_RETRY_THRESHOLD_MAX, \
+		CFG_DP_MPDU_RETRY_THRESHOLD, \
+		CFG_VALUE_OR_DEFAULT, "DP mpdu retry threshold 2")
+
+#ifdef QCA_SUPPORT_TX_MIN_RATES_FOR_SPECIAL_FRAMES
+/* Macro enabling support marking of notify frames by host */
+#define DP_MARK_NOTIFY_FRAME_SUPPORT 1
+#else
+#define DP_MARK_NOTIFY_FRAME_SUPPORT 0
+#endif /* QCA_SUPPORT_TX_MIN_RATES_FOR_SPECIAL_FRAMES */
+
 #define CFG_DP \
 		CFG(CFG_DP_HTT_PACKET_TYPE) \
 		CFG(CFG_DP_INT_BATCH_THRESHOLD_OTHER) \
@@ -1656,6 +1750,7 @@
 		CFG(CFG_DP_LRO) \
 		CFG(CFG_DP_SG) \
 		CFG(CFG_DP_GRO) \
+		CFG(CFG_DP_TC_INGRESS_PRIO) \
 		CFG(CFG_DP_OL_TX_CSUM) \
 		CFG(CFG_DP_OL_RX_CSUM) \
 		CFG(CFG_DP_RAWMODE) \
@@ -1703,6 +1798,7 @@
 		CFG(CFG_DP_RXDMA_MONITOR_RX_DROP_THRESHOLD) \
 		CFG(CFG_DP_PKTLOG_BUFFER_SIZE) \
 		CFG(CFG_DP_RX_FISA_ENABLE) \
+		CFG(CFG_DP_RX_FISA_LRU_DEL_ENABLE) \
 		CFG(CFG_DP_FULL_MON_MODE) \
 		CFG(CFG_DP_REO_RINGS_MAP) \
 		CFG(CFG_DP_PEER_EXT_STATS) \
@@ -1723,11 +1819,14 @@
 		CFG(CFG_DP_DELAY_MON_REPLENISH) \
 		CFG(CFG_DP_TX_MONITOR_BUF_RING) \
 		CFG(CFG_DP_TX_MONITOR_DST_RING) \
+		CFG(CFG_DP_MPDU_RETRY_THRESHOLD_1) \
+		CFG(CFG_DP_MPDU_RETRY_THRESHOLD_2) \
 		CFG_DP_IPA_TX_RING_CFG \
 		CFG_DP_PPE_CONFIG \
 		CFG_DP_IPA_TX_ALT_RING_CFG \
 		CFG_DP_MLO_CONFIG \
 		CFG_DP_INI_SECTION_PARAMS \
 		CFG_DP_VDEV_STATS_HW_OFFLOAD \
-		CFG(CFG_DP_TX_CAPT_MAX_MEM_MB)
+		CFG(CFG_DP_TX_CAPT_MAX_MEM_MB) \
+		CFG(CFG_DP_NAPI_SCALE_FACTOR)
 #endif /* _CFG_DP_H_ */
