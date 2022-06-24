@@ -1079,6 +1079,7 @@ struct hal_hw_txrx_ops {
 	uint8_t (*hal_get_first_wow_wakeup_packet)(uint8_t *buf);
 #endif
 	void (*hal_reo_shared_qaddr_cache_clear)(hal_soc_handle_t hal_soc_hdl);
+	uint32_t (*hal_rx_tlv_l3_type_get)(uint8_t *buf);
 };
 
 /**

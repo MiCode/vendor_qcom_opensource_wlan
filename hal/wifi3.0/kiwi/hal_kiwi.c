@@ -2057,6 +2057,8 @@ static void hal_hw_txrx_ops_attach_kiwi(struct hal_soc *hal_soc)
 		hal_get_first_wow_wakeup_packet_kiwi;
 #endif
 	hal_soc->ops->hal_compute_reo_remap_ix0 = NULL;
+
+	hal_soc->ops->hal_rx_tlv_l3_type_get = hal_rx_tlv_l3_type_get_be;
 };
 
 struct hal_hw_srng_config hw_srng_table_kiwi[] = {
