@@ -25,6 +25,8 @@
 #include "wcss_version.h"
 #include <qdf_tracepoint.h>
 
+struct tcl_data_cmd gtcl_data_symbol __attribute__((used));
+
 #ifdef QCA_WIFI_QCA8074
 void hal_qca6290_attach(struct hal_soc *hal);
 #endif
