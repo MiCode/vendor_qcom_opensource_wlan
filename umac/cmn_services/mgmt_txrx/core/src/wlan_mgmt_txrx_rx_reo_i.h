@@ -40,6 +40,7 @@
 #define MGMT_RX_REO_LIST_MAX_SIZE             (100)
 #define MGMT_RX_REO_LIST_TIMEOUT_US           (500 * USEC_PER_MSEC)
 #define MGMT_RX_REO_AGEOUT_TIMER_PERIOD_MS    (250)
+#define MGMT_RX_REO_GLOBAL_MGMT_RX_INACTIVITY_TIMEOUT   (10 * 60 * MSEC_PER_SEC)
 #define MGMT_RX_REO_STATUS_WAIT_FOR_FRAME_ON_OTHER_LINKS         (BIT(0))
 #define MGMT_RX_REO_STATUS_AGED_OUT                              (BIT(1))
 #define MGMT_RX_REO_STATUS_OLDER_THAN_LATEST_AGED_OUT_FRAME      (BIT(2))
@@ -198,6 +199,7 @@ struct mgmt_rx_reo_global_ts_info {
  * @list_entry_timeout_us: Time out value(microsecond) for the reorder list
  * entries
  * @ageout_timer: Periodic timer to age-out the list entries
+ * @global_mgmt_rx_inactivity_timer: Global management Rx inactivity timer
  * @ts_last_released_frame: Stores the global time stamp for the last frame
  * removed from the reorder list
  */
@@ -207,6 +209,7 @@ struct mgmt_rx_reo_list {
 	uint32_t max_list_size;
 	uint32_t list_entry_timeout_us;
 	qdf_timer_t ageout_timer;
+	qdf_timer_t global_mgmt_rx_inactivity_timer;
 	struct mgmt_rx_reo_global_ts_info ts_last_released_frame;
 };
 

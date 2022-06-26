@@ -1975,6 +1975,10 @@ mgmt_rx_reo_list_release_entries(struct mgmt_rx_reo_context *reo_context)
 			ts_last_released_frame->end_ts =
 					mgmt_rx_reo_get_end_ts(params);
 			ts_last_released_frame->valid = true;
+
+			qdf_timer_mod
+				(&reo_list->global_mgmt_rx_inactivity_timer,
+				 MGMT_RX_REO_GLOBAL_MGMT_RX_INACTIVITY_TIMEOUT);
 		} else {
 			/**
 			 * This should never happen. All the frames older than
@@ -2071,6 +2075,38 @@ mgmt_rx_reo_list_ageout_timer_handler(void *arg)
 			return;
 		}
 	}
+}
+
+/**
+ * mgmt_rx_reo_global_mgmt_rx_inactivity_timer_handler() - Timer handler
+ * for global management Rx inactivity timer
+ * @arg: Argument to timer handler
+ *
+ * This is the timer handler for tracking management Rx inactivity across
+ * links.
+ *
+ * Return: void
+ */
+static void
+mgmt_rx_reo_global_mgmt_rx_inactivity_timer_handler(void *arg)
+{
+	struct mgmt_rx_reo_list *reo_list = arg;
+	struct mgmt_rx_reo_context *reo_context;
+	struct mgmt_rx_reo_global_ts_info *ts_last_released_frame;
+
+	qdf_assert_always(reo_list);
+	ts_last_released_frame = &reo_list->ts_last_released_frame;
+
+	reo_context = mgmt_rx_reo_get_context_from_reo_list(reo_list);
+	qdf_assert_always(reo_context);
+
+	qdf_spin_lock(&reo_context->frame_release_lock);
+	qdf_spin_lock_bh(&reo_list->list_lock);
+
+	qdf_mem_zero(ts_last_released_frame, sizeof(*ts_last_released_frame));
+
+	qdf_spin_unlock_bh(&reo_list->list_lock);
+	qdf_spin_unlock(&reo_context->frame_release_lock);
 }
 
 /**
@@ -2432,6 +2468,15 @@ mgmt_rx_reo_list_init(struct mgmt_rx_reo_list *reo_list)
 	}
 
 	reo_list->ts_last_released_frame.valid = false;
+
+	status = qdf_timer_init
+			(NULL, &reo_list->global_mgmt_rx_inactivity_timer,
+			 mgmt_rx_reo_global_mgmt_rx_inactivity_timer_handler,
+			 reo_list, QDF_TIMER_TYPE_WAKE_APPS);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		mgmt_rx_reo_err("Failed to init glb mgmt rx inactivity timer");
+		return status;
+	}
 
 	return QDF_STATUS_SUCCESS;
 }
@@ -4739,6 +4784,7 @@ mgmt_rx_reo_list_deinit(struct mgmt_rx_reo_list *reo_list)
 {
 	QDF_STATUS status;
 
+	qdf_timer_free(&reo_list->global_mgmt_rx_inactivity_timer);
 	qdf_timer_free(&reo_list->ageout_timer);
 
 	status = mgmt_rx_reo_flush_reorder_list(reo_list);
@@ -4764,6 +4810,8 @@ mgmt_rx_reo_deinit_context(void)
 		return QDF_STATUS_E_NULL_VALUE;
 	}
 
+	qdf_timer_sync_cancel(
+			&reo_context->reo_list.global_mgmt_rx_inactivity_timer);
 	qdf_timer_sync_cancel(&reo_context->reo_list.ageout_timer);
 
 	qdf_spinlock_destroy(&reo_context->reo_algo_entry_lock);
