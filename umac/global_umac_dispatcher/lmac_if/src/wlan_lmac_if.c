@@ -47,7 +47,7 @@
 #include <wlan_dfs_tgt_api.h>
 #include <wlan_objmgr_vdev_obj.h>
 #include <wlan_dfs_utils_api.h>
-#ifdef QCA_SUPPORT_DFS_CHAN_POSTNOL
+#if defined(QCA_SUPPORT_DFS_CHAN_POSTNOL) || defined(QCA_DFS_BW_EXPAND)
 #include <dfs_postnol_ucfg.h>
 #endif
 #endif
@@ -651,6 +651,26 @@ register_dfs_chan_postnol_rx_ops(struct wlan_lmac_if_dfs_rx_ops *rx_ops)
 }
 #endif
 
+#ifdef QCA_DFS_BW_EXPAND
+/* register_dfs_bw_expand_rx_ops() - Register DFS Rx-Ops for BW Expand
+ * @rx_ops: Pointer to wlan_lmac_if_dfs_rx_ops.
+ */
+static void
+register_dfs_bw_expand_rx_ops(struct wlan_lmac_if_dfs_rx_ops *rx_ops)
+{
+	if (!rx_ops)
+		return;
+
+	rx_ops->dfs_set_bw_expand = ucfg_dfs_set_bw_expand;
+	rx_ops->dfs_get_bw_expand = ucfg_dfs_get_bw_expand;
+}
+#else
+static inline void
+register_dfs_bw_expand_rx_ops(struct wlan_lmac_if_dfs_rx_ops *rx_ops)
+{
+}
+#endif
+
 #ifdef WLAN_MGMT_RX_REO_SUPPORT
 static QDF_STATUS
 wlan_lmac_if_mgmt_rx_reo_rx_ops_register(
@@ -804,6 +824,7 @@ wlan_lmac_if_umac_dfs_rx_ops_register(struct wlan_lmac_if_rx_ops *rx_ops)
 	register_rcac_dfs_rx_ops(dfs_rx_ops);
 	register_agile_dfs_rx_ops(dfs_rx_ops);
 	register_dfs_chan_postnol_rx_ops(dfs_rx_ops);
+	register_dfs_bw_expand_rx_ops(dfs_rx_ops);
 
 	return QDF_STATUS_SUCCESS;
 }

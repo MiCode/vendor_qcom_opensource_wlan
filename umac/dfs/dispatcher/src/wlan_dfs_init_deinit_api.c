@@ -79,7 +79,7 @@ register_dfs_precac_auto_chan_callbacks_freq(struct dfs_to_mlme *mlme_callback)
  * @mlme_callback: Pointer to dfs_to_mlme.
  */
 #ifndef MOBILE_DFS_SUPPORT
-#ifdef QCA_SUPPORT_DFS_CHAN_POSTNOL
+#if defined(QCA_SUPPORT_DFS_CHAN_POSTNOL) || defined(QCA_DFS_BW_EXPAND)
 static inline void
 register_dfs_postnol_csa_callback(struct dfs_to_mlme *mlme_callback)
 {

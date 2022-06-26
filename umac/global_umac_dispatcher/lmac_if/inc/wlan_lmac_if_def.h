@@ -2013,6 +2013,9 @@ struct wlan_lmac_if_wifi_pos_rx_ops {
  * @dfs_get_postnol_mode:             API to get phymode to switch to, post NOL.
  * @dfs_get_postnol_cfreq2:           API to get secondary center frequency to
  *                                    switch to, post NOL.
+ * @dfs_set_bw_expand:                API to set BW Expansion feature.
+ * @dfs_get_bw_expand:                API to get the status of BW Expansion
+ *                                    feature.
  */
 struct wlan_lmac_if_dfs_rx_ops {
 	QDF_STATUS (*dfs_get_radars)(struct wlan_objmgr_pdev *pdev);
@@ -2124,6 +2127,12 @@ struct wlan_lmac_if_dfs_rx_ops {
 			struct wlan_objmgr_pdev *pdev,
 			bool value);
 	QDF_STATUS (*dfs_get_nol_subchannel_marking)(
+			struct wlan_objmgr_pdev *pdev,
+			bool *value);
+	QDF_STATUS (*dfs_set_bw_expand)(
+			struct wlan_objmgr_pdev *pdev,
+			bool value);
+	QDF_STATUS (*dfs_get_bw_expand)(
 			struct wlan_objmgr_pdev *pdev,
 			bool *value);
 	QDF_STATUS (*dfs_set_bw_reduction)(struct wlan_objmgr_pdev *pdev,
