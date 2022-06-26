@@ -36,7 +36,6 @@
 #include <wlan_objmgr_psoc_obj.h>
 #include <wlan_mlo_mgr_public_structs.h>
 
-#define MGMT_RX_REO_MGMT_PKT_CTR_INITIAL_VALUE   ((1 << 16) - 1)
 #define MGMT_RX_REO_LIST_MAX_SIZE             (100)
 #define MGMT_RX_REO_LIST_TIMEOUT_US           (500 * USEC_PER_MSEC)
 #define MGMT_RX_REO_AGEOUT_TIMER_PERIOD_MS    (250)

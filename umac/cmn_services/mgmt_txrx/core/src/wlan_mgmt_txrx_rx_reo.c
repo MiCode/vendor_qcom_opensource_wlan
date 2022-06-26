@@ -654,6 +654,111 @@ wlan_mgmt_rx_reo_get_priv_object(struct wlan_objmgr_pdev *pdev)
 }
 
 /**
+ * mgmt_rx_reo_print_snapshots() - Print all snapshots related
+ * to management Rx reorder module
+ * @mac_hw_ss: MAC HW snapshot
+ * @fw_forwarded_ss: FW forwarded snapshot
+ * @fw_consumed_ss: FW consumed snapshot
+ * @host_ss: Host snapshot
+ *
+ * return: QDF_STATUS
+ */
+static QDF_STATUS
+mgmt_rx_reo_print_snapshots
+			(struct mgmt_rx_reo_snapshot_params *mac_hw_ss,
+			 struct mgmt_rx_reo_snapshot_params *fw_forwarded_ss,
+			 struct mgmt_rx_reo_snapshot_params *fw_consumed_ss,
+			 struct mgmt_rx_reo_snapshot_params *host_ss)
+{
+	mgmt_rx_reo_debug("HW SS: valid = %u, ctr = %u, ts = %u",
+			  mac_hw_ss->valid, mac_hw_ss->mgmt_pkt_ctr,
+			  mac_hw_ss->global_timestamp);
+	mgmt_rx_reo_debug("FW forwarded SS: valid = %u, ctr = %u, ts = %u",
+			  fw_forwarded_ss->valid,
+			  fw_forwarded_ss->mgmt_pkt_ctr,
+			  fw_forwarded_ss->global_timestamp);
+	mgmt_rx_reo_debug("FW consumed SS: valid = %u, ctr = %u, ts = %u",
+			  fw_consumed_ss->valid,
+			  fw_consumed_ss->mgmt_pkt_ctr,
+			  fw_consumed_ss->global_timestamp);
+	mgmt_rx_reo_debug("HOST SS: valid = %u, ctr = %u, ts = %u",
+			  host_ss->valid, host_ss->mgmt_pkt_ctr,
+			  host_ss->global_timestamp);
+
+	return QDF_STATUS_SUCCESS;
+}
+
+/**
+ * mgmt_rx_reo_invalidate_stale_snapshots() - Invalidate stale management
+ * Rx REO snapshots
+ * @mac_hw_ss: MAC HW snapshot
+ * @fw_forwarded_ss: FW forwarded snapshot
+ * @fw_consumed_ss: FW consumed snapshot
+ * @host_ss: Host snapshot
+ * @link: link ID
+ *
+ * return: QDF_STATUS
+ */
+static QDF_STATUS
+mgmt_rx_reo_invalidate_stale_snapshots
+			(struct mgmt_rx_reo_snapshot_params *mac_hw_ss,
+			 struct mgmt_rx_reo_snapshot_params *fw_forwarded_ss,
+			 struct mgmt_rx_reo_snapshot_params *fw_consumed_ss,
+			 struct mgmt_rx_reo_snapshot_params *host_ss,
+			 uint8_t link)
+{
+	if (!mac_hw_ss->valid)
+		return QDF_STATUS_SUCCESS;
+
+	if (fw_forwarded_ss->valid) {
+		if (!mgmt_rx_reo_compare_global_timestamps_gte
+					(mac_hw_ss->global_timestamp,
+					 fw_forwarded_ss->global_timestamp) ||
+		    !mgmt_rx_reo_compare_pkt_ctrs_gte
+					(mac_hw_ss->mgmt_pkt_ctr,
+					 fw_forwarded_ss->mgmt_pkt_ctr)) {
+			mgmt_rx_reo_print_snapshots(mac_hw_ss, fw_forwarded_ss,
+						    fw_consumed_ss, host_ss);
+			mgmt_rx_reo_debug("Invalidate FW forwarded SS, link %u",
+					  link);
+			fw_forwarded_ss->valid = false;
+		}
+	}
+
+	if (fw_consumed_ss->valid) {
+		if (!mgmt_rx_reo_compare_global_timestamps_gte
+					(mac_hw_ss->global_timestamp,
+					 fw_consumed_ss->global_timestamp) ||
+		    !mgmt_rx_reo_compare_pkt_ctrs_gte
+					(mac_hw_ss->mgmt_pkt_ctr,
+					 fw_consumed_ss->mgmt_pkt_ctr)) {
+			mgmt_rx_reo_print_snapshots(mac_hw_ss, fw_forwarded_ss,
+						    fw_consumed_ss, host_ss);
+			mgmt_rx_reo_debug("Invalidate FW consumed SS, link %u",
+					  link);
+			fw_consumed_ss->valid = false;
+		}
+	}
+
+	if (host_ss->valid) {
+		if (!mgmt_rx_reo_compare_global_timestamps_gte
+					(mac_hw_ss->global_timestamp,
+					 host_ss->global_timestamp) ||
+		    !mgmt_rx_reo_compare_pkt_ctrs_gte
+					(mac_hw_ss->mgmt_pkt_ctr,
+					 host_ss->mgmt_pkt_ctr)) {
+			mgmt_rx_reo_print_snapshots(mac_hw_ss, fw_forwarded_ss,
+						    fw_consumed_ss, host_ss);
+			mgmt_rx_reo_debug("Invalidate host snapshot, link %u",
+					  link);
+			host_ss->valid = false;
+		}
+	}
+
+	return QDF_STATUS_SUCCESS;
+}
+
+/**
  * mgmt_rx_reo_snapshots_check_sanity() - Check the sanity of management
  * Rx REO snapshots
  * @mac_hw_ss: MAC HW snapshot
@@ -916,11 +1021,10 @@ wlan_mgmt_rx_reo_algo_calculate_wait_count(
 		}
 
 		host_ss = &rx_reo_pdev_ctx->host_snapshot;
-		desc->host_snapshot[link] = rx_reo_pdev_ctx->host_snapshot;
 
-		mgmt_rx_reo_debug("link_id = %u HOST SS: valid = %u, ctr = %u, ts = %u",
-				  link, host_ss->valid, host_ss->mgmt_pkt_ctr,
-				  host_ss->global_timestamp);
+		mgmt_rx_reo_info("link_id = %u HOST SS: valid = %u, ctr = %u, ts = %u",
+				 link, host_ss->valid, host_ss->mgmt_pkt_ctr,
+				 host_ss->global_timestamp);
 
 		snapshot_id = 0;
 		/* Read all the shared snapshots */
@@ -966,6 +1070,16 @@ wlan_mgmt_rx_reo_algo_calculate_wait_count(
 		fw_consumed_ss = &snapshot_params
 				[MGMT_RX_REO_SHARED_SNAPSHOT_FW_CONSUMED];
 
+		status = mgmt_rx_reo_invalidate_stale_snapshots(mac_hw_ss,
+								fw_forwarded_ss,
+								fw_consumed_ss,
+								host_ss, link);
+		if (QDF_IS_STATUS_ERROR(status)) {
+			mgmt_rx_reo_err("Failed to invalidate SS for link %u",
+					link);
+			return status;
+		}
+
 		status = mgmt_rx_reo_snapshots_check_sanity
 			(mac_hw_ss, fw_forwarded_ss, fw_consumed_ss, host_ss);
 		if (QDF_IS_STATUS_ERROR(status)) {
@@ -974,21 +1088,61 @@ wlan_mgmt_rx_reo_algo_calculate_wait_count(
 			qdf_assert_always(0);
 		}
 
-		mgmt_rx_reo_debug("link_id = %u HW SS: valid = %u, ctr = %u, ts = %u",
-				  link, mac_hw_ss->valid,
-				  mac_hw_ss->mgmt_pkt_ctr,
-				  mac_hw_ss->global_timestamp);
-		mgmt_rx_reo_debug("link_id = %u FW forwarded SS: valid = %u, ctr = %u, ts = %u",
-				  link, fw_forwarded_ss->valid,
-				  fw_forwarded_ss->mgmt_pkt_ctr,
-				  fw_forwarded_ss->global_timestamp);
-		mgmt_rx_reo_debug("link_id = %u FW consumed SS: valid = %u, ctr = %u, ts = %u",
-				  link, fw_consumed_ss->valid,
-				  fw_consumed_ss->mgmt_pkt_ctr,
-				  fw_consumed_ss->global_timestamp);
+		desc->shared_snapshots[link][MGMT_RX_REO_SHARED_SNAPSHOT_MAC_HW] =
+								*mac_hw_ss;
+		desc->shared_snapshots[link][MGMT_RX_REO_SHARED_SNAPSHOT_FW_FORWADED] =
+								*fw_forwarded_ss;
+		desc->shared_snapshots[link][MGMT_RX_REO_SHARED_SNAPSHOT_FW_CONSUMED] =
+								*fw_consumed_ss;
+		desc->host_snapshot[link] = *host_ss;
+
+		mgmt_rx_reo_info("link_id = %u HW SS: valid = %u, ctr = %u, ts = %u",
+				 link, mac_hw_ss->valid,
+				 mac_hw_ss->mgmt_pkt_ctr,
+				 mac_hw_ss->global_timestamp);
+		mgmt_rx_reo_info("link_id = %u FW forwarded SS: valid = %u, ctr = %u, ts = %u",
+				 link, fw_forwarded_ss->valid,
+				 fw_forwarded_ss->mgmt_pkt_ctr,
+				 fw_forwarded_ss->global_timestamp);
+		mgmt_rx_reo_info("link_id = %u FW consumed SS: valid = %u, ctr = %u, ts = %u",
+				 link, fw_consumed_ss->valid,
+				 fw_consumed_ss->mgmt_pkt_ctr,
+				 fw_consumed_ss->global_timestamp);
 
 		/* No need wait for any frames on the same link */
 		if (link == in_frame_link) {
+			frames_pending = 0;
+			goto update_pending_frames;
+		}
+
+		/**
+		 * If MAC HW snapshot is invalid, the link has not started
+		 * receiving management frames. Set wait count to zero.
+		 */
+		if (!mac_hw_ss->valid) {
+			frames_pending = 0;
+			goto update_pending_frames;
+		}
+
+		/**
+		 * If host snapshot is invalid, wait for MAX number of frames.
+		 * When any frame in this link arrives at host, actual wait
+		 * counts will be updated.
+		 */
+		if (!host_ss->valid) {
+			wait_count->per_link_count[link] = UINT_MAX;
+			wait_count->total_count += UINT_MAX;
+			goto print_wait_count;
+		}
+
+		/**
+		 * If MAC HW snapshot sequence number and host snapshot
+		 * sequence number are same, all the frames received by
+		 * this link are processed by host. No need to wait for
+		 * any frames from this link.
+		 */
+		if (!mgmt_rx_reo_subtract_pkt_ctrs(mac_hw_ss->mgmt_pkt_ctr,
+						   host_ss->mgmt_pkt_ctr)) {
 			frames_pending = 0;
 			goto update_pending_frames;
 		}
@@ -1014,19 +1168,9 @@ wlan_mgmt_rx_reo_algo_calculate_wait_count(
 		 * whether to deliver such a frame to upper layers is handled
 		 * separately.
 		 */
-		if (host_ss->valid &&
-		    mgmt_rx_reo_compare_global_timestamps_gte(
+		if (mgmt_rx_reo_compare_global_timestamps_gte(
 				host_ss->global_timestamp,
 				in_frame_params->global_timestamp)) {
-			frames_pending = 0;
-			goto update_pending_frames;
-		}
-
-		/**
-		 * If MAC HW snapshot is invalid, the link has not started
-		 * receiving management frames. Set wait count to zero.
-		 */
-		if (!mac_hw_ss->valid) {
 			frames_pending = 0;
 			goto update_pending_frames;
 		}
@@ -1163,10 +1307,10 @@ update_pending_frames:
 			wait_count->per_link_count[link] = frames_pending;
 			wait_count->total_count += frames_pending;
 
-			mgmt_rx_reo_debug("link_id = %u wait count: per link = 0x%x, total = 0x%llx",
-					  link,
-					  wait_count->per_link_count[link],
-					  wait_count->total_count);
+print_wait_count:
+			mgmt_rx_reo_info("link_id = %u wait count: per link = 0x%x, total = 0x%llx",
+					 link, wait_count->per_link_count[link],
+					 wait_count->total_count);
 	}
 
 	return QDF_STATUS_SUCCESS;
@@ -2173,8 +2317,6 @@ mgmt_rx_reo_prepare_list_entry(
 			MGMT_RX_REO_STATUS_WAIT_FOR_FRAME_ON_OTHER_LINKS;
 
 	*entry = list_entry;
-
-	mgmt_rx_reo_debug("New entry to be inserted is %pK", list_entry);
 
 	return QDF_STATUS_SUCCESS;
 }
@@ -4891,7 +5033,7 @@ wlan_mgmt_rx_reo_initialize_snapshot_params(
 			struct mgmt_rx_reo_snapshot_params *snapshot_params)
 {
 	snapshot_params->valid = false;
-	snapshot_params->mgmt_pkt_ctr = MGMT_RX_REO_MGMT_PKT_CTR_INITIAL_VALUE;
+	snapshot_params->mgmt_pkt_ctr = 0;
 	snapshot_params->global_timestamp = 0;
 }
 
@@ -5008,6 +5150,14 @@ mgmt_rx_reo_initialize_snapshots(struct wlan_objmgr_pdev *pdev)
 static QDF_STATUS
 mgmt_rx_reo_clear_snapshots(struct wlan_objmgr_pdev *pdev)
 {
+	QDF_STATUS status;
+
+	status = mgmt_rx_reo_initialize_snapshot_value(pdev);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		mgmt_rx_reo_err("Failed to initialize snapshot value");
+		return status;
+	}
+
 	return QDF_STATUS_SUCCESS;
 }
 
