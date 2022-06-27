@@ -1185,13 +1185,15 @@ uint8_t dp_rx_process_invalid_peer(struct dp_soc *soc, qdf_nbuf_t mpdu,
 	struct ieee80211_frame *wh;
 	qdf_nbuf_t curr_nbuf, next_nbuf;
 	uint8_t *rx_tlv_hdr = qdf_nbuf_data(mpdu);
-	uint8_t *rx_pkt_hdr = hal_rx_pkt_hdr_get(soc->hal_soc, rx_tlv_hdr);
+	uint8_t *rx_pkt_hdr = NULL;
 
 	if (!HAL_IS_DECAP_FORMAT_RAW(soc->hal_soc, rx_tlv_hdr)) {
 		dp_rx_debug("%pK: Drop decapped frames", soc);
 		goto free;
 	}
 
+	/* In RAW packet, packet header will be part of data */
+	rx_pkt_hdr = rx_tlv_hdr + soc->rx_pkt_tlv_size;
 	wh = (struct ieee80211_frame *)rx_pkt_hdr;
 
 	if (!DP_FRAME_IS_DATA(wh)) {

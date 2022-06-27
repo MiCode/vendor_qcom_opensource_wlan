@@ -791,7 +791,7 @@ dp_rxdma_ring_sel_cfg_be(struct dp_soc *soc)
 	htt_tlv_filter.mpdu_start = 1;
 	htt_tlv_filter.msdu_end = 1;
 	htt_tlv_filter.packet = 1;
-	htt_tlv_filter.packet_header = 1;
+	htt_tlv_filter.packet_header = 0;
 
 	htt_tlv_filter.ppdu_start = 0;
 	htt_tlv_filter.ppdu_end = 0;
