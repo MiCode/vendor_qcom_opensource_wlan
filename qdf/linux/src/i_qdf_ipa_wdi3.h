@@ -186,6 +186,10 @@ typedef struct ipa_wdi_reg_intf_in_params  __qdf_ipa_wdi_reg_intf_in_params_t;
 #define __QDF_IPA_WDI_REG_INTF_IN_PARAMS_IS_TX1_USED(in)	\
 	(((struct ipa_wdi_reg_intf_in_params *)(in))->is_tx1_used)
 #endif
+#ifdef IPA_WDI3_RX_TWO_PIPES
+#define __QDF_IPA_WDI_REG_INTF_IN_PARAMS_IS_RX1_USED(in)	\
+	(((struct ipa_wdi_reg_intf_in_params *)(in))->is_rx1_used)
+#endif
 
 typedef struct ipa_ep_cfg __qdf_ipa_ep_cfg_t;
 
@@ -308,6 +312,14 @@ typedef struct ipa_wdi_conn_in_params  __qdf_ipa_wdi_conn_in_params_t;
 	(((struct ipa_wdi_conn_in_params *)(pipe_in))->u_rx.rx)
 #define __QDF_IPA_WDI_CONN_IN_PARAMS_RX_SMMU(pipe_in)	\
 	(((struct ipa_wdi_conn_in_params *)(pipe_in))->u_rx.rx_smmu)
+#ifdef IPA_WDI3_RX_TWO_PIPES
+#define __QDF_IPA_WDI_CONN_IN_PARAMS_IS_RX1_USED(pipe_in)	\
+	(((struct ipa_wdi_conn_in_params *)(pipe_in))->is_rx1_used)
+#define __QDF_IPA_WDI_CONN_IN_PARAMS_RX_ALT(pipe_in)	\
+	(((struct ipa_wdi_conn_in_params *)(pipe_in))->u_rx1.rx)
+#define __QDF_IPA_WDI_CONN_IN_PARAMS_RX_ALT_SMMU(pipe_in)	\
+	(((struct ipa_wdi_conn_in_params *)(pipe_in))->u_rx1.rx_smmu)
+#endif
 #define __QDF_IPA_WDI_CONN_IN_PARAMS_HANDLE(pipe_in)	\
 	(((struct ipa_wdi_conn_in_params *)(pipe_in))->hdl)
 
@@ -325,6 +337,10 @@ typedef struct ipa_wdi_conn_out_params  __qdf_ipa_wdi_conn_out_params_t;
 #endif
 #define __QDF_IPA_WDI_CONN_OUT_PARAMS_RX_UC_DB_PA(pipe_out)	\
 	(((struct ipa_wdi_conn_out_params *)(pipe_out))->rx_uc_db_pa)
+#ifdef IPA_WDI3_RX_TWO_PIPES
+#define __QDF_IPA_WDI_CONN_OUT_PARAMS_RX_ALT_UC_DB_PA(pipe_out)	\
+	(((struct ipa_wdi_conn_out_params *)(pipe_out))->rx1_uc_db_pa)
+#endif
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0))
 #define __QDF_IPA_WDI_CONN_OUT_PARAMS_IS_DB_DDR_MAPPED(pipe_out)	\
 	(((struct ipa_wdi_conn_out_params *)(pipe_out))->is_ddr_mapped)

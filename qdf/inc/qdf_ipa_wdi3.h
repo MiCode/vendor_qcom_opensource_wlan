@@ -204,6 +204,11 @@ typedef __qdf_ipa_wdi_reg_intf_in_params_t qdf_ipa_wdi_reg_intf_in_params_t;
 #define QDF_IPA_WDI_REG_INTF_IN_PARAMS_IS_TX1_USED(in)	\
 	__QDF_IPA_WDI_REG_INTF_IN_PARAMS_IS_TX1_USED(in)
 #endif
+#ifdef IPA_WDI3_RX_TWO_PIPES
+#define QDF_IPA_WDI_REG_INTF_IN_PARAMS_IS_RX1_USED(in)	\
+	__QDF_IPA_WDI_REG_INTF_IN_PARAMS_IS_RX1_USED(in)
+#endif
+
 
 /**
  * qdf_ipa_wdi_pipe_setup_info_t - WDI TX/Rx configuration
@@ -293,7 +298,14 @@ typedef __qdf_ipa_wdi_conn_in_params_t qdf_ipa_wdi_conn_in_params_t;
 #define QDF_IPA_WDI_CONN_OUT_PARAMS_TX_UC_ALT_DB_PA(pipe_out)	\
 	__QDF_IPA_WDI_CONN_OUT_PARAMS_TX_UC_ALT_DB_PA(pipe_out)
 #endif
-
+#ifdef IPA_WDI3_RX_TWO_PIPES
+#define QDF_IPA_WDI_CONN_IN_PARAMS_IS_RX1_USED(pipe_in)	\
+	__QDF_IPA_WDI_CONN_IN_PARAMS_IS_RX1_USED(pipe_in)
+#define QDF_IPA_WDI_CONN_IN_PARAMS_RX_ALT(pipe_in)	\
+	__QDF_IPA_WDI_CONN_IN_PARAMS_RX_ALT(pipe_in)
+#define QDF_IPA_WDI_CONN_IN_PARAMS_RX_ALT_SMMU(pipe_in)	\
+	__QDF_IPA_WDI_CONN_IN_PARAMS_RX_ALT_SMMU(pipe_in)
+#endif
 /**
  * qdf_ipa_wdi_conn_out_params_t - information provided
  *				to WLAN druver
@@ -306,6 +318,10 @@ typedef __qdf_ipa_wdi_conn_out_params_t qdf_ipa_wdi_conn_out_params_t;
 	__QDF_IPA_WDI_CONN_OUT_PARAMS_TX_UC_DB_VA(pipe_out)
 #define QDF_IPA_WDI_CONN_OUT_PARAMS_RX_UC_DB_PA(pipe_out)	\
 	__QDF_IPA_WDI_CONN_OUT_PARAMS_RX_UC_DB_PA(pipe_out)
+#ifdef IPA_WDI3_RX_TWO_PIPES
+#define QDF_IPA_WDI_CONN_OUT_PARAMS_RX_ALT_UC_DB_PA(pipe_out)	\
+	__QDF_IPA_WDI_CONN_OUT_PARAMS_RX_ALT_UC_DB_PA(pipe_out)
+#endif
 #define QDF_IPA_WDI_CONN_OUT_PARAMS_IS_DB_DDR_MAPPED(pipe_out)	\
 	__QDF_IPA_WDI_CONN_OUT_PARAMS_IS_DB_DDR_MAPPED(pipe_out)
 
