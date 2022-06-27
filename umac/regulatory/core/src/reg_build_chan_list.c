@@ -1556,7 +1556,7 @@ reg_modify_6g_afc_chan_list(struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj)
 }
 #endif /* CONFIG_BAND_6GHZ */
 
-#if defined(CONFIG_BAND_6GHZ) && (CONFIG_REG_CLIENT)
+#if defined(CONFIG_BAND_6GHZ) && defined(CONFIG_REG_CLIENT)
 /**
  * reg_modify_sec_chan_list_for_6g_edge_chan() - Modify 6 GHz edge channels
  * for SAP (for MCC use case)
