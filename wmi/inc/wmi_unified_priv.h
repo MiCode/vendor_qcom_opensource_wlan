@@ -1933,7 +1933,7 @@ QDF_STATUS (*extract_pdev_csa_switch_count_status)(wmi_unified_t wmi_handle,
 		void *evt_buf, struct pdev_csa_switch_count_status *param);
 
 QDF_STATUS (*extract_swba_num_vdevs)(wmi_unified_t wmi_handle, void *evt_buf,
-	uint32_t *num_vdevs);
+	uint32_t *num_vdevs, uint32_t *num_quiet_triggered_vdevs);
 
 #ifdef CONVERGED_P2P_ENABLE
 #ifdef FEATURE_P2P_LISTEN_OFFLOAD
