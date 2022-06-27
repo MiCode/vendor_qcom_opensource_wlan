@@ -174,6 +174,9 @@ struct vdev_mlme_he_ops_info {
  * @eht_maccap_scs_traffic_description : SCS Traffic Description Support
  * @eht_maccap_max_mpdu_len          : Maximum MPDU Length
  * @eht_maccap_max_ampdu_len_exp_etn : Maximum A-MPDU Length Exponent Extension
+ * @eht_maccap_trs_support           : EHT TRS Support
+ * @eht_maccap_txop_ret_supp_in_txop_mode2: TXOP Return Support In TXOP
+ *                                          Sharing Mode 2
  * @eht_phycap_reserved              : Reserved
  * @eht_phycap_320mhzin6ghz          : Support For 320 MHz In 6 GHz
  * @eht_phycap_242tonerubwlt20mhz    : Support for 242-tone RU In BW Wider Than
@@ -228,7 +231,9 @@ struct vdev_mlme_eht_caps_info {
 		 eht_maccap_rtwt_support                :1,
 		 eht_maccap_scs_traffic_description     :1,
 		 eht_maccap_max_mpdu_len                :2,
-		 eht_maccap_max_ampdu_len_exp_etn       :1;
+		 eht_maccap_max_ampdu_len_exp_etn       :1,
+		 eht_maccap_trs_support                 :1,
+		 eht_maccap_txop_ret_supp_in_txop_mode2 :1;
 	uint32_t eht_phycap_reserved                    :1,
 		 eht_phycap_320mhzin6ghz                :1,
 		 eht_phycap_242tonerubwlt20mhz          :1,

@@ -1632,6 +1632,10 @@ struct subelem_header {
 #define EHTCAP_MAC_MAX_MPDU_LEN_BITS                    2
 #define EHTCAP_MAC_MAX_A_MPDU_LEN_IDX                   8
 #define EHTCAP_MAC_MAX_A_MPDU_LEN_BITS                  1
+#define EHTCAP_MAC_TRS_SUPPORT_IDX                      9
+#define EHTCAP_MAC_TRS_SUPPORT_BITS                     1
+#define EHTCAP_MAC_TXOP_RET_SUPPP_IN_SHARING_MODE2_IDX  10
+#define EHTCAP_MAC_TXOP_RET_SUPPP_IN_SHARING_MODE2_BITS 1
 
 #define EHTCAP_PHY_320MHZIN6GHZ_IDX                     1
 #define EHTCAP_PHY_320MHZIN6GHZ_BITS                    1
@@ -1729,15 +1733,35 @@ struct subelem_header {
 #define EHTCAP_PPET_RU_INDEX_BITMASK_IDX  4
 #define EHTCAP_PPET_RU_INDEX_BITMASK_BITS 5
 
-#define EHTOP_INFO_PRESENT_IDX             0
-#define EHTOP_INFO_PRESENT_BITS            1
+#define EHTOP_INFO_PRESENT_IDX                           0
+#define EHTOP_INFO_PRESENT_BITS                          1
 #define EHTOP_PARAM_DISABLED_SC_BITMAP_PRESENT_IDX       1
 #define EHTOP_PARAM_DISABLED_SC_BITMAP_PRESENT_BITS      1
+#define EHTOP_DEFAULT_PE_DURATION_IDX                    2
+#define EHTOP_DEFAULT_PE_DURATION_BITS                   1
+#define EHTOP_GRP_ADDRESSED_BU_IND_LIMIT_IDX             3
+#define EHTOP_GRP_ADDRESSED_BU_IND_LIMIT_BITS            1
+#define EHTOP_GRP_ADDRESSED_BU_IND_EXPONENT_IDX          4
+#define EHTOP_GRP_ADDRESSED_BU_IND_EXPONENT_BITS         2
 
 #define EHTOP_INFO_CHAN_WIDTH_IDX          0
 #define EHTOP_INFO_CHAN_WIDTH_BITS         3
 
 #define MAX_EHT_MCS_NSS_MAP_LEN 9
+
+/**
+ * struct eht_basic_mcs_nss_set - EHT Basic mcs nss set
+ * @max_nss_mcs_0_7: Rx, Tx Max Nss That Supports EHT-MCS 0-7
+ * @max_nss_mcs_8_9: Rx, Tx Max Nss That Supports EHT-MCS 8-9
+ * @max_nss_mcs_10_11: Rx, Tx Max Nss That Supports EHT-MCS 10-11
+ * @max_nss_mcs_12_13: Rx, Tx Max Nss That Supports EHT-MCS 12-13
+ */
+struct eht_basic_mcs_nss_set {
+	uint8_t max_nss_mcs_0_7;
+	uint8_t max_nss_mcs_8_9;
+	uint8_t max_nss_mcs_10_11;
+	uint8_t max_nss_mcs_12_13;
+} qdf_packed;
 
 /**
  * struct wlan_ie_ehtcaps - EHT capabilities
@@ -1770,12 +1794,7 @@ struct wlan_ie_ehtcaps {
 			uint8_t max_nss_mcs_10_11;
 			uint8_t max_nss_mcs_12_13;
 		} qdf_packed mcs_bw_map[WLAN_EHT_MAX_MCS_MAPS];
-		struct {
-			uint8_t max_nss_mcs_0_7;
-			uint8_t max_nss_mcs_8_9;
-			uint8_t max_nss_mcs_10_11;
-			uint8_t max_nss_mcs_12_13;
-		} qdf_packed mcs_bw_map_20_sta;
+		struct eht_basic_mcs_nss_set mcs_bw_map_20_sta;
 		uint8_t mcs_nss_map_bytes[MAX_EHT_MCS_NSS_MAP_LEN];
 	} qdf_packed;
 } qdf_packed;
@@ -1786,6 +1805,7 @@ struct wlan_ie_ehtcaps {
  * @elem_len: EHT caps IE len
  * @elem_id_extn: EHT caps extension id
  * @ehtop_param: EHT Operation Parameters
+ * @basic_mcs_nss_set: EHT basic mcs nss set
  * @control: Control field in EHT Operation Information
  * @ccfs0: EHT Channel Centre Frequency Segment0 information
  * @ccfs1: EHT Channel Centre Frequency Segment1 information
@@ -1797,6 +1817,7 @@ struct wlan_ie_ehtops {
 	uint8_t elem_len;
 	uint8_t elem_id_extn;
 	uint8_t ehtop_param;
+	struct eht_basic_mcs_nss_set basic_mcs_nss_set;
 	uint8_t control;
 	uint8_t ccfs0;
 	uint8_t ccfs1;
