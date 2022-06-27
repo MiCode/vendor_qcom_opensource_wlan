@@ -3236,11 +3236,20 @@ QDF_STATUS reg_get_channel_list_with_power_for_freq(struct wlan_objmgr_pdev
 
 enum channel_enum reg_get_chan_enum_for_freq(qdf_freq_t freq)
 {
-	uint32_t count;
+	int16_t start = 0;
+	int16_t end = NUM_CHANNELS - 1;
 
-	for (count = 0; count < NUM_CHANNELS; count++)
-		if (channel_map[count].center_freq == freq)
-			return count;
+	while (start <= end) {
+		int16_t middle = (start + end) / 2;
+		qdf_freq_t mid_freq_elem = channel_map[middle].center_freq;
+
+		if (freq == mid_freq_elem)
+			return middle;
+		if (freq > mid_freq_elem)
+			start = middle + 1;
+		else
+			end = middle - 1;
+	}
 
 	reg_debug_rl("invalid channel center frequency %d", freq);
 
