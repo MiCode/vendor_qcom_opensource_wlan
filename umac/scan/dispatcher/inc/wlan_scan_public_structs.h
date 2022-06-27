@@ -203,6 +203,13 @@ struct channel_info {
  * @ehtcap: pointer to ehtcap ie
  * @ehtop: pointer to eht op ie
  * @multi_link: pointer to multi lik IE
+ * @bwnss_map: pointer to NSS map IE
+ * @secchanoff: pointer to secondary chan IE
+ * @mdie: pointer to md IE
+ * @heop: pointer to HE op IE
+ * @muedca: pointer to muedca IE
+ * @extender: pointer to extended IE
+ * @qcn: pointer to QCN IE
  */
 struct ie_list {
 	uint8_t *tim;
@@ -264,6 +271,7 @@ struct ie_list {
 #ifdef WLAN_FEATURE_11BE_MLO
 	uint8_t *multi_link;
 #endif
+	uint8_t *qcn;
 
 /**
  * For any new IEs in this structre, add handling in

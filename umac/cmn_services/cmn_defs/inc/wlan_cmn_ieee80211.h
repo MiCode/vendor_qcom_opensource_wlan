@@ -187,6 +187,7 @@
 #define SFA_OUI_TYPE 0x14
 /* QCA OUI (in little endian) */
 #define QCA_OUI 0xf0fd8c
+#define QCN_OUI_TYPE_CMN 0x01
 #define QCA_OUI_WHC_TYPE  0x00
 #define QCA_OUI_WHC_REPT_TYPE 0x01
 
@@ -3256,6 +3257,13 @@ is_wcn_oui(uint8_t *frm)
 {
 	return (frm[1] > 4) && (LE_READ_4(frm + 2) ==
 		((WCN_OUI_TYPE << 24) | WCN_OUI));
+}
+
+static inline bool
+is_qcn_oui(uint8_t *frm)
+{
+	return ((frm[1] > 4) && (LE_READ_4(frm + 2) ==
+		((QCN_OUI_TYPE_CMN << 24) | QCA_OUI)));
 }
 
 #define WLAN_VENDOR_WME_IE_LEN 24
