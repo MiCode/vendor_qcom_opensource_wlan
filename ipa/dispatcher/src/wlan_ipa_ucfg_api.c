@@ -67,6 +67,13 @@ bool ucfg_ipa_uc_is_enabled(void)
 
 qdf_export_symbol(ucfg_ipa_uc_is_enabled);
 
+bool ucfg_ipa_is_vlan_enabled(void)
+{
+	return ipa_config_is_vlan_enabled();
+}
+
+qdf_export_symbol(ucfg_ipa_is_vlan_enabled);
+
 void ucfg_ipa_set_pdev_id(struct wlan_objmgr_psoc *psoc,
 			  uint8_t pdev_id)
 {
