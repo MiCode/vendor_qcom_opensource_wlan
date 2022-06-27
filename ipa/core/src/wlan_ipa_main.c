@@ -845,6 +845,8 @@ void ipa_component_config_update(struct wlan_objmgr_psoc *psoc)
 		cfg_get(psoc, CFG_DP_BUS_BANDWIDTH_LOW_THRESHOLD);
 	g_ipa_config->ipa_force_voting =
 		cfg_get(psoc, CFG_DP_IPA_ENABLE_FORCE_VOTING);
+	g_ipa_config->ipa_wds =
+		cfg_get(psoc, CFG_DP_IPA_WDS_STATUS);
 }
 
 void ipa_component_config_free(void)
@@ -895,3 +897,7 @@ void ipa_flush_pending_vdev_events(struct wlan_objmgr_pdev *pdev,
 	wlan_ipa_flush_pending_vdev_events(ipa_obj, vdev_id);
 }
 
+bool ipa_is_wds_enabled(void)
+{
+	return g_ipa_config ? g_ipa_config->ipa_wds : 0;
+}

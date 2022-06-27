@@ -568,6 +568,13 @@ void ipa_init_deinit_lock(void);
  */
 void ipa_init_deinit_unlock(void);
 
+/**
+ * ipa_is_wds_enabled() - IPA wds status
+ *
+ * Return: true if WDS is enabled otherwise false
+ */
+bool ipa_is_wds_enabled(void);
+
 #else /* Not IPA_OFFLOAD */
 typedef QDF_STATUS (*wlan_ipa_softap_xmit)(qdf_nbuf_t nbuf, qdf_netdev_t dev);
 typedef void (*wlan_ipa_send_to_nw)(qdf_nbuf_t nbuf, qdf_netdev_t dev);

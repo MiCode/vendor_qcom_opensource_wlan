@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2012-2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -198,6 +199,25 @@
 		512, \
 		CFG_VALUE_OR_DEFAULT, "IPA tx buffer count")
 
+/*
+ * <ini>
+ * gIPAWds - IPA WDS Enable
+ * @Default: false
+ *
+ * This ini specifies to enable WDS for IPA
+ *
+ * Related: N/A
+ *
+ * Supported Feature: IPA
+ *
+ * Usage: Internal
+ *
+ * </ini>
+ */
+#define CFG_DP_IPA_WDS_STATUS \
+		CFG_INI_BOOL("gIPAWds", \
+		false, "Ctrl to enable WDS for EasyMesh")
+
 #define CFG_IPA \
 	CFG(CFG_DP_IPA_OFFLOAD_CONFIG) \
 	CFG(CFG_DP_IPA_DESC_SIZE) \
@@ -205,6 +225,6 @@
 	CFG(CFG_DP_IPA_MEDIUM_BANDWIDTH_MBPS) \
 	CFG(CFG_DP_IPA_LOW_BANDWIDTH_MBPS) \
 	CFG(CFG_DP_IPA_ENABLE_FORCE_VOTING) \
-	CFG(CFG_DP_IPA_UC_TX_BUF_COUNT)
-
+	CFG(CFG_DP_IPA_UC_TX_BUF_COUNT) \
+	CFG(CFG_DP_IPA_WDS_STATUS)
 #endif /* _CFG_IPA_H_ */

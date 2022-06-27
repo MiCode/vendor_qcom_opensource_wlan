@@ -449,6 +449,18 @@ void ucfg_ipa_update_tx_stats(struct wlan_objmgr_pdev *pdev, uint64_t sta_tx,
  */
 void ucfg_ipa_flush_pending_vdev_events(struct wlan_objmgr_pdev *pdev,
 					uint8_t vdev_id);
+
+/**
+ * ucfg_ipa_is_wds_enabled() - get IPA AP WDS status
+ *
+ * IPA driver requires WDS status for adding filter rules
+ * to support easymesh feature, IPA expectes wds status
+ * with WLAN_IPA_AP_CONNECT event.
+ *
+ * Return: true - WDS is enabled
+ *         false - WDS is not enabled
+ */
+bool ucfg_ipa_is_wds_enabled(void);
 #else
 static inline void ucfg_ipa_set_pld_enable(bool flag)
 {
@@ -700,6 +712,12 @@ static inline
 void ucfg_ipa_flush_pending_vdev_events(struct wlan_objmgr_pdev *pdev,
 					uint8_t vdev_id)
 {
+}
+
+static inline
+bool ucfg_ipa_is_wds_enabled(void)
+{
+	return 0;
 }
 #endif /* IPA_OFFLOAD */
 #endif /* _WLAN_IPA_UCFG_API_H_ */

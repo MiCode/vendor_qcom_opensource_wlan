@@ -347,3 +347,10 @@ void ucfg_ipa_flush_pending_vdev_events(struct wlan_objmgr_pdev *pdev,
 }
 
 qdf_export_symbol(ucfg_ipa_flush_pending_vdev_events);
+
+bool ucfg_ipa_is_wds_enabled(void)
+{
+	return ipa_is_wds_enabled();
+}
+
+qdf_export_symbol(ucfg_ipa_is_wds_enabled);
