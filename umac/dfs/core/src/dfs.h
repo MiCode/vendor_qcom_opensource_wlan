@@ -1117,6 +1117,10 @@ struct dfs_rcac_params {
  * @dfs_is_rcsa_ie_sent:             To send or to not send RCSA IE.
  * @dfs_is_nol_ie_sent:              To send or to not send NOL IE.
  * @dfs_agile_precac_ucfg:           User configuration for agile preCAC.
+ * @dfs_bw_expand_target_freq:       User configured Channel frequency for
+ *                                   bandwidth expansion feature.
+ * @dfs_bw_expand_des_mode:          User configured Channel Phymode for
+ *                                   bandwidth expansion feature.
  * @dfs_agile_rcac_ucfg:             User configuration for Rolling CAC.
  * @dfs_fw_adfs_support_non_160:     Target Agile DFS support for non-160 BWs.
  * @dfs_fw_adfs_support_160:         Target Agile DFS support for 160 BW.
@@ -1287,6 +1291,10 @@ struct wlan_dfs {
 	uint8_t        dfs_nol_ie_bitmap;
 	bool           dfs_is_rcsa_ie_sent;
 	bool           dfs_is_nol_ie_sent;
+#endif
+#if defined(QCA_DFS_BW_EXPAND)
+	qdf_freq_t      dfs_bw_expand_target_freq;
+	enum wlan_phymode dfs_bw_expand_des_mode;
 #endif
 	uint8_t        dfs_agile_precac_ucfg:1,
 #if defined(QCA_SUPPORT_ADFS_RCAC)
