@@ -295,6 +295,7 @@ static void dp_ast_aging_timer_fn(void *soc_hdl)
 }
 #endif /* WLAN_FEATURE_MULTI_AST_DEL */
 
+#ifndef IPA_WDS_EASYMESH_FEATURE
 /*
  * dp_soc_wds_attach() - Setup WDS timer and AST table
  * @soc:		Datapath SOC handle
@@ -326,6 +327,15 @@ void dp_soc_wds_detach(struct dp_soc *soc)
 	qdf_timer_stop(&soc->ast_aging_timer);
 	qdf_timer_free(&soc->ast_aging_timer);
 }
+#else
+void dp_soc_wds_attach(struct dp_soc *soc)
+{
+}
+
+void dp_soc_wds_detach(struct dp_soc *soc)
+{
+}
+#endif
 
 /**
  * dp_tx_mec_handler() - Tx  MEC Notify Handler

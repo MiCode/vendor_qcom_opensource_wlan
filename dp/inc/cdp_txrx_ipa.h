@@ -406,6 +406,7 @@ cdp_ipa_disable_autonomy(ol_txrx_soc_handle soc, uint8_t pdev_id)
  * @over_gsi: Is IPA using GSI
  * @hdl: IPA handle
  * @id: IPA instance id
+ * @ipa_ast_notify_cb: IPA to WLAN callback for ast create
  *
  * Return: QDF_STATUS
  */
@@ -415,7 +416,8 @@ cdp_ipa_setup(ol_txrx_soc_handle soc, uint8_t pdev_id, void *ipa_i2w_cb,
 	      uint32_t ipa_desc_size, void *ipa_priv, bool is_rm_enabled,
 	      uint32_t *tx_pipe_handle, uint32_t *rx_pipe_handle,
 	      bool is_smmu_enabled, qdf_ipa_sys_connect_params_t *sys_in,
-	      bool over_gsi, qdf_ipa_wdi_hdl_t hdl, qdf_ipa_wdi_hdl_t id)
+	      bool over_gsi, qdf_ipa_wdi_hdl_t hdl, qdf_ipa_wdi_hdl_t id,
+	      void *ipa_ast_notify_cb)
 {
 	if (!soc || !soc->ops || !soc->ops->ipa_ops) {
 		QDF_TRACE(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_FATAL,
@@ -432,7 +434,8 @@ cdp_ipa_setup(ol_txrx_soc_handle soc, uint8_t pdev_id, void *ipa_i2w_cb,
 						    tx_pipe_handle,
 						    rx_pipe_handle,
 						    is_smmu_enabled,
-						    sys_in, over_gsi, hdl, id);
+						    sys_in, over_gsi, hdl, id,
+						    ipa_ast_notify_cb);
 
 	return QDF_STATUS_SUCCESS;
 }
@@ -726,7 +729,34 @@ cdp_ipa_tx_buf_smmu_unmapping(ol_txrx_soc_handle soc, uint8_t pdev_id)
 
 	return QDF_STATUS_SUCCESS;
 }
+
+#ifdef IPA_WDS_EASYMESH_FEATURE
+/**
+ * cdp_ipa_ast_create() - Create/update AST entry in AST table
+ *			  for learning/roaming packets from IPA
+ * @soc: data path soc handle
+ * @data: Structure used for updating the AST table
+ *
+ * Create/update AST entry in AST table for learning/roaming packets from IPA
+ *
+ * Return: QDF_STATUS
+ */
+static inline QDF_STATUS
+cdp_ipa_ast_create(ol_txrx_soc_handle soc, qdf_ipa_ast_info_type_t *data)
+{
+	if (!soc || !soc->ops || !soc->ops->ipa_ops) {
+		QDF_TRACE(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_FATAL,
+			  "%s invalid instance", __func__);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	if (soc->ops->ipa_ops->ipa_ast_create)
+		return soc->ops->ipa_ops->ipa_ast_create(soc, data);
+
+	return QDF_STATUS_SUCCESS;
+}
+#endif
+
 #endif /* IPA_OFFLOAD */
 
 #endif /* _CDP_TXRX_IPA_H_ */
-

@@ -1333,10 +1333,15 @@ struct ol_if_ops {
 			       uint8_t vdev_id, uint8_t *peer_mac_addr,
 			       enum cdp_txrx_ast_entry_type peer_type,
 			       uint32_t tx_ast_hashidx);
+#ifdef IPA_OFFLOAD
+	int (*peer_unmap_event)(struct cdp_ctrl_objmgr_psoc *psoc,
+				uint16_t peer_id,
+				uint8_t vdev_id, uint8_t *mac_addr);
+#else
 	int (*peer_unmap_event)(struct cdp_ctrl_objmgr_psoc *psoc,
 				uint16_t peer_id,
 				uint8_t vdev_id);
-
+#endif
 	int (*get_dp_cfg_param)(struct cdp_ctrl_objmgr_psoc *psoc,
 				enum cdp_cfg_param_type param_num);
 
@@ -1870,6 +1875,7 @@ struct cdp_throttle_ops {
  * @ipa_tx_buf_smmu_mapping: Create SMMU mappings for Tx
  * @ipa_tx_buf_smmu_unmapping: Release SMMU mappings for Tx
  * buffers to IPA
+ * @ipa_ast_create: Create/Update ast entry
  */
 struct cdp_ipa_ops {
 	QDF_STATUS (*ipa_get_resource)(struct cdp_soc_t *soc_hdl,
@@ -1916,7 +1922,8 @@ struct cdp_ipa_ops {
 				uint32_t *rx_pipe_handle, bool is_smmu_enabled,
 				qdf_ipa_sys_connect_params_t *sys_in,
 				bool over_gsi, qdf_ipa_wdi_hdl_t hdl,
-				qdf_ipa_wdi_hdl_t id);
+				qdf_ipa_wdi_hdl_t id,
+				void *ipa_ast_notify_cb);
 #else /* CONFIG_IPA_WDI_UNIFIED_API */
 	QDF_STATUS (*ipa_setup)(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
 				void *ipa_i2w_cb, void *ipa_w2i_cb,
@@ -1949,6 +1956,10 @@ struct cdp_ipa_ops {
 					      uint8_t pdev_id);
 	QDF_STATUS (*ipa_tx_buf_smmu_unmapping)(struct cdp_soc_t *soc_hdl,
 						uint8_t pdev_id);
+#ifdef IPA_WDS_EASYMESH_FEATURE
+	QDF_STATUS (*ipa_ast_create)(struct cdp_soc_t *soc_hdl,
+				     qdf_ipa_ast_info_type_t *data);
+#endif
 };
 #endif
 

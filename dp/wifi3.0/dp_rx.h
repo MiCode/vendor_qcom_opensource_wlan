@@ -1286,6 +1286,14 @@ dp_rx_wds_srcport_learn(struct dp_soc *soc,
 			struct hal_rx_msdu_metadata msdu_metadata)
 {
 }
+
+static inline void
+dp_rx_ipa_wds_srcport_learn(struct dp_soc *soc,
+			    struct dp_peer *ta_peer, qdf_nbuf_t nbuf,
+			    struct hal_rx_msdu_metadata msdu_end_info,
+			    bool ad4_valid, bool chfrag_start)
+{
+}
 #endif
 
 /*

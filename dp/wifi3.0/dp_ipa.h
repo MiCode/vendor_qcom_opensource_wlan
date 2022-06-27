@@ -59,6 +59,10 @@ struct dp_ipa_uc_rx_hdr {
 
 #define DP_IPA_UC_WLAN_TX_HDR_LEN      sizeof(struct dp_ipa_uc_tx_hdr)
 #define DP_IPA_UC_WLAN_RX_HDR_LEN      sizeof(struct dp_ipa_uc_rx_hdr)
+/* 28 <bytes of rx_msdu_end_tlv> + 16 <bytes of attn tlv> +
+ * 52 <bytes of rx_mpdu_start_tlv> + <L2 Header>
+ */
+#define DP_IPA_UC_WLAN_RX_HDR_LEN_AST  110
 #define DP_IPA_UC_WLAN_HDR_DES_MAC_OFFSET	0
 
 #define DP_IPA_HDL_INVALID	0xFF
@@ -205,6 +209,7 @@ QDF_STATUS dp_ipa_disable_autonomy(struct cdp_soc_t *soc_hdl, uint8_t pdev_id);
  * @sys_in: parameters to setup sys pipe in mcc mode
  * @hdl: IPA handle
  * @id: IPA instance id
+ * @ipa_ast_notify_cb: IPA to WLAN callback for ast create and update
  *
  * Return: QDF_STATUS
  */
@@ -216,8 +221,8 @@ QDF_STATUS dp_ipa_setup(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
 			uint32_t *rx_pipe_handle,
 			bool is_smmu_enabled,
 			qdf_ipa_sys_connect_params_t *sys_in, bool over_gsi,
-			qdf_ipa_wdi_hdl_t hdl,
-			qdf_ipa_wdi_hdl_t id);
+			qdf_ipa_wdi_hdl_t hdl, qdf_ipa_wdi_hdl_t id,
+			void *ipa_ast_notify_cb);
 #else /* CONFIG_IPA_WDI_UNIFIED_API */
 /**
  * dp_ipa_setup() - Setup and connect IPA pipes
@@ -392,6 +397,41 @@ dp_ipa_reo_ctx_buf_mapping_unlock(struct dp_soc *soc,
 }
 #endif
 
+#ifdef IPA_WDS_EASYMESH_FEATURE
+/**
+ * dp_ipa_ast_create() - Create/update AST entry in AST table
+ *			 for learning/roaming packets from IPA
+ * @soc: data path soc handle
+ * @data: Structure used for updating the AST table
+ *
+ * Create/update AST entry in AST table for learning/roaming packets from IPA
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS dp_ipa_ast_create(struct cdp_soc_t *soc_hdl,
+			     qdf_ipa_ast_info_type_t *data);
+
+/**
+ * dp_ipa_ast_notify_cb() - Provide ast notify cb to IPA
+ * @pipe_in: WDI conn pipe in params
+ * @ipa_ast_notify_cb: ipa ast notify cb
+ *
+ * Return: None
+ */
+static inline void
+dp_ipa_ast_notify_cb(qdf_ipa_wdi_conn_in_params_t *pipe_in,
+		     void *ipa_ast_notify_cb)
+{
+	QDF_IPA_WDI_CONN_IN_PARAMS_AST_NOTIFY(pipe_in) = ipa_ast_notify_cb;
+}
+#else
+static inline void
+dp_ipa_ast_notify_cb(qdf_ipa_wdi_conn_in_params_t *pipe_in,
+		     void *ipa_ast_notify_cb)
+{
+}
+#endif
+
 #else
 static inline int dp_ipa_uc_detach(struct dp_soc *soc, struct dp_pdev *pdev)
 {
@@ -456,6 +496,14 @@ static inline QDF_STATUS dp_ipa_tx_buf_smmu_unmapping(struct cdp_soc_t *soc_hdl,
 {
 	return QDF_STATUS_SUCCESS;
 }
+
+#ifdef IPA_WDS_EASYMESH_FEATURE
+static inline QDF_STATUS dp_ipa_ast_create(struct cdp_soc_t *soc_hdl,
+					   qdf_ipa_ast_info_type_t *data)
+{
+	return QDF_STATUS_SUCCESS;
+}
+#endif
 
 #endif
 #endif /* _DP_IPA_H_ */

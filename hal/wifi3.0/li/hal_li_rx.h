@@ -271,6 +271,20 @@ struct rx_pkt_hdr_tlv {
  */
 #define RX_PADDING0_BYTES	4
 #define RX_PADDING1_BYTES	16
+#if defined(IPA_OFFLOAD) && defined(IPA_WDS_EASYMESH_FEATURE)
+struct rx_pkt_tlvs {
+	struct rx_msdu_end_tlv   msdu_end_tlv;	/*  72 bytes */
+	struct rx_attention_tlv  attn_tlv;	/*  16 bytes */
+	struct rx_mpdu_start_tlv mpdu_start_tlv;/*  96 bytes */
+	struct rx_msdu_start_tlv msdu_start_tlv;/*  40 bytes */
+	uint8_t rx_padding0[RX_PADDING0_BYTES];	/*   4 bytes */
+	struct rx_mpdu_end_tlv   mpdu_end_tlv;	/*  12 bytes */
+	uint8_t rx_padding1[RX_PADDING1_BYTES];	/*  16 bytes */
+#ifndef NO_RX_PKT_HDR_TLV
+	struct rx_pkt_hdr_tlv	 pkt_hdr_tlv;	/* 128 bytes */
+#endif
+};
+#else
 struct rx_pkt_tlvs {
 	struct rx_msdu_end_tlv   msdu_end_tlv;	/*  72 bytes */
 	struct rx_attention_tlv  attn_tlv;	/*  16 bytes */
@@ -283,6 +297,7 @@ struct rx_pkt_tlvs {
 	struct rx_pkt_hdr_tlv	 pkt_hdr_tlv;	/* 128 bytes */
 #endif
 };
+#endif
 #else /* RXDMA_OPTIMIZATION */
 struct rx_pkt_tlvs {
 	struct rx_attention_tlv  attn_tlv;
