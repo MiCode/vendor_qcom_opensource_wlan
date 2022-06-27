@@ -484,6 +484,16 @@ typedef enum ipa_rm_resource_name __qdf_ipa_rm_resource_name_t;
 typedef enum ipa_wlan_event __qdf_ipa_wlan_event_t;
 typedef struct ipa_wlan_msg __qdf_ipa_wlan_msg_t;
 
+#ifdef IPA_WDS_EASYMESH_FEATURE
+/**
+ * __qdf_ipa_ast_info_type_t - AST entry create/update information
+ */
+typedef struct ipa_ast_info_type __qdf_ipa_ast_info_type_t;
+
+#define QDF_IPA_WLAN_MSG_WDS_UPDATE(ipa_msg)	\
+	(((struct ipa_wlan_msg *)(ipa_msg))->ast_update)
+#endif
+
 #define QDF_IPA_WLAN_MSG_NAME(ipa_msg)	\
 	(((struct ipa_wlan_msg *)(ipa_msg))->name)
 #define QDF_IPA_WLAN_MSG_MAC_ADDR(ipa_msg)	\

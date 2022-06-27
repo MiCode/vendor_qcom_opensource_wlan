@@ -125,6 +125,11 @@ typedef struct ipa_wdi_init_in_params __qdf_ipa_wdi_init_in_params_t;
 	(((struct ipa_wdi_init_in_params *)(in_params))->inst_id)
 #endif
 
+#ifdef IPA_WDS_EASYMESH_FEATURE
+#define __QDF_IPA_WDI_INIT_IN_PARAMS_WDS_UPDATE(in_params)	\
+	(((struct ipa_wdi_init_in_params *)(in_params))->ast_update)
+#endif
+
 /**
  * __qdf_ipa_wdi_init_out_params_t - wdi init output parameters
  */
@@ -322,6 +327,11 @@ typedef struct ipa_wdi_conn_in_params  __qdf_ipa_wdi_conn_in_params_t;
 #endif
 #define __QDF_IPA_WDI_CONN_IN_PARAMS_HANDLE(pipe_in)	\
 	(((struct ipa_wdi_conn_in_params *)(pipe_in))->hdl)
+
+#ifdef IPA_WDS_EASYMESH_FEATURE
+#define __QDF_IPA_WDI_CONN_IN_PARAMS_AST_NOTIFY(pipe_in)	\
+	(((struct ipa_wdi_conn_in_params *)(pipe_in))->ast_notify)
+#endif
 
 /**
  * __qdf_ipa_wdi_conn_out_params_t - information provided

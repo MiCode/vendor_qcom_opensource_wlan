@@ -72,6 +72,11 @@ typedef __qdf_ipa_wdi_init_in_params_t qdf_ipa_wdi_init_in_params_t;
 #define QDF_IPA_WDI_INIT_IN_PARAMS_INSTANCE_ID(in_params)	\
 	__QDF_IPA_WDI_INIT_IN_PARAMS_INSTANCE_ID(in_params)
 
+#ifdef IPA_WDS_EASYMESH_FEATURE
+#define QDF_IPA_WDI_INIT_IN_PARAMS_WDS_UPDATE(in_params)	\
+	__QDF_IPA_WDI_INIT_IN_PARAMS_WDS_UPDATE(in_params)
+#endif
+
 /**
  * qdf_ipa_wdi_init_out_params_t - wdi init output parameters
  */
@@ -288,6 +293,12 @@ typedef __qdf_ipa_wdi_conn_in_params_t qdf_ipa_wdi_conn_in_params_t;
 	__QDF_IPA_WDI_CONN_IN_PARAMS_RX_SMMU(pipe_in)
 #define QDF_IPA_WDI_CONN_IN_PARAMS_HANDLE(pipe_in)	\
 	__QDF_IPA_WDI_CONN_IN_PARAMS_HANDLE(pipe_in)
+
+#ifdef IPA_WDS_EASYMESH_FEATURE
+#define QDF_IPA_WDI_CONN_IN_PARAMS_AST_NOTIFY(pipe_in)	\
+	__QDF_IPA_WDI_CONN_IN_PARAMS_AST_NOTIFY(pipe_in)
+#endif
+
 #ifdef IPA_WDI3_TX_TWO_PIPES
 #define QDF_IPA_WDI_CONN_IN_PARAMS_IS_TX1_USED(pipe_in)	\
 	__QDF_IPA_WDI_CONN_IN_PARAMS_IS_TX1_USED(pipe_in)
