@@ -106,7 +106,7 @@
 #endif
 
 #define CE_WINDOW_ADDRESS_5332 \
-		((CE_WFSS_CE_REG_BASE >> WINDOW_SHIFT) & WINDOW_VALUE_MASK)
+		((CE_CFG_WFSS_CE_REG_BASE >> WINDOW_SHIFT) & WINDOW_VALUE_MASK)
 
 #define UMAC_WINDOW_ADDRESS_5332 \
 		((UMAC_BASE >> WINDOW_SHIFT) & WINDOW_VALUE_MASK)
@@ -1215,7 +1215,7 @@ static inline qdf_iomem_t hal_get_window_address_5332(struct hal_soc *hal_soc,
 	 * If offset lies within CE register range, use 2nd window to write
 	 * into CE region.
 	 */
-	} else if ((offset ^ CE_WFSS_CE_REG_BASE) < WINDOW_RANGE_MASK) {
+	} else if ((offset ^ CE_CFG_WFSS_CE_REG_BASE) < WINDOW_RANGE_MASK) {
 		new_offset = (hal_soc->dev_base_addr + (2 * WINDOW_START) +
 			  (offset & WINDOW_RANGE_MASK));
 	} else {
@@ -1466,28 +1466,6 @@ static inline void hal_rx_dump_pkt_hdr_tlv_5332(struct rx_pkt_tlvs *pkt_tlvs,
 }
 #endif
 
-/*
- * hal_tx_dump_ppe_vp_entry_5332()
- * @hal_soc_hdl: HAL SoC handle
- *
- * Return: void
- */
-static inline
-void hal_tx_dump_ppe_vp_entry_5332(hal_soc_handle_t hal_soc_hdl)
-{
-	struct hal_soc *soc = (struct hal_soc *)hal_soc_hdl;
-	uint32_t reg_addr, reg_val = 0, i;
-
-	for (i = 0; i < HAL_PPE_VP_ENTRIES_MAX; i++) {
-		reg_addr =
-			HWIO_TCL_R0_PPE_VP_CONFIG_TABLE_n_ADDR(
-				MAC_TCL_REG_REG_BASE,
-				i);
-		reg_val = HAL_REG_READ(soc, reg_addr);
-		hal_verbose_debug("%d: 0x%x\n", i, reg_val);
-	}
-}
-
 /**
  * hal_rx_dump_pkt_tlvs_5332(): API to print RX Pkt TLVS qca5332
  * @hal_soc_hdl: hal_soc handle
@@ -1689,19 +1667,6 @@ static uint32_t hal_qca5332_get_reo_qdesc_size(uint32_t ba_window_size, int tid)
 		(10 * sizeof(struct rx_reo_queue_ext)) +
 		sizeof(struct rx_reo_queue_1k);
 }
-
-/*
- * hal_tx_dump_ppe_vp_entry_5332()
- * @hal_soc_hdl: HAL SoC handle
- *
- * Return: Number of PPE VP entries
- */
-static
-uint32_t hal_tx_get_num_ppe_vp_tbl_entries_5332(hal_soc_handle_t hal_soc_hdl)
-{
-	return HAL_PPE_VP_ENTRIES_MAX;
-}
-
 /**
  * hal_rx_tlv_msdu_done_copy_get_5332() - Get msdu done copy bit from rx_tlv
  *
@@ -1728,20 +1693,15 @@ static void hal_hw_txrx_ops_attach_qca5332(struct hal_soc *hal_soc)
 			hal_tx_comp_get_status_generic_be;
 	hal_soc->ops->hal_tx_init_cmd_credit_ring =
 			hal_tx_init_cmd_credit_ring_5332;
-	hal_soc->ops->hal_tx_set_ppe_cmn_cfg =
-			hal_tx_set_ppe_cmn_config_5332;
-	hal_soc->ops->hal_tx_set_ppe_vp_entry =
-			hal_tx_set_ppe_vp_entry_5332;
-	hal_soc->ops->hal_tx_set_ppe_pri2tid =
-			hal_tx_set_ppe_pri2tid_map_5332;
-	hal_soc->ops->hal_tx_update_ppe_pri2tid =
-			hal_tx_update_ppe_pri2tid_5332;
-	hal_soc->ops->hal_tx_dump_ppe_vp_entry =
-			hal_tx_dump_ppe_vp_entry_5332;
-	hal_soc->ops->hal_tx_get_num_ppe_vp_tbl_entries =
-			hal_tx_get_num_ppe_vp_tbl_entries_5332;
-	hal_soc->ops->hal_tx_enable_pri2tid_map =
-			hal_tx_enable_pri2tid_map_5332;
+	hal_soc->ops->hal_tx_set_ppe_cmn_cfg = NULL;
+	hal_soc->ops->hal_tx_set_ppe_vp_entry = NULL;
+	hal_soc->ops->hal_tx_set_ppe_pri2tid = NULL;
+	hal_soc->ops->hal_tx_update_ppe_pri2tid = NULL;
+	hal_soc->ops->hal_tx_dump_ppe_vp_entry = NULL;
+	hal_soc->ops->hal_tx_get_num_ppe_vp_tbl_entries = NULL;
+	hal_soc->ops->hal_tx_enable_pri2tid_map = NULL;
+	hal_soc->ops->hal_tx_config_rbm_mapping_be =
+				hal_tx_config_rbm_mapping_be_5332;
 
 	/* rx */
 	hal_soc->ops->hal_rx_msdu_start_nss_get = hal_rx_tlv_nss_get_be;
@@ -1953,6 +1913,18 @@ static void hal_hw_txrx_ops_attach_qca5332(struct hal_soc *hal_soc)
 				hal_txmon_status_free_buffer_generic_be;
 #endif /* QCA_MONITOR_2_0_SUPPORT */
 	hal_soc->ops->hal_compute_reo_remap_ix0 = NULL;
+	hal_soc->ops->hal_tx_vdev_mismatch_routing_set =
+		hal_tx_vdev_mismatch_routing_set_generic_be;
+	hal_soc->ops->hal_tx_mcast_mlo_reinject_routing_set =
+		hal_tx_mcast_mlo_reinject_routing_set_generic_be;
+	hal_soc->ops->hal_get_ba_aging_timeout =
+		hal_get_ba_aging_timeout_be_generic;
+	hal_soc->ops->hal_setup_link_idle_list =
+		hal_setup_link_idle_list_generic_be;
+	hal_soc->ops->hal_cookie_conversion_reg_cfg_be =
+		hal_cookie_conversion_reg_cfg_generic_be;
+	hal_soc->ops->hal_set_ba_aging_timeout =
+		hal_set_ba_aging_timeout_be_generic;
 };
 
 struct hal_hw_srng_config hw_srng_table_5332[] = {
@@ -2223,7 +2195,7 @@ struct hal_hw_srng_config hw_srng_table_5332[] = {
 	},
 	{ /* SW2WBM_RELEASE */
 		.start_ring_id = HAL_SRNG_WBM_SW_RELEASE,
-		.max_rings = 2,
+		.max_rings = 1,
 		.entry_size = sizeof(struct wbm_release_ring) >> 2,
 		.lmac_ring = FALSE,
 		.ring_dir = HAL_SRNG_SRC_RING,
@@ -2231,12 +2203,10 @@ struct hal_hw_srng_config hw_srng_table_5332[] = {
 		HWIO_WBM_R0_SW_RELEASE_RING_BASE_LSB_ADDR(WBM_REG_REG_BASE),
 		HWIO_WBM_R2_SW_RELEASE_RING_HP_ADDR(WBM_REG_REG_BASE),
 		},
-		.reg_size = {
-		HWIO_WBM_R0_SW1_RELEASE_RING_BASE_LSB_ADDR(WBM_REG_REG_BASE) -
-		HWIO_WBM_R0_SW_RELEASE_RING_BASE_LSB_ADDR(WBM_REG_REG_BASE),
-		HWIO_WBM_R2_SW1_RELEASE_RING_HP_ADDR(WBM_REG_REG_BASE) -
-		HWIO_WBM_R2_SW_RELEASE_RING_HP_ADDR(WBM_REG_REG_BASE)
-		},
+		/* Single ring - provide ring size if multiple rings of this
+		 * type are supported
+		 */
+		.reg_size = {},
 		.max_size =
 		HWIO_WBM_R0_SW_RELEASE_RING_BASE_MSB_RING_SIZE_BMSK >>
 		HWIO_WBM_R0_SW_RELEASE_RING_BASE_MSB_RING_SIZE_SHFT,
@@ -2387,58 +2357,6 @@ struct hal_hw_srng_config hw_srng_table_5332[] = {
 		.max_size = HAL_RXDMA_MAX_RING_SIZE_BE,
 	},
 #endif
-	{ /* REO2PPE */
-		.start_ring_id = HAL_SRNG_REO2PPE,
-		.max_rings = 1,
-		.entry_size = sizeof(struct reo_destination_ring) >> 2,
-		.lmac_ring = FALSE,
-		.ring_dir = HAL_SRNG_DST_RING,
-		.reg_start = {
-			HWIO_REO_R0_REO2PPE_RING_BASE_LSB_ADDR(
-				REO_REG_REG_BASE),
-			HWIO_REO_R2_REO2PPE_RING_HP_ADDR(
-				REO_REG_REG_BASE),
-		},
-		/* Single ring - provide ring size if multiple rings of this
-		 * type are supported
-		 */
-		.reg_size = {},
-		.max_size =
-		HWIO_REO_R0_REO2PPE_RING_BASE_LSB_RING_BASE_ADDR_LSB_BMSK >>
-		HWIO_REO_R0_REO2PPE_RING_BASE_LSB_RING_BASE_ADDR_LSB_SHFT,
-	},
-	{ /* PPE2TCL */
-		.start_ring_id = HAL_SRNG_PPE2TCL1,
-		.max_rings = 1,
-		.entry_size = sizeof(struct tcl_entrance_from_ppe_ring) >> 2,
-		.lmac_ring = FALSE,
-		.ring_dir = HAL_SRNG_SRC_RING,
-		.reg_start = {
-			HWIO_TCL_R0_PPE2TCL1_RING_BASE_LSB_ADDR(
-				MAC_TCL_REG_REG_BASE),
-			HWIO_TCL_R2_PPE2TCL1_RING_HP_ADDR(
-				MAC_TCL_REG_REG_BASE),
-		},
-		.reg_size = {},
-		.max_size =
-			HWIO_TCL_R0_SW2TCL1_RING_BASE_MSB_RING_SIZE_BMSK >>
-			HWIO_TCL_R0_SW2TCL1_RING_BASE_MSB_RING_SIZE_SHFT,
-	},
-	{ /* PPE_RELEASE */
-		.start_ring_id = HAL_SRNG_WBM_PPE_RELEASE,
-		.max_rings = 1,
-		.entry_size = sizeof(struct wbm_release_ring) >> 2,
-		.lmac_ring = FALSE,
-		.ring_dir = HAL_SRNG_SRC_RING,
-		.reg_start = {
-		HWIO_WBM_R0_PPE_RELEASE_RING_BASE_LSB_ADDR(WBM_REG_REG_BASE),
-		HWIO_WBM_R2_PPE_RELEASE_RING_HP_ADDR(WBM_REG_REG_BASE),
-		},
-		.reg_size = {},
-		.max_size =
-		HWIO_WBM_R0_PPE_RELEASE_RING_BASE_MSB_RING_SIZE_BMSK >>
-		HWIO_WBM_R0_PPE_RELEASE_RING_BASE_MSB_RING_SIZE_SHFT,
-	},
 #ifdef QCA_MONITOR_2_0_SUPPORT
 	{ /* TX_MONITOR_BUF */
 		.start_ring_id = HAL_SRNG_SW2TXMON_BUF0,

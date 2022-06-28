@@ -2737,4 +2737,456 @@ static void hal_reo_shared_qaddr_detach_be(hal_soc_handle_t hal_soc_hdl)
 				hal->reo_qref.non_mlo_reo_qref_table_paddr, 0);
 }
 #endif
+
+/**
+ * hal_tx_vdev_mismatch_routing_set - set vdev mismatch exception routing
+ * @hal_soc: HAL SoC context
+ * @config: HAL_TX_VDEV_MISMATCH_TQM_NOTIFY - route via TQM
+ *          HAL_TX_VDEV_MISMATCH_FW_NOTIFY - route via FW
+ *
+ * Return: void
+ */
+#ifdef HWIO_TCL_R0_CMN_CONFIG_VDEVID_MISMATCH_EXCEPTION_BMSK
+static inline void
+hal_tx_vdev_mismatch_routing_set_generic_be(hal_soc_handle_t hal_soc_hdl,
+					    enum hal_tx_vdev_mismatch_notify
+					    config)
+{
+	struct hal_soc *hal_soc = (struct hal_soc *)hal_soc_hdl;
+	uint32_t reg_addr, reg_val = 0;
+	uint32_t val = 0;
+
+	reg_addr = HWIO_TCL_R0_CMN_CONFIG_ADDR(MAC_TCL_REG_REG_BASE);
+
+	val = HAL_REG_READ(hal_soc, reg_addr);
+
+	/* reset the corresponding bits in register */
+	val &= (~(HWIO_TCL_R0_CMN_CONFIG_VDEVID_MISMATCH_EXCEPTION_BMSK));
+
+	/* set config value */
+	reg_val = val | (config <<
+			HWIO_TCL_R0_CMN_CONFIG_VDEVID_MISMATCH_EXCEPTION_SHFT);
+
+	HAL_REG_WRITE(hal_soc, reg_addr, reg_val);
+}
+#else
+static inline void
+hal_tx_vdev_mismatch_routing_set_generic_be(hal_soc_handle_t hal_soc_hdl,
+					    enum hal_tx_vdev_mismatch_notify
+					    config)
+{
+}
+#endif
+
+/**
+ * hal_tx_mcast_mlo_reinject_routing_set - set MLO multicast reinject routing
+ * @hal_soc: HAL SoC context
+ * @config: HAL_TX_MCAST_MLO_REINJECT_FW_NOTIFY - route via FW
+ *          HAL_TX_MCAST_MLO_REINJECT_TQM_NOTIFY - route via TQM
+ *
+ * Return: void
+ */
+#if defined(HWIO_TCL_R0_CMN_CONFIG_MCAST_CMN_PN_SN_MLO_REINJECT_ENABLE_BMSK) && \
+	defined(WLAN_MCAST_MLO)
+static inline void
+hal_tx_mcast_mlo_reinject_routing_set_generic_be(
+				hal_soc_handle_t hal_soc_hdl,
+				enum hal_tx_mcast_mlo_reinject_notify config)
+{
+	struct hal_soc *hal_soc = (struct hal_soc *)hal_soc_hdl;
+	uint32_t reg_addr, reg_val = 0;
+	uint32_t val = 0;
+
+	reg_addr = HWIO_TCL_R0_CMN_CONFIG_ADDR(MAC_TCL_REG_REG_BASE);
+	val = HAL_REG_READ(hal_soc, reg_addr);
+
+	/* reset the corresponding bits in register */
+	val &= (~(HWIO_TCL_R0_CMN_CONFIG_MCAST_CMN_PN_SN_MLO_REINJECT_ENABLE_BMSK));
+
+	/* set config value */
+	reg_val = val | (config << HWIO_TCL_R0_CMN_CONFIG_MCAST_CMN_PN_SN_MLO_REINJECT_ENABLE_SHFT);
+
+	HAL_REG_WRITE(hal_soc, reg_addr, reg_val);
+}
+#else
+static inline void
+hal_tx_mcast_mlo_reinject_routing_set_generic_be(
+				hal_soc_handle_t hal_soc_hdl,
+				enum hal_tx_mcast_mlo_reinject_notify config)
+{
+}
+#endif
+
+/**
+ * hal_get_ba_aging_timeout_be - Get BA Aging timeout
+ *
+ * @hal_soc: Opaque HAL SOC handle
+ * @ac: Access category
+ * @value: window size to get
+ */
+
+static inline
+void hal_get_ba_aging_timeout_be_generic(hal_soc_handle_t hal_soc_hdl,
+					 uint8_t ac, uint32_t *value)
+{
+	struct hal_soc *soc = (struct hal_soc *)hal_soc_hdl;
+
+	switch (ac) {
+	case WME_AC_BE:
+		*value = HAL_REG_READ(soc,
+				      HWIO_REO_R0_AGING_THRESHOLD_IX_0_ADDR(
+				      REO_REG_REG_BASE)) / 1000;
+		break;
+	case WME_AC_BK:
+		*value = HAL_REG_READ(soc,
+				      HWIO_REO_R0_AGING_THRESHOLD_IX_1_ADDR(
+				      REO_REG_REG_BASE)) / 1000;
+		break;
+	case WME_AC_VI:
+		*value = HAL_REG_READ(soc,
+				      HWIO_REO_R0_AGING_THRESHOLD_IX_2_ADDR(
+				      REO_REG_REG_BASE)) / 1000;
+		break;
+	case WME_AC_VO:
+		*value = HAL_REG_READ(soc,
+				      HWIO_REO_R0_AGING_THRESHOLD_IX_3_ADDR(
+				      REO_REG_REG_BASE)) / 1000;
+		break;
+	default:
+		QDF_TRACE(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_ERROR,
+			  "Invalid AC: %d\n", ac);
+	}
+}
+
+/**
+ * hal_setup_link_idle_list_generic_be - Setup scattered idle list using the
+ * buffer list provided
+ *
+ * @hal_soc: Opaque HAL SOC handle
+ * @scatter_bufs_base_paddr: Array of physical base addresses
+ * @scatter_bufs_base_vaddr: Array of virtual base addresses
+ * @num_scatter_bufs: Number of scatter buffers in the above lists
+ * @scatter_buf_size: Size of each scatter buffer
+ * @last_buf_end_offset: Offset to the last entry
+ * @num_entries: Total entries of all scatter bufs
+ *
+ * Return: None
+ */
+static inline void
+hal_setup_link_idle_list_generic_be(struct hal_soc *soc,
+				    qdf_dma_addr_t scatter_bufs_base_paddr[],
+				    void *scatter_bufs_base_vaddr[],
+				    uint32_t num_scatter_bufs,
+				    uint32_t scatter_buf_size,
+				    uint32_t last_buf_end_offset,
+				    uint32_t num_entries)
+{
+	int i;
+	uint32_t *prev_buf_link_ptr = NULL;
+	uint32_t reg_scatter_buf_size, reg_tot_scatter_buf_size;
+	uint32_t val;
+
+	/* Link the scatter buffers */
+	for (i = 0; i < num_scatter_bufs; i++) {
+		if (i > 0) {
+			prev_buf_link_ptr[0] =
+				scatter_bufs_base_paddr[i] & 0xffffffff;
+			prev_buf_link_ptr[1] = HAL_SM(
+				HWIO_WBM_R0_SCATTERED_LINK_DESC_LIST_BASE_MSB,
+				BASE_ADDRESS_39_32,
+				((uint64_t)(scatter_bufs_base_paddr[i])
+				 >> 32)) | HAL_SM(
+				HWIO_WBM_R0_SCATTERED_LINK_DESC_LIST_BASE_MSB,
+				ADDRESS_MATCH_TAG,
+				ADDRESS_MATCH_TAG_VAL);
+		}
+		prev_buf_link_ptr = (uint32_t *)(scatter_bufs_base_vaddr[i] +
+			scatter_buf_size - WBM_IDLE_SCATTER_BUF_NEXT_PTR_SIZE);
+	}
+
+	/* TBD: Register programming partly based on MLD & the rest based on
+	 * inputs from HW team. Not complete yet.
+	 */
+
+	reg_scatter_buf_size = (scatter_buf_size -
+				WBM_IDLE_SCATTER_BUF_NEXT_PTR_SIZE) / 64;
+	reg_tot_scatter_buf_size = ((scatter_buf_size -
+		WBM_IDLE_SCATTER_BUF_NEXT_PTR_SIZE) * num_scatter_bufs) / 64;
+
+	HAL_REG_WRITE(soc,
+		HWIO_WBM_R0_IDLE_LIST_CONTROL_ADDR(
+		WBM_REG_REG_BASE),
+		HAL_SM(HWIO_WBM_R0_IDLE_LIST_CONTROL, SCATTER_BUFFER_SIZE,
+		reg_scatter_buf_size) |
+		HAL_SM(HWIO_WBM_R0_IDLE_LIST_CONTROL, LINK_DESC_IDLE_LIST_MODE,
+		0x1));
+
+	HAL_REG_WRITE(soc,
+		HWIO_WBM_R0_IDLE_LIST_SIZE_ADDR(
+		WBM_REG_REG_BASE),
+		HAL_SM(HWIO_WBM_R0_IDLE_LIST_SIZE,
+		SCATTER_RING_SIZE_OF_IDLE_LINK_DESC_LIST,
+		reg_tot_scatter_buf_size));
+
+	HAL_REG_WRITE(soc,
+		HWIO_WBM_R0_SCATTERED_LINK_DESC_LIST_BASE_LSB_ADDR(
+		WBM_REG_REG_BASE),
+		scatter_bufs_base_paddr[0] & 0xffffffff);
+
+	HAL_REG_WRITE(soc,
+		HWIO_WBM_R0_SCATTERED_LINK_DESC_LIST_BASE_MSB_ADDR(
+		WBM_REG_REG_BASE),
+		((uint64_t)(scatter_bufs_base_paddr[0]) >> 32) &
+		HWIO_WBM_R0_SCATTERED_LINK_DESC_LIST_BASE_MSB_BASE_ADDRESS_39_32_BMSK);
+
+	HAL_REG_WRITE(soc,
+		HWIO_WBM_R0_SCATTERED_LINK_DESC_LIST_BASE_MSB_ADDR(
+		WBM_REG_REG_BASE),
+		HAL_SM(HWIO_WBM_R0_SCATTERED_LINK_DESC_LIST_BASE_MSB,
+		BASE_ADDRESS_39_32, ((uint64_t)(scatter_bufs_base_paddr[0])
+								>> 32)) |
+		HAL_SM(HWIO_WBM_R0_SCATTERED_LINK_DESC_LIST_BASE_MSB,
+		ADDRESS_MATCH_TAG, ADDRESS_MATCH_TAG_VAL));
+
+	/* ADDRESS_MATCH_TAG field in the above register is expected to match
+	 * with the upper bits of link pointer. The above write sets this field
+	 * to zero and we are also setting the upper bits of link pointers to
+	 * zero while setting up the link list of scatter buffers above
+	 */
+
+	/* Setup head and tail pointers for the idle list */
+	HAL_REG_WRITE(soc,
+		HWIO_WBM_R0_SCATTERED_LINK_DESC_PTR_HEAD_INFO_IX0_ADDR(
+		WBM_REG_REG_BASE),
+		scatter_bufs_base_paddr[num_scatter_bufs - 1] & 0xffffffff);
+	HAL_REG_WRITE(soc,
+		HWIO_WBM_R0_SCATTERED_LINK_DESC_PTR_HEAD_INFO_IX1_ADDR(
+		WBM_REG_REG_BASE),
+		HAL_SM(HWIO_WBM_R0_SCATTERED_LINK_DESC_PTR_HEAD_INFO_IX1,
+		BUFFER_ADDRESS_39_32,
+		((uint64_t)(scatter_bufs_base_paddr[num_scatter_bufs - 1])
+								>> 32)) |
+		HAL_SM(HWIO_WBM_R0_SCATTERED_LINK_DESC_PTR_HEAD_INFO_IX1,
+		HEAD_POINTER_OFFSET, last_buf_end_offset >> 2));
+
+	HAL_REG_WRITE(soc,
+		HWIO_WBM_R0_SCATTERED_LINK_DESC_PTR_HEAD_INFO_IX0_ADDR(
+		WBM_REG_REG_BASE),
+		scatter_bufs_base_paddr[0] & 0xffffffff);
+
+	HAL_REG_WRITE(soc,
+		HWIO_WBM_R0_SCATTERED_LINK_DESC_PTR_TAIL_INFO_IX0_ADDR(
+		WBM_REG_REG_BASE),
+		scatter_bufs_base_paddr[0] & 0xffffffff);
+	HAL_REG_WRITE(soc,
+		HWIO_WBM_R0_SCATTERED_LINK_DESC_PTR_TAIL_INFO_IX1_ADDR(
+		WBM_REG_REG_BASE),
+		HAL_SM(HWIO_WBM_R0_SCATTERED_LINK_DESC_PTR_TAIL_INFO_IX1,
+		BUFFER_ADDRESS_39_32,
+		((uint64_t)(scatter_bufs_base_paddr[0]) >>
+		32)) | HAL_SM(HWIO_WBM_R0_SCATTERED_LINK_DESC_PTR_TAIL_INFO_IX1,
+		TAIL_POINTER_OFFSET, 0));
+
+	HAL_REG_WRITE(soc,
+		HWIO_WBM_R0_SCATTERED_LINK_DESC_PTR_HP_ADDR(
+		WBM_REG_REG_BASE),
+		2 * num_entries);
+
+	/* Set RING_ID_DISABLE */
+	val = HAL_SM(HWIO_WBM_R0_WBM_IDLE_LINK_RING_MISC, RING_ID_DISABLE, 1);
+
+	/*
+	 * SRNG_ENABLE bit is not available in HWK v1 (QCA8074v1). Hence
+	 * check the presence of the bit before toggling it.
+	 */
+#ifdef HWIO_WBM_R0_WBM_IDLE_LINK_RING_MISC_SRNG_ENABLE_BMSK
+	val |= HAL_SM(HWIO_WBM_R0_WBM_IDLE_LINK_RING_MISC, SRNG_ENABLE, 1);
+#endif
+	HAL_REG_WRITE(soc,
+		      HWIO_WBM_R0_WBM_IDLE_LINK_RING_MISC_ADDR(WBM_REG_REG_BASE),
+		      val);
+}
+
+#ifdef DP_HW_COOKIE_CONVERT_EXCEPTION
+#define HAL_WBM_MISC_CONTROL_SPARE_CONTROL_FIELD_BIT15 0x8000
+#endif
+
+/**
+ * hal_cookie_conversion_reg_cfg_generic_be() - set cookie conversion relevant register
+ *					for REO/WBM
+ * @soc: HAL soc handle
+ * @cc_cfg: structure pointer for HW cookie conversion configuration
+ *
+ * Return: None
+ */
+static inline
+void hal_cookie_conversion_reg_cfg_generic_be(hal_soc_handle_t hal_soc_hdl,
+					      struct hal_hw_cc_config *cc_cfg)
+{
+	uint32_t reg_addr, reg_val = 0;
+	struct hal_soc *soc = (struct hal_soc *)hal_soc_hdl;
+
+	/* REO CFG */
+	reg_addr = HWIO_REO_R0_SW_COOKIE_CFG0_ADDR(REO_REG_REG_BASE);
+	reg_val = cc_cfg->lut_base_addr_31_0;
+	HAL_REG_WRITE(soc, reg_addr, reg_val);
+
+	reg_addr = HWIO_REO_R0_SW_COOKIE_CFG1_ADDR(REO_REG_REG_BASE);
+	reg_val = 0;
+	reg_val |= HAL_SM(HWIO_REO_R0_SW_COOKIE_CFG1,
+			  SW_COOKIE_CONVERT_GLOBAL_ENABLE,
+			  cc_cfg->cc_global_en);
+	reg_val |= HAL_SM(HWIO_REO_R0_SW_COOKIE_CFG1,
+			  SW_COOKIE_CONVERT_ENABLE,
+			  cc_cfg->cc_global_en);
+	reg_val |= HAL_SM(HWIO_REO_R0_SW_COOKIE_CFG1,
+			  PAGE_ALIGNMENT,
+			  cc_cfg->page_4k_align);
+	reg_val |= HAL_SM(HWIO_REO_R0_SW_COOKIE_CFG1,
+			  COOKIE_OFFSET_MSB,
+			  cc_cfg->cookie_offset_msb);
+	reg_val |= HAL_SM(HWIO_REO_R0_SW_COOKIE_CFG1,
+			  COOKIE_PAGE_MSB,
+			  cc_cfg->cookie_page_msb);
+	reg_val |= HAL_SM(HWIO_REO_R0_SW_COOKIE_CFG1,
+			  CMEM_LUT_BASE_ADDR_39_32,
+			  cc_cfg->lut_base_addr_39_32);
+	HAL_REG_WRITE(soc, reg_addr, reg_val);
+
+	/* WBM CFG */
+	reg_addr = HWIO_WBM_R0_SW_COOKIE_CFG0_ADDR(WBM_REG_REG_BASE);
+	reg_val = cc_cfg->lut_base_addr_31_0;
+	HAL_REG_WRITE(soc, reg_addr, reg_val);
+
+	reg_addr = HWIO_WBM_R0_SW_COOKIE_CFG1_ADDR(WBM_REG_REG_BASE);
+	reg_val = 0;
+	reg_val |= HAL_SM(HWIO_WBM_R0_SW_COOKIE_CFG1,
+			  PAGE_ALIGNMENT,
+			  cc_cfg->page_4k_align);
+	reg_val |= HAL_SM(HWIO_WBM_R0_SW_COOKIE_CFG1,
+			  COOKIE_OFFSET_MSB,
+			  cc_cfg->cookie_offset_msb);
+	reg_val |= HAL_SM(HWIO_WBM_R0_SW_COOKIE_CFG1,
+			  COOKIE_PAGE_MSB,
+			  cc_cfg->cookie_page_msb);
+	reg_val |= HAL_SM(HWIO_WBM_R0_SW_COOKIE_CFG1,
+			  CMEM_LUT_BASE_ADDR_39_32,
+			  cc_cfg->lut_base_addr_39_32);
+	HAL_REG_WRITE(soc, reg_addr, reg_val);
+
+	/*
+	 * WCSS_UMAC_WBM_R0_SW_COOKIE_CONVERT_CFG default value is 0x1FE,
+	 */
+	reg_addr = HWIO_WBM_R0_SW_COOKIE_CONVERT_CFG_ADDR(WBM_REG_REG_BASE);
+	reg_val = 0;
+	reg_val |= HAL_SM(HWIO_WBM_R0_SW_COOKIE_CONVERT_CFG,
+			  WBM_COOKIE_CONV_GLOBAL_ENABLE,
+			  cc_cfg->cc_global_en);
+	reg_val |= HAL_SM(HWIO_WBM_R0_SW_COOKIE_CONVERT_CFG,
+			  WBM2SW6_COOKIE_CONVERSION_EN,
+			  cc_cfg->wbm2sw6_cc_en);
+	reg_val |= HAL_SM(HWIO_WBM_R0_SW_COOKIE_CONVERT_CFG,
+			  WBM2SW5_COOKIE_CONVERSION_EN,
+			  cc_cfg->wbm2sw5_cc_en);
+	reg_val |= HAL_SM(HWIO_WBM_R0_SW_COOKIE_CONVERT_CFG,
+			  WBM2SW4_COOKIE_CONVERSION_EN,
+			  cc_cfg->wbm2sw4_cc_en);
+	reg_val |= HAL_SM(HWIO_WBM_R0_SW_COOKIE_CONVERT_CFG,
+			  WBM2SW3_COOKIE_CONVERSION_EN,
+			  cc_cfg->wbm2sw3_cc_en);
+	reg_val |= HAL_SM(HWIO_WBM_R0_SW_COOKIE_CONVERT_CFG,
+			  WBM2SW2_COOKIE_CONVERSION_EN,
+			  cc_cfg->wbm2sw2_cc_en);
+	reg_val |= HAL_SM(HWIO_WBM_R0_SW_COOKIE_CONVERT_CFG,
+			  WBM2SW1_COOKIE_CONVERSION_EN,
+			  cc_cfg->wbm2sw1_cc_en);
+	reg_val |= HAL_SM(HWIO_WBM_R0_SW_COOKIE_CONVERT_CFG,
+			  WBM2SW0_COOKIE_CONVERSION_EN,
+			  cc_cfg->wbm2sw0_cc_en);
+	reg_val |= HAL_SM(HWIO_WBM_R0_SW_COOKIE_CONVERT_CFG,
+			  WBM2FW_COOKIE_CONVERSION_EN,
+			  cc_cfg->wbm2fw_cc_en);
+	HAL_REG_WRITE(soc, reg_addr, reg_val);
+
+#ifdef HWIO_WBM_R0_WBM_CFG_2_COOKIE_DEBUG_SEL_BMSK
+	reg_addr = HWIO_WBM_R0_WBM_CFG_2_ADDR(WBM_REG_REG_BASE);
+	reg_val = 0;
+	reg_val |= HAL_SM(HWIO_WBM_R0_WBM_CFG_2,
+			  COOKIE_DEBUG_SEL,
+			  cc_cfg->cc_global_en);
+
+	reg_val |= HAL_SM(HWIO_WBM_R0_WBM_CFG_2,
+			  COOKIE_CONV_INDICATION_EN,
+			  cc_cfg->cc_global_en);
+
+	reg_val |= HAL_SM(HWIO_WBM_R0_WBM_CFG_2,
+			  ERROR_PATH_COOKIE_CONV_EN,
+			  cc_cfg->error_path_cookie_conv_en);
+
+	reg_val |= HAL_SM(HWIO_WBM_R0_WBM_CFG_2,
+			  RELEASE_PATH_COOKIE_CONV_EN,
+			  cc_cfg->release_path_cookie_conv_en);
+
+	HAL_REG_WRITE(soc, reg_addr, reg_val);
+#endif
+#ifdef DP_HW_COOKIE_CONVERT_EXCEPTION
+	/*
+	 * To enable indication for HW cookie conversion done or not for
+	 * WBM, WCSS_UMAC_WBM_R0_MISC_CONTROL spare_control field 15th
+	 * bit spare_control[15] should be set.
+	 */
+	reg_addr = HWIO_WBM_R0_MISC_CONTROL_ADDR(WBM_REG_REG_BASE);
+	reg_val = HAL_REG_READ(soc, reg_addr);
+	reg_val |= HAL_SM(HWIO_WCSS_UMAC_WBM_R0_MISC_CONTROL,
+			  SPARE_CONTROL,
+			  HAL_WBM_MISC_CONTROL_SPARE_CONTROL_FIELD_BIT15);
+	HAL_REG_WRITE(soc, reg_addr, reg_val);
+#endif
+}
+
+/**
+ * hal_set_ba_aging_timeout_be - Set BA Aging timeout
+ *
+ * @hal_soc: Opaque HAL SOC handle
+ * @ac: Access category
+ * ac: 0 - Background, 1 - Best Effort, 2 - Video, 3 - Voice
+ * @value: Input value to set
+ */
+static inline
+void hal_set_ba_aging_timeout_be_generic(hal_soc_handle_t hal_soc_hdl,
+					 uint8_t ac, uint32_t value)
+{
+	struct hal_soc *soc = (struct hal_soc *)hal_soc_hdl;
+
+	switch (ac) {
+	case WME_AC_BE:
+		HAL_REG_WRITE(soc,
+			      HWIO_REO_R0_AGING_THRESHOLD_IX_0_ADDR(
+			      REO_REG_REG_BASE),
+			      value * 1000);
+		break;
+	case WME_AC_BK:
+		HAL_REG_WRITE(soc,
+			      HWIO_REO_R0_AGING_THRESHOLD_IX_1_ADDR(
+			      REO_REG_REG_BASE),
+			      value * 1000);
+		break;
+	case WME_AC_VI:
+		HAL_REG_WRITE(soc,
+			      HWIO_REO_R0_AGING_THRESHOLD_IX_2_ADDR(
+			      REO_REG_REG_BASE),
+			      value * 1000);
+		break;
+	case WME_AC_VO:
+		HAL_REG_WRITE(soc,
+			      HWIO_REO_R0_AGING_THRESHOLD_IX_3_ADDR(
+			      REO_REG_REG_BASE),
+			      value * 1000);
+		break;
+	default:
+		QDF_TRACE(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_ERROR,
+			  "Invalid AC: %d\n", ac);
+	}
+}
+
 #endif /* _HAL_BE_GENERIC_API_H_ */

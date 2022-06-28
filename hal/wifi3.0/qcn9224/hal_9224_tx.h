@@ -181,6 +181,69 @@ static void hal_tx_update_dscp_tid_9224(struct hal_soc *soc, uint8_t tid,
 	HAL_REG_WRITE(soc, cmn_reg_addr, regval);
 }
 
+#ifdef DP_TX_IMPLICIT_RBM_MAPPING
+
+#define RBM_MAPPING_BMSK HWIO_TCL_R0_RBM_MAPPING0_SW2TCL1_RING_BMSK
+#define RBM_MAPPING_SHFT HWIO_TCL_R0_RBM_MAPPING0_SW2TCL2_RING_SHFT
+
+#define RBM_PPE2TCL_OFFSET \
+			(HWIO_TCL_R0_RBM_MAPPING0_PPE2TCL1_RING_SHFT >> 2)
+#define RBM_TCL_CMD_CREDIT_OFFSET \
+			(HWIO_TCL_R0_RBM_MAPPING0_SW2TCL_CREDIT_RING_SHFT >> 2)
+
+/**
+ * hal_tx_config_rbm_mapping_be() - Update return buffer manager ring id
+ * @hal_soc: HAL SoC context
+ * @hal_ring_hdl: Source ring pointer
+ * @rbm_id: return buffer manager ring id
+ *
+ * Return: void
+ */
+static inline void
+hal_tx_config_rbm_mapping_be_9224(hal_soc_handle_t hal_soc_hdl,
+				  hal_ring_handle_t hal_ring_hdl,
+				  uint8_t rbm_id)
+{
+	struct hal_srng *srng = (struct hal_srng *)hal_ring_hdl;
+	struct hal_soc *hal_soc = (struct hal_soc *)hal_soc_hdl;
+	uint32_t reg_addr = 0;
+	uint32_t reg_val = 0;
+	uint32_t val = 0;
+	uint8_t ring_num;
+	enum hal_ring_type ring_type;
+
+	ring_type = srng->ring_type;
+	ring_num = hal_soc->hw_srng_table[ring_type].start_ring_id;
+	ring_num = srng->ring_id - ring_num;
+
+	reg_addr = HWIO_TCL_R0_RBM_MAPPING0_ADDR(MAC_TCL_REG_REG_BASE);
+
+	if (ring_type == PPE2TCL)
+		ring_num = ring_num + RBM_PPE2TCL_OFFSET;
+	else if (ring_type == TCL_CMD_CREDIT)
+		ring_num = ring_num + RBM_TCL_CMD_CREDIT_OFFSET;
+
+	/* get current value stored in register address */
+	val = HAL_REG_READ(hal_soc, reg_addr);
+
+	/* mask out other stored value */
+	val &= (~(RBM_MAPPING_BMSK << (RBM_MAPPING_SHFT * ring_num)));
+
+	reg_val = val | ((RBM_MAPPING_BMSK & rbm_id) <<
+			 (RBM_MAPPING_SHFT * ring_num));
+
+	/* write rbm mapped value to register address */
+	HAL_REG_WRITE(hal_soc, reg_addr, reg_val);
+}
+#else
+static inline void
+hal_tx_config_rbm_mapping_be_9224(hal_soc_handle_t hal_soc_hdl,
+				  hal_ring_handle_t hal_ring_hdl,
+				  uint8_t rbm_id)
+{
+}
+#endif
+
 /**
  * hal_tx_init_cmd_credit_ring_9224() - Initialize command/credit SRNG
  * @hal_soc_hdl: Handle to HAL SoC structure

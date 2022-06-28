@@ -97,6 +97,26 @@ extern bool is_hal_verbose_debug_enabled;
  */
 #define HAL_GET_NUM_DWORDS(num)	((num) >> 2)
 
+struct hal_hw_cc_config {
+	uint32_t lut_base_addr_31_0;
+	uint32_t cc_global_en:1,
+		 page_4k_align:1,
+		 cookie_offset_msb:5,
+		 cookie_page_msb:5,
+		 lut_base_addr_39_32:8,
+		 wbm2sw6_cc_en:1,
+		 wbm2sw5_cc_en:1,
+		 wbm2sw4_cc_en:1,
+		 wbm2sw3_cc_en:1,
+		 wbm2sw2_cc_en:1,
+		 wbm2sw1_cc_en:1,
+		 wbm2sw0_cc_en:1,
+		 wbm2fw_cc_en:1,
+		 error_path_cookie_conv_en:1,
+		 release_path_cookie_conv_en:1,
+		 reserved:2;
+};
+
 /*
  * dp_hal_soc - opaque handle for DP HAL soc
  */
@@ -765,6 +785,26 @@ enum hal_reo_cmd_type {
 	CMD_UPDATE_RX_REO_QUEUE = 5
 };
 
+/**
+ * enum hal_tx_mcast_mlo_reinject_notify
+ * @HAL_TX_MCAST_MLO_REINJECT_FW_NOTIFY: MLO Mcast reinject routed to FW
+ * @HAL_TX_MCAST_MLO_REINJECT_TQM_NOTIFY: MLO Mcast reinject routed to TQM
+ */
+enum hal_tx_mcast_mlo_reinject_notify {
+	HAL_TX_MCAST_MLO_REINJECT_FW_NOTIFY = 0,
+	HAL_TX_MCAST_MLO_REINJECT_TQM_NOTIFY,
+};
+
+/**
+ * enum hal_tx_vdev_mismatch_notify
+ * @HAL_TX_VDEV_MISMATCH_TQM_NOTIFY: vdev mismatch exception routed to TQM
+ * @HAL_TX_VDEV_MISMATCH_FW_NOTIFY: vdev mismatch exception routed to FW
+ */
+enum hal_tx_vdev_mismatch_notify {
+	HAL_TX_VDEV_MISMATCH_TQM_NOTIFY = 0,
+	HAL_TX_VDEV_MISMATCH_FW_NOTIFY,
+};
+
 struct hal_rx_pkt_capture_flags {
 	uint8_t encrypt_type;
 	uint8_t fragment_flag;
@@ -843,6 +883,9 @@ struct hal_hw_txrx_ops {
 	void (*hal_tx_dump_ppe_vp_entry)(hal_soc_handle_t hal_soc_hdl);
 	void (*hal_tx_enable_pri2tid_map)(hal_soc_handle_t hal_soc_hdl,
 					  bool value, uint8_t ppe_vp_idx);
+	void (*hal_tx_config_rbm_mapping_be)(hal_soc_handle_t hal_soc_hdl,
+					     hal_ring_handle_t hal_ring_hdl,
+					     uint8_t rbm_id);
 
 	/* rx */
 	uint32_t (*hal_rx_msdu_start_nss_get)(uint8_t *);
@@ -1121,6 +1164,14 @@ struct hal_hw_txrx_ops {
 #endif
 	void (*hal_reo_shared_qaddr_cache_clear)(hal_soc_handle_t hal_soc_hdl);
 	uint32_t (*hal_rx_tlv_l3_type_get)(uint8_t *buf);
+	void (*hal_tx_vdev_mismatch_routing_set)(hal_soc_handle_t hal_soc_hdl,
+			enum hal_tx_vdev_mismatch_notify config);
+	void (*hal_tx_mcast_mlo_reinject_routing_set)(
+			hal_soc_handle_t hal_soc_hdl,
+			enum hal_tx_mcast_mlo_reinject_notify config);
+	void (*hal_cookie_conversion_reg_cfg_be)(hal_soc_handle_t hal_soc_hdl,
+						 struct hal_hw_cc_config
+						 *cc_cfg);
 };
 
 /**

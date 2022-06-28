@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022, Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -22,26 +22,6 @@
 
 #include "hal_hw_headers.h"
 #include "hal_rx.h"
-
-struct hal_hw_cc_config {
-	uint32_t lut_base_addr_31_0;
-	uint32_t cc_global_en:1,
-		 page_4k_align:1,
-		 cookie_offset_msb:5,
-		 cookie_page_msb:5,
-		 lut_base_addr_39_32:8,
-		 wbm2sw6_cc_en:1,
-		 wbm2sw5_cc_en:1,
-		 wbm2sw4_cc_en:1,
-		 wbm2sw3_cc_en:1,
-		 wbm2sw2_cc_en:1,
-		 wbm2sw1_cc_en:1,
-		 wbm2sw0_cc_en:1,
-		 wbm2fw_cc_en:1,
-		 error_path_cookie_conv_en:1,
-		 release_path_cookie_conv_en:1,
-		 reserved:2;
-};
 
 #define HAL_RX_MSDU_EXT_DESC_INFO_GET(msdu_details_ptr) \
 	((struct rx_msdu_ext_desc_info *) \
