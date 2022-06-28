@@ -2685,6 +2685,7 @@ dp_tx_stats_update(struct dp_pdev *pdev, struct dp_peer *peer,
 	enum cdp_ru_index ru_index;
 	struct dp_mon_peer *mon_peer = NULL;
 	uint32_t ratekbps = 0;
+	uint64_t tx_byte_count;
 
 	preamble = ppdu->preamble;
 	mcs = ppdu->mcs;
@@ -2692,6 +2693,7 @@ dp_tx_stats_update(struct dp_pdev *pdev, struct dp_peer *peer,
 	num_mpdu = ppdu->mpdu_success;
 	mpdu_tried = ppdu->mpdu_tried_ucast + ppdu->mpdu_tried_mcast;
 	mpdu_failed = mpdu_tried - num_mpdu;
+	tx_byte_count = ppdu->success_bytes;
 
 	/* If the peer statistics are already processed as part of
 	 * per-MSDU completion handler, do not process these again in per-PPDU
@@ -2703,6 +2705,12 @@ dp_tx_stats_update(struct dp_pdev *pdev, struct dp_peer *peer,
 	mon_peer = peer->monitor_peer;
 	if (!mon_peer)
 		return;
+
+	if (!ppdu->is_mcast) {
+		DP_STATS_INC(mon_peer, tx.tx_ucast_total.num, num_msdu);
+		DP_STATS_INC(mon_peer, tx.tx_ucast_total.bytes,
+			     tx_byte_count);
+	}
 
 	if (ppdu->completion_status != HTT_PPDU_STATS_USER_STATUS_OK) {
 		/*
@@ -2769,6 +2777,12 @@ dp_tx_stats_update(struct dp_pdev *pdev, struct dp_peer *peer,
 	DP_STATS_INCC(mon_peer, tx.ldpc, num_msdu, ppdu->ldpc);
 	if (!(ppdu->is_mcast) && ppdu->ack_rssi_valid)
 		DP_STATS_UPD(mon_peer, tx.last_ack_rssi, ack_rssi);
+
+	if (!ppdu->is_mcast) {
+		DP_STATS_INC(mon_peer, tx.tx_ucast_success.num, num_msdu);
+		DP_STATS_INC(mon_peer, tx.tx_ucast_success.bytes,
+			     tx_byte_count);
+	}
 
 	DP_STATS_INCC(mon_peer,
 		      tx.pkt_type[preamble].mcs_count[MAX_MCS - 1], num_msdu,

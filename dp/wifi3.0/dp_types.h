@@ -3640,6 +3640,8 @@ struct dp_peer_per_pkt_tx_stats {
  *       <enum 2     1_6_us_sgi > HE related GI
  *       <enum 3     3_2_us_sgi > HE
  * @preamble_info: preamble
+ * @tx_ucast_total: total ucast count
+ * @tx_ucast_success: total ucast success count
  * @retries_mpdu: mpdu number of successfully transmitted after retries
  * @mpdu_success_with_retries: mpdu retry count in case of successful tx
  * @su_be_ppdu_cnt: SU Tx packet count for 11BE
@@ -3690,6 +3692,8 @@ struct dp_peer_extd_tx_stats {
 
 	uint32_t retries_mpdu;
 	uint32_t mpdu_success_with_retries;
+	struct cdp_pkt_info tx_ucast_total;
+	struct cdp_pkt_info tx_ucast_success;
 #ifdef WLAN_FEATURE_11BE
 	struct cdp_pkt_type su_be_ppdu_cnt;
 	struct cdp_pkt_type mu_be_ppdu_cnt[TXRX_TYPE_MU_MAX];
