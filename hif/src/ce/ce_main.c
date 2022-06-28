@@ -3577,10 +3577,10 @@ static void hif_print_hal_shadow_register_cfg(struct pld_wlan_enable_cfg *cfg)
 {
 	int i;
 
-	hif_err("num_config %d", cfg->num_shadow_reg_v2_cfg);
+	hif_err("v3: num_config %d", cfg->num_shadow_reg_v3_cfg);
 
-	for (i = 0; i < cfg->num_shadow_reg_v2_cfg; i++) {
-		hif_err("i %d, val %x", i, cfg->shadow_reg_v2_cfg[i].addr);
+	for (i = 0; i < cfg->num_shadow_reg_v3_cfg; i++) {
+		hif_err("i %d, val %x", i, cfg->shadow_reg_v3_cfg[i].addr);
 	}
 }
 
