@@ -83,5 +83,36 @@
 #define CFG80211_SA_QUERY_OFFLOAD_SUPPORT 1
 #endif
 
-
+/*
+ * CFG80211_SINGLE_NETDEV_MULTI_LINK_SUPPORT
+ * Used to indicate the Linux Kernel contains support for single netdevice multi
+ * link support.
+ *
+ * This feature was merged into wireless-next via below commits:
+ * 7b0a0e3c3 wifi: cfg80211: do some rework towards MLO link APIs
+ * 0f7594489 wifi: cfg80211: mlme: get BSS entry outside cfg80211_mlme_assoc()
+ * 9ecff10e8 wifi: nl80211: refactor BSS lookup in nl80211_associate()
+ * 0f48b8b88 wifi: ieee80211: add definitions for multi-link element
+ * 325839da9 wifi: cfg80211: simplify cfg80211_mlme_auth() prototype
+ * d648c2302 wifi: nl80211: support MLO in auth/assoc
+ *
+ * This feature was backported to Android Common Kernel 5.15 via:
+ * https://android-review.googlesource.com/c/kernel/common/+/2123895
+ * https://android-review.googlesource.com/c/kernel/common/+/2115618
+ * https://android-review.googlesource.com/c/kernel/common/+/2115620
+ * https://android-review.googlesource.com/c/kernel/common/+/2121347
+ * https://android-review.googlesource.com/c/kernel/common/+/2121348
+ * https://android-review.googlesource.com/c/kernel/common/+/2121349
+ * https://android-review.googlesource.com/c/kernel/common/+/2121350
+ * https://android-review.googlesource.com/c/kernel/common/+/2121351
+ * https://android-review.googlesource.com/c/kernel/common/+/2123452
+ * https://android-review.googlesource.com/c/kernel/common/+/2123454
+ * https://android-review.googlesource.com/c/kernel/common/+/2115621
+ *
+ */
+#if (defined(__ANDROID_COMMON_KERNEL__) && \
+	(LINUX_VERSION_CODE >= KERNEL_VERSION(5, 15, 0)) && \
+	(defined  IEEE80211_MLD_MAX_NUM_LINKS))
+#define CFG80211_SINGLE_NETDEV_MULTI_LINK_SUPPORT 1
+#endif
 #endif
