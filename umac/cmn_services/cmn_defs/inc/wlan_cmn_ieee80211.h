@@ -2704,6 +2704,8 @@ struct wlan_ext_cap_ie {
 	uint8_t ext_caps[];
 } qdf_packed;
 
+/* EHT caps fixed field = 2 bytes (EHT mac caps) + 9 bytes (EHT phy caps) */
+#define EHT_CAP_FIXED_FIELDS         11
 #define EHT_CAP_320M_MCS_MAP_LEN      3
 #define EHT_CAP_160M_MCS_MAP_LEN      3
 #define EHT_CAP_80M_MCS_MAP_LEN       3
