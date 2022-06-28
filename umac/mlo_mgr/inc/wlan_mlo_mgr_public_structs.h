@@ -362,6 +362,7 @@ struct mlnawds_config {
  * @vdev_id:  VDEV ID
  * @psoc_id:  PSOC ID
  * @link_addr: MAC address
+ * @mldmacaddr: MLD MAC address
  * @algo:  Auth algorithm
  * @seq: Auth sequence number
  * @status_code: Auth status
@@ -374,6 +375,7 @@ struct mlpeer_auth_params {
 	uint8_t vdev_id;
 	uint8_t psoc_id;
 	struct qdf_mac_addr link_addr;
+	struct qdf_mac_addr mldaddr;
 	uint16_t algo;
 	uint16_t seq;
 	uint16_t status_code;
