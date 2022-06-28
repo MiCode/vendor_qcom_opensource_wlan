@@ -2482,7 +2482,7 @@ reg_get_ch_state_based_on_nol_flag(struct wlan_objmgr_pdev *pdev,
 				   bool treat_nol_chan_as_disabled);
 
 /**
- * reg_get_min_max_bw_cur_chan_list() - Given a frequency index, find out the
+ * reg_get_min_max_bw_reg_chan_list() - Given a frequency index, find out the
  * min/max bw of the channel.
  *
  * @pdev: pdev pointer.
@@ -2493,7 +2493,7 @@ reg_get_ch_state_based_on_nol_flag(struct wlan_objmgr_pdev *pdev,
  *
  * Return: true/false.
  */
-QDF_STATUS reg_get_min_max_bw_cur_chan_list(struct wlan_objmgr_pdev *pdev,
+QDF_STATUS reg_get_min_max_bw_reg_chan_list(struct wlan_objmgr_pdev *pdev,
 					    enum channel_enum freq_idx,
 					    enum supported_6g_pwr_types
 					    in_6g_pwr_mode,
@@ -2566,3 +2566,23 @@ reg_get_chan_state_for_320(struct wlan_objmgr_pdev *pdev,
 QDF_STATUS reg_get_regd_rules(struct wlan_objmgr_pdev *pdev,
 			      struct reg_rule_info *reg_rules);
 #endif
+
+/**
+ * reg_get_max_bw_5G_for_fo() - get max bw
+ * @pdev: PDEV object
+ *
+ * API to get max bw from pdev.
+ *
+ * Return: max bw
+ */
+uint16_t reg_get_max_bw_5G_for_fo(struct wlan_objmgr_pdev *pdev);
+
+/**
+ * reg_is_offload_enabled() - get offload_enabled
+ * @pdev: PDEV object
+ *
+ * API to get offload_enabled from psoc.
+ *
+ * Return: true if offload enaled
+ */
+bool reg_is_offload_enabled(struct wlan_objmgr_pdev *pdev);

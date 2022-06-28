@@ -1451,32 +1451,6 @@ QDF_STATUS reg_get_max_5g_bw_from_regdomain(struct wlan_objmgr_pdev *pdev,
 	return QDF_STATUS_SUCCESS;
 }
 #else
-/**
- * reg_get_max_bw_5g_for_fo() - get max_5g_bw for FullOffload
- * @pdev: PDEV object
- *
- * API to get max_bw_5g from pdev object
- *
- * Return: @max_bw_5g
- */
-static uint16_t reg_get_max_bw_5G_for_fo(struct wlan_objmgr_pdev *pdev)
-{
-	struct wlan_objmgr_psoc *psoc = wlan_pdev_get_psoc(pdev);
-	struct wlan_regulatory_psoc_priv_obj *soc_reg;
-	uint8_t pdev_id;
-	uint8_t phy_id;
-	struct wlan_lmac_if_reg_tx_ops *reg_tx_ops;
-
-	soc_reg = reg_get_psoc_obj(psoc);
-	pdev_id = wlan_objmgr_pdev_get_pdev_id(pdev);
-	reg_tx_ops = reg_get_psoc_tx_ops(psoc);
-	if (reg_tx_ops->get_phy_id_from_pdev_id)
-		reg_tx_ops->get_phy_id_from_pdev_id(psoc, pdev_id, &phy_id);
-	else
-		phy_id = pdev_id;
-
-	return soc_reg->mas_chan_params[phy_id].max_bw_5g;
-}
 
 QDF_STATUS reg_get_max_5g_bw_from_country_code(struct wlan_objmgr_pdev *pdev,
 					       uint16_t cc,
@@ -1496,6 +1470,30 @@ QDF_STATUS reg_get_max_5g_bw_from_regdomain(struct wlan_objmgr_pdev *pdev,
 	return QDF_STATUS_SUCCESS;
 }
 #endif
+
+uint16_t reg_get_max_bw_5G_for_fo(struct wlan_objmgr_pdev *pdev)
+{
+	struct wlan_objmgr_psoc *psoc = wlan_pdev_get_psoc(pdev);
+	struct wlan_regulatory_psoc_priv_obj *soc_reg;
+	uint8_t pdev_id;
+	uint8_t phy_id;
+	struct wlan_lmac_if_reg_tx_ops *reg_tx_ops;
+
+	soc_reg = reg_get_psoc_obj(psoc);
+	if (!soc_reg) {
+		reg_err("soc_reg is NULL");
+		return 0;
+	}
+
+	pdev_id = wlan_objmgr_pdev_get_pdev_id(pdev);
+	reg_tx_ops = reg_get_psoc_tx_ops(psoc);
+	if (reg_tx_ops->get_phy_id_from_pdev_id)
+		reg_tx_ops->get_phy_id_from_pdev_id(psoc, pdev_id, &phy_id);
+	else
+		phy_id = pdev_id;
+
+	return soc_reg->mas_chan_params[phy_id].max_bw_5g;
+}
 
 void reg_get_current_dfs_region(struct wlan_objmgr_pdev *pdev,
 				enum dfs_reg *dfs_reg)
@@ -3904,7 +3902,7 @@ reg_get_5g_chan_state(struct wlan_objmgr_pdev *pdev, qdf_freq_t freq,
 	if (ch_indx == INVALID_CHANNEL)
 		return CHANNEL_STATE_INVALID;
 
-	if (reg_get_min_max_bw_cur_chan_list(pdev, ch_indx, in_6g_pwr_mode,
+	if (reg_get_min_max_bw_reg_chan_list(pdev, ch_indx, in_6g_pwr_mode,
 					     &min_bw, &max_bw)) {
 		return CHANNEL_STATE_INVALID;
 	}
@@ -4440,11 +4438,10 @@ reg_get_5g_bonded_channel_state_for_pwrmode(struct wlan_objmgr_pdev *pdev,
 	enum phy_ch_width bw;
 	enum channel_enum ch_indx;
 	enum channel_state chan_state;
-	struct regulatory_channel *reg_channels;
 	struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj;
 	bool bw_enabled = false;
 	const struct bonded_channel_freq *bonded_chan_ptr = NULL;
-	QDF_STATUS status;
+	uint16_t min_bw, max_bw;
 
 	if (!ch_params) {
 		reg_err_rl("Invalid ch_params");
@@ -4475,43 +4472,37 @@ reg_get_5g_bonded_channel_state_for_pwrmode(struct wlan_objmgr_pdev *pdev,
 		reg_err("pdev reg obj is NULL");
 		return CHANNEL_STATE_INVALID;
 	}
-	reg_channels = qdf_mem_malloc(NUM_CHANNELS * sizeof(*reg_channels));
-	if (!reg_channels)
-		return CHANNEL_STATE_INVALID;
-
-	status = reg_get_pwrmode_chan_list(pdev, reg_channels, in_6g_pwr_mode);
-	if (!QDF_IS_STATUS_SUCCESS(status)) {
-		qdf_mem_free(reg_channels);
-		return CHANNEL_STATE_INVALID;
-	}
 
 	ch_indx = reg_get_chan_enum_for_freq(freq);
 	if (ch_indx == INVALID_CHANNEL) {
-		qdf_mem_free(reg_channels);
 		return CHANNEL_STATE_INVALID;
 	}
+
+	if (reg_get_min_max_bw_reg_chan_list(pdev, ch_indx, in_6g_pwr_mode,
+					     &min_bw, &max_bw))
+		return CHANNEL_STATE_INVALID;
+
 	if (bw == CH_WIDTH_5MHZ)
 		bw_enabled = true;
 	else if (bw == CH_WIDTH_10MHZ)
-		bw_enabled = (reg_channels[ch_indx].min_bw <= 10) &&
-			(reg_channels[ch_indx].max_bw >= 10);
+		bw_enabled = (min_bw <= 10) &&
+			(max_bw >= 10);
 	else if (bw == CH_WIDTH_20MHZ)
-		bw_enabled = (reg_channels[ch_indx].min_bw <= 20) &&
-			(reg_channels[ch_indx].max_bw >= 20);
+		bw_enabled = (min_bw <= 20) &&
+			(max_bw >= 20);
 	else if (bw == CH_WIDTH_40MHZ)
-		bw_enabled = (reg_channels[ch_indx].min_bw <= 40) &&
-			(reg_channels[ch_indx].max_bw >= 40);
+		bw_enabled = (min_bw <= 40) &&
+			(max_bw >= 40);
 	else if (bw == CH_WIDTH_80MHZ)
-		bw_enabled = (reg_channels[ch_indx].min_bw <= 80) &&
-			(reg_channels[ch_indx].max_bw >= 80);
+		bw_enabled = (min_bw <= 80) &&
+			(max_bw >= 80);
 	else if (bw == CH_WIDTH_160MHZ)
-		bw_enabled = (reg_channels[ch_indx].min_bw <= 160) &&
-			(reg_channels[ch_indx].max_bw >= 160);
+		bw_enabled = (min_bw <= 160) &&
+			(max_bw >= 160);
 	else if (bw == CH_WIDTH_80P80MHZ)
-		bw_enabled = (reg_channels[ch_indx].min_bw <= 80) &&
-			(reg_channels[ch_indx].max_bw >= 80);
+		bw_enabled = (min_bw <= 80) &&
+			(max_bw >= 80);
 
-	qdf_mem_free(reg_channels);
 	if (bw_enabled)
 		return chan_state;
 	return CHANNEL_STATE_DISABLE;
@@ -5103,8 +5094,6 @@ reg_fill_channel_list_for_320_for_pwrmode(
 	enum channel_enum chan_enum;
 	const struct bonded_channel_freq *bonded_ch_ptr[2] = {NULL, NULL};
 	struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj;
-	struct regulatory_channel *reg_chan_list;
-	QDF_STATUS status;
 
 	*update_bw = false;
 
@@ -5123,18 +5112,10 @@ reg_fill_channel_list_for_320_for_pwrmode(
 	/* Maximum bandwidth of the channel supported by regulatory for
 	 * the given freq.
 	 */
-	reg_chan_list = qdf_mem_malloc(NUM_CHANNELS * sizeof(*reg_chan_list));
-	if (!reg_chan_list)
+	if (reg_get_min_max_bw_reg_chan_list(pdev, chan_enum, in_6g_pwr_mode,
+					     NULL, &max_reg_bw))
 		return;
 
-	status = reg_get_pwrmode_chan_list(pdev, reg_chan_list, in_6g_pwr_mode);
-	if (!QDF_IS_STATUS_SUCCESS(status)) {
-		qdf_mem_free(reg_chan_list);
-		return;
-	}
-
-	max_reg_bw = reg_chan_list[chan_enum].max_bw;
-	qdf_mem_free(reg_chan_list);
 	/* Regulatory does not support BW greater than 160.
 	 * Try finding a channel in a lower mode.
 	 */
@@ -5443,7 +5424,6 @@ static void reg_set_5g_channel_params_for_freq(struct wlan_objmgr_pdev *pdev,
 	enum channel_state chan_state = CHANNEL_STATE_ENABLE;
 	enum channel_state chan_state2 = CHANNEL_STATE_ENABLE;
 	const struct bonded_channel_freq *bonded_chan_ptr = NULL;
-	const struct bonded_channel_freq *bonded_chan_ptr2 = NULL;
 	struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj;
 	enum channel_enum chan_enum, sec_5g_chan_enum;
 	uint16_t max_bw, bw_80, sec_5g_freq_max_bw = 0;
@@ -5497,7 +5477,6 @@ static void reg_set_5g_channel_params_for_freq(struct wlan_objmgr_pdev *pdev,
 		}
 
 		bonded_chan_ptr = NULL;
-		bonded_chan_ptr2 = NULL;
 		chan_state = reg_get_5g_bonded_channel_for_freq(
 				pdev, freq, ch_params->ch_width,
 				&bonded_chan_ptr);
@@ -5534,13 +5513,9 @@ static void reg_set_5g_channel_params_for_freq(struct wlan_objmgr_pdev *pdev,
 						 ch_params->mhz_freq_seg0);
 			break;
 		} else if (ch_params->ch_width >= CH_WIDTH_40MHZ) {
-			bonded_chan_ptr2 =
-				reg_get_bonded_chan_entry(freq,
-							  CH_WIDTH_40MHZ, 0);
-
-			if (!bonded_chan_ptr || !bonded_chan_ptr2)
+			if (!bonded_chan_ptr)
 				goto update_bw;
-			if (freq == bonded_chan_ptr2->start_freq)
+			if (freq == bonded_chan_ptr->start_freq)
 				ch_params->sec_ch_offset = LOW_PRIMARY_CH;
 			else
 				ch_params->sec_ch_offset = HIGH_PRIMARY_CH;
@@ -5614,12 +5589,10 @@ static void reg_set_5g_channel_params_for_pwrmode(
 	enum channel_state chan_state = CHANNEL_STATE_ENABLE;
 	enum channel_state chan_state2 = CHANNEL_STATE_ENABLE;
 	const struct bonded_channel_freq *bonded_chan_ptr = NULL;
-	const struct bonded_channel_freq *bonded_chan_ptr2 = NULL;
 	struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj;
 	enum channel_enum chan_enum, sec_5g_chan_enum;
-	uint16_t max_bw, bw_80, sec_5g_freq_max_bw = 0;
-	struct regulatory_channel *reg_chan_list;
-	QDF_STATUS status;
+	uint16_t bw_80 = 0;
+	uint16_t max_bw, sec_5g_freq_max_bw = 0;
 
 	if (!ch_params) {
 		reg_err("ch_params is NULL");
@@ -5645,17 +5618,9 @@ static void reg_set_5g_channel_params_for_pwrmode(
 			ch_params->ch_width = CH_WIDTH_160MHZ;
 	}
 
-	reg_chan_list = qdf_mem_malloc(NUM_CHANNELS * sizeof(*reg_chan_list));
-	if (!reg_chan_list)
+	if (reg_get_min_max_bw_reg_chan_list(pdev, chan_enum, in_6g_pwr_type,
+					     NULL, &max_bw))
 		return;
-
-	status = reg_get_pwrmode_chan_list(pdev, reg_chan_list, in_6g_pwr_type);
-	if (!QDF_IS_STATUS_SUCCESS(status)) {
-		qdf_mem_free(reg_chan_list);
-		return;
-	}
-
-	max_bw = reg_chan_list[chan_enum].max_bw;
 
 	bw_80 = reg_get_bw_value(CH_WIDTH_80MHZ);
 
@@ -5665,14 +5630,15 @@ static void reg_set_5g_channel_params_for_pwrmode(
 					NEAREST_20MHZ_CHAN_FREQ_OFFSET);
 		if (sec_5g_chan_enum == INVALID_CHANNEL) {
 			reg_err("secondary channel freq is not valid");
-			qdf_mem_free(reg_chan_list);
 			return;
 		}
 
-		sec_5g_freq_max_bw = reg_chan_list[sec_5g_chan_enum].max_bw;
+		if (reg_get_min_max_bw_reg_chan_list(pdev, sec_5g_chan_enum,
+						     in_6g_pwr_type,
+						     NULL, &sec_5g_freq_max_bw))
+			return;
 	}
 
-	qdf_mem_free(reg_chan_list);
 	while (ch_params->ch_width != CH_WIDTH_INVALID) {
 		if (ch_params->ch_width == CH_WIDTH_80P80MHZ) {
 			if ((max_bw < bw_80) || (sec_5g_freq_max_bw < bw_80))
@@ -5682,7 +5648,6 @@ static void reg_set_5g_channel_params_for_pwrmode(
 		}
 
 		bonded_chan_ptr = NULL;
-		bonded_chan_ptr2 = NULL;
 		chan_state = reg_get_5g_bonded_channel_for_pwrmode(
 				pdev, freq, ch_params->ch_width,
 				&bonded_chan_ptr, in_6g_pwr_type);
@@ -5719,13 +5684,9 @@ static void reg_set_5g_channel_params_for_pwrmode(
 						 ch_params->mhz_freq_seg0);
 			break;
 		} else if (ch_params->ch_width >= CH_WIDTH_40MHZ) {
-			bonded_chan_ptr2 =
-				reg_get_bonded_chan_entry(freq,
-							  CH_WIDTH_40MHZ, 0);
-
-			if (!bonded_chan_ptr || !bonded_chan_ptr2)
+			if (!bonded_chan_ptr)
 				goto update_bw;
-			if (freq == bonded_chan_ptr2->start_freq)
+			if (freq == bonded_chan_ptr->start_freq)
 				ch_params->sec_ch_offset = LOW_PRIMARY_CH;
 			else
 				ch_params->sec_ch_offset = HIGH_PRIMARY_CH;
@@ -8798,7 +8759,7 @@ bool reg_is_freq_idx_enabled(struct wlan_objmgr_pdev *pdev,
 	}
 }
 
-QDF_STATUS reg_get_min_max_bw_cur_chan_list(struct wlan_objmgr_pdev *pdev,
+QDF_STATUS reg_get_min_max_bw_reg_chan_list(struct wlan_objmgr_pdev *pdev,
 					    enum channel_enum freq_idx,
 					    enum supported_6g_pwr_types
 					    in_6g_pwr_mode,
@@ -9265,4 +9226,17 @@ QDF_STATUS reg_get_regd_rules(struct wlan_objmgr_pdev *pdev,
 	qdf_spin_unlock_bh(&pdev_priv_obj->reg_rules_lock);
 
 	return QDF_STATUS_SUCCESS;
+}
+
+bool reg_is_offload_enabled(struct wlan_objmgr_pdev *pdev)
+{
+	struct wlan_objmgr_psoc *psoc = wlan_pdev_get_psoc(pdev);
+	struct wlan_regulatory_psoc_priv_obj *soc_reg;
+
+	soc_reg = reg_get_psoc_obj(psoc);
+	if (!soc_reg) {
+		reg_err("soc_reg is NULL");
+		return 0;
+	}
+	return soc_reg->offload_enabled;
 }

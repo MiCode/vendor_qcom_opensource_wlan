@@ -2822,23 +2822,11 @@ reg_populate_6g_band_channels(struct cur_reg_rule *reg_rule_5g,
 				   mas_chan_list);
 }
 
-/**
- * copy_from_super_chan_info_to_reg_channel - Copy the structure fields from
- * a super channel entry to the regulatory channel fields.
- *
- * chan - Pointer to the regulatory channel where the fields of super channel
- * entry is copied to.
- * sc_entry - Input super channel entry whose fields are copied to the
- * regulatory channel structure.
- * in_6g_pwr_mode - Input 6g power type. If the power type is best power mode,
- * get the best power mode of the given super channel entry and copy its
- * information to the regulatory channel fields.
- */
-static void
-copy_from_super_chan_info_to_reg_channel(struct regulatory_channel *chan,
-					 const struct super_chan_info sc_entry,
-					 enum supported_6g_pwr_types
-					 in_6g_pwr_mode)
+void
+reg_copy_from_super_chan_info_to_reg_channel(struct regulatory_channel *chan,
+					     const struct super_chan_info sc_entry,
+					     enum supported_6g_pwr_types
+					     in_6g_pwr_mode)
 {
 	if (in_6g_pwr_mode == REG_BEST_PWR_MODE)
 		in_6g_pwr_mode = sc_entry.best_power_mode;
@@ -2874,7 +2862,7 @@ reg_get_6g_pwrmode_chan_list(struct wlan_regulatory_pdev_priv_obj
 
 	/* Copy the regulatory_channel fields from super_chan_info */
 	for (i = 0; i < NUM_6GHZ_CHANNELS; i++)
-		copy_from_super_chan_info_to_reg_channel(
+		reg_copy_from_super_chan_info_to_reg_channel(
 					&chan_list[i + MIN_6GHZ_CHANNEL],
 					pdev_priv_obj->super_chan_list[i],
 					in_6g_pwr_mode);
@@ -2887,14 +2875,6 @@ reg_populate_6g_band_channels(struct cur_reg_rule *reg_rule_5g,
 			      uint32_t num_5g_reg_rules,
 			      uint16_t min_bw_5g,
 			      struct regulatory_channel *mas_chan_list)
-{
-}
-
-static inline void
-copy_from_super_chan_info_to_reg_channel(struct regulatory_channel *chan,
-					 const struct super_chan_info sc_entry,
-					 enum supported_6g_pwr_types
-					 in_6g_pwr_mode)
 {
 }
 

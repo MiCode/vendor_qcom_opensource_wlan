@@ -543,6 +543,27 @@ QDF_STATUS wlan_reg_get_max_5g_bw_from_regdomain(
 					uint16_t *max_bw_5g);
 
 /**
+ * wlan_reg_get_max_bw_5G_for_fo() - get max_5g_bw for FullOffload
+ * @pdev: PDEV object
+ *
+ * API to get max_bw_5g from pdev object
+ *
+ * Return: @max_bw_5g
+ */
+QDF_STATUS wlan_reg_get_max_bw_5G_for_fo(struct wlan_objmgr_pdev *pdev);
+
+/**
+ * wlan_reg_is_offload_enabled() - get offload_enabled
+ * @pdev: PDEV object
+ *
+ * API to get offload_enabled from psoc.
+ *
+ * Return: true if offload enaled
+ */
+
+bool wlan_reg_is_offload_enabled(struct wlan_objmgr_pdev *pdev);
+
+/**
  * wlan_reg_get_fcc_constraint() - Check FCC constraint on given frequency
  * @pdev: physical dev to get
  * @freq: frequency to be checked

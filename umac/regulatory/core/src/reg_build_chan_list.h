@@ -232,6 +232,23 @@ reg_is_supp_pwr_mode_invalid(enum supported_6g_pwr_types supp_pwr_mode)
 	return (supp_pwr_mode < REG_AP_LPI || supp_pwr_mode > REG_CLI_SUB_VLP);
 }
 
+/**
+ * reg_copy_from_super_chan_info_to_reg_channel - Copy the structure fields from
+ * a super channel entry to the regulatory channel fields.
+ *
+ * chan - Pointer to the regulatory channel where the fields of super channel
+ * entry is copied to.
+ * sc_entry - Input super channel entry whose fields are copied to the
+ * regulatory channel structure.
+ * in_6g_pwr_mode - Input 6g power type. If the power type is best power mode,
+ * get the best power mode of the given super channel entry and copy its
+ * information to the regulatory channel fields.
+ */
+void
+reg_copy_from_super_chan_info_to_reg_channel(struct regulatory_channel *chan,
+					     const struct super_chan_info sc_entry,
+					     enum supported_6g_pwr_types
+					     in_6g_pwr_mode);
 #else /* CONFIG_BAND_6GHZ */
 static inline QDF_STATUS
 reg_get_6g_ap_master_chan_list(struct wlan_objmgr_pdev *pdev,
@@ -278,6 +295,14 @@ static inline bool
 reg_is_supp_pwr_mode_invalid(enum supported_6g_pwr_types supp_pwr_mode)
 {
 	return true;
+}
+
+static inline void
+reg_copy_from_super_chan_info_to_reg_channel(struct regulatory_channel *chan,
+					     const struct super_chan_info sc_entry,
+					     enum supported_6g_pwr_types
+					     in_6g_pwr_mode)
+{
 }
 #endif /* CONFIG_BAND_6GHZ */
 /**
