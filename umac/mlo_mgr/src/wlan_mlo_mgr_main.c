@@ -215,7 +215,7 @@ struct wlan_mlo_dev_context *mlo_get_next_mld_ctx(qdf_list_t *ml_list,
 	return mld_next;
 }
 
-static inline struct wlan_mlo_dev_context
+struct wlan_mlo_dev_context
 *wlan_mlo_get_mld_ctx_by_mldaddr(struct qdf_mac_addr *mldaddr)
 {
 	struct wlan_mlo_dev_context *mld_cur;
@@ -289,16 +289,94 @@ static QDF_STATUS mlo_ap_ctx_init(struct wlan_mlo_dev_context *ml_dev)
 }
 
 #ifdef CONFIG_AP_PLATFORM
-QDF_STATUS wlan_mlo_vdev_cmp_same_pdev(struct wlan_objmgr_vdev *vdev,
-				       struct wlan_objmgr_vdev *tmp_vdev)
+static inline
+QDF_STATUS wlan_mlo_pdev_check(struct wlan_objmgr_pdev *ref_pdev,
+			       struct wlan_objmgr_vdev *vdev)
 {
-	if (wlan_vdev_get_pdev(vdev) ==
-			wlan_vdev_get_pdev(tmp_vdev))
-		return QDF_STATUS_SUCCESS;
+	struct wlan_objmgr_pdev *pdev = NULL;
+	struct wlan_objmgr_psoc *psoc = NULL;
 
-	return QDF_STATUS_E_FAILURE;
+	pdev = wlan_vdev_get_pdev(vdev);
+
+	psoc = wlan_pdev_get_psoc(ref_pdev);
+	if (mlo_check_all_pdev_state(psoc, MLO_LINK_SETUP_DONE)) {
+		mlo_err("Pdev link is not in ready state, initial link setup failed");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	if (ref_pdev == pdev) {
+		mlo_err("MLD vdev for this pdev already found, investigate config");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	return QDF_STATUS_SUCCESS;
+}
+
+static inline
+QDF_STATUS mlo_dev_config_check(struct wlan_mlo_dev_context *ml_dev,
+				struct wlan_objmgr_vdev *vdev)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+#else
+static inline
+QDF_STATUS mlo_dev_config_check(struct wlan_mlo_dev_context *ml_dev,
+				struct wlan_objmgr_vdev *vdev)
+{
+	enum QDF_OPMODE opmode = wlan_vdev_mlme_get_opmode(vdev);
+
+	if (wlan_mlo_check_valid_config(ml_dev, wlan_vdev_get_pdev(vdev),
+					opmode) != QDF_STATUS_SUCCESS)
+		return QDF_STATUS_E_FAILURE;
+
+	return QDF_STATUS_SUCCESS;
+}
+
+static inline
+QDF_STATUS wlan_mlo_pdev_check(struct wlan_objmgr_pdev *ref_pdev,
+			       struct wlan_objmgr_vdev *vdev)
+{
+	return QDF_STATUS_SUCCESS;
 }
 #endif
+
+QDF_STATUS wlan_mlo_check_valid_config(struct wlan_mlo_dev_context *ml_dev,
+				       struct wlan_objmgr_pdev *pdev,
+				       enum QDF_OPMODE opmode)
+{
+	uint32_t id = 0;
+	struct wlan_objmgr_vdev *vdev = NULL;
+
+	if (!ml_dev)
+		return QDF_STATUS_E_FAILURE;
+
+	if (!pdev)
+		return QDF_STATUS_E_FAILURE;
+
+	mlo_dev_lock_acquire(ml_dev);
+	while (id < WLAN_UMAC_MLO_MAX_VDEVS) {
+		vdev = ml_dev->wlan_vdev_list[id];
+		if (vdev) {
+			if (wlan_mlo_pdev_check(pdev, vdev)) {
+				mlo_dev_lock_release(ml_dev);
+				return QDF_STATUS_E_FAILURE;
+			}
+
+			if (wlan_vdev_mlme_get_opmode(vdev) != opmode) {
+				mlo_err("Invalid opmode %d type found expected %d, investigate config",
+					wlan_vdev_mlme_get_opmode(vdev),
+					opmode);
+				mlo_dev_lock_release(ml_dev);
+				return QDF_STATUS_E_FAILURE;
+			}
+		}
+		id++;
+	}
+
+	mlo_dev_lock_release(ml_dev);
+	return QDF_STATUS_SUCCESS;
+}
 
 static QDF_STATUS mlo_dev_ctx_init(struct wlan_objmgr_vdev *vdev)
 {
@@ -307,32 +385,21 @@ static QDF_STATUS mlo_dev_ctx_init(struct wlan_objmgr_vdev *vdev)
 	struct qdf_mac_addr *mld_addr;
 	struct mlo_mgr_context *g_mlo_ctx = wlan_objmgr_get_mlo_ctx();
 	uint8_t id = 0;
-	enum QDF_OPMODE opmode = wlan_vdev_mlme_get_opmode(vdev);
 
 	mld_addr = (struct qdf_mac_addr *)wlan_vdev_mlme_get_mldaddr(vdev);
 	ml_dev = wlan_mlo_get_mld_ctx_by_mldaddr(mld_addr);
+
 	if (ml_dev) {
+		if (mlo_dev_config_check(ml_dev, vdev) != QDF_STATUS_SUCCESS)
+			return QDF_STATUS_E_FAILURE;
+
 		mlo_dev_lock_acquire(ml_dev);
 		while (id < WLAN_UMAC_MLO_MAX_VDEVS) {
 			if (ml_dev->wlan_vdev_list[id]) {
-				if (wlan_vdev_mlme_get_opmode(
-					ml_dev->wlan_vdev_list[id]) !=
-						opmode) {
-					mlo_err("Invalid opmode type found, investigate config");
-					mlo_dev_lock_release(ml_dev);
-					return QDF_STATUS_E_FAILURE;
-				}
-
-				if (wlan_mlo_vdev_cmp_same_pdev(
-						ml_dev->wlan_vdev_list[id],
-						vdev) == QDF_STATUS_SUCCESS) {
-					mlo_err("Invalid pdev type found, investigate config");
-					mlo_dev_lock_release(ml_dev);
-					return QDF_STATUS_E_FAILURE;
-				}
 				id++;
 				continue;
 			}
+
 			ml_dev->wlan_vdev_list[id] = vdev;
 			ml_dev->wlan_vdev_count++;
 			vdev->mlo_dev_ctx = ml_dev;

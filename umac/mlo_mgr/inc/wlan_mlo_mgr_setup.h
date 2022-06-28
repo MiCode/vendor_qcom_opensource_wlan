@@ -139,6 +139,18 @@ QDF_STATUS mlo_link_teardown_link(struct wlan_objmgr_psoc *psoc,
  */
 bool mlo_vdevs_check_single_soc(struct wlan_objmgr_vdev **wlan_vdev_list,
 				uint8_t vdev_count);
+
+/**
+ * mlo_check_all_pdev_state() - API to check all the pdev of the soc
+ *                              are on the same expected state.
+ *
+ * @psoc: Pointer to psoc object
+ * @state: Expected link state to be verified
+ *
+ * Return: QDF_STATUS: QDF_STATUS_SUCCESS if all belongs to same state
+ */
+QDF_STATUS mlo_check_all_pdev_state(struct wlan_objmgr_psoc *psoc,
+				    enum MLO_LINK_STATE state);
 #else
 static inline void mlo_setup_init(void)
 {
@@ -153,6 +165,13 @@ mlo_vdevs_check_single_soc(struct wlan_objmgr_vdev **wlan_vdev_list,
 			   uint8_t vdev_count)
 {
 	return true;
+}
+
+static inline
+QDF_STATUS mlo_check_all_pdev_state(struct wlan_objmgr_psoc *psoc,
+				    uint32_t state)
+{
+	return QDF_STATUS_SUCCESS;
 }
 #endif /* WLAN_MLO_MULTI_CHIP */
 #endif /* _WLAN_MLO_MGR_SETUP_H_ */

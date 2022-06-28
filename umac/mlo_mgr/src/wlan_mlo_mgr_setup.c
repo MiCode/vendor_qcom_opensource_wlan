@@ -457,7 +457,6 @@ static void mlo_force_teardown(void)
 		mlo_ctx->setup_info.state[link_idx] = MLO_LINK_TEARDOWN;
 }
 
-static
 QDF_STATUS mlo_check_all_pdev_state(struct wlan_objmgr_psoc *psoc,
 				    enum MLO_LINK_STATE state)
 {
