@@ -1301,7 +1301,7 @@ void dp_peer_ast_hash_remove(struct dp_soc *soc,
 	struct dp_ast_entry *tmpase;
 	int found = 0;
 
-	if (soc->ast_offload_support)
+	if (soc->ast_offload_support && !soc->host_ast_db_enable)
 		return;
 
 	index = dp_peer_ast_hash_index(soc, &ase->mac_addr);
@@ -2433,7 +2433,7 @@ dp_peer_clean_wds_entries(struct dp_soc *soc, struct dp_peer *peer,
 {
 	uint32_t wds_deleted = 0;
 
-	if (soc->ast_offload_support)
+	if (soc->ast_offload_support && !soc->host_ast_db_enable)
 		return;
 
 	wds_deleted = dp_peer_ast_free_wds_entries(soc, peer);
@@ -3157,8 +3157,14 @@ dp_rx_peer_unmap_handler(struct dp_soc *soc, uint16_t peer_id,
 	struct dp_peer *peer;
 	struct dp_vdev *vdev = NULL;
 
-	if (soc->ast_offload_support && is_wds)
-		return;
+	/*
+	 * If FW AST offload is enabled and host AST DB is enabled,
+	 * the AST entries are created during peer map from FW.
+	 */
+	if (soc->ast_offload_support && is_wds) {
+		if (!soc->host_ast_db_enable)
+			return;
+	}
 
 	peer = __dp_peer_get_ref_by_id(soc, peer_id, DP_MOD_ID_HTT);
 
