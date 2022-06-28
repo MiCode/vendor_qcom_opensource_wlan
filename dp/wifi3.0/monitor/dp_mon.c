@@ -1234,9 +1234,46 @@ void dp_pktlogmod_exit(struct dp_pdev *pdev)
 #endif /*DP_CON_MON*/
 
 #if defined(WDI_EVENT_ENABLE) && defined(QCA_ENHANCED_STATS_SUPPORT)
+#ifdef IPA_OFFLOAD
+void dp_peer_get_tx_rx_stats(struct dp_peer *peer,
+			     struct cdp_interface_peer_stats *peer_stats_intf)
+{
+	struct dp_rx_tid *rx_tid = NULL;
+	uint8_t i = 0;
+
+	for (i = 0; i < DP_MAX_TIDS; i++) {
+		rx_tid = &peer->rx_tid[i];
+		peer_stats_intf->rx_byte_count +=
+			rx_tid->rx_msdu_cnt.bytes;
+		peer_stats_intf->rx_packet_count +=
+			rx_tid->rx_msdu_cnt.num;
+	}
+	peer_stats_intf->tx_packet_count =
+		peer->monitor_peer->stats.tx.tx_ucast_success.num;
+	peer_stats_intf->tx_byte_count =
+		peer->monitor_peer->stats.tx.tx_ucast_success.bytes;
+}
+#else
+void dp_peer_get_tx_rx_stats(struct dp_peer *peer,
+			     struct cdp_interface_peer_stats *peer_stats_intf)
+{
+	struct dp_txrx_peer *txrx_peer = NULL;
+	struct dp_peer *tgt_peer = NULL;
+
+	tgt_peer = dp_get_tgt_peer_from_peer(peer);
+	txrx_peer = tgt_peer->txrx_peer;
+	peer_stats_intf->rx_packet_count = txrx_peer->to_stack.num;
+	peer_stats_intf->rx_byte_count = txrx_peer->to_stack.bytes;
+	peer_stats_intf->tx_packet_count =
+			txrx_peer->stats.per_pkt_stats.tx.ucast.num;
+	peer_stats_intf->tx_byte_count =
+			txrx_peer->stats.per_pkt_stats.tx.tx_success.bytes;
+}
+#endif
+
 QDF_STATUS dp_peer_stats_notify(struct dp_pdev *dp_pdev, struct dp_peer *peer)
 {
-	struct cdp_interface_peer_stats peer_stats_intf;
+	struct cdp_interface_peer_stats peer_stats_intf = {0};
 	struct dp_mon_peer_stats *mon_peer_stats = NULL;
 	struct dp_peer *tgt_peer = NULL;
 	struct dp_txrx_peer *txrx_peer = NULL;
@@ -1254,7 +1291,6 @@ QDF_STATUS dp_peer_stats_notify(struct dp_pdev *dp_pdev, struct dp_peer *peer)
 
 	mon_peer_stats = &peer->monitor_peer->stats;
 
-	qdf_mem_zero(&peer_stats_intf, sizeof(peer_stats_intf));
 	if (mon_peer_stats->rx.last_snr != mon_peer_stats->rx.snr)
 		peer_stats_intf.rssi_changed = true;
 
@@ -1269,12 +1305,7 @@ QDF_STATUS dp_peer_stats_notify(struct dp_pdev *dp_pdev, struct dp_peer *peer)
 		peer_stats_intf.peer_tx_rate = mon_peer_stats->tx.tx_rate;
 		peer_stats_intf.peer_rssi = mon_peer_stats->rx.snr;
 		peer_stats_intf.ack_rssi = mon_peer_stats->tx.last_ack_rssi;
-		peer_stats_intf.rx_packet_count = txrx_peer->to_stack.num;
-		peer_stats_intf.rx_byte_count = txrx_peer->to_stack.bytes;
-		peer_stats_intf.tx_packet_count =
-				txrx_peer->stats.per_pkt_stats.tx.ucast.num;
-		peer_stats_intf.tx_byte_count =
-			txrx_peer->stats.per_pkt_stats.tx.tx_success.bytes;
+		dp_peer_get_tx_rx_stats(peer, &peer_stats_intf);
 		peer_stats_intf.per = tgt_peer->stats.tx.last_per;
 		peer_stats_intf.free_buff = INVALID_FREE_BUFF;
 		dp_wdi_event_handler(WDI_EVENT_PEER_STATS, dp_pdev->soc,
@@ -2082,6 +2113,37 @@ void dp_peer_update_telemetry_stats(struct dp_peer *peer)
  * @peer : Datapath peer
  * @arg : argument to iter function
  */
+#ifdef IPA_OFFLOAD
+static void
+dp_peer_cal_clients_stats_update(struct dp_soc *soc,
+				 struct dp_peer *peer,
+				 void *arg)
+{
+	struct cdp_calibr_stats_intf peer_stats_intf = {0};
+	struct dp_peer *tgt_peer = NULL;
+	struct dp_txrx_peer *txrx_peer = NULL;
+
+	dp_peer_update_telemetry_stats(peer);
+
+	if (!dp_peer_is_primary_link_peer(peer))
+		return;
+
+	tgt_peer = dp_get_tgt_peer_from_peer(peer);
+	if (!tgt_peer || !(tgt_peer->txrx_peer))
+		return;
+
+	txrx_peer = tgt_peer->txrx_peer;
+	peer_stats_intf.to_stack = txrx_peer->to_stack;
+	peer_stats_intf.tx_success =
+				peer->monitor_peer->stats.tx.tx_ucast_success;
+	peer_stats_intf.tx_ucast =
+				peer->monitor_peer->stats.tx.tx_ucast_total;
+
+	dp_cal_client_update_peer_stats_wifi3(&peer_stats_intf,
+					      &tgt_peer->stats);
+	dp_peer_get_rxtid_stats_ipa(peer, dp_peer_update_tid_stats_from_reo);
+}
+#else
 static void
 dp_peer_cal_clients_stats_update(struct dp_soc *soc,
 				 struct dp_peer *peer,
@@ -2110,6 +2172,7 @@ dp_peer_cal_clients_stats_update(struct dp_soc *soc,
 	dp_cal_client_update_peer_stats_wifi3(&peer_stats_intf,
 					      &tgt_peer->stats);
 }
+#endif
 
 /*dp_iterate_update_peer_list - update peer stats on cal client timer
  * @pdev_hdl: pdev handle
