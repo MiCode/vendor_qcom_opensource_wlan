@@ -1422,6 +1422,137 @@ struct dp_ast_entry *dp_peer_ast_hash_find_soc(struct dp_soc *soc,
 }
 
 /*
+ * dp_peer_host_add_map_ast() - Add ast entry with HW AST Index
+ * @soc: SoC handle
+ * @peer_id: peer id from firmware
+ * @mac_addr: MAC address of ast node
+ * @hw_peer_id: HW AST Index returned by target in peer map event
+ * @vdev_id: vdev id for VAP to which the peer belongs to
+ * @ast_hash: ast hash value in HW
+ * @is_wds: flag to indicate peer map event for WDS ast entry
+ *
+ * Return: QDF_STATUS code
+ */
+static inline
+QDF_STATUS dp_peer_host_add_map_ast(struct dp_soc *soc, uint16_t peer_id,
+				    uint8_t *mac_addr, uint16_t hw_peer_id,
+				    uint8_t vdev_id, uint16_t ast_hash,
+				    uint8_t is_wds)
+{
+	struct dp_vdev *vdev;
+	struct dp_ast_entry *ast_entry;
+	enum cdp_txrx_ast_entry_type type;
+	struct dp_peer *peer;
+	struct dp_peer *old_peer;
+	QDF_STATUS status = QDF_STATUS_SUCCESS;
+
+	if (is_wds)
+		type = CDP_TXRX_AST_TYPE_WDS;
+	else
+		type = CDP_TXRX_AST_TYPE_STATIC;
+
+	peer = dp_peer_get_ref_by_id(soc, peer_id, DP_MOD_ID_HTT);
+	if (!peer) {
+		dp_peer_info("Peer not found soc:%pK: peer_id %d, peer_mac " QDF_MAC_ADDR_FMT ", vdev_id %d",
+			     soc, peer_id,
+			     QDF_MAC_ADDR_REF(mac_addr), vdev_id);
+		return QDF_STATUS_E_INVAL;
+	}
+
+	vdev = peer->vdev;
+	if (!vdev) {
+		dp_peer_err("%pK: Peers vdev is NULL", soc);
+		status = QDF_STATUS_E_INVAL;
+		goto fail;
+	}
+
+	if (!dp_peer_state_cmp(peer, DP_PEER_STATE_ACTIVE)) {
+		if (type != CDP_TXRX_AST_TYPE_STATIC &&
+		    type != CDP_TXRX_AST_TYPE_SELF) {
+			status = QDF_STATUS_E_BUSY;
+			goto fail;
+		}
+	}
+
+	dp_peer_debug("%pK: vdev: %u  ast_entry->type: %d peer_mac: " QDF_MAC_ADDR_FMT " peer: %pK mac " QDF_MAC_ADDR_FMT,
+		      soc, vdev->vdev_id, type,
+		      QDF_MAC_ADDR_REF(peer->mac_addr.raw), peer,
+		      QDF_MAC_ADDR_REF(mac_addr));
+
+	qdf_spin_lock_bh(&soc->ast_lock);
+
+	ast_entry = dp_peer_ast_hash_find_soc(soc, mac_addr);
+	if (ast_entry) {
+		dp_peer_debug("AST present ID %d vid %d mac " QDF_MAC_ADDR_FMT,
+			      hw_peer_id, vdev_id,
+			      QDF_MAC_ADDR_REF(mac_addr));
+
+		old_peer = __dp_peer_get_ref_by_id(soc, ast_entry->peer_id,
+						   DP_MOD_ID_AST);
+		if (!old_peer) {
+			dp_peer_info("Peer not found soc:%pK: peer_id %d, peer_mac " QDF_MAC_ADDR_FMT ", vdev_id %d",
+				     soc, ast_entry->peer_id,
+				     QDF_MAC_ADDR_REF(mac_addr), vdev_id);
+			qdf_spin_unlock_bh(&soc->ast_lock);
+			status = QDF_STATUS_E_INVAL;
+			goto fail;
+		}
+
+		dp_peer_unlink_ast_entry(soc, ast_entry, old_peer);
+		dp_peer_free_ast_entry(soc, ast_entry);
+		if (old_peer)
+			dp_peer_unref_delete(old_peer, DP_MOD_ID_AST);
+	}
+
+	ast_entry = (struct dp_ast_entry *)
+		qdf_mem_malloc(sizeof(struct dp_ast_entry));
+	if (!ast_entry) {
+		dp_peer_err("%pK: fail to allocate ast_entry", soc);
+		qdf_spin_unlock_bh(&soc->ast_lock);
+		QDF_ASSERT(0);
+		status = QDF_STATUS_E_NOMEM;
+		goto fail;
+	}
+
+	qdf_mem_copy(&ast_entry->mac_addr.raw[0], mac_addr, QDF_MAC_ADDR_SIZE);
+	ast_entry->pdev_id = vdev->pdev->pdev_id;
+	ast_entry->is_mapped = false;
+	ast_entry->delete_in_progress = false;
+	ast_entry->next_hop = 0;
+	ast_entry->vdev_id = vdev->vdev_id;
+	ast_entry->type = type;
+
+	switch (type) {
+	case CDP_TXRX_AST_TYPE_STATIC:
+		if (peer->vdev->opmode == wlan_op_mode_sta)
+			ast_entry->type = CDP_TXRX_AST_TYPE_STA_BSS;
+		break;
+	case CDP_TXRX_AST_TYPE_WDS:
+		ast_entry->next_hop = 1;
+		break;
+	default:
+		dp_peer_alert("%pK: Incorrect AST entry type", soc);
+	}
+
+	ast_entry->is_active = TRUE;
+	DP_STATS_INC(soc, ast.added, 1);
+	soc->num_ast_entries++;
+	dp_peer_ast_hash_add(soc, ast_entry);
+
+	ast_entry->ast_idx = hw_peer_id;
+	ast_entry->ast_hash_value = ast_hash;
+	ast_entry->peer_id = peer_id;
+	TAILQ_INSERT_TAIL(&peer->ast_entry_list, ast_entry,
+			  ase_list_elem);
+
+	qdf_spin_unlock_bh(&soc->ast_lock);
+fail:
+	dp_peer_unref_delete(peer, DP_MOD_ID_HTT);
+
+	return status;
+}
+
+/*
  * dp_peer_map_ast() - Map the ast entry with HW AST Index
  * @soc: SoC handle
  * @peer: peer to which ast node belongs
@@ -2993,6 +3124,16 @@ dp_rx_peer_map_handler(struct dp_soc *soc, uint16_t peer_id,
 	}
 
 	dp_rx_reset_roaming_peer(soc, vdev_id, peer_mac_addr);
+
+	/*
+	 * If AST offload and host AST DB is enabled, populate AST entries on
+	 * host based on peer map event from FW
+	 */
+	if (soc->ast_offload_support && soc->host_ast_db_enable) {
+		dp_peer_host_add_map_ast(soc, peer_id, peer_mac_addr,
+					 hw_peer_id, vdev_id,
+					 ast_hash, is_wds);
+	}
 
 	return err;
 }
