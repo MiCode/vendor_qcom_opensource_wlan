@@ -1033,6 +1033,13 @@ dp_tx_mon_generated_response_frm(struct dp_pdev *pdev,
 	}
 	case TXMON_GEN_RESP_SELFGEN_CTS:
 	{
+		TXMON_PPDU_COM(tx_ppdu_info,
+			       frame_control) = ((IEEE80211_FC0_TYPE_CTL <<
+						  IEEE80211_FC0_TYPE_SHIFT) |
+						 (IEEE80211_FC0_SUBTYPE_CTS <<
+						  IEEE80211_FC0_SUBTYPE_SHIFT));
+		TXMON_PPDU_COM(tx_ppdu_info,
+			       frame_control_info_valid) = 1;
 		dp_tx_mon_generate_cts2self_frm(pdev, tx_ppdu_info);
 		break;
 	}
@@ -1205,6 +1212,8 @@ dp_tx_mon_update_ppdu_info_status(struct dp_pdev *pdev,
 	case HAL_MON_RESPONSE_END_STATUS_INFO:
 	{
 		dp_tx_mon_generated_response_frm(pdev, tx_data_ppdu_info);
+		status = dp_lite_mon_filter_subtype(mon_pdev_be,
+						    &tx_data_ppdu_info->hal_txmon);
 		break;
 	}
 	case HAL_MON_TX_FES_STATUS_START:
