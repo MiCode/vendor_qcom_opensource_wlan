@@ -58,6 +58,9 @@ void hal_qca6750_attach(struct hal_soc *hal);
 #ifdef QCA_WIFI_QCA5018
 void hal_qca5018_attach(struct hal_soc *hal);
 #endif
+#ifdef QCA_WIFI_QCA5332
+void hal_qca5332_attach(struct hal_soc *hal);
+#endif
 #ifdef QCA_WIFI_KIWI
 void hal_kiwi_attach(struct hal_soc *hal);
 #endif
@@ -504,6 +507,13 @@ static void hal_target_based_configure(struct hal_soc *hal)
 		hal->use_register_windowing = true;
 		hal->static_window_map = true;
 		hal_qcn9224_attach(hal);
+	break;
+#endif
+#ifdef QCA_WIFI_QCA5332
+	case TARGET_TYPE_QCA5332:
+		hal->use_register_windowing = true;
+		hal->static_window_map = true;
+		hal_qca5332_attach(hal);
 	break;
 #endif
 	default:
