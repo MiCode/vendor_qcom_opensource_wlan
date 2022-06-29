@@ -826,11 +826,9 @@ QDF_STATUS wlan_mlo_peer_create(struct wlan_objmgr_vdev *vdev,
 		}
 	}
 
-	if ((wlan_vdev_mlme_get_opmode(vdev) == QDF_STA_MODE)) {
-		ml_peer = mlo_get_mlpeer(
-				ml_dev,
-				(struct qdf_mac_addr *)&link_peer->mldaddr[0]);
-	}
+	if (wlan_vdev_mlme_get_opmode(vdev) == QDF_STA_MODE)
+		ml_peer = wlan_mlo_get_mlpeer(ml_dev,
+				 (struct qdf_mac_addr *)&link_peer->mldaddr[0]);
 
 	if (!ml_peer) {
 		/* Allocate MLO peer */
