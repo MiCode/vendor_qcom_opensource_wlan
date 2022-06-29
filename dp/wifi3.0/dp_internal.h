@@ -156,6 +156,103 @@ struct htt_dbgfs_cfg {
 	(1 << HTT_PPDU_STATS_USR_COMPLTN_BA_BITMAP_256_TLV) | \
 	(1 << HTT_PPDU_STATS_USR_MPDU_ENQ_BITMAP_256_TLV))
 
+static const enum cdp_packet_type hal_2_dp_pkt_type_map[HAL_DOT11_MAX] = {
+	[HAL_DOT11A] = DOT11_A,
+	[HAL_DOT11B] = DOT11_B,
+	[HAL_DOT11N_MM] = DOT11_N,
+	[HAL_DOT11AC] = DOT11_AC,
+	[HAL_DOT11AX] = DOT11_AX,
+	[HAL_DOT11BA] = DOT11_MAX,
+#ifdef WLAN_FEATURE_11BE
+	[HAL_DOT11BE] = DOT11_BE,
+#else
+	[HAL_DOT11BE] = DOT11_MAX,
+#endif
+	[HAL_DOT11AZ] = DOT11_MAX,
+	[HAL_DOT11N_GF] = DOT11_MAX,
+};
+
+#ifdef WLAN_FEATURE_11BE
+/**
+ * dp_get_mcs_array_index_by_pkt_type_mcs () - get the destination mcs index
+					       in array
+ * @pkt_type: host SW pkt type
+ * @mcs: mcs value for TX/RX rate
+ *
+ * Return: succeeded - valid index in mcs array
+	   fail - same value as MCS_MAX
+ */
+static inline uint8_t
+dp_get_mcs_array_index_by_pkt_type_mcs(uint32_t pkt_type, uint32_t mcs)
+{
+	uint8_t dst_mcs_idx = MCS_INVALID_ARRAY_INDEX;
+
+	switch (pkt_type) {
+	case DOT11_A:
+		dst_mcs_idx =
+			mcs >= MAX_MCS_11A ? (MAX_MCS - 1) : mcs;
+		break;
+	case DOT11_B:
+		dst_mcs_idx =
+			mcs >= MAX_MCS_11B ? (MAX_MCS - 1) : mcs;
+		break;
+	case DOT11_N:
+		dst_mcs_idx =
+			mcs >= MAX_MCS_11N ? (MAX_MCS - 1) : mcs;
+		break;
+	case DOT11_AC:
+		dst_mcs_idx =
+			mcs >= MAX_MCS_11AC ? (MAX_MCS - 1) : mcs;
+		break;
+	case DOT11_AX:
+		dst_mcs_idx =
+			mcs >= MAX_MCS_11AX ? (MAX_MCS - 1) : mcs;
+		break;
+	case DOT11_BE:
+		dst_mcs_idx =
+			mcs >= MAX_MCS_11BE ? (MAX_MCS - 1) : mcs;
+		break;
+	default:
+		break;
+	}
+
+	return dst_mcs_idx;
+}
+#else
+static inline uint8_t
+dp_get_mcs_array_index_by_pkt_type_mcs(uint32_t pkt_type, uint32_t mcs)
+{
+	uint8_t dst_mcs_idx = MCS_INVALID_ARRAY_INDEX;
+
+	switch (pkt_type) {
+	case DOT11_A:
+		dst_mcs_idx =
+			mcs >= MAX_MCS_11A ? (MAX_MCS - 1) : mcs;
+		break;
+	case DOT11_B:
+		dst_mcs_idx =
+			mcs >= MAX_MCS_11B ? (MAX_MCS - 1) : mcs;
+		break;
+	case DOT11_N:
+		dst_mcs_idx =
+			mcs >= MAX_MCS_11N ? (MAX_MCS - 1) : mcs;
+		break;
+	case DOT11_AC:
+		dst_mcs_idx =
+			mcs >= MAX_MCS_11AC ? (MAX_MCS - 1) : mcs;
+		break;
+	case DOT11_AX:
+		dst_mcs_idx =
+			mcs >= MAX_MCS_11AX ? (MAX_MCS - 1) : mcs;
+		break;
+	default:
+		break;
+	}
+
+	return dst_mcs_idx;
+}
+#endif
+
 QDF_STATUS dp_mon_soc_attach(struct dp_soc *soc);
 QDF_STATUS dp_mon_soc_detach(struct dp_soc *soc);
 

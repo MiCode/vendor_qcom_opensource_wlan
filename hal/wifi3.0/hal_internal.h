@@ -1325,4 +1325,33 @@ struct hal_srng *hal_ring_handle_to_hal_srng(hal_ring_handle_t hal_ring)
  * REO2PPE destination indication
  */
 #define REO2PPE_DST_IND 11
+
+/**
+ * enum hal_pkt_type - Type of packet type reported by HW
+ * @HAL_DOT11A: 802.11a PPDU type
+ * @HAL_DOT11B: 802.11b PPDU type
+ * @HAL_DOT11N_MM: 802.11n Mixed Mode PPDU type
+ * @HAL_DOT11AC: 802.11ac PPDU type
+ * @HAL_DOT11AX: 802.11ax PPDU type
+ * @HAL_DOT11BA: 802.11ba (WUR) PPDU type
+ * @HAL_DOT11BE: 802.11be PPDU type
+ * @HAL_DOT11AZ: 802.11az (ranging) PPDU type
+ * @HAL_DOT11N_GF: 802.11n Green Field PPDU type
+ *
+ * Enum indicating the packet type reported by HW in rx_pkt_tlvs (RX data)
+ * or WBM2SW ring entry's descriptor (TX data completion)
+ */
+enum hal_pkt_type {
+	HAL_DOT11A = 0,
+	HAL_DOT11B = 1,
+	HAL_DOT11N_MM = 2,
+	HAL_DOT11AC = 3,
+	HAL_DOT11AX = 4,
+	HAL_DOT11BA = 5,
+	HAL_DOT11BE = 6,
+	HAL_DOT11AZ = 7,
+	HAL_DOT11N_GF = 8,
+	HAL_DOT11_MAX,
+};
+
 #endif /* _HAL_INTERNAL_H_ */
