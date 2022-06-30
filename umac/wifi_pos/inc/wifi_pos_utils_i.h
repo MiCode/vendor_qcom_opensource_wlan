@@ -220,6 +220,7 @@ typedef void (*wifi_pos_send_rsp_handler)(struct wlan_objmgr_psoc *, uint32_t,
  * struct wifi_pos_legacy_ops  - wifi pos module legacy callbacks
  * @pasn_peer_create_cb: PASN peer create callback
  * @pasn_peer_delete_cb: PASN peer delete callback
+ * @pasn_vdev_delete_resume_cb: PASN resume vdev delete callback
  */
 struct wifi_pos_legacy_ops {
 	QDF_STATUS (*pasn_peer_create_cb)(struct wlan_objmgr_psoc *psoc,
@@ -229,6 +230,7 @@ struct wifi_pos_legacy_ops {
 					  struct qdf_mac_addr *peer_addr,
 					  uint8_t vdev_id,
 					  bool no_fw_peer_delete);
+	QDF_STATUS (*pasn_vdev_delete_resume_cb)(struct wlan_objmgr_vdev *vdev);
 };
 
 /**

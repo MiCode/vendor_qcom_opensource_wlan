@@ -1178,6 +1178,11 @@ static QDF_STATUS target_if_vdev_mgr_peer_delete_all_send(
 	}
 
 	vdev_rsp->expire_time = PEER_DELETE_ALL_RESPONSE_TIMER;
+	vdev_rsp->peer_type_bitmap = param->peer_type_bitmap;
+
+	mlme_debug("VDEV_%d: PSOC_%d vdev delete all: bitmap:%d", vdev_id,
+		   wlan_psoc_get_id(psoc), vdev_rsp->peer_type_bitmap);
+
 	target_if_vdev_mgr_rsp_timer_start(psoc, vdev_rsp,
 					   PEER_DELETE_ALL_RESPONSE_BIT);
 

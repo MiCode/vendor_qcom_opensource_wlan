@@ -1396,6 +1396,30 @@ static QDF_STATUS send_peer_delete_cmd_tlv(wmi_unified_t wmi,
 	return 0;
 }
 
+static void
+wmi_get_converted_peer_bitmap(uint32_t src_peer_bitmap, uint32_t *dst_bitmap)
+{
+	if  (QDF_HAS_PARAM(src_peer_bitmap, WLAN_PEER_SELF))
+		WMI_VDEV_DELETE_ALL_PEER_BITMAP_SET(dst_bitmap,
+						    WMI_PEER_TYPE_DEFAULT);
+
+	if  (QDF_HAS_PARAM(src_peer_bitmap, WLAN_PEER_AP))
+		WMI_VDEV_DELETE_ALL_PEER_BITMAP_SET(dst_bitmap,
+						    WMI_PEER_TYPE_BSS);
+
+	if  (QDF_HAS_PARAM(src_peer_bitmap, WLAN_PEER_TDLS))
+		WMI_VDEV_DELETE_ALL_PEER_BITMAP_SET(dst_bitmap,
+						    WMI_PEER_TYPE_TDLS);
+
+	if  (QDF_HAS_PARAM(src_peer_bitmap, WLAN_PEER_NDP))
+		WMI_VDEV_DELETE_ALL_PEER_BITMAP_SET(dst_bitmap,
+						    WMI_PEER_TYPE_NAN_DATA);
+
+	if  (QDF_HAS_PARAM(src_peer_bitmap, WLAN_PEER_RTT_PASN))
+		WMI_VDEV_DELETE_ALL_PEER_BITMAP_SET(dst_bitmap,
+						    WMI_PEER_TYPE_PASN);
+}
+
 /**
  * send_peer_delete_all_cmd_tlv() - send PEER delete all command to fw
  * @wmi: wmi handle
@@ -1422,8 +1446,11 @@ static QDF_STATUS send_peer_delete_all_cmd_tlv(
 		WMITLV_GET_STRUCT_TLVLEN
 				(wmi_vdev_delete_all_peer_cmd_fixed_param));
 	cmd->vdev_id = param->vdev_id;
+	wmi_get_converted_peer_bitmap(param->peer_type_bitmap,
+				      cmd->peer_type_bitmap);
 
-	wmi_debug("vdev_id %d", cmd->vdev_id);
+	wmi_debug("vdev_id %d peer_type_bitmap:%d", cmd->vdev_id,
+		  param->peer_type_bitmap);
 	wmi_mtrace(WMI_VDEV_DELETE_ALL_PEER_CMDID, cmd->vdev_id, 0);
 	if (wmi_unified_cmd_send(wmi, buf, len,
 				 WMI_VDEV_DELETE_ALL_PEER_CMDID)) {

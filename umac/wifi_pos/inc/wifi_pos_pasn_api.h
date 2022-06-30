@@ -134,6 +134,48 @@ wifi_pos_send_pasn_auth_status(struct wlan_objmgr_psoc *psoc,
 QDF_STATUS
 wifi_pos_send_pasn_peer_deauth(struct wlan_objmgr_psoc *psoc,
 			       struct qdf_mac_addr *peer_mac);
+
+/**
+ * wifi_pos_get_pasn_peer_count() - Wifi POS get total pasn peer count
+ * @vdev: Pointer to vdev object
+ *
+ * Return: Total number of pasn peers
+ */
+uint8_t
+wifi_pos_get_pasn_peer_count(struct wlan_objmgr_vdev *vdev);
+
+/**
+ * wifi_pos_update_pasn_peer_count() - Increment pasn peer count
+ * @vdev: Pointer to vdev object
+ * @is_increment: flag to indicate if peer count needs to be incremented
+ *
+ * Return: None
+ */
+void wifi_pos_update_pasn_peer_count(struct wlan_objmgr_vdev *vdev,
+				     bool is_increment);
+
+/**
+ * wifi_pos_vdev_delete_all_ranging_peers() - Delete all ranging peers
+ * associated with given vdev id
+ * @psoc: Psoc pointer
+ * @vdev_id: vdev id
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+wifi_pos_vdev_delete_all_ranging_peers(struct wlan_objmgr_vdev *vdev);
+
+/**
+ * wifi_pos_vdev_delete_all_ranging_peers_rsp() - Delete all vdev peers response
+ * handler
+ * @psoc: Psoc pointer
+ * @vdev_id: vdev id
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+wifi_pos_vdev_delete_all_ranging_peers_rsp(struct wlan_objmgr_psoc *psoc,
+					   uint8_t vdev_id);
 #else
 static inline
 QDF_STATUS wifi_pos_handle_ranging_peer_create(struct wlan_objmgr_psoc *psoc,
@@ -176,6 +218,23 @@ wifi_pos_handle_ranging_peer_delete(struct wlan_objmgr_psoc *psoc,
 static inline QDF_STATUS
 wifi_pos_send_pasn_peer_deauth(struct wlan_objmgr_psoc *psoc,
 			       struct qdf_mac_addr *peer_mac)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static inline void
+wifi_pos_update_pasn_peer_count(struct wlan_objmgr_vdev *vdev,
+				bool is_increment)
+{}
+
+static inline uint8_t
+wifi_pos_get_pasn_peer_count(struct wlan_objmgr_vdev *vdev)
+{
+	return 0;
+}
+
+static inline QDF_STATUS
+wifi_pos_vdev_delete_all_ranging_peers(struct wlan_objmgr_vdev *vdev)
 {
 	return QDF_STATUS_SUCCESS;
 }

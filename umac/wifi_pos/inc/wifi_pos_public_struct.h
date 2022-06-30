@@ -104,9 +104,14 @@ struct wifi_pos_11az_context {
 /**
  * struct wifi_pos_vdev_priv_obj  - Wifi Pos module vdev private object
  * @pasn_context: 11az security peers context.
+ * @num_pasn_peers: Total number of PASN peers
+ * @is_delete_all_pasn_peer_in_progress: Delete all the VDEV PASN peers in
+ * progress
  */
 struct wifi_pos_vdev_priv_obj {
 	struct wifi_pos_11az_context pasn_context;
+	uint8_t num_pasn_peers;
+	bool is_delete_all_pasn_peer_in_progress;
 };
 
 /**

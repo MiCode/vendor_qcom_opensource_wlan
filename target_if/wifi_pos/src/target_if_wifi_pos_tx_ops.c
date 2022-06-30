@@ -29,6 +29,8 @@
 #include "target_if_wifi_pos.h"
 #include "target_if_wifi_pos_tx_ops.h"
 #include "wifi_pos_utils_i.h"
+#include "wifi_pos_api.h"
+#include "wifi_pos_pasn_api.h"
 #include "target_if.h"
 
 /**
@@ -311,6 +313,8 @@ void target_if_wifi_pos_register_tx_ops(struct wlan_lmac_if_tx_ops *tx_ops)
 	wifi_pos_tx_ops->data_req_tx = target_if_wifi_pos_oem_data_req;
 	wifi_pos_tx_ops->wifi_pos_parse_measreq_chan_info =
 			target_if_wifi_pos_parse_measreq_chan_info;
+	wifi_pos_tx_ops->wifi_pos_vdev_delete_all_ranging_peers_cb =
+			wifi_pos_vdev_delete_all_ranging_peers;
 
 	target_if_wifi_pos_register_11az_ops(wifi_pos_tx_ops);
 }

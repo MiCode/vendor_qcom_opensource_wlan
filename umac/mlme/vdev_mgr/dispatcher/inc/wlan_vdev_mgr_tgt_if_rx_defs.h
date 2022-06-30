@@ -108,6 +108,7 @@ defined(QCA_WIFI_QCA5018)
  * @timer_status: status of timer
  * @rsp_timer_inuse: Status bit to inform whether the rsp timer is inuse
  * @vdev_id: vdev object id
+ * @peer_type_bitmap: Peer type bitmap
  */
 struct vdev_response_timer {
 	struct wlan_objmgr_psoc *psoc;
@@ -117,6 +118,7 @@ struct vdev_response_timer {
 	QDF_STATUS timer_status;
 	qdf_atomic_t rsp_timer_inuse;
 	uint8_t vdev_id;
+	uint32_t peer_type_bitmap;
 };
 
 /**
@@ -165,10 +167,12 @@ struct vdev_delete_response {
  * struct peer_delete_all_response - peer delete all response structure
  * @vdev_id: vdev id
  * @status: FW status for vdev delete all peer request
+ * @peer_type_bitmap: bitmap of peer type to delete from enum wlan_peer_type
  */
 struct peer_delete_all_response {
 	uint8_t vdev_id;
 	uint8_t status;
+	uint32_t peer_type_bitmap;
 };
 
 /**

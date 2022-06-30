@@ -24,6 +24,7 @@
 #include "qdf_types.h"
 #include "qdf_status.h"
 #include <wlan_objmgr_cmn.h>
+#include "wifi_pos_public_struct.h"
 
 #if defined(WIFI_POS_CONVERGED) && defined(WLAN_FEATURE_RTT_11AZ_SUPPORT)
 /**
