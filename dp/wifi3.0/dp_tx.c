@@ -41,7 +41,7 @@
 #endif
 #include "dp_hist.h"
 #ifdef WLAN_DP_FEATURE_SW_LATENCY_MGR
-#include <dp_swlm.h>
+#include <wlan_dp_swlm.h>
 #endif
 #ifdef WIFI_MONITOR_SUPPORT
 #include <dp_mon.h>

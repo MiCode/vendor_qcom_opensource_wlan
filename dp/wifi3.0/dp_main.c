@@ -91,7 +91,7 @@ cdp_dump_flow_pool_info(struct cdp_soc_t *soc)
 #endif
 #endif
 #ifdef WLAN_DP_FEATURE_SW_LATENCY_MGR
-#include <dp_swlm.h>
+#include <wlan_dp_swlm.h>
 #endif
 #ifdef CONFIG_SAWF_DEF_QUEUES
 #include "dp_sawf.h"
