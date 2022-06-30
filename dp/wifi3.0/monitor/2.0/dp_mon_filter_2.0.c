@@ -2974,3 +2974,92 @@ dp_mon_filter_setup_tx_lite_mon(struct dp_mon_pdev_be *be_mon_pdev)
 	be_mon_pdev->filter_be[mode][srng_type] = filter;
 }
 #endif /* QCA_SUPPORT_LITE_MONITOR */
+
+#if defined(WLAN_CFR_ENABLE) && defined(WLAN_ENH_CFR_ENABLE)
+/**
+ * dp_cfr_filter_2_0() - Configure HOST monitor destination ring for CFR
+ *
+ * @soc_hdl: Datapath soc handle
+ * @pdev_id: id of data path pdev handle
+ * @enable: Enable/Disable CFR
+ * @filter_val: Flag to select Filter for monitor mode
+ *
+ * Return: void
+ */
+static void dp_cfr_filter_2_0(struct cdp_soc_t *soc_hdl,
+			      uint8_t pdev_id,
+			      bool enable,
+			      struct cdp_monitor_filter *filter_val)
+{
+	struct dp_soc *soc = cdp_soc_t_to_dp_soc(soc_hdl);
+	struct dp_pdev *pdev = NULL;
+	struct htt_rx_ring_tlv_filter htt_tlv_filter = {0};
+	int max_mac_rings;
+	uint8_t mac_id = 0;
+	struct dp_mon_pdev *mon_pdev;
+
+	pdev = dp_get_pdev_from_soc_pdev_id_wifi3(soc, pdev_id);
+	if (!pdev) {
+		dp_mon_err("pdev is NULL");
+		return;
+	}
+
+	mon_pdev = pdev->monitor_pdev;
+
+	if (mon_pdev->mvdev) {
+		dp_mon_info("No action is needed since mon mode is enabled\n");
+		return;
+	}
+
+	soc = pdev->soc;
+	pdev->cfr_rcc_mode = false;
+	max_mac_rings = wlan_cfg_get_num_mac_rings(pdev->wlan_cfg_ctx);
+	dp_update_num_mac_rings_for_dbs(soc, &max_mac_rings);
+
+	dp_mon_debug("Max_mac_rings %d", max_mac_rings);
+	dp_mon_info("enable : %d, mode: 0x%x", enable, filter_val->mode);
+
+	if (enable) {
+		pdev->cfr_rcc_mode = true;
+		htt_tlv_filter.ppdu_start = 1;
+		htt_tlv_filter.ppdu_end = 1;
+		htt_tlv_filter.ppdu_end_user_stats = 1;
+		htt_tlv_filter.ppdu_end_user_stats_ext = 1;
+		htt_tlv_filter.ppdu_end_status_done = 1;
+		htt_tlv_filter.mpdu_start = 1;
+		htt_tlv_filter.offset_valid = false;
+
+		htt_tlv_filter.enable_fp =
+			(filter_val->mode & MON_FILTER_PASS) ? 1 : 0;
+		htt_tlv_filter.enable_md = 0;
+		htt_tlv_filter.enable_mo =
+			(filter_val->mode & MON_FILTER_OTHER) ? 1 : 0;
+		htt_tlv_filter.fp_mgmt_filter = filter_val->fp_mgmt;
+		htt_tlv_filter.fp_ctrl_filter = filter_val->fp_ctrl;
+		htt_tlv_filter.fp_data_filter = filter_val->fp_data;
+		htt_tlv_filter.mo_mgmt_filter = filter_val->mo_mgmt;
+		htt_tlv_filter.mo_ctrl_filter = filter_val->mo_ctrl;
+		htt_tlv_filter.mo_data_filter = filter_val->mo_data;
+	}
+
+	for (mac_id = 0;
+	     mac_id  < soc->wlan_cfg_ctx->num_rxdma_dst_rings_per_pdev;
+	     mac_id++) {
+		int mac_for_pdev =
+			dp_get_mac_id_for_pdev(mac_id, pdev->pdev_id);
+
+		if (soc->wlan_cfg_ctx->rxdma1_enable) {
+			htt_h2t_rx_ring_cfg(soc->htt_handle, mac_for_pdev,
+					    soc->rxdma_mon_dst_ring[mac_id]
+					    .hal_srng, RXDMA_MONITOR_DST,
+					    RX_DATA_BUFFER_SIZE,
+					    &htt_tlv_filter);
+		}
+	}
+}
+
+void dp_cfr_filter_register_2_0(struct cdp_ops *ops)
+{
+	ops->cfr_ops->txrx_cfr_filter = dp_cfr_filter_2_0;
+}
+#endif

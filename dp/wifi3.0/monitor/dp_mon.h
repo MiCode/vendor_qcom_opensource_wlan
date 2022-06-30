@@ -3966,6 +3966,16 @@ void dp_mon_ops_register_1_0(struct dp_mon_soc *mon_soc);
  */
 void dp_mon_cdp_ops_register_1_0(struct cdp_ops *ops);
 
+#if defined(WLAN_CFR_ENABLE) && defined(WLAN_ENH_CFR_ENABLE)
+/**
+ * dp_cfr_filter_register_1_0(): register cfr filter setting API
+ * @ops: cdp ops handle
+ *
+ * return: void
+ */
+void dp_cfr_filter_register_1_0(struct cdp_ops *ops);
+#endif
+
 #ifdef QCA_MONITOR_2_0_SUPPORT
 /**
  * dp_mon_ops_register_2_0(): register monitor ops
@@ -3982,6 +3992,16 @@ void dp_mon_ops_register_2_0(struct dp_mon_soc *mon_soc);
  * return: void
  */
 void dp_mon_cdp_ops_register_2_0(struct cdp_ops *ops);
+
+#if defined(WLAN_CFR_ENABLE) && defined(WLAN_ENH_CFR_ENABLE)
+/**
+ * dp_cfr_filter_register_2_0(): register cfr filter setting API
+ * @ops: cdp ops handle
+ *
+ * return: void
+ */
+void dp_cfr_filter_register_2_0(struct cdp_ops *ops);
+#endif
 #endif /* QCA_MONITOR_2_0_SUPPORT */
 
 /**
