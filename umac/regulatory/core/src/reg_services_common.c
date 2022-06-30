@@ -317,6 +317,18 @@ struct bw_puncture_bitmap_pair bw_puncture_bitmap_pair_map[] = {
 	{CH_WIDTH_80MHZ, chan_80mhz_puncture_bitmap,
 		QDF_ARRAY_SIZE(chan_80mhz_puncture_bitmap)},
 };
+
+static inline qdf_freq_t
+reg_get_band_cen_from_bandstart(uint16_t bw, qdf_freq_t bandstart)
+{
+	return bandstart - BW_10_MHZ + bw / 2;
+}
+#else /* WLAN_FEATURE_11BE */
+static inline qdf_freq_t
+reg_get_band_cen_from_bandstart(uint16_t bw, qdf_freq_t bandstart)
+{
+	return 0;
+}
 #endif /* WLAN_FEATURE_11BE */
 
 static bool reg_is_freq_within_bonded_chan(
@@ -327,8 +339,21 @@ static bool reg_is_freq_within_bonded_chan(
 	qdf_freq_t band_center;
 
 	if (reg_is_ch_width_320(chwidth) && cen320_freq) {
-		band_center =  (bonded_chan_arr->start_freq +
-				bonded_chan_arr->end_freq) >> 1;
+		/*
+		 * For the 5GHz 320/240 MHz channel, bonded pair ends are not
+		 * symmetric around the center of the channel. Use the start
+		 * frequency of the bonded channel to calculate the center
+		 */
+		if (REG_IS_5GHZ_FREQ(freq)) {
+			qdf_freq_t start_freq = bonded_chan_arr->start_freq;
+			uint16_t bw = reg_get_bw_value(chwidth);
+
+			band_center =
+				reg_get_band_cen_from_bandstart(bw,
+								start_freq);
+		} else
+			band_center = (bonded_chan_arr->start_freq +
+					bonded_chan_arr->end_freq) >> 1;
 		if (band_center != cen320_freq)
 			return false;
 	}
@@ -4563,11 +4588,6 @@ reg_get_2g_bonded_channel_state_for_freq(struct wlan_objmgr_pdev *pdev,
 }
 
 #ifdef WLAN_FEATURE_11BE
-static inline qdf_freq_t
-reg_get_band_cen_from_bandstart(uint16_t bw, qdf_freq_t bandstart)
-{
-	return bandstart - BW_10_MHZ + bw / 2;
-}
 
 /**
  * reg_get_20mhz_channel_state_based_on_nol() - Get channel state of the
