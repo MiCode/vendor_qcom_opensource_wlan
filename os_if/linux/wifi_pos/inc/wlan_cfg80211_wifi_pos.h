@@ -29,7 +29,8 @@
 #include <net/netlink.h>
 #include <net/cfg80211.h>
 
-#if defined(CFG80211_PASN_SUPPORT) && defined(WIFI_POS_CONVERGED)
+#if defined(CFG80211_PASN_SUPPORT) && defined(WIFI_POS_CONVERGED) && \
+	defined(WLAN_FEATURE_RTT_11AZ_SUPPORT)
 void
 wlan_wifi_pos_cfg80211_set_wiphy_ext_feature(struct wiphy *wiphy,
 					     struct wlan_objmgr_psoc *psoc);

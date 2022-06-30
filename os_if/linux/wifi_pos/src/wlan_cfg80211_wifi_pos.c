@@ -25,7 +25,8 @@
 #include "wlan_objmgr_psoc_obj.h"
 #include "wlan_cfg80211_wifi_pos.h"
 
-#if defined(CFG80211_PASN_SUPPORT) && defined(WIFI_POS_CONVERGED)
+#if defined(CFG80211_PASN_SUPPORT) && defined(WIFI_POS_CONVERGED) && \
+	defined(WLAN_FEATURE_RTT_11AZ_SUPPORT)
 void
 wlan_wifi_pos_cfg80211_set_wiphy_ext_feature(struct wiphy *wiphy,
 					     struct wlan_objmgr_psoc *psoc)
@@ -39,11 +40,5 @@ wlan_wifi_pos_cfg80211_set_wiphy_ext_feature(struct wiphy *wiphy,
 	if (wlan_psoc_nif_fw_ext2_cap_get(psoc,
 					  WLAN_RTT_11AZ_MAC_PHY_SEC_SUPPORT))
 		wiphy_ext_feature_set(wiphy, NL80211_EXT_FEATURE_SECURE_LTF);
-
-	if (wlan_psoc_nif_fw_ext_cap_get(psoc, WLAN_RTT_11AZ_NTB_SUPPORT))
-		wiphy_ext_feature_set(wiphy, NL80211_EXT_FEATURE_NTB_RANGING);
-
-	if (wlan_psoc_nif_fw_ext2_cap_get(psoc, WLAN_RTT_11AZ_TB_SUPPORT))
-		wiphy_ext_feature_set(wiphy, NL80211_EXT_FEATURE_TB_RANGING);
 }
 #endif
