@@ -894,6 +894,8 @@ bool __qdf_nbuf_data_is_tcp_ack(uint8_t *data);
 uint16_t __qdf_nbuf_data_get_tcp_src_port(uint8_t *data);
 uint16_t __qdf_nbuf_data_get_tcp_dst_port(uint8_t *data);
 bool __qdf_nbuf_data_is_icmpv4_req(uint8_t *data);
+bool __qdf_nbuf_data_is_icmpv4_redirect(uint8_t *data);
+bool __qdf_nbuf_data_is_icmpv6_redirect(uint8_t *data);
 bool __qdf_nbuf_data_is_icmpv4_rsp(uint8_t *data);
 uint32_t __qdf_nbuf_get_icmpv4_src_ip(uint8_t *data);
 uint32_t __qdf_nbuf_get_icmpv4_tgt_ip(uint8_t *data);
