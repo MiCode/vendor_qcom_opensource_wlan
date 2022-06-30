@@ -506,6 +506,11 @@ static inline void wlan_ipa_wdi_get_wdi_version(struct wlan_ipa_priv *ipa_ctx)
 {
 	ipa_ctx->wdi_version = IPA_WDI_3;
 }
+#elif defined(QCA_WIFI_KIWI) || defined(QCA_WIFI_KIWI_V2)
+static inline void wlan_ipa_wdi_get_wdi_version(struct wlan_ipa_priv *ipa_ctx)
+{
+	ipa_ctx->wdi_version = IPA_WDI_3_V2;
+}
 #elif defined(QCA_WIFI_3_0)
 static inline void wlan_ipa_wdi_get_wdi_version(struct wlan_ipa_priv *ipa_ctx)
 {
@@ -883,7 +888,7 @@ wlan_ipa_rx_intrabss_fwd(struct wlan_ipa_priv *ipa_ctx,
 	int ret;
 
 	/* legacy intra-bss fowarding for WDI 1.0 and 2.0 */
-	if (ipa_ctx->wdi_version != IPA_WDI_3) {
+	if (ipa_ctx->wdi_version < IPA_WDI_3) {
 		fw_desc = (uint8_t)nbuf->cb[1];
 		return wlan_ipa_intrabss_forward(ipa_ctx, iface_ctx, fw_desc,
 						 nbuf);
@@ -2119,7 +2124,8 @@ end:
 
 #if defined(QCA_WIFI_QCA6290) || defined(QCA_WIFI_QCA6390) || \
     defined(QCA_WIFI_QCA6490) || defined(QCA_WIFI_QCA6750) || \
-    defined(QCA_WIFI_WCN7850) || defined(QCA_WIFI_QCN9000)
+    defined(QCA_WIFI_WCN7850) || defined(QCA_WIFI_QCN9000) || \
+    defined(QCA_WIFI_KIWI) || defined(QCA_WIFI_KIWI_V2)
 
 #ifdef QCA_CONFIG_RPS
 void ipa_set_rps(struct wlan_ipa_priv *ipa_ctx, enum QDF_OPMODE mode,
