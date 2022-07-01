@@ -872,9 +872,9 @@ send_update_tdls_peer_state_cmd_tlv(wmi_unified_t wmi_handle,
 
 		if (in_chan_info->dfs_set) {
 			WMI_SET_CHANNEL_FLAG(chan_info, WMI_CHAN_FLAG_PASSIVE);
-			wmi_debug("chan[%d] DFS[%d]",
-				 in_chan_info->chan_id,
-				 in_chan_info->dfs_set);
+			wmi_debug("chan_freq[%d] DFS[%d]",
+				  in_chan_info->ch_freq,
+				  in_chan_info->dfs_set);
 		}
 
 		if (chan_info->mhz < WMI_2_4_GHZ_MAX_FREQ)
