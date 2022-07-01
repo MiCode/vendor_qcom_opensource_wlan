@@ -502,6 +502,41 @@ struct hal_offload_info {
 	uint32_t flow_id;
 };
 
+#ifdef WLAN_DP_SRNG_USAGE_WM_TRACKING
+/**
+ * enum hal_srng_high_wm_bin - BIN for SRNG high watermark
+ * @HAL_SRNG_HIGH_WM_BIN_BELOW_50_PERCENT: <50% SRNG entries used
+ * @HAL_SRNG_HIGH_WM_BIN_50_to_60: 50-60% SRNG entries used
+ * @HAL_SRNG_HIGH_WM_BIN_60_to_70: 60-70% SRNG entries used
+ * @HAL_SRNG_HIGH_WM_BIN_70_to_80: 70-80% SRNG entries used
+ * @HAL_SRNG_HIGH_WM_BIN_80_to_90: 80-90% SRNG entries used
+ * @HAL_SRNG_HIGH_WM_BIN_90_to_100: 90-100% SRNG entries used
+ */
+enum hal_srng_high_wm_bin {
+	HAL_SRNG_HIGH_WM_BIN_BELOW_50_PERCENT,
+	HAL_SRNG_HIGH_WM_BIN_50_to_60,
+	HAL_SRNG_HIGH_WM_BIN_60_to_70,
+	HAL_SRNG_HIGH_WM_BIN_70_to_80,
+	HAL_SRNG_HIGH_WM_BIN_80_to_90,
+	HAL_SRNG_HIGH_WM_BIN_90_to_100,
+	HAL_SRNG_HIGH_WM_BIN_MAX,
+};
+
+/**
+ * struct hal_srng_high_wm_info - SRNG usage high watermark info
+ * @val: highest number of entries used in SRNG
+ * @timestamp: Timestamp when the max num entries were in used for a SRNG
+ * @bin_thresh: threshold for each bins
+ * @bins: Bins for srng usage
+ */
+struct hal_srng_high_wm_info {
+	uint32_t val;
+	uint64_t timestamp;
+	uint32_t bin_thresh[HAL_SRNG_HIGH_WM_BIN_MAX];
+	uint32_t bins[HAL_SRNG_HIGH_WM_BIN_MAX];
+};
+#endif
+
 /* Common SRNG ring structure for source and destination rings */
 struct hal_srng {
 	/* Unique SRNG ring ID */
@@ -649,6 +684,9 @@ struct hal_srng {
 
 	/* srng specific delayed write stats */
 	struct hal_reg_write_srng_stats wstats;
+#endif
+#ifdef WLAN_DP_SRNG_USAGE_WM_TRACKING
+	struct hal_srng_high_wm_info high_wm;
 #endif
 };
 

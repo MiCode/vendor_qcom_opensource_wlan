@@ -404,11 +404,13 @@ const int dp_stats_mapping_table[][STATS_TYPE_MAX] = {
 	{TXRX_FW_STATS_INVALID, TXRX_REO_QUEUE_STATS},
 	{TXRX_FW_STATS_INVALID, TXRX_SOC_CFG_PARAMS},
 	{TXRX_FW_STATS_INVALID, TXRX_PDEV_CFG_PARAMS},
+	{TXRX_FW_STATS_INVALID, TXRX_NAPI_STATS},
 	{TXRX_FW_STATS_INVALID, TXRX_SOC_INTERRUPT_STATS},
 	{TXRX_FW_STATS_INVALID, TXRX_SOC_FSE_STATS},
 	{TXRX_FW_STATS_INVALID, TXRX_HAL_REG_WRITE_STATS},
 	{TXRX_FW_STATS_INVALID, TXRX_SOC_REO_HW_DESC_DUMP},
 	{TXRX_FW_STATS_INVALID, TXRX_SOC_WBM_IDLE_HPTP_DUMP},
+	{TXRX_FW_STATS_INVALID, TXRX_SRNG_USAGE_WM_STATS},
 	{HTT_DBG_EXT_STATS_PDEV_RX_RATE_EXT, TXRX_HOST_STATS_INVALID},
 	{HTT_DBG_EXT_STATS_TX_SOUNDING_INFO, TXRX_HOST_STATS_INVALID}
 };
@@ -9197,6 +9199,21 @@ dp_txrx_host_peer_stats_clr(struct dp_soc *soc,
 #endif
 }
 
+#ifdef WLAN_DP_SRNG_USAGE_WM_TRACKING
+static inline void dp_srng_clear_ring_usage_wm_stats(struct dp_soc *soc)
+{
+	int ring;
+
+	for (ring = 0; ring < soc->num_reo_dest_rings; ring++)
+		hal_srng_clear_ring_usage_wm_locked(soc->hal_soc,
+					    soc->reo_dest_ring[ring].hal_srng);
+}
+#else
+static inline void dp_srng_clear_ring_usage_wm_stats(struct dp_soc *soc)
+{
+}
+#endif
+
 /**
  * dp_txrx_host_stats_clr(): Reinitialize the txrx stats
  * @vdev: DP_VDEV handle
@@ -9232,6 +9249,8 @@ dp_txrx_host_stats_clr(struct dp_vdev *vdev, struct dp_soc *soc)
 
 	dp_vdev_iterate_peer(vdev, dp_txrx_host_peer_stats_clr, NULL,
 			     DP_MOD_ID_GENERIC_STATS);
+
+	dp_srng_clear_ring_usage_wm_stats(soc);
 
 #if defined(FEATURE_PERPKT_INFO) && WDI_EVENT_ENABLE
 	dp_wdi_event_handler(WDI_EVENT_UPDATE_DP_STATS, vdev->pdev->soc,
@@ -9570,8 +9589,13 @@ static void dp_txrx_stats_help(void)
 	dp_info(" 28 -- Host REO Queue Statistics");
 	dp_info(" 29 -- Host Soc cfg param Statistics");
 	dp_info(" 30 -- Host pdev cfg param Statistics");
-	dp_info(" 31 -- Host FISA stats");
-	dp_info(" 32 -- Host Register Work stats");
+	dp_info(" 31 -- Host NAPI stats");
+	dp_info(" 32 -- Host Interrupt stats");
+	dp_info(" 33 -- Host FISA stats");
+	dp_info(" 34 -- Host Register Work stats");
+	dp_info(" 35 -- HW REO Queue stats");
+	dp_info(" 36 -- Host WBM IDLE link desc ring HP/TP");
+	dp_info(" 37 -- Host SRNG usage watermark stats");
 }
 
 /**
@@ -9651,6 +9675,10 @@ dp_print_host_stats(struct dp_vdev *vdev,
 		break;
 	case TXRX_SOC_WBM_IDLE_HPTP_DUMP:
 		dp_dump_wbm_idle_hptp(pdev->soc, pdev);
+		break;
+	case TXRX_SRNG_USAGE_WM_STATS:
+		/* Dump usage watermark stats for all SRNGs */
+		dp_dump_srng_high_wm_stats(soc, 0xFF);
 		break;
 	default:
 		dp_info("Wrong Input For TxRx Host Stats");
@@ -11147,6 +11175,8 @@ static QDF_STATUS dp_txrx_dump_stats(struct cdp_soc_t *psoc, uint16_t value,
 		dp_print_soc_interrupt_stats(soc);
 		hal_dump_reg_write_stats(soc->hal_soc);
 		dp_pdev_print_tx_delay_stats(soc);
+		/* Dump usage watermark stats for core TX/RX SRNGs */
+		dp_dump_srng_high_wm_stats(soc, (1 << REO_DST));
 		break;
 
 	case CDP_RX_RING_STATS:

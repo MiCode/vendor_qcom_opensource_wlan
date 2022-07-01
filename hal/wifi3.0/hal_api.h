@@ -2139,6 +2139,137 @@ hal_srng_src_num_avail(void *hal_soc,
 		return ((srng->ring_size - hp + tp) / srng->entry_size) - 1;
 }
 
+#ifdef WLAN_DP_SRNG_USAGE_WM_TRACKING
+/**
+ * hal_srng_clear_ring_usage_wm_locked() - Clear SRNG usage watermark stats
+ * @hal_soc_hdl: HAL soc handle
+ * @hal_ring_hdl: SRNG handle
+ *
+ * This function tries to acquire SRNG lock, and hence should not be called
+ * from a context which has already acquired the SRNG lock.
+ *
+ * Return: None
+ */
+static inline
+void hal_srng_clear_ring_usage_wm_locked(hal_soc_handle_t hal_soc_hdl,
+					 hal_ring_handle_t hal_ring_hdl)
+{
+	struct hal_srng *srng = (struct hal_srng *)hal_ring_hdl;
+
+	SRNG_LOCK(&srng->lock);
+	srng->high_wm.val = 0;
+	srng->high_wm.timestamp = 0;
+	qdf_mem_zero(&srng->high_wm.bins[0], sizeof(srng->high_wm.bins[0]) *
+					     HAL_SRNG_HIGH_WM_BIN_MAX);
+	SRNG_UNLOCK(&srng->lock);
+}
+
+/**
+ * hal_srng_update_ring_usage_wm_no_lock() - Update the SRNG usage wm stats
+ * @hal_soc_hdl: HAL soc handle
+ * @hal_ring_hdl: SRNG handle
+ *
+ * This function should be called with the SRNG lock held.
+ *
+ * Return: None
+ */
+static inline
+void hal_srng_update_ring_usage_wm_no_lock(hal_soc_handle_t hal_soc_hdl,
+					   hal_ring_handle_t hal_ring_hdl)
+{
+	struct hal_srng *srng = (struct hal_srng *)hal_ring_hdl;
+	uint32_t curr_wm_val = 0;
+
+	if (srng->ring_dir == HAL_SRNG_SRC_RING)
+		curr_wm_val = hal_srng_src_num_avail(hal_soc_hdl, hal_ring_hdl,
+						     0);
+	else
+		curr_wm_val = hal_srng_dst_num_valid(hal_soc_hdl, hal_ring_hdl,
+						     0);
+
+	if (curr_wm_val > srng->high_wm.val) {
+		srng->high_wm.val = curr_wm_val;
+		srng->high_wm.timestamp = qdf_get_system_timestamp();
+	}
+
+	if (curr_wm_val >=
+		srng->high_wm.bin_thresh[HAL_SRNG_HIGH_WM_BIN_90_to_100])
+		srng->high_wm.bins[HAL_SRNG_HIGH_WM_BIN_90_to_100]++;
+	else if (curr_wm_val >=
+		 srng->high_wm.bin_thresh[HAL_SRNG_HIGH_WM_BIN_80_to_90])
+		srng->high_wm.bins[HAL_SRNG_HIGH_WM_BIN_80_to_90]++;
+	else if (curr_wm_val >=
+		 srng->high_wm.bin_thresh[HAL_SRNG_HIGH_WM_BIN_70_to_80])
+		srng->high_wm.bins[HAL_SRNG_HIGH_WM_BIN_70_to_80]++;
+	else if (curr_wm_val >=
+		 srng->high_wm.bin_thresh[HAL_SRNG_HIGH_WM_BIN_60_to_70])
+		srng->high_wm.bins[HAL_SRNG_HIGH_WM_BIN_60_to_70]++;
+	else if (curr_wm_val >=
+		 srng->high_wm.bin_thresh[HAL_SRNG_HIGH_WM_BIN_50_to_60])
+		srng->high_wm.bins[HAL_SRNG_HIGH_WM_BIN_50_to_60]++;
+	else
+		srng->high_wm.bins[HAL_SRNG_HIGH_WM_BIN_BELOW_50_PERCENT]++;
+}
+
+static inline
+int hal_dump_srng_high_wm_stats(hal_soc_handle_t hal_soc_hdl,
+				hal_ring_handle_t hal_ring_hdl,
+				char *buf, int buf_len, int pos)
+{
+	struct hal_srng *srng = (struct hal_srng *)hal_ring_hdl;
+
+	return qdf_scnprintf(buf + pos, buf_len - pos,
+			     "%8u %7u %12llu %10u %10u %10u %10u %10u %10u",
+			     srng->ring_id, srng->high_wm.val,
+			     srng->high_wm.timestamp,
+			     srng->high_wm.bins[HAL_SRNG_HIGH_WM_BIN_BELOW_50_PERCENT],
+			     srng->high_wm.bins[HAL_SRNG_HIGH_WM_BIN_50_to_60],
+			     srng->high_wm.bins[HAL_SRNG_HIGH_WM_BIN_60_to_70],
+			     srng->high_wm.bins[HAL_SRNG_HIGH_WM_BIN_70_to_80],
+			     srng->high_wm.bins[HAL_SRNG_HIGH_WM_BIN_80_to_90],
+			     srng->high_wm.bins[HAL_SRNG_HIGH_WM_BIN_90_to_100]);
+}
+#else
+/**
+ * hal_srng_clear_ring_usage_wm_locked() - Clear SRNG usage watermark stats
+ * @hal_soc_hdl: HAL soc handle
+ * @hal_ring_hdl: SRNG handle
+ *
+ * This function tries to acquire SRNG lock, and hence should not be called
+ * from a context which has already acquired the SRNG lock.
+ *
+ * Return: None
+ */
+static inline
+void hal_srng_clear_ring_usage_wm_locked(hal_soc_handle_t hal_soc_hdl,
+					 hal_ring_handle_t hal_ring_hdl)
+{
+}
+
+/**
+ * hal_srng_update_ring_usage_wm_no_lock() - Update the SRNG usage wm stats
+ * @hal_soc_hdl: HAL soc handle
+ * @hal_ring_hdl: SRNG handle
+ *
+ * This function should be called with the SRNG lock held.
+ *
+ * Return: None
+ */
+static inline
+void hal_srng_update_ring_usage_wm_no_lock(hal_soc_handle_t hal_soc_hdl,
+					   hal_ring_handle_t hal_ring_hdl)
+{
+}
+
+static inline
+int hal_dump_srng_high_wm_stats(hal_soc_handle_t hal_soc_hdl,
+				hal_ring_handle_t hal_ring_hdl,
+				char *buf, int buf_len, int pos)
+{
+	return 0;
+}
+#endif
+
 /**
  * hal_srng_access_end_unlocked - End ring access (unlocked) - update cached
  * ring head/tail pointers to HW.

@@ -2347,6 +2347,31 @@ void dp_print_soc_tx_stats(struct dp_soc *soc);
  */
 void dp_print_soc_interrupt_stats(struct dp_soc *soc);
 
+#ifdef WLAN_DP_SRNG_USAGE_WM_TRACKING
+/**
+ * dp_dump_srng_high_wm_stats() - Print the ring usage high watermark stats
+ *				  for all SRNGs
+ * @soc: DP soc handle
+ * @srng_mask: SRNGs mask for dumping usage watermark stats
+ *
+ * Return: None
+ */
+void dp_dump_srng_high_wm_stats(struct dp_soc *soc, uint64_t srng_mask);
+#else
+/**
+ * dp_dump_srng_high_wm_stats() - Print the ring usage high watermark stats
+ *				  for all SRNGs
+ * @soc: DP soc handle
+ * @srng_mask: SRNGs mask for dumping usage watermark stats
+ *
+ * Return: None
+ */
+static inline
+void dp_dump_srng_high_wm_stats(struct dp_soc *soc, uint64_t srng_mask)
+{
+}
+#endif
+
 /**
  * dp_print_soc_rx_stats: Print SOC level Rx stats
  * @soc: DP_SOC Handle

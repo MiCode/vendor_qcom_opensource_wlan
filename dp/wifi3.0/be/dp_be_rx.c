@@ -243,6 +243,8 @@ more_data:
 		goto done;
 	}
 
+	hal_srng_update_ring_usage_wm_no_lock(soc->hal_soc, hal_ring_hdl);
+
 	/*
 	 * start reaping the buffers from reo ring and queue
 	 * them in per vdev queue.

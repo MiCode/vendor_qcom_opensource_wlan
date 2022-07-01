@@ -7610,6 +7610,36 @@ int dp_fill_tx_interrupt_ctx_stats(struct dp_intr *intr_ctx,
 	return pos;
 }
 
+#ifdef WLAN_DP_SRNG_USAGE_WM_TRACKING
+#define DP_SRNG_HIGH_WM_STATS_STRING_LEN 512
+void dp_dump_srng_high_wm_stats(struct dp_soc *soc, uint64_t srng_mask)
+{
+	char *buf;
+	int ring, pos, buf_len;
+	char srng_high_wm_str[DP_SRNG_HIGH_WM_STATS_STRING_LEN] = {'\0'};
+
+	if (!srng_mask)
+		return;
+
+	buf = srng_high_wm_str;
+	buf_len = DP_SRNG_HIGH_WM_STATS_STRING_LEN;
+
+	dp_info("%8s %7s %12s %10s %10s %10s %10s %10s %10s",
+		"ring_id", "high_wm", "time", "<50", "50-60", "60-70",
+		"70-80", "80-90", "90-100");
+
+	if (srng_mask & (1 << REO_DST)) {
+		for (ring = 0; ring < soc->num_reo_dest_rings; ring++) {
+			pos = 0;
+			pos += hal_dump_srng_high_wm_stats(soc->hal_soc,
+					    soc->reo_dest_ring[ring].hal_srng,
+					    buf, buf_len, pos);
+			dp_info("%s", srng_high_wm_str);
+		}
+	}
+}
+#endif
+
 #define DP_INT_CTX_STATS_STRING_LEN 512
 void dp_print_soc_interrupt_stats(struct dp_soc *soc)
 {
