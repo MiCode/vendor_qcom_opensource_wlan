@@ -329,10 +329,6 @@ static void hif_rtpm_sanitize_exit(void)
 static void hif_rtpm_sanitize_ssr_exit(void)
 {
 	struct hif_pm_runtime_lock *ctx, *tmp;
-	struct hif_rtpm_client *client;
-	int i;
-
-	qdf_atomic_set(&gp_hif_rtpm_ctx->dev->power.usage_count, 0);
 
 	qdf_spin_lock_bh(&gp_hif_rtpm_ctx->prevent_list_lock);
 	list_for_each_entry_safe(ctx, tmp,
@@ -340,15 +336,6 @@ static void hif_rtpm_sanitize_ssr_exit(void)
 		__hif_pm_runtime_allow_suspend(ctx);
 	}
 	qdf_spin_unlock_bh(&gp_hif_rtpm_ctx->prevent_list_lock);
-
-	for (i = 0; i < HIF_RTPM_ID_MAX; i++) {
-		client = gp_hif_rtpm_ctx->clients[i];
-		if (client) {
-			qdf_atomic_set(&client->active_count, 0);
-			qdf_atomic_set(&client->get_count, 0);
-			qdf_atomic_set(&client->put_count, 0);
-		}
-	}
 }
 
 void hif_rtpm_close(struct hif_softc *scn)
