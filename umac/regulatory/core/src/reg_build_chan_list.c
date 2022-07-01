@@ -3265,6 +3265,35 @@ reg_modify_max_bw_for_240mhz_5g_chans(struct cur_regulatory_info *regulat_info,
 {
 }
 #endif
+
+/**
+ * reg_is_pwrmode_not_required - Check if given power mode is needed.
+ * @soc_reg: soc private object for regulatory
+ * @pwr_type: input AP power type
+ *
+ * Return: True if deployemnt is outdoor and power type is LPI, else false.
+ */
+#if !defined(CONFIG_REG_CLIENT) && defined(CONFIG_AFC_SUPPORT)
+static bool reg_is_pwrmode_not_required(
+				struct wlan_regulatory_psoc_priv_obj *soc_reg,
+				enum reg_6g_ap_type pwr_type)
+{
+	/*
+	 * In outdoor deployment, LPI(AP INDDOR and  CLI INDOOR)
+	 * rules are not needed.
+	 */
+	return ((soc_reg->reg_afc_dev_type == AFC_DEPLOYMENT_OUTDOOR) &&
+		(pwr_type == REG_INDOOR_AP));
+}
+#else
+static bool reg_is_pwrmode_not_required(
+				struct wlan_regulatory_psoc_priv_obj *soc_reg,
+				enum reg_6g_ap_type pwr_mode)
+{
+	return false;
+}
+#endif
+
 /**
  * reg_fill_master_channels() - Fill the master channel lists based on the
  *	regulatory rules
@@ -3274,6 +3303,7 @@ reg_modify_max_bw_for_240mhz_5g_chans(struct cur_regulatory_info *regulat_info,
  * @mas_chan_list_2g_5g: master chan list to fill with 2GHz and 5GHz channels
  * @mas_chan_list_6g_ap: master AP chan list to fill with 6GHz channels
  * @mas_chan_list_6g_client: master client chan list to fill with 6GHz channels
+ * @soc_reg: soc private object for regulatory
  *
  * Return: QDF_STATUS
  */
@@ -3284,7 +3314,8 @@ reg_fill_master_channels(struct cur_regulatory_info *regulat_info,
 			 struct regulatory_channel *mas_chan_list_2g_5g,
 	struct regulatory_channel *mas_chan_list_6g_ap[REG_CURRENT_MAX_AP_TYPE],
 	struct regulatory_channel *mas_chan_list_6g_client
-		[REG_CURRENT_MAX_AP_TYPE][REG_MAX_CLIENT_TYPE])
+		[REG_CURRENT_MAX_AP_TYPE][REG_MAX_CLIENT_TYPE],
+	struct wlan_regulatory_psoc_priv_obj *soc_reg)
 {
 	uint32_t i, j, k, curr_reg_rule_location;
 	uint32_t num_2g_reg_rules, num_5g_reg_rules;
@@ -3413,6 +3444,9 @@ reg_fill_master_channels(struct cur_regulatory_info *regulat_info,
 	}
 
 	for (i = 0; i < REG_CURRENT_MAX_AP_TYPE; i++) {
+		if (reg_is_pwrmode_not_required(soc_reg, i))
+			continue;
+
 		if (num_6g_reg_rules_ap[i])
 			reg_populate_band_channels_ext_for_6g(0,
 							NUM_6GHZ_CHANNELS - 1,
@@ -3594,7 +3628,8 @@ QDF_STATUS reg_process_master_chan_list_ext(
 					  this_mchan_params->client_type,
 					  mas_chan_list_2g_5g,
 					  mas_chan_list_6g_ap,
-					  mas_chan_list_6g_client);
+					  mas_chan_list_6g_client,
+					  soc_reg);
 	if (!QDF_IS_STATUS_SUCCESS(status))
 		return status;
 
