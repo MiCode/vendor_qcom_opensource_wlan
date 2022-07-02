@@ -129,6 +129,13 @@ tgt_mgmt_rx_reo_enter_algo_without_buffer(
 		mgmt_rx_reo_err("Invalid link %d for the pdev", link_id);
 		return QDF_STATUS_E_INVAL;
 	}
+
+	if (!reo_params->valid) {
+		mgmt_rx_reo_err("Invalid MGMT rx REO param for link %u",
+				link_id);
+		return QDF_STATUS_E_INVAL;
+	}
+
 	reo_params->link_id = link_id;
 
 	mgmt_rx_params.reo_params = reo_params;
@@ -244,9 +251,22 @@ QDF_STATUS tgt_mgmt_rx_reo_frame_handler(
 		return tgt_mgmt_txrx_process_rx_frame(pdev, buf,
 						      mgmt_rx_params);
 
+	if (!mgmt_rx_params->reo_params) {
+		mgmt_rx_reo_err("MGMT rx REO params is NULL");
+		status = QDF_STATUS_E_NULL_VALUE;
+		goto cleanup;
+	}
+
 	link_id = wlan_get_mlo_link_id_from_pdev(pdev);
 	if (link_id < 0) {
 		mgmt_rx_reo_err("Invalid link %d for the pdev", link_id);
+		status = QDF_STATUS_E_INVAL;
+		goto cleanup;
+	}
+
+	if (!mgmt_rx_params->reo_params->valid) {
+		mgmt_rx_reo_err("Invalid MGMT rx REO param for link %u",
+				link_id);
 		status = QDF_STATUS_E_INVAL;
 		goto cleanup;
 	}
@@ -286,7 +306,8 @@ QDF_STATUS tgt_mgmt_rx_reo_frame_handler(
 		desc.reo_required = true;
 		status = wlan_mgmt_rx_reo_algo_entry(pdev, &desc, &is_queued);
 
-		qdf_assert_always(QDF_IS_STATUS_ERROR(status) || is_queued);
+		if (QDF_IS_STATUS_ERROR(status))
+			mgmt_rx_reo_err("Failure in executing REO algorithm");
 
 		/**
 		 *  If frame is queued, we shouldn't free up params and

@@ -63,16 +63,6 @@ enum cdp_lite_mon_peer_action {
 	CDP_LITE_MON_PEER_REMOVE = 1,
 };
 
-/* lite mon peer types */
-enum cdp_lite_mon_peer_type {
-	/* associated peer */
-	CDP_LITE_MON_PEER_TYPE_ASSOCIATED = 0,
-	/* non associated peer */
-	CDP_LITE_MON_PEER_TYPE_NON_ASSOCIATED = 1,
-	/* max peer types */
-	CDP_LITE_MON_PEER_TYPE_MAX = 2,
-};
-
 /* lite mon config direction */
 enum cdp_lite_mon_direction {
 	/* lite mon config direction rx */
@@ -475,14 +465,12 @@ struct cdp_lite_mon_filter_config {
  * cdp_lite_mon_peer_config - lite mon set peer config
  * @direction: direction tx/rx
  * @action: add/del
- * @type: assoc/non-assoc
  * @vdev_id: peer vdev id
  * @mac: peer mac
  */
 struct cdp_lite_mon_peer_config {
 	uint8_t direction;
 	uint8_t action;
-	uint8_t type;
 	uint8_t vdev_id;
 	uint8_t mac[QDF_MAC_ADDR_SIZE];
 };
@@ -490,13 +478,11 @@ struct cdp_lite_mon_peer_config {
 /**
  * cdp_lite_mon_peer_info - lite mon get peer config
  * @direction: direction tx/rx
- * @type: assoc/non-assoc
  * @count: no of peers
  * @mac: peer macs
  */
 struct cdp_lite_mon_peer_info {
 	uint8_t direction;
-	uint8_t type;
 	uint8_t count;
 	uint8_t mac[CDP_LITE_MON_PEER_MAX][QDF_MAC_ADDR_SIZE];
 };

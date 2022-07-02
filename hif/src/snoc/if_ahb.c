@@ -760,6 +760,9 @@ void hif_display_ahb_irq_regs(struct hif_softc *scn)
 	void *mem = scn->mem_ce ? scn->mem_ce : scn->mem;
 	struct hif_target_info *tgt_info = &scn->target_info;
 
+	if (tgt_info->target_type == TARGET_TYPE_QCN6122) {
+		return;
+	}
 	if (scn->per_ce_irq) {
 		regval = hif_read32_mb(scn, mem + HOST_IE_ADDRESS);
 		hif_nofl_err("IRQ enable register value 0x%08x", regval);

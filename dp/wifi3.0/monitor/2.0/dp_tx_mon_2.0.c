@@ -515,6 +515,26 @@ QDF_STATUS dp_peer_set_tx_capture_enabled_2_0(struct dp_pdev *pdev_handle,
 	return QDF_STATUS_SUCCESS;
 }
 
+#ifdef QCA_SUPPORT_LITE_MONITOR
+static void dp_fill_lite_mon_vdev(struct cdp_tx_indication_info *tx_cap_info,
+				  struct dp_mon_pdev_be *mon_pdev_be)
+{
+	struct dp_lite_mon_config *config;
+	struct dp_vdev *lite_mon_vdev;
+
+	config = &mon_pdev_be->lite_mon_tx_config->tx_config;
+	lite_mon_vdev = config->lite_mon_vdev;
+
+	if (lite_mon_vdev)
+		tx_cap_info->osif_vdev = lite_mon_vdev->osif_vdev;
+}
+#else
+static void dp_fill_lite_mon_vdev(struct cdp_tx_indication_info *tx_cap_info,
+				  struct dp_mon_pdev_be *mon_pdev_be)
+{
+}
+#endif
+
 /**
  * dp_tx_mon_send_to_stack() - API to send to stack
  * @pdev: pdev Handle
@@ -540,6 +560,7 @@ dp_tx_mon_send_to_stack(struct dp_pdev *pdev, qdf_nbuf_t mpdu)
 				     WDI_NO_VAL,
 				     pdev->pdev_id);
 	} else {
+		dp_fill_lite_mon_vdev(&tx_capture_info, mon_pdev_be);
 		dp_wdi_event_handler(WDI_EVENT_LITE_MON_TX,
 				     pdev->soc,
 				     &tx_capture_info,

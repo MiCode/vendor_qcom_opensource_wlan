@@ -349,16 +349,8 @@ void dfs_cac_valid_reset_for_freq(struct wlan_dfs *dfs,
 #endif
 #endif
 
-/*
- * dfs_is_subset_channel_for_freq() - Find out if prev channel and current
- * channel are subsets of each other.
- * @old_subchans_freq: Pointer to previous sub-channels freq.
- * @old_n_chans: Number of previous sub-channels.
- * @new_subchans_freq: Pointer to new sub-channels freq.
- * @new_n_chans:  Number of new sub-channels
- */
 #ifdef CONFIG_CHAN_FREQ_API
-static bool
+bool
 dfs_is_subset_channel_for_freq(uint16_t *old_subchans_freq,
 			       uint8_t old_n_chans,
 			       uint16_t *new_subchans_freq,

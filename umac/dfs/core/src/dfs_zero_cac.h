@@ -1186,4 +1186,20 @@ dfs_translate_radar_params_for_agile_chan(struct wlan_dfs *dfs,
 {
 }
 #endif
+
+/**
+ * dfs_is_subset_channel_for_freq() - Find out if prev channel and current
+ * channel are subsets of each other.
+ * @old_subchans_freq: Pointer to previous sub-channels freq.
+ * @old_n_chans: Number of previous sub-channels.
+ * @new_subchans_freq: Pointer to new sub-channels freq.
+ * @new_n_chans:  Number of new sub-channels
+ */
+#ifdef CONFIG_CHAN_FREQ_API
+bool
+dfs_is_subset_channel_for_freq(uint16_t *old_subchans_freq,
+			       uint8_t old_n_chans,
+			       uint16_t *new_subchans_freq,
+			       uint8_t new_n_chans);
+#endif
 #endif /* _DFS_ZERO_CAC_H_ */

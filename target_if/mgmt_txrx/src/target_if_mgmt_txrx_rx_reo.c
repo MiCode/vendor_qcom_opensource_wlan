@@ -374,7 +374,7 @@ target_if_mgmt_rx_reo_read_snapshot(
 						snapshot_version);
 
 			if (!snapshot_valid) {
-				mgmt_rx_reo_debug("Invalid REO snapshot value");
+				mgmt_rx_reo_info("Invalid REO snapshot value");
 				snapshot_value->valid = false;
 				snapshot_value->mgmt_pkt_ctr = 0xFFFE;
 				snapshot_value->global_timestamp = 0xFFFFFFFE;

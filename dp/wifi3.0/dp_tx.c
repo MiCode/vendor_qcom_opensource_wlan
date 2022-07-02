@@ -4975,7 +4975,7 @@ dp_tx_comp_process_desc_list(struct dp_soc *soc,
 			dp_tx_desc_history_add(soc, desc->dma_addr, desc->nbuf,
 					       desc->id, DP_TX_COMP_UNMAP);
 			dp_tx_nbuf_unmap(soc, desc);
-			qdf_nbuf_free(desc->nbuf);
+			qdf_nbuf_free_simple(desc->nbuf);
 			dp_tx_desc_free(soc, desc, desc->pool_id);
 			desc = next;
 			continue;

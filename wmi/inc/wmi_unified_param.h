@@ -5747,6 +5747,7 @@ typedef enum {
 #ifdef WLAN_FEATURE_11AX
 	wmi_service_tdls_6g_support,
 #endif
+	wmi_service_tdls_wideband_support,
 #endif
 	wmi_services_max,
 } wmi_conv_service_ids;

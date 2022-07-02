@@ -187,6 +187,7 @@
 #define SFA_OUI_TYPE 0x14
 /* QCA OUI (in little endian) */
 #define QCA_OUI 0xf0fd8c
+#define QCN_OUI_TYPE_CMN 0x01
 #define QCA_OUI_WHC_TYPE  0x00
 #define QCA_OUI_WHC_REPT_TYPE 0x01
 
@@ -1944,8 +1945,10 @@ enum wlan_ml_variant {
 #define WLAN_ML_BV_CTRL_PBM_MEDIUMSYNCDELAYINFO_P      ((uint16_t)BIT(2))
 /* EML Capabilities Present */
 #define WLAN_ML_BV_CTRL_PBM_EMLCAP_P                   ((uint16_t)BIT(3))
-/* MLD Capabilities */
-#define WLAN_ML_BV_CTRL_PBM_MLDCAP_P                   ((uint16_t)BIT(4))
+/* MLD Capabilities and operation Present */
+#define WLAN_ML_BV_CTRL_PBM_MLDCAPANDOP_P              ((uint16_t)BIT(4))
+/* MLD ID Present */
+#define WLAN_ML_BV_CTRL_PBM_MLDID_P                    ((uint16_t)BIT(5))
 
 /* Definitions related to Basic variant Multi-Link element Common Info field */
 
@@ -2097,6 +2100,9 @@ enum wlan_ml_bv_cinfo_emlcap_emlmrdelay {
  * values instead of using a formula, and we reflect this accordingly using an
  * enumeration.
  * WLAN_ML_BV_CINFO_EMLCAP_TRANSTIMEOUT_0TU: Transition Timeout value of 0 TUs
+ * WLAN_ML_BV_CINFO_EMLCAP_TRANSTIMEOUT_128MU: Transition Timeout value of 128μs
+ * WLAN_ML_BV_CINFO_EMLCAP_TRANSTIMEOUT_256MU: Transition Timeout value of 256μs
+ * WLAN_ML_BV_CINFO_EMLCAP_TRANSTIMEOUT_512MU: Transition Timeout value of 512μs
  * WLAN_ML_BV_CINFO_EMLCAP_TRANSTIMEOUT_1TU: Transition Timeout value of 1 TU
  * WLAN_ML_BV_CINFO_EMLCAP_TRANSTIMEOUT_2TU: Transition Timeout value of 2 TUs
  * WLAN_ML_BV_CINFO_EMLCAP_TRANSTIMEOUT_4TU: Transition Timeout value of 4 TUs
@@ -2114,40 +2120,48 @@ enum wlan_ml_bv_cinfo_emlcap_emlmrdelay {
  */
 enum wlan_ml_bv_cinfo_emlcap_transtimeout {
 	WLAN_ML_BV_CINFO_EMLCAP_TRANSTIMEOUT_0TU = 0,
-	WLAN_ML_BV_CINFO_EMLCAP_TRANSTIMEOUT_1TU = 1,
-	WLAN_ML_BV_CINFO_EMLCAP_TRANSTIMEOUT_2TU = 2,
-	WLAN_ML_BV_CINFO_EMLCAP_TRANSTIMEOUT_4TU = 3,
-	WLAN_ML_BV_CINFO_EMLCAP_TRANSTIMEOUT_8TU = 4,
-	WLAN_ML_BV_CINFO_EMLCAP_TRANSTIMEOUT_16TU = 5,
-	WLAN_ML_BV_CINFO_EMLCAP_TRANSTIMEOUT_32TU = 6,
-	WLAN_ML_BV_CINFO_EMLCAP_TRANSTIMEOUT_64TU = 7,
-	WLAN_ML_BV_CINFO_EMLCAP_TRANSTIMEOUT_128TU = 8,
+	WLAN_ML_BV_CINFO_EMLCAP_TRANSTIMEOUT_128MU = 1,
+	WLAN_ML_BV_CINFO_EMLCAP_TRANSTIMEOUT_256MU = 2,
+	WLAN_ML_BV_CINFO_EMLCAP_TRANSTIMEOUT_512MU = 3,
+	WLAN_ML_BV_CINFO_EMLCAP_TRANSTIMEOUT_1TU = 4,
+	WLAN_ML_BV_CINFO_EMLCAP_TRANSTIMEOUT_2TU = 5,
+	WLAN_ML_BV_CINFO_EMLCAP_TRANSTIMEOUT_4TU = 6,
+	WLAN_ML_BV_CINFO_EMLCAP_TRANSTIMEOUT_8TU = 7,
+	WLAN_ML_BV_CINFO_EMLCAP_TRANSTIMEOUT_16TU = 8,
+	WLAN_ML_BV_CINFO_EMLCAP_TRANSTIMEOUT_32TU = 9,
+	WLAN_ML_BV_CINFO_EMLCAP_TRANSTIMEOUT_64TU = 10,
+	WLAN_ML_BV_CINFO_EMLCAP_TRANSTIMEOUT_128TU = 11,
 	WLAN_ML_BV_CINFO_EMLCAP_TRANSTIMEOUT_INVALIDSTART,
 };
 
-/* Size in octets of MLD Capabilities subfield in Basic variant Multi-Link
- * element Common Info field as per IEEE P802.11be/D1.5.
+/* Size in octets of MLD Capabilities and operation subfield in Basic variant
+ * Multi-Link element Common Info field as per IEEE P802.11be/D1.5.
  */
-#define WLAN_ML_BV_CINFO_MLDCAP_SIZE                                2
+#define WLAN_ML_BV_CINFO_MLDCAPANDOP_SIZE                                2
 
 /* Definitions for sub-sub fields in MLD Capabilities subfield in Basic variant
  * Multi-Link element Common Info field. Any unused bits are reserved.
  */
 /* Maximum Number Of Simultaneous Links */
-#define WLAN_ML_BV_CINFO_MLDCAP_MAXSIMULLINKS_IDX                   0
-#define WLAN_ML_BV_CINFO_MLDCAP_MAXSIMULLINKS_BITS                  4
+#define WLAN_ML_BV_CINFO_MLDCAPANDOP_MAXSIMULLINKS_IDX                   0
+#define WLAN_ML_BV_CINFO_MLDCAPANDOP_MAXSIMULLINKS_BITS                  4
 /* SRS Support */
-#define WLAN_ML_BV_CINFO_MLDCAP_SRSSUPPORT_IDX                      4
-#define WLAN_ML_BV_CINFO_MLDCAP_SRSSUPPORT_BITS                     1
+#define WLAN_ML_BV_CINFO_MLDCAPANDOP_SRSSUPPORT_IDX                      4
+#define WLAN_ML_BV_CINFO_MLDCAPANDOP_SRSSUPPORT_BITS                     1
 /* TID-To-Link Mapping Negotiation Supported */
-#define WLAN_ML_BV_CINFO_MLDCAP_TIDTOLINKMAPNEGSUPPORT_IDX          5
-#define WLAN_ML_BV_CINFO_MLDCAP_TIDTOLINKMAPNEGSUPPORT_BITS         2
+#define WLAN_ML_BV_CINFO_MLDCAPANDOP_TIDTOLINKMAPNEGSUPPORT_IDX          5
+#define WLAN_ML_BV_CINFO_MLDCAPANDOP_TIDTOLINKMAPNEGSUPPORT_BITS         2
 /* Frequency Separation For STR */
-#define WLAN_ML_BV_CINFO_MLDCAP_STRFREQSEPARATION_IDX               7
-#define WLAN_ML_BV_CINFO_MLDCAP_STRFREQSEPARATION_BITS              5
+#define WLAN_ML_BV_CINFO_MLDCAPANDOP_STRFREQSEPARATION_IDX               7
+#define WLAN_ML_BV_CINFO_MLDCAPANDOP_STRFREQSEPARATION_BITS              5
 /* AAR Support */
-#define WLAN_ML_BV_CINFO_MLDCAP_AARSUPPORT_IDX                      12
-#define WLAN_ML_BV_CINFO_MLDCAP_AARSUPPORT_BITS                     1
+#define WLAN_ML_BV_CINFO_MLDCAPANDOP_AARSUPPORT_IDX                      12
+#define WLAN_ML_BV_CINFO_MLDCAPANDOP_AARSUPPORT_BITS                     1
+
+/* Size in octets of MLD ID subfield in Basic variant Multi-Link
+ * element Common Info field.
+ */
+#define WLAN_ML_BV_CINFO_MLDID_SIZE                                      1
 
 /* Max value in octets of Common Info Length subfield of Common Info field in
  * Basic variant Multi-Link element
@@ -2159,7 +2173,8 @@ enum wlan_ml_bv_cinfo_emlcap_transtimeout {
 	 WLAN_ML_BSSPARAMCHNGCNT_SIZE + \
 	 WLAN_ML_BV_CINFO_MEDMSYNCDELAYINFO_SIZE + \
 	 WLAN_ML_BV_CINFO_EMLCAP_SIZE + \
-	 WLAN_ML_BV_CINFO_MLDCAP_SIZE)
+	 WLAN_ML_BV_CINFO_MLDCAPANDOP_SIZE + \
+	 WLAN_ML_BV_CINFO_MLDID_SIZE)
 
 /* End of definitions related to Basic variant Multi-Link element Common Info
  * field.
@@ -2223,17 +2238,20 @@ struct wlan_ml_bv_linfo_perstaprof {
 /* Beacon Interval Present */
 #define WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_BCNINTP_IDX             6
 #define WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_BCNINTP_BITS            1
+/* TSF Offset Present */
+#define WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_TSFOFFSETP_IDX          7
+#define WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_TSFOFFSETP_BITS         1
 /* DTIM Info Present */
-#define WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_DTIMINFOP_IDX           7
+#define WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_DTIMINFOP_IDX           8
 #define WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_DTIMINFOP_BITS          1
 /* NSTR Link Pair Present */
-#define WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_NSTRLINKPRP_IDX         8
+#define WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_NSTRLINKPRP_IDX         9
 #define WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_NSTRLINKPRP_BITS        1
 /* NSTR Bitmap Size */
-#define WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_NSTRBMSZ_IDX            9
+#define WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_NSTRBMSZ_IDX            10
 #define WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_NSTRBMSZ_BITS           1
 /* BSS Parameters Change Count Present */
-#define WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_BSSPARAMCHNGCNTP_IDX    10
+#define WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_BSSPARAMCHNGCNTP_IDX    11
 #define WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_BSSPARAMCHNGCNTP_BITS   1
 
 /* Definitions for subfields in STA Info field of Per-STA Profile subelement
@@ -2241,6 +2259,11 @@ struct wlan_ml_bv_linfo_perstaprof {
  */
 /* STA Info Length */
 #define WLAN_ML_BV_LINFO_PERSTAPROF_STAINFO_LENGTH_SIZE             1
+
+/* Size in octets of the TSF Offset in STA info field of Per-STA Profile
+ * subelement in Basic variant Multi-Link element Link Info field.
+ */
+#define WLAN_ML_TSF_OFFSET_SIZE             8
 
 /**
  * wlan_ml_bv_linfo_perstaprof_stactrl_nstrbmsz - Encoding for NSTR Bitmap Size
@@ -2285,6 +2308,7 @@ struct wlan_ml_bv_linfo_perstaprof_stainfo_dtiminfo {
 	(WLAN_ML_BV_LINFO_PERSTAPROF_STAINFO_LENGTH_SIZE + \
 	 QDF_MAC_ADDR_SIZE + \
 	 WLAN_BEACONINTERVAL_LEN + \
+	 WLAN_ML_TSF_OFFSET_SIZE + \
 	 sizeof(struct wlan_ml_bv_linfo_perstaprof_stainfo_dtiminfo) + \
 	 WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_NSTRBMSZ_MAX + \
 	 WLAN_ML_BSSPARAMCHNGCNT_SIZE)
@@ -3233,6 +3257,13 @@ is_wcn_oui(uint8_t *frm)
 {
 	return (frm[1] > 4) && (LE_READ_4(frm + 2) ==
 		((WCN_OUI_TYPE << 24) | WCN_OUI));
+}
+
+static inline bool
+is_qcn_oui(uint8_t *frm)
+{
+	return ((frm[1] > 4) && (LE_READ_4(frm + 2) ==
+		((QCN_OUI_TYPE_CMN << 24) | QCA_OUI)));
 }
 
 #define WLAN_VENDOR_WME_IE_LEN 24
