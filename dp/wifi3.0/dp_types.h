@@ -425,6 +425,7 @@ struct dp_rx_nbuf_frag_info {
  * @DP_TX_HW_DESC_HIST_TYPE: Datapath TX HW descriptor history
  * @DP_MON_SOC_TYPE: Datapath monitor soc context
  * @DP_MON_PDEV_TYPE: Datapath monitor pdev context
+ * @DP_MON_STATUS_BUF_HIST_TYPE: DP monitor status buffer history
  */
 enum dp_ctxt_type {
 	DP_PDEV_TYPE,
@@ -438,6 +439,7 @@ enum dp_ctxt_type {
 	DP_TX_HW_DESC_HIST_TYPE,
 	DP_MON_SOC_TYPE,
 	DP_MON_PDEV_TYPE,
+	DP_MON_STATUS_BUF_HIST_TYPE,
 };
 
 /**
@@ -1356,6 +1358,50 @@ struct dp_tx_hw_desc_history {
 };
 #endif
 
+/*
+ * enum dp_mon_status_process_event - Events for monitor status buffer record
+ * @DP_MON_STATUS_BUF_REAP: Monitor status buffer is reaped from ring
+ * @DP_MON_STATUS_BUF_ENQUEUE: Status buffer is enqueued to local queue
+ * @DP_MON_STATUS_BUF_DEQUEUE: Status buffer is dequeued from local queue
+ */
+enum dp_mon_status_process_event {
+	DP_MON_STATUS_BUF_REAP,
+	DP_MON_STATUS_BUF_ENQUEUE,
+	DP_MON_STATUS_BUF_DEQUEUE,
+};
+
+#ifdef WLAN_FEATURE_DP_MON_STATUS_RING_HISTORY
+#define DP_MON_STATUS_HIST_MAX	2048
+
+/**
+ * struct dp_buf_info_record - ring buffer info
+ * @hbi: HW ring buffer info
+ * @timestamp: timestamp when this entry was recorded
+ * @event: event
+ * @rx_desc: RX descriptor corresponding to the received buffer
+ * @nbuf: buffer attached to rx_desc, if event is REAP, else the buffer
+ *	  which was enqueued or dequeued.
+ * @rx_desc_nbuf_data: nbuf data pointer.
+ */
+struct dp_mon_stat_info_record {
+	struct hal_buf_info hbi;
+	uint64_t timestamp;
+	enum dp_mon_status_process_event event;
+	void *rx_desc;
+	qdf_nbuf_t nbuf;
+	uint8_t *rx_desc_nbuf_data;
+};
+
+/* struct dp_rx_history - rx ring hisotry
+ * @index: Index where the last entry is written
+ * @entry: history entries
+ */
+struct dp_mon_status_ring_history {
+	qdf_atomic_t index;
+	struct dp_mon_stat_info_record entry[DP_MON_STATUS_HIST_MAX];
+};
+#endif
+
 #ifdef WLAN_FEATURE_DP_RX_RING_HISTORY
 /*
  * The logic for get current index of these history is dependent on this
@@ -2140,6 +2186,10 @@ struct dp_soc {
 	struct dp_rx_refill_history *rx_refill_ring_history[MAX_PDEV_CNT];
 	struct dp_rx_err_history *rx_err_ring_history;
 	struct dp_rx_reinject_history *rx_reinject_ring_history;
+#endif
+
+#ifdef WLAN_FEATURE_DP_MON_STATUS_RING_HISTORY
+	struct dp_mon_status_ring_history *mon_status_ring_history;
 #endif
 
 #ifdef WLAN_FEATURE_DP_TX_DESC_HISTORY
