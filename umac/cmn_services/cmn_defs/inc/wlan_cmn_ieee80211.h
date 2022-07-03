@@ -369,6 +369,12 @@
 #define WLAN_BSS_MEMBERSHIP_SELECTOR_SAE_H2E      123
 #define WLAN_BSS_MEMBERSHIP_SELECTOR_HE_PHY       122
 
+/* EXT cap bit definitions based on IEEE 802.11az D4.0 - 9.4.2.26 */
+#define WLAN_EXT_CAPA11_NTB_RANGING_RESPONDER          BIT(2)
+#define WLAN_EXT_CAPA11_TB_RANGING_RESPONDER           BIT(3)
+#define WLAN_EXT_CAPA11_PASSIVE_TB_RANGING_RESPONDER   BIT(4)
+#define WLAN_EXT_CAPA11_PASSIVE_TB_RANGING_INITIATOR   BIT(5)
+
 #define WLAN_CHAN_IS_5GHZ(chanidx) \
 	((chanidx > 30) ? true : false)
 #define WLAN_CHAN_IS_2GHZ(chanidx) \
