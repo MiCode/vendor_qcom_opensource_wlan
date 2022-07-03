@@ -1326,6 +1326,7 @@ static void dp_mon_filter_set_mon_2_0(struct dp_mon_pdev *mon_pdev,
 	filter->tlv_filter.packet = 1;
 	filter->tlv_filter.packet_header = 1;
 	filter->tlv_filter.header_per_msdu = 1;
+	filter->tlv_filter.rx_hdr_length = RX_HDR_DMA_LENGTH_64B;
 	filter->tlv_filter.msdu_end = 1;
 	filter->tlv_filter.mpdu_end = 1;
 	filter->tlv_filter.attention = 0;
