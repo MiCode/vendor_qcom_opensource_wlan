@@ -117,6 +117,7 @@ union dp_mon_desc_list_elem_t {
  * @owner: owner for nbuf
  * @buf_size: Buffer size
  * @buf_alignment: Buffer alignment
+ * @pf_cache: page frag cache
  */
 struct dp_mon_desc_pool {
 	uint32_t pool_size;
@@ -126,6 +127,7 @@ struct dp_mon_desc_pool {
 	uint8_t owner;
 	uint16_t buf_size;
 	uint8_t buf_alignment;
+	qdf_frag_cache_t pf_cache;
 };
 
 /**

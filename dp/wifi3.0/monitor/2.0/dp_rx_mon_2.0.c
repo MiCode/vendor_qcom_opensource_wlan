@@ -23,6 +23,8 @@
 #include "hal_be_api_mon.h"
 #include "dp_internal.h"
 #include "qdf_mem.h"   /* qdf_mem_malloc,free */
+#include <qdf_flex_mem.h>
+#include "qdf_nbuf_frag.h"
 #include "dp_mon.h"
 #include <dp_rx_mon.h>
 #include <dp_mon_2.0.h>
@@ -1508,6 +1510,8 @@ dp_rx_mon_buf_desc_pool_deinit(struct dp_soc *soc)
 	struct dp_mon_soc *mon_soc = soc->monitor_soc;
 	struct dp_mon_soc_be *mon_soc_be = dp_get_be_mon_soc_from_dp_mon_soc(mon_soc);
 
+	/* Drain page frag cachce before pool deinit */
+	qdf_frag_cache_drain(&mon_soc_be->rx_desc_mon.pf_cache);
 	dp_mon_desc_pool_deinit(&mon_soc_be->rx_desc_mon);
 }
 

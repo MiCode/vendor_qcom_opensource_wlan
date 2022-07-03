@@ -194,7 +194,8 @@ dp_mon_frag_alloc_and_map(struct dp_soc *dp_soc,
 {
 	QDF_STATUS ret = QDF_STATUS_E_FAILURE;
 
-	mon_desc->buf_addr = qdf_frag_alloc(mon_desc_pool->buf_size);
+	mon_desc->buf_addr = qdf_frag_alloc(&mon_desc_pool->pf_cache,
+					    mon_desc_pool->buf_size);
 
 	if (!mon_desc->buf_addr) {
 		dp_mon_err("Frag alloc failed");

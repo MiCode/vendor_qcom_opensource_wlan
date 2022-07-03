@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -27,6 +28,12 @@
 #include <qdf_util.h>
 #include <i_qdf_trace.h>
 #include <i_qdf_nbuf_frag.h>
+
+/*
+ * typedef qdf_frag_cache_t - Platform independent
+ * frag cache abstraction
+ */
+typedef __qdf_frag_cache_t qdf_frag_cache_t;
 
 /*
  * typedef qdf_frag_t - Platform independent frag address abstraction
@@ -109,18 +116,21 @@ void qdf_frag_debug_delete_node(qdf_frag_t fragp, const char *func_name,
 void qdf_frag_debug_update_addr(qdf_frag_t p_fragp, qdf_frag_t n_fragp,
 				const char *func_name, uint32_t line_num);
 
-#define qdf_frag_alloc(s) \
-	qdf_frag_alloc_debug(s, __func__, __LINE__)
+#define qdf_frag_alloc(p, s) \
+	qdf_frag_alloc_debug(p, s, __func__, __LINE__)
 
 /**
  * qdf_frag_alloc_debug() - Allocate frag memory
+ * @pf_cache: page frag cache
  * @fragsz: Size of frag memory to be allocated
  * @func_name: Caller function name
  * @line_num: Caller function line no.
  *
  * Return: Allocated frag address
  */
-qdf_frag_t qdf_frag_alloc_debug(unsigned int fragsz, const char *func_name,
+qdf_frag_t qdf_frag_alloc_debug(qdf_frag_cache_t *pf_cache,
+				unsigned int fragsz,
+				const char *func_name,
 				uint32_t line_num);
 
 #define qdf_frag_free(p) \
@@ -180,13 +190,15 @@ static inline void qdf_frag_debug_update_addr(qdf_frag_t p_fragp,
 
 /**
  * qdf_frag_alloc() - Allocate frag memory
+ * @pf_cache: page frag cache
  * @fragsz: Size of frag memory to be allocated
  *
  * Return: Allocated frag address
  */
-static inline qdf_frag_t qdf_frag_alloc(unsigned int fragsz)
+static inline qdf_frag_t qdf_frag_alloc(qdf_frag_cache_t *pf_cache,
+					unsigned int fragsz)
 {
-	return __qdf_frag_alloc(fragsz);
+	return __qdf_frag_alloc(pf_cache, fragsz);
 }
 
 /**
@@ -284,4 +296,15 @@ static inline void qdf_mem_unmap_page(qdf_device_t osdev, qdf_dma_addr_t paddr,
 	__qdf_mem_unmap_page(osdev, paddr, nbytes, dir);
 }
 
+/*
+ * qdf_frag_cache_drain() - Drain page frag cache
+ *
+ * @pf_cache: page frag cache
+ *
+ * Return: void
+ */
+static inline void qdf_frag_cache_drain(qdf_frag_cache_t *pf_cache)
+{
+	__qdf_frag_cache_drain(pf_cache);
+}
 #endif /* _QDF_NBUF_FRAG_H */
