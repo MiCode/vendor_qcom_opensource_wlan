@@ -2339,6 +2339,17 @@ int hif_pci_bus_suspend(struct hif_softc *scn)
 		return -EBUSY;
 	}
 
+	/*
+	 * In an unlikely case, if draining becomes infinite loop,
+	 * it returns an error, shall abort the bus suspend.
+	 */
+	ret = hif_drain_fw_diag_ce(scn);
+	if (ret) {
+		hif_err("draining fw_diag_ce goes infinite, so abort suspend");
+		hif_apps_irqs_enable(GET_HIF_OPAQUE_HDL(scn));
+		return -EBUSY;
+	}
+
 	/* Stop the HIF Sleep Timer */
 	hif_cancel_deferred_target_sleep(scn);
 
