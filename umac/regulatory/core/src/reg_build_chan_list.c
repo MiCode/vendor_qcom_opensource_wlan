@@ -3368,12 +3368,12 @@ reg_fill_master_channels(struct cur_regulatory_info *regulat_info,
 				     sizeof(struct cur_reg_rule));
 		curr_reg_rule_location = num_2g_reg_rules;
 		if (num_5g_reg_rules) {
-			reg_modify_max_bw_for_240mhz_5g_chans(regulat_info,
-							      reg_rule_5g);
 			qdf_mem_copy(reg_rules->reg_rules +
 				     curr_reg_rule_location, reg_rule_5g,
 				     num_5g_reg_rules *
 				     sizeof(struct cur_reg_rule));
+			reg_modify_max_bw_for_240mhz_5g_chans(regulat_info,
+							      reg_rule_5g);
 		}
 	}
 
