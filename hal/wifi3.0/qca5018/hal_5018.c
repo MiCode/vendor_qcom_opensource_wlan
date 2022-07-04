@@ -151,6 +151,25 @@ static uint32_t hal_rx_msdu_start_nss_get_5018(uint8_t *buf)
 }
 
 /**
+ * hal_rx_msdu_start_get_len_5018(): API to get the MSDU length
+ * from rx_msdu_start TLV
+ *
+ * @ buf: pointer to the start of RX PKT TLV headers
+ * Return: (uint32_t)msdu length
+ */
+static uint32_t hal_rx_msdu_start_get_len_5018(uint8_t *buf)
+{
+	struct rx_pkt_tlvs *pkt_tlvs = (struct rx_pkt_tlvs *)buf;
+	struct rx_msdu_start *msdu_start =
+				&pkt_tlvs->msdu_start_tlv.rx_msdu_start;
+	uint32_t msdu_len;
+
+	msdu_len = HAL_RX_MSDU_START_MSDU_LEN_GET(msdu_start);
+
+	return msdu_len;
+}
+
+/**
  * hal_rx_mon_hw_desc_get_mpdu_status_5018(): Retrieve MPDU status
  *
  * @ hw_desc_addr: Start address of Rx HW TLVs
@@ -1842,6 +1861,8 @@ static void hal_hw_txrx_ops_attach_qca5018(struct hal_soc *hal_soc)
 	hal_soc->ops->hal_setup_link_idle_list =
 				hal_setup_link_idle_list_generic_li;
 	hal_soc->ops->hal_compute_reo_remap_ix0 = NULL;
+	hal_soc->ops->hal_rx_tlv_msdu_len_get =
+				hal_rx_msdu_start_get_len_5018;
 };
 
 struct hal_hw_srng_config hw_srng_table_5018[] = {
