@@ -1127,6 +1127,22 @@ QDF_STATUS __scm_handle_bcn_probe(struct scan_bcn_probe_event *bcn)
 			qdf_mem_free(scan_node);
 			continue;
 		}
+		if (util_scan_entry_rsn(scan_entry)) {
+			status = wlan_crypto_rsnie_check(
+					&sec_params,
+					util_scan_entry_rsn(scan_entry));
+			if (QDF_IS_STATUS_ERROR(status)) {
+				scm_nofl_debug("Drop frame from invalid RSN IE AP"
+					       QDF_MAC_ADDR_FMT
+					       ": RSN IE parse failed, status %d",
+					       QDF_MAC_ADDR_REF(
+					       scan_entry->bssid.bytes),
+					       status);
+				util_scan_free_cache_entry(scan_entry);
+				qdf_mem_free(scan_node);
+				continue;
+			}
+		}
 		if (wlan_cm_get_check_6ghz_security(psoc) &&
 		    wlan_reg_is_6ghz_chan_freq(scan_entry->channel.chan_freq)) {
 			if (!util_scan_entry_rsn(scan_entry)) {
