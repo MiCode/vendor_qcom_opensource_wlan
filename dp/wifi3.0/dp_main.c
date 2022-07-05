@@ -5749,6 +5749,7 @@ static void dp_pdev_deinit(struct cdp_pdev *txrx_pdev, int force)
 	dp_rx_pdev_desc_pool_deinit(pdev);
 	dp_pdev_bkp_stats_detach(pdev);
 	qdf_event_destroy(&pdev->fw_peer_stats_event);
+	qdf_event_destroy(&pdev->fw_stats_event);
 	if (pdev->sojourn_buf)
 		qdf_nbuf_free(pdev->sojourn_buf);
 
@@ -10950,14 +10951,18 @@ dp_txrx_stats_publish(struct cdp_soc_t *soc, uint8_t pdev_id,
 	if (!pdev)
 		return TXRX_STATS_LEVEL_OFF;
 
+	if (pdev->pending_fw_response)
+		return TXRX_STATS_LEVEL_OFF;
+
 	dp_aggregate_pdev_stats(pdev);
+
+	pdev->pending_fw_response = true;
 	req.stats = (enum cdp_stats)HTT_DBG_EXT_STATS_PDEV_TX;
 	req.cookie_val = DBG_STATS_COOKIE_DP_STATS;
+	pdev->fw_stats_tlv_bitmap_rcvd = 0;
 	dp_h2t_ext_stats_msg_send(pdev, req.stats, req.param0,
 				req.param1, req.param2, req.param3, 0,
 				req.cookie_val, 0);
-
-	msleep(DP_MAX_SLEEP_TIME);
 
 	req.stats = (enum cdp_stats)HTT_DBG_EXT_STATS_PDEV_RX;
 	req.cookie_val = DBG_STATS_COOKIE_DP_STATS;
@@ -10965,8 +10970,10 @@ dp_txrx_stats_publish(struct cdp_soc_t *soc, uint8_t pdev_id,
 				req.param1, req.param2, req.param3, 0,
 				req.cookie_val, 0);
 
-	msleep(DP_MAX_SLEEP_TIME);
+	qdf_event_reset(&pdev->fw_stats_event);
+	qdf_wait_single_event(&pdev->fw_stats_event, DP_MAX_SLEEP_TIME);
 	qdf_mem_copy(buf, &pdev->stats, sizeof(struct cdp_pdev_stats));
+	pdev->pending_fw_response = false;
 
 	return TXRX_STATS_LEVEL;
 }
@@ -15897,6 +15904,7 @@ static QDF_STATUS dp_pdev_init(struct cdp_soc_t *txrx_soc,
 	qdf_mem_zero(sojourn_buf, sizeof(struct cdp_tx_sojourn_stats));
 
 	qdf_event_create(&pdev->fw_peer_stats_event);
+	qdf_event_create(&pdev->fw_stats_event);
 
 	pdev->num_tx_allowed = wlan_cfg_get_num_tx_desc(soc->wlan_cfg_ctx);
 

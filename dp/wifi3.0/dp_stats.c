@@ -32,6 +32,16 @@
 #endif
 
 #define DP_MAX_STRING_LEN 500
+#define DP_HTT_TX_RX_EXPECTED_TLVS (((uint64_t)1 << HTT_STATS_TX_PDEV_CMN_TAG) |\
+	((uint64_t)1 << HTT_STATS_TX_PDEV_UNDERRUN_TAG) |\
+	((uint64_t)1 << HTT_STATS_TX_PDEV_SIFS_TAG) |\
+	((uint64_t)1 << HTT_STATS_TX_PDEV_FLUSH_TAG) |\
+	((uint64_t)1 << HTT_STATS_RX_PDEV_FW_STATS_TAG) |\
+	((uint64_t)1 << HTT_STATS_RX_SOC_FW_STATS_TAG) |\
+	((uint64_t)1 << HTT_STATS_RX_SOC_FW_REFILL_RING_EMPTY_TAG) |\
+	((uint64_t)1 << HTT_STATS_RX_SOC_FW_REFILL_RING_NUM_REFILL_TAG) |\
+	((uint64_t)1 << HTT_STATS_RX_PDEV_FW_RING_MPDU_ERR_TAG) |\
+	((uint64_t)1 << HTT_STATS_RX_PDEV_FW_MPDU_DROP_TAG))
 
 #define DP_HTT_HW_INTR_NAME_LEN  HTT_STATS_MAX_HW_INTR_NAME_LEN
 #define DP_HTT_HW_MODULE_NAME_LEN  HTT_STATS_MAX_HW_MODULE_NAME_LEN
@@ -4713,7 +4723,9 @@ void dp_htt_stats_copy_tag(struct dp_pdev *pdev, uint8_t tag_type, uint32_t *tag
 	void *dest_ptr = NULL;
 	uint32_t size = 0;
 	uint32_t size_expected = 0;
+	uint64_t val = 1;
 
+	pdev->fw_stats_tlv_bitmap_rcvd |= (val << tag_type);
 	switch (tag_type) {
 	case HTT_STATS_TX_PDEV_CMN_TAG:
 		dest_ptr = &pdev->stats.htt_tx_pdev_stats.cmn_tlv;
@@ -4786,6 +4798,11 @@ void dp_htt_stats_copy_tag(struct dp_pdev *pdev, uint8_t tag_type, uint32_t *tag
 
 	if (dest_ptr)
 		qdf_mem_copy(dest_ptr, tag_buf, size_expected);
+
+	if (((pdev->fw_stats_tlv_bitmap_rcvd) & DP_HTT_TX_RX_EXPECTED_TLVS)
+	      == DP_HTT_TX_RX_EXPECTED_TLVS) {
+		qdf_event_set(&pdev->fw_stats_event);
+	}
 }
 
 #ifdef VDEV_PEER_PROTOCOL_COUNT
