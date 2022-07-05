@@ -461,9 +461,8 @@ dp_rx_pn_error_handle(struct dp_soc *soc, hal_ring_desc_t ring_desc,
 		/*
 		 * TODO: Check for peer specific policies & set peer_pn_policy
 		 */
-		QDF_TRACE(QDF_MODULE_ID_TXRX, QDF_TRACE_LEVEL_ERROR,
-			 "discard rx due to PN error for peer  %pK",
-			 txrx_peer);
+		dp_err_rl("discard rx due to PN error for peer  %pK",
+			  txrx_peer);
 
 		dp_txrx_peer_unref_delete(txrx_ref_handle, DP_MOD_ID_RX_ERR);
 	}
