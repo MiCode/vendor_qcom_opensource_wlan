@@ -1678,10 +1678,20 @@ dp_soc_max_peer_id_set(struct dp_soc *soc)
 
 static void dp_peer_map_detach_be(struct dp_soc *soc)
 {
+	if (soc->host_ast_db_enable)
+		dp_peer_ast_hash_detach(soc);
 }
 
 static QDF_STATUS dp_peer_map_attach_be(struct dp_soc *soc)
 {
+	QDF_STATUS status;
+
+	if (soc->host_ast_db_enable) {
+		status = dp_peer_ast_hash_attach(soc);
+		if (QDF_IS_STATUS_ERROR(status))
+			return status;
+	}
+
 	dp_soc_max_peer_id_set(soc);
 
 	return QDF_STATUS_SUCCESS;
