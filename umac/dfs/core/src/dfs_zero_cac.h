@@ -111,6 +111,13 @@
 #define DEPTH_40_ROOT                            3
 #define DEPTH_20_ROOT                            4
 
+#ifdef QCA_DFS_BW_EXPAND
+/* Column of the phymode_decoupler array */
+enum phymode_decoupler_col {
+	CH_WIDTH_COL = 1
+};
+#endif /* QCA_DFS_BW_EXPAND */
+
 /**
  * struct precac_tree_node - Individual tree node structure for every node in
  *                           the precac forest maintained.
@@ -1202,4 +1209,87 @@ dfs_is_subset_channel_for_freq(uint16_t *old_subchans_freq,
 			       uint16_t *new_subchans_freq,
 			       uint8_t new_n_chans);
 #endif
+
+#ifdef QCA_DFS_BW_EXPAND
+/**
+ * dfs_bwexpand_find_usr_cnf_chan() - Find the User configured channel for
+ * BW Expand.
+ * @dfs: Pointer to wlan_dfs object.
+ *
+ * Return: User configured frequency.
+ */
+qdf_freq_t dfs_bwexpand_find_usr_cnf_chan(struct wlan_dfs *dfs);
+
+/**
+ * dfs_bwexpand_try_jumping_to_target_subchan() - Expand the current channel
+ * bandwidth or jump to a (subset of) user configured target channel.
+ * Example: Current channel is 60 HT20 and user configured target channel is
+ * 100 HT160. Agile SM runs on the subchans with 20Mhz BW of 100 HT160, here
+ * Agile SM runs on 100HT20 and after completion of agile CAC, it checks
+ * the API dfs_bwexpand_try_jumping_to_target_subchan for possibility of
+ * BW Expansion and only 20Mhz subchan is available. There is no possible for
+ * higher bandwidth channel. Then agile CAC runs on the adjacent subchannel
+ * 104 HT20. After agile CAC completion, the API is checked again for possible
+ * bandwidth expansion and 102 HT40 is available. The API invokes channel change
+ * to higher bandwidth.
+ * @dfs: Pointer to wlan_dfs object.
+ *
+ * Return: TRUE, if Bandwidth expansion is success.
+ * FALSE, if Bandwidth expansion is failure.
+ */
+bool dfs_bwexpand_try_jumping_to_target_subchan(struct wlan_dfs *dfs);
+
+/**
+ * dfs_is_rcac_cac_done()- Check RCAC is completed on the subset of the
+ * user configured target channel.
+ * @dfs: Pointer to wlan_dfs.
+ * @chan: Pointer to dfs_channel object of user configured target channel.
+ * @subset_chan: Pointer to dfs_channel object of subchannel in which RCAC is
+ * completed.
+ *
+ * Return: Boolean value.
+ */
+bool dfs_is_rcac_cac_done(struct wlan_dfs *dfs,
+			  struct dfs_channel *chan,
+			  struct dfs_channel *subset_chan);
+
+/*
+ * dfs_get_configured_bwexpand_dfs_chan() - Get a DFS chan when frequency and
+ * phymode is provided.
+ * @dfs: pointer to wlan_dfs.
+ * @user_chan: pointer to dfs_channel.
+ * @target_mode: phymode of type wlan_phymode.
+ */
+bool dfs_get_configured_bwexpand_dfs_chan(struct wlan_dfs *dfs,
+					  struct dfs_channel *user_chan,
+					  enum wlan_phymode target_mode);
+#else
+static inline
+qdf_freq_t dfs_bwexpand_find_usr_cnf_chan(struct wlan_dfs *dfs)
+{
+	return 0;
+}
+
+static inline
+bool dfs_bwexpand_try_jumping_to_target_subchan(struct wlan_dfs *dfs)
+{
+	return false;
+}
+
+static inline
+bool dfs_is_rcac_cac_done(struct wlan_dfs *dfs,
+			  struct dfs_channel *chan,
+			  struct dfs_channel *subset_chan)
+{
+	return false;
+}
+
+static inline
+bool dfs_get_configured_bwexpand_dfs_chan(struct wlan_dfs *dfs,
+					  struct dfs_channel *user_chan,
+					  enum wlan_phymode target_mode)
+{
+	return false;
+}
+#endif /* QCA_DFS_BW_EXPAND */
 #endif /* _DFS_ZERO_CAC_H_ */
