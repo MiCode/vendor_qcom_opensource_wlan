@@ -24,6 +24,7 @@
 #include "include/wlan_vdev_mlme.h"
 #include "../../core/src/vdev_mlme_sm.h"
 #include <wlan_vdev_mlme_api.h>
+#include <include/wlan_mlme_cmn.h>
 #include <qdf_module.h>
 
 struct vdev_mlme_obj *wlan_vdev_mlme_get_cmpt_obj(struct wlan_objmgr_vdev *vdev)
@@ -231,6 +232,8 @@ QDF_STATUS wlan_vdev_is_mlo_peer_create_allowed(struct wlan_objmgr_vdev *vdev)
 {
 	enum wlan_vdev_state state;
 	enum wlan_vdev_state substate;
+	bool acs_in_progress;
+	QDF_STATUS ret;
 
 	if (!vdev) {
 		mlme_err("vdev is null");
@@ -239,11 +242,20 @@ QDF_STATUS wlan_vdev_is_mlo_peer_create_allowed(struct wlan_objmgr_vdev *vdev)
 
 	state = wlan_vdev_mlme_get_state(vdev);
 	substate = wlan_vdev_mlme_get_substate(vdev);
-	if ((state == WLAN_VDEV_S_UP) ||
-	    ((state == WLAN_VDEV_S_SUSPEND) &&
-	     (substate == WLAN_VDEV_SS_SUSPEND_CSA_RESTART)) ||
-	    (state == WLAN_VDEV_S_DFS_CAC_WAIT))
-		return QDF_STATUS_SUCCESS;
+
+	acs_in_progress = false;
+	ret = mlme_ext_hdl_get_acs_in_progress(vdev, &acs_in_progress);
+	if (ret != QDF_STATUS_SUCCESS) {
+		mlme_err("Unable to get ACS in progress status");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	if (!acs_in_progress)
+		if ((state == WLAN_VDEV_S_UP) ||
+		    ((state == WLAN_VDEV_S_SUSPEND) &&
+		     (substate == WLAN_VDEV_SS_SUSPEND_CSA_RESTART)) ||
+		    (state == WLAN_VDEV_S_DFS_CAC_WAIT))
+			return QDF_STATUS_SUCCESS;
 
 	return QDF_STATUS_E_FAILURE;
 }
