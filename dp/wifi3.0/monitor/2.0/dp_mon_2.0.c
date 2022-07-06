@@ -45,6 +45,38 @@
 #if !defined(DISABLE_MON_CONFIG)
 
 /**
+ * dp_mon_ppdu_info_pool_init_2_0 () - PPDU info pool init
+ *
+ * @pdev: DP pdev handle
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS dp_mon_ppdu_info_pool_init_2_0(struct dp_pdev *pdev)
+{
+	struct dp_mon_pdev *mon_pdev = pdev->monitor_pdev;
+
+	dp_rx_mon_ppdu_info_pool_init(mon_pdev);
+
+	return QDF_STATUS_SUCCESS;
+}
+
+/**
+ * dp_mon_ppdu_info_pool_deinit_2_0 () - PPDU info pool deinit
+ *
+ * @pdev: DP pdev handle
+ *
+ * Return: void
+ */
+void dp_mon_ppdu_info_pool_deinit_2_0(struct dp_pdev *pdev)
+{
+	struct dp_mon_pdev *mon_pdev = pdev->monitor_pdev;
+	struct dp_mon_pdev_be *mon_pdev_be =
+			dp_get_be_mon_pdev_from_dp_mon_pdev(mon_pdev);
+
+	dp_rx_mon_ppdu_info_pool_deinit(mon_pdev_be);
+}
+
+/**
  * dp_mon_pdev_ext_init_2_0() - Init pdev ext param
  *
  * @pdev: DP pdev handle
@@ -70,7 +102,6 @@ QDF_STATUS dp_mon_pdev_ext_init_2_0(struct dp_pdev *pdev)
 	TAILQ_INIT(&mon_pdev_be->rx_mon_queue);
 
 	qdf_spinlock_create(&mon_pdev_be->rx_mon_wq_lock);
-	dp_rx_mon_ppdu_info_pool_init(mon_pdev);
 
 	return QDF_STATUS_SUCCESS;
 
@@ -100,7 +131,6 @@ QDF_STATUS dp_mon_pdev_ext_deinit_2_0(struct dp_pdev *pdev)
 	qdf_disable_work(&mon_pdev_be->rx_mon_work);
 	mon_pdev_be->rx_mon_workqueue = NULL;
 	dp_rx_mon_drain_wq(pdev);
-	dp_rx_mon_ppdu_info_pool_deinit(mon_pdev_be);
 	qdf_spinlock_destroy(&mon_pdev_be->rx_mon_wq_lock);
 
 	return QDF_STATUS_SUCCESS;
@@ -1624,6 +1654,8 @@ struct dp_mon_ops monitor_ops_2_0 = {
 	.mon_lite_mon_dealloc = dp_lite_mon_dealloc,
 	.mon_lite_mon_vdev_delete = dp_lite_mon_vdev_delete,
 	.mon_lite_mon_disable_rx = dp_lite_mon_disable_rx,
+	.rx_mon_ppdu_info_pool_init = dp_mon_ppdu_info_pool_init_2_0,
+	.rx_mon_ppdu_info_pool_deinit = dp_mon_ppdu_info_pool_deinit_2_0,
 };
 
 struct cdp_mon_ops dp_ops_mon_2_0 = {

@@ -786,6 +786,8 @@ struct dp_mon_ops {
 	/* Print advanced monitor stats */
 	void (*mon_rx_print_advanced_stats)
 		(struct dp_soc *soc, struct dp_pdev *pdev);
+	QDF_STATUS (*rx_mon_ppdu_info_pool_init)(struct dp_pdev *pdev);
+	void (*rx_mon_ppdu_info_pool_deinit)(struct dp_pdev *pdev);
 };
 
 /**
