@@ -1702,15 +1702,40 @@ static struct dp_peer *dp_find_peer_by_destmac_be(struct dp_soc *soc,
 						  uint8_t vdev_id)
 {
 	struct dp_peer *peer = NULL;
+	struct dp_peer *tgt_peer = NULL;
+	struct dp_ast_entry *ast_entry = NULL;
+	uint16_t peer_id;
 
-	peer = dp_peer_find_hash_find(soc, dest_mac, 0,
-				      vdev_id, DP_MOD_ID_SAWF);
-	if (!peer) {
-		dp_err("Invalid peer");
+	qdf_spin_lock_bh(&soc->ast_lock);
+	ast_entry = dp_peer_ast_hash_find_soc(soc, dest_mac);
+	if (!ast_entry) {
+		qdf_spin_unlock_bh(&soc->ast_lock);
+		dp_err("NULL ast entry");
 		return NULL;
 	}
 
-	return peer;
+	peer_id = ast_entry->peer_id;
+	qdf_spin_unlock_bh(&soc->ast_lock);
+
+	if (peer_id == HTT_INVALID_PEER)
+		return NULL;
+
+	peer = dp_peer_get_ref_by_id(soc, peer_id, DP_MOD_ID_SAWF);
+	if (!peer) {
+		dp_err("NULL peer for peer_id:%d", peer_id);
+		return NULL;
+	}
+
+	tgt_peer = dp_get_tgt_peer_from_peer(peer);
+
+	/*
+	 * Once tgt_peer is obtained,
+	 * release the ref taken for original peer.
+	 */
+	dp_peer_get_ref(NULL, tgt_peer, DP_MOD_ID_SAWF);
+	dp_peer_unref_delete(peer, DP_MOD_ID_SAWF);
+
+	return tgt_peer;
 }
 
 #ifdef WLAN_FEATURE_11BE_MLO
