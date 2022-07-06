@@ -315,6 +315,17 @@ struct wlan_crypto_pmksa {
 	struct mobility_domain_params mdid;
 };
 
+#ifdef WLAN_ADAPTIVE_11R
+/**
+ * struct wlan_crypto_pmksa - structure to store AKM(s) present in RSN IE of
+ * Beacon/Probe response
+ * @key_mgmt: AKM(s) present in RSN IE of Beacon/Probe response
+ */
+struct key_mgmt_list {
+	uint32_t key_mgmt;
+};
+#endif
+
 /**
  * struct wlan_crypto_params - holds crypto params
  * @authmodeset:        authentication mode
@@ -325,6 +336,7 @@ struct wlan_crypto_pmksa {
  * @key_mgmt:           key mgmt
  * @pmksa:              pmksa
  * @rsn_caps:           rsn_capability
+ * @akm_list:           order of AKM present in RSN IE of Beacon/Probe response
  *
  * This structure holds crypto params for peer or vdev
  */
@@ -337,6 +349,9 @@ struct wlan_crypto_params {
 	uint32_t key_mgmt;
 	struct   wlan_crypto_pmksa *pmksa[WLAN_CRYPTO_MAX_PMKID];
 	uint16_t rsn_caps;
+#ifdef WLAN_ADAPTIVE_11R
+	struct key_mgmt_list akm_list[WLAN_CRYPTO_KEY_MGMT_MAX];
+#endif
 };
 
 /**

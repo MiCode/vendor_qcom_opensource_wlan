@@ -214,6 +214,73 @@ static bool scm_chk_crypto_params(struct scan_filter *filter,
 	return true;
 }
 
+#ifdef WLAN_ADAPTIVE_11R
+/**
+ * scm_check_and_update_adaptive_11r_key_mgmt_support() -  check and update
+ * first rsn security which is present in RSN IE of Beacon/Probe response to
+ * corresponding FT AKM.
+ * @ap_crypto: crypto param structure
+ *
+ * Return: none
+ */
+static void scm_check_and_update_adaptive_11r_key_mgmt_support(
+					struct wlan_crypto_params *ap_crypto)
+{
+	uint32_t i, first_key_mgmt = WLAN_CRYPTO_KEY_MGMT_MAX;
+
+	/*
+	 * Supplicant compares AKM(s) in RSN IE of Beacon/Probe response and
+	 * AKM on EAPOL M3 frame received by AP.  In the case of multi AKM,
+	 * previously Host converts all adaptive 11r AKM(s), if any, present
+	 * in RSN IE of Beacon/Probe response to corresponding FT AKM but the
+	 * AP(s) which support adaptive 11r (ADAPTIVE_11R_OUI: 0x964000) only
+	 * converts first AKM to corresponding FT AKM and sends EAPOL M3 frame
+	 * to DUT. This results in failure in a 4-way handshake in supplicant
+	 * due to RSN IE miss-match between RSNIE sent by host and RSNIE
+	 * present in EAPOL M3 frame. Now like AP, the host is converting only
+	 * the first AKM to corresponding FT AKM to avoid RSNIE mismatch in
+	 * supplicant.
+	 */
+	for (i = 0; i < WLAN_CRYPTO_KEY_MGMT_MAX; i++) {
+		if (ap_crypto->akm_list[i].key_mgmt ==
+		    WLAN_CRYPTO_KEY_MGMT_IEEE8021X ||
+		    ap_crypto->akm_list[i].key_mgmt ==
+		    WLAN_CRYPTO_KEY_MGMT_IEEE8021X_SHA256) {
+			first_key_mgmt = WLAN_CRYPTO_KEY_MGMT_IEEE8021X;
+			break;
+		}
+
+		if (ap_crypto->akm_list[i].key_mgmt ==
+		    WLAN_CRYPTO_KEY_MGMT_PSK ||
+		    ap_crypto->akm_list[i].key_mgmt ==
+		    WLAN_CRYPTO_KEY_MGMT_PSK_SHA256) {
+			first_key_mgmt = WLAN_CRYPTO_KEY_MGMT_PSK;
+			break;
+		}
+	}
+
+	if (first_key_mgmt == WLAN_CRYPTO_KEY_MGMT_MAX) {
+		scm_debug("No adaptive 11r's AKM present in RSN IE");
+		return;
+	}
+
+	scm_debug("First AKM:%d present in RSN IE of bcn/Probe rsp at index:%d",
+		  first_key_mgmt, i);
+
+	if (first_key_mgmt == WLAN_CRYPTO_KEY_MGMT_IEEE8021X)
+		QDF_SET_PARAM(ap_crypto->key_mgmt,
+			      WLAN_CRYPTO_KEY_MGMT_FT_IEEE8021X);
+
+	if (first_key_mgmt == WLAN_CRYPTO_KEY_MGMT_PSK)
+		QDF_SET_PARAM(ap_crypto->key_mgmt, WLAN_CRYPTO_KEY_MGMT_FT_PSK);
+}
+#else
+static inline void scm_check_and_update_adaptive_11r_key_mgmt_support(
+					struct wlan_crypto_params *ap_crypto)
+{
+}
+#endif
+
 /**
  * scm_check_rsn() - Check if scan entry support RSN security
  * @filter: scan filter
@@ -253,29 +320,11 @@ static bool scm_check_rsn(struct scan_filter *filter,
 				filter->enable_adaptive_11r;
 
 	/* If adaptive 11r is enabled set the FT AKM for AP */
-	if (is_adaptive_11r) {
-		if (QDF_HAS_PARAM(ap_crypto->key_mgmt,
-				  WLAN_CRYPTO_KEY_MGMT_IEEE8021X)) {
-			QDF_SET_PARAM(ap_crypto->key_mgmt,
-				      WLAN_CRYPTO_KEY_MGMT_FT_IEEE8021X);
-		}
-		if (QDF_HAS_PARAM(ap_crypto->key_mgmt,
-				  WLAN_CRYPTO_KEY_MGMT_PSK)) {
-			QDF_SET_PARAM(ap_crypto->key_mgmt,
-				      WLAN_CRYPTO_KEY_MGMT_FT_PSK);
-		}
-		if (QDF_HAS_PARAM(ap_crypto->key_mgmt,
-				  WLAN_CRYPTO_KEY_MGMT_PSK_SHA256)) {
-			QDF_SET_PARAM(ap_crypto->key_mgmt,
-				      WLAN_CRYPTO_KEY_MGMT_FT_PSK);
-		}
-		if (QDF_HAS_PARAM(ap_crypto->key_mgmt,
-				  WLAN_CRYPTO_KEY_MGMT_IEEE8021X_SHA256)) {
-			QDF_SET_PARAM(ap_crypto->key_mgmt,
-				      WLAN_CRYPTO_KEY_MGMT_FT_IEEE8021X);
-		}
-	}
+	if (is_adaptive_11r)
+		scm_check_and_update_adaptive_11r_key_mgmt_support(ap_crypto);
 
+	scm_debug("ap_crypto->key_mgmt:%d, filter->key_mgmt:%d",
+		  ap_crypto->key_mgmt, filter->key_mgmt);
 	match = scm_chk_crypto_params(filter, ap_crypto, is_adaptive_11r,
 				      db_entry, security);
 	qdf_mem_free(ap_crypto);
