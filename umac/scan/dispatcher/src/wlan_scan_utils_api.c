@@ -1927,6 +1927,11 @@ static void util_get_partner_link_info(struct scan_cache_entry *scan_entry)
 				wlan_reg_chan_opclass_to_freq(rnr->channel_number,
 							      rnr->operating_class,
 							      true);
+			if (!link_info->freq)
+				scm_debug("freq 0 rnr channel %d op_class %d",
+					  rnr->channel_number,
+					  rnr->operating_class);
+			link_info->op_class = rnr->operating_class;
 			link_idx++;
 		}
 		rnr_idx++;

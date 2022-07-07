@@ -135,7 +135,7 @@
  * chan_width_weightage - Channel Width Weightage to calculate best candidate
  * @Min: 0
  * @Max: 100
- * @Default: 12
+ * @Default: 20
  *
  * This ini is used to increase/decrease Channel Width weightage in best
  * candidate selection. AP with Higher channel width will get higher weightage
@@ -152,7 +152,7 @@
 	"chan_width_weightage", \
 	0, \
 	100, \
-	12, \
+	20, \
 	CFG_VALUE_OR_DEFAULT, \
 	"Channel width weightage")
 
@@ -190,7 +190,7 @@
  * nss_weightage - NSS Weightage to calculate best candidate
  * @Min: 0
  * @Max: 100
- * @Default: 16
+ * @Default: 20
  *
  * This ini is used to increase/decrease NSS weightage in best candidate
  * selection. If there are two AP, one AP supports 2x2 and another one supports
@@ -209,7 +209,7 @@
 	"nss_weightage", \
 	0, \
 	100, \
-	16, \
+	20, \
 	CFG_VALUE_OR_DEFAULT, \
 	"NSS Weightage")
 /*
@@ -701,7 +701,7 @@
  * nss_weight_per_index - percentage as per NSS
  * @Min: 0x00000000
  * @Max: 0x64646464
- * @Default: 0x6432190C
+ * @Default: 0x5032190C
  *
  * This INI give percentage value of nss_weightage to be used as per peer NSS.
  * Self NSS capability is also considered. Eg if self NSS is 1x1 10% will be
@@ -711,7 +711,7 @@
  *     0 Index (BITS 0-7): 1X1- Def 12%
  *     1 Index (BITS 8-15): 2X2- Def 25%
  *     2 Index (BITS 16-23): 3X3- Def 50%
- *     3 Index (BITS 24-31): 4X4- Def 100%
+ *     3 Index (BITS 24-31): 4X4- Def 80%
  * These percentage values are stored in HEX. For any index max value, can be 64
  *
  * Related: nss_weightage
@@ -726,7 +726,7 @@
 	"nss_weight_per_index", \
 	0x00000000, \
 	0x64646464, \
-	0x6432190C, \
+	0x5032190C, \
 	CFG_VALUE_OR_DEFAULT, \
 	"NSS weight per index")
 
