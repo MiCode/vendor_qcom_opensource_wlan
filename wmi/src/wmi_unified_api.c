@@ -2119,6 +2119,18 @@ wmi_extract_frame_pn_params(wmi_unified_t wmi_handle, void *evt_buf,
 }
 
 QDF_STATUS
+wmi_extract_is_conn_ap_frame(wmi_unified_t wmi_handle, void *evt_buf,
+			     struct frm_conn_ap *is_conn_ap_frm)
+{
+	if (wmi_handle->ops->extract_is_conn_ap_frame)
+		return wmi_handle->ops->extract_is_conn_ap_frame(wmi_handle,
+							evt_buf,
+							is_conn_ap_frm);
+
+	return QDF_STATUS_E_FAILURE;
+}
+
+QDF_STATUS
 wmi_extract_vdev_roam_param(wmi_unified_t wmi_handle, void *evt_buf,
 			    wmi_host_roam_event *param)
 {

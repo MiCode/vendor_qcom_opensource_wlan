@@ -1053,6 +1053,49 @@ static QDF_STATUS simulation_frame_update(struct wlan_objmgr_psoc *psoc,
 #endif
 
 /**
+ * wlan_mgmt_rx_beacon_rate_limit() - rate limiting mgmt beacons
+ * @psoc - pointer to psoc struct
+ * @mgmt_rx_params - rx params
+ *
+ * This function will drop the beacons if the number of beacons
+ * received is greater than the percentage of limit of beacons to max
+ * count of beacons, when beacon rate limiting is enabled
+ *
+ * Return : QDF_STATUS if success, else QDF_STATUS_E_RESOURCES
+ */
+static QDF_STATUS wlan_mgmt_rx_beacon_rate_limit(struct wlan_objmgr_psoc *psoc,
+						 struct mgmt_rx_event_params
+						 *mgmt_rx_params)
+{
+	struct wlan_objmgr_pdev *pdev = NULL;
+
+	pdev = wlan_objmgr_get_pdev_by_id(psoc, mgmt_rx_params->pdev_id,
+					  WLAN_MGMT_SB_ID);
+
+	if (pdev && pdev->pdev_objmgr.bcn.bcn_rate_limit) {
+		uint64_t b_limit = qdf_do_div(
+				(wlan_pdev_get_max_beacon_count(pdev) *
+				 wlan_pdev_get_max_beacon_limit(pdev)), 100);
+		wlan_pdev_incr_wlan_beacon_count(pdev);
+
+		if (wlan_pdev_get_wlan_beacon_count(pdev) >=
+					wlan_pdev_get_max_beacon_count(pdev))
+			wlan_pdev_set_wlan_beacon_count(pdev, 0);
+
+		if (wlan_pdev_get_wlan_beacon_count(pdev) >= b_limit) {
+			wlan_pdev_incr_dropped_beacon_count(pdev);
+			wlan_objmgr_pdev_release_ref(pdev, WLAN_MGMT_SB_ID);
+			return QDF_STATUS_E_RESOURCES;
+		}
+	}
+
+	if (pdev)
+		wlan_objmgr_pdev_release_ref(pdev, WLAN_MGMT_SB_ID);
+
+	return QDF_STATUS_SUCCESS;
+}
+
+/**
  * wlan_mgmt_txrx_rx_handler_list_copy() - copies rx handler list
  * @rx_handler: pointer to rx handler list
  * @rx_handler_head: pointer to head of the copies list
@@ -1316,6 +1359,15 @@ QDF_STATUS tgt_mgmt_txrx_rx_frame_handler(
 		return QDF_STATUS_E_FAILURE;
 	}
 	qdf_spin_unlock_bh(&mgmt_txrx_psoc_ctx->mgmt_txrx_psoc_ctx_lock);
+
+	if (mgmt_subtype == MGMT_SUBTYPE_BEACON &&
+	    mgmt_rx_params->is_conn_ap.is_conn_ap_frm == 0) {
+		status = wlan_mgmt_rx_beacon_rate_limit(psoc, mgmt_rx_params);
+		if (QDF_IS_STATUS_ERROR(status)) {
+			qdf_nbuf_free(buf);
+			goto rx_handler_mem_free;
+		}
+	}
 
 	mac_addr = (uint8_t *)wh->i_addr2;
 	/*

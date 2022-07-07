@@ -182,6 +182,22 @@ struct wlan_objmgr_pdev_mlme {
 };
 
 /**
+ * struct wlan_beacon_process - wlan beacon structure
+ * @bcn_rate_limit:    To indicate if beacon ratelimiting is enabled or not
+ * @wlan_beacon_count: Per pdev beacon count received
+ * @max_beacon_count:  Per vdev max beacon count, defaults to 100
+ * @max_beacon_limit:  Limit of beacons to be processed
+ * @dropped_beacon:    Dropped beacons
+ */
+struct wlan_beacon_process {
+	bool bcn_rate_limit;
+	uint64_t wlan_beacon_count;
+	uint64_t max_beacon_count;
+	uint8_t max_beacon_limit;
+	uint64_t dropped_beacon;
+};
+
+/**
  * struct wlan_objmgr_pdev_objmgr - pdev object object manager structure
  * @wlan_pdev_id:      PDEV id
  * @wlan_vdev_count:   VDEVs count
@@ -196,6 +212,7 @@ struct wlan_objmgr_pdev_mlme {
  * @ref_cnt:           Ref count
  * @ref_id_dbg:        Array to track Ref count
  * @wlan_mlo_vdev_count: MLO VDEVs count
+ * @bcn:               Struct to keep track of beacon count
  */
 struct wlan_objmgr_pdev_objmgr {
 	uint8_t wlan_pdev_id;
@@ -213,6 +230,7 @@ struct wlan_objmgr_pdev_objmgr {
 #ifdef WLAN_FEATURE_11BE_MLO
 	qdf_atomic_t wlan_mlo_vdev_count;
 #endif
+	struct wlan_beacon_process bcn;
 };
 
 /**
@@ -1037,6 +1055,151 @@ static inline uint16_t wlan_pdev_get_max_peer_count(
 						struct wlan_objmgr_pdev *pdev)
 {
 	return pdev->pdev_objmgr.max_peer_count;
+}
+
+/**
+ * wlan_pdev_set_max_beacon_count() - set max beacon count
+ * @pdev: pdev object
+ * @count: Max beacon count
+ *
+ * API to set max beacon count of pdev
+ *
+ * Return: void
+ */
+static inline void wlan_pdev_set_max_beacon_count(
+					struct wlan_objmgr_pdev *pdev,
+					uint64_t count)
+{
+	pdev->pdev_objmgr.bcn.max_beacon_count = count;
+}
+
+/**
+ * wlan_pdev_get_max_beacon_count() - get max beacon count
+ * @pdev: pdev object
+ *
+ * API to get max beacon count of pdev
+ *
+ * Return: max beacon count
+ */
+static inline uint64_t wlan_pdev_get_max_beacon_count(
+					struct wlan_objmgr_pdev *pdev)
+{
+	return pdev->pdev_objmgr.bcn.max_beacon_count;
+}
+
+/**
+ * wlan_pdev_incr_beacon_count() - incr beacon count for rx beacon frames
+ * @pdev: pdev object
+ *
+ * API to incr beacon count of pdev
+ *
+ * Return: void
+ */
+static inline void wlan_pdev_incr_wlan_beacon_count(
+					struct wlan_objmgr_pdev *pdev)
+{
+	pdev->pdev_objmgr.bcn.wlan_beacon_count++;
+}
+
+/**
+ * wlan_pdev_get_wlan_beacon_count() - set wlan beacon count
+ * @pdev: pdev object
+ * @count: count to reset beacon count
+ *
+ * API to get wlan beacon count of pdev
+ *
+ */
+static inline void wlan_pdev_set_wlan_beacon_count(
+					struct wlan_objmgr_pdev *pdev,
+					uint64_t count)
+{
+	pdev->pdev_objmgr.bcn.wlan_beacon_count = count;
+}
+
+/**
+ * wlan_pdev_get_wlan_beacon_limit() - get wlan beacon limit
+ * @pdev: pdev object
+ *
+ * API to get wlan beacon limit of pdev
+ *
+ * Return: beacon limit
+ */
+static inline uint64_t wlan_pdev_get_wlan_beacon_count(
+					struct wlan_objmgr_pdev *pdev)
+{
+	return pdev->pdev_objmgr.bcn.wlan_beacon_count;
+}
+
+/**
+ * wlan_pdev_set_wlan_beacon_count() - set wlan beacon limit
+ * @pdev: pdev object
+ * @limit: limit for thresholding
+ *
+ * API to set wlan beacon limit of pdev
+ *
+ */
+static inline void wlan_pdev_set_max_beacon_limit(
+					struct wlan_objmgr_pdev *pdev,
+					uint64_t limit)
+{
+	pdev->pdev_objmgr.bcn.max_beacon_limit = limit;
+}
+
+/**
+ * wlan_pdev_get_wlan_beacon_limit() - get wlan beacon limit
+ * @pdev: pdev object
+ *
+ * API to get wlan beacon limit of pdev
+ *
+ * Return: beacon limit
+ */
+static inline uint64_t wlan_pdev_get_max_beacon_limit(
+					struct wlan_objmgr_pdev *pdev)
+{
+	return pdev->pdev_objmgr.bcn.max_beacon_limit;
+}
+
+/**
+ * wlan_pdev_incr_dropped_beacon_count() - increment dropped bcn cnt
+ * @pdev: pdev object
+ *
+ * API to increment dropped beacon count
+ *
+ * Return: beacon limit
+ */
+static inline void wlan_pdev_incr_dropped_beacon_count(
+					struct wlan_objmgr_pdev *pdev)
+{
+	pdev->pdev_objmgr.bcn.dropped_beacon++;
+}
+
+/**
+ * wlan_pdev_set_dropped_beacon_count() - reset dropped beacon count
+ * @pdev: pdev object
+ * @count: count value
+ *
+ * API to set beacon drop count
+ *
+ */
+static inline void wlan_pdev_set_dropped_beacon_count(
+					struct wlan_objmgr_pdev *pdev,
+					uint64_t count)
+{
+	pdev->pdev_objmgr.bcn.dropped_beacon = count;
+}
+
+/**
+ * wlan_pdev_get_dropped_beacon_count() - get drop beacon count
+ * @pdev: pdev object
+ *
+ * API to get dropped beacon count
+ *
+ * Return: beacon limit
+ */
+static inline uint64_t wlan_pdev_get_dropped_beacon_count(
+					struct wlan_objmgr_pdev *pdev)
+{
+	return pdev->pdev_objmgr.bcn.dropped_beacon;
 }
 
 /**

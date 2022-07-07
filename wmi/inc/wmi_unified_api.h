@@ -2994,6 +2994,18 @@ wmi_extract_frame_pn_params(wmi_unified_t wmi_handle, void *evt_buf,
 			    struct frame_pn_params *pn_params);
 
 /**
+ * wmi_extract_is_conn_ap_frame() - extract is_conn_ap_frame param from event
+ * @wmi_handle: wmi handle
+ * @evt_buf: pointer to event buffer
+ * @is_conn_ap: is_conn_ap param
+ *
+ * Return: QDF_STATUS_SUCCESS on success and QDF_STATUS_E_FAILURE for failure
+ */
+QDF_STATUS
+wmi_extract_is_conn_ap_frame(wmi_unified_t wmi_handle, void *evt_buf,
+			     struct frm_conn_ap *is_conn_ap);
+
+/**
  * wmi_extract_vdev_roam_param() - extract vdev roam param from event
  * @wmi_handle: wmi handle
  * @evt_buf: pointer to event buffer

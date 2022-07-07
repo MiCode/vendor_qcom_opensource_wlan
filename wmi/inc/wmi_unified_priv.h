@@ -1885,6 +1885,10 @@ QDF_STATUS (*extract_mgmt_rx_params)(wmi_unified_t wmi_handle, void *evt_buf,
 QDF_STATUS (*extract_frame_pn_params)(wmi_unified_t wmi_handle, void *evt_buf,
 				      struct frame_pn_params *pn_params);
 
+QDF_STATUS (*extract_is_conn_ap_frame)(wmi_unified_t wmi_handle,
+				       void *evt_buf,
+				       struct frm_conn_ap *is_conn_ap);
+
 QDF_STATUS (*extract_vdev_stopped_param)(wmi_unified_t wmi_handle,
 		void *evt_buf, uint32_t *vdev_id);
 

@@ -11944,6 +11944,43 @@ static QDF_STATUS extract_frame_pn_params_tlv(wmi_unified_t wmi_handle,
 }
 
 /**
+ * extract_is_conn_ap_param_tlv() - extract is_conn_ap_frame param from event
+ * @wmi_handle: wmi handle
+ * @evt_buf: pointer to event buffer
+ * @is_conn_ap: Pointer for is_conn_ap frame
+ *
+ * Return: QDF_STATUS_SUCCESS for success or error code
+ */
+static QDF_STATUS extract_is_conn_ap_frm_param_tlv(
+						wmi_unified_t wmi_handle,
+						void *evt_buf,
+						struct frm_conn_ap *is_conn_ap)
+{
+	WMI_MGMT_RX_EVENTID_param_tlvs *param_tlvs;
+	wmi_is_my_mgmt_frame *my_frame_tlv;
+
+	param_tlvs = evt_buf;
+	if (!param_tlvs) {
+		wmi_err("Got NULL point message from FW");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	if (!is_conn_ap) {
+		wmi_err(" is connected ap param is NULL");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	my_frame_tlv = param_tlvs->my_frame;
+	if (!my_frame_tlv)
+		return QDF_STATUS_SUCCESS;
+
+	is_conn_ap->mgmt_frm_sub_type = my_frame_tlv->mgmt_frm_sub_type;
+	is_conn_ap->is_conn_ap_frm = my_frame_tlv->is_my_frame;
+
+	return QDF_STATUS_SUCCESS;
+}
+
+/**
  * extract_vdev_roam_param_tlv() - extract vdev roam param from event
  * @wmi_handle: wmi handle
  * @param evt_buf: pointer to event buffer
@@ -18375,6 +18412,7 @@ struct wmi_ops tlv_ops =  {
 	.extract_dbglog_data_len = extract_dbglog_data_len_tlv,
 	.extract_mgmt_rx_params = extract_mgmt_rx_params_tlv,
 	.extract_frame_pn_params = extract_frame_pn_params_tlv,
+	.extract_is_conn_ap_frame = extract_is_conn_ap_frm_param_tlv,
 	.extract_vdev_roam_param = extract_vdev_roam_param_tlv,
 	.extract_vdev_scan_ev_param = extract_vdev_scan_ev_param_tlv,
 #ifdef FEATURE_WLAN_SCAN_PNO
