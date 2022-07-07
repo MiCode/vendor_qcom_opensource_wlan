@@ -7889,13 +7889,13 @@ extract_spectral_fft_size_caps_tlv(
 		fft_size_caps[idx].sscan_bw = wmi_map_ch_width(
 			param_buf->fft_size_caps[idx].sscan_bw);
 		fft_size_caps[idx].supports_fft_sizes =
-			param_buf->sscan_bw_caps[idx].supported_flags;
+			param_buf->fft_size_caps[idx].supported_flags;
 
 		wmi_debug("fft_size_caps[%u]:: pdev_id:%u sscan_bw:%u"
 			  "supported_flags:0x%x",
-			  idx, param_buf->sscan_bw_caps[idx].pdev_id,
+			  idx, param_buf->fft_size_caps[idx].pdev_id,
 			  param_buf->fft_size_caps[idx].sscan_bw,
-			  param_buf->sscan_bw_caps[idx].supported_flags);
+			  param_buf->fft_size_caps[idx].supported_flags);
 	}
 
 	return QDF_STATUS_SUCCESS;
@@ -19280,6 +19280,8 @@ static void populate_tlv_events_id(uint32_t *event_ids)
 	event_ids[wmi_coex_dbam_complete_event_id] =
 			WMI_COEX_DBAM_COMPLETE_EVENTID;
 #endif
+	event_ids[wmi_spectral_capabilities_eventid] =
+				WMI_SPECTRAL_CAPABILITIES_EVENTID;
 }
 
 #ifdef WLAN_FEATURE_LINK_LAYER_STATS
