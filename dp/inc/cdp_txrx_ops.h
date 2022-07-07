@@ -71,6 +71,10 @@ enum cdp_tx_filter_action {
 	CDP_TX_FILTER_ACTION_ADD = 1,
 	/* delete peer mac address */
 	CDP_TX_FILTER_ACTION_DEL,
+	/* Enable Tx peer filtering */
+	CDP_TX_FILTER_ACTION_ENABLE_FILTERING,
+	/* Clear Tx peer filtering */
+	CDP_TX_FILTER_ACTION_CLEAR_FILTERING,
 };
 
 #define CDP_DELBA_INTERVAL_MS 3000
