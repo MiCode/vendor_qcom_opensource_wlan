@@ -2933,13 +2933,9 @@ dp_mon_filter_setup_tx_lite_mon(struct dp_mon_pdev_be *be_mon_pdev)
 	filter.tx_valid = true;
 	tx_tlv_filter->enable = 1;
 
-	/* Set dtlvs utlvs and wmask to 0xFF */
-	qdf_mem_set(&tx_tlv_filter->dtlvs,
-		    sizeof(struct dp_tx_mon_downstream_tlv_config), 0xFF);
-	qdf_mem_set(&tx_tlv_filter->utlvs,
-		    sizeof(struct dp_tx_mon_upstream_tlv_config), 0xFF);
-	qdf_mem_set(&tx_tlv_filter->wmask,
-		    sizeof(struct dp_tx_mon_wordmask_config), 0xFF);
+	dp_tx_mon_filter_set_downstream_tlvs(tx_tlv_filter);
+	dp_tx_mon_filter_set_upstream_tlvs(tx_tlv_filter);
+	dp_tx_mon_filter_set_word_mask(tx_tlv_filter);
 
 	/* configure mgmt filters */
 	if (config->tx_config.mgmt_filter[DP_MON_FRM_FILTER_MODE_FP]) {
