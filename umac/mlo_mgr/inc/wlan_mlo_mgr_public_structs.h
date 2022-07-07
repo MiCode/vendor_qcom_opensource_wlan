@@ -543,6 +543,16 @@ struct wlan_mlo_peer_t2lm_policy {
 };
 #endif /* WLAN_FEATURE_11BE */
 
+/**
+ * struct wlan_mlo_peer_eml_caps - peer EML capabilities
+ * @emlsr_support: eMLSR Support
+ * @transition_timeout: Transition Timeout
+ */
+struct wlan_mlo_peer_eml_caps {
+	bool emlsr_support;
+	uint16_t transition_timeout;
+};
+
 /*
  * struct wlan_mlo_peer_context - MLO peer context
  *
@@ -593,6 +603,7 @@ struct wlan_mlo_peer_context {
 #ifdef WLAN_FEATURE_11BE
 	struct wlan_mlo_peer_t2lm_policy t2lm_policy;
 #endif
+	struct wlan_mlo_peer_eml_caps eml_caps;
 };
 
 /*

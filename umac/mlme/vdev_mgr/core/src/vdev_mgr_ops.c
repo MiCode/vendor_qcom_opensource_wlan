@@ -325,6 +325,12 @@ vdev_mgr_start_param_update_mlo(struct vdev_mlme_obj *mlme_obj,
 	    !wlan_vdev_mlme_is_mlo_link_vdev(vdev))
 		param->mlo_flags.mlo_assoc_link = 1;
 
+	if ((wlan_vdev_mlme_get_opmode(vdev) == QDF_STA_MODE) &&
+	    wlan_vdev_mlme_cap_get(vdev, WLAN_VDEV_C_EMLSR_CAP)) {
+		param->mlo_flags.emlsr_support  = 1;
+		mlme_debug("eMLSR support=%d", param->mlo_flags.emlsr_support);
+	}
+
 	if (wlan_vdev_mlme_get_opmode(vdev) == QDF_SAP_MODE) {
 		vdev_mgr_start_param_update_mlo_mcast(vdev, param);
 		vdev_mgr_start_param_update_mlo_partner(vdev, param);

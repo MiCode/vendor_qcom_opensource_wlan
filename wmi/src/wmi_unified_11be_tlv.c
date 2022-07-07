@@ -101,6 +101,8 @@ uint8_t *vdev_start_add_mlo_params(uint8_t *buf_ptr,
 				  req->mlo_flags.mlo_enabled);
 	WMI_MLO_FLAGS_SET_ASSOC_LINK(mlo_params->mlo_flags.mlo_flags,
 				     req->mlo_flags.mlo_assoc_link);
+	WMI_MLO_FLAGS_SET_EMLSR_SUPPORT(mlo_params->mlo_flags.emlsr_support,
+					req->mlo_flags.emlsr_support);
 
 	vdev_start_add_mlo_mcast_params(&mlo_params->mlo_flags.mlo_flags,
 					req);
@@ -243,6 +245,9 @@ uint8_t *peer_assoc_add_mlo_params(uint8_t *buf_ptr,
 					   req->mlo_params.mlo_logical_link_index_valid);
 	WMI_MLO_FLAGS_SET_PEER_ID_VALID(mlo_params->mlo_flags.mlo_flags,
 					req->mlo_params.mlo_peer_id_valid);
+	WMI_MLO_FLAGS_SET_EMLSR_SUPPORT(mlo_params->mlo_flags.emlsr_support,
+					req->mlo_params.emlsr_support);
+
 	mlo_params->mlo_flags.mlo_force_link_inactive =
 			req->mlo_params.mlo_force_link_inactive;
 
@@ -250,6 +255,10 @@ uint8_t *peer_assoc_add_mlo_params(uint8_t *buf_ptr,
 				   &mlo_params->mld_macaddr);
 	mlo_params->logical_link_index = req->mlo_params.logical_link_index;
 	mlo_params->mld_peer_id = req->mlo_params.ml_peer_id;
+
+	mlo_params->ieee_link_id = req->mlo_params.ieee_link_id;
+	mlo_params->emlsr_trans_timeout_us =
+			req->mlo_params.emlsr_trans_timeout;
 
 	return buf_ptr + sizeof(wmi_peer_assoc_mlo_params);
 }
