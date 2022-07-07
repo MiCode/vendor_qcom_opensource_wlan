@@ -59,7 +59,7 @@ wmi_send_mlo_link_set_active_cmd(wmi_unified_t wmi,
 	return QDF_STATUS_E_FAILURE;
 }
 
-#if defined(WLAN_FEATURE_11BE) && defined(WLAN_FEATURE_T2LM)
+#ifdef WLAN_FEATURE_11BE
 QDF_STATUS wmi_send_mlo_peer_tid_to_link_map_cmd(
 		wmi_unified_t wmi,
 		struct wmi_host_tid_to_link_map_params *params)
@@ -69,4 +69,4 @@ QDF_STATUS wmi_send_mlo_peer_tid_to_link_map_cmd(
 
 	return QDF_STATUS_E_FAILURE;
 }
-#endif /* defined(WLAN_FEATURE_11BE) && defined(WLAN_FEATURE_T2LM) */
+#endif /* WLAN_FEATURE_11BE */

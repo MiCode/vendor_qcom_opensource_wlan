@@ -3032,11 +3032,11 @@ QDF_STATUS
 (*send_vdev_pn_mgmt_rxfilter_cmd)(wmi_unified_t wmi_handle,
 				  struct vdev_pn_mgmt_rxfilter_params *params);
 
-#if defined(WLAN_FEATURE_11BE) && defined(WLAN_FEATURE_T2LM)
+#ifdef WLAN_FEATURE_11BE
 QDF_STATUS (*send_mlo_peer_tid_to_link_map)(
 		wmi_unified_t wmi_handle,
 		struct wmi_host_tid_to_link_map_params *params);
-#endif /* defined(WLAN_FEATURE_11BE) && defined(WLAN_FEATURE_T2LM) */
+#endif /* WLAN_FEATURE_11BE */
 
 QDF_STATUS
 (*extract_pktlog_decode_info_event)(wmi_unified_t wmi_handle, void *evt_buf,

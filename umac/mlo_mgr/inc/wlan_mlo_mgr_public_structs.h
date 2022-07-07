@@ -383,7 +383,7 @@ struct mlpeer_auth_params {
 	void *rs;
 };
 
-#ifdef WLAN_FEATURE_T2LM
+#ifdef WLAN_FEATURE_11BE
 
 /**
  * enum wlan_t2lm_direction - Indicates the direction for which TID-to-link
@@ -541,7 +541,7 @@ struct wlan_mlo_peer_t2lm_policy {
 	struct wlan_prev_t2lm_negotiated_info t2lm_negotiated_info;
 	struct wlan_t2lm_onging_negotiation_info ongoing_tid_to_link_mapping;
 };
-#endif /* WLAN_FEATURE_T2LM */
+#endif /* WLAN_FEATURE_11BE */
 
 /*
  * struct wlan_mlo_peer_context - MLO peer context
@@ -590,7 +590,7 @@ struct wlan_mlo_peer_context {
 #ifdef UMAC_MLO_AUTH_DEFER
 	struct mlpeer_auth_params *pending_auth[MAX_MLO_LINK_PEERS];
 #endif
-#ifdef WLAN_FEATURE_T2LM
+#ifdef WLAN_FEATURE_11BE
 	struct wlan_mlo_peer_t2lm_policy t2lm_policy;
 #endif
 };
@@ -622,7 +622,7 @@ struct mlo_link_info {
 struct mlo_partner_info {
 	uint8_t num_partner_links;
 	struct mlo_link_info partner_link_info[WLAN_UMAC_MLO_MAX_VDEVS];
-#ifdef WLAN_FEATURE_T2LM
+#ifdef WLAN_FEATURE_11BE
 	enum wlan_t2lm_enable t2lm_enable_val;
 #endif
 };
