@@ -181,6 +181,52 @@ typedef struct s_qdf_trace_data {
 	uint16_t dump_count;
 } t_qdf_trace_data;
 
+#ifdef CONNECTIVITY_DIAG_EVENT
+/**
+ * enum diag_dp_tx_rx_status - TX/RX packet status
+ * @DIAG_TX_RX_STATUS_INVALID: default invalid status
+ * @DIAG_TX_RX_STATUS_OK: successfully sent + acked
+ * @DIAG_TX_RX_STATUS_DISCARD: queued but not sent over air
+ * @DIAG_TX_RX_STATUS_NO_ACK: packet sent but no ack received
+ * @DIAG_TX_RX_STATUS_DROP: packet dropped due to congestion
+ * @DIAG_TX_RX_STATUS_DOWNLOAD_SUCC: packet delivered to target
+ * @DIAG_TX_RX_STATUS_DEFAULT: default status
+ * @DIAG_TX_RX_STATUS_MAX:
+ */
+enum diag_dp_tx_rx_status {
+	DIAG_TX_RX_STATUS_INVALID,
+	DIAG_TX_RX_STATUS_OK,
+	DIAG_TX_RX_STATUS_FW_DISCARD,
+	DIAG_TX_RX_STATUS_NO_ACK,
+	DIAG_TX_RX_STATUS_DROP,
+	DIAG_TX_RX_STATUS_DOWNLOAD_SUCC,
+	DIAG_TX_RX_STATUS_DEFAULT,
+	DIAG_TX_RX_STATUS_MAX
+};
+
+/**
+ * enum diag_tx_status - Used by attribute
+ * @DIAG_TX_STATUS_FAIL: Indicates frame is not sent over the air.
+ * @DIAG_TX_STATUS_NO_ACK: Indicates packet sent but acknowledgment
+ * is not received.
+ * @DIAG_TX_STATUS_ACK: Indicates the frame is successfully sent and
+ * acknowledged.
+ */
+enum diag_tx_status {
+	DIAG_TX_STATUS_FAIL = 1,
+	DIAG_TX_STATUS_NO_ACK = 2,
+	DIAG_TX_STATUS_ACK = 3
+};
+
+/**
+ * wlan_get_diag_tx_status() - Gives the diag logging specific tx status
+ * @tx_status: fw specific TX status
+ *
+ * Returns TX status specified in enum diag_tx_status
+ */
+enum diag_tx_status wlan_get_diag_tx_status(enum qdf_dp_tx_rx_status tx_status);
+#endif
+
 #define CASE_RETURN_STRING(str) case ((str)): return (uint8_t *)(# str);
 
 #ifndef MAX_QDF_DP_TRACE_RECORDS
