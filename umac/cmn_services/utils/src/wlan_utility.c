@@ -546,6 +546,12 @@ wlan_create_elemsubelem_fragseq(bool inline_frag,
 	 /* The lead bytes that occur before the payload */
 	qdf_size_t prepayload_leadbytes;
 
+	 /* used for inline copy, the extra bytes needed in the payload buffer
+	  * due to difference in destination and source.
+	  * Note that the caller should ensure there is enough bytes beyond
+	  * valid data untill payloadbuff_maxsize*/
+	qdf_size_t payloadbuff_shiftsize;
+
 	/* Miscellaneous variables */
 	uint8_t *src;
 	uint8_t *dst;
@@ -690,6 +696,12 @@ wlan_create_elemsubelem_fragseq(bool inline_frag,
 
 		bytes_to_transfer = smallerfrag_size;
 
+		/* Account for increased size due to shift in data */
+		if (inline_frag && (dst > src))
+			payloadbuff_shiftsize = (dst - src);
+		else
+			payloadbuff_shiftsize = 0;
+
 		/* In the case of inline fragmentation, if the payload buffer
 		 * has additional contents beyond the payload, include those
 		 * contents in the move/copy.
@@ -698,7 +710,8 @@ wlan_create_elemsubelem_fragseq(bool inline_frag,
 		    (payloadbuff_maxsize > (prepayload_leadbytes + payloadlen)))
 			bytes_to_transfer += (payloadbuff_maxsize -
 					      prepayload_leadbytes -
-					      payloadlen);
+					      payloadlen -
+					      payloadbuff_shiftsize);
 
 		if (inline_frag)
 			qdf_mem_move(dst, src, bytes_to_transfer);
@@ -748,6 +761,12 @@ wlan_create_elemsubelem_fragseq(bool inline_frag,
 
 		bytes_to_transfer = elemunit_maxpayloadlen;
 
+		/* Account for increased size due to shift in data */
+		if (inline_frag && (dst > src))
+			payloadbuff_shiftsize = (dst - src);
+		else
+			payloadbuff_shiftsize = 0;
+
 		/* In the case of inline fragmentation, if this is the last
 		 * non-lead max-sized fragment (i.e. at the highest memory
 		 * location), if the payload buffer has additional contents
@@ -763,7 +782,8 @@ wlan_create_elemsubelem_fragseq(bool inline_frag,
 			!smallerfrag_size)
 			bytes_to_transfer += (payloadbuff_maxsize -
 					      prepayload_leadbytes -
-					      payloadlen);
+					      payloadlen -
+					      payloadbuff_shiftsize);
 
 		if (inline_frag)
 			qdf_mem_move(dst, src, bytes_to_transfer);
