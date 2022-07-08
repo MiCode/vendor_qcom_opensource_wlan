@@ -53,6 +53,8 @@ void target_if_wake_lock_init(struct wlan_objmgr_psoc *psoc)
 
 	qdf_runtime_lock_init(&psoc_wakelock->wmi_cmd_rsp_runtime_lock);
 	qdf_runtime_lock_init(&psoc_wakelock->prevent_runtime_lock);
+	qdf_runtime_lock_init(&psoc_wakelock->roam_sync_runtime_lock);
+
 	psoc_wakelock->is_link_up = false;
 }
 
@@ -76,6 +78,7 @@ void target_if_wake_lock_deinit(struct wlan_objmgr_psoc *psoc)
 
 	qdf_runtime_lock_deinit(&psoc_wakelock->wmi_cmd_rsp_runtime_lock);
 	qdf_runtime_lock_deinit(&psoc_wakelock->prevent_runtime_lock);
+	qdf_runtime_lock_deinit(&psoc_wakelock->roam_sync_runtime_lock);
 }
 
 QDF_STATUS target_if_wake_lock_timeout_acquire(
@@ -313,3 +316,34 @@ void target_if_vdev_stop_link_handler(struct wlan_objmgr_vdev *vdev)
 			target_if_vote_for_link_down(psoc, psoc_wakelock);
 }
 
+void target_if_prevent_pm_during_roam_sync(struct wlan_objmgr_psoc *psoc)
+{
+	struct psoc_mlme_wakelock *psoc_wakelock;
+	struct wlan_lmac_if_mlme_rx_ops *rx_ops;
+
+	rx_ops = target_if_vdev_mgr_get_rx_ops(psoc);
+	if (!rx_ops || !rx_ops->psoc_get_wakelock_info) {
+		target_if_err("psoc_id:%d No Rx Ops",
+			      wlan_psoc_get_id(psoc));
+		return;
+	}
+
+	psoc_wakelock = rx_ops->psoc_get_wakelock_info(psoc);
+	qdf_runtime_pm_prevent_suspend(&psoc_wakelock->roam_sync_runtime_lock);
+}
+
+void target_if_allow_pm_after_roam_sync(struct wlan_objmgr_psoc *psoc)
+{
+	struct psoc_mlme_wakelock *psoc_wakelock;
+	struct wlan_lmac_if_mlme_rx_ops *rx_ops;
+
+	rx_ops = target_if_vdev_mgr_get_rx_ops(psoc);
+	if (!rx_ops || !rx_ops->psoc_get_wakelock_info) {
+		target_if_err("psoc_id:%d No Rx Ops",
+			      wlan_psoc_get_id(psoc));
+		return;
+	}
+
+	psoc_wakelock = rx_ops->psoc_get_wakelock_info(psoc);
+	qdf_runtime_pm_allow_suspend(&psoc_wakelock->roam_sync_runtime_lock);
+}
