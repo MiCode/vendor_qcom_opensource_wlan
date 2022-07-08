@@ -2248,6 +2248,7 @@ struct cdp_tx_completion_msdu {
  * @rx_ratekpbs - rx rate in kbps
  * @rix - rate index
  * @mpdu_retries - retries of mpdu in rx
+ * @rx_time_us - Rx duration
  */
 struct cdp_rx_stats_ppdu_user {
 	uint16_t peer_id;
@@ -2287,6 +2288,7 @@ struct cdp_rx_stats_ppdu_user {
 	uint32_t rx_ratekbps;
 	uint32_t rix;
 	uint32_t mpdu_retries;
+	uint16_t rx_time_us;
 };
 
 /**
