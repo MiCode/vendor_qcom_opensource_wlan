@@ -19,16 +19,11 @@
 #define _DP_RX_MON_2_0_H_
 
 #include <qdf_nbuf_frag.h>
-#include <qdf_flex_mem.h>
-#include <dp_mon_2.0.h>
 #include <hal_be_api_mon.h>
 
 #define DP_RX_MON_PACKET_OFFSET 8
 #define DP_RX_MON_RX_HDR_OFFSET 8
 #define DP_GET_NUM_QWORDS(num)	((num) >> 3)
-#define DP_RX_MON_WQ_THRESHOLD 128
-#define DP_RXMON_PPDU_INFO_SEG_MAX (DP_RX_MON_WQ_THRESHOLD / QDF_FM_BITMAP_BITS)
-
 /*
  * dp_rx_mon_buffers_alloc() - allocate rx monitor buffers
  * @soc: DP soc handle
@@ -187,29 +182,4 @@ dp_rx_mon_handle_full_mon(struct dp_pdev *pdev,
  * Return: Void
  */
 void dp_rx_mon_drain_wq(struct dp_pdev *pdev);
-
-/**
- * dp_rx_mon_ppdu_info_pool_init() - PPDU info pool init
- *
- * Return: void
- */
-void dp_rx_mon_ppdu_info_pool_init(struct dp_mon_pdev *mon_pdev);
-
-/**
- * dp_rx_mon_ppdu_info_pool_deinit() - PPDU info pool deinit
- *
- * Return: void
- */
-void dp_rx_mon_ppdu_info_pool_deinit(struct dp_mon_pdev_be *mon_pdev_be);
-
-/**
- * dp_mon_rx_print_advanced_stats_2_0 () - print advanced monitor statistics
- *
- * @soc: DP soc handle
- * @pdev: DP pdev handle
- *
- * Return: void
- */
-void dp_mon_rx_print_advanced_stats_2_0(struct dp_soc *soc,
-					struct dp_pdev *pdev);
 #endif /* _DP_RX_MON_2_0_H_ */

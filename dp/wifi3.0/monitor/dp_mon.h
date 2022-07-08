@@ -812,9 +812,6 @@ struct dp_mon_ops {
 	void (*mon_lite_mon_vdev_delete)(struct dp_pdev *pdev,
 					 struct dp_vdev *vdev);
 	void (*mon_lite_mon_disable_rx)(struct dp_pdev *pdev);
-	/* Print advanced monitor stats */
-	void (*mon_rx_print_advanced_stats)
-		(struct dp_soc *soc, struct dp_pdev *pdev);
 };
 
 /**
@@ -3795,35 +3792,6 @@ dp_rx_mon_enable(struct dp_soc *soc, uint32_t *msg_word,
 	}
 
 	monitor_ops->rx_mon_enable(msg_word, tlv_filter);
-}
-
-/**
- * dp_mon_rx_print_advanced_stats () - print advanced monitor stats
- *
- * @soc: DP soc handle
- * @pdev: DP pdev handle
- *
- * Return: void
- */
-static inline void
-dp_mon_rx_print_advanced_stats(struct dp_soc *soc,
-			       struct dp_pdev *pdev)
-{
-	struct dp_mon_soc *mon_soc = soc->monitor_soc;
-	struct dp_mon_ops *monitor_ops;
-
-	if (!mon_soc) {
-		dp_mon_debug("mon soc is NULL");
-		return;
-	}
-
-	monitor_ops = mon_soc->mon_ops;
-	if (!monitor_ops ||
-	    !monitor_ops->mon_rx_print_advanced_stats) {
-		dp_mon_debug("callback not registered");
-		return;
-	}
-	return monitor_ops->mon_rx_print_advanced_stats(soc, pdev);
 }
 
 #ifdef QCA_ENHANCED_STATS_SUPPORT

@@ -20,8 +20,6 @@
 
 #if !defined(DISABLE_MON_CONFIG)
 #include <qdf_lock.h>
-#include <qdf_flex_mem.h>
-#include <qdf_atomic.h>
 #include <dp_types.h>
 #include <dp_mon.h>
 #include <dp_mon_filter.h>
@@ -145,9 +143,6 @@ struct dp_mon_desc_pool {
  * @rx_mon_queue_depth: RxMON queue depth
  * @desc_count: reaped status desc count
  * @status: reaped status buffer per ppdu
- * @rx_ppdu_info_pool: rx ppdu info mem pool
- * @rx_ppdu_info_pool_head: rx ppdu info mem pool head segment
- * @rx_ppdu_info_pool_head_bytes: ppdu info pool head for array indexing
  */
 struct dp_mon_pdev_be {
 	struct dp_mon_pdev mon_pdev;
@@ -170,9 +165,6 @@ struct dp_mon_pdev_be {
 #endif
 	void *prev_rxmon_desc;
 	uint32_t prev_rxmon_cookie;
-	struct qdf_flex_mem_pool rx_ppdu_info_pool;
-	struct qdf_flex_mem_segment rx_ppdu_info_pool_head;
-	uint8_t rx_ppdu_info_pool_head_bytes[QDF_FM_BITMAP_BITS * (sizeof(struct hal_rx_ppdu_info))];
 };
 
 /**

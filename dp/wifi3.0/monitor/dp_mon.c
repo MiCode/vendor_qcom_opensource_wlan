@@ -827,6 +827,7 @@ dp_print_pdev_rx_mon_stats(struct dp_pdev *pdev)
 	uint32_t *dest_ring_ppdu_ids;
 	int i, idx;
 	struct dp_mon_pdev *mon_pdev = pdev->monitor_pdev;
+	struct dp_mon_soc *mon_soc = pdev->soc->monitor_soc;
 
 	rx_mon_stats = &mon_pdev->rx_mon_stats;
 
@@ -904,8 +905,24 @@ dp_print_pdev_rx_mon_stats(struct dp_pdev *pdev)
 	qdf_mem_free(dest_ring_ppdu_ids);
 	DP_PRINT_STATS("mon_rx_dest_stuck = %d",
 		       rx_mon_stats->mon_rx_dest_stuck);
+
+	DP_PRINT_STATS("rx_hdr_not_received = %d",
+		       rx_mon_stats->rx_hdr_not_received);
+	DP_PRINT_STATS("parent_buf_alloc = %d",
+		       rx_mon_stats->parent_buf_alloc);
+	DP_PRINT_STATS("parent_buf_free = %d",
+		       rx_mon_stats->parent_buf_free);
+	DP_PRINT_STATS("mpdus_buf_to_stack = %d",
+		       rx_mon_stats->mpdus_buf_to_stack);
+	DP_PRINT_STATS("frag_alloc = %d",
+		       mon_soc->stats.frag_alloc);
+	DP_PRINT_STATS("frag_free = %d",
+		       mon_soc->stats.frag_free);
+	DP_PRINT_STATS("status_buf_count = %d",
+		       rx_mon_stats->status_buf_count);
+	DP_PRINT_STATS("pkt_buf_count = %d",
+		       rx_mon_stats->pkt_buf_count);
 	dp_pdev_get_undecoded_capture_stats(mon_pdev, rx_mon_stats);
-	dp_mon_rx_print_advanced_stats(pdev->soc, pdev);
 }
 
 #ifdef QCA_SUPPORT_BPR
