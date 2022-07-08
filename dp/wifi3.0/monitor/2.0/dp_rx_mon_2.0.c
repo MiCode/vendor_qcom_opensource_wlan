@@ -956,7 +956,7 @@ uint8_t dp_rx_mon_process_tlv_status(struct dp_pdev *pdev,
 
 			nbuf = ppdu_info->mpdu_q[user_id][mpdu_idx];
 			if (qdf_unlikely(!nbuf)) {
-				dp_mon_err("nbuf is NULL");
+				dp_mon_debug("nbuf is NULL");
 				return num_buf_reaped;
 			}
 
@@ -1113,7 +1113,8 @@ uint8_t dp_rx_mon_process_tlv_status(struct dp_pdev *pdev,
 		if (!nbuf) {
 			/* reset msdu info for next msdu for same user */
 			qdf_mem_zero(msdu_info, sizeof(*msdu_info));
-			dp_mon_err(" <%d> nbuf is NULL, return user: %d mpdu_idx: %d", __LINE__, user_id, mpdu_idx);
+			dp_mon_debug(" <%d> nbuf is NULL, return user: %d mpdu_idx: %d",
+				     __LINE__, user_id, mpdu_idx);
 			break;
 		}
 		num_frags = qdf_nbuf_get_nr_frags(nbuf);
@@ -1151,7 +1152,8 @@ uint8_t dp_rx_mon_process_tlv_status(struct dp_pdev *pdev,
 
 		nbuf = ppdu_info->mpdu_q[user_id][mpdu_idx];
 		if (!nbuf) {
-			dp_mon_err(" <%d> nbuf is NULL, return user: %d mpdu_idx: %d", __LINE__, user_id, mpdu_idx);
+			dp_mon_debug(" <%d> nbuf is NULL, return user: %d mpdu_idx: %d",
+				     __LINE__, user_id, mpdu_idx);
 			break;
 		}
 		mpdu_meta = (struct hal_rx_mon_mpdu_info *)qdf_nbuf_data(nbuf);
@@ -1168,7 +1170,8 @@ uint8_t dp_rx_mon_process_tlv_status(struct dp_pdev *pdev,
 		if (!nbuf) {
 			/* reset mpdu info for next mpdu for same user */
 			qdf_mem_zero(mpdu_info, sizeof(*mpdu_info));
-			dp_mon_err(" <%d> nbuf is NULL, return user: %d mpdu_idx: %d", __LINE__, user_id, mpdu_idx);
+			dp_mon_debug(" <%d> nbuf is NULL, return user: %d mpdu_idx: %d",
+				     __LINE__, user_id, mpdu_idx);
 			break;
 		}
 		mpdu_meta = (struct hal_rx_mon_mpdu_info *)qdf_nbuf_data(nbuf);
