@@ -4941,9 +4941,6 @@ QDF_STATUS dp_mon_pdev_attach(struct dp_pdev *pdev)
 		}
 	}
 
-	if (mon_ops->rx_mon_ppdu_info_pool_init)
-		mon_ops->rx_mon_ppdu_info_pool_init(pdev);
-
 	pdev->monitor_pdev = mon_pdev;
 	dp_mon_pdev_per_target_config(pdev);
 
@@ -4983,8 +4980,6 @@ QDF_STATUS dp_mon_pdev_detach(struct dp_pdev *pdev)
 		return QDF_STATUS_E_FAILURE;
 	}
 
-	if (mon_ops->rx_mon_ppdu_info_pool_deinit)
-		mon_ops->rx_mon_ppdu_info_pool_deinit(pdev);
 	if (mon_ops->rx_mon_desc_pool_free)
 		mon_ops->rx_mon_desc_pool_free(pdev);
 	if (mon_ops->mon_rings_free)
