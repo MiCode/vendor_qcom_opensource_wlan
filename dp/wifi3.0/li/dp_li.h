@@ -23,7 +23,6 @@
 #include <dp_mon.h>
 #include <hal_li_tx.h>
 #include <hal_li_rx.h>
-#include <qdf_pkt_add_timestamp.h>
 
 /* WBM2SW ring id for rx release */
 #define WBM2SW_REL_ERR_RING_NUM 3
@@ -108,35 +107,4 @@ qdf_size_t dp_get_context_size_li(enum dp_context_type context_type);
  */
 
 qdf_size_t dp_mon_get_context_size_li(enum dp_context_type context_type);
-
-#ifdef CONFIG_DP_PKT_ADD_TIMESTAMP
-/**
- * dp_pkt_add_timestamp() - add timestamp in data payload
- *
- * @vdev: dp vdev
- * @index: index to decide offset in payload
- * @time: timestamp to add in data payload
- * @nbuf: network buffer
- *
- * Return: none
- */
-void dp_pkt_add_timestamp(struct dp_vdev *vdev,
-			  enum qdf_pkt_timestamp_index index, uint64_t time,
-			  qdf_nbuf_t nbuf);
-/**
- * dp_pkt_get_timestamp() - get current system time
- *
- * @time: return current system time
- *
- * Return: none
- */
-void dp_pkt_get_timestamp(uint64_t *time);
-#else
-#define dp_pkt_add_timestamp(vdev, index, time, nbuf)
-
-static inline
-void dp_pkt_get_timestamp(uint64_t *time)
-{
-}
-#endif
 #endif
