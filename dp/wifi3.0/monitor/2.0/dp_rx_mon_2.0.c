@@ -495,7 +495,7 @@ dp_rx_mon_handle_full_mon(struct dp_pdev *pdev,
 
 	if (!mpdu) {
 		dp_mon_debug("nbuf is NULL, return");
-		return;
+		return QDF_STATUS_E_FAILURE;
 	}
 
 	head_msdu = mpdu;
