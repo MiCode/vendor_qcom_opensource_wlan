@@ -5072,6 +5072,9 @@ typedef enum {
 #ifdef WLAN_VENDOR_HANDOFF_CONTROL
 	wmi_get_roam_vendor_control_param_event_id,
 #endif
+#ifdef WLAN_FEATURE_DBAM_CONFIG
+	wmi_coex_dbam_complete_event_id,
+#endif
 	wmi_events_max,
 } wmi_conv_event_id;
 

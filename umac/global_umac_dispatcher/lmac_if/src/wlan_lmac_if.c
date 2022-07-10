@@ -88,6 +88,10 @@
 #include <wlan_p2p_mcc_quota_tgt_api.h>
 #endif
 
+#ifdef WLAN_FEATURE_DBAM_CONFIG
+#include "target_if_coex.h"
+#endif
+
 #include "target_if.h"
 
 /* Function pointer for OL/WMA specific UMAC tx_ops
@@ -930,6 +934,19 @@ void wlan_lmac_if_twt_rx_ops_register(struct wlan_lmac_if_rx_ops *rx_ops)
 }
 #endif /* WLAN_SUPPORT_TWT && WLAN_TWT_CONV_SUPPORTED */
 
+#ifdef WLAN_FEATURE_DBAM_CONFIG
+static void
+wlan_lmac_if_dbam_rx_ops_register(struct wlan_lmac_if_rx_ops *rx_ops)
+{
+	rx_ops->dbam_rx_ops.dbam_resp_event = target_if_dbam_process_event;
+}
+#else
+static void
+wlan_lmac_if_dbam_rx_ops_register(struct wlan_lmac_if_rx_ops *rx_ops)
+{
+}
+#endif /* WLAN_FEATURE_DBAM_CONFIG */
+
 /**
  * wlan_lmac_if_umac_rx_ops_register() - UMAC rx handler register
  * @rx_ops: Pointer to rx_ops structure to be populated
@@ -996,6 +1013,8 @@ wlan_lmac_if_umac_rx_ops_register(struct wlan_lmac_if_rx_ops *rx_ops)
 	wlan_lmac_if_mlo_mgr_rx_ops_register(rx_ops);
 
 	wlan_lmac_if_twt_rx_ops_register(rx_ops);
+
+	wlan_lmac_if_dbam_rx_ops_register(rx_ops);
 
 	return QDF_STATUS_SUCCESS;
 }

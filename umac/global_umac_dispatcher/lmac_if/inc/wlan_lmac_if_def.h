@@ -98,6 +98,10 @@ struct dbr_module_config;
 #ifdef QCA_SUPPORT_CP_STATS
 #include <wlan_cp_stats_public_structs.h>
 
+#ifdef WLAN_FEATURE_DBAM_CONFIG
+#include "wlan_coex_public_structs.h"
+#endif
+
 /**
  * typedef cp_stats_event - Definition of cp stats event
  * Define stats_event from external cp stats component to cp_stats_event
@@ -1263,6 +1267,28 @@ struct wlan_lmac_if_coex_tx_ops {
 };
 #endif
 
+#ifdef WLAN_FEATURE_DBAM_CONFIG
+/**
+ * struct wlan_lmac_if_dbam_tx_ops - south bound tx function pointers for dbam
+ * @set_dbam_config: function pointer to send dbam config to fw
+ */
+struct wlan_lmac_if_dbam_tx_ops {
+	QDF_STATUS (*set_dbam_config)(struct wlan_objmgr_psoc *psoc,
+				      struct coex_dbam_config_params *param);
+	QDF_STATUS (*dbam_event_attach)(struct wlan_objmgr_psoc *psoc);
+	QDF_STATUS (*dbam_event_detach)(struct wlan_objmgr_psoc *psoc);
+};
+
+/**
+ * struct wlan_lmac_if_dbam_rx_ops - defines southbound rx callback for dbam
+ * @dbam_resp_event: function pointer to rx dbam response event from FW
+ */
+struct wlan_lmac_if_dbam_rx_ops {
+	QDF_STATUS (*dbam_resp_event)(struct wlan_objmgr_psoc *psoc,
+				      enum coex_dbam_comp_status dbam_resp);
+};
+#endif
+
 #ifdef WLAN_FEATURE_GPIO_CFG
 struct gpio_config_params;
 struct gpio_output_params;
@@ -1455,6 +1481,7 @@ struct wlan_lmac_if_spatial_reuse_tx_ops {
  * @cp_stats_tx_ops: cp stats tx_ops
  * @coex_ops: coex tx_ops
  * @gpio_ops: gpio tx_ops
+ * @dbam_tx_ops: coex dbam tx_ops
  *
  * Callback function tabled to be registered with umac.
  * umac will use the functional table to send events/frames to wmi
@@ -1532,6 +1559,10 @@ struct wlan_lmac_if_tx_ops {
 
 #ifdef FEATURE_COEX
 	struct wlan_lmac_if_coex_tx_ops coex_ops;
+#endif
+
+#ifdef WLAN_FEATURE_DBAM_CONFIG
+	struct wlan_lmac_if_dbam_tx_ops dbam_tx_ops;
 #endif
 
 #ifdef WLAN_FEATURE_GPIO_CFG
@@ -2288,6 +2319,7 @@ struct wlan_lmac_if_green_ap_rx_ops {
  * @green_ap_rx_ops: green ap rx ops
  * @ftm_rx_ops: ftm rx ops
  * @mlo_rx_ops: mlo rx ops
+ * @dbam_rx_ops: dbam rx ops
  *
  * Callback function tabled to be registered with lmac/wmi.
  * lmac will use the functional table to send events/frames to umac
@@ -2356,6 +2388,9 @@ struct wlan_lmac_if_rx_ops {
 #endif
 #if defined(WLAN_SUPPORT_TWT) && defined(WLAN_TWT_CONV_SUPPORTED)
 	struct wlan_lmac_if_twt_rx_ops twt_rx_ops;
+#endif
+#ifdef WLAN_FEATURE_DBAM_CONFIG
+	struct wlan_lmac_if_dbam_rx_ops dbam_rx_ops;
 #endif
 };
 

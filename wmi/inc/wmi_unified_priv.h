@@ -103,6 +103,10 @@
 #include <wlan_twt_public_structs.h>
 #endif
 
+#ifdef WLAN_FEATURE_DBAM_CONFIG
+#include "wlan_coex_public_structs.h"
+#endif
+
 #define WMI_UNIFIED_MAX_EVENT 0x100
 
 #ifdef WMI_EXT_DBG
@@ -1795,6 +1799,15 @@ QDF_STATUS
 QDF_STATUS
 (*send_coex_config_cmd)(wmi_unified_t wmi_handle,
 			struct coex_config_params *param);
+
+#ifdef WLAN_FEATURE_DBAM_CONFIG
+QDF_STATUS
+(*send_dbam_config_cmd)(wmi_unified_t wmi_handle,
+			struct coex_dbam_config_params *param);
+QDF_STATUS
+(*extract_dbam_config_resp_event)(wmi_unified_t wmi_handle, void *evt_buf,
+				  struct coex_dbam_config_resp *resp);
+#endif
 
 #ifdef OL_ATH_SMART_LOGGING
 QDF_STATUS

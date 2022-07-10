@@ -8037,6 +8037,111 @@ send_coex_config_cmd_tlv(wmi_unified_t wmi_handle,
 	return ret;
 }
 
+#ifdef WLAN_FEATURE_DBAM_CONFIG
+
+static enum wmi_coex_dbam_mode_type
+map_to_wmi_coex_dbam_mode_type(enum coex_dbam_config_mode mode)
+{
+	switch (mode) {
+	case COEX_DBAM_ENABLE:
+		return WMI_COEX_DBAM_ENABLE;
+	case COEX_DBAM_FORCE_ENABLE:
+		return WMI_COEX_DBAM_FORCED;
+	case COEX_DBAM_DISABLE:
+	default:
+		return WMI_COEX_DBAM_DISABLE;
+	}
+}
+
+/**
+ * send_dbam_config_cmd_tlv() - send coex DBAM config command to fw
+ * @wmi_handle: wmi handle
+ * @param: pointer to coex dbam config param
+ *
+ * Return: 0 for success or error code
+ */
+static QDF_STATUS
+send_dbam_config_cmd_tlv(wmi_unified_t wmi_handle,
+			 struct coex_dbam_config_params *param)
+{
+	wmi_coex_dbam_cmd_fixed_param *cmd;
+	wmi_buf_t buf;
+	void *buf_ptr;
+	QDF_STATUS ret;
+	int32_t len;
+
+	len = sizeof(*cmd);
+	buf = wmi_buf_alloc(wmi_handle, len);
+	if (!buf) {
+		wmi_err_rl("Failed to allocate wmi buffer");
+		return QDF_STATUS_E_NOMEM;
+	}
+
+	buf_ptr = wmi_buf_data(buf);
+	cmd = buf_ptr;
+	WMITLV_SET_HDR(&cmd->tlv_header,
+		       WMITLV_TAG_STRUC_wmi_coex_dbam_cmd_fixed_param,
+		       WMITLV_GET_STRUCT_TLVLEN(
+		       wmi_coex_dbam_cmd_fixed_param));
+
+	cmd->vdev_id = param->vdev_id;
+	cmd->dbam_mode = map_to_wmi_coex_dbam_mode_type(param->dbam_mode);
+
+	wmi_mtrace(WMI_COEX_DBAM_CMDID, cmd->vdev_id, 0);
+	ret = wmi_unified_cmd_send(wmi_handle, buf, len,
+				   WMI_COEX_DBAM_CMDID);
+
+	if (QDF_IS_STATUS_ERROR(ret)) {
+		wmi_err("Sending DBAM CONFIG CMD failed");
+		wmi_buf_free(buf);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	return ret;
+}
+
+static enum coex_dbam_comp_status
+wmi_convert_dbam_comp_status(wmi_coex_dbam_comp_status status)
+{
+	switch (status) {
+	case WMI_COEX_DBAM_COMP_SUCCESS:
+	case WMI_COEX_DBAM_COMP_ONGOING:
+	case WMI_COEX_DBAM_COMP_DELAYED:
+		return COEX_DBAM_COMP_SUCCESS;
+	case WMI_COEX_DBAM_COMP_NOT_SUPPORT:
+		return COEX_DBAM_COMP_NOT_SUPPORT;
+	case WMI_COEX_DBAM_COMP_INVALID_PARAM:
+	case WMI_COEX_DBAM_COMP_FAIL:
+	default:
+		return COEX_DBAM_COMP_FAIL;
+	}
+}
+
+/**
+ * extract_dbam_comp_status_event_tlv() - extract dbam complete status event
+ * @wmi_handle: WMI handle
+ * @evt_buf: event buffer
+ * @resp: pointer to coex dbam config response
+ *
+ * Return: QDF_STATUS
+ */
+static QDF_STATUS
+extract_dbam_config_resp_event_tlv(wmi_unified_t wmi_handle, void *evt_buf,
+				   struct coex_dbam_config_resp *resp)
+{
+	WMI_COEX_DBAM_COMPLETE_EVENTID_param_tlvs *param_buf;
+	wmi_coex_dbam_complete_event_fixed_param *event;
+
+	param_buf = (WMI_COEX_DBAM_COMPLETE_EVENTID_param_tlvs *)evt_buf;
+
+	event = param_buf->fixed_param;
+
+	resp->dbam_resp = wmi_convert_dbam_comp_status(event->comp_status);
+
+	return QDF_STATUS_SUCCESS;
+}
+#endif
+
 #ifdef WLAN_SUPPORT_TWT
 static void wmi_copy_twt_resource_config(wmi_resource_config *resource_cfg,
 					target_resource_config *tgt_res_cfg)
@@ -18688,6 +18793,10 @@ struct wmi_ops tlv_ops =  {
 #ifdef WLAN_FEATURE_PEER_TXQ_FLUSH_CONF
 	.send_peer_txq_flush_config_cmd = send_peer_txq_flush_config_cmd_tlv,
 #endif
+#ifdef WLAN_FEATURE_DBAM_CONFIG
+	.send_dbam_config_cmd = send_dbam_config_cmd_tlv,
+	.extract_dbam_config_resp_event = extract_dbam_config_resp_event_tlv,
+#endif
 };
 
 #ifdef WLAN_FEATURE_11BE_MLO
@@ -19165,6 +19274,10 @@ static void populate_tlv_events_id(uint32_t *event_ids)
 #ifdef WLAN_VENDOR_HANDOFF_CONTROL
 	event_ids[wmi_get_roam_vendor_control_param_event_id] =
 				WMI_ROAM_GET_VENDOR_CONTROL_PARAM_EVENTID;
+#endif
+#ifdef WLAN_FEATURE_DBAM_CONFIG
+	event_ids[wmi_coex_dbam_complete_event_id] =
+			WMI_COEX_DBAM_COMPLETE_EVENTID;
 #endif
 }
 

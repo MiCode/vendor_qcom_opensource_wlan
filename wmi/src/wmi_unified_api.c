@@ -2864,6 +2864,30 @@ wmi_unified_send_coex_config_cmd(wmi_unified_t wmi_handle,
 	return QDF_STATUS_E_FAILURE;
 }
 
+#ifdef WLAN_FEATURE_DBAM_CONFIG
+QDF_STATUS
+wmi_unified_send_dbam_config_cmd(wmi_unified_t wmi_handle,
+				 struct coex_dbam_config_params *param)
+{
+	if (wmi_handle->ops->send_dbam_config_cmd)
+		return wmi_handle->ops->send_dbam_config_cmd(wmi_handle,
+							     param);
+
+	return QDF_STATUS_E_FAILURE;
+}
+
+QDF_STATUS
+wmi_extract_dbam_config_response(wmi_unified_t wmi_handle, void *evt_buf,
+				 struct coex_dbam_config_resp *resp)
+{
+	if (wmi_handle->ops->extract_dbam_config_resp_event)
+		return wmi_handle->ops->extract_dbam_config_resp_event(
+					wmi_handle, evt_buf, resp);
+
+	return QDF_STATUS_E_FAILURE;
+}
+#endif
+
 QDF_STATUS
 wmi_unified_send_request_get_rcpi_cmd(wmi_unified_t wmi_handle,
 				      struct rcpi_req *get_rcpi_param)
