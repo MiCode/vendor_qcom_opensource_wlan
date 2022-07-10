@@ -319,6 +319,9 @@ dp_rx_mon_process_ppdu_info(struct dp_pdev *pdev,
 	struct dp_mon_pdev *mon_pdev = (struct dp_mon_pdev *)pdev->monitor_pdev;
 	uint8_t user;
 
+	if (!ppdu_info)
+		return;
+
 	for (user = 0; user < ppdu_info->com_info.num_users; user++) {
 		uint16_t mpdu_count  = ppdu_info->mpdu_count[user];
 		uint16_t mpdu_idx;
@@ -436,7 +439,7 @@ void dp_rx_mon_process_ppdu(void *context)
  * Return: SUCCESS or FAILIRE
  */
 
-static QDF_STATUS
+QDF_STATUS
 dp_rx_mon_add_ppdu_info_to_wq(struct dp_mon_pdev *mon_pdev,
 			      struct hal_rx_ppdu_info *ppdu_info)
 {
@@ -952,7 +955,7 @@ uint8_t dp_rx_mon_process_tlv_status(struct dp_pdev *pdev,
 			nbuf = ppdu_info->mpdu_q[user_id][mpdu_idx];
 			if (qdf_unlikely(!nbuf)) {
 				dp_mon_err("nbuf is NULL");
-				qdf_assert_always(0);
+				return num_buf_reaped;
 			}
 
 			tmp_nbuf = qdf_get_nbuf_valid_frag(nbuf);
@@ -1012,6 +1015,7 @@ uint8_t dp_rx_mon_process_tlv_status(struct dp_pdev *pdev,
 		if (qdf_unlikely(!nbuf)) {
 
 			/* WAR: RX_HDR is not received for this MPDU, drop this frame */
+			mon_pdev->rx_mon_stats.rx_hdr_not_received++;
 			DP_STATS_INC(mon_soc, frag_free, 1);
 			qdf_frag_free(addr);
 			return num_buf_reaped;
@@ -1220,7 +1224,7 @@ dp_rx_mon_process_status_tlv(struct dp_pdev *pdev)
 		return NULL;
 	}
 
-	ppdu_info = qdf_mem_malloc(sizeof(*ppdu_info));
+	ppdu_info = &mon_pdev->ppdu_info;
 
 	if (!ppdu_info) {
 		dp_mon_err("ppdu_info malloc failed pdev: %pK", pdev);
@@ -1470,13 +1474,7 @@ dp_rx_mon_srng_process_2_0(struct dp_soc *soc, struct dp_intr *int_ctx,
 		else if (dp_cfr_rcc_mode_status(pdev) && ppdu_info)
 			dp_rx_handle_cfr(soc, pdev, ppdu_info);
 
-		/* Call API to add PPDU info workqueue */
-		status = dp_rx_mon_add_ppdu_info_to_wq(mon_pdev, ppdu_info);
-
-		if (status != QDF_STATUS_SUCCESS) {
-			if (ppdu_info)
-				qdf_mem_free(ppdu_info);
-		}
+		dp_rx_mon_process_ppdu_info(pdev, ppdu_info);
 
 		work_done++;
 
