@@ -17,10 +17,10 @@
 #ifndef _DP_UMAC_RESET_H_
 #define _DP_UMAC_RESET_H_
 
-#ifdef DP_UMAC_HW_RESET_SUPPORT
-
 #include <qdf_types.h>
+struct dp_soc;
 
+#ifdef DP_UMAC_HW_RESET_SUPPORT
 #define dp_umac_reset_alert(params...) \
 	QDF_TRACE_FATAL(QDF_MODULE_ID_DP_UMAC_RESET, params)
 #define dp_umac_reset_err(params...) \
@@ -35,8 +35,6 @@
 	QDF_TRACE_DEBUG(QDF_MODULE_ID_DP_UMAC_RESET, params)
 
 #define DP_UMAC_RESET_SHMEM_ALIGN 8
-
-struct dp_soc;
 /**
  * enum umac_reset_state - States required for UMAC reset state machine
  * @UMAC_RESET_STATE_WAIT_FOR_PRE_RESET: Waiting for the PRE_RESET event
@@ -75,6 +73,7 @@ struct umac_reset_shmem {
  * @shmem_vaddr_aligned: Virtual address of the shared memory (aligned)
  * @intr_offset: Offset of the UMAC reset interrupt w.r.t DP base interrupt
  * @current_state: current state of the UMAC reset state machine
+ * @supported: Whether UMAC reset is supported on this soc
  */
 struct dp_soc_umac_reset_ctx {
 	qdf_dma_addr_t shmem_paddr_unaligned;
@@ -83,6 +82,7 @@ struct dp_soc_umac_reset_ctx {
 	struct umac_reset_shmem *shmem_vaddr_aligned;
 	int intr_offset;
 	enum umac_reset_state current_state;
+	bool supported;
 };
 
 /**
@@ -92,5 +92,27 @@ struct dp_soc_umac_reset_ctx {
  * Return: QDF status of operation
  */
 QDF_STATUS dp_soc_umac_reset_init(struct dp_soc *soc);
+
+/**
+ * dp_umac_reset_interrupt_attach() - Register handlers for UMAC reset interrupt
+ * @soc: DP soc object
+ *
+ * Return: QDF status of operation
+ */
+QDF_STATUS dp_umac_reset_interrupt_attach(struct dp_soc *soc);
+
+/**
+ * dp_umac_reset_interrupt_detach() - Unregister UMAC reset interrupt handlers
+ * @soc: DP soc object
+ *
+ * Return: QDF status of operation
+ */
+QDF_STATUS dp_umac_reset_interrupt_detach(struct dp_soc *soc);
+#else
+static inline
+QDF_STATUS dp_soc_umac_reset_init(struct dp_soc *soc)
+{
+	return QDF_STATUS_SUCCESS;
+}
 #endif /* DP_UMAC_HW_RESET_SUPPORT */
 #endif /* _DP_UMAC_RESET_H_ */

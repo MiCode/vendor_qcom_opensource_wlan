@@ -2349,4 +2349,43 @@ void hif_set_grp_intr_affinity(struct hif_opaque_softc *scn,
  *  uint8_t: count for WMI eps in target svc map
  */
 uint8_t hif_get_max_wmi_ep(struct hif_opaque_softc *scn);
+
+#ifdef DP_UMAC_HW_RESET_SUPPORT
+/**
+ * hif_register_umac_reset_handler() - Register UMAC HW reset handler
+ * @hif_scn: hif opaque handle
+ * @handler: callback handler function
+ * @cb_ctx: context to passed to @handler
+ * @irq: irq number to be used for UMAC HW reset interrupt
+ *
+ * Return: QDF_STATUS of operation
+ */
+QDF_STATUS hif_register_umac_reset_handler(struct hif_opaque_softc *hif_scn,
+					   int (*handler)(void *cb_ctx),
+					   void *cb_ctx, int irq);
+
+/**
+ * hif_unregister_umac_reset_handler() - Unregister UMAC HW reset handler
+ * @hif_scn: hif opaque handle
+ *
+ * Return: QDF_STATUS of operation
+ */
+QDF_STATUS hif_unregister_umac_reset_handler(struct hif_opaque_softc *hif_scn);
+#else
+static inline
+QDF_STATUS hif_register_umac_reset_handler(struct hif_opaque_softc *hif_scn,
+					   int (*handler)(void *cb_ctx),
+					   void *cb_ctx, int irq)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static inline
+QDF_STATUS hif_unregister_umac_reset_handler(struct hif_opaque_softc *hif_scn)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+#endif /* DP_UMAC_HW_RESET_SUPPORT */
+
 #endif /* _HIF_H_ */

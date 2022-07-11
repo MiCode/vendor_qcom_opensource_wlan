@@ -204,6 +204,24 @@ struct hif_cfg {
 	uint8_t ce_status_ring_batch_count_threshold;
 };
 
+#ifdef DP_UMAC_HW_RESET_SUPPORT
+/**
+ * struct hif_umac_reset_ctx - UMAC HW reset context at HIF layer
+ * @intr_tq: Tasklet structure
+ * @cb_handler: Callback handler
+ * @cb_ctx: Argument to be passed to @cb_handler
+ * @os_irq: Interrupt number for this IRQ
+ * @irq_configured: Whether the IRQ has been configured
+ */
+struct hif_umac_reset_ctx {
+	struct tasklet_struct intr_tq;
+	int (*cb_handler)(void *cb_ctx);
+	void *cb_ctx;
+	uint32_t os_irq;
+	bool irq_configured;
+};
+#endif
+
 struct hif_softc {
 	struct hif_opaque_softc osc;
 	struct hif_config_info hif_config;
@@ -323,6 +341,9 @@ struct hif_softc {
 	uint64_t cmem_start;
 	/* CMEM size target reserved */
 	uint64_t cmem_size;
+#ifdef DP_UMAC_HW_RESET_SUPPORT
+	struct hif_umac_reset_ctx umac_reset_ctx;
+#endif
 };
 
 static inline

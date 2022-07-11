@@ -15,6 +15,7 @@
  */
 #include <dp_types.h>
 #include <wlan_cfg.h>
+#include <hif.h>
 
 /**
  * dp_get_umac_reset_intr_ctx() - Get the interrupt context to be used by
@@ -60,6 +61,7 @@ QDF_STATUS dp_soc_umac_reset_init(struct dp_soc *soc)
 	umac_reset_ctx = &soc->umac_reset_ctx;
 	qdf_mem_zero(umac_reset_ctx, sizeof(*umac_reset_ctx));
 
+	umac_reset_ctx->supported = true;
 	umac_reset_ctx->current_state = UMAC_RESET_STATE_WAIT_FOR_PRE_RESET;
 
 	status = dp_get_umac_reset_intr_ctx(soc, &umac_reset_ctx->intr_offset);
@@ -89,3 +91,87 @@ QDF_STATUS dp_soc_umac_reset_init(struct dp_soc *soc)
 	return QDF_STATUS_SUCCESS;
 }
 
+/**
+ * dp_umac_reset_rx_event_handler() - Main Rx event handler for UMAC reset
+ * @dp_ctx: Interrupt context corresponding to UMAC reset
+ *
+ * Return: 0 incase of success, else failure
+ */
+static int dp_umac_reset_rx_event_handler(void *dp_ctx)
+{
+	/* Note: This will be implemented in an upcoming change */
+	return 0;
+}
+
+QDF_STATUS dp_umac_reset_interrupt_attach(struct dp_soc *soc)
+{
+	struct dp_soc_umac_reset_ctx *umac_reset_ctx;
+	int msi_vector_count, ret;
+	uint32_t msi_base_data, msi_vector_start;
+	uint32_t umac_reset_vector, umac_reset_irq;
+
+	if (!soc) {
+		dp_umac_reset_err("DP SOC is null");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	umac_reset_ctx = &soc->umac_reset_ctx;
+
+	/* return if feature is not supported */
+	if (!umac_reset_ctx->supported) {
+		dp_umac_reset_info("UMAC reset is not supported on this SOC");
+		return QDF_STATUS_SUCCESS;
+	}
+
+	if (pld_get_enable_intx(soc->osdev->dev)) {
+		dp_umac_reset_err("UMAC reset is not supported in legacy interrupt mode");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	ret = pld_get_user_msi_assignment(soc->osdev->dev, "DP",
+					  &msi_vector_count, &msi_base_data,
+					  &msi_vector_start);
+	if (ret) {
+		dp_umac_reset_err("UMAC reset is only supported in MSI interrupt mode");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	if (umac_reset_ctx->intr_offset < 0 ||
+	    umac_reset_ctx->intr_offset >= WLAN_CFG_INT_NUM_CONTEXTS) {
+		dp_umac_reset_err("Invalid interrupt offset");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	umac_reset_vector = msi_vector_start +
+			       (umac_reset_ctx->intr_offset % msi_vector_count);
+
+	/* Get IRQ number */
+	umac_reset_irq = pld_get_msi_irq(soc->osdev->dev, umac_reset_vector);
+
+	/* Finally register to this IRQ from HIF layer */
+	return hif_register_umac_reset_handler(
+				soc->hif_handle,
+				dp_umac_reset_rx_event_handler,
+				&soc->intr_ctx[umac_reset_ctx->intr_offset],
+				umac_reset_irq);
+}
+
+QDF_STATUS dp_umac_reset_interrupt_detach(struct dp_soc *soc)
+{
+	struct dp_soc_umac_reset_ctx *umac_reset_ctx;
+
+	if (!soc) {
+		dp_umac_reset_err("DP SOC is null");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	umac_reset_ctx = &soc->umac_reset_ctx;
+
+	/* return if feature is not supported */
+	if (!umac_reset_ctx->supported) {
+		dp_umac_reset_info("UMAC reset is not supported on this SOC");
+		return QDF_STATUS_SUCCESS;
+	}
+
+	return hif_unregister_umac_reset_handler(soc->hif_handle);
+}
