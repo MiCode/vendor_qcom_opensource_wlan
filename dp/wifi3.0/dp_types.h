@@ -425,6 +425,7 @@ struct dp_rx_nbuf_frag_info {
  * @DP_TX_HW_DESC_HIST_TYPE: Datapath TX HW descriptor history
  * @DP_MON_SOC_TYPE: Datapath monitor soc context
  * @DP_MON_PDEV_TYPE: Datapath monitor pdev context
+ * @DP_MON_STATUS_BUF_HIST_TYPE: DP monitor status buffer history
  */
 enum dp_ctxt_type {
 	DP_PDEV_TYPE,
@@ -438,6 +439,7 @@ enum dp_ctxt_type {
 	DP_TX_HW_DESC_HIST_TYPE,
 	DP_MON_SOC_TYPE,
 	DP_MON_PDEV_TYPE,
+	DP_MON_STATUS_BUF_HIST_TYPE,
 };
 
 /**
@@ -952,6 +954,7 @@ struct dp_intr {
 
 	/* Interrupt Stats for individual masks */
 	struct dp_intr_stats intr_stats;
+	uint8_t umac_reset_intr_mask;  /* UMAC reset interrupt mask */
 };
 
 #define REO_DESC_FREELIST_SIZE 64
@@ -1352,6 +1355,50 @@ struct dp_tx_hw_desc_evt {
 struct dp_tx_hw_desc_history {
 	uint64_t index;
 	struct dp_tx_hw_desc_evt entry[DP_TX_HW_DESC_HIST_MAX];
+};
+#endif
+
+/*
+ * enum dp_mon_status_process_event - Events for monitor status buffer record
+ * @DP_MON_STATUS_BUF_REAP: Monitor status buffer is reaped from ring
+ * @DP_MON_STATUS_BUF_ENQUEUE: Status buffer is enqueued to local queue
+ * @DP_MON_STATUS_BUF_DEQUEUE: Status buffer is dequeued from local queue
+ */
+enum dp_mon_status_process_event {
+	DP_MON_STATUS_BUF_REAP,
+	DP_MON_STATUS_BUF_ENQUEUE,
+	DP_MON_STATUS_BUF_DEQUEUE,
+};
+
+#ifdef WLAN_FEATURE_DP_MON_STATUS_RING_HISTORY
+#define DP_MON_STATUS_HIST_MAX	2048
+
+/**
+ * struct dp_buf_info_record - ring buffer info
+ * @hbi: HW ring buffer info
+ * @timestamp: timestamp when this entry was recorded
+ * @event: event
+ * @rx_desc: RX descriptor corresponding to the received buffer
+ * @nbuf: buffer attached to rx_desc, if event is REAP, else the buffer
+ *	  which was enqueued or dequeued.
+ * @rx_desc_nbuf_data: nbuf data pointer.
+ */
+struct dp_mon_stat_info_record {
+	struct hal_buf_info hbi;
+	uint64_t timestamp;
+	enum dp_mon_status_process_event event;
+	void *rx_desc;
+	qdf_nbuf_t nbuf;
+	uint8_t *rx_desc_nbuf_data;
+};
+
+/* struct dp_rx_history - rx ring hisotry
+ * @index: Index where the last entry is written
+ * @entry: history entries
+ */
+struct dp_mon_status_ring_history {
+	qdf_atomic_t index;
+	struct dp_mon_stat_info_record entry[DP_MON_STATUS_HIST_MAX];
 };
 #endif
 
@@ -2141,6 +2188,10 @@ struct dp_soc {
 	struct dp_rx_reinject_history *rx_reinject_ring_history;
 #endif
 
+#ifdef WLAN_FEATURE_DP_MON_STATUS_RING_HISTORY
+	struct dp_mon_status_ring_history *mon_status_ring_history;
+#endif
+
 #ifdef WLAN_FEATURE_DP_TX_DESC_HISTORY
 	struct dp_tx_tcl_history *tx_tcl_history;
 	struct dp_tx_comp_history *tx_comp_history;
@@ -2307,10 +2358,12 @@ struct dp_soc {
 #ifdef WLAN_DP_FEATURE_SW_LATENCY_MGR
 	struct dp_swlm swlm;
 #endif
+
 #ifdef FEATURE_RUNTIME_PM
+	/* DP Rx timestamp */
+	qdf_time_t rx_last_busy;
 	/* Dp runtime refcount */
 	qdf_atomic_t dp_runtime_refcount;
-
 	/* Dp tx pending count in RTPM */
 	qdf_atomic_t tx_pending_rtpm;
 #endif
@@ -2380,6 +2433,9 @@ struct dp_soc {
 #ifdef DP_UMAC_HW_RESET_SUPPORT
 	struct dp_soc_umac_reset_ctx umac_reset_ctx;
 #endif
+	/* PPDU to link_id mapping parameters */
+	uint8_t link_id_offset;
+	uint8_t link_id_bits;
 };
 
 #ifdef IPA_OFFLOAD
@@ -2925,6 +2981,11 @@ struct dp_pdev {
 #ifdef WLAN_FEATURE_MARK_FIRST_WAKEUP_PACKET
 	uint8_t is_first_wakeup_packet;
 #endif
+#ifdef CONNECTIVITY_PKTLOG
+	/* packetdump callback functions */
+	ol_txrx_pktdump_cb dp_tx_packetdump_cb;
+	ol_txrx_pktdump_cb dp_rx_packetdump_cb;
+#endif
 };
 
 struct dp_peer;
@@ -3126,9 +3187,10 @@ struct dp_vdev {
 	struct cdp_vdev_stats stats;
 
 	/* Is this a proxySTA VAP */
-	bool proxysta_vdev;
-	/* Is isolation mode enabled */
-	bool isolation_vdev;
+	uint8_t proxysta_vdev : 1, /* Is this a proxySTA VAP */
+		wrap_vdev : 1, /* Is this a QWRAP AP VAP */
+		isolation_vdev : 1, /* Is this a QWRAP AP VAP */
+		reserved : 5; /* Reserved */
 
 #ifdef QCA_LL_TX_FLOW_CONTROL_V2
 	struct dp_tx_desc_pool_s *pool;
@@ -3828,9 +3890,8 @@ struct dp_peer_stats {
  * @stats: Peer stats
  * @delay_stats: Peer delay stats
  * @jitter_stats: Peer jitter stats
- * @mpdu_retry_threshold_1: MPDU retry threshold 1 to increment tx bad count
- * @mpdu_retry_threshold_1: MPDU retry threshold 2 to increment tx bad count
-
+ * @bw: bandwidth of peer connection
+ * @mpdu_retry_threshold: MPDU retry threshold to increment tx bad count
  */
 struct dp_txrx_peer {
 	/* Core TxRx Peer */
@@ -3886,8 +3947,10 @@ struct dp_txrx_peer {
 #ifdef CONFIG_SAWF
 	struct dp_peer_sawf_stats *sawf_stats;
 #endif
-	uint8_t mpdu_retry_threshold_1;
-	uint8_t mpdu_retry_threshold_2;
+#ifdef DP_PEER_EXTENDED_API
+	enum cdp_peer_bw bw;
+	uint8_t mpdu_retry_threshold;
+#endif
 };
 
 /* Peer structure for data path state */

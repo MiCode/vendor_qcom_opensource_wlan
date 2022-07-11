@@ -145,6 +145,7 @@
  * @QCA_NL80211_VENDOR_SUBCMD_THERMAL_INDEX: Report thermal event index
  * @QCA_NL80211_VENDOR_SUBCMD_CONFIG_TWT_INDEX: TWT config index
  * @QCA_NL80211_VENDOR_SUBCMD_PEER_CFR_CAPTURE_CFG_INDEX: CFR data event index
+ * @QCA_NL80211_VENDOR_SUBCMD_DRIVER_READY_INDEX: Driver Ready after SSR index
  */
 
 enum qca_nl80211_vendor_subcmds_index {
@@ -252,6 +253,7 @@ enum qca_nl80211_vendor_subcmds_index {
 #endif
 	QCA_NL80211_VENDOR_SUBCMD_MCC_QUOTA_INDEX,
 	QCA_NL80211_VENDOR_SUBCMD_PEER_FLUSH_PENDING_INDEX,
+	QCA_NL80211_VENDOR_SUBCMD_DRIVER_READY_INDEX,
 };
 
 #if !defined(SUPPORT_WDEV_CFG80211_VENDOR_EVENT_ALLOC) && \
@@ -497,6 +499,24 @@ static inline void wlan_cfg80211_unregister_netdevice(struct net_device *dev)
 static inline void wlan_cfg80211_unregister_netdevice(struct net_device *dev)
 {
 	unregister_netdevice(dev);
+}
+#endif
+
+#ifdef CFG80211_SINGLE_NETDEV_MULTI_LINK_SUPPORT
+static inline
+void wlan_cfg80211_ch_switch_notify(struct net_device *dev,
+				    struct cfg80211_chan_def *chandef,
+				    unsigned int link_id)
+{
+	cfg80211_ch_switch_notify(dev, chandef, link_id);
+}
+#else
+static inline
+void wlan_cfg80211_ch_switch_notify(struct net_device *dev,
+				    struct cfg80211_chan_def *chandef,
+				    unsigned int link_id)
+{
+	cfg80211_ch_switch_notify(dev, chandef);
 }
 #endif
 

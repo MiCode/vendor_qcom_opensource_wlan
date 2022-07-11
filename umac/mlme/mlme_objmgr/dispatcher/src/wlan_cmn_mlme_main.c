@@ -502,6 +502,18 @@ QDF_STATUS mlme_cm_osif_disconnect_start_ind(struct wlan_objmgr_vdev *vdev)
 	return ret;
 }
 
+#ifdef WLAN_VENDOR_HANDOFF_CONTROL
+QDF_STATUS mlme_cm_osif_get_vendor_handoff_params(struct wlan_objmgr_psoc *psoc,
+						  void *vendor_handoff_context)
+{
+	if (glbl_cm_ops && glbl_cm_ops->mlme_cm_get_vendor_handoff_params_cb)
+		return glbl_cm_ops->mlme_cm_get_vendor_handoff_params_cb(psoc,
+							vendor_handoff_context);
+
+	return QDF_STATUS_E_FAILURE;
+}
+#endif
+
 #ifdef CONN_MGR_ADV_FEATURE
 QDF_STATUS mlme_cm_osif_roam_sync_ind(struct wlan_objmgr_vdev *vdev)
 {

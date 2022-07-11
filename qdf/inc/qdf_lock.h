@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2014-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -574,18 +575,195 @@ void __qdf_wake_lock_destroy(qdf_wake_lock_t *lock,
 
 void qdf_pm_system_wakeup(void);
 
-QDF_STATUS qdf_runtime_pm_get(void);
-QDF_STATUS qdf_runtime_pm_put(void);
-QDF_STATUS qdf_runtime_pm_prevent_suspend(qdf_runtime_lock_t *lock);
-QDF_STATUS qdf_runtime_pm_allow_suspend(qdf_runtime_lock_t *lock);
-
-QDF_STATUS __qdf_runtime_lock_init(qdf_runtime_lock_t *lock, const char *name);
-
-#define qdf_runtime_lock_init(lock) __qdf_runtime_lock_init(lock, #lock)
-
-void qdf_runtime_lock_deinit(qdf_runtime_lock_t *lock);
-
 QDF_STATUS qdf_spinlock_acquire(qdf_spinlock_t *lock);
 
 QDF_STATUS qdf_spinlock_release(qdf_spinlock_t *lock);
+
+/**
+ * enum qdf_rtpm_type - Get and Put calls types
+ * @QDF_RTPM_GET: Increment usage count and when system is suspended
+ *               schedule resume process, return depends on pm state.
+ * @QDF_RTPM_GET_FORCE: Increment usage count and when system is suspended
+ *                     shedule resume process, returns success irrespective of
+ *                     pm_state.
+ * @QDF_RTPM_GET_SYNC: Increment usage count and when system is suspended,
+ *                    wait till process is resumed.
+ * @QDF_RTPM_GET_NORESUME: Only increments usage count.
+ * @QDF_RTPM_PUT: Decrements usage count and puts system in idle state.
+ * @QDF_RTPM_PUT_SYNC_SUSPEND: Decrements usage count and puts system in
+ *                            suspended state.
+ * @QDF_RTPM_PUT_NOIDLE: Decrements usage count.
+ */
+enum qdf_rtpm_call_type {
+	QDF_RTPM_GET,
+	QDF_RTPM_GET_FORCE,
+	QDF_RTPM_GET_SYNC,
+	QDF_RTPM_GET_NORESUME,
+	QDF_RTPM_PUT,
+	QDF_RTPM_PUT_SYNC_SUSPEND,
+	QDF_RTPM_PUT_NOIDLE,
+};
+
+/**
+ * enum qdf_rtpm_client_id - modules registered with runtime pm module
+ * @QDF_RTPM_ID_RESERVED: Reserved ID
+ * @QDF_RTPM_ID_PM_QOS_NOTIFY: PM QOS context
+ * @QDF_RTPM_ID_BUS_SUSPEND: APSS Bus suspend context
+ * @QDF_RTPM_ID_MAX: Max id
+ */
+enum  qdf_rtpm_client_id {
+	QDF_RTPM_ID_RESERVED,
+	QDF_RTPM_ID_PM_QOS_NOTIFY,
+	QDF_RTPM_ID_WIPHY_SUSPEND,
+	QDF_RTPM_ID_MAX
+};
+
+#define qdf_runtime_lock_init(lock) __qdf_runtime_lock_init(lock, #lock)
+
+#ifdef FEATURE_RUNTIME_PM
+/**
+ * qdf_rtpm_register() - QDF wrapper to register a module with runtime PM.
+ * @id: ID of the module which needs to be registered
+ * @hif_rpm_cbk: callback to be called when get was called in suspended state.
+ * @prevent_multiple_get: not allow simultaneous get calls or put calls
+ *
+ * Return: success status if registered
+ */
+QDF_STATUS qdf_rtpm_register(uint32_t id, void (*hif_rpm_cbk)(void));
+
+/**
+ * qdf_rtpm_deregister() - QDF wrapper to deregister the module
+ * @id: ID of the module which needs to be de-registered
+ *
+ * Return: success status if successfully de-registered
+ */
+QDF_STATUS qdf_rtpm_deregister(uint32_t id);
+
+/**
+ * qdf_runtime_lock_init() - initialize runtime lock
+ * @name: name of the runtime lock
+ *
+ * Initialize a runtime pm lock.  This lock can be used
+ * to prevent the runtime pm system from putting the bus
+ * to sleep.
+ *
+ * Return: Success if lock initialized
+ */
+QDF_STATUS __qdf_runtime_lock_init(qdf_runtime_lock_t *lock, const char *name);
+
+/**
+ * qdf_runtime_lock_deinit() - deinitialize runtime pm lock
+ * @lock: the lock to deinitialize
+ *
+ * Ensures the lock is released. Frees the runtime lock.
+ *
+ * Return: void
+ */
+void qdf_runtime_lock_deinit(qdf_runtime_lock_t *lock);
+
+/**
+ * qdf_rtpm_get() - Incremeant usage_count on the device to avoid suspend.
+ * @type: get call types from hif_rpm_type
+ * @id: ID of the module calling get()
+ *
+ * Return: success if a get has been issued, else error code.
+ */
+QDF_STATUS qdf_rtpm_get(uint8_t type, uint32_t id);
+
+/**
+ * qdf_rtpm_put() - Decremeant usage_count on the device to avoid suspend.
+ * @type: put call types from hif_rpm_type
+ * @id: ID of the module calling put()
+ *
+ * Return: success if a put has been issued, else error code.
+ */
+QDF_STATUS qdf_rtpm_put(uint8_t type, uint32_t id);
+
+/**
+ * qdf_runtime_pm_allow_suspend() - Prevent Runtime suspend
+ * @data: runtime PM lock
+ *
+ * This function will prevent runtime suspend, by incrementing
+ * device's usage count.
+ *
+ * Return: status
+ */
+QDF_STATUS qdf_runtime_pm_prevent_suspend(qdf_runtime_lock_t *lock);
+
+/**
+ * qdf_runtime_pm_allow_suspend() - Allow Runtime suspend
+ * @data: runtime PM lock
+ *
+ * This function will allow runtime suspend, by decrementing
+ * device's usage count.
+ *
+ * Return: status
+ */
+QDF_STATUS qdf_runtime_pm_allow_suspend(qdf_runtime_lock_t *lock);
+
+/**
+ * qdf_pm_runtime_sync_resume() - Invoke synchronous runtime resume.
+ *
+ * This function will invoke synchronous runtime resume.
+ *
+ * Return: Success if state is ON
+ */
+QDF_STATUS qdf_rtpm_sync_resume(void);
+
+#else
+static inline
+QDF_STATUS qdf_rtpm_register(uint32_t id, void (*hif_rpm_cbk)(void))
+{
+	return 0;
+}
+
+static inline
+QDF_STATUS qdf_rtpm_deregister(uint32_t id)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static inline
+QDF_STATUS __qdf_runtime_lock_init(qdf_runtime_lock_t *lock, const char *name)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static inline
+void qdf_runtime_lock_deinit(qdf_runtime_lock_t *lock)
+{
+}
+
+static inline
+QDF_STATUS qdf_rtpm_get(uint8_t type, uint32_t id)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static inline
+QDF_STATUS qdf_rtpm_put(uint8_t type, uint32_t id)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static inline
+QDF_STATUS qdf_runtime_pm_prevent_suspend(qdf_runtime_lock_t *lock)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static inline
+QDF_STATUS qdf_runtime_pm_allow_suspend(qdf_runtime_lock_t *lock)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static inline
+QDF_STATUS qdf_rtpm_sync_resume(void)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+#endif /* FEATURE_RUNTIME_PM */
+
 #endif /* _QDF_LOCK_H */

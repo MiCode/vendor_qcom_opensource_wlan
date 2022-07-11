@@ -51,8 +51,11 @@
 #else
 #define MAX_MCS (14 + 1)
 #endif
+
+#define MCS_INVALID_ARRAY_INDEX MAX_MCS
 #define MAX_MCS_11A 8
 #define MAX_MCS_11B 7
+#define MAX_MCS_11N 8
 #define MAX_MCS_11AC 12
 #define MAX_MCS_11AX 14
 /* 1 additional GI is for invalid values */
@@ -427,6 +430,16 @@ enum cdp_packet_type {
 
 #define MCS_VALID 1
 #define MCS_INVALID 0
+
+#ifdef WLAN_FEATURE_11BE
+#define CDP_IS_PKT_TYPE_SUPPORT_NSS(_pkt_type) \
+		(DOT11_N == (_pkt_type) || DOT11_AC == (_pkt_type) || \
+		 DOT11_AX == (_pkt_type) || DOT11_BE == (_pkt_type))
+#else
+#define CDP_IS_PKT_TYPE_SUPPORT_NSS(_pkt_type) \
+		(DOT11_N == (_pkt_type) || DOT11_AC == (_pkt_type) || \
+		 DOT11_AX == (_pkt_type))
+#endif /* WLAN_FEATURE_11BE */
 
 #define CDP_MAX_MCS_STRING_LEN 34
 /*

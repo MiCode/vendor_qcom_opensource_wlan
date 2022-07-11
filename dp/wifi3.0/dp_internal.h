@@ -156,6 +156,103 @@ struct htt_dbgfs_cfg {
 	(1 << HTT_PPDU_STATS_USR_COMPLTN_BA_BITMAP_256_TLV) | \
 	(1 << HTT_PPDU_STATS_USR_MPDU_ENQ_BITMAP_256_TLV))
 
+static const enum cdp_packet_type hal_2_dp_pkt_type_map[HAL_DOT11_MAX] = {
+	[HAL_DOT11A] = DOT11_A,
+	[HAL_DOT11B] = DOT11_B,
+	[HAL_DOT11N_MM] = DOT11_N,
+	[HAL_DOT11AC] = DOT11_AC,
+	[HAL_DOT11AX] = DOT11_AX,
+	[HAL_DOT11BA] = DOT11_MAX,
+#ifdef WLAN_FEATURE_11BE
+	[HAL_DOT11BE] = DOT11_BE,
+#else
+	[HAL_DOT11BE] = DOT11_MAX,
+#endif
+	[HAL_DOT11AZ] = DOT11_MAX,
+	[HAL_DOT11N_GF] = DOT11_MAX,
+};
+
+#ifdef WLAN_FEATURE_11BE
+/**
+ * dp_get_mcs_array_index_by_pkt_type_mcs () - get the destination mcs index
+					       in array
+ * @pkt_type: host SW pkt type
+ * @mcs: mcs value for TX/RX rate
+ *
+ * Return: succeeded - valid index in mcs array
+	   fail - same value as MCS_MAX
+ */
+static inline uint8_t
+dp_get_mcs_array_index_by_pkt_type_mcs(uint32_t pkt_type, uint32_t mcs)
+{
+	uint8_t dst_mcs_idx = MCS_INVALID_ARRAY_INDEX;
+
+	switch (pkt_type) {
+	case DOT11_A:
+		dst_mcs_idx =
+			mcs >= MAX_MCS_11A ? (MAX_MCS - 1) : mcs;
+		break;
+	case DOT11_B:
+		dst_mcs_idx =
+			mcs >= MAX_MCS_11B ? (MAX_MCS - 1) : mcs;
+		break;
+	case DOT11_N:
+		dst_mcs_idx =
+			mcs >= MAX_MCS_11N ? (MAX_MCS - 1) : mcs;
+		break;
+	case DOT11_AC:
+		dst_mcs_idx =
+			mcs >= MAX_MCS_11AC ? (MAX_MCS - 1) : mcs;
+		break;
+	case DOT11_AX:
+		dst_mcs_idx =
+			mcs >= MAX_MCS_11AX ? (MAX_MCS - 1) : mcs;
+		break;
+	case DOT11_BE:
+		dst_mcs_idx =
+			mcs >= MAX_MCS_11BE ? (MAX_MCS - 1) : mcs;
+		break;
+	default:
+		break;
+	}
+
+	return dst_mcs_idx;
+}
+#else
+static inline uint8_t
+dp_get_mcs_array_index_by_pkt_type_mcs(uint32_t pkt_type, uint32_t mcs)
+{
+	uint8_t dst_mcs_idx = MCS_INVALID_ARRAY_INDEX;
+
+	switch (pkt_type) {
+	case DOT11_A:
+		dst_mcs_idx =
+			mcs >= MAX_MCS_11A ? (MAX_MCS - 1) : mcs;
+		break;
+	case DOT11_B:
+		dst_mcs_idx =
+			mcs >= MAX_MCS_11B ? (MAX_MCS - 1) : mcs;
+		break;
+	case DOT11_N:
+		dst_mcs_idx =
+			mcs >= MAX_MCS_11N ? (MAX_MCS - 1) : mcs;
+		break;
+	case DOT11_AC:
+		dst_mcs_idx =
+			mcs >= MAX_MCS_11AC ? (MAX_MCS - 1) : mcs;
+		break;
+	case DOT11_AX:
+		dst_mcs_idx =
+			mcs >= MAX_MCS_11AX ? (MAX_MCS - 1) : mcs;
+		break;
+	default:
+		break;
+	}
+
+	return dst_mcs_idx;
+}
+#endif
+
 QDF_STATUS dp_mon_soc_attach(struct dp_soc *soc);
 QDF_STATUS dp_mon_soc_detach(struct dp_soc *soc);
 
@@ -3390,14 +3487,40 @@ static inline int32_t dp_runtime_get_refcount(struct dp_soc *soc)
 }
 
 /**
- * dp_runtime_init() - Init dp runtime refcount when dp soc init
+ * dp_runtime_init() - Init DP related runtime PM clients and runtime refcount
  * @soc: Datapath soc handle
  *
  * Return: QDF_STATUS
  */
-static inline QDF_STATUS dp_runtime_init(struct dp_soc *soc)
+static inline void dp_runtime_init(struct dp_soc *soc)
 {
-	return qdf_atomic_init(&soc->dp_runtime_refcount);
+	hif_rtpm_register(HIF_RTPM_ID_DP, NULL);
+	hif_rtpm_register(HIF_RTPM_ID_DP_RING_STATS, NULL);
+	qdf_atomic_init(&soc->dp_runtime_refcount);
+}
+
+/**
+ * dp_runtime_deinit() - Deinit DP related runtime PM clients
+ *
+ * Return: None
+ */
+static inline void dp_runtime_deinit(void)
+{
+	hif_rtpm_deregister(HIF_RTPM_ID_DP);
+	hif_rtpm_deregister(HIF_RTPM_ID_DP_RING_STATS);
+}
+
+/**
+ * dp_runtime_pm_mark_last_busy() - Mark last busy when rx path in use
+ * @soc: Datapath soc handle
+ *
+ * Return: None
+ */
+static inline void dp_runtime_pm_mark_last_busy(struct dp_soc *soc)
+{
+	soc->rx_last_busy = qdf_get_log_timestamp_usecs();
+
+	hif_rtpm_mark_last_busy(HIF_RTPM_ID_DP);
 }
 #else
 static inline int32_t dp_runtime_get(struct dp_soc *soc)
@@ -3413,6 +3536,14 @@ static inline int32_t dp_runtime_put(struct dp_soc *soc)
 static inline QDF_STATUS dp_runtime_init(struct dp_soc *soc)
 {
 	return QDF_STATUS_SUCCESS;
+}
+
+static inline void dp_runtime_deinit(void)
+{
+}
+
+static inline void dp_runtime_pm_mark_last_busy(struct dp_soc *soc)
+{
 }
 #endif
 
@@ -3613,4 +3744,68 @@ QDF_STATUS
 dp_get_peer_telemetry_stats(struct cdp_soc_t *soc_hdl, uint8_t *addr,
 			    struct cdp_peer_telemetry_stats *stats);
 #endif /* WLAN_TELEMETRY_STATS_SUPPORT */
+
+#ifdef CONNECTIVITY_PKTLOG
+/*
+ * dp_tx_send_pktlog() - send tx packet log
+ * @soc: soc handle
+ * @pdev: pdev handle
+ * @nbuf: nbuf
+ * @status: status of tx packet
+ *
+ * This function is used to send tx packet for logging
+ *
+ * Return: None
+ *
+ */
+static inline
+void dp_tx_send_pktlog(struct dp_soc *soc, struct dp_pdev *pdev,
+		       qdf_nbuf_t nbuf, enum qdf_dp_tx_rx_status status)
+{
+	ol_txrx_pktdump_cb packetdump_cb = pdev->dp_tx_packetdump_cb;
+
+	if (qdf_unlikely(packetdump_cb)) {
+		packetdump_cb((ol_txrx_soc_handle)soc, pdev->pdev_id,
+			      QDF_NBUF_CB_TX_VDEV_CTX(nbuf),
+			      nbuf, status, QDF_TX_DATA_PKT);
+	}
+}
+
+/*
+ * dp_rx_send_pktlog() - send rx packet log
+ * @soc: soc handle
+ * @pdev: pdev handle
+ * @nbuf: nbuf
+ * @status: status of rx packet
+ *
+ * This function is used to send rx packet for logging
+ *
+ * Return: None
+ *
+ */
+static inline
+void dp_rx_send_pktlog(struct dp_soc *soc, struct dp_pdev *pdev,
+		       qdf_nbuf_t nbuf, enum qdf_dp_tx_rx_status status)
+{
+	ol_txrx_pktdump_cb packetdump_cb = pdev->dp_rx_packetdump_cb;
+
+	if (qdf_unlikely(packetdump_cb)) {
+		packetdump_cb((ol_txrx_soc_handle)soc, pdev->pdev_id,
+			      QDF_NBUF_CB_RX_VDEV_ID(nbuf),
+			      nbuf, status, QDF_RX_DATA_PKT);
+	}
+}
+#else
+static inline
+void dp_tx_send_pktlog(struct dp_soc *soc, struct dp_pdev *pdev,
+		       qdf_nbuf_t nbuf, enum qdf_dp_tx_rx_status status)
+{
+}
+
+static inline
+void dp_rx_send_pktlog(struct dp_soc *soc, struct dp_pdev *pdev,
+		       qdf_nbuf_t nbuf, enum qdf_dp_tx_rx_status status)
+{
+}
+#endif
 #endif /* #ifndef _DP_INTERNAL_H_ */

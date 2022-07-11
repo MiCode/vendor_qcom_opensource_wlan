@@ -1365,6 +1365,7 @@ static void hif_select_service_to_pipe_map(struct hif_softc *scn,
 				sizeof(target_service_to_ce_map_qca6750);
 			break;
 		case TARGET_TYPE_KIWI:
+		case TARGET_TYPE_MANGO:
 			*tgt_svc_map_to_use = target_service_to_ce_map_kiwi;
 			*sz_tgt_svc_map_to_use =
 				sizeof(target_service_to_ce_map_kiwi);
@@ -1674,6 +1675,7 @@ bool ce_srng_based(struct hif_softc *scn)
 	case TARGET_TYPE_QCN6122:
 	case TARGET_TYPE_QCA5018:
 	case TARGET_TYPE_KIWI:
+	case TARGET_TYPE_MANGO:
 	case TARGET_TYPE_QCN9224:
 	case TARGET_TYPE_QCA9574:
 		return true;
@@ -2933,12 +2935,10 @@ hif_pci_ce_recv_data(struct CE_handle *copyeng, void *ce_context,
 	struct HIF_CE_state *hif_state = pipe_info->HIF_CE_state;
 	struct CE_state *ce_state = (struct CE_state *) copyeng;
 	struct hif_softc *scn = HIF_GET_SOFTC(hif_state);
-	struct hif_opaque_softc *hif_ctx = GET_HIF_OPAQUE_HDL(scn);
-	struct hif_msg_callbacks *msg_callbacks =
-		 &pipe_info->pipe_callbacks;
+	struct hif_msg_callbacks *msg_callbacks = &pipe_info->pipe_callbacks;
 
 	do {
-		hif_pm_runtime_mark_last_busy(hif_ctx);
+		hif_rtpm_mark_last_busy(HIF_RTPM_ID_CE);
 		qdf_nbuf_unmap_single(scn->qdf_dev,
 				      (qdf_nbuf_t) transfer_context,
 				      QDF_DMA_FROM_DEVICE);
@@ -3579,10 +3579,10 @@ static void hif_print_hal_shadow_register_cfg(struct pld_wlan_enable_cfg *cfg)
 {
 	int i;
 
-	hif_err("num_config %d", cfg->num_shadow_reg_v2_cfg);
+	hif_err("v3: num_config %d", cfg->num_shadow_reg_v3_cfg);
 
-	for (i = 0; i < cfg->num_shadow_reg_v2_cfg; i++) {
-		hif_err("i %d, val %x", i, cfg->shadow_reg_v2_cfg[i].addr);
+	for (i = 0; i < cfg->num_shadow_reg_v3_cfg; i++) {
+		hif_err("i %d, val %x", i, cfg->shadow_reg_v3_cfg[i].addr);
 	}
 }
 
@@ -3806,6 +3806,7 @@ int hif_wlan_enable(struct hif_softc *scn)
 
 	switch (tgt_info->target_type) {
 	case TARGET_TYPE_KIWI:
+	case TARGET_TYPE_MANGO:
 		hif_prepare_hal_shadow_reg_cfg_v3(scn, &cfg);
 		break;
 	default:
@@ -4054,6 +4055,7 @@ void hif_ce_prepare_config(struct hif_softc *scn)
 		scn->ce_count = QCA_6750_CE_COUNT;
 		break;
 	case TARGET_TYPE_KIWI:
+	case TARGET_TYPE_MANGO:
 		hif_state->host_ce_config = host_ce_config_wlan_kiwi;
 		hif_state->target_ce_config = target_ce_config_wlan_kiwi;
 		hif_state->target_ce_config_sz =

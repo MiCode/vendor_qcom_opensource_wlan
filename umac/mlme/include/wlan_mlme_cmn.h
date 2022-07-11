@@ -75,6 +75,11 @@
  * @mlme_cm_cckm_preauth_cmpl_cb: Roam cckm preauth complete cb
  * @vdev: vdev pointer
  * @rsp: preauth response pointer
+ *
+ * @mlme_cm_get_vendor_handoff_params_cb: get vendor handoff params cb
+ * @psoc: psoc pointer
+ * @rsp: vendor handoff response pointer
+ * @vendor_handoff_context: vendor handoff context
  */
 struct mlme_cm_ops {
 	QDF_STATUS (*mlme_cm_connect_complete_cb)(
@@ -113,6 +118,11 @@ struct mlme_cm_ops {
 					struct wlan_objmgr_vdev *vdev,
 					struct wlan_preauth_rsp *rsp);
 #endif
+#endif
+#ifdef WLAN_VENDOR_HANDOFF_CONTROL
+	QDF_STATUS (*mlme_cm_get_vendor_handoff_params_cb)(
+				struct wlan_objmgr_psoc *psoc,
+				void *vendor_handoff_context);
 #endif
 };
 
@@ -789,6 +799,19 @@ mlme_cm_osif_disconnect_complete(struct wlan_objmgr_vdev *vdev,
  * Return: QDF_STATUS
  */
 QDF_STATUS mlme_cm_osif_disconnect_start_ind(struct wlan_objmgr_vdev *vdev);
+
+#ifdef WLAN_VENDOR_HANDOFF_CONTROL
+/**
+ * mlme_cm_osif_get_vendor_handoff_params() - osif get vendor handoff params
+ * indication
+ * @psoc: psoc pointer
+ * @vendor_handoff_context: vendor handoff context
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS mlme_cm_osif_get_vendor_handoff_params(struct wlan_objmgr_psoc *psoc,
+						  void *vendor_handoff_context);
+#endif
 
 #ifdef CONN_MGR_ADV_FEATURE
 /**

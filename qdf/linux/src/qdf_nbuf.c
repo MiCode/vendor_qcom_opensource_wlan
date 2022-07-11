@@ -601,36 +601,6 @@ skb_alloc:
 }
 #else
 
-struct sk_buff *__qdf_nbuf_alloc_simple(qdf_device_t osdev, size_t size)
-{
-	struct sk_buff *skb;
-	int flags = GFP_KERNEL;
-
-	if (in_interrupt() || irqs_disabled() || in_atomic()) {
-		flags = GFP_ATOMIC;
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0)
-		/*
-		 * Observed that kcompactd burns out CPU to make order-3 page.
-		 *__netdev_alloc_skb has 4k page fallback option just in case of
-		 * failing high order page allocation so we don't need to be
-		 * hard. Make kcompactd rest in piece.
-		 */
-		flags = flags & ~__GFP_KSWAPD_RECLAIM;
-#endif
-	}
-
-	skb = __netdev_alloc_skb(NULL, size, flags);
-
-	if (skb)
-		qdf_nbuf_count_inc(skb);
-	else
-		return NULL;
-
-	return skb;
-}
-
-qdf_export_symbol(__qdf_nbuf_alloc_simple);
-
 struct sk_buff *__qdf_nbuf_alloc(qdf_device_t osdev, size_t size, int reserve,
 				 int align, int prio, const char *func,
 				 uint32_t line)
@@ -773,17 +743,6 @@ __qdf_nbuf_t __qdf_nbuf_clone(__qdf_nbuf_t skb)
 qdf_export_symbol(__qdf_nbuf_clone);
 
 #ifdef NBUF_MEMORY_DEBUG
-enum qdf_nbuf_event_type {
-	QDF_NBUF_ALLOC,
-	QDF_NBUF_ALLOC_CLONE,
-	QDF_NBUF_ALLOC_COPY,
-	QDF_NBUF_ALLOC_FAILURE,
-	QDF_NBUF_FREE,
-	QDF_NBUF_MAP,
-	QDF_NBUF_UNMAP,
-	QDF_NBUF_ALLOC_COPY_EXPAND,
-};
-
 struct qdf_nbuf_event {
 	qdf_nbuf_t nbuf;
 	char func[QDF_MEM_FUNC_NAME_SIZE];
@@ -809,7 +768,7 @@ static int32_t qdf_nbuf_circular_index_next(qdf_atomic_t *index, int size)
 	return next % size;
 }
 
-static void
+void
 qdf_nbuf_history_add(qdf_nbuf_t nbuf, const char *func, uint32_t line,
 		     enum qdf_nbuf_event_type type)
 {
@@ -3275,6 +3234,61 @@ free_buf:
 	__qdf_nbuf_free(nbuf);
 }
 qdf_export_symbol(qdf_nbuf_free_debug);
+
+struct sk_buff *__qdf_nbuf_alloc_simple(qdf_device_t osdev, size_t size,
+					const char *func, uint32_t line)
+{
+	struct sk_buff *skb;
+	int flags = GFP_KERNEL;
+
+	if (in_interrupt() || irqs_disabled() || in_atomic()) {
+		flags = GFP_ATOMIC;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0)
+		/*
+		 * Observed that kcompactd burns out CPU to make order-3 page.
+		 *__netdev_alloc_skb has 4k page fallback option just in case of
+		 * failing high order page allocation so we don't need to be
+		 * hard. Make kcompactd rest in piece.
+		 */
+		flags = flags & ~__GFP_KSWAPD_RECLAIM;
+#endif
+	}
+
+	skb = __netdev_alloc_skb(NULL, size, flags);
+
+
+	if (qdf_likely(is_initial_mem_debug_disabled)) {
+		if (qdf_likely(skb))
+			qdf_nbuf_count_inc(skb);
+	} else {
+		if (qdf_likely(skb)) {
+			qdf_nbuf_count_inc(skb);
+			qdf_net_buf_debug_add_node(skb, size, func, line);
+			qdf_nbuf_history_add(skb, func, line, QDF_NBUF_ALLOC);
+		} else {
+			qdf_nbuf_history_add(skb, func, line, QDF_NBUF_ALLOC_FAILURE);
+		}
+	}
+
+
+	return skb;
+}
+
+qdf_export_symbol(__qdf_nbuf_alloc_simple);
+
+void qdf_nbuf_free_debug_simple(qdf_nbuf_t nbuf, const char *func,
+				uint32_t line)
+{
+	if (qdf_likely(nbuf)) {
+		if (is_initial_mem_debug_disabled) {
+			dev_kfree_skb_any(nbuf);
+		} else {
+			qdf_nbuf_free_debug(nbuf, func, line);
+		}
+	}
+}
+
+qdf_export_symbol(qdf_nbuf_free_debug_simple);
 
 qdf_nbuf_t qdf_nbuf_clone_debug(qdf_nbuf_t buf, const char *func, uint32_t line)
 {

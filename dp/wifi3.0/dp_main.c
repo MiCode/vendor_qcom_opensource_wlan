@@ -409,7 +409,8 @@ const int dp_stats_mapping_table[][STATS_TYPE_MAX] = {
 	{TXRX_FW_STATS_INVALID, TXRX_HAL_REG_WRITE_STATS},
 	{TXRX_FW_STATS_INVALID, TXRX_SOC_REO_HW_DESC_DUMP},
 	{TXRX_FW_STATS_INVALID, TXRX_SOC_WBM_IDLE_HPTP_DUMP},
-	{HTT_DBG_EXT_STATS_PDEV_RX_RATE_EXT, TXRX_HOST_STATS_INVALID}
+	{HTT_DBG_EXT_STATS_PDEV_RX_RATE_EXT, TXRX_HOST_STATS_INVALID},
+	{HTT_DBG_EXT_STATS_TX_SOUNDING_INFO, TXRX_HOST_STATS_INVALID}
 };
 
 /* MCL specific functions */
@@ -3265,6 +3266,7 @@ static void dp_soc_interrupt_detach(struct cdp_soc_t *txrx_soc)
 		soc->intr_ctx[i].tx_ring_near_full_mask = 0;
 		soc->intr_ctx[i].tx_mon_ring_mask = 0;
 		soc->intr_ctx[i].host2txmon_ring_mask = 0;
+		soc->intr_ctx[i].umac_reset_intr_mask = 0;
 
 		hif_event_history_deinit(soc->hif_handle, i);
 		qdf_lro_deinit(soc->intr_ctx[i].lro_ctx);
@@ -3336,6 +3338,8 @@ static QDF_STATUS dp_soc_interrupt_attach(struct cdp_soc_t *txrx_soc)
 							    i);
 		int host2txmon_ring_mask =
 			wlan_cfg_get_host2txmon_ring_mask(soc->wlan_cfg_ctx, i);
+		int umac_reset_intr_mask =
+			wlan_cfg_get_umac_reset_intr_mask(soc->wlan_cfg_ctx, i);
 
 		soc->intr_ctx[i].dp_intr_id = i;
 		soc->intr_ctx[i].tx_ring_mask = tx_mask;
@@ -3356,6 +3360,7 @@ static QDF_STATUS dp_soc_interrupt_attach(struct cdp_soc_t *txrx_soc)
 						tx_ring_near_full_mask;
 		soc->intr_ctx[i].tx_mon_ring_mask = tx_mon_ring_mask;
 		soc->intr_ctx[i].host2txmon_ring_mask = host2txmon_ring_mask;
+		soc->intr_ctx[i].umac_reset_intr_mask = umac_reset_intr_mask;
 
 		soc->intr_ctx[i].soc = soc;
 
@@ -5257,6 +5262,50 @@ static inline void dp_soc_rx_history_detach(struct dp_soc *soc)
 }
 #endif
 
+#ifdef WLAN_FEATURE_DP_MON_STATUS_RING_HISTORY
+/**
+ * dp_soc_mon_status_ring_history_attach() - Attach the monitor status
+ *					     buffer record history.
+ * @soc: DP soc handle
+ *
+ * This function allocates memory to track the event for a monitor
+ * status buffer, before its parsed and freed.
+ *
+ * Return: None
+ */
+static void dp_soc_mon_status_ring_history_attach(struct dp_soc *soc)
+{
+	soc->mon_status_ring_history = dp_context_alloc_mem(soc,
+				DP_MON_STATUS_BUF_HIST_TYPE,
+				sizeof(struct dp_mon_status_ring_history));
+	if (!soc->mon_status_ring_history) {
+		dp_err("Failed to alloc memory for mon status ring history");
+		return;
+	}
+}
+
+/**
+ * dp_soc_mon_status_ring_history_detach() - Detach the monitor status buffer
+ *					     record history.
+ * @soc: DP soc handle
+ *
+ * Return: None
+ */
+static void dp_soc_mon_status_ring_history_detach(struct dp_soc *soc)
+{
+	dp_context_free_mem(soc, DP_MON_STATUS_BUF_HIST_TYPE,
+			    soc->mon_status_ring_history);
+}
+#else
+static void dp_soc_mon_status_ring_history_attach(struct dp_soc *soc)
+{
+}
+
+static void dp_soc_mon_status_ring_history_detach(struct dp_soc *soc)
+{
+}
+#endif
+
 #ifdef WLAN_FEATURE_DP_TX_DESC_HISTORY
 /**
  * dp_soc_tx_history_attach() - Attach the ring history record buffers
@@ -5916,6 +5965,8 @@ static void dp_soc_detach(struct cdp_soc_t *txrx_soc)
 
 	soc->arch_ops.txrx_soc_detach(soc);
 
+	dp_runtime_deinit();
+
 	dp_sysfs_deinitialize_stats(soc);
 	dp_soc_swlm_detach(soc);
 	dp_soc_tx_desc_sw_pools_free(soc);
@@ -5925,6 +5976,7 @@ static void dp_soc_detach(struct cdp_soc_t *txrx_soc)
 	wlan_cfg_soc_detach(soc->wlan_cfg_ctx);
 	dp_soc_tx_hw_desc_history_detach(soc);
 	dp_soc_tx_history_detach(soc);
+	dp_soc_mon_status_ring_history_detach(soc);
 	dp_soc_rx_history_detach(soc);
 
 	if (!dp_monitor_modularized_enable()) {
@@ -6544,6 +6596,7 @@ static QDF_STATUS dp_vdev_attach_wifi3(struct cdp_soc_t *cdp_soc,
 	vdev->drop_unenc = 1;
 	vdev->sec_type = cdp_sec_type_none;
 	vdev->multipass_en = false;
+	vdev->wrap_vdev = false;
 	dp_vdev_init_rx_eapol(vdev);
 	qdf_atomic_init(&vdev->ref_cnt);
 	for (i = 0; i < DP_MOD_ID_MAX; i++)
@@ -7094,12 +7147,6 @@ static QDF_STATUS dp_txrx_peer_attach(struct dp_soc *soc, struct dp_peer *peer)
 	/* initialize the peer_id */
 	txrx_peer->vdev = peer->vdev;
 	pdev = peer->vdev->pdev;
-
-	/* Initialize MPDU success count with retry update thresholds */
-	txrx_peer->mpdu_retry_threshold_1 =
-		soc->wlan_cfg_ctx->mpdu_retry_threshold_1;
-	txrx_peer->mpdu_retry_threshold_2 =
-		soc->wlan_cfg_ctx->mpdu_retry_threshold_2;
 
 	DP_STATS_INIT(txrx_peer);
 
@@ -9905,6 +9952,7 @@ static QDF_STATUS dp_set_pdev_param(struct cdp_soc_t *cdp_soc, uint8_t pdev_id,
 		pdev->ch_band_lmac_id_mapping[REG_BAND_6G] = DP_MAC0_LMAC_ID;
 		break;
 	case TARGET_TYPE_KIWI:
+	case TARGET_TYPE_MANGO:
 		pdev->ch_band_lmac_id_mapping[REG_BAND_2G] = DP_MAC0_LMAC_ID;
 		pdev->ch_band_lmac_id_mapping[REG_BAND_5G] = DP_MAC0_LMAC_ID;
 		pdev->ch_band_lmac_id_mapping[REG_BAND_6G] = DP_MAC0_LMAC_ID;
@@ -10281,7 +10329,8 @@ dp_set_vdev_param(struct cdp_soc_t *cdp_soc, uint8_t vdev_id,
 		break;
 #ifdef QCA_SUPPORT_WDS_EXTENDED
 	case CDP_CFG_WDS_EXT:
-		vdev->wds_ext_enabled = val.cdp_vdev_param_wds_ext;
+		if (vdev->opmode == wlan_op_mode_ap)
+			vdev->wds_ext_enabled = val.cdp_vdev_param_wds_ext;
 		break;
 #endif
 	case CDP_ENABLE_PEER_AUTHORIZE:
@@ -10313,6 +10362,9 @@ dp_set_vdev_param(struct cdp_soc_t *cdp_soc, uint8_t vdev_id,
 		dp_info("vdev_id %d drop 3 addr mcast :%d", vdev_id,
 			val.cdp_drop_3addr_mcast);
 		vdev->drop_3addr_mcast = val.cdp_drop_3addr_mcast;
+		break;
+	case CDP_ENABLE_WRAP:
+		vdev->wrap_vdev = val.cdp_vdev_param_wrap;
 		break;
 	default:
 		break;
@@ -12791,6 +12843,9 @@ static struct cdp_sawf_ops dp_ops_sawf = {
 	.txrx_sawf_set_mov_avg_params = dp_sawf_set_mov_avg_params,
 	.txrx_sawf_set_sla_params = dp_sawf_set_sla_params,
 	.txrx_sawf_init_telemtery_params = dp_sawf_init_telemetry_params,
+	.telemetry_get_throughput_stats = dp_sawf_get_tx_stats,
+	.telemetry_get_mpdu_stats = dp_sawf_get_mpdu_sched_stats,
+	.telemetry_get_drop_stats = dp_sawf_get_drop_stats,
 #endif
 };
 #endif
@@ -13436,6 +13491,72 @@ static int dp_set_peer_txq_flush_config(struct cdp_soc_t *soc_hdl,
 }
 #endif
 
+#ifdef CONNECTIVITY_PKTLOG
+/**
+ * dp_register_packetdump_callback() - registers
+ *  tx data packet, tx mgmt. packet and rx data packet
+ *  dump callback handler.
+ *
+ * @soc_hdl: Datapath soc handle
+ * @pdev_id: id of data path pdev handle
+ * @dp_tx_packetdump_cb: tx packetdump cb
+ * @dp_rx_packetdump_cb: rx packetdump cb
+ *
+ * This function is used to register tx data pkt, tx mgmt.
+ * pkt and rx data pkt dump callback
+ *
+ * Return: None
+ *
+ */
+static inline
+void dp_register_packetdump_callback(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
+				     ol_txrx_pktdump_cb dp_tx_packetdump_cb,
+				     ol_txrx_pktdump_cb dp_rx_packetdump_cb)
+{
+	struct dp_soc *soc = cdp_soc_t_to_dp_soc(soc_hdl);
+	struct dp_pdev *pdev;
+
+	pdev = dp_get_pdev_from_soc_pdev_id_wifi3(soc, pdev_id);
+	if (!pdev) {
+		dp_err("pdev is NULL!");
+		return;
+	}
+
+	pdev->dp_tx_packetdump_cb = dp_tx_packetdump_cb;
+	pdev->dp_rx_packetdump_cb = dp_rx_packetdump_cb;
+}
+
+/**
+ * dp_deregister_packetdump_callback() - deregidters
+ *  tx data packet, tx mgmt. packet and rx data packet
+ *  dump callback handler
+ * @soc_hdl: Datapath soc handle
+ * @pdev_id: id of data path pdev handle
+ *
+ * This function is used to deregidter tx data pkt.,
+ * tx mgmt. pkt and rx data pkt. dump callback
+ *
+ * Return: None
+ *
+ */
+static inline
+void dp_deregister_packetdump_callback(struct cdp_soc_t *soc_hdl,
+				       uint8_t pdev_id)
+{
+	struct dp_soc *soc = cdp_soc_t_to_dp_soc(soc_hdl);
+	struct dp_pdev *pdev;
+
+	pdev = dp_get_pdev_from_soc_pdev_id_wifi3(soc, pdev_id);
+	if (!pdev) {
+		dp_err("pdev is NULL!");
+		return;
+	}
+
+	pdev->dp_tx_packetdump_cb = NULL;
+	pdev->dp_rx_packetdump_cb = NULL;
+}
+#endif
+
 #ifdef DP_PEER_EXTENDED_API
 static struct cdp_misc_ops dp_ops_misc = {
 #ifdef FEATURE_WLAN_TDLS
@@ -13471,6 +13592,10 @@ static struct cdp_misc_ops dp_ops_misc = {
 #endif
 #ifdef WLAN_FEATURE_PEER_TXQ_FLUSH_CONF
 	.set_peer_txq_flush_config = dp_set_peer_txq_flush_config,
+#endif
+#ifdef CONNECTIVITY_PKTLOG
+	.register_pktdump_cb = dp_register_packetdump_callback,
+	.unregister_pktdump_cb = dp_deregister_packetdump_callback,
 #endif
 };
 #endif
@@ -13842,6 +13967,7 @@ dp_soc_attach(struct cdp_ctrl_objmgr_psoc *ctrl_psoc,
 
 	dp_soc_tx_hw_desc_history_attach(soc);
 	dp_soc_rx_history_attach(soc);
+	dp_soc_mon_status_ring_history_attach(soc);
 	dp_soc_tx_history_attach(soc);
 	wlan_set_srng_cfg(&soc->wlan_srng_cfg);
 	soc->wlan_cfg_ctx = wlan_cfg_soc_attach(soc->ctrl_psoc);
@@ -15350,8 +15476,7 @@ static void dp_soc_cfg_init(struct dp_soc *soc)
 		soc->wlan_cfg_ctx->rxdma1_enable = 0;
 		break;
 	case TARGET_TYPE_KIWI:
-		wlan_cfg_set_reo_dst_ring_size(soc->wlan_cfg_ctx,
-					       REO_DST_RING_SIZE_QCA6290);
+	case TARGET_TYPE_MANGO:
 		soc->ast_override_support = 1;
 		soc->per_tid_basize_max_tid = 8;
 
@@ -15452,8 +15577,7 @@ static void dp_soc_cfg_attach(struct dp_soc *soc)
 		soc->wlan_cfg_ctx->rxdma1_enable = 0;
 		break;
 	case TARGET_TYPE_KIWI:
-		wlan_cfg_set_reo_dst_ring_size(soc->wlan_cfg_ctx,
-					       REO_DST_RING_SIZE_QCA6290);
+	case TARGET_TYPE_MANGO:
 		soc->wlan_cfg_ctx->rxdma1_enable = 0;
 		break;
 	case TARGET_TYPE_QCA8074:

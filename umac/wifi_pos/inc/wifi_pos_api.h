@@ -638,4 +638,26 @@ QDF_STATUS wifi_pos_send_report_resp(struct wlan_objmgr_psoc *psoc,
 QDF_STATUS wifi_pos_convert_host_pdev_id_to_target(
 	struct wlan_objmgr_psoc *psoc, uint32_t host_pdev_id,
 	uint32_t *target_pdev_id);
-#endif
+
+#ifdef WIFI_POS_CONVERGED
+/**
+ * wifi_pos_register_osif_callbacks() - Register OSIF callbacks
+ * @psoc: Pointer to psoc object
+ * @ops: Osif callbacks pointer
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+wifi_pos_register_osif_callbacks(struct wlan_objmgr_psoc *psoc,
+				 struct wifi_pos_osif_ops *ops);
+
+/**
+ * wifi_pos_get_osif_callbacks() - Get OS IF callbacks
+ * @psoc: Pointer to PSOC object
+ *
+ * Return: struct wifi_pos_osif_ops pointer
+ */
+struct wifi_pos_osif_ops *
+wifi_pos_get_osif_callbacks(struct wlan_objmgr_psoc *psoc);
+#endif /* WIFI_POS_CONVERGED */
+#endif /* _WIFI_POS_API_H_ */

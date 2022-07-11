@@ -89,6 +89,16 @@ QDF_STATUS wlan_reg_get_max_5g_bw_from_regdomain(
 	return reg_get_max_5g_bw_from_regdomain(pdev, regdmn, max_bw_5g);
 }
 
+QDF_STATUS wlan_reg_get_max_bw_5G_for_fo(struct wlan_objmgr_pdev *pdev)
+{
+	return reg_get_max_bw_5G_for_fo(pdev);
+}
+
+bool wlan_reg_is_offload_enabled(struct wlan_objmgr_pdev *pdev)
+{
+	return reg_is_offload_enabled(pdev);
+}
+
 QDF_STATUS wlan_reg_get_pwrmode_chan_list(struct wlan_objmgr_pdev *pdev,
 					  struct regulatory_channel *chan_list,
 					  enum supported_6g_pwr_types
@@ -1639,6 +1649,8 @@ wlan_reg_get_cur_6g_ap_pwr_type(struct wlan_objmgr_pdev *pdev,
 	return reg_get_cur_6g_ap_pwr_type(pdev, reg_cur_6g_ap_pwr_type);
 }
 
+qdf_export_symbol(wlan_reg_get_cur_6g_ap_pwr_type);
+
 QDF_STATUS
 wlan_reg_get_cur_6g_client_type(struct wlan_objmgr_pdev *pdev,
 				enum reg_6g_client_type
@@ -1816,15 +1828,52 @@ QDF_STATUS wlan_reg_psd_2_eirp(struct wlan_objmgr_pdev *pdev,
 
 qdf_export_symbol(wlan_reg_psd_2_eirp);
 
+QDF_STATUS wlan_reg_eirp_2_psd(struct wlan_objmgr_pdev *pdev, uint16_t ch_bw,
+			       int16_t eirp, int16_t *psd)
+{
+	return reg_eirp_2_psd(pdev, ch_bw, eirp, psd);
+}
+
 enum reg_6g_ap_type
 wlan_reg_get_best_pwr_mode(struct wlan_objmgr_pdev *pdev, qdf_freq_t freq,
+			   qdf_freq_t cen320,
 			   uint16_t bw)
 {
-	return reg_get_best_pwr_mode(pdev, freq, bw);
+	return reg_get_best_pwr_mode(pdev, freq, cen320, bw);
 }
+
+qdf_export_symbol(wlan_reg_get_best_pwr_mode);
+
+uint8_t wlan_reg_get_eirp_pwr(struct wlan_objmgr_pdev *pdev, qdf_freq_t freq,
+			      qdf_freq_t cen320, uint16_t bw,
+			      enum reg_6g_ap_type ap_pwr_type)
+{
+	return reg_get_eirp_pwr(pdev, freq, cen320, bw, ap_pwr_type);
+}
+
+qdf_export_symbol(wlan_reg_get_eirp_pwr);
+
 #endif /* CONFIG_BAND_6GHZ */
 
 enum phy_ch_width wlan_reg_find_chwidth_from_bw(uint16_t bw)
 {
 	return reg_find_chwidth_from_bw(bw);
 }
+
+#ifdef WLAN_FEATURE_11BE
+enum channel_state
+wlan_reg_get_chan_state_for_320(struct wlan_objmgr_pdev *pdev,
+				uint16_t freq,
+				qdf_freq_t center_320,
+				enum phy_ch_width ch_width,
+				const struct bonded_channel_freq
+				**bonded_chan_ptr_ptr,
+				enum supported_6g_pwr_types in_6g_pwr_type,
+				bool treat_nol_chan_as_disabled)
+{
+	return reg_get_chan_state_for_320(pdev, freq, center_320,
+					  ch_width, bonded_chan_ptr_ptr,
+					  in_6g_pwr_type,
+					  treat_nol_chan_as_disabled);
+}
+#endif

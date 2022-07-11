@@ -783,6 +783,19 @@ struct dp_mon_ops {
 	void (*mon_lite_mon_disable_rx)(struct dp_pdev *pdev);
 	void (*mon_rx_stats_update_rssi_dbm_params)
 		(struct dp_soc *soc, struct dp_mon_pdev *mon_pdev);
+	/* Print advanced monitor stats */
+	void (*mon_rx_print_advanced_stats)
+		(struct dp_soc *soc, struct dp_pdev *pdev);
+};
+
+/**
+ * struct dp_mon_soc_stats - monitor stats
+ * @frag_alloc: Number of frags allocated
+ * @frag_free: Number of frags freed
+ */
+struct dp_mon_soc_stats {
+	uint32_t frag_alloc;
+	uint32_t frag_free;
 };
 
 struct dp_mon_soc {
@@ -828,6 +841,8 @@ struct dp_mon_soc {
 #ifdef WLAN_TX_PKT_CAPTURE_ENH
 	struct dp_soc_tx_capture dp_soc_tx_capt;
 #endif
+	/* monitor stats */
+	struct dp_mon_soc_stats stats;
 };
 
 #ifdef WLAN_TELEMETRY_STATS_SUPPORT
@@ -1190,7 +1205,8 @@ dp_cpu_ring_map[DP_NSS_CPU_RING_MAP_MAX][WLAN_CFG_INT_NUM_CONTEXTS_MAX];
 int
 dp_htt_get_ppdu_sniffer_ampdu_tlv_bitmap(uint32_t bitmap);
 
-#ifdef WDI_EVENT_ENABLE
+#if (defined(DP_CON_MON) || defined(WDI_EVENT_ENABLE)) &&\
+	(!defined(REMOVE_PKT_LOG))
 void dp_pkt_log_init(struct cdp_soc_t *soc_hdl, uint8_t pdev_id, void *scn);
 #else
 static inline void
@@ -3773,6 +3789,35 @@ dp_mon_rx_stats_update_rssi_dbm_params(struct dp_soc *soc,
 	monitor_ops->mon_rx_stats_update_rssi_dbm_params(soc, mon_pdev);
 }
 
+/**
+ * dp_mon_rx_print_advanced_stats () - print advanced monitor stats
+ *
+ * @soc: DP soc handle
+ * @pdev: DP pdev handle
+ *
+ * Return: void
+ */
+static inline void
+dp_mon_rx_print_advanced_stats(struct dp_soc *soc,
+			       struct dp_pdev *pdev)
+{
+	struct dp_mon_soc *mon_soc = soc->monitor_soc;
+	struct dp_mon_ops *monitor_ops;
+
+	if (!mon_soc) {
+		dp_mon_debug("mon soc is NULL");
+		return;
+	}
+
+	monitor_ops = mon_soc->mon_ops;
+	if (!monitor_ops ||
+	    !monitor_ops->mon_rx_print_advanced_stats) {
+		dp_mon_debug("callback not registered");
+		return;
+	}
+	return monitor_ops->mon_rx_print_advanced_stats(soc, pdev);
+}
+
 #ifdef QCA_ENHANCED_STATS_SUPPORT
 QDF_STATUS dp_peer_qos_stats_notify(struct dp_pdev *dp_pdev,
 				    struct cdp_rx_stats_ppdu_user *ppdu_user);
@@ -3921,6 +3966,16 @@ void dp_mon_ops_register_1_0(struct dp_mon_soc *mon_soc);
  */
 void dp_mon_cdp_ops_register_1_0(struct cdp_ops *ops);
 
+#if defined(WLAN_CFR_ENABLE) && defined(WLAN_ENH_CFR_ENABLE)
+/**
+ * dp_cfr_filter_register_1_0(): register cfr filter setting API
+ * @ops: cdp ops handle
+ *
+ * return: void
+ */
+void dp_cfr_filter_register_1_0(struct cdp_ops *ops);
+#endif
+
 #ifdef QCA_MONITOR_2_0_SUPPORT
 /**
  * dp_mon_ops_register_2_0(): register monitor ops
@@ -3937,6 +3992,16 @@ void dp_mon_ops_register_2_0(struct dp_mon_soc *mon_soc);
  * return: void
  */
 void dp_mon_cdp_ops_register_2_0(struct cdp_ops *ops);
+
+#if defined(WLAN_CFR_ENABLE) && defined(WLAN_ENH_CFR_ENABLE)
+/**
+ * dp_cfr_filter_register_2_0(): register cfr filter setting API
+ * @ops: cdp ops handle
+ *
+ * return: void
+ */
+void dp_cfr_filter_register_2_0(struct cdp_ops *ops);
+#endif
 #endif /* QCA_MONITOR_2_0_SUPPORT */
 
 /**

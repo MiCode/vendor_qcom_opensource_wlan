@@ -205,9 +205,9 @@ uint32_t dp_rx_process_be(struct dp_intr *int_ctx,
 	qdf_assert_always(hal_soc);
 
 	scn = soc->hif_handle;
-	hif_pm_runtime_mark_dp_rx_busy(scn);
 	intr_id = int_ctx->dp_intr_id;
 	num_entries = hal_srng_get_num_entries(hal_soc, hal_ring_hdl);
+	dp_runtime_pm_mark_last_busy(soc);
 
 more_data:
 	/* reset local variables here to be re-used in the function */
@@ -591,6 +591,8 @@ done:
 
 		tid_stats =
 		&rx_pdev->stats.tid_stats.tid_rx_stats[reo_ring_num][tid];
+
+		dp_rx_send_pktlog(soc, rx_pdev, nbuf, QDF_TX_RX_STATUS_OK);
 
 		/*
 		 * Check if DMA completed -- msdu_done is the last bit
@@ -1167,6 +1169,20 @@ bool dp_rx_mlo_igmp_handler(struct dp_soc *soc,
 		dp_rx_debug("Non mlo vdev");
 		goto send_pkt;
 	}
+
+	if (qdf_unlikely(vdev->wrap_vdev)) {
+		/* In the case of qwrap repeater send the original
+		 * packet on the interface where it received,
+		 * packet with dummy src on the mcast primary interface.
+		 */
+		qdf_nbuf_t nbuf_copy;
+
+		nbuf_copy = qdf_nbuf_copy(nbuf);
+		if (qdf_likely(nbuf_copy))
+			dp_rx_deliver_to_stack(soc, vdev, peer, nbuf_copy,
+					       NULL);
+	}
+
 	dp_rx_dummy_src_mac(vdev, nbuf);
 	dp_rx_deliver_to_stack(mcast_primary_vdev->pdev->soc,
 			       mcast_primary_vdev,

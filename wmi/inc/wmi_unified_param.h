@@ -697,6 +697,7 @@ typedef enum {
  * @allow_he: HE allowed on chan
  * @psc_channel: 6 ghz preferred scan chan
  * @nan_disabled: is NAN disabled on @mhz
+ * @allow_eht: EHT allowed on chan
  * @phy_mode: phymode (vht80 or ht40 or ...)
  * @cfreq1: centre frequency on primary
  * @cfreq2: centre frequency on secondary
@@ -722,7 +723,8 @@ struct channel_param {
 		set_agile:1,
 		allow_he:1,
 		psc_channel:1,
-		nan_disabled:1;
+		nan_disabled:1,
+		allow_eht:1;
 	uint32_t phy_mode;
 	uint32_t cfreq1;
 	uint32_t cfreq2;
@@ -5067,6 +5069,9 @@ typedef enum {
 	wmi_rtt_pasn_peer_create_req_eventid,
 	wmi_rtt_pasn_peer_delete_eventid,
 #endif
+#ifdef WLAN_VENDOR_HANDOFF_CONTROL
+	wmi_get_roam_vendor_control_param_event_id,
+#endif
 	wmi_events_max,
 } wmi_conv_event_id;
 
@@ -5734,6 +5739,15 @@ typedef enum {
 #endif
 #ifdef MULTI_CLIENT_LL_SUPPORT
 	wmi_service_configure_multi_client_ll_support,
+#endif
+#ifdef WLAN_VENDOR_HANDOFF_CONTROL
+	wmi_service_configure_vendor_handoff_control_support,
+#endif
+#ifdef FEATURE_WLAN_TDLS
+#ifdef WLAN_FEATURE_11AX
+	wmi_service_tdls_6g_support,
+#endif
+	wmi_service_tdls_wideband_support,
 #endif
 	wmi_services_max,
 } wmi_conv_service_ids;
@@ -8168,6 +8182,7 @@ struct wmi_roam_candidate_info {
 /**
  * struct wmi_roam_scan_data - Roam scan event details
  * @present:            Flag to check if the roam scan tlv is present
+ * @is_btcoex_active:   is bluetooth connection active
  * @type:      0 - Partial roam scan; 1 - Full roam scan
  * @num_ap:    Number of candidate APs.
  * @num_chan:  Number of channels.
@@ -8178,6 +8193,7 @@ struct wmi_roam_candidate_info {
  */
 struct wmi_roam_scan_data {
 	bool present;
+	bool is_btcoex_active;
 	uint16_t type;
 	uint16_t num_ap;
 	uint16_t num_chan;

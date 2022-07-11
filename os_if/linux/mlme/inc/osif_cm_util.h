@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2012-2015, 2020-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -151,6 +152,20 @@ typedef QDF_STATUS
 	(*osif_cm_connect_comp_cb)(struct wlan_objmgr_vdev *vdev,
 				   struct wlan_cm_connect_resp *rsp,
 				   enum osif_cb_type type);
+
+#ifdef WLAN_VENDOR_HANDOFF_CONTROL
+/**
+ * typedef osif_cm_get_vendor_handoff_params_cb  - process vendor handoff cb
+ * @psoc: psoc pointer
+ * @rsp: vendor handoff response
+ * @vendor_handoff_context: vendor handoff context
+ *
+ * return: none
+ */
+typedef QDF_STATUS
+(*osif_cm_get_vendor_handoff_params_cb)(struct wlan_objmgr_psoc *psoc,
+					void *vendor_handoff_context);
+#endif
 
 #ifdef WLAN_FEATURE_FILS_SK
 /**
@@ -306,6 +321,8 @@ typedef QDF_STATUS
  * transition event
  * @cckm_preauth_complete_cb: callback to legacy module to send cckm
  * preauth indication to the supplicant via wireless custom event.
+ * @vendor_handoff_params_cb: callback to legacy module to send vendor handoff
+ * parameters to upper layer
  */
 struct osif_cm_ops {
 	osif_cm_connect_comp_cb connect_complete_cb;
@@ -324,6 +341,9 @@ struct osif_cm_ops {
 	osif_cm_cckm_preauth_complete_cb cckm_preauth_complete_cb;
 #endif
 #endif
+#ifdef WLAN_VENDOR_HANDOFF_CONTROL
+	osif_cm_get_vendor_handoff_params_cb vendor_handoff_params_cb;
+#endif
 };
 
 /**
@@ -341,6 +361,19 @@ struct osif_cm_ops {
 QDF_STATUS osif_cm_connect_comp_ind(struct wlan_objmgr_vdev *vdev,
 				    struct wlan_cm_connect_resp *rsp,
 				    enum osif_cb_type type);
+
+#ifdef WLAN_VENDOR_HANDOFF_CONTROL
+/**
+ * osif_cm_vendor_handoff_params_cb() - Function to process vendor handoff
+ * event callback
+ * @psoc: psoc object pointer
+ * @vendor_handoff_context: vendor handoff context
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS osif_cm_vendor_handoff_params_cb(struct wlan_objmgr_psoc *psoc,
+					    void *vendor_handoff_context);
+#endif
 
 /**
  * osif_cm_disconnect_comp_ind() - Function to indicate disconnect

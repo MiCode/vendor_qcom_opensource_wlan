@@ -97,6 +97,7 @@
 /* TODO: change IDs for HastingsPrime */
 #define QCA6490_EMULATION_DEVICE_ID (0x010a)
 #define QCA6490_DEVICE_ID (0x1103)
+#define MANGO_DEVICE_ID (0x110a)
 
 /* TODO: change IDs for Moselle */
 #define QCA6750_EMULATION_DEVICE_ID (0x010c)
@@ -307,6 +308,9 @@ struct hif_softc {
 #ifdef HIF_DETECTION_LATENCY_ENABLE
 	struct hif_latency_detect latency_detect;
 #endif
+#ifdef FEATURE_RUNTIME_PM
+	qdf_runtime_lock_t prevent_linkdown_lock;
+#endif
 #ifdef SYSTEM_PM_CHECK
 	qdf_atomic_t sys_pm_state;
 #endif
@@ -446,10 +450,6 @@ QDF_STATUS hif_bus_open(struct hif_softc *ol_sc,
 QDF_STATUS hif_enable_bus(struct hif_softc *ol_sc, struct device *dev,
 	void *bdev, const struct hif_bus_id *bid, enum hif_enable_type type);
 void hif_disable_bus(struct hif_softc *scn);
-#ifdef FEATURE_RUNTIME_PM
-struct hif_runtime_pm_ctx *hif_bus_get_rpm_ctx(struct hif_softc *hif_sc);
-struct device *hif_bus_get_dev(struct hif_softc *hif_sc);
-#endif
 void hif_bus_prevent_linkdown(struct hif_softc *scn, bool flag);
 int hif_bus_get_context_size(enum qdf_bus_type bus_type);
 void hif_read_phy_mem_base(struct hif_softc *scn, qdf_dma_addr_t *bar_value);
@@ -557,4 +557,21 @@ static inline
 void hif_uninit_rri_on_ddr(struct hif_softc *scn) {}
 #endif
 void hif_cleanup_static_buf_to_target(struct hif_softc *scn);
+
+#ifdef FEATURE_RUNTIME_PM
+/**
+ * hif_runtime_prevent_linkdown() - prevent or allow a runtime pm from occurring
+ * @scn: hif context
+ * @is_get: prevent linkdown if true otherwise allow
+ *
+ * this api should only be called as part of bus prevent linkdown
+ */
+void hif_runtime_prevent_linkdown(struct hif_softc *scn, bool is_get);
+#else
+static inline
+void hif_runtime_prevent_linkdown(struct hif_softc *scn, bool is_get)
+{
+}
+#endif
+
 #endif /* __HIF_MAIN_H__ */

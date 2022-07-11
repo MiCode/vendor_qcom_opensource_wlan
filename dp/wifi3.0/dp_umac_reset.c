@@ -14,11 +14,43 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 #include <dp_types.h>
+#include <wlan_cfg.h>
+
+/**
+ * dp_get_umac_reset_intr_ctx() - Get the interrupt context to be used by
+ * UMAC reset feature
+ * @soc: DP soc object
+ * @intr_ctx: Interrupt context variable to be populated by this API
+ *
+ * Return: QDF_STATUS of operation
+ */
+static QDF_STATUS dp_get_umac_reset_intr_ctx(struct dp_soc *soc, int *intr_ctx)
+{
+	int umac_reset_mask, i;
+
+	/**
+	 * Go over all the contexts and check which interrupt context has
+	 * the UMAC reset mask set.
+	 */
+	for (i = 0; i < wlan_cfg_get_num_contexts(soc->wlan_cfg_ctx); i++) {
+		umac_reset_mask = wlan_cfg_get_umac_reset_intr_mask(
+					soc->wlan_cfg_ctx, i);
+
+		if (umac_reset_mask) {
+			*intr_ctx = i;
+			return QDF_STATUS_SUCCESS;
+		}
+	}
+
+	*intr_ctx = -1;
+	return QDF_STATUS_E_FAILURE;
+}
 
 QDF_STATUS dp_soc_umac_reset_init(struct dp_soc *soc)
 {
 	struct dp_soc_umac_reset_ctx *umac_reset_ctx;
 	size_t alloc_size;
+	QDF_STATUS status;
 
 	if (!soc) {
 		dp_umac_reset_err("DP SOC is null");
@@ -29,6 +61,12 @@ QDF_STATUS dp_soc_umac_reset_init(struct dp_soc *soc)
 	qdf_mem_zero(umac_reset_ctx, sizeof(*umac_reset_ctx));
 
 	umac_reset_ctx->current_state = UMAC_RESET_STATE_WAIT_FOR_PRE_RESET;
+
+	status = dp_get_umac_reset_intr_ctx(soc, &umac_reset_ctx->intr_offset);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		dp_umac_reset_err("No interrupt assignment");
+		return status;
+	}
 
 	alloc_size = sizeof(struct umac_reset_shmem) +
 			DP_UMAC_RESET_SHMEM_ALIGN - 1;

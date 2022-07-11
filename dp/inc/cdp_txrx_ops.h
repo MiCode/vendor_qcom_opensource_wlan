@@ -2074,6 +2074,20 @@ struct cdp_sawf_ops {
 	(*txrx_sawf_set_sla_params)(uint32_t num_pkt, uint32_t time_secs);
 	QDF_STATUS
 	(*txrx_sawf_init_telemtery_params)(void);
+	QDF_STATUS
+	(*telemetry_get_throughput_stats)(void *arg, uint64_t *in_bytes,
+					  uint64_t *in_cnt, uint64_t *tx_bytes,
+					  uint64_t *tx_cnt, uint8_t tid,
+					  uint8_t msduq);
+	QDF_STATUS
+	(*telemetry_get_mpdu_stats)(void *arg, uint64_t *svc_int_pass,
+				    uint64_t *svc_int_fail,
+				    uint64_t *burst_pass, uint64_t *burst_fail,
+				    uint8_t tid, uint8_t msduq);
+	QDF_STATUS
+	(*telemetry_get_drop_stats)(void *arg, uint64_t *pass, uint64_t *drop,
+				    uint64_t *drop_ttl, uint8_t tid,
+				    uint8_t msduq);
 #endif
 };
 #endif

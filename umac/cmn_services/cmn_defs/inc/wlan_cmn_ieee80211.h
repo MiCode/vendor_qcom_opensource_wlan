@@ -187,6 +187,7 @@
 #define SFA_OUI_TYPE 0x14
 /* QCA OUI (in little endian) */
 #define QCA_OUI 0xf0fd8c
+#define QCN_OUI_TYPE_CMN 0x01
 #define QCA_OUI_WHC_TYPE  0x00
 #define QCA_OUI_WHC_REPT_TYPE 0x01
 
@@ -1632,6 +1633,10 @@ struct subelem_header {
 #define EHTCAP_MAC_MAX_MPDU_LEN_BITS                    2
 #define EHTCAP_MAC_MAX_A_MPDU_LEN_IDX                   8
 #define EHTCAP_MAC_MAX_A_MPDU_LEN_BITS                  1
+#define EHTCAP_MAC_TRS_SUPPORT_IDX                      9
+#define EHTCAP_MAC_TRS_SUPPORT_BITS                     1
+#define EHTCAP_MAC_TXOP_RET_SUPPP_IN_SHARING_MODE2_IDX  10
+#define EHTCAP_MAC_TXOP_RET_SUPPP_IN_SHARING_MODE2_BITS 1
 
 #define EHTCAP_PHY_320MHZIN6GHZ_IDX                     1
 #define EHTCAP_PHY_320MHZIN6GHZ_BITS                    1
@@ -1729,15 +1734,40 @@ struct subelem_header {
 #define EHTCAP_PPET_RU_INDEX_BITMASK_IDX  4
 #define EHTCAP_PPET_RU_INDEX_BITMASK_BITS 5
 
-#define EHTOP_INFO_PRESENT_IDX             0
-#define EHTOP_INFO_PRESENT_BITS            1
+#define EHTOP_INFO_PRESENT_IDX                           0
+#define EHTOP_INFO_PRESENT_BITS                          1
 #define EHTOP_PARAM_DISABLED_SC_BITMAP_PRESENT_IDX       1
 #define EHTOP_PARAM_DISABLED_SC_BITMAP_PRESENT_BITS      1
+#define EHTOP_DEFAULT_PE_DURATION_IDX                    2
+#define EHTOP_DEFAULT_PE_DURATION_BITS                   1
+#define EHTOP_GRP_ADDRESSED_BU_IND_LIMIT_IDX             3
+#define EHTOP_GRP_ADDRESSED_BU_IND_LIMIT_BITS            1
+#define EHTOP_GRP_ADDRESSED_BU_IND_EXPONENT_IDX          4
+#define EHTOP_GRP_ADDRESSED_BU_IND_EXPONENT_BITS         2
 
 #define EHTOP_INFO_CHAN_WIDTH_IDX          0
 #define EHTOP_INFO_CHAN_WIDTH_BITS         3
 
+#define EHTOP_RX_MCS_NSS_MAP_IDX                       0
+#define EHTOP_RX_MCS_NSS_MAP_BITS                      4
+#define EHTOP_TX_MCS_NSS_MAP_IDX                       4
+#define EHTOP_TX_MCS_NSS_MAP_BITS                      4
+
 #define MAX_EHT_MCS_NSS_MAP_LEN 9
+
+/**
+ * struct eht_basic_mcs_nss_set - EHT Basic mcs nss set
+ * @max_nss_mcs_0_7: Rx, Tx Max Nss That Supports EHT-MCS 0-7
+ * @max_nss_mcs_8_9: Rx, Tx Max Nss That Supports EHT-MCS 8-9
+ * @max_nss_mcs_10_11: Rx, Tx Max Nss That Supports EHT-MCS 10-11
+ * @max_nss_mcs_12_13: Rx, Tx Max Nss That Supports EHT-MCS 12-13
+ */
+struct eht_basic_mcs_nss_set {
+	uint8_t max_nss_mcs_0_7;
+	uint8_t max_nss_mcs_8_9;
+	uint8_t max_nss_mcs_10_11;
+	uint8_t max_nss_mcs_12_13;
+} qdf_packed;
 
 /**
  * struct wlan_ie_ehtcaps - EHT capabilities
@@ -1770,12 +1800,7 @@ struct wlan_ie_ehtcaps {
 			uint8_t max_nss_mcs_10_11;
 			uint8_t max_nss_mcs_12_13;
 		} qdf_packed mcs_bw_map[WLAN_EHT_MAX_MCS_MAPS];
-		struct {
-			uint8_t max_nss_mcs_0_7;
-			uint8_t max_nss_mcs_8_9;
-			uint8_t max_nss_mcs_10_11;
-			uint8_t max_nss_mcs_12_13;
-		} qdf_packed mcs_bw_map_20_sta;
+		struct eht_basic_mcs_nss_set mcs_bw_map_20_sta;
 		uint8_t mcs_nss_map_bytes[MAX_EHT_MCS_NSS_MAP_LEN];
 	} qdf_packed;
 } qdf_packed;
@@ -1786,6 +1811,7 @@ struct wlan_ie_ehtcaps {
  * @elem_len: EHT caps IE len
  * @elem_id_extn: EHT caps extension id
  * @ehtop_param: EHT Operation Parameters
+ * @basic_mcs_nss_set: EHT basic mcs nss set
  * @control: Control field in EHT Operation Information
  * @ccfs0: EHT Channel Centre Frequency Segment0 information
  * @ccfs1: EHT Channel Centre Frequency Segment1 information
@@ -1797,6 +1823,7 @@ struct wlan_ie_ehtops {
 	uint8_t elem_len;
 	uint8_t elem_id_extn;
 	uint8_t ehtop_param;
+	struct eht_basic_mcs_nss_set basic_mcs_nss_set;
 	uint8_t control;
 	uint8_t ccfs0;
 	uint8_t ccfs1;
@@ -1869,6 +1896,8 @@ struct wlan_ml_probe_req {
  *    Multi-Link element Link Info field.
  * 4. STA Info Length subfield in STA Info field in Per-STA Profile subelement
  *    in Basic variant Multi-Link element Link Info field.
+ * 5. EML Capabilities subfield of Common Info field.
+ * 6. MLD Capabilities subfield of Common Info field.
  */
 
 /* Size in octets of Multi-Link element Control field */
@@ -1916,8 +1945,10 @@ enum wlan_ml_variant {
 #define WLAN_ML_BV_CTRL_PBM_MEDIUMSYNCDELAYINFO_P      ((uint16_t)BIT(2))
 /* EML Capabilities Present */
 #define WLAN_ML_BV_CTRL_PBM_EMLCAP_P                   ((uint16_t)BIT(3))
-/* MLD Capabilities */
-#define WLAN_ML_BV_CTRL_PBM_MLDCAP_P                   ((uint16_t)BIT(4))
+/* MLD Capabilities and operation Present */
+#define WLAN_ML_BV_CTRL_PBM_MLDCAPANDOP_P              ((uint16_t)BIT(4))
+/* MLD ID Present */
+#define WLAN_ML_BV_CTRL_PBM_MLDID_P                    ((uint16_t)BIT(5))
 
 /* Definitions related to Basic variant Multi-Link element Common Info field */
 
@@ -2069,6 +2100,9 @@ enum wlan_ml_bv_cinfo_emlcap_emlmrdelay {
  * values instead of using a formula, and we reflect this accordingly using an
  * enumeration.
  * WLAN_ML_BV_CINFO_EMLCAP_TRANSTIMEOUT_0TU: Transition Timeout value of 0 TUs
+ * WLAN_ML_BV_CINFO_EMLCAP_TRANSTIMEOUT_128MU: Transition Timeout value of 128μs
+ * WLAN_ML_BV_CINFO_EMLCAP_TRANSTIMEOUT_256MU: Transition Timeout value of 256μs
+ * WLAN_ML_BV_CINFO_EMLCAP_TRANSTIMEOUT_512MU: Transition Timeout value of 512μs
  * WLAN_ML_BV_CINFO_EMLCAP_TRANSTIMEOUT_1TU: Transition Timeout value of 1 TU
  * WLAN_ML_BV_CINFO_EMLCAP_TRANSTIMEOUT_2TU: Transition Timeout value of 2 TUs
  * WLAN_ML_BV_CINFO_EMLCAP_TRANSTIMEOUT_4TU: Transition Timeout value of 4 TUs
@@ -2086,37 +2120,48 @@ enum wlan_ml_bv_cinfo_emlcap_emlmrdelay {
  */
 enum wlan_ml_bv_cinfo_emlcap_transtimeout {
 	WLAN_ML_BV_CINFO_EMLCAP_TRANSTIMEOUT_0TU = 0,
-	WLAN_ML_BV_CINFO_EMLCAP_TRANSTIMEOUT_1TU = 1,
-	WLAN_ML_BV_CINFO_EMLCAP_TRANSTIMEOUT_2TU = 2,
-	WLAN_ML_BV_CINFO_EMLCAP_TRANSTIMEOUT_4TU = 3,
-	WLAN_ML_BV_CINFO_EMLCAP_TRANSTIMEOUT_8TU = 4,
-	WLAN_ML_BV_CINFO_EMLCAP_TRANSTIMEOUT_16TU = 5,
-	WLAN_ML_BV_CINFO_EMLCAP_TRANSTIMEOUT_32TU = 6,
-	WLAN_ML_BV_CINFO_EMLCAP_TRANSTIMEOUT_64TU = 7,
-	WLAN_ML_BV_CINFO_EMLCAP_TRANSTIMEOUT_128TU = 8,
+	WLAN_ML_BV_CINFO_EMLCAP_TRANSTIMEOUT_128MU = 1,
+	WLAN_ML_BV_CINFO_EMLCAP_TRANSTIMEOUT_256MU = 2,
+	WLAN_ML_BV_CINFO_EMLCAP_TRANSTIMEOUT_512MU = 3,
+	WLAN_ML_BV_CINFO_EMLCAP_TRANSTIMEOUT_1TU = 4,
+	WLAN_ML_BV_CINFO_EMLCAP_TRANSTIMEOUT_2TU = 5,
+	WLAN_ML_BV_CINFO_EMLCAP_TRANSTIMEOUT_4TU = 6,
+	WLAN_ML_BV_CINFO_EMLCAP_TRANSTIMEOUT_8TU = 7,
+	WLAN_ML_BV_CINFO_EMLCAP_TRANSTIMEOUT_16TU = 8,
+	WLAN_ML_BV_CINFO_EMLCAP_TRANSTIMEOUT_32TU = 9,
+	WLAN_ML_BV_CINFO_EMLCAP_TRANSTIMEOUT_64TU = 10,
+	WLAN_ML_BV_CINFO_EMLCAP_TRANSTIMEOUT_128TU = 11,
 	WLAN_ML_BV_CINFO_EMLCAP_TRANSTIMEOUT_INVALIDSTART,
 };
 
-/* Size in octets of MLD Capabilities subfield in Basic variant Multi-Link
- * element Common Info field.
+/* Size in octets of MLD Capabilities and operation subfield in Basic variant
+ * Multi-Link element Common Info field as per IEEE P802.11be/D1.5.
  */
-#define WLAN_ML_BV_CINFO_MLDCAP_SIZE                                2
+#define WLAN_ML_BV_CINFO_MLDCAPANDOP_SIZE                                2
 
 /* Definitions for sub-sub fields in MLD Capabilities subfield in Basic variant
  * Multi-Link element Common Info field. Any unused bits are reserved.
  */
 /* Maximum Number Of Simultaneous Links */
-#define WLAN_ML_BV_CINFO_MLDCAP_MAXSIMULLINKS_IDX                   0
-#define WLAN_ML_BV_CINFO_MLDCAP_MAXSIMULLINKS_BITS                  4
+#define WLAN_ML_BV_CINFO_MLDCAPANDOP_MAXSIMULLINKS_IDX                   0
+#define WLAN_ML_BV_CINFO_MLDCAPANDOP_MAXSIMULLINKS_BITS                  4
 /* SRS Support */
-#define WLAN_ML_BV_CINFO_MLDCAP_SRSSUPPORT_IDX                      4
-#define WLAN_ML_BV_CINFO_MLDCAP_SRSSUPPORT_BITS                     1
+#define WLAN_ML_BV_CINFO_MLDCAPANDOP_SRSSUPPORT_IDX                      4
+#define WLAN_ML_BV_CINFO_MLDCAPANDOP_SRSSUPPORT_BITS                     1
 /* TID-To-Link Mapping Negotiation Supported */
-#define WLAN_ML_BV_CINFO_MLDCAP_TIDTOLINKMAPNEGSUPPORT_IDX          5
-#define WLAN_ML_BV_CINFO_MLDCAP_TIDTOLINKMAPNEGSUPPORT_BITS         2
+#define WLAN_ML_BV_CINFO_MLDCAPANDOP_TIDTOLINKMAPNEGSUPPORT_IDX          5
+#define WLAN_ML_BV_CINFO_MLDCAPANDOP_TIDTOLINKMAPNEGSUPPORT_BITS         2
 /* Frequency Separation For STR */
-#define WLAN_ML_BV_CINFO_MLDCAP_STRFREQSEPARATION_IDX               7
-#define WLAN_ML_BV_CINFO_MLDCAP_STRFREQSEPARATION_BITS              5
+#define WLAN_ML_BV_CINFO_MLDCAPANDOP_STRFREQSEPARATION_IDX               7
+#define WLAN_ML_BV_CINFO_MLDCAPANDOP_STRFREQSEPARATION_BITS              5
+/* AAR Support */
+#define WLAN_ML_BV_CINFO_MLDCAPANDOP_AARSUPPORT_IDX                      12
+#define WLAN_ML_BV_CINFO_MLDCAPANDOP_AARSUPPORT_BITS                     1
+
+/* Size in octets of MLD ID subfield in Basic variant Multi-Link
+ * element Common Info field.
+ */
+#define WLAN_ML_BV_CINFO_MLDID_SIZE                                      1
 
 /* Max value in octets of Common Info Length subfield of Common Info field in
  * Basic variant Multi-Link element
@@ -2128,7 +2173,8 @@ enum wlan_ml_bv_cinfo_emlcap_transtimeout {
 	 WLAN_ML_BSSPARAMCHNGCNT_SIZE + \
 	 WLAN_ML_BV_CINFO_MEDMSYNCDELAYINFO_SIZE + \
 	 WLAN_ML_BV_CINFO_EMLCAP_SIZE + \
-	 WLAN_ML_BV_CINFO_MLDCAP_SIZE)
+	 WLAN_ML_BV_CINFO_MLDCAPANDOP_SIZE + \
+	 WLAN_ML_BV_CINFO_MLDID_SIZE)
 
 /* End of definitions related to Basic variant Multi-Link element Common Info
  * field.
@@ -2192,17 +2238,20 @@ struct wlan_ml_bv_linfo_perstaprof {
 /* Beacon Interval Present */
 #define WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_BCNINTP_IDX             6
 #define WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_BCNINTP_BITS            1
+/* TSF Offset Present */
+#define WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_TSFOFFSETP_IDX          7
+#define WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_TSFOFFSETP_BITS         1
 /* DTIM Info Present */
-#define WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_DTIMINFOP_IDX           7
+#define WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_DTIMINFOP_IDX           8
 #define WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_DTIMINFOP_BITS          1
 /* NSTR Link Pair Present */
-#define WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_NSTRLINKPRP_IDX         8
+#define WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_NSTRLINKPRP_IDX         9
 #define WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_NSTRLINKPRP_BITS        1
 /* NSTR Bitmap Size */
-#define WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_NSTRBMSZ_IDX            9
+#define WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_NSTRBMSZ_IDX            10
 #define WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_NSTRBMSZ_BITS           1
 /* BSS Parameters Change Count Present */
-#define WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_BSSPARAMCHNGCNTP_IDX    10
+#define WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_BSSPARAMCHNGCNTP_IDX    11
 #define WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_BSSPARAMCHNGCNTP_BITS   1
 
 /* Definitions for subfields in STA Info field of Per-STA Profile subelement
@@ -2210,6 +2259,11 @@ struct wlan_ml_bv_linfo_perstaprof {
  */
 /* STA Info Length */
 #define WLAN_ML_BV_LINFO_PERSTAPROF_STAINFO_LENGTH_SIZE             1
+
+/* Size in octets of the TSF Offset in STA info field of Per-STA Profile
+ * subelement in Basic variant Multi-Link element Link Info field.
+ */
+#define WLAN_ML_TSF_OFFSET_SIZE             8
 
 /**
  * wlan_ml_bv_linfo_perstaprof_stactrl_nstrbmsz - Encoding for NSTR Bitmap Size
@@ -2254,6 +2308,7 @@ struct wlan_ml_bv_linfo_perstaprof_stainfo_dtiminfo {
 	(WLAN_ML_BV_LINFO_PERSTAPROF_STAINFO_LENGTH_SIZE + \
 	 QDF_MAC_ADDR_SIZE + \
 	 WLAN_BEACONINTERVAL_LEN + \
+	 WLAN_ML_TSF_OFFSET_SIZE + \
 	 sizeof(struct wlan_ml_bv_linfo_perstaprof_stainfo_dtiminfo) + \
 	 WLAN_ML_BV_LINFO_PERSTAPROF_STACTRL_NSTRBMSZ_MAX + \
 	 WLAN_ML_BSSPARAMCHNGCNT_SIZE)
@@ -2263,6 +2318,80 @@ struct wlan_ml_bv_linfo_perstaprof_stainfo_dtiminfo {
  */
 
 /* End of definitions related to Basic variant Multi-Link element. */
+
+/* Definitions related to Probe Req Multi-Link element Link Info field */
+
+/* Probe Req variant Multi-Link element Link Info field contains zero or more
+ * subelements.
+ */
+
+/**
+ *  enum wlan_ml_prv_linfo_subelementid - IDs for subelements in Probe Req
+ *  Multi-Link element Link Info field.
+ *  @WLAN_ML_PRV_LINFO_SUBELEMID_PERSTAPROFILE: Per-STA Profile
+ */
+enum wlan_ml_prv_linfo_subelementid {
+	WLAN_ML_PRV_LINFO_SUBELEMID_PERSTAPROFILE  = 0,
+	WLAN_ML_PRV_LINFO_SUBELEMID_FRAGMENT = 254,
+};
+
+/**
+ * struct wlan_ml_prv_linfo_perstaprof - Fixed fields of Per-STA Profile
+ * subelement in Probe Request variant Multi-Link element Link Info field
+ * @subelem_id: Subelement ID
+ * @subelem_len: Subelement length
+ * @stacontrol: STA Control
+ */
+struct wlan_ml_prv_linfo_perstaprof {
+	uint8_t subelem_id;
+	uint8_t subelem_len;
+	uint16_t stacontrol;
+} qdf_packed;
+
+/* The above fixed fields may be followed by:
+ * STA Profile (variable size)
+ */
+
+/* Size in octets of STA Control field of Per-STA Profile subelement in Basic
+ * variant Multi-Link element Link Info field.
+ */
+#define WLAN_ML_PRV_LINFO_PERSTAPROF_STACTRL_SIZE                   2
+
+/* Definitions for subfields in STA Control field of Per-STA Profile subelement
+ * in Probe Req variant Multi-Link element Link Info field. Any unused bits are
+ * reserved.
+ */
+/* Link ID */
+#define WLAN_ML_PRV_LINFO_PERSTAPROF_STACTRL_LINKID_IDX              0
+#define WLAN_ML_PRV_LINFO_PERSTAPROF_STACTRL_LINKID_BITS             4
+/* Complete Profile */
+#define WLAN_ML_PRV_LINFO_PERSTAPROF_STACTRL_CMPLTPROF_IDX           4
+#define WLAN_ML_PRV_LINFO_PERSTAPROF_STACTRL_CMPLTPROF_BITS          1
+
+/* Definitions for bits in the Presence Bitmap subfield in Probe Req variant
+ * Multi-Link element Control field. Any unused bits are reserved.
+ */
+/* MLD ID Present */
+#define WLAN_ML_PRV_CTRL_PBM_MLDID_P               ((uint16_t)BIT(0))
+/* Size in octets of Common Info Length subfield of Common Info field in
+ * Probe Req variant Multi-Link element.
+ */
+/* Common Info Length  */
+#define WLAN_ML_PRV_CINFO_LENGTH_SIZE                               1
+
+/* Size in octets of MLD ID subfield in Probe Req variant Multi-Link
+ * element Common Info field.
+ */
+#define WLAN_ML_PRV_CINFO_MLDID_SIZE                                1
+
+/* Max value in octets of Common Info Length subfield of Common Info field in
+ * Probe Req variant Multi-Link element
+ */
+#define WLAN_ML_PRV_CINFO_LENGTH_MAX \
+	(WLAN_ML_PRV_CINFO_LENGTH_SIZE + \
+	 WLAN_ML_PRV_CINFO_MLDID_SIZE)
+
+/* End of definitions related to Probe Request variant Multi-Link element. */
 
 /*
  * Definitions related to MLO specific aspects of Reduced Neighbor Report
@@ -2575,6 +2704,8 @@ struct wlan_ext_cap_ie {
 	uint8_t ext_caps[];
 } qdf_packed;
 
+/* EHT caps fixed field = 2 bytes (EHT mac caps) + 9 bytes (EHT phy caps) */
+#define EHT_CAP_FIXED_FIELDS         11
 #define EHT_CAP_320M_MCS_MAP_LEN      3
 #define EHT_CAP_160M_MCS_MAP_LEN      3
 #define EHT_CAP_80M_MCS_MAP_LEN       3
@@ -2591,6 +2722,8 @@ struct wlan_ext_cap_ie {
  * @scs_traffic_desc: SCS traffic description support
  * @max_mpdu_len: Maximum MPDU length
  * @max_a_mpdu_len_exponent_ext: Maximum A-MPDU Length Exponent Extension
+ * @eht_trs_support: EHT TRS SUPPORT
+ * @txop_return_support_txop_share_m2: TXOP Return Support in TXOP Share Mode 2
  * @reserved3: reserved bits
  * @reserved2: reserved bits
  * @support_320mhz_6ghz: support 320mhz in 6gz
@@ -2687,7 +2820,9 @@ struct wlan_ext_cap_ie {
  */
 struct wlan_eht_cap_info {
 #ifndef ANI_LITTLE_BIT_ENDIAN
-	uint16_t reserved:7;
+	uint16_t reserved:5;
+	uint16_t txop_return_support_txop_share_m2:1;
+	uint16_t eht_trs_support:1;
 	uint16_t max_a_mpdu_len_exponent_ext:1;
 	uint16_t max_mpdu_len:2;
 	uint16_t scs_traffic_desc:1;
@@ -2783,7 +2918,9 @@ struct wlan_eht_cap_info {
 	uint16_t scs_traffic_desc:1;
 	uint16_t max_mpdu_len:2;
 	uint16_t max_a_mpdu_len_exponent_ext:1;
-	uint16_t reserved:7;
+	uint16_t eht_trs_support:1;
+	uint16_t txop_return_support_txop_share_m2:1;
+	uint16_t reserved:5;
 
 	uint32_t reserved2:1;
 	uint32_t support_320mhz_6ghz:1;
@@ -3122,6 +3259,13 @@ is_wcn_oui(uint8_t *frm)
 {
 	return (frm[1] > 4) && (LE_READ_4(frm + 2) ==
 		((WCN_OUI_TYPE << 24) | WCN_OUI));
+}
+
+static inline bool
+is_qcn_oui(uint8_t *frm)
+{
+	return ((frm[1] > 4) && (LE_READ_4(frm + 2) ==
+		((QCN_OUI_TYPE_CMN << 24) | QCA_OUI)));
 }
 
 #define WLAN_VENDOR_WME_IE_LEN 24

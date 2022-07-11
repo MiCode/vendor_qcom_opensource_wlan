@@ -63,16 +63,6 @@ enum cdp_lite_mon_peer_action {
 	CDP_LITE_MON_PEER_REMOVE = 1,
 };
 
-/* lite mon peer types */
-enum cdp_lite_mon_peer_type {
-	/* associated peer */
-	CDP_LITE_MON_PEER_TYPE_ASSOCIATED = 0,
-	/* non associated peer */
-	CDP_LITE_MON_PEER_TYPE_NON_ASSOCIATED = 1,
-	/* max peer types */
-	CDP_LITE_MON_PEER_TYPE_MAX = 2,
-};
-
 /* lite mon config direction */
 enum cdp_lite_mon_direction {
 	/* lite mon config direction rx */
@@ -392,6 +382,17 @@ enum cdp_mon_phyrx_abort_reason_code {
  *  ring ppdu id
  * @rx_undecoded_count: Received undecoded frame count
  * @rx_undecoded_error: Rx undecoded errors
+ * @rx_hdr_not_received: Rx HDR not received for MPDU
+ * @parent_buf_alloc: Numder of parent nbuf allocated for MPDU
+ * @parent_buf_free: Number of parent nbuf freed
+ * @pkt_buf_count: Number of packet buffers received
+ * @mpdus_to_stack: Number of MPDUs delivered to stack
+ * @status_buf_count: Number of status buffer received
+ * @empty_desc_ppdu: Number of empty desc received
+ * @total_ppdu_info_enq: Number of PPDUs enqueued to wq
+ * @total_ppdu_info_drop: Number of PPDUs dropped
+ * @total_ppdu_info_alloc: Number of PPDU info allocated
+ * @total_ppdu_info_free: Number of PPDU info freeed
  */
 struct cdp_pdev_mon_stats {
 #ifndef REMOVE_MON_DBG_STATS
@@ -428,6 +429,17 @@ struct cdp_pdev_mon_stats {
 	uint32_t rx_undecoded_count;
 	uint32_t rx_undecoded_error[CDP_PHYRX_ERR_MAX];
 #endif
+	uint32_t rx_hdr_not_received;
+	uint32_t parent_buf_alloc;
+	uint32_t parent_buf_free;
+	uint32_t pkt_buf_count;
+	uint32_t mpdus_buf_to_stack;
+	uint32_t status_buf_count;
+	uint32_t empty_desc_ppdu;
+	uint32_t total_ppdu_info_enq;
+	uint32_t total_ppdu_info_drop;
+	uint32_t total_ppdu_info_alloc;
+	uint32_t total_ppdu_info_free;
 };
 
 #ifdef QCA_SUPPORT_LITE_MONITOR
@@ -461,14 +473,12 @@ struct cdp_lite_mon_filter_config {
  * cdp_lite_mon_peer_config - lite mon set peer config
  * @direction: direction tx/rx
  * @action: add/del
- * @type: assoc/non-assoc
  * @vdev_id: peer vdev id
  * @mac: peer mac
  */
 struct cdp_lite_mon_peer_config {
 	uint8_t direction;
 	uint8_t action;
-	uint8_t type;
 	uint8_t vdev_id;
 	uint8_t mac[QDF_MAC_ADDR_SIZE];
 };
@@ -476,13 +486,11 @@ struct cdp_lite_mon_peer_config {
 /**
  * cdp_lite_mon_peer_info - lite mon get peer config
  * @direction: direction tx/rx
- * @type: assoc/non-assoc
  * @count: no of peers
  * @mac: peer macs
  */
 struct cdp_lite_mon_peer_info {
 	uint8_t direction;
-	uint8_t type;
 	uint8_t count;
 	uint8_t mac[CDP_LITE_MON_PEER_MAX][QDF_MAC_ADDR_SIZE];
 };

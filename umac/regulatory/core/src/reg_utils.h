@@ -292,16 +292,6 @@ void reg_program_mas_chan_list(struct wlan_objmgr_psoc *psoc,
 			       uint8_t *alpha2, enum dfs_reg dfs_region);
 
 /**
- * reg_get_regd_rules() - provides the reg domain rules info
- * @pdev: pdev pointer
- * @reg_rules: regulatory rules
- *
- * Return: QDF_STATUS
- */
-QDF_STATUS reg_get_regd_rules(struct wlan_objmgr_pdev *pdev,
-			      struct reg_rule_info *reg_rules);
-
-/**
  * reg_get_cc_and_src() - Get country string and country source
  * @psoc: Pointer to psoc
  * @alpha2: Pointer to save country string
@@ -423,12 +413,6 @@ static inline void reg_program_mas_chan_list(
 	struct regulatory_channel *reg_channels,
 	uint8_t *alpha2, enum dfs_reg dfs_region)
 {
-}
-
-static inline QDF_STATUS reg_get_regd_rules(struct wlan_objmgr_pdev *pdev,
-					    struct reg_rule_info *reg_rules)
-{
-	return QDF_STATUS_SUCCESS;
 }
 
 static inline enum country_src reg_get_cc_and_src(struct wlan_objmgr_psoc *psoc,

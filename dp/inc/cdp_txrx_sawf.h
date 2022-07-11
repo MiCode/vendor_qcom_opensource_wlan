@@ -19,6 +19,9 @@
 #ifndef _CDP_TXRX_SAWF_H_
 #define _CDP_TXRX_SAWF_H_
 
+#include <cdp_txrx_cmn_struct.h>
+#include <cdp_txrx_cmn.h>
+
 static inline QDF_STATUS
 cdp_sawf_peer_svcid_map(ol_txrx_soc_handle soc,
 			uint8_t *mac, uint8_t svc_id)
@@ -245,6 +248,68 @@ cdp_sawf_init_telemtery_params(ol_txrx_soc_handle soc)
 		return QDF_STATUS_E_FAILURE;
 
 	return soc->ops->sawf_ops->txrx_sawf_init_telemtery_params();
+}
+
+static inline QDF_STATUS
+cdp_get_throughput_stats(ol_txrx_soc_handle soc, void *arg,
+			 uint64_t *in_bytes, uint64_t *in_cnt,
+			 uint64_t *tx_bytes, uint64_t *tx_cnt,
+			 uint8_t tid, uint8_t msduq)
+{
+	if (!soc || !soc->ops) {
+		dp_cdp_debug("Invalid Instance");
+		QDF_BUG(0);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	if (!soc->ops->sawf_ops ||
+	    !soc->ops->sawf_ops->telemetry_get_throughput_stats)
+		return QDF_STATUS_E_FAILURE;
+
+	return soc->ops->sawf_ops->telemetry_get_throughput_stats(
+			arg, in_bytes, in_cnt, tx_bytes,
+			tx_cnt, tid, msduq);
+}
+
+static inline QDF_STATUS
+cdp_get_mpdu_stats(ol_txrx_soc_handle soc, void *arg,
+		   uint64_t *svc_int_pass, uint64_t *svc_int_fail,
+		   uint64_t *burst_pass, uint64_t *burst_fail,
+		   uint8_t tid, uint8_t msduq)
+{
+	if (!soc || !soc->ops) {
+		dp_cdp_debug("Invalid Instance");
+		QDF_BUG(0);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	if (!soc->ops->sawf_ops ||
+	    !soc->ops->sawf_ops->telemetry_get_mpdu_stats)
+		return QDF_STATUS_E_FAILURE;
+
+	return soc->ops->sawf_ops->telemetry_get_mpdu_stats(
+			arg, svc_int_pass, svc_int_fail, burst_pass,
+			burst_fail, tid, msduq);
+}
+
+static inline QDF_STATUS
+cdp_get_drop_stats(ol_txrx_soc_handle soc, void *arg,
+		   uint64_t *pass, uint64_t *drop,
+		   uint64_t *drop_ttl,
+		   uint8_t tid, uint8_t msduq)
+{
+	if (!soc || !soc->ops) {
+		dp_cdp_debug("Invalid Instance");
+		QDF_BUG(0);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	if (!soc->ops->sawf_ops ||
+	    !soc->ops->sawf_ops->telemetry_get_drop_stats)
+		return QDF_STATUS_E_FAILURE;
+
+	return soc->ops->sawf_ops->telemetry_get_drop_stats(
+			arg, pass, drop, drop_ttl, tid, msduq);
 }
 
 #else

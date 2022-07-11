@@ -32,6 +32,22 @@
  */
 #define SHOW_DEFINED(x) do {} while (0)
 
+#if defined(WLAN_FEATURE_TSF_UPLINK_DELAY) || defined(CONFIG_SAWF)
+static inline void
+hal_tx_comp_get_buffer_timestamp_be(void *desc,
+				    struct hal_tx_completion_status *ts)
+{
+	ts->buffer_timestamp = HAL_TX_DESC_GET(desc, WBM2SW_COMPLETION_RING_TX,
+					       BUFFER_TIMESTAMP);
+}
+#else /* !WLAN_FEATURE_TSF_UPLINK_DELAY || CONFIG_SAWF */
+static inline void
+hal_tx_comp_get_buffer_timestamp_be(void *desc,
+				    struct hal_tx_completion_status *ts)
+{
+}
+#endif /* WLAN_FEATURE_TSF_UPLINK_DELAY || CONFIG_SAWF */
+
 /**
  * hal_tx_comp_get_status() - TQM Release reason
  * @hal_desc: completion ring Tx status
@@ -104,6 +120,7 @@ hal_tx_comp_get_status_generic_be(void *desc, void *ts1,
 
 	ts->tsf = HAL_TX_DESC_GET(desc, UNIFIED_WBM_RELEASE_RING_6,
 			TX_RATE_STATS_INFO_TX_RATE_STATS);
+	hal_tx_comp_get_buffer_timestamp_be(desc, ts);
 }
 
 /**
@@ -494,6 +511,37 @@ hal_txmon_parse_pcu_ppdu_setup_init(void *tx_tlv,
 				    struct hal_tx_status_info *data_status_info,
 				    struct hal_tx_status_info *prot_status_info)
 {
+	prot_status_info->protection_addr =
+			HAL_TX_DESC_GET_64(tx_tlv, PCU_PPDU_SETUP_INIT,
+					   USE_ADDRESS_FIELDS_FOR_PROTECTION);
+	/* protection frame address 1 */
+	*(uint32_t *)&prot_status_info->addr1[0] =
+				HAL_TX_DESC_GET_64(tx_tlv, PCU_PPDU_SETUP_INIT,
+						   PROTECTION_FRAME_AD1_31_0);
+	*(uint32_t *)&prot_status_info->addr1[4] =
+				HAL_TX_DESC_GET_64(tx_tlv, PCU_PPDU_SETUP_INIT,
+						   PROTECTION_FRAME_AD1_47_32);
+	/* protection frame address 2 */
+	*(uint32_t *)&prot_status_info->addr2[0] =
+				HAL_TX_DESC_GET_64(tx_tlv, PCU_PPDU_SETUP_INIT,
+						   PROTECTION_FRAME_AD2_15_0);
+	*(uint32_t *)&prot_status_info->addr2[2] =
+				HAL_TX_DESC_GET_64(tx_tlv, PCU_PPDU_SETUP_INIT,
+						   PROTECTION_FRAME_AD2_47_16);
+	/* protection frame address 3 */
+	*(uint32_t *)&prot_status_info->addr3[0] =
+				HAL_TX_DESC_GET_64(tx_tlv, PCU_PPDU_SETUP_INIT,
+						   PROTECTION_FRAME_AD3_31_0);
+	*(uint32_t *)&prot_status_info->addr3[4] =
+				HAL_TX_DESC_GET_64(tx_tlv, PCU_PPDU_SETUP_INIT,
+						   PROTECTION_FRAME_AD3_47_32);
+	/* protection frame address 4 */
+	*(uint32_t *)&prot_status_info->addr4[0] =
+				HAL_TX_DESC_GET_64(tx_tlv, PCU_PPDU_SETUP_INIT,
+						   PROTECTION_FRAME_AD4_15_0);
+	*(uint32_t *)&prot_status_info->addr4[2] =
+				HAL_TX_DESC_GET_64(tx_tlv, PCU_PPDU_SETUP_INIT,
+						   PROTECTION_FRAME_AD4_47_16);
 }
 
 /**
@@ -512,6 +560,16 @@ hal_txmon_parse_peer_entry(void *tx_tlv,
 			   struct hal_tx_ppdu_info *tx_ppdu_info,
 			   struct hal_tx_status_info *tx_status_info)
 {
+	*(uint32_t *)&tx_status_info->addr1[0] =
+		HAL_TX_DESC_GET_64(tx_tlv, TX_PEER_ENTRY, MAC_ADDR_A_31_0);
+	*(uint32_t *)&tx_status_info->addr1[4] =
+		HAL_TX_DESC_GET_64(tx_tlv, TX_PEER_ENTRY, MAC_ADDR_A_47_32);
+	*(uint32_t *)&tx_status_info->addr2[0] =
+		HAL_TX_DESC_GET_64(tx_tlv, TX_PEER_ENTRY, MAC_ADDR_B_15_0);
+	*(uint32_t *)&tx_status_info->addr2[2] =
+		HAL_TX_DESC_GET_64(tx_tlv, TX_PEER_ENTRY, MAC_ADDR_B_47_16);
+	TXMON_HAL_USER(tx_ppdu_info, user_id, sw_peer_id) =
+		HAL_TX_DESC_GET_64(tx_tlv, TX_PEER_ENTRY, SW_PEER_ID);
 }
 
 /**
@@ -526,6 +584,10 @@ static inline void
 hal_txmon_parse_queue_exten(void *tx_tlv,
 			    struct hal_tx_ppdu_info *tx_ppdu_info)
 {
+	TXMON_HAL_STATUS(tx_ppdu_info, frame_control) =
+				HAL_TX_DESC_GET_64(tx_tlv, TX_QUEUE_EXTENSION,
+						   FRAME_CTL);
+	TXMON_HAL_STATUS(tx_ppdu_info, frame_control_info_valid) = true;
 }
 
 /**
@@ -541,6 +603,10 @@ static inline void
 hal_txmon_parse_mpdu_start(void *tx_tlv, uint8_t user_id,
 			   struct hal_tx_ppdu_info *tx_ppdu_info)
 {
+	TXMON_HAL_USER(tx_ppdu_info, user_id,
+		       start_seq) = HAL_TX_DESC_GET_64(tx_tlv, TX_MPDU_START,
+						       MPDU_SEQUENCE_NUMBER);
+	TXMON_HAL(tx_ppdu_info, cur_usr_idx) = user_id;
 }
 #endif
 
@@ -763,14 +829,104 @@ hal_txmon_status_parse_tlv_generic_be(void *data_ppdu_info,
 	case WIFITX_FES_STATUS_END_E:/* UPSTREAM */
 	{
 		/* initiator PPDU window end */
+		uint32_t ppdu_timestamp_start = 0;
+		uint32_t ppdu_timestamp_end = 0;
+		uint8_t response_type = 0;
+		uint8_t r2r_end_status_follow = 0;
+
 		status = HAL_MON_TX_FES_STATUS_END;
+
+		ppdu_timestamp_start =
+			HAL_TX_DESC_GET_64(tx_tlv, TX_FES_STATUS_END,
+					   START_OF_FRAME_TIMESTAMP_15_0) |
+			(HAL_TX_DESC_GET_64(tx_tlv, TX_FES_STATUS_END,
+					    START_OF_FRAME_TIMESTAMP_31_16) <<
+			 HAL_TX_LSB(TX_FES_STATUS_END,
+				    START_OF_FRAME_TIMESTAMP_31_16));
+		ppdu_timestamp_end =
+			HAL_TX_DESC_GET_64(tx_tlv, TX_FES_STATUS_END,
+					   END_OF_FRAME_TIMESTAMP_15_0) |
+			(HAL_TX_DESC_GET_64(tx_tlv, TX_FES_STATUS_END,
+					    END_OF_FRAME_TIMESTAMP_31_16) <<
+			 HAL_TX_LSB(TX_FES_STATUS_END,
+				    END_OF_FRAME_TIMESTAMP_31_16));
+
+		response_type = HAL_TX_DESC_GET_64(tx_tlv, TX_FES_STATUS_END,
+						   RESPONSE_TYPE);
+		/*
+		 * r2r end status follow to inform whether to look for
+		 * rx_response_required_info
+		 */
+		r2r_end_status_follow =
+			HAL_TX_DESC_GET_64(tx_tlv, TX_FES_STATUS_END,
+					   R2R_END_STATUS_TO_FOLLOW);
+
+		TXMON_STATUS_INFO(tx_status_info,
+				  response_type) = response_type;
+		TXMON_STATUS_INFO(tx_status_info,
+				  r2r_to_follow) = r2r_end_status_follow;
+
+		/*  update phy timestamp to ppdu timestamp */
+		TXMON_HAL_STATUS(ppdu_info,
+				 ppdu_timestamp) = ppdu_timestamp_start;
+
 		SHOW_DEFINED(WIFITX_FES_STATUS_END_E);
 		break;
 	}
 	/* response window open */
 	case WIFIRX_RESPONSE_REQUIRED_INFO_E:/* UPSTREAM */
 	{
+		/* response PPDU window start */
+		uint32_t ppdu_id = 0;
+		uint8_t reception_type = 0;
+		uint8_t response_sta_count = 0;
+
 		status = HAL_MON_RX_RESPONSE_REQUIRED_INFO;
+
+		ppdu_id = HAL_TX_DESC_GET_64(tx_tlv,
+					     RX_RESPONSE_REQUIRED_INFO,
+					     PHY_PPDU_ID);
+		reception_type =
+			HAL_TX_DESC_GET_64(tx_tlv, RX_RESPONSE_REQUIRED_INFO,
+					   SU_OR_UPLINK_MU_RECEPTION);
+		response_sta_count =
+			HAL_TX_DESC_GET_64(tx_tlv, RX_RESPONSE_REQUIRED_INFO,
+					   RESPONSE_STA_COUNT);
+
+		/* get mac address */
+		*(uint32_t *)&tx_status_info->addr1[0] =
+				HAL_TX_DESC_GET_64(tx_tlv,
+						   RX_RESPONSE_REQUIRED_INFO,
+						   ADDR1_31_0);
+		*(uint32_t *)&tx_status_info->addr1[4] =
+				HAL_TX_DESC_GET_64(tx_tlv,
+						   RX_RESPONSE_REQUIRED_INFO,
+						   ADDR1_47_32);
+		*(uint32_t *)&tx_status_info->addr2[0] =
+				HAL_TX_DESC_GET_64(tx_tlv,
+						   RX_RESPONSE_REQUIRED_INFO,
+						   ADDR2_15_0);
+		*(uint32_t *)&tx_status_info->addr2[2] =
+				HAL_TX_DESC_GET_64(tx_tlv,
+						   RX_RESPONSE_REQUIRED_INFO,
+						   ADDR2_47_16);
+
+		TXMON_HAL(ppdu_info, ppdu_id) = ppdu_id;
+		TXMON_HAL_STATUS(ppdu_info, ppdu_id) = ppdu_id;
+
+		if (response_sta_count == 0)
+			response_sta_count = 1;
+		TXMON_HAL(ppdu_info, num_users) = response_sta_count;
+
+		if (reception_type)
+			TXMON_STATUS_INFO(tx_status_info,
+					  transmission_type) =
+							TXMON_SU_TRANSMISSION;
+		else
+			TXMON_STATUS_INFO(tx_status_info,
+					  transmission_type) =
+							TXMON_MU_TRANSMISSION;
+
 		SHOW_DEFINED(WIFIRX_RESPONSE_REQUIRED_INFO_E);
 		break;
 	}
@@ -778,7 +934,38 @@ hal_txmon_status_parse_tlv_generic_be(void *data_ppdu_info,
 	case WIFIRESPONSE_END_STATUS_E:/* UPSTREAM */
 	{
 		/* response PPDU window end */
+		uint8_t generated_response = 0;
+		uint32_t bandwidth = 0;
+		uint32_t ppdu_timestamp_start = 0;
+		uint32_t ppdu_timestamp_end = 0;
+
 		status = HAL_MON_RESPONSE_END_STATUS_INFO;
+		generated_response = HAL_TX_DESC_GET_64(tx_tlv,
+							RESPONSE_END_STATUS,
+							GENERATED_RESPONSE);
+		bandwidth = HAL_TX_DESC_GET_64(tx_tlv, RESPONSE_END_STATUS,
+					       COEX_BASED_TX_BW);
+		/* 32 bits TSF */
+		ppdu_timestamp_start =
+			(HAL_TX_DESC_GET_64(tx_tlv, RESPONSE_END_STATUS,
+					    START_OF_FRAME_TIMESTAMP_15_0) |
+			 (HAL_TX_DESC_GET_64(tx_tlv, RESPONSE_END_STATUS,
+					     START_OF_FRAME_TIMESTAMP_31_16) <<
+			  16));
+		ppdu_timestamp_end =
+			(HAL_TX_DESC_GET_64(tx_tlv, RESPONSE_END_STATUS,
+					    END_OF_FRAME_TIMESTAMP_15_0) |
+			 (HAL_TX_DESC_GET_64(tx_tlv, RESPONSE_END_STATUS,
+					     END_OF_FRAME_TIMESTAMP_31_16) <<
+			  16));
+
+		TXMON_HAL_STATUS(ppdu_info, bw) = bandwidth;
+		/* update phy timestamp to ppdu timestamp */
+		TXMON_HAL_STATUS(ppdu_info,
+				 ppdu_timestamp) = ppdu_timestamp_start;
+
+		TXMON_STATUS_INFO(tx_status_info,
+				  generated_response) = generated_response;
 		SHOW_DEFINED(WIFIRESPONSE_END_STATUS_E);
 		break;
 	}
@@ -807,6 +994,7 @@ hal_txmon_status_parse_tlv_generic_be(void *data_ppdu_info,
 	}
 	case WIFITX_QUEUE_EXTENSION_E:/* DOWNSTREAM */
 	{
+		status = HAL_MON_TX_QUEUE_EXTENSION;
 		hal_txmon_parse_queue_exten(tx_tlv, ppdu_info);
 
 		SHOW_DEFINED(WIFITX_QUEUE_EXTENSION_E);
@@ -831,6 +1019,20 @@ hal_txmon_status_parse_tlv_generic_be(void *data_ppdu_info,
 	}
 	case WIFITX_DATA_E:/* DOWNSTREAM */
 	{
+		status = HAL_MON_TX_DATA;
+		/*
+		 * TODO: do we need a conversion api to convert
+		 * user_id from hw to get host user_index
+		 */
+		TXMON_HAL(ppdu_info, cur_usr_idx) = user_id;
+		TXMON_STATUS_INFO(tx_status_info,
+				  buffer) = (void *)status_frag;
+		TXMON_STATUS_INFO(tx_status_info,
+				  offset) = ((void *)tx_tlv -
+					     (void *)status_frag);
+		TXMON_STATUS_INFO(tx_status_info,
+				  length) = tlv_len;
+
 		/*
 		 * reference of the status buffer will be held in
 		 * dp_tx_update_ppdu_info_status()
@@ -839,13 +1041,23 @@ hal_txmon_status_parse_tlv_generic_be(void *data_ppdu_info,
 		SHOW_DEFINED(WIFITX_DATA_E);
 		break;
 	}
-	case WIFIMON_BUFFER_ADDR_E:
+	case WIFIMON_BUFFER_ADDR_E:/* DOWNSTREAM */
 	{
-		frag_buf = hal_txmon_get_buffer_addr_generic_be(tx_tlv, NULL);
-		if (frag_buf)
-			qdf_frag_free(frag_buf);
-		frag_buf = NULL;
+		struct hal_mon_buf_addr_status buf_status = {0};
+
 		status = HAL_MON_TX_BUFFER_ADDR;
+		/*
+		 * TODO: do we need a conversion api to convert
+		 * user_id from hw to get host user_index
+		 */
+		TXMON_HAL(ppdu_info, cur_usr_idx) = user_id;
+		frag_buf = hal_txmon_get_buffer_addr_generic_be(tx_tlv,
+								&buf_status);
+		TXMON_STATUS_INFO(tx_status_info,
+				  buffer) = (void *)frag_buf;
+		TXMON_STATUS_INFO(tx_status_info, offset) = 0;
+		TXMON_STATUS_INFO(tx_status_info,
+				  length) = buf_status.dma_length;
 
 		SHOW_DEFINED(WIFIMON_BUFFER_ADDR_E);
 		break;
@@ -980,24 +1192,75 @@ hal_txmon_status_parse_tlv_generic_be(void *data_ppdu_info,
 		/*
 		 * TLV indicating that first transmission on the medium
 		 */
+		uint8_t medium_prot_type = 0;
+
 		status = HAL_MON_TX_FES_STATUS_START;
+
+		medium_prot_type = HAL_TX_DESC_GET_64(tx_tlv,
+						      TX_FES_STATUS_START,
+						      MEDIUM_PROT_TYPE);
+
+		ppdu_info = (struct hal_tx_ppdu_info *)prot_ppdu_info;
+		/* update what type of medium protection frame */
+		TXMON_STATUS_INFO(tx_status_info,
+				  medium_prot_type) = medium_prot_type;
 		SHOW_DEFINED(WIFITX_FES_STATUS_START_E);
 		break;
 	}
 	case WIFITX_FES_STATUS_PROT_E:
 	{
+		uint32_t start_timestamp = 0;
+		uint32_t end_timestamp = 0;
+
 		/*
 		 * generated by TXPCU to indicate the result of having
 		 * received of the expected protection frame
 		 */
 
 		status = HAL_MON_TX_FES_STATUS_PROT;
+		start_timestamp =
+			HAL_TX_DESC_GET_64(tx_tlv, TX_FES_STATUS_PROT,
+					   START_OF_FRAME_TIMESTAMP_15_0);
+		start_timestamp |=
+			(HAL_TX_DESC_GET_64(tx_tlv, TX_FES_STATUS_PROT,
+					    START_OF_FRAME_TIMESTAMP_31_16) <<
+			 15);
+		end_timestamp = HAL_TX_DESC_GET_64(tx_tlv,
+						   TX_FES_STATUS_PROT,
+						   END_OF_FRAME_TIMESTAMP_15_0);
+		end_timestamp |=
+			HAL_TX_DESC_GET_64(tx_tlv, TX_FES_STATUS_PROT,
+					   END_OF_FRAME_TIMESTAMP_31_16) << 15;
+
+		/* ppdu timestamp as phy timestamp */
+		TXMON_HAL_STATUS(ppdu_info,
+				 ppdu_timestamp) = start_timestamp;
+
 		SHOW_DEFINED(WIFITX_FES_STATUS_PROT_E);
 		break;
 	}
 	case WIFITX_FES_STATUS_START_PROT_E:
 	{
+		uint64_t tsft_64;
+		uint32_t response_type;
 		status = HAL_MON_TX_FES_STATUS_START_PROT;
+		TXMON_HAL(ppdu_info, prot_tlv_status) = tlv_tag;
+		/* timestamp */
+		tsft_64 = HAL_TX_DESC_GET_64(tx_tlv,
+					     TX_FES_STATUS_START_PROT,
+					     PROT_TIMESTAMP_LOWER_32);
+		tsft_64 |= (HAL_TX_DESC_GET_64(tx_tlv,
+					       TX_FES_STATUS_START_PROT,
+					       PROT_TIMESTAMP_UPPER_32) << 32);
+
+		response_type = HAL_TX_DESC_GET_64(tx_tlv,
+						   TX_FES_STATUS_START_PROT,
+						   RESPONSE_TYPE);
+
+		TXMON_STATUS_INFO(tx_status_info,
+				  response_type) = response_type;
+		TXMON_HAL_STATUS(ppdu_info, tsft) = tsft_64;
+
 		SHOW_DEFINED(WIFITX_FES_STATUS_START_PROT_E);
 		break;
 	}
@@ -1014,13 +1277,44 @@ hal_txmon_status_parse_tlv_generic_be(void *data_ppdu_info,
 	}
 	case WIFITX_FES_STATUS_START_PPDU_E:
 	{
+		uint64_t tsft_64;
+		uint8_t ndp_frame;
+
 		status = HAL_MON_TX_FES_STATUS_START_PPDU;
+		tsft_64 = HAL_TX_DESC_GET_64(tx_tlv,
+					     TX_FES_STATUS_START_PPDU,
+					     PPDU_TIMESTAMP_LOWER_32);
+		tsft_64 |= (HAL_TX_DESC_GET_64(tx_tlv,
+					       TX_FES_STATUS_START_PPDU,
+					       PPDU_TIMESTAMP_UPPER_32) << 32);
+
+		ndp_frame = HAL_TX_DESC_GET_64(tx_tlv,
+					       TX_FES_STATUS_START_PPDU,
+					       NDP_FRAME);
+
+		TXMON_STATUS_INFO(tx_status_info, ndp_frame) = ndp_frame;
+		TXMON_HAL_STATUS(ppdu_info, tsft) = tsft_64;
+
 		SHOW_DEFINED(WIFITX_FES_STATUS_START_PPDU_E);
 		break;
 	}
 	case WIFITX_FES_STATUS_USER_PPDU_E:
 	{
 		/* user tlv */
+		uint16_t duration;
+		uint8_t transmitted_tid;
+
+		duration = HAL_TX_DESC_GET_64(tx_tlv,
+					      TX_FES_STATUS_USER_PPDU,
+					      DURATION);
+		transmitted_tid = HAL_TX_DESC_GET_64(tx_tlv,
+						     TX_FES_STATUS_USER_PPDU,
+						     TRANSMITTED_TID);
+
+		TXMON_HAL(ppdu_info, cur_usr_idx) = user_id;
+		TXMON_HAL_USER(ppdu_info, user_id, tid) = transmitted_tid;
+		TXMON_HAL_USER(ppdu_info, user_id, duration) = duration;
+
 		status = HAL_MON_TX_FES_STATUS_USER_PPDU;
 		SHOW_DEFINED(WIFITX_FES_STATUS_USER_PPDU_E);
 		break;
@@ -1188,6 +1482,68 @@ hal_txmon_status_parse_tlv_generic_be(void *data_ppdu_info,
 		/* user tlv */
 		status = HAL_MON_RX_FRAME_BITMAP_ACK;
 		SHOW_DEFINED(WIFIRX_FRAME_BITMAP_ACK_E);
+		TXMON_HAL(ppdu_info, cur_usr_idx) = user_id;
+		TXMON_STATUS_INFO(tx_status_info, no_bitmap_avail) =
+					HAL_TX_DESC_GET_64(tx_tlv,
+							   RX_FRAME_BITMAP_ACK,
+							   NO_BITMAP_AVAILABLE);
+
+		TXMON_STATUS_INFO(tx_status_info, explicit_ack) =
+					HAL_TX_DESC_GET_64(tx_tlv,
+							   RX_FRAME_BITMAP_ACK,
+							   EXPLICIT_ACK);
+		/*
+		 * get mac address, since address is received frame
+		 * change the order and store it
+		 */
+		*(uint32_t *)&tx_status_info->addr2[0] =
+					HAL_TX_DESC_GET_64(tx_tlv,
+							   RX_FRAME_BITMAP_ACK,
+							   ADDR1_31_0);
+		*(uint32_t *)&tx_status_info->addr2[4] =
+					HAL_TX_DESC_GET_64(tx_tlv,
+							   RX_FRAME_BITMAP_ACK,
+							   ADDR1_47_32);
+		*(uint32_t *)&tx_status_info->addr1[0] =
+					HAL_TX_DESC_GET_64(tx_tlv,
+							   RX_FRAME_BITMAP_ACK,
+							   ADDR2_15_0);
+		*(uint32_t *)&tx_status_info->addr1[2] =
+					HAL_TX_DESC_GET_64(tx_tlv,
+							   RX_FRAME_BITMAP_ACK,
+							   ADDR2_47_16);
+
+		TXMON_STATUS_INFO(tx_status_info, explicit_ack_type) =
+				HAL_TX_DESC_GET_64(tx_tlv, RX_FRAME_BITMAP_ACK,
+						   EXPLICT_ACK_TYPE);
+
+		TXMON_HAL_USER(ppdu_info, user_id, tid) =
+					HAL_TX_DESC_GET_64(tx_tlv,
+							   RX_FRAME_BITMAP_ACK,
+							   BA_TID);
+		TXMON_HAL_USER(ppdu_info, user_id, aid) =
+					HAL_TX_DESC_GET_64(tx_tlv,
+							   RX_FRAME_BITMAP_ACK,
+							   STA_FULL_AID);
+		TXMON_HAL_USER(ppdu_info, user_id, start_seq) =
+					HAL_TX_DESC_GET_64(tx_tlv,
+							   RX_FRAME_BITMAP_ACK,
+							   BA_TS_SEQ);
+		TXMON_HAL_USER(ppdu_info, user_id, ba_control) =
+					HAL_TX_DESC_GET_64(tx_tlv,
+							   RX_FRAME_BITMAP_ACK,
+							   BA_TS_CTRL);
+		TXMON_HAL_USER(ppdu_info, user_id, ba_bitmap_sz) =
+					HAL_TX_DESC_GET_64(tx_tlv,
+							   RX_FRAME_BITMAP_ACK,
+							   BA_BITMAP_SIZE);
+
+		/* ba bitmap */
+		qdf_mem_copy(TXMON_HAL_USER(ppdu_info, user_id, ba_bitmap),
+			     &HAL_SET_FLD_OFFSET_64(tx_tlv,
+						    RX_FRAME_BITMAP_ACK,
+						    BA_TS_BITMAP_31_0, 0), 32);
+
 		break;
 	}
 	case WIFIRX_FRAME_1K_BITMAP_ACK_E:
@@ -1195,6 +1551,53 @@ hal_txmon_status_parse_tlv_generic_be(void *data_ppdu_info,
 		/* user tlv */
 		status = HAL_MON_RX_FRAME_BITMAP_BLOCK_ACK_1K;
 		SHOW_DEFINED(WIFIRX_FRAME_1K_BITMAP_ACK_E);
+		TXMON_HAL(ppdu_info, cur_usr_idx) = user_id;
+		TXMON_HAL_USER(ppdu_info, user_id, ba_bitmap_sz) =
+			(4 + HAL_TX_DESC_GET_64(tx_tlv, RX_FRAME_1K_BITMAP_ACK,
+						BA_BITMAP_SIZE));
+		TXMON_HAL_USER(ppdu_info, user_id, tid) =
+				HAL_TX_DESC_GET_64(tx_tlv,
+						   RX_FRAME_1K_BITMAP_ACK,
+						   BA_TID);
+		TXMON_HAL_USER(ppdu_info, user_id, aid) =
+				HAL_TX_DESC_GET_64(tx_tlv,
+						   RX_FRAME_1K_BITMAP_ACK,
+						   STA_FULL_AID);
+		/* get mac address */
+		*(uint32_t *)&tx_status_info->addr1[0] =
+				HAL_TX_DESC_GET_64(tx_tlv,
+						   RX_FRAME_1K_BITMAP_ACK,
+						   ADDR1_31_0);
+		*(uint32_t *)&tx_status_info->addr1[4] =
+				HAL_TX_DESC_GET_64(tx_tlv,
+						   RX_FRAME_1K_BITMAP_ACK,
+						   ADDR1_47_32);
+		*(uint32_t *)&tx_status_info->addr2[0] =
+				HAL_TX_DESC_GET_64(tx_tlv,
+						   RX_FRAME_1K_BITMAP_ACK,
+						   ADDR2_15_0);
+		*(uint32_t *)&tx_status_info->addr2[2] =
+				HAL_TX_DESC_GET_64(tx_tlv,
+						   RX_FRAME_1K_BITMAP_ACK,
+						   ADDR2_47_16);
+
+		TXMON_HAL_USER(ppdu_info, user_id, start_seq) =
+				HAL_TX_DESC_GET_64(tx_tlv,
+						   RX_FRAME_1K_BITMAP_ACK,
+						   BA_TS_SEQ);
+		TXMON_HAL_USER(ppdu_info, user_id, ba_control) =
+				HAL_TX_DESC_GET_64(tx_tlv,
+						   RX_FRAME_1K_BITMAP_ACK,
+						   BA_TS_CTRL);
+		/* memcpy  ba bitmap */
+		qdf_mem_copy(TXMON_HAL_USER(ppdu_info, user_id, ba_bitmap),
+			     tx_tlv +
+			     HAL_TX_DESC_OFFSET_GET_64(tx_tlv,
+						       RX_FRAME_1K_BITMAP_ACK,
+						       BA_TS_BITMAP_31_0, 0),
+			     4 << TXMON_HAL_USER(ppdu_info,
+						 user_id, ba_bitmap_sz));
+
 		break;
 	}
 	case WIFIRESPONSE_START_STATUS_E:
@@ -1250,7 +1653,22 @@ hal_txmon_status_parse_tlv_generic_be(void *data_ppdu_info,
 	case WIFICOEX_TX_STATUS_E:
 	{
 		/* duration are retrieved from coex tx status */
+		uint16_t duration;
+		uint8_t status_reason;
+
 		status = HAL_MON_COEX_TX_STATUS;
+		duration = HAL_TX_DESC_GET_64(tx_tlv,
+					      COEX_TX_STATUS,
+					      CURRENT_TX_DURATION);
+		status_reason = HAL_TX_DESC_GET_64(tx_tlv,
+						   COEX_TX_STATUS,
+						   TX_STATUS_REASON);
+
+		/* update duration */
+		if (status_reason == COEX_FES_TX_START ||
+		    status_reason == COEX_RESPONSE_TX_START)
+			TXMON_HAL_USER(ppdu_info, user_id, duration) = duration;
+
 		SHOW_DEFINED(WIFICOEX_TX_STATUS_E);
 		break;
 	}
@@ -1300,11 +1718,115 @@ hal_txmon_status_parse_tlv_generic_be(void *data_ppdu_info,
 
 	case WIFIMACTX_HE_SIG_A_SU_E:
 	{
+		uint8_t mcs_of_sig_b = 0;
+		uint8_t dcm_of_sig_b = 0;
+		uint8_t sig_a_bw = 0;
+		uint16_t he_mu_flag_1 = 0;
+		uint16_t he_mu_flag_2 = 0;
+
+		status = HAL_MON_MACTX_HE_SIG_A_SU;
+
+		mcs_of_sig_b = HAL_TX_DESC_GET_64(tx_tlv,
+						  MACTX_HE_SIG_A_SU_MACTX_HE_SIG_A_SU_INFO_DETAILS,
+						  TRANSMIT_MCS);
+		dcm_of_sig_b = HAL_TX_DESC_GET_64(tx_tlv,
+						  MACTX_HE_SIG_A_SU_MACTX_HE_SIG_A_SU_INFO_DETAILS,
+						  DCM);
+		sig_a_bw = HAL_TX_DESC_GET_64(tx_tlv,
+					      MACTX_HE_SIG_A_SU_MACTX_HE_SIG_A_SU_INFO_DETAILS,
+					      TRANSMIT_BW);
+
+		he_mu_flag_1 |= QDF_MON_STATUS_SIG_B_MCS_KNOWN |
+				QDF_MON_STATUS_SIG_B_DCM_KNOWN |
+				QDF_MON_STATUS_CHANNEL_2_CENTER_26_RU_KNOWN |
+				QDF_MON_STATUS_CHANNEL_1_RU_KNOWN |
+				QDF_MON_STATUS_CHANNEL_2_RU_KNOWN |
+				QDF_MON_STATUS_CHANNEL_1_CENTER_26_RU_KNOWN;
+
+		/* MCS */
+		he_mu_flag_1 |= mcs_of_sig_b <<
+				QDF_MON_STATUS_SIG_B_MCS_SHIFT;
+		/* DCM */
+		he_mu_flag_1 |= dcm_of_sig_b <<
+				QDF_MON_STATUS_SIG_B_DCM_SHIFT;
+		/* bandwidth */
+		he_mu_flag_2 |= QDF_MON_STATUS_SIG_A_BANDWIDTH_KNOWN;
+		he_mu_flag_2 |= sig_a_bw <<
+				QDF_MON_STATUS_SIG_A_BANDWIDTH_SHIFT;
+
+		TXMON_HAL_STATUS(ppdu_info, he_flags1) = he_mu_flag_1;
+		TXMON_HAL_STATUS(ppdu_info, he_flags2) = he_mu_flag_2;
+
 		SHOW_DEFINED(WIFIMACTX_HE_SIG_A_SU_E);
 		break;
 	}
 	case WIFIMACTX_HE_SIG_A_MU_DL_E:
 	{
+		uint8_t mcs_of_sig_b = 0;
+		uint8_t dcm_of_sig_b = 0;
+		uint8_t sig_a_bw = 0;
+		uint8_t num_sig_b_symb = 0;
+		uint8_t comp_mode_sig_b = 0;
+		uint8_t punc_bw = 0;
+		uint16_t he_mu_flag_1 = 0;
+		uint16_t he_mu_flag_2 = 0;
+
+		status = HAL_MON_MACTX_HE_SIG_A_MU_DL;
+		mcs_of_sig_b = HAL_TX_DESC_GET_64(tx_tlv,
+						  MACTX_HE_SIG_A_MU_DL_MACTX_HE_SIG_A_MU_DL_INFO_DETAILS,
+						  MCS_OF_SIG_B);
+		dcm_of_sig_b = HAL_TX_DESC_GET_64(tx_tlv,
+						  MACTX_HE_SIG_A_MU_DL_MACTX_HE_SIG_A_MU_DL_INFO_DETAILS,
+						  DCM_OF_SIG_B);
+		sig_a_bw = HAL_TX_DESC_GET_64(tx_tlv,
+					      MACTX_HE_SIG_A_MU_DL_MACTX_HE_SIG_A_MU_DL_INFO_DETAILS,
+					      TRANSMIT_BW);
+		num_sig_b_symb = HAL_TX_DESC_GET_64(tx_tlv,
+						    MACTX_HE_SIG_A_MU_DL_MACTX_HE_SIG_A_MU_DL_INFO_DETAILS,
+						    NUM_SIG_B_SYMBOLS);
+		comp_mode_sig_b = HAL_TX_DESC_GET_64(tx_tlv,
+						     MACTX_HE_SIG_A_MU_DL_MACTX_HE_SIG_A_MU_DL_INFO_DETAILS,
+						     COMP_MODE_SIG_B);
+
+		he_mu_flag_1 |= QDF_MON_STATUS_SIG_B_MCS_KNOWN |
+				QDF_MON_STATUS_SIG_B_DCM_KNOWN |
+				QDF_MON_STATUS_SIG_B_SYM_NUM_KNOWN |
+				QDF_MON_STATUS_CHANNEL_2_CENTER_26_RU_KNOWN |
+				QDF_MON_STATUS_CHANNEL_1_RU_KNOWN |
+				QDF_MON_STATUS_CHANNEL_2_RU_KNOWN |
+				QDF_MON_STATUS_CHANNEL_1_CENTER_26_RU_KNOWN |
+				QDF_MON_STATUS_SIG_B_COMPRESSION_FLAG_1_KNOWN |
+				QDF_MON_STATUS_SIG_B_SYMBOL_USER_KNOWN;
+
+		/* MCS */
+		he_mu_flag_1 |= mcs_of_sig_b <<
+				QDF_MON_STATUS_SIG_B_MCS_SHIFT;
+		/* DCM */
+		he_mu_flag_1 |= dcm_of_sig_b <<
+				QDF_MON_STATUS_SIG_B_DCM_SHIFT;
+		/* Compression */
+		he_mu_flag_2 |= comp_mode_sig_b <<
+				QDF_MON_STATUS_SIG_B_COMPRESSION_FLAG_2_SHIFT;
+		/* bandwidth */
+		he_mu_flag_2 |= QDF_MON_STATUS_SIG_A_BANDWIDTH_KNOWN;
+		he_mu_flag_2 |= sig_a_bw <<
+				QDF_MON_STATUS_SIG_A_BANDWIDTH_SHIFT;
+		he_mu_flag_2 |= comp_mode_sig_b <<
+				QDF_MON_STATUS_SIG_B_COMPRESSION_FLAG_2_SHIFT;
+		/* number of symbol */
+		he_mu_flag_2 |= num_sig_b_symb <<
+				QDF_MON_STATUS_NUM_SIG_B_SYMBOLS_SHIFT;
+		/* puncture bw */
+		he_mu_flag_2 |= QDF_MON_STATUS_SIG_A_PUNC_BANDWIDTH_KNOWN;
+		punc_bw = sig_a_bw;
+		he_mu_flag_2 |=
+			punc_bw << QDF_MON_STATUS_SIG_A_PUNC_BANDWIDTH_SHIFT;
+
+		/* copy per user info to all user */
+		TXMON_HAL_STATUS(ppdu_info, he_mu_flags) = 1;
+		TXMON_HAL_STATUS(ppdu_info, he_flags1) = he_mu_flag_1;
+		TXMON_HAL_STATUS(ppdu_info, he_flags2) = he_mu_flag_2;
+
 		SHOW_DEFINED(WIFIMACTX_HE_SIG_A_MU_DL_E);
 		break;
 	}
@@ -1322,38 +1844,366 @@ hal_txmon_status_parse_tlv_generic_be(void *data_ppdu_info,
 	case WIFIMACTX_HE_SIG_B2_MU_E:
 	{
 		/* user tlv */
+		uint16_t sta_id = 0;
+		uint16_t sta_spatial_config = 0;
+		uint8_t sta_mcs = 0;
+		uint8_t coding = 0;
+		uint8_t nss = 0;
+		uint8_t user_order = 0;
+
 		status = HAL_MON_MACTX_HE_SIG_B2_MU;
+
+		TXMON_HAL(ppdu_info, cur_usr_idx) = user_id;
+
+		sta_id = HAL_TX_DESC_GET_64(tx_tlv,
+					    MACTX_HE_SIG_B2_MU_MACTX_HE_SIG_B2_MU_INFO_DETAILS,
+					    STA_ID);
+		sta_spatial_config = HAL_TX_DESC_GET_64(tx_tlv,
+							MACTX_HE_SIG_B2_MU_MACTX_HE_SIG_B2_MU_INFO_DETAILS,
+							STA_SPATIAL_CONFIG);
+		sta_mcs = HAL_TX_DESC_GET_64(tx_tlv,
+					     MACTX_HE_SIG_B2_MU_MACTX_HE_SIG_B2_MU_INFO_DETAILS,
+					     STA_MCS);
+		coding = HAL_TX_DESC_GET_64(tx_tlv,
+					    MACTX_HE_SIG_B2_MU_MACTX_HE_SIG_B2_MU_INFO_DETAILS,
+					    STA_CODING);
+		nss = HAL_TX_DESC_GET_64(tx_tlv,
+					 MACTX_HE_SIG_B2_MU_MACTX_HE_SIG_B2_MU_INFO_DETAILS,
+					 NSTS);
+		user_order = HAL_TX_DESC_GET_64(tx_tlv,
+						MACTX_HE_SIG_B2_MU_MACTX_HE_SIG_B2_MU_INFO_DETAILS,
+						USER_ORDER);
+
+		/* HE data 1 */
+		TXMON_HAL_USER(ppdu_info, user_id, he_data1) |=
+				QDF_MON_STATUS_HE_MCS_KNOWN |
+				QDF_MON_STATUS_HE_CODING_KNOWN;
+		/* HE data 2 */
+
+		/* HE data 3 */
+		TXMON_HAL_USER(ppdu_info, user_id, mcs) = sta_mcs;
+		TXMON_HAL_USER(ppdu_info, user_id, he_data3) |=
+				sta_mcs << QDF_MON_STATUS_TRANSMIT_MCS_SHIFT;
+		TXMON_HAL_USER(ppdu_info, user_id, he_data3) |=
+				coding << QDF_MON_STATUS_CODING_SHIFT;
+
+		/* HE data 4 */
+		TXMON_HAL_USER(ppdu_info, user_id, he_data4) |=
+				sta_id << QDF_MON_STATUS_STA_ID_SHIFT;
+
+		/* HE data 5 */
+
+		/* HE data 6 */
+		TXMON_HAL_USER(ppdu_info, user_id, nss) = nss;
+		TXMON_HAL_USER(ppdu_info, user_id, he_data6) |= nss;
+
 		SHOW_DEFINED(WIFIMACTX_HE_SIG_B2_MU_E);
 		break;
 	}
 	case WIFIMACTX_HE_SIG_B2_OFDMA_E:
 	{
 		/* user tlv */
+		uint8_t *he_sig_b2_ofdma_info = NULL;
+		uint16_t sta_id = 0;
+		uint8_t nss = 0;
+		uint8_t txbf = 0;
+		uint8_t sta_mcs = 0;
+		uint8_t sta_dcm = 0;
+		uint8_t coding = 0;
+		uint8_t user_order = 0;
+
 		status = HAL_MON_MACTX_HE_SIG_B2_OFDMA;
+
+		TXMON_HAL(ppdu_info, cur_usr_idx) = user_id;
+
+		he_sig_b2_ofdma_info = (uint8_t *)tx_tlv +
+			HAL_OFFSET(MACTX_HE_SIG_B2_OFDMA_MACTX_HE_SIG_B2_OFDMA_INFO_DETAILS,
+				   STA_ID);
+
+		sta_id = HAL_TX_DESC_GET_64(tx_tlv,
+					    MACTX_HE_SIG_B2_OFDMA_MACTX_HE_SIG_B2_OFDMA_INFO_DETAILS,
+					    STA_ID);
+		nss = HAL_TX_DESC_GET_64(tx_tlv,
+					 MACTX_HE_SIG_B2_OFDMA_MACTX_HE_SIG_B2_OFDMA_INFO_DETAILS,
+					 NSTS);
+		txbf = HAL_TX_DESC_GET_64(tx_tlv,
+					  MACTX_HE_SIG_B2_OFDMA_MACTX_HE_SIG_B2_OFDMA_INFO_DETAILS,
+					  TXBF);
+		sta_mcs = HAL_TX_DESC_GET_64(tx_tlv,
+					     MACTX_HE_SIG_B2_OFDMA_MACTX_HE_SIG_B2_OFDMA_INFO_DETAILS,
+					     STA_MCS);
+		sta_dcm = HAL_TX_DESC_GET_64(tx_tlv,
+					     MACTX_HE_SIG_B2_OFDMA_MACTX_HE_SIG_B2_OFDMA_INFO_DETAILS,
+					     STA_DCM);
+		coding = HAL_TX_DESC_GET_64(tx_tlv,
+					    MACTX_HE_SIG_B2_OFDMA_MACTX_HE_SIG_B2_OFDMA_INFO_DETAILS,
+					    STA_CODING);
+		user_order = HAL_TX_DESC_GET_64(tx_tlv,
+						MACTX_HE_SIG_B2_OFDMA_MACTX_HE_SIG_B2_OFDMA_INFO_DETAILS,
+						USER_ORDER);
+
+		/* HE data 1 */
+		TXMON_HAL_USER(ppdu_info, user_id, he_data1) |=
+				QDF_MON_STATUS_HE_MCS_KNOWN |
+				QDF_MON_STATUS_HE_CODING_KNOWN |
+				QDF_MON_STATUS_HE_DCM_KNOWN;
+		/* HE data 2 */
+		TXMON_HAL_USER(ppdu_info, user_id, he_data2) |=
+				QDF_MON_STATUS_TXBF_KNOWN;
+
+		/* HE data 3 */
+		TXMON_HAL_USER(ppdu_info, user_id, mcs) = sta_mcs;
+		TXMON_HAL_USER(ppdu_info, user_id, he_data3) |=
+				sta_mcs << QDF_MON_STATUS_TRANSMIT_MCS_SHIFT;
+		TXMON_HAL_USER(ppdu_info, user_id, he_data3) |=
+				sta_dcm << QDF_MON_STATUS_DCM_SHIFT;
+		TXMON_HAL_USER(ppdu_info, user_id, he_data3) |=
+				coding << QDF_MON_STATUS_CODING_SHIFT;
+
+		/* HE data 4 */
+		TXMON_HAL_USER(ppdu_info, user_id, he_data4) |=
+				sta_id << QDF_MON_STATUS_STA_ID_SHIFT;
+
+		/* HE data 5 */
+		TXMON_HAL_USER(ppdu_info, user_id, he_data5) |=
+				txbf << QDF_MON_STATUS_TXBF_SHIFT;
+
+		/* HE data 6 */
+		TXMON_HAL_USER(ppdu_info, user_id, nss) = nss;
+		TXMON_HAL_USER(ppdu_info, user_id, he_data6) |= nss;
+
 		SHOW_DEFINED(WIFIMACTX_HE_SIG_B2_OFDMA_E);
 		break;
 	}
 	case WIFIMACTX_L_SIG_A_E:
 	{
+		uint8_t *l_sig_a_info = NULL;
+		uint8_t rate = 0;
+
 		status = HAL_MON_MACTX_L_SIG_A;
+
+		l_sig_a_info = (uint8_t *)tx_tlv +
+			HAL_OFFSET(MACTX_L_SIG_A_MACTX_L_SIG_A_INFO_DETAILS,
+				   RATE);
+		rate = HAL_TX_DESC_GET_64(tx_tlv,
+					  MACTX_L_SIG_A_MACTX_L_SIG_A_INFO_DETAILS,
+					  RATE);
+
+		switch (rate) {
+		case 8:
+			TXMON_HAL_STATUS(ppdu_info, rate) = HAL_11A_RATE_0MCS;
+			TXMON_HAL_STATUS(ppdu_info, mcs) = HAL_LEGACY_MCS0;
+			break;
+		case 9:
+			TXMON_HAL_STATUS(ppdu_info, rate) = HAL_11A_RATE_1MCS;
+			TXMON_HAL_STATUS(ppdu_info, mcs) = HAL_LEGACY_MCS1;
+			break;
+		case 10:
+			TXMON_HAL_STATUS(ppdu_info, rate) = HAL_11A_RATE_2MCS;
+			TXMON_HAL_STATUS(ppdu_info, mcs) = HAL_LEGACY_MCS2;
+			break;
+		case 11:
+			TXMON_HAL_STATUS(ppdu_info, rate) = HAL_11A_RATE_3MCS;
+			TXMON_HAL_STATUS(ppdu_info, mcs) = HAL_LEGACY_MCS3;
+			break;
+		case 12:
+			TXMON_HAL_STATUS(ppdu_info, rate) = HAL_11A_RATE_4MCS;
+			TXMON_HAL_STATUS(ppdu_info, mcs) = HAL_LEGACY_MCS4;
+			break;
+		case 13:
+			TXMON_HAL_STATUS(ppdu_info, rate) = HAL_11A_RATE_5MCS;
+			TXMON_HAL_STATUS(ppdu_info, mcs) = HAL_LEGACY_MCS5;
+			break;
+		case 14:
+			TXMON_HAL_STATUS(ppdu_info, rate) = HAL_11A_RATE_6MCS;
+			TXMON_HAL_STATUS(ppdu_info, mcs) = HAL_LEGACY_MCS6;
+			break;
+		case 15:
+			TXMON_HAL_STATUS(ppdu_info, rate) = HAL_11A_RATE_7MCS;
+			TXMON_HAL_STATUS(ppdu_info, mcs) = HAL_LEGACY_MCS7;
+			break;
+		default:
+			break;
+		}
+
+		TXMON_HAL_STATUS(ppdu_info, ofdm_flag) = 1;
+		TXMON_HAL_STATUS(ppdu_info, reception_type) = HAL_RX_TYPE_SU;
+		TXMON_HAL_STATUS(ppdu_info, l_sig_a_info) = *l_sig_a_info;
+
 		SHOW_DEFINED(WIFIMACTX_L_SIG_A_E);
 		break;
 	}
 	case WIFIMACTX_L_SIG_B_E:
 	{
+		uint8_t *l_sig_b_info = NULL;
+		uint8_t rate = 0;
+
 		status = HAL_MON_MACTX_L_SIG_B;
+
+		l_sig_b_info = (uint8_t *)tx_tlv +
+			HAL_OFFSET(MACTX_L_SIG_B_MACTX_L_SIG_B_INFO_DETAILS,
+				   RATE);
+		rate = HAL_TX_DESC_GET_64(tx_tlv,
+					  MACTX_L_SIG_B_MACTX_L_SIG_B_INFO_DETAILS,
+					  RATE);
+
+		switch (rate) {
+		case 1:
+			TXMON_HAL_STATUS(ppdu_info, rate) = HAL_11B_RATE_3MCS;
+			TXMON_HAL_STATUS(ppdu_info, mcs) = HAL_LEGACY_MCS3;
+			break;
+		case 2:
+			TXMON_HAL_STATUS(ppdu_info, rate) = HAL_11B_RATE_2MCS;
+			TXMON_HAL_STATUS(ppdu_info, mcs) = HAL_LEGACY_MCS2;
+			break;
+		case 3:
+			TXMON_HAL_STATUS(ppdu_info, rate) = HAL_11B_RATE_1MCS;
+			TXMON_HAL_STATUS(ppdu_info, mcs) = HAL_LEGACY_MCS1;
+			break;
+		case 4:
+			TXMON_HAL_STATUS(ppdu_info, rate) = HAL_11B_RATE_0MCS;
+			TXMON_HAL_STATUS(ppdu_info, mcs) = HAL_LEGACY_MCS0;
+			break;
+		case 5:
+			TXMON_HAL_STATUS(ppdu_info, rate) = HAL_11B_RATE_6MCS;
+			TXMON_HAL_STATUS(ppdu_info, mcs) = HAL_LEGACY_MCS6;
+			break;
+		case 6:
+			TXMON_HAL_STATUS(ppdu_info, rate) = HAL_11B_RATE_5MCS;
+			TXMON_HAL_STATUS(ppdu_info, mcs) = HAL_LEGACY_MCS5;
+			break;
+		case 7:
+			TXMON_HAL_STATUS(ppdu_info, rate) = HAL_11B_RATE_4MCS;
+			TXMON_HAL_STATUS(ppdu_info, mcs) = HAL_LEGACY_MCS4;
+			break;
+		default:
+			break;
+		}
+
+		TXMON_HAL_STATUS(ppdu_info, cck_flag) = 1;
+		TXMON_HAL_STATUS(ppdu_info, reception_type) = HAL_RX_TYPE_SU;
+		TXMON_HAL_STATUS(ppdu_info, l_sig_b_info) = *l_sig_b_info;
+
 		SHOW_DEFINED(WIFIMACTX_L_SIG_B_E);
 		break;
 	}
 	case WIFIMACTX_HT_SIG_E:
 	{
+		uint8_t mcs = 0;
+		uint8_t bw = 0;
+		uint8_t is_stbc = 0;
+		uint8_t coding = 0;
+		uint8_t gi = 0;
+
 		status = HAL_MON_MACTX_HT_SIG;
+		mcs = HAL_TX_DESC_GET_64(tx_tlv, HT_SIG_INFO, MCS);
+		bw = HAL_TX_DESC_GET_64(tx_tlv, HT_SIG_INFO, CBW);
+		is_stbc = HAL_TX_DESC_GET_64(tx_tlv, HT_SIG_INFO, STBC);
+		coding = HAL_TX_DESC_GET_64(tx_tlv, HT_SIG_INFO, FEC_CODING);
+		gi = HAL_TX_DESC_GET_64(tx_tlv, HT_SIG_INFO, SHORT_GI);
+
+		TXMON_HAL_STATUS(ppdu_info, ldpc) =
+				(coding == HAL_SU_MU_CODING_LDPC) ? 1 : 0;
+		TXMON_HAL_STATUS(ppdu_info, ht_mcs) = mcs;
+		TXMON_HAL_STATUS(ppdu_info, bw) = bw;
+		TXMON_HAL_STATUS(ppdu_info, sgi) = gi;
+		TXMON_HAL_STATUS(ppdu_info, is_stbc) = is_stbc;
+		TXMON_HAL_STATUS(ppdu_info, reception_type) = HAL_RX_TYPE_SU;
+
 		SHOW_DEFINED(WIFIMACTX_HT_SIG_E);
 		break;
 	}
 	case WIFIMACTX_VHT_SIG_A_E:
 	{
+		uint8_t bandwidth = 0;
+		uint8_t is_stbc = 0;
+		uint8_t group_id = 0;
+		uint32_t nss_comb = 0;
+		uint8_t nss_su = 0;
+		uint8_t nss_mu[4] = {0};
+		uint8_t sgi = 0;
+		uint8_t coding = 0;
+		uint8_t mcs = 0;
+		uint8_t beamformed = 0;
+		uint8_t partial_aid = 0;
+
 		status = HAL_MON_MACTX_VHT_SIG_A;
+		bandwidth = HAL_TX_DESC_GET_64(tx_tlv,
+					       MACTX_VHT_SIG_A_MACTX_VHT_SIG_A_INFO_DETAILS,
+					       BANDWIDTH);
+		is_stbc = HAL_TX_DESC_GET_64(tx_tlv,
+					     MACTX_VHT_SIG_A_MACTX_VHT_SIG_A_INFO_DETAILS,
+					     STBC);
+		group_id = HAL_TX_DESC_GET_64(tx_tlv,
+					      MACTX_VHT_SIG_A_MACTX_VHT_SIG_A_INFO_DETAILS,
+					      GROUP_ID);
+		/* nss_comb is su nss, MU nss and partial AID */
+		nss_comb = HAL_TX_DESC_GET_64(tx_tlv,
+					      MACTX_VHT_SIG_A_MACTX_VHT_SIG_A_INFO_DETAILS,
+					      N_STS);
+		/* if it is SU */
+		nss_su = nss_comb & 0x7;
+		/* partial aid - applicable only for SU */
+		partial_aid = (nss_comb >> 3) & 0x1F;
+		/* if it is MU */
+		nss_mu[0] = nss_comb & 0x7;
+		nss_mu[1] = (nss_comb >> 3) & 0x7;
+		nss_mu[2] = (nss_comb >> 6) & 0x7;
+		nss_mu[3] = (nss_comb >> 9) & 0x7;
+
+		sgi = HAL_TX_DESC_GET_64(tx_tlv,
+					 MACTX_VHT_SIG_A_MACTX_VHT_SIG_A_INFO_DETAILS,
+					 GI_SETTING);
+		coding = HAL_TX_DESC_GET_64(tx_tlv,
+					    MACTX_VHT_SIG_A_MACTX_VHT_SIG_A_INFO_DETAILS,
+					    SU_MU_CODING);
+		mcs = HAL_TX_DESC_GET_64(tx_tlv,
+					 MACTX_VHT_SIG_A_MACTX_VHT_SIG_A_INFO_DETAILS,
+					 MCS);
+		beamformed = HAL_TX_DESC_GET_64(tx_tlv,
+						MACTX_VHT_SIG_A_MACTX_VHT_SIG_A_INFO_DETAILS,
+						BEAMFORMED);
+
+		TXMON_HAL_STATUS(ppdu_info, ldpc) =
+			(coding == HAL_SU_MU_CODING_LDPC) ? 1 : 0;
+		TXMON_STATUS_INFO(tx_status_info, sw_frame_group_id) = group_id;
+
+		TXMON_HAL_STATUS(ppdu_info, sgi) = sgi;
+		TXMON_HAL_STATUS(ppdu_info, is_stbc) = is_stbc;
+		TXMON_HAL_STATUS(ppdu_info, bw) = bandwidth;
+		TXMON_HAL_STATUS(ppdu_info, beamformed) = beamformed;
+
+		if (group_id == 0 || group_id == 63) {
+			TXMON_HAL_STATUS(ppdu_info, reception_type) =
+						HAL_RX_TYPE_SU;
+			TXMON_HAL_STATUS(ppdu_info, mcs) = mcs;
+			TXMON_HAL_STATUS(ppdu_info, nss) =
+						nss_su & VHT_SIG_SU_NSS_MASK;
+		} else {
+			TXMON_HAL_STATUS(ppdu_info, reception_type) =
+						HAL_RX_TYPE_MU_MIMO;
+			TXMON_HAL_USER(ppdu_info, user_id, mcs) = mcs;
+			TXMON_HAL_USER(ppdu_info, user_id, nss) =
+						nss_su & VHT_SIG_SU_NSS_MASK;
+		}
+
+		/* TODO: loop over multiple user */
+		TXMON_HAL_USER(ppdu_info, user_id,
+			       vht_flag_values2) = bandwidth;
+		TXMON_HAL_USER(ppdu_info, user_id,
+			       vht_flag_values3[0]) = (mcs << 4) | nss_su;
+		TXMON_HAL_USER(ppdu_info, user_id,
+			       vht_flag_values3[1]) = (mcs << 4) | nss_mu[1];
+		TXMON_HAL_USER(ppdu_info, user_id,
+			       vht_flag_values3[2]) = (mcs << 4) | nss_mu[2];
+		TXMON_HAL_USER(ppdu_info, user_id,
+			       vht_flag_values3[3]) = (mcs << 4) | nss_mu[3];
+		TXMON_HAL_USER(ppdu_info, user_id,
+			       vht_flag_values4) = coding;
+		TXMON_HAL_USER(ppdu_info, user_id,
+			       vht_flag_values5) = group_id;
+		TXMON_HAL_USER(ppdu_info, user_id,
+			       vht_flag_values6) = partial_aid;
 		SHOW_DEFINED(WIFIMACTX_VHT_SIG_A_E);
 		break;
 	}
@@ -1404,7 +2254,76 @@ hal_txmon_status_parse_tlv_generic_be(void *data_ppdu_info,
 	}
 	case WIFIMACTX_USER_DESC_PER_USER_E:
 	{
+		uint32_t psdu_length = 0;
+		uint8_t ru_start_index = 0;
+		uint8_t ru_size = 0;
+		uint8_t nss = 0;
+		uint8_t mcs = 0;
+		uint8_t dcm = 0;
+		uint8_t fec_type = 0;
+		uint8_t is_ldpc_extra_symb = 0;
+		uint32_t he_data1 = 0;
+		uint32_t he_data2 = 0;
+		uint32_t he_data3 = 0;
+		uint32_t he_data4 = 0;
+		uint32_t he_data5 = 0;
+		uint32_t he_data6 = 0;
+
 		status = HAL_MON_MACTX_USER_DESC_PER_USER;
+
+		TXMON_HAL(ppdu_info, cur_usr_idx) = user_id;
+
+		psdu_length = HAL_TX_DESC_GET_64(tx_tlv,
+						 MACTX_USER_DESC_PER_USER,
+						 PSDU_LENGTH);
+		ru_start_index = HAL_TX_DESC_GET_64(tx_tlv,
+						    MACTX_USER_DESC_PER_USER,
+						    RU_START_INDEX);
+		ru_size = HAL_TX_DESC_GET_64(tx_tlv, MACTX_USER_DESC_PER_USER,
+					     RU_SIZE);
+		nss = HAL_TX_DESC_GET_64(tx_tlv, MACTX_USER_DESC_PER_USER, NSS);
+		mcs = HAL_TX_DESC_GET_64(tx_tlv, MACTX_USER_DESC_PER_USER, MCS);
+		dcm = HAL_TX_DESC_GET_64(tx_tlv, MACTX_USER_DESC_PER_USER, DCM);
+		fec_type = HAL_TX_DESC_GET_64(tx_tlv, MACTX_USER_DESC_PER_USER,
+					      FEC_TYPE);
+		is_ldpc_extra_symb =
+			HAL_TX_DESC_GET_64(tx_tlv, MACTX_USER_DESC_PER_USER,
+					   LDPC_EXTRA_SYMBOL);
+
+		if (!TXMON_HAL_STATUS(ppdu_info, he_flags))
+			break;
+
+		/* update */
+		/* MCS */
+		he_data1 |= QDF_MON_STATUS_HE_MCS_KNOWN;
+		he_data3 |= (mcs << QDF_MON_STATUS_TRANSMIT_MCS_SHIFT);
+		/* DCM */
+		he_data1 |= QDF_MON_STATUS_HE_DCM_KNOWN;
+		he_data3 |= (dcm << QDF_MON_STATUS_DCM_SHIFT);
+		/* LDPC EXTRA SYMB */
+		he_data1 |= QDF_MON_STATUS_HE_LDPC_EXTRA_SYMBOL_KNOWN;
+		he_data3 |= (is_ldpc_extra_symb <<
+			     QDF_MON_STATUS_LDPC_EXTRA_SYMBOL_SHIFT);
+		/* RU offset and RU */
+		he_data1 |= QDF_MON_STATUS_HE_DATA_BW_RU_KNOWN;
+		he_data2 |= QDF_MON_STATUS_RU_ALLOCATION_OFFSET_KNOWN;
+		he_data2 |= (ru_start_index <<
+			     QDF_MON_STATUS_RU_ALLOCATION_SHIFT);
+
+		/* Data BW and RU allocation */
+		he_data1 |= QDF_MON_STATUS_HE_DATA_BW_RU_KNOWN;
+		he_data5 |= ru_size << 2;
+
+		TXMON_HAL_USER(ppdu_info, user_id, mcs) = mcs;
+
+		/* update stack variable to ppdu_info */
+		TXMON_HAL_USER(ppdu_info, user_id, he_data1) |= he_data1;
+		TXMON_HAL_USER(ppdu_info, user_id, he_data2) |= he_data2;
+		TXMON_HAL_USER(ppdu_info, user_id, he_data3) |= he_data3;
+		TXMON_HAL_USER(ppdu_info, user_id, he_data4) |= he_data4;
+		TXMON_HAL_USER(ppdu_info, user_id, he_data5) |= he_data5;
+		TXMON_HAL_USER(ppdu_info, user_id, he_data6) |= he_data6;
+
 		SHOW_DEFINED(WIFIMACTX_USER_DESC_PER_USER_E);
 		break;
 	}
@@ -1415,7 +2334,162 @@ hal_txmon_status_parse_tlv_generic_be(void *data_ppdu_info,
 	}
 	case WIFIMACTX_PHY_DESC_E:
 	{
+		uint32_t bf_type = 0;
+		/* pkt_type - preamble type */
+		uint32_t pkt_type = 0;
+		uint8_t bandwidth = 0;
+		uint8_t mcs = 0;
+		uint8_t is_stbc = 0;
+		uint8_t nss = 0;
+		uint8_t is_triggered = 0;
+		uint8_t gi = 0;
+		uint8_t he_ppdu_subtype = 0;
+		uint32_t ltf_size = 0;
+		uint32_t ru_start = 0;
+		uint32_t he_data1 = 0;
+		uint32_t he_data2 = 0;
+		uint32_t he_data3 = 0;
+		uint32_t he_data4 = 0;
+		uint32_t he_data5 = 0;
+		uint32_t he_data6 = 0;
+		uint16_t he_mu_flag_1 = 0;
+		uint16_t he_mu_flag_2 = 0;
+		uint8_t i = 0;
+
 		status = HAL_MON_MACTX_PHY_DESC;
+
+		bf_type = HAL_TX_DESC_GET_64(tx_tlv, MACTX_PHY_DESC, BF_TYPE);
+		pkt_type = HAL_TX_DESC_GET_64(tx_tlv, MACTX_PHY_DESC, PKT_TYPE);
+
+		mcs = HAL_TX_DESC_GET_64(tx_tlv, MACTX_PHY_DESC, MCS);
+		is_stbc = HAL_TX_DESC_GET_64(tx_tlv, MACTX_PHY_DESC, STBC);
+		is_triggered = HAL_TX_DESC_GET_64(tx_tlv, MACTX_PHY_DESC,
+						  TRIGGERED);
+		if (!is_triggered) {
+			nss = HAL_TX_DESC_GET_64(tx_tlv, MACTX_PHY_DESC,
+						 HEAVY_CLIP_NSS);
+			bandwidth = HAL_TX_DESC_GET_64(tx_tlv, MACTX_PHY_DESC,
+						       BANDWIDTH);
+		} else {
+			nss = HAL_TX_DESC_GET_64(tx_tlv, MACTX_PHY_DESC, NSS);
+			/*
+			 * is_triggered, bw is minimum of AP pkt bw
+			 * or STA bw
+			 */
+			bandwidth = HAL_TX_DESC_GET_64(tx_tlv, MACTX_PHY_DESC,
+						       AP_PKT_BW);
+			if (pkt_type == TXMON_PKT_TYPE_11AX ||
+			    pkt_type == TXMON_PKT_TYPE_11BE)
+				ru_start =
+					HAL_TX_DESC_GET_64(tx_tlv,
+							   MACTX_PHY_DESC,
+							   RU_SIZE_UPDATED_V2);
+		}
+
+		gi = HAL_TX_DESC_GET_64(tx_tlv, MACTX_PHY_DESC,
+					CP_SETTING);
+		ltf_size = HAL_TX_DESC_GET_64(tx_tlv, MACTX_PHY_DESC, LTF_SIZE);
+		he_ppdu_subtype = HAL_TX_DESC_GET_64(tx_tlv, MACTX_PHY_DESC,
+						     HE_PPDU_SUBTYPE);
+
+		TXMON_HAL_STATUS(ppdu_info, beamformed) = bf_type;
+		TXMON_HAL_STATUS(ppdu_info, preamble_type) = pkt_type;
+		TXMON_HAL_STATUS(ppdu_info, mcs) = mcs;
+		TXMON_HAL_STATUS(ppdu_info, ltf_size) = ltf_size;
+		TXMON_HAL_STATUS(ppdu_info, nss) = nss;
+		TXMON_HAL_STATUS(ppdu_info, is_stbc) = is_stbc;
+		TXMON_HAL_STATUS(ppdu_info, bw) = bandwidth;
+
+		switch (ppdu_info->rx_status.preamble_type) {
+		case TXMON_PKT_TYPE_11N_MM:
+			TXMON_HAL_STATUS(ppdu_info, ht_flags) = 1;
+			TXMON_HAL_STATUS(ppdu_info,
+					 rtap_flags) |= HT_SGI_PRESENT;
+			break;
+		case TXMON_PKT_TYPE_11AC:
+			TXMON_HAL_STATUS(ppdu_info, vht_flags) = 1;
+			break;
+		case TXMON_PKT_TYPE_11AX:
+			TXMON_HAL_STATUS(ppdu_info, he_flags) = 1;
+			break;
+		default:
+			break;
+		}
+
+		if (!TXMON_HAL_STATUS(ppdu_info, he_flags))
+			break;
+
+		/* update he flags */
+		/* PPDU FORMAT */
+		switch (he_ppdu_subtype) {
+		case TXMON_HE_SUBTYPE_SU:
+			TXMON_HAL_STATUS(ppdu_info, he_data1) |=
+					QDF_MON_STATUS_HE_SU_FORMAT_TYPE;
+			break;
+		case TXMON_HE_SUBTYPE_TRIG:
+			TXMON_HAL_STATUS(ppdu_info, he_data1) |=
+					QDF_MON_STATUS_HE_TRIG_FORMAT_TYPE;
+			break;
+		case TXMON_HE_SUBTYPE_MU:
+			TXMON_HAL_STATUS(ppdu_info, he_data1) |=
+					QDF_MON_STATUS_HE_MU_FORMAT_TYPE;
+			break;
+		case TXMON_HE_SUBTYPE_EXT_SU:
+			TXMON_HAL_STATUS(ppdu_info, he_data1) |=
+					QDF_MON_STATUS_HE_EXT_SU_FORMAT_TYPE;
+			break;
+		};
+
+		/* BEAM CHANGE */
+		he_data1 |= QDF_MON_STATUS_HE_BEAM_CHANGE_KNOWN;
+		if (ppdu_info->rx_status.beamformed) {
+			he_data1 |= QDF_MON_STATUS_TXBF_KNOWN;
+			he_data5 |= (1 << QDF_MON_STATUS_TXBF_SHIFT);
+			he_data3 |= (1 << QDF_MON_STATUS_BEAM_CHANGE_SHIFT);
+		}
+
+		/* UL/DL known */
+		he_data1 |= QDF_MON_STATUS_HE_DL_UL_KNOWN;
+		he_data3 |= (1 << QDF_MON_STATUS_DL_UL_SHIFT);
+
+		/* MCS */
+		he_data1 |= QDF_MON_STATUS_HE_MCS_KNOWN;
+		he_data3 |= (mcs << QDF_MON_STATUS_TRANSMIT_MCS_SHIFT);
+
+		/* STBC */
+		he_data1 |= QDF_MON_STATUS_HE_STBC_KNOWN;
+		he_data3 |= (is_stbc << QDF_MON_STATUS_STBC_SHIFT);
+
+		/* GI */
+		he_data2 |= QDF_MON_STATUS_HE_GI_KNOWN;
+		he_data5 |= (gi << QDF_MON_STATUS_GI_SHIFT);
+
+		/* NSS */
+		he_data6 |= (nss << QDF_MON_STATUS_HE_DATA_6_NSS_SHIFT);
+
+		/* Data BW and RU allocation */
+		he_data1 |= QDF_MON_STATUS_HE_DATA_BW_RU_KNOWN;
+		he_data5 |= bandwidth;
+
+		/* update stack variable to ppdu_info */
+		TXMON_HAL_STATUS(ppdu_info, he_data1) |= he_data1;
+		TXMON_HAL_STATUS(ppdu_info, he_data2) |= he_data2;
+		TXMON_HAL_STATUS(ppdu_info, he_data3) |= he_data3;
+		TXMON_HAL_STATUS(ppdu_info, he_data4) |= he_data4;
+		TXMON_HAL_STATUS(ppdu_info, he_data5) |= he_data5;
+		TXMON_HAL_STATUS(ppdu_info, he_data6) |= he_data6;
+
+		for (i = 0; i < TXMON_HAL(ppdu_info, num_users); i++) {
+			TXMON_HAL_USER(ppdu_info, i, he_data1) |= he_data1;
+			TXMON_HAL_USER(ppdu_info, i, he_data2) |= he_data2;
+			TXMON_HAL_USER(ppdu_info, i, he_data3) |= he_data3;
+			TXMON_HAL_USER(ppdu_info, i, he_data4) |= he_data4;
+			TXMON_HAL_USER(ppdu_info, i, he_data5) |= he_data5;
+			TXMON_HAL_USER(ppdu_info, i, he_data6) |= he_data6;
+			TXMON_HAL_USER(ppdu_info, i, he_flags1) = he_mu_flag_1;
+			TXMON_HAL_USER(ppdu_info, i, he_flags2) = he_mu_flag_2;
+		}
+
 		SHOW_DEFINED(WIFIMACTX_PHY_DESC_E);
 		break;
 	}

@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2012-2015, 2020-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -479,6 +480,10 @@ static struct mlme_cm_ops cm_ops = {
 	.mlme_cm_cckm_preauth_cmpl_cb = osif_cm_cckm_preauth_cmpl_cb,
 #endif
 #endif
+#ifdef WLAN_VENDOR_HANDOFF_CONTROL
+	.mlme_cm_get_vendor_handoff_params_cb =
+					osif_cm_vendor_handoff_params_cb,
+#endif
 };
 
 /**
@@ -547,6 +552,21 @@ QDF_STATUS osif_cm_connect_comp_ind(struct wlan_objmgr_vdev *vdev,
 
 	return ret;
 }
+
+#ifdef WLAN_VENDOR_HANDOFF_CONTROL
+QDF_STATUS osif_cm_vendor_handoff_params_cb(struct wlan_objmgr_psoc *psoc,
+					    void *vendor_handoff_context)
+{
+	osif_cm_get_vendor_handoff_params_cb cb = NULL;
+
+	if (osif_cm_legacy_ops)
+		cb = osif_cm_legacy_ops->vendor_handoff_params_cb;
+	if (cb)
+		return cb(psoc, vendor_handoff_context);
+
+	return QDF_STATUS_E_FAILURE;
+}
+#endif
 
 QDF_STATUS osif_cm_disconnect_comp_ind(struct wlan_objmgr_vdev *vdev,
 				       struct wlan_cm_discon_rsp *rsp,

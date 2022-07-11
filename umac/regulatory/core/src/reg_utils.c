@@ -986,30 +986,6 @@ enum country_src reg_get_cc_and_src(struct wlan_objmgr_psoc *psoc,
 	return psoc_priv_obj->cc_src;
 }
 
-QDF_STATUS reg_get_regd_rules(struct wlan_objmgr_pdev *pdev,
-			      struct reg_rule_info *reg_rules)
-{
-	struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj;
-
-	if (!pdev) {
-		reg_err("pdev is NULL");
-		return QDF_STATUS_E_FAILURE;
-	}
-
-	pdev_priv_obj = reg_get_pdev_obj(pdev);
-	if (!pdev_priv_obj) {
-		reg_err("pdev priv obj is NULL");
-		return QDF_STATUS_E_FAILURE;
-	}
-
-	qdf_spin_lock_bh(&pdev_priv_obj->reg_rules_lock);
-	qdf_mem_copy(reg_rules, &pdev_priv_obj->reg_rules,
-		     sizeof(struct reg_rule_info));
-	qdf_spin_unlock_bh(&pdev_priv_obj->reg_rules_lock);
-
-	return QDF_STATUS_SUCCESS;
-}
-
 void reg_reset_ctry_pending_hints(struct wlan_regulatory_psoc_priv_obj
 				  *soc_reg)
 {

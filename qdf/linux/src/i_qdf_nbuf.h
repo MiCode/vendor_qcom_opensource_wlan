@@ -791,7 +791,8 @@ __qdf_nbuf_t
 __qdf_nbuf_alloc(__qdf_device_t osdev, size_t size, int reserve, int align,
 		 int prio, const char *func, uint32_t line);
 
-__qdf_nbuf_t __qdf_nbuf_alloc_simple(__qdf_device_t osdev, size_t size);
+__qdf_nbuf_t __qdf_nbuf_alloc_simple(__qdf_device_t osdev, size_t size,
+				     const char *func, uint32_t line);
 
 /**
  * __qdf_nbuf_alloc_no_recycler() - Allocates skb
@@ -2250,6 +2251,19 @@ static inline uint16_t
 __qdf_nbuf_get_queue_mapping(struct sk_buff *skb)
 {
 	return skb->queue_mapping;
+}
+
+/**
+ * __qdf_nbuf_set_queue_mapping() - get the queue mapping set by linux kernel
+ *
+ * @buf: sk buff
+ * @val: queue_id
+ *
+ */
+static inline void
+__qdf_nbuf_set_queue_mapping(struct sk_buff *skb, uint16_t val)
+{
+	skb_set_queue_mapping(skb, val);
 }
 
 /**

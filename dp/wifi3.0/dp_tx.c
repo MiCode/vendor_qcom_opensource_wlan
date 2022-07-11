@@ -1548,10 +1548,8 @@ dp_tx_ring_access_end_wrapper(struct dp_soc *soc,
 		return;
 	}
 
-	ret = hif_pm_runtime_get(soc->hif_handle,
-				 RTPM_ID_DW_TX_HW_ENQUEUE, true);
-	switch (ret) {
-	case 0:
+	ret = hif_rtpm_get(HIF_RTPM_GET_ASYNC, HIF_RTPM_ID_DP);
+	if (QDF_IS_STATUS_SUCCESS(ret)) {
 		if (hif_system_pm_state_check(soc->hif_handle)) {
 			dp_tx_hal_ring_access_end_reap(soc, hal_ring_hdl);
 			hal_srng_set_event(hal_ring_hdl, HAL_SRNG_FLUSH_EVENT);
@@ -1559,31 +1557,8 @@ dp_tx_ring_access_end_wrapper(struct dp_soc *soc,
 		} else {
 			dp_tx_ring_access_end(soc, hal_ring_hdl, coalesce);
 		}
-		hif_pm_runtime_put(soc->hif_handle,
-				   RTPM_ID_DW_TX_HW_ENQUEUE);
-		break;
-	/*
-	 * If hif_pm_runtime_get returns -EBUSY or -EINPROGRESS,
-	 * take the dp runtime refcount using dp_runtime_get,
-	 * check link state,if up, write TX ring HP, else just set flush event.
-	 * In dp_runtime_resume, wait until dp runtime refcount becomes
-	 * zero or time out, then flush pending tx.
-	 */
-	case -EBUSY:
-	case -EINPROGRESS:
-		dp_runtime_get(soc);
-		if (hif_pm_get_link_state(soc->hif_handle) ==
-		    HIF_PM_LINK_STATE_UP) {
-			dp_tx_ring_access_end(soc, hal_ring_hdl, coalesce);
-		} else {
-			dp_tx_hal_ring_access_end_reap(soc, hal_ring_hdl);
-			hal_srng_set_event(hal_ring_hdl, HAL_SRNG_FLUSH_EVENT);
-			qdf_atomic_inc(&soc->tx_pending_rtpm);
-			hal_srng_inc_flush_cnt(hal_ring_hdl);
-		}
-		dp_runtime_put(soc);
-		break;
-	default:
+		hif_rtpm_put(HIF_RTPM_PUT_ASYNC, HIF_RTPM_ID_DP);
+	} else {
 		dp_runtime_get(soc);
 		dp_tx_hal_ring_access_end_reap(soc, hal_ring_hdl);
 		hal_srng_set_event(hal_ring_hdl, HAL_SRNG_FLUSH_EVENT);
@@ -3352,15 +3327,12 @@ qdf_nbuf_t dp_tx_send(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
 	if (qdf_unlikely(!vdev))
 		return nbuf;
 
-	dp_verbose_debug("skb "QDF_MAC_ADDR_FMT,
-			 QDF_MAC_ADDR_REF(nbuf->data));
-
 	/*
 	 * Set Default Host TID value to invalid TID
 	 * (TID override disabled)
 	 */
 	msdu_info.tid = HTT_TX_EXT_TID_INVALID;
-	DP_STATS_INC_PKT(vdev, tx_i.rcvd, 1, qdf_nbuf_len(nbuf));
+	DP_STATS_INC_PKT(vdev, tx_i.rcvd, 1, qdf_nbuf_headlen(nbuf));
 
 	if (qdf_unlikely(vdev->mesh_vdev)) {
 		qdf_nbuf_t nbuf_mesh = dp_tx_extract_mesh_meta_data(vdev, nbuf,
@@ -4062,41 +4034,20 @@ static inline void
 dp_tx_update_peer_extd_stats(struct hal_tx_completion_status *ts,
 			     struct dp_txrx_peer *txrx_peer)
 {
-	uint8_t mcs, pkt_type, retry_threshold;
+	uint8_t mcs, pkt_type, dst_mcs_idx;
+	uint8_t retry_threshold = txrx_peer->mpdu_retry_threshold;
 
 	mcs = ts->mcs;
 	pkt_type = ts->pkt_type;
+	/* do HW to SW pkt type conversion */
+	pkt_type = (pkt_type >= HAL_DOT11_MAX ? DOT11_MAX :
+		    hal_2_dp_pkt_type_map[pkt_type]);
 
-	DP_PEER_EXTD_STATS_INCC(txrx_peer,
-				tx.pkt_type[pkt_type].mcs_count[MAX_MCS - 1], 1,
-				((mcs >= MAX_MCS_11A) && (pkt_type == DOT11_A)));
-	DP_PEER_EXTD_STATS_INCC(txrx_peer,
-				tx.pkt_type[pkt_type].mcs_count[mcs], 1,
-				((mcs < (MAX_MCS_11A)) && (pkt_type == DOT11_A)));
-	DP_PEER_EXTD_STATS_INCC(txrx_peer,
-				tx.pkt_type[pkt_type].mcs_count[MAX_MCS - 1], 1,
-				((mcs >= MAX_MCS_11B) && (pkt_type == DOT11_B)));
-	DP_PEER_EXTD_STATS_INCC(txrx_peer,
-				tx.pkt_type[pkt_type].mcs_count[mcs], 1,
-				((mcs < MAX_MCS_11B) && (pkt_type == DOT11_B)));
-	DP_PEER_EXTD_STATS_INCC(txrx_peer,
-				tx.pkt_type[pkt_type].mcs_count[MAX_MCS - 1], 1,
-				((mcs >= MAX_MCS_11A) && (pkt_type == DOT11_N)));
-	DP_PEER_EXTD_STATS_INCC(txrx_peer,
-				tx.pkt_type[pkt_type].mcs_count[mcs], 1,
-				((mcs < MAX_MCS_11A) && (pkt_type == DOT11_N)));
-	DP_PEER_EXTD_STATS_INCC(txrx_peer,
-				tx.pkt_type[pkt_type].mcs_count[MAX_MCS - 1], 1,
-				((mcs >= MAX_MCS_11AC) && (pkt_type == DOT11_AC)));
-	DP_PEER_EXTD_STATS_INCC(txrx_peer,
-				tx.pkt_type[pkt_type].mcs_count[mcs], 1,
-				((mcs < MAX_MCS_11AC) && (pkt_type == DOT11_AC)));
-	DP_PEER_EXTD_STATS_INCC(txrx_peer,
-				tx.pkt_type[pkt_type].mcs_count[MAX_MCS - 1], 1,
-				((mcs >= (MAX_MCS - 1)) && (pkt_type == DOT11_AX)));
-	DP_PEER_EXTD_STATS_INCC(txrx_peer,
-				tx.pkt_type[pkt_type].mcs_count[mcs], 1,
-				((mcs < (MAX_MCS - 1)) && (pkt_type == DOT11_AX)));
+	dst_mcs_idx = dp_get_mcs_array_index_by_pkt_type_mcs(pkt_type, mcs);
+	if (MCS_INVALID_ARRAY_INDEX != dst_mcs_idx)
+		DP_PEER_EXTD_STATS_INC(txrx_peer,
+				       tx.pkt_type[pkt_type].mcs_count[dst_mcs_idx],
+				       1);
 
 	DP_PEER_EXTD_STATS_INC(txrx_peer, tx.sgi_count[ts->sgi], 1);
 	DP_PEER_EXTD_STATS_INC(txrx_peer, tx.bw[ts->bw], 1);
@@ -4109,19 +4060,9 @@ dp_tx_update_peer_extd_stats(struct hal_tx_completion_status *ts,
 	if (ts->first_msdu) {
 		DP_PEER_EXTD_STATS_INCC(txrx_peer, tx.retries_mpdu, 1,
 					ts->transmit_cnt > 1);
-		switch (ts->bw) {
-		case 0: /* 20Mhz */
-		case 1: /* 40Mhz */
-		case 2: /* 80Mhz */
-			retry_threshold = txrx_peer->mpdu_retry_threshold_1;
-			break;
-		default: /* 160Mhz */
-			retry_threshold = txrx_peer->mpdu_retry_threshold_2;
-			break;
-		}
+
 		if (!retry_threshold)
 			return;
-
 		DP_PEER_EXTD_STATS_INCC(txrx_peer, tx.mpdu_success_with_retries,
 					qdf_do_div(ts->transmit_cnt,
 						   retry_threshold),
@@ -4817,6 +4758,7 @@ void dp_tx_comp_process_tx_status(struct dp_soc *soc,
 	dp_tx_update_peer_delay_stats(txrx_peer, tx_desc, ts->tid, ring_id);
 	dp_tx_update_peer_sawf_stats(soc, vdev, txrx_peer, tx_desc,
 				     ts, ts->tid);
+	dp_tx_send_pktlog(soc, vdev->pdev, nbuf, dp_status);
 
 #ifdef QCA_SUPPORT_RDK_STATS
 	if (soc->peerstats_enabled)
@@ -4896,6 +4838,7 @@ void dp_tx_prefetch_next_nbuf_data(struct dp_tx_desc_s *next)
 		/* prefetch skb fields present in different cachelines */
 		qdf_prefetch(&nbuf->len);
 		qdf_prefetch(&nbuf->users);
+		qdf_prefetch(skb_end_pointer(nbuf));
 	}
 }
 #else
@@ -5010,7 +4953,7 @@ dp_tx_comp_process_desc_list(struct dp_soc *soc,
 			dp_tx_desc_history_add(soc, desc->dma_addr, desc->nbuf,
 					       desc->id, DP_TX_COMP_UNMAP);
 			dp_tx_nbuf_unmap(soc, desc);
-			qdf_nbuf_free(desc->nbuf);
+			qdf_nbuf_free_simple(desc->nbuf);
 			dp_tx_desc_free(soc, desc, desc->pool_id);
 			desc = next;
 			continue;

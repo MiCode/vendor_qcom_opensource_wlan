@@ -180,6 +180,12 @@ void hif_target_register_tbl_attach(struct hif_softc *scn, u32 target_type)
 		scn->target_ce_def = KIWI_CE_TARGETdef;
 		hif_info("TARGET_TYPE_KIWI");
 		break;
+
+	case TARGET_TYPE_MANGO:
+		scn->targetdef = KIWI_TARGETdef;
+		scn->target_ce_def = KIWI_CE_TARGETdef;
+		hif_info("TARGET_TYPE_MANGO");
+		break;
 #endif /* KIWI_HEADERS_DEF */
 
 #if defined(QCA6750_HEADERS_DEF)
@@ -315,6 +321,11 @@ void hif_register_tbl_attach(struct hif_softc *scn, u32 hif_type)
 	case HIF_TYPE_KIWI:
 		scn->hostdef = KIWI_HOSTdef;
 		hif_info("HIF_TYPE_KIWI");
+		break;
+
+	case HIF_TYPE_MANGO:
+		scn->hostdef = KIWI_HOSTdef;
+		hif_info("HIF_TYPE_MANGO");
 		break;
 #endif /* KIWI_HEADERS_DEF */
 

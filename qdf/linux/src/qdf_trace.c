@@ -48,8 +48,10 @@ qdf_declare_param(qdf_log_flush_timer_period, uint);
 #include "qdf_mc_timer.h"
 #include <host_diag_core_log.h>
 
-#ifdef WLAN_FEATURE_CONNECTIVITY_LOGGING
+#if defined(WLAN_FEATURE_CONNECTIVITY_LOGGING) || \
+	defined(CONNECTIVITY_DIAG_EVENT)
 #include <wlan_connectivity_logging.h>
+#include "i_host_diag_core_event.h"
 #endif
 
 /* Global qdf print id */
@@ -1725,7 +1727,169 @@ static bool qdf_log_icmp_pkt(uint8_t vdev_id, struct sk_buff *skb,
 	return false;
 }
 
-#ifdef WLAN_FEATURE_CONNECTIVITY_LOGGING
+#ifdef CONNECTIVITY_DIAG_EVENT
+/**
+ * qdf_subtype_to_wlan_main_tag() - Convert qdf subtype to wlan main tag
+ * @subtype: EAPoL key subtype
+ *
+ * Return: Wlan main tag subtype
+ */
+static int qdf_subtype_to_wlan_main_tag(enum qdf_proto_subtype subtype)
+{
+	switch (subtype) {
+	case QDF_PROTO_DHCP_DISCOVER:
+		return WLAN_CONN_DIAG_DHCP_DISC_EVENT;
+	case QDF_PROTO_DHCP_REQUEST:
+		return WLAN_CONN_DIAG_DHCP_REQUEST_EVENT;
+	case QDF_PROTO_DHCP_OFFER:
+		return WLAN_CONN_DIAG_DHCP_OFFER_EVENT;
+	case QDF_PROTO_DHCP_ACK:
+		return WLAN_CONN_DIAG_DHCP_ACK_EVENT;
+	case QDF_PROTO_DHCP_NACK:
+		return WLAN_CONN_DIAG_DHCP_NACK_EVENT;
+	case QDF_PROTO_EAPOL_M1:
+		return WLAN_CONN_DIAG_EAPOL_M1_EVENT;
+	case QDF_PROTO_EAPOL_M2:
+		return WLAN_CONN_DIAG_EAPOL_M2_EVENT;
+	case QDF_PROTO_EAPOL_M3:
+		return WLAN_CONN_DIAG_EAPOL_M3_EVENT;
+	case QDF_PROTO_EAPOL_M4:
+		return WLAN_CONN_DIAG_EAPOL_M4_EVENT;
+	default:
+		return WLAN_CONN_DIAG_MAX;
+	}
+}
+
+/**
+ * qdf_get_wlan_eap_code() - Get EAP code
+ * @data: skb data pointer
+ *
+ * Return: EAP code value
+ */
+static int qdf_get_wlan_eap_code(uint8_t *data)
+{
+	uint8_t code = *(data + EAP_CODE_OFFSET);
+
+	switch (code) {
+	case QDF_EAP_REQUEST:
+		return WLAN_CONN_DIAG_EAP_REQ_EVENT;
+	case QDF_EAP_RESPONSE:
+		return WLAN_CONN_DIAG_EAP_RESP_EVENT;
+	case QDF_EAP_SUCCESS:
+		return WLAN_CONN_DIAG_EAP_SUCC_EVENT;
+	case QDF_EAP_FAILURE:
+		return WLAN_CONN_DIAG_EAP_FAIL_EVENT;
+	default:
+		return WLAN_CONN_DIAG_MAX;
+	}
+}
+
+/**
+ * qdf_eapol_get_key_type() - Get EAPOL key type
+ * @data: skb data pointer
+ * @subtype: EAPoL key subtype
+ *
+ * Return: EAPOL key type
+ */
+static
+uint8_t qdf_eapol_get_key_type(uint8_t *data, enum qdf_proto_subtype subtype)
+{
+	uint16_t key_info = *(uint16_t *)(data + EAPOL_KEY_INFO_OFFSET);
+
+	/* If key type is PTK, key type will be set in EAPOL Key info */
+	if (key_info & EAPOL_KEY_TYPE_MASK)
+		return qdf_subtype_to_wlan_main_tag(subtype);
+	else if (key_info & EAPOL_KEY_ENCRYPTED_MASK)
+		return WLAN_CONN_DIAG_GTK_M1_EVENT;
+	else
+		return WLAN_CONN_DIAG_GTK_M2_EVENT;
+}
+
+/**
+ * qdf_skip_wlan_connectivity_log() - Check if connectivity log need to skip
+ * @type: Protocol type
+ * @subtype: Protocol subtype
+ * @dir: Rx or Tx
+ *
+ * Return: true or false
+ */
+static inline
+bool qdf_skip_wlan_connectivity_log(enum qdf_proto_type type,
+				    enum qdf_proto_subtype subtype,
+				    enum qdf_proto_dir dir)
+{
+	if (dir == QDF_RX && type == QDF_PROTO_TYPE_DHCP &&
+	    (subtype == QDF_PROTO_DHCP_DISCOVER ||
+	     subtype == QDF_PROTO_DHCP_REQUEST))
+		return true;
+	return false;
+}
+
+/**
+ * qdf_fill_wlan_connectivity_log() - Fill and queue protocol packet to logging
+ * the logging queue
+ * @type: Protocol type
+ * @subtype: Protocol subtype
+ * @dir: Rx or Tx
+ * @qdf_tx_status: Tx completion status
+ * @vdev_id: DP vdev ID
+ * @data: skb data pointer
+ *
+ * Return: None
+ */
+static
+void qdf_fill_wlan_connectivity_log(enum qdf_proto_type type,
+				    enum qdf_proto_subtype subtype,
+				    enum qdf_proto_dir dir,
+				    enum qdf_dp_tx_rx_status qdf_tx_status,
+				    uint8_t vdev_id, uint8_t *data)
+{
+	uint8_t pkt_type;
+
+	WLAN_HOST_DIAG_EVENT_DEF(wlan_diag_event, struct wlan_diag_packet_info);
+
+	if (qdf_skip_wlan_connectivity_log(type, subtype, dir))
+		return;
+
+	qdf_mem_zero(&wlan_diag_event, sizeof(wlan_diag_event));
+
+	wlan_diag_event.diag_cmn.timestamp_us =
+					qdf_get_time_of_the_day_ms() * 1000;
+	wlan_diag_event.diag_cmn.ktime_us = qdf_ktime_to_us(qdf_ktime_get());
+	wlan_diag_event.diag_cmn.vdev_id = vdev_id;
+
+	wlan_diag_event.version = DIAG_MGMT_VERSION;
+
+	if (type == QDF_PROTO_TYPE_DHCP) {
+		wlan_diag_event.subtype =
+					qdf_subtype_to_wlan_main_tag(subtype);
+	} else if (type == QDF_PROTO_TYPE_EAPOL) {
+		pkt_type = *(data + EAPOL_PACKET_TYPE_OFFSET);
+		if (pkt_type == EAPOL_PACKET_TYPE_EAP) {
+			wlan_diag_event.subtype =
+						qdf_get_wlan_eap_code(data);
+			wlan_diag_event.eap_type =
+						*(data + EAP_TYPE_OFFSET);
+			wlan_diag_event.eap_len =
+			   qdf_ntohs(*(uint16_t *)(data + EAP_LENGTH_OFFSET));
+		} else if (pkt_type == EAPOL_PACKET_TYPE_KEY) {
+			wlan_diag_event.subtype =
+					qdf_eapol_get_key_type(data, subtype);
+		} else {
+			return;
+		}
+	} else {
+		return;
+	}
+
+	/*Tx completion status needs to be logged*/
+	if (dir == QDF_TX)
+		wlan_diag_event.tx_status = qdf_tx_status;
+
+	WLAN_HOST_DIAG_EVENT_REPORT(&wlan_diag_event, EVENT_WLAN_CONN_DP);
+}
+
+#elif defined(WLAN_FEATURE_CONNECTIVITY_LOGGING)
 /**
  * qdf_subtype_to_wlan_main_tag() - Convert qdf subtype to wlan main tag
  * @subtype: EAPoL key subtype
@@ -1771,7 +1935,7 @@ static int qdf_get_wlan_eap_code(uint8_t *data)
 	switch (code) {
 	case QDF_EAP_REQUEST:
 		return WLAN_EAP_REQUEST;
-	case QDF_EAP_RESPONE:
+	case QDF_EAP_RESPONSE:
 		return WLAN_EAP_RESPONSE;
 	case QDF_EAP_SUCCESS:
 		return WLAN_EAP_SUCCESS;
@@ -1823,18 +1987,6 @@ bool qdf_skip_wlan_connectivity_log(enum qdf_proto_type type,
 	return false;
 }
 
-/**
- * qdf_fill_wlan_connectivity_log() - Fill and queue protocol packet to logging
- * the logging queue
- * @type: Protocol type
- * @subtype: Protocol subtype
- * @dir: Rx or Tx
- * @qdf_tx_status: Tx completion status
- * @vdev_id: DP vdev ID
- * @data: skb data pointer
- *
- * Return: None
- */
 static
 void qdf_fill_wlan_connectivity_log(enum qdf_proto_type type,
 				    enum qdf_proto_subtype subtype,
@@ -1855,7 +2007,7 @@ void qdf_fill_wlan_connectivity_log(enum qdf_proto_type type,
 		log_buf.log_subtype = qdf_subtype_to_wlan_main_tag(subtype);
 	} else if (type == QDF_PROTO_TYPE_EAPOL) {
 		pkt_type = *(data + EAPOL_PACKET_TYPE_OFFSET);
-		if (pkt_type == 0) {
+		if (pkt_type == EAPOL_PACKET_TYPE_EAP) {
 			log_buf.log_subtype = qdf_get_wlan_eap_code(data);
 			log_buf.pkt_info.eap_type = *(data + EAP_TYPE_OFFSET);
 			log_buf.pkt_info.eap_len =

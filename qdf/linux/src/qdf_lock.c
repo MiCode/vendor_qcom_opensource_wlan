@@ -474,214 +474,116 @@ qdf_export_symbol(qdf_pm_system_wakeup);
 
 #ifdef FEATURE_RUNTIME_PM
 /**
- * qdf_runtime_pm_get() - do a get opperation on the device
+ * qdf_to_hif_convert_trpm_id() - Convert QDF Runtime PM ID to HIF RTPM ID
+ * @id: Client id
  *
- * A get opperation will prevent a runtime suspend until a
- * corresponding put is done.  This api should be used when sending
- * data.
- *
- * CONTRARY TO THE REGULAR RUNTIME PM, WHEN THE BUS IS SUSPENDED,
- * THIS API WILL ONLY REQUEST THE RESUME AND NOT TO A GET!!!
- *
- * return: success if the bus is up and a get has been issued
- *   otherwise an error code.
+ * Return: HIF Runtime pm ID of client
  */
-QDF_STATUS qdf_runtime_pm_get(void)
+static uint32_t qdf_to_hif_convert_rtpm_id(uint32_t id)
 {
-	void *ol_sc;
-	int ret;
-
-	ol_sc = cds_get_context(QDF_MODULE_ID_HIF);
-
-	if (!ol_sc) {
-		QDF_ASSERT(0);
-		QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_ERROR,
-			  "%s: HIF context is null!", __func__);
-		return QDF_STATUS_E_INVAL;
+	switch (id) {
+	case QDF_RTPM_ID_RESERVED:
+		return HIF_RTPM_ID_RESERVED;
+	case QDF_RTPM_ID_PM_QOS_NOTIFY:
+		return HIF_RTPM_ID_PM_QOS_NOTIFY;
+	case QDF_RTPM_ID_WIPHY_SUSPEND:
+		return HIF_RTPM_ID_WIPHY_SUSPEND;
+	default:
+		return HIF_RTPM_ID_MAX;
 	}
-
-	ret = hif_pm_runtime_get(ol_sc, RTPM_ID_RESVERD, false);
-
-	if (ret)
-		return QDF_STATUS_E_FAILURE;
-	return QDF_STATUS_SUCCESS;
 }
-qdf_export_symbol(qdf_runtime_pm_get);
 
 /**
- * qdf_runtime_pm_put() - do a put opperation on the device
+ * qdf_to_hif_convert_rtpm_type() - Convert QDF Runtime PM call type to HIF
+ *                                 call type
+ * @type: call type
  *
- * A put opperation will allow a runtime suspend after a corresponding
- * get was done.  This api should be used when sending data.
- *
- * This api will return a failure if the hif module hasn't been
- * initialized
- *
- * return: QDF_STATUS_SUCCESS if the put is performed
+ * Return: HIF runtime PM call type
  */
-QDF_STATUS qdf_runtime_pm_put(void)
+static uint8_t qdf_to_hif_convert_rtpm_type(uint8_t type)
 {
-	void *ol_sc;
-	int ret;
-
-	ol_sc = cds_get_context(QDF_MODULE_ID_HIF);
-
-	if (!ol_sc) {
-		QDF_ASSERT(0);
-		QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_ERROR,
-			  "%s: HIF context is null!", __func__);
-		return QDF_STATUS_E_INVAL;
+	switch (type) {
+	case QDF_RTPM_GET:
+		return HIF_RTPM_GET_ASYNC;
+	case QDF_RTPM_GET_FORCE:
+		return HIF_RTPM_GET_FORCE;
+	case QDF_RTPM_GET_SYNC:
+		return HIF_RTPM_GET_SYNC;
+	case QDF_RTPM_GET_NORESUME:
+		return HIF_RTPM_GET_NORESUME;
+	case QDF_RTPM_PUT:
+		return HIF_RTPM_PUT_ASYNC;
+	case QDF_RTPM_PUT_SYNC_SUSPEND:
+		return HIF_RTPM_PUT_SYNC_SUSPEND;
+	case QDF_RTPM_PUT_NOIDLE:
+		return HIF_RTPM_PUT_NOIDLE;
+	default:
+		return QDF_STATUS_E_NOSUPPORT;
 	}
-
-	ret = hif_pm_runtime_put(ol_sc, RTPM_ID_RESVERD);
-
-	if (ret)
-		return QDF_STATUS_E_FAILURE;
-	return QDF_STATUS_SUCCESS;
 }
-qdf_export_symbol(qdf_runtime_pm_put);
 
-/**
- * qdf_runtime_pm_prevent_suspend() - prevent a runtime bus suspend
- * @lock: an opaque context for tracking
- *
- * The lock can only be acquired once per lock context and is tracked.
- *
- * return: QDF_STATUS_SUCCESS or failure code.
- */
-QDF_STATUS qdf_runtime_pm_prevent_suspend(qdf_runtime_lock_t *lock)
+QDF_STATUS qdf_rtpm_register(uint32_t id, void (*hif_rpm_cbk)(void))
 {
-	void *ol_sc;
-	int ret;
-
-	ol_sc = cds_get_context(QDF_MODULE_ID_HIF);
-
-	if (!ol_sc) {
-		QDF_ASSERT(0);
-		QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_ERROR,
-			  "%s: HIF context is null!", __func__);
-		return QDF_STATUS_E_INVAL;
-	}
-
-	ret = hif_pm_runtime_prevent_suspend(ol_sc, lock->lock);
-
-	if (ret)
-		return QDF_STATUS_E_FAILURE;
-	return QDF_STATUS_SUCCESS;
+	return hif_rtpm_register(qdf_to_hif_convert_rtpm_id(id), hif_rpm_cbk);
 }
-qdf_export_symbol(qdf_runtime_pm_prevent_suspend);
 
-/**
- * qdf_runtime_pm_allow_suspend() - prevent a runtime bus suspend
- * @lock: an opaque context for tracking
- *
- * The lock can only be acquired once per lock context and is tracked.
- *
- * return: QDF_STATUS_SUCCESS or failure code.
- */
-QDF_STATUS qdf_runtime_pm_allow_suspend(qdf_runtime_lock_t *lock)
+qdf_export_symbol(qdf_rtpm_register);
+
+QDF_STATUS qdf_rtpm_deregister(uint32_t id)
 {
-	void *ol_sc;
-	int ret;
-
-	ol_sc = cds_get_context(QDF_MODULE_ID_HIF);
-	if (!ol_sc) {
-		QDF_ASSERT(0);
-		QDF_TRACE(QDF_MODULE_ID_QDF, QDF_TRACE_LEVEL_ERROR,
-		"%s: HIF context is null!", __func__);
-		return QDF_STATUS_E_INVAL;
-	}
-
-	ret = hif_pm_runtime_allow_suspend(ol_sc, lock->lock);
-	if (ret)
-		return QDF_STATUS_E_FAILURE;
-
-	return QDF_STATUS_SUCCESS;
+	return hif_rtpm_deregister(qdf_to_hif_convert_rtpm_id(id));
 }
-qdf_export_symbol(qdf_runtime_pm_allow_suspend);
 
-/**
- * qdf_runtime_lock_init() - initialize runtime lock
- * @name: name of the runtime lock
- *
- * Initialize a runtime pm lock.  This lock can be used
- * to prevent the runtime pm system from putting the bus
- * to sleep.
- *
- * Return: runtime_pm_lock_t
- */
-QDF_STATUS __qdf_runtime_lock_init(qdf_runtime_lock_t *lock, const char *name)
-{
-	int ret = hif_runtime_lock_init(lock, name);
-
-	if (ret)
-		return QDF_STATUS_E_NOMEM;
-
-	return QDF_STATUS_SUCCESS;
-}
-qdf_export_symbol(__qdf_runtime_lock_init);
-
-/**
- * qdf_runtime_lock_deinit() - deinitialize runtime pm lock
- * @lock: the lock to deinitialize
- *
- * Ensures the lock is released. Frees the runtime lock.
- *
- * Return: void
- */
-void qdf_runtime_lock_deinit(qdf_runtime_lock_t *lock)
-{
-	void *hif_ctx = cds_get_context(QDF_MODULE_ID_HIF);
-
-	if (!hif_ctx)
-		return;
-
-	if (!lock)
-		return;
-
-	hif_runtime_lock_deinit(hif_ctx, lock->lock);
-}
-qdf_export_symbol(qdf_runtime_lock_deinit);
-
-#else
-
-QDF_STATUS qdf_runtime_pm_get(void)
-{
-	return QDF_STATUS_SUCCESS;
-}
-qdf_export_symbol(qdf_runtime_pm_get);
-
-QDF_STATUS qdf_runtime_pm_put(void)
-{
-	return QDF_STATUS_SUCCESS;
-}
-qdf_export_symbol(qdf_runtime_pm_put);
-
-QDF_STATUS qdf_runtime_pm_prevent_suspend(qdf_runtime_lock_t *lock)
-{
-	return QDF_STATUS_SUCCESS;
-}
-qdf_export_symbol(qdf_runtime_pm_prevent_suspend);
-
-QDF_STATUS qdf_runtime_pm_allow_suspend(qdf_runtime_lock_t *lock)
-{
-	return QDF_STATUS_SUCCESS;
-}
-qdf_export_symbol(qdf_runtime_pm_allow_suspend);
+qdf_export_symbol(qdf_rtpm_deregister);
 
 QDF_STATUS __qdf_runtime_lock_init(qdf_runtime_lock_t *lock, const char *name)
 {
-	return QDF_STATUS_SUCCESS;
+	return hif_runtime_lock_init(lock, name);
 }
+
 qdf_export_symbol(__qdf_runtime_lock_init);
 
 void qdf_runtime_lock_deinit(qdf_runtime_lock_t *lock)
 {
+	hif_runtime_lock_deinit(lock->lock);
 }
 qdf_export_symbol(qdf_runtime_lock_deinit);
 
-#endif /* FEATURE_RUNTIME_PM */
+QDF_STATUS qdf_rtpm_get(uint8_t type, uint32_t id)
+{
+	return hif_rtpm_get(qdf_to_hif_convert_rtpm_type(type),
+			    qdf_to_hif_convert_rtpm_id(id));
+}
 
+qdf_export_symbol(qdf_rtpm_get);
+
+QDF_STATUS qdf_rtpm_put(uint8_t type, uint32_t id)
+{
+	return hif_rtpm_put(qdf_to_hif_convert_rtpm_type(type),
+			    qdf_to_hif_convert_rtpm_id(id));
+}
+
+qdf_export_symbol(qdf_rtpm_put);
+
+QDF_STATUS qdf_runtime_pm_prevent_suspend(qdf_runtime_lock_t *lock)
+{
+	return hif_pm_runtime_prevent_suspend(lock->lock);
+}
+
+qdf_export_symbol(qdf_runtime_pm_prevent_suspend);
+
+QDF_STATUS qdf_runtime_pm_allow_suspend(qdf_runtime_lock_t *lock)
+{
+	return hif_pm_runtime_allow_suspend(lock->lock);
+}
+
+qdf_export_symbol(qdf_runtime_pm_allow_suspend);
+
+QDF_STATUS qdf_rtpm_sync_resume(void)
+{
+	return hif_rtpm_sync_resume();
+}
+#endif
 /**
  * qdf_spinlock_acquire() - acquires a spin lock
  * @lock: Spin lock to acquire

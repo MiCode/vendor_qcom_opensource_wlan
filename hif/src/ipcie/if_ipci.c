@@ -44,31 +44,15 @@
 
 #include "ipci_api.h"
 
-#ifdef FEATURE_RUNTIME_PM
-inline struct hif_runtime_pm_ctx *hif_ipci_get_rpm_ctx(struct hif_softc *scn)
-{
-	struct hif_ipci_softc *sc = HIF_GET_IPCI_SOFTC(scn);
-
-	return &sc->rpm_ctx;
-}
-
-inline struct device *hif_ipci_get_dev(struct hif_softc *scn)
-{
-	struct hif_ipci_softc *sc = HIF_GET_IPCI_SOFTC(scn);
-
-	return sc->dev;
-}
-#endif
-
 void hif_ipci_enable_power_management(struct hif_softc *hif_sc,
 				      bool is_packet_log_enabled)
 {
-	hif_pm_runtime_start(hif_sc);
+	hif_rtpm_start(hif_sc);
 }
 
 void hif_ipci_disable_power_management(struct hif_softc *hif_ctx)
 {
-	hif_pm_runtime_stop(hif_ctx);
+	hif_rtpm_stop(hif_ctx);
 }
 
 void hif_ipci_display_stats(struct hif_softc *hif_ctx)
@@ -92,7 +76,7 @@ QDF_STATUS hif_ipci_open(struct hif_softc *hif_ctx, enum qdf_bus_type bus_type)
 	struct hif_ipci_softc *sc = HIF_GET_IPCI_SOFTC(hif_ctx);
 
 	hif_ctx->bus_type = bus_type;
-	hif_pm_runtime_open(hif_ctx);
+	hif_rtpm_open(hif_ctx);
 
 	qdf_spinlock_create(&sc->irq_lock);
 
@@ -162,7 +146,7 @@ disable_wlan:
 
 void hif_ipci_close(struct hif_softc *hif_sc)
 {
-	hif_pm_runtime_close(hif_sc);
+	hif_rtpm_close(hif_sc);
 	hif_ce_close(hif_sc);
 }
 
@@ -369,11 +353,11 @@ int hif_ipci_bus_suspend_noirq(struct hif_softc *scn)
 	 * have scheduled CE2 tasklet, so suspend activity can
 	 * be aborted.
 	 * Similar scenario for runtime suspend case, would be
-	 * handled by hif_pm_runtime_check_and_request_resume
+	 * handled by hif_rtpm_check_and_request_resume
 	 * in hif_ce_interrupt_handler.
 	 *
 	 */
-	if (!hif_pm_runtime_get_monitor_wake_intr(GET_HIF_OPAQUE_HDL(scn)) &&
+	if (!hif_rtpm_get_monitor_wake_intr() &&
 	    hif_get_num_active_tasklets(scn)) {
 		hif_err("Tasklets are pending, abort sys suspend_noirq");
 		return -EBUSY;
@@ -424,8 +408,7 @@ static irqreturn_t hif_ce_interrupt_handler(int irq, void *context)
 {
 	struct ce_tasklet_entry *tasklet_entry = context;
 
-	hif_pm_runtime_check_and_request_resume(
-			GET_HIF_OPAQUE_HDL(tasklet_entry->hif_ce_state));
+	hif_rtpm_check_and_request_resume();
 	return ce_dispatch_interrupt(tasklet_entry->ce_id, tasklet_entry);
 }
 

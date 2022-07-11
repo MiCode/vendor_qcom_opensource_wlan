@@ -81,7 +81,7 @@ struct dp_soc_umac_reset_ctx {
 	struct umac_reset_shmem *shmem_vaddr_unaligned;
 	qdf_dma_addr_t shmem_paddr_aligned;
 	struct umac_reset_shmem *shmem_vaddr_aligned;
-	uint32_t intr_offset;
+	int intr_offset;
 	enum umac_reset_state current_state;
 };
 

@@ -70,6 +70,7 @@ QDF_STATUS dp_mon_pdev_ext_init_2_0(struct dp_pdev *pdev)
 	TAILQ_INIT(&mon_pdev_be->rx_mon_queue);
 
 	qdf_spinlock_create(&mon_pdev_be->rx_mon_wq_lock);
+	dp_rx_mon_ppdu_info_pool_init(mon_pdev);
 
 	return QDF_STATUS_SUCCESS;
 
@@ -93,12 +94,13 @@ QDF_STATUS dp_mon_pdev_ext_deinit_2_0(struct dp_pdev *pdev)
 	if (!mon_pdev_be->rx_mon_workqueue)
 		return QDF_STATUS_E_FAILURE;
 
-	dp_rx_mon_drain_wq(pdev);
 	qdf_flush_workqueue(0, mon_pdev_be->rx_mon_workqueue);
 	qdf_destroy_workqueue(0, mon_pdev_be->rx_mon_workqueue);
 	qdf_flush_work(&mon_pdev_be->rx_mon_work);
 	qdf_disable_work(&mon_pdev_be->rx_mon_work);
 	mon_pdev_be->rx_mon_workqueue = NULL;
+	dp_rx_mon_drain_wq(pdev);
+	dp_rx_mon_ppdu_info_pool_deinit(mon_pdev_be);
 	qdf_spinlock_destroy(&mon_pdev_be->rx_mon_wq_lock);
 
 	return QDF_STATUS_SUCCESS;
@@ -243,6 +245,7 @@ dp_mon_buffers_replenish(struct dp_soc *dp_soc,
 	union dp_mon_desc_list_elem_t *next;
 	void *mon_srng;
 	QDF_STATUS ret = QDF_STATUS_E_FAILURE;
+	struct dp_mon_soc *mon_soc = dp_soc->monitor_soc;
 
 	if (!num_req_buffers) {
 		dp_mon_debug("%pK: Received request for 0 buffers replenish",
@@ -318,6 +321,7 @@ dp_mon_buffers_replenish(struct dp_soc *dp_soc,
 		(*desc_list)->mon_desc.paddr = mon_desc.paddr;
 		(*desc_list)->mon_desc.magic = DP_MON_DESC_MAGIC;
 
+		mon_soc->stats.frag_alloc++;
 		hal_mon_buff_addr_info_set(dp_soc->hal_soc,
 					   mon_ring_entry,
 					   &((*desc_list)->mon_desc),
@@ -1530,6 +1534,8 @@ dp_mon_register_feature_ops_2_0(struct dp_soc *soc)
 #endif
 	mon_ops->mon_rx_stats_update_rssi_dbm_params =
 		dp_mon_rx_stats_update_rssi_dbm_params_2_0;
+	mon_ops->mon_rx_print_advanced_stats =
+		dp_mon_rx_print_advanced_stats_2_0;
 }
 
 struct dp_mon_ops monitor_ops_2_0 = {

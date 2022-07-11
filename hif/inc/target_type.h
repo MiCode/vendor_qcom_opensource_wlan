@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2013-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -83,6 +83,11 @@ extern "C" {
 /* Alder */
 #ifndef TARGET_TYPE_QCA9574
 #define TARGET_TYPE_QCA9574      33
+#endif
+
+/* Yamuna */
+#ifndef TARGET_TYPE_MANGO
+#define TARGET_TYPE_MANGO 34
 #endif
 
 #ifdef __cplusplus

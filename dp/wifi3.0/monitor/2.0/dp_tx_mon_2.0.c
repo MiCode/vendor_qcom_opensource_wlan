@@ -29,6 +29,9 @@
 #include <dp_be.h>
 #include <hal_be_api_mon.h>
 #include <dp_mon_filter_2.0.h>
+#ifdef FEATURE_PERPKT_INFO
+#include "dp_ratetable.h"
+#endif
 
 static inline uint32_t
 dp_tx_mon_srng_process_2_0(struct dp_soc *soc, struct dp_intr *int_ctx,
@@ -512,6 +515,26 @@ QDF_STATUS dp_peer_set_tx_capture_enabled_2_0(struct dp_pdev *pdev_handle,
 	return QDF_STATUS_SUCCESS;
 }
 
+#ifdef QCA_SUPPORT_LITE_MONITOR
+static void dp_fill_lite_mon_vdev(struct cdp_tx_indication_info *tx_cap_info,
+				  struct dp_mon_pdev_be *mon_pdev_be)
+{
+	struct dp_lite_mon_config *config;
+	struct dp_vdev *lite_mon_vdev;
+
+	config = &mon_pdev_be->lite_mon_tx_config->tx_config;
+	lite_mon_vdev = config->lite_mon_vdev;
+
+	if (lite_mon_vdev)
+		tx_cap_info->osif_vdev = lite_mon_vdev->osif_vdev;
+}
+#else
+static void dp_fill_lite_mon_vdev(struct cdp_tx_indication_info *tx_cap_info,
+				  struct dp_mon_pdev_be *mon_pdev_be)
+{
+}
+#endif
+
 /**
  * dp_tx_mon_send_to_stack() - API to send to stack
  * @pdev: pdev Handle
@@ -529,12 +552,22 @@ dp_tx_mon_send_to_stack(struct dp_pdev *pdev, qdf_nbuf_t mpdu)
 		    0);
 	tx_capture_info.radiotap_done = 1;
 	tx_capture_info.mpdu_nbuf = mpdu;
-	dp_wdi_event_handler(WDI_EVENT_TX_PKT_CAPTURE,
-			     pdev->soc,
-			     &tx_capture_info,
-			     HTT_INVALID_PEER,
-			     WDI_NO_VAL,
-			     pdev->pdev_id);
+	if (!dp_lite_mon_is_tx_enabled(pdev->monitor_pdev)) {
+		dp_wdi_event_handler(WDI_EVENT_TX_PKT_CAPTURE,
+				     pdev->soc,
+				     &tx_capture_info,
+				     HTT_INVALID_PEER,
+				     WDI_NO_VAL,
+				     pdev->pdev_id);
+	} else {
+		dp_fill_lite_mon_vdev(&tx_capture_info, mon_pdev_be);
+		dp_wdi_event_handler(WDI_EVENT_LITE_MON_TX,
+				     pdev->soc,
+				     &tx_capture_info,
+				     HTT_INVALID_PEER,
+				     WDI_NO_VAL,
+				     pdev->pdev_id);
+	}
 }
 
 /**
@@ -649,6 +682,25 @@ dp_tx_mon_update_radiotap(struct dp_pdev *pdev,
 			continue;
 		}
 
+		if (qdf_unlikely(!TXMON_PPDU_COM(ppdu_info, rate))) {
+			uint32_t rate = 0;
+			uint32_t rix = 0;
+			uint16_t ratecode = 0;
+
+			rate = dp_getrateindex(TXMON_PPDU_COM(ppdu_info, sgi),
+					       TXMON_PPDU_USR(ppdu_info,
+							      i, mcs),
+					       TXMON_PPDU_COM(ppdu_info, nss),
+					       TXMON_PPDU_COM(ppdu_info,
+							      preamble_type),
+					       TXMON_PPDU_COM(ppdu_info, bw),
+					       0,
+					       &rix, &ratecode);
+
+			/* update rate */
+			TXMON_PPDU_COM(ppdu_info, rate) = rate;
+		}
+
 		/* copy rx_status to rx_status and invoke update radiotap */
 		ppdu_info->hal_txmon.rx_status.rx_user_status =
 					&ppdu_info->hal_txmon.rx_user_status[i];
@@ -696,7 +748,8 @@ void dp_tx_mon_ppdu_process(void *context)
 		return;
 
 	tx_cap_be = &mon_pdev_be->tx_capture_be;
-	if (qdf_unlikely(TX_MON_BE_DISABLE == tx_cap_be->mode))
+	if (qdf_unlikely(TX_MON_BE_DISABLE == tx_cap_be->mode &&
+			 !dp_lite_mon_is_tx_enabled(mon_pdev)))
 		return;
 
 	/* take lock here */

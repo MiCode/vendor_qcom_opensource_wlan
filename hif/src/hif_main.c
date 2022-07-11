@@ -362,6 +362,11 @@ static const struct qwlan_hw qwlan_hw_list[] = {
 		.id = KIWI_V1,
 		.subid = 0xE,
 		.name = "KIWI_V1",
+	},
+	{
+		.id = MANGO_V1,
+		.subid = 0xF,
+		.name = "MANGO_V1",
 	}
 };
 
@@ -449,6 +454,38 @@ void *hif_get_dev_ba_ce(struct hif_opaque_softc *hif_handle)
 }
 
 qdf_export_symbol(hif_get_dev_ba_ce);
+
+#ifdef FEATURE_RUNTIME_PM
+void hif_runtime_prevent_linkdown(struct hif_softc *scn, bool is_get)
+{
+	if (is_get)
+		qdf_runtime_pm_prevent_suspend(&scn->prevent_linkdown_lock);
+	else
+		qdf_runtime_pm_allow_suspend(&scn->prevent_linkdown_lock);
+}
+
+static inline
+void hif_rtpm_lock_init(struct hif_softc *scn)
+{
+	qdf_runtime_lock_init(&scn->prevent_linkdown_lock);
+}
+
+static inline
+void hif_rtpm_lock_deinit(struct hif_softc *scn)
+{
+	qdf_runtime_lock_deinit(&scn->prevent_linkdown_lock);
+}
+#else
+static inline
+void hif_rtpm_lock_init(struct hif_softc *scn)
+{
+}
+
+static inline
+void hif_rtpm_lock_deinit(struct hif_softc *scn)
+{
+}
+#endif
 
 #ifdef WLAN_CE_INTERRUPT_THRESHOLD_CONFIG
 /**
@@ -935,7 +972,6 @@ struct hif_opaque_softc *hif_open(qdf_device_t qdf_ctx,
 		     sizeof(struct hif_driver_state_callbacks));
 	scn->bus_type  = bus_type;
 
-	hif_pm_set_link_state(GET_HIF_OPAQUE_HDL(scn), HIF_PM_LINK_STATE_DOWN);
 	hif_allow_ep_vote_access(GET_HIF_OPAQUE_HDL(scn));
 	hif_get_cfg_from_psoc(scn, psoc);
 
@@ -948,6 +984,8 @@ struct hif_opaque_softc *hif_open(qdf_device_t qdf_ctx,
 		scn = NULL;
 		goto out;
 	}
+
+	hif_rtpm_lock_init(scn);
 
 	hif_cpuhp_register(scn);
 	hif_latency_detect_timer_init(scn);
@@ -1006,6 +1044,7 @@ void hif_close(struct hif_opaque_softc *hif_ctx)
 	hif_uninit_rri_on_ddr(scn);
 	hif_cleanup_static_buf_to_target(scn);
 	hif_cpuhp_unregister(scn);
+	hif_rtpm_lock_deinit(scn);
 
 	hif_bus_close(scn);
 
@@ -1253,7 +1292,6 @@ QDF_STATUS hif_enable(struct hif_opaque_softc *hif_ctx, struct device *dev,
 		return status;
 	}
 
-	hif_pm_set_link_state(GET_HIF_OPAQUE_HDL(scn), HIF_PM_LINK_STATE_UP);
 	status = hif_hal_attach(scn);
 	if (status != QDF_STATUS_SUCCESS) {
 		hif_err("hal attach failed");
@@ -1311,7 +1349,6 @@ void hif_disable(struct hif_opaque_softc *hif_ctx, enum hif_disable_type type)
 
 	hif_hal_detach(scn);
 
-	hif_pm_set_link_state(hif_ctx, HIF_PM_LINK_STATE_DOWN);
 	hif_disable_bus(scn);
 
 	hif_wlan_disable(scn);
@@ -1580,6 +1617,12 @@ int hif_get_device_type(uint32_t device_id,
 		*hif_type = HIF_TYPE_KIWI;
 		*target_type = TARGET_TYPE_KIWI;
 		hif_info(" *********** KIWI *************");
+		break;
+
+	case MANGO_DEVICE_ID:
+		*hif_type = HIF_TYPE_MANGO;
+		*target_type = TARGET_TYPE_MANGO;
+		hif_info(" *********** MANGO *************");
 		break;
 
 	case QCA8074V2_DEVICE_ID:
@@ -2098,12 +2141,11 @@ hif_pm_wake_irq_type hif_pm_get_wake_irq_type(struct hif_opaque_softc *hif_ctx)
 irqreturn_t hif_wake_interrupt_handler(int irq, void *context)
 {
 	struct hif_softc *scn = context;
-	struct hif_opaque_softc *hif_ctx = GET_HIF_OPAQUE_HDL(scn);
 
 	hif_info("wake interrupt received on irq %d", irq);
 
-	hif_pm_runtime_set_monitor_wake_intr(hif_ctx, 0);
-	hif_pm_runtime_request_resume(hif_ctx, RTPM_ID_WAKE_INTR_HANDLER);
+	hif_rtpm_set_monitor_wake_intr(0);
+	hif_rtpm_request_resume();
 
 	if (scn->initial_wakeup_cb)
 		scn->initial_wakeup_cb(scn->initial_wakeup_priv);

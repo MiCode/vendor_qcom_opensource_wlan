@@ -29,11 +29,24 @@
 
 #define CHAN_12_CENT_FREQ 2467
 #define CHAN_13_CENT_FREQ 2472
-#define REG_MAX_20M_SUB_CH   8
+
+#ifdef WLAN_FEATURE_11BE
+#define REG_MAX_20M_SUB_CH 16
+#else
+#define REG_MAX_20M_SUB_CH  8
+#endif
+
 #ifdef CONFIG_AFC_SUPPORT
 #define MIN_AFC_BW 2
+#ifdef WLAN_FEATURE_11BE
+#define MAX_AFC_BW 320
+#else
 #define MAX_AFC_BW 160
 #endif
+#endif
+
+#define HALF_IEEE_CH_SEP  2
+#define IEEE_20MHZ_CH_SEP 4
 
 #include "reg_priv_objs.h"
 /**
@@ -64,7 +77,6 @@ void reg_init_pdev_mas_chan_list(
  */
 void reg_set_ap_pwr_type(struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj);
 
-#ifdef CONFIG_REG_CLIENT
 /**
  * reg_save_reg_rules_to_pdev() - Save psoc reg-rules to pdev.
  * @pdev_priv_obj: Pointer to regdb pdev private object.
@@ -72,13 +84,6 @@ void reg_set_ap_pwr_type(struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj);
 void reg_save_reg_rules_to_pdev(
 		struct reg_rule_info *psoc_reg_rules,
 		struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj);
-#else
-static inline void
-reg_save_reg_rules_to_pdev(struct reg_rule_info *psoc_reg_rules,
-			   struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj)
-{
-}
-#endif
 
 /**
  * reg_compute_pdev_current_chan_list() - Compute pdev current channel list.
@@ -196,6 +201,21 @@ QDF_STATUS reg_psd_2_eirp(struct wlan_objmgr_pdev *pdev,
 			  int16_t *eirp);
 
 /**
+ * reg_eirp_2_psd() - Calculate PSD from EIRP and bandwidth
+ * channel list
+ * @pdev: pdev pointer
+ * @ch_bw: Bandwdith of a channel in MHz (20/40/80/160/320 etc)
+ * @eirp:  EIRP power  in dBm
+ * @psd: Power Spectral Density in dBm/MHz
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS reg_eirp_2_psd(struct wlan_objmgr_pdev *pdev,
+			  uint16_t ch_bw,
+			  int16_t eirp,
+			  int16_t *psd);
+
+/**
  * reg_is_supp_pwr_mode_invalid - Indicates if the given 6G power mode is
  * one of the valid power modes enumerated by enum supported_6g_pwr_types
  * from REG_AP_LPI to REG_CLI_SUB_VLP.
@@ -212,6 +232,23 @@ reg_is_supp_pwr_mode_invalid(enum supported_6g_pwr_types supp_pwr_mode)
 	return (supp_pwr_mode < REG_AP_LPI || supp_pwr_mode > REG_CLI_SUB_VLP);
 }
 
+/**
+ * reg_copy_from_super_chan_info_to_reg_channel - Copy the structure fields from
+ * a super channel entry to the regulatory channel fields.
+ *
+ * chan - Pointer to the regulatory channel where the fields of super channel
+ * entry is copied to.
+ * sc_entry - Input super channel entry whose fields are copied to the
+ * regulatory channel structure.
+ * in_6g_pwr_mode - Input 6g power type. If the power type is best power mode,
+ * get the best power mode of the given super channel entry and copy its
+ * information to the regulatory channel fields.
+ */
+void
+reg_copy_from_super_chan_info_to_reg_channel(struct regulatory_channel *chan,
+					     const struct super_chan_info sc_entry,
+					     enum supported_6g_pwr_types
+					     in_6g_pwr_mode);
 #else /* CONFIG_BAND_6GHZ */
 static inline QDF_STATUS
 reg_get_6g_ap_master_chan_list(struct wlan_objmgr_pdev *pdev,
@@ -246,10 +283,26 @@ static inline QDF_STATUS reg_psd_2_eirp(struct wlan_objmgr_pdev *pdev,
 	return QDF_STATUS_E_FAILURE;
 }
 
+static inline QDF_STATUS reg_eirp_2_psd(struct wlan_objmgr_pdev *pdev,
+					uint16_t ch_bw,
+					int16_t eirp,
+					int16_t *psd)
+{
+	return QDF_STATUS_E_FAILURE;
+}
+
 static inline bool
 reg_is_supp_pwr_mode_invalid(enum supported_6g_pwr_types supp_pwr_mode)
 {
 	return true;
+}
+
+static inline void
+reg_copy_from_super_chan_info_to_reg_channel(struct regulatory_channel *chan,
+					     const struct super_chan_info sc_entry,
+					     enum supported_6g_pwr_types
+					     in_6g_pwr_mode)
+{
 }
 #endif /* CONFIG_BAND_6GHZ */
 /**

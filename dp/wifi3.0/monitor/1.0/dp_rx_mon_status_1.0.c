@@ -329,6 +329,84 @@ dp_rx_mon_update_scan_spcl_vap_stats(struct dp_pdev *pdev,
 }
 #endif
 
+#ifdef WLAN_FEATURE_DP_MON_STATUS_RING_HISTORY
+/**
+ * dp_rx_mon_status_ring_record_entry() - Record one entry of a particular
+ *					  event type into the monitor status
+ *					  buffer tracking history.
+ * @soc: DP soc handle
+ * @event: event type
+ * @ring_desc: Monitor status ring descriptor
+ * @rx_desc: RX descriptor
+ * @nbuf: status buffer.
+ *
+ * Return: None
+ */
+static void
+dp_rx_mon_status_ring_record_entry(struct dp_soc *soc,
+				   enum dp_mon_status_process_event event,
+				   hal_ring_desc_t ring_desc,
+				   struct dp_rx_desc *rx_desc,
+				   qdf_nbuf_t nbuf)
+{
+	struct dp_mon_stat_info_record *record;
+	struct hal_buf_info hbi;
+	uint32_t idx;
+
+	if (qdf_unlikely(!soc->mon_status_ring_history))
+		return;
+
+	idx = dp_history_get_next_index(&soc->mon_status_ring_history->index,
+					DP_MON_STATUS_HIST_MAX);
+
+	/* No NULL check needed for record since its an array */
+	record = &soc->mon_status_ring_history->entry[idx];
+
+	record->timestamp = qdf_get_log_timestamp();
+	if (event == DP_MON_STATUS_BUF_REAP) {
+		hal_rx_buffer_addr_info_get_paddr(ring_desc, &hbi);
+
+		/* buffer_addr_info is the first element of ring_desc */
+		hal_rx_buf_cookie_rbm_get(soc->hal_soc, (uint32_t *)ring_desc,
+					  &hbi);
+
+		record->hbi.paddr = hbi.paddr;
+		record->hbi.sw_cookie = hbi.sw_cookie;
+		record->hbi.rbm = hbi.rbm;
+		record->rx_desc = rx_desc;
+		if (rx_desc) {
+			record->nbuf = rx_desc->nbuf;
+			record->rx_desc_nbuf_data = qdf_nbuf_data(rx_desc->nbuf);
+		} else {
+			record->nbuf = NULL;
+			record->rx_desc_nbuf_data = NULL;
+		}
+	}
+
+	if (event == DP_MON_STATUS_BUF_ENQUEUE) {
+		record->nbuf = nbuf;
+		record->rx_desc_nbuf_data = qdf_nbuf_data(nbuf);
+	}
+
+	if (event == DP_MON_STATUS_BUF_DEQUEUE) {
+		record->nbuf = nbuf;
+		if (nbuf)
+			record->rx_desc_nbuf_data = qdf_nbuf_data(nbuf);
+		else
+			record->rx_desc_nbuf_data = NULL;
+	}
+}
+#else
+static void
+dp_rx_mon_status_ring_record_entry(struct dp_soc *soc,
+				   enum dp_mon_status_process_event event,
+				   hal_ring_desc_t ring_desc,
+				   struct dp_rx_desc *rx_desc,
+				   qdf_nbuf_t nbuf)
+{
+}
+#endif
+
 /**
  * dp_rx_mon_status_process_tlv() - Process status TLV in status
  * buffer on Rx status Queue posted by status SRNG processing.
@@ -376,6 +454,9 @@ dp_rx_mon_status_process_tlv(struct dp_soc *soc, struct dp_intr *int_ctx,
 	while (!qdf_nbuf_is_queue_empty(&mon_pdev->rx_status_q)) {
 
 		status_nbuf = qdf_nbuf_queue_remove(&mon_pdev->rx_status_q);
+		dp_rx_mon_status_ring_record_entry(soc,
+						   DP_MON_STATUS_BUF_DEQUEUE,
+						   NULL, NULL, status_nbuf);
 
 		if (!status_nbuf)
 			return;
@@ -593,6 +674,9 @@ dp_rx_mon_status_srng_process(struct dp_soc *soc, struct dp_intr *int_ctx,
 					&hbi);
 			rx_desc = dp_rx_cookie_2_va_mon_status(soc,
 						hbi.sw_cookie);
+			dp_rx_mon_status_ring_record_entry(soc, DP_MON_STATUS_BUF_REAP,
+						rxdma_mon_status_ring_entry,
+						rx_desc, NULL);
 
 			qdf_assert_always(rx_desc);
 
@@ -662,6 +746,9 @@ dp_rx_mon_status_srng_process(struct dp_soc *soc, struct dp_intr *int_ctx,
 
 			/* Put the status_nbuf to queue */
 			qdf_nbuf_queue_add(&mon_pdev->rx_status_q, status_nbuf);
+			dp_rx_mon_status_ring_record_entry(soc, DP_MON_STATUS_BUF_ENQUEUE,
+						rxdma_mon_status_ring_entry,
+						rx_desc, status_nbuf);
 
 		} else {
 			union dp_rx_desc_list_elem_t *desc_list = NULL;

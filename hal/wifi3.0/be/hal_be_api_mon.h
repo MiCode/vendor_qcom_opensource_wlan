@@ -725,6 +725,7 @@ enum hal_tx_tlv_status {
 
 	HAL_MON_TX_FES_STATUS_START_PPDU,
 	HAL_MON_TX_FES_STATUS_USER_PPDU,
+	HAL_MON_TX_QUEUE_EXTENSION,
 
 	HAL_MON_RX_FRAME_BITMAP_ACK,
 	HAL_MON_RX_FRAME_BITMAP_BLOCK_ACK_256,
@@ -783,6 +784,16 @@ enum txmon_pkt_type {
 	TXMON_PKT_TYPE_11AZ
 };
 
+enum txmon_generated_response {
+	TXMON_GEN_RESP_SELFGEN_ACK = 0,
+	TXMON_GEN_RESP_SELFGEN_CTS,
+	TXMON_GEN_RESP_SELFGEN_BA,
+	TXMON_GEN_RESP_SELFGEN_MBA,
+	TXMON_GEN_RESP_SELFGEN_CBF,
+	TXMON_GEN_RESP_SELFGEN_TRIG,
+	TXMON_GEN_RESP_SELFGEN_NDP_LMR
+};
+
 #define TXMON_HAL(hal_tx_ppdu_info, field)		\
 			hal_tx_ppdu_info->field
 #define TXMON_HAL_STATUS(hal_tx_ppdu_info, field)	\
@@ -793,10 +804,35 @@ enum txmon_pkt_type {
 #define TXMON_STATUS_INFO(hal_tx_status_info, field)	\
 			hal_tx_status_info->field
 
+/**
+ * struct hal_tx_status_info - status info that wasn't populated in rx_status
+ * @reception_type: su or uplink mu reception type
+ * @transmission_type: su or mu transmission type
+ * @medium_prot_type: medium protection type
+ * @generated_response: Generated frame in response window
+ * @no_bitmap_avail: Bitmap available flag
+ * @explicit_ack: Explicit Acknowledge flag
+ * @explicit_ack_type: Explicit Acknowledge type
+ * @r2r_end_status_follow: Response to Response status flag
+ * @response_type: Response type in response window
+ * @ndp_frame: NDP frame
+ * @num_users: number of users
+ * @sw_frame_group_id: software frame group ID
+ * @r2r_to_follow: Response to Response follow flag
+ * @buffer: Packet buffer pointer address
+ * @offset: Packet buffer offset
+ * @length: Packet buffer length
+ * @protection_addr: Protection Address flag
+ * @addr1: MAC address 1
+ * @addr2: MAC address 2
+ * @addr3: MAC address 3
+ * @addr4: MAC address 4
+ */
 struct hal_tx_status_info {
 	uint8_t reception_type;
 	uint8_t transmission_type;
 	uint8_t medium_prot_type;
+	uint8_t generated_response;
 
 	uint32_t no_bitmap_avail	:1,
 		explicit_ack		:1,
@@ -809,7 +845,6 @@ struct hal_tx_status_info {
 
 	uint8_t sw_frame_group_id;
 	uint32_t r2r_to_follow;
-	uint32_t prot_tlv_status;
 
 	void *buffer;
 	uint32_t offset;
@@ -822,6 +857,18 @@ struct hal_tx_status_info {
 	uint8_t addr4[QDF_MAC_ADDR_SIZE];
 };
 
+/**
+ * struct hal_tx_ppdu_info - tx monitor ppdu information
+ * @ppdu_id:  Id of the PLCP protocol data unit
+ * @num_users: number of users
+ * @is_used: boolean flag to identify valid ppdu info
+ * @is_data: boolean flag to identify data frame
+ * @cur_usr_idx: Current user index of the PPDU
+ * @reserved: for furture purpose
+ * @prot_tlv_status: protection tlv status
+ * @rx_status: monitor mode rx status information
+ * @rx_user_status: monitor mode rx user status information
+ */
 struct hal_tx_ppdu_info {
 	uint32_t ppdu_id;
 	uint32_t num_users	:8,
@@ -1772,7 +1819,8 @@ hal_rx_status_get_mon_buf_addr(uint8_t *rx_tlv,
 
 	ppdu_info->packet_info.sw_cookie = (((uint64_t)addr->buffer_virt_addr_63_32 << 32) |
 					    (addr->buffer_virt_addr_31_0));
-	ppdu_info->packet_info.dma_length = addr->dma_length;
+	/* HW DMA length is '-1' of actual DMA length*/
+	ppdu_info->packet_info.dma_length = addr->dma_length + 1;
 	ppdu_info->packet_info.msdu_continuation = addr->msdu_continuation;
 	ppdu_info->packet_info.truncated = addr->truncated;
 
@@ -2218,6 +2266,7 @@ hal_rx_status_get_tlv_info_generic_be(void *rx_tlv_hdr, void *ppduinfo,
 		case TARGET_TYPE_QCA6490:
 		case TARGET_TYPE_QCA6750:
 		case TARGET_TYPE_KIWI:
+		case TARGET_TYPE_MANGO:
 			ppdu_info->rx_status.nss = 0;
 			break;
 		default:

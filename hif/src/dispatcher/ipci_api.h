@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2020-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -143,30 +143,6 @@ QDF_STATUS hif_ipci_enable_bus(
  * Return: none
  */
 void hif_ipci_disable_bus(struct hif_softc *scn);
-
-#ifdef FEATURE_RUNTIME_PM
-/**
- * hif_ipci_get_rpm_ctx() - Map corresponding hif_runtime_pm_ctx
- * @scn: hif context
- *
- * This function will map and return the corresponding
- * hif_runtime_pm_ctx based on ipcie interface.
- *
- * Return: struct hif_runtime_pm_ctx pointer
- */
-struct hif_runtime_pm_ctx *hif_ipci_get_rpm_ctx(struct hif_softc *hif_sc);
-
-/**
- * hif_ipci_get_dev() - Map corresponding device structure
- * @scn: hif context
- *
- * This function will map and return the corresponding
- * device structure based on ipcie interface.
- *
- * Return: struct device pointer
- */
-struct device *hif_ipci_get_dev(struct hif_softc *hif_sc);
-#endif
 
 /**
  * hif_ipci_bus_configure() - configure the pcie bus

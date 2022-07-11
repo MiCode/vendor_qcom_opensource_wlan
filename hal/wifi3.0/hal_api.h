@@ -2217,11 +2217,6 @@ hal_srng_access_end(void *hal_soc, hal_ring_handle_t hal_ring_hdl)
 	SRNG_UNLOCK(&(srng->lock));
 }
 
-void hal_srng_access_end_v1(hal_soc_handle_t hal_soc_hdl,
-			    hal_ring_handle_t hal_ring_hdl,
-			    wlan_rtpm_dbgid rtpm_dbgid,
-			    bool is_critical_ctx);
-
 #ifdef FEATURE_RUNTIME_PM
 #define hal_srng_access_end_v1 hal_srng_rtpm_access_end
 
@@ -2243,11 +2238,9 @@ void hal_srng_access_end_v1(hal_soc_handle_t hal_soc_hdl,
 void
 hal_srng_rtpm_access_end(hal_soc_handle_t hal_soc_hdl,
 			 hal_ring_handle_t hal_ring_hdl,
-			 wlan_rtpm_dbgid rtpm_dbgid,
-			 bool is_critical_ctx);
+			 uint32_t rtpm_id);
 #else
-#define hal_srng_access_end_v1(hal_soc_hdl, hal_ring_hdl, rtpm_dbgid, \
-			       is_critical_ctx)\
+#define hal_srng_access_end_v1(hal_soc_hdl, hal_ring_hdl, rtpm_id) \
 	hal_srng_access_end(hal_soc_hdl, hal_ring_hdl)
 #endif
 

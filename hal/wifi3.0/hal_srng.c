@@ -25,6 +25,8 @@
 #include "wcss_version.h"
 #include <qdf_tracepoint.h>
 
+struct tcl_data_cmd gtcl_data_symbol __attribute__((used));
+
 #ifdef QCA_WIFI_QCA8074
 void hal_qca6290_attach(struct hal_soc *hal);
 #endif
@@ -438,6 +440,7 @@ static void hal_target_based_configure(struct hal_soc *hal)
 #endif
 #ifdef QCA_WIFI_KIWI
 	case TARGET_TYPE_KIWI:
+	case TARGET_TYPE_MANGO:
 		hal->use_register_windowing = true;
 		hal_kiwi_attach(hal);
 		break;
@@ -1102,6 +1105,8 @@ void *hal_attach(struct hif_opaque_softc *hif_handle, qdf_device_t qdf_dev)
 
 	hal_reo_shared_qaddr_setup((hal_soc_handle_t)hal);
 
+	hif_rtpm_register(HIF_RTPM_ID_HAL_REO_CMD, NULL);
+
 	return (void *)hal;
 fail3:
 	qdf_mem_free_consistent(qdf_dev, qdf_dev->dev,
@@ -1156,6 +1161,7 @@ extern void hal_detach(void *hal_soc)
 {
 	struct hal_soc *hal = (struct hal_soc *)hal_soc;
 
+	hif_rtpm_deregister(HIF_RTPM_ID_HAL_REO_CMD);
 	hal_delayed_reg_write_deinit(hal);
 	hal_reo_shared_qaddr_detach((hal_soc_handle_t)hal);
 	qdf_mem_free(hal->ops);
@@ -1788,21 +1794,16 @@ qdf_export_symbol(hal_set_low_threshold);
 void
 hal_srng_rtpm_access_end(hal_soc_handle_t hal_soc_hdl,
 			 hal_ring_handle_t hal_ring_hdl,
-			 wlan_rtpm_dbgid rtpm_dbgid,
-			 bool is_critical_ctx)
+			 uint32_t rtpm_id)
 {
-	struct hal_soc *hal_soc = (struct hal_soc *)hal_soc_hdl;
-
 	if (qdf_unlikely(!hal_ring_hdl)) {
 		qdf_print("Error: Invalid hal_ring\n");
 		return;
 	}
 
-	if (hif_pm_runtime_get(hal_soc->hif_handle,
-			       rtpm_dbgid, is_critical_ctx) == 0) {
+	if (hif_rtpm_get(HIF_RTPM_GET_ASYNC, rtpm_id) == 0) {
 		hal_srng_access_end(hal_soc_hdl, hal_ring_hdl);
-		hif_pm_runtime_put(hal_soc->hif_handle,
-				   rtpm_dbgid);
+		hif_rtpm_put(HIF_RTPM_PUT_ASYNC, rtpm_id);
 	} else {
 		hal_srng_access_end_reap(hal_soc_hdl, hal_ring_hdl);
 		hal_srng_set_event(hal_ring_hdl, HAL_SRNG_FLUSH_EVENT);

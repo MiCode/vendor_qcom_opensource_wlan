@@ -349,6 +349,55 @@ QDF_STATUS
 util_get_bvmlie_persta_partner_info(uint8_t *mlieseq,
 				    qdf_size_t mlieseqlen,
 				    struct mlo_partner_info *partner_info);
+
+/**
+ * util_get_prvmlie_mldid - Get the MLD ID from a given Probe Request
+ * variant Multi-Link element , of the STA that transmits ML Probe Request
+ * with the Multi-Link element
+ *
+ * @mlieseq: Starting address of the Multi-Link element or Multi-Link element
+ * fragment sequence
+ * @mlieseqlen: Total length of the Multi-Link element or Multi-Link element
+ * fragment sequence
+ * @mldidfound: Pointer to the location where a boolean status should be
+ * updated indicating whether the MLD ID was found or not. This should
+ * be ignored by the caller if the function returns error.
+ * @mldid: Pointer to the location where the value of the MLD ID
+ * should be updated. This should be ignored by the caller if the function
+ * returns error, or if the function indicates that the MLD ID was not
+ * found.
+ *
+ * Return: QDF_STATUS_SUCCESS in the case of success, QDF_STATUS value giving
+ * the reason for error in the case of failure
+ */
+QDF_STATUS
+util_get_prvmlie_mldid(uint8_t *mlieseq, qdf_size_t mlieseqlen,
+		       bool *mldidfound, uint8_t *mldid);
+
+/**
+ * util_get_prvmlie_persta_link_id() - Get per-STA probe req link information
+ *
+ * @mlieseq: Starting address of the Multi-Link element or Multi-Link element
+ * fragment sequence
+ * @mlieseqlen: Total length of the Multi-Link element or Multi-Link element
+ * fragment sequence
+ * @probereq_info: Pointer to the location where the probe req link information
+ * should be updated. This should be ignored by the caller if the function
+ * returns error. Note that success will be returned and the number of links in
+ * this structure will be reported as 0, if no Link Info is found, or no per-STA
+ * profile is found.
+ *
+ * Get probe req link information in the per-STA profiles present in a Probe req
+ * variant Multi-Link element.
+ *
+ * Return: QDF_STATUS_SUCCESS in the case of success, QDF_STATUS value giving
+ * the reason for error in the case of failure
+ */
+QDF_STATUS
+util_get_prvmlie_persta_link_id(uint8_t *mlieseq,
+				qdf_size_t mlieseqlen,
+				struct mlo_probereq_info *probereq_info);
+
 #else
 static inline QDF_STATUS
 util_gen_link_assoc_req(uint8_t *frame, qdf_size_t frame_len, bool isreassoc,
@@ -428,5 +477,21 @@ util_get_bvmlie_persta_partner_info(uint8_t *mlieseq,
 {
 	return QDF_STATUS_E_NOSUPPORT;
 }
+
+static inline QDF_STATUS
+util_get_prvmlie_persta_link_id(uint8_t *mlieseq,
+				qdf_size_t mlieseqlen,
+				struct mlo_probereq_info *probereq_info)
+{
+	return QDF_STATUS_E_NOSUPPORT;
+}
+
+static inline QDF_STATUS
+util_get_prvmlie_mldid(uint8_t *mlieseq, qdf_size_t mlieseqlen,
+		       bool *mldcapfound, uint8_t *mldcap)
+{
+	return QDF_STATUS_E_NOSUPPORT;
+}
+
 #endif /* WLAN_FEATURE_11BE_MLO */
 #endif /* _WLAN_UTILS_MLO_H_ */

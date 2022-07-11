@@ -919,14 +919,6 @@ dp_mon_rx_enable_phy_errors(uint32_t *msg_word,
 		*msg_word = 0;
 		HTT_RX_RING_SELECTION_CFG_PHY_ERR_MASK_CONT_SET
 			(*msg_word, htt_tlv_filter->phy_err_mask_cont);
-
-		/* word 14*/
-		msg_word++;
-		*msg_word = 0;
-	} else {
-		/* word 14*/
-		msg_word += 3;
-		*msg_word = 0;
 	}
 }
 #else
@@ -934,9 +926,6 @@ static inline void
 dp_mon_rx_enable_phy_errors(uint32_t *msg_word,
 			    struct htt_rx_ring_tlv_filter *htt_tlv_filter)
 {
-	/* word 14*/
-	msg_word += 3;
-	*msg_word = 0;
 }
 #endif
 
@@ -1669,6 +1658,10 @@ int htt_h2t_rx_ring_cfg(struct htt_soc *htt_soc, int pdev_id,
 	dp_mon_rx_enable_mpdu_logging(soc->dp_soc, msg_word, htt_tlv_filter);
 
 	dp_mon_rx_enable_phy_errors(msg_word, htt_tlv_filter);
+
+	/* word 14*/
+	msg_word += 3;
+	*msg_word = 0;
 
 	dp_mon_rx_wmask_subscribe(soc->dp_soc, msg_word, htt_tlv_filter);
 
@@ -3154,10 +3147,43 @@ dp_htt_rx_addba_handler(struct dp_soc *soc, uint16_t peer_id,
 					       peer->vdev->vdev_id, 0,
 					       tid, 0, win_sz, 0xffff);
 
-	dp_info("PeerID %d BAW %d TID %d stat %d",
-		peer_id, win_sz, tid, status);
+	dp_addba_resp_tx_completion_wifi3(
+		(struct cdp_soc_t *)soc,
+		peer->mac_addr.raw, peer->vdev->vdev_id,
+		tid,
+		status);
 
 	dp_peer_unref_delete(peer, DP_MOD_ID_HTT);
+
+	dp_info("PeerID %d BAW %d TID %d stat %d",
+		peer_id, win_sz, tid, status);
+}
+
+/*
+ * dp_htt_ppdu_id_fmt_handler() - PPDU ID Format handler
+ * @htt_soc: HTT SOC handle
+ * @msg_word: Pointer to payload
+ *
+ * Return: None
+ */
+static void
+dp_htt_ppdu_id_fmt_handler(struct dp_soc *soc, uint32_t *msg_word)
+{
+	uint8_t msg_type, valid, bits, offset;
+
+	msg_type = HTT_T2H_MSG_TYPE_GET(*msg_word);
+
+	msg_word += HTT_PPDU_ID_FMT_IND_LINK_ID_OFFSET;
+	valid = HTT_PPDU_ID_FMT_IND_VALID_GET_BITS31_16(*msg_word);
+	bits = HTT_PPDU_ID_FMT_IND_BITS_GET_BITS31_16(*msg_word);
+	offset = HTT_PPDU_ID_FMT_IND_OFFSET_GET_BITS31_16(*msg_word);
+
+	dp_info("link_id: valid %u bits %u offset %u", valid, bits, offset);
+
+	if (valid) {
+		soc->link_id_offset = offset;
+		soc->link_id_bits = bits;
+	}
 }
 
 /*
@@ -3346,6 +3372,11 @@ static void dp_htt_t2h_msg_handler(void *context, HTC_PACKET *pkt)
 
 			dp_htt_rx_addba_handler(soc->dp_soc, peer_id,
 						tid, win_sz);
+			break;
+		}
+	case HTT_T2H_PPDU_ID_FMT_IND:
+		{
+			dp_htt_ppdu_id_fmt_handler(soc->dp_soc, msg_word);
 			break;
 		}
 	case HTT_T2H_MSG_TYPE_EXT_STATS_CONF:

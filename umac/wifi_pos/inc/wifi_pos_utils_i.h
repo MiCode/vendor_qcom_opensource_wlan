@@ -253,6 +253,7 @@ struct wifi_pos_legacy_ops {
  * @dma_cfg: DMA ring cfg to be programmed to firmware
  * @dma_buf_pool: DMA buffer pools maintained at host: this will be 2-D array
  * where with num_rows = number of rings num_elements in each row = ring depth
+ * @osif_cb: Callbacks to OS_IF
  * @wifi_pos_lock: lock to access wifi pos priv object
  * @oem_6g_support_disable: oem target 6ghz support is disabled if set
  * @wifi_pos_req_handler: function pointer to handle TLV or non-TLV
@@ -304,6 +305,8 @@ struct wifi_pos_psoc_priv_obj {
 	struct wifi_pos_dma_rings_cap *dma_cap;
 	struct wifi_pos_dma_rings_cfg *dma_cfg;
 	struct wifi_pos_dma_buf_info **dma_buf_pool;
+
+	struct wifi_pos_osif_ops *osif_cb;
 
 	qdf_spinlock_t wifi_pos_lock;
 	bool oem_6g_support_disable;

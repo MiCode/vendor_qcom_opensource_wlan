@@ -20,6 +20,8 @@
 
 #if !defined(DISABLE_MON_CONFIG)
 #include <qdf_lock.h>
+#include <qdf_flex_mem.h>
+#include <qdf_atomic.h>
 #include <dp_types.h>
 #include <dp_mon.h>
 #include <dp_mon_filter.h>
@@ -30,7 +32,7 @@
 #define DP_MON_RING_FILL_LEVEL_DEFAULT 2048
 #define DP_MON_DATA_BUFFER_SIZE     2048
 #define DP_MON_DESC_MAGIC 0xdeadabcd
-#define DP_MON_MAX_STATUS_BUF 128
+#define DP_MON_MAX_STATUS_BUF 1200
 #define DP_MON_QUEUE_DEPTH_MAX 16
 #define DP_MON_MSDU_LOGGING 0
 #define DP_MON_MPDU_LOGGING 1
@@ -145,6 +147,9 @@ struct dp_mon_desc_pool {
  * @xlna_bypass_threshold: Low noise amplifier bypass threshold
  * @xbar_config: 3 Bytes of xbar_config are used for RF to BB mapping
  * @min_nf_dbm: min noise floor in active chains per channel
+ * @rx_ppdu_info_pool: rx ppdu info mem pool
+ * @rx_ppdu_info_pool_head: rx ppdu info mem pool head segment
+ * @rx_ppdu_info_pool_head_bytes: ppdu info pool head for array indexing
  */
 struct dp_mon_pdev_be {
 	struct dp_mon_pdev mon_pdev;
@@ -174,6 +179,9 @@ struct dp_mon_pdev_be {
 	uint32_t xbar_config;
 	int8_t min_nf_dbm;
 #endif
+	struct qdf_flex_mem_pool rx_ppdu_info_pool;
+	struct qdf_flex_mem_segment rx_ppdu_info_pool_head;
+	uint8_t rx_ppdu_info_pool_head_bytes[QDF_FM_BITMAP_BITS * (sizeof(struct hal_rx_ppdu_info))];
 };
 
 /**

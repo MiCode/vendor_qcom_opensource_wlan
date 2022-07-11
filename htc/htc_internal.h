@@ -198,6 +198,7 @@ enum ol_ath_htc_pkt_ecodes {
 	HTC_PKT_Q_EMPTY,
 	HTC_SEND_Q_EMPTY
 };
+
 /* our HTC target state */
 typedef struct _HTC_TARGET {
 	struct hif_opaque_softc *hif_dev;

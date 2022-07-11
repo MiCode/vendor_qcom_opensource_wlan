@@ -3773,6 +3773,10 @@ static QDF_STATUS send_scan_chan_list_cmd_tlv(wmi_unified_t wmi_handle,
 				WMI_SET_CHANNEL_FLAG(chan_info,
 						     WMI_CHAN_FLAG_ALLOW_HE);
 
+			if (tchan_info->allow_eht)
+				WMI_SET_CHANNEL_FLAG(chan_info,
+						     WMI_CHAN_FLAG_ALLOW_EHT);
+
 			if (tchan_info->allow_vht)
 				WMI_SET_CHANNEL_FLAG(chan_info,
 						     WMI_CHAN_FLAG_ALLOW_VHT);
@@ -18936,6 +18940,10 @@ static void populate_tlv_events_id(uint32_t *event_ids)
 	event_ids[wmi_rtt_pasn_peer_delete_eventid] =
 			WMI_RTT_PASN_PEER_DELETE_EVENTID;
 #endif
+#ifdef WLAN_VENDOR_HANDOFF_CONTROL
+	event_ids[wmi_get_roam_vendor_control_param_event_id] =
+				WMI_ROAM_GET_VENDOR_CONTROL_PARAM_EVENTID;
+#endif
 }
 
 #ifdef WLAN_FEATURE_LINK_LAYER_STATS
@@ -19314,12 +19322,18 @@ static void populate_tlv_service(uint32_t *wmi_service)
 	wmi_service[wmi_service_igmp_offload_support] =
 			WMI_SERVICE_IGMP_OFFLOAD_SUPPORT;
 #endif
-#ifdef WLAN_FEATURE_11AX
+
 #ifdef FEATURE_WLAN_TDLS
+#ifdef WLAN_FEATURE_11AX
 	wmi_service[wmi_service_tdls_ax_support] =
 			WMI_SERVICE_11AX_TDLS_SUPPORT;
+	wmi_service[wmi_service_tdls_6g_support] =
+			WMI_SERVICE_TDLS_6GHZ_SUPPORT;
 #endif
+	wmi_service[wmi_service_tdls_wideband_support] =
+			WMI_SERVICE_TDLS_WIDEBAND_SUPPORT;
 #endif
+
 #ifdef WLAN_SUPPORT_TWT
 	wmi_service[wmi_service_twt_bcast_req_support] =
 			WMI_SERVICE_BROADCAST_TWT_REQUESTER;
@@ -19433,6 +19447,10 @@ static void populate_tlv_service(uint32_t *wmi_service)
 #ifdef MULTI_CLIENT_LL_SUPPORT
 	wmi_service[wmi_service_configure_multi_client_ll_support] =
 				WMI_SERVICE_MULTI_CLIENT_LL_SUPPORT;
+#endif
+#ifdef WLAN_VENDOR_HANDOFF_CONTROL
+	wmi_service[wmi_service_configure_vendor_handoff_control_support] =
+				WMI_SERVICE_FW_INI_PARSE_SUPPORT;
 #endif
 }
 

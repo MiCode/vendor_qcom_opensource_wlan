@@ -367,7 +367,7 @@ void DP_PRINT_STATS(const char *fmt, ...)
  *
  * return:void
  */
-static inline void dp_print_stats_string_tlv(uint32_t *tag_buf)
+static void dp_print_stats_string_tlv(uint32_t *tag_buf)
 {
 	htt_stats_string_tlv *dp_stats_buf =
 		(htt_stats_string_tlv *)tag_buf;
@@ -398,7 +398,7 @@ static inline void dp_print_stats_string_tlv(uint32_t *tag_buf)
  *
  * return:void
  */
-static inline void dp_print_tx_pdev_stats_cmn_tlv(uint32_t *tag_buf)
+static void dp_print_tx_pdev_stats_cmn_tlv(uint32_t *tag_buf)
 {
 	htt_tx_pdev_stats_cmn_tlv *dp_stats_buf =
 		(htt_tx_pdev_stats_cmn_tlv *)tag_buf;
@@ -492,7 +492,7 @@ static inline void dp_print_tx_pdev_stats_cmn_tlv(uint32_t *tag_buf)
  *
  * return:void
  */
-static inline void dp_print_tx_pdev_stats_urrn_tlv_v(uint32_t *tag_buf)
+static void dp_print_tx_pdev_stats_urrn_tlv_v(uint32_t *tag_buf)
 {
 	htt_tx_pdev_stats_urrn_tlv_v *dp_stats_buf =
 		(htt_tx_pdev_stats_urrn_tlv_v *)tag_buf;
@@ -523,7 +523,7 @@ static inline void dp_print_tx_pdev_stats_urrn_tlv_v(uint32_t *tag_buf)
  *
  * return:void
  */
-static inline void dp_print_tx_pdev_stats_flush_tlv_v(uint32_t *tag_buf)
+static void dp_print_tx_pdev_stats_flush_tlv_v(uint32_t *tag_buf)
 {
 	htt_tx_pdev_stats_flush_tlv_v *dp_stats_buf =
 		(htt_tx_pdev_stats_flush_tlv_v *)tag_buf;
@@ -556,7 +556,7 @@ static inline void dp_print_tx_pdev_stats_flush_tlv_v(uint32_t *tag_buf)
  *
  * return:void
  */
-static inline void dp_print_tx_pdev_stats_sifs_tlv_v(uint32_t *tag_buf)
+static void dp_print_tx_pdev_stats_sifs_tlv_v(uint32_t *tag_buf)
 {
 	htt_tx_pdev_stats_sifs_tlv_v *dp_stats_buf =
 		(htt_tx_pdev_stats_sifs_tlv_v *)tag_buf;
@@ -588,7 +588,7 @@ static inline void dp_print_tx_pdev_stats_sifs_tlv_v(uint32_t *tag_buf)
  *
  * return:void
  */
-static inline void dp_print_tx_pdev_stats_phy_err_tlv_v(uint32_t *tag_buf)
+static void dp_print_tx_pdev_stats_phy_err_tlv_v(uint32_t *tag_buf)
 {
 	htt_tx_pdev_stats_phy_err_tlv_v *dp_stats_buf =
 		(htt_tx_pdev_stats_phy_err_tlv_v *)tag_buf;
@@ -620,7 +620,7 @@ static inline void dp_print_tx_pdev_stats_phy_err_tlv_v(uint32_t *tag_buf)
  *
  * return:void
  */
-static inline void dp_print_hw_stats_intr_misc_tlv(uint32_t *tag_buf)
+static void dp_print_hw_stats_intr_misc_tlv(uint32_t *tag_buf)
 {
 	htt_hw_stats_intr_misc_tlv *dp_stats_buf =
 		(htt_hw_stats_intr_misc_tlv *)tag_buf;
@@ -653,7 +653,7 @@ static inline void dp_print_hw_stats_intr_misc_tlv(uint32_t *tag_buf)
  *
  * return:void
  */
-static inline void dp_print_hw_stats_wd_timeout_tlv(uint32_t *tag_buf)
+static void dp_print_hw_stats_wd_timeout_tlv(uint32_t *tag_buf)
 {
 	htt_hw_stats_wd_timeout_tlv *dp_stats_buf =
 		(htt_hw_stats_wd_timeout_tlv *)tag_buf;
@@ -684,7 +684,7 @@ static inline void dp_print_hw_stats_wd_timeout_tlv(uint32_t *tag_buf)
  *
  * return:void
  */
-static inline void dp_print_hw_stats_pdev_errs_tlv(uint32_t *tag_buf)
+static void dp_print_hw_stats_pdev_errs_tlv(uint32_t *tag_buf)
 {
 	htt_hw_stats_pdev_errs_tlv *dp_stats_buf =
 		(htt_hw_stats_pdev_errs_tlv *)tag_buf;
@@ -720,7 +720,7 @@ static inline void dp_print_hw_stats_pdev_errs_tlv(uint32_t *tag_buf)
  *
  * return:void
  */
-static inline void dp_print_msdu_flow_stats_tlv(uint32_t *tag_buf)
+static void dp_print_msdu_flow_stats_tlv(uint32_t *tag_buf)
 {
 	htt_msdu_flow_stats_tlv *dp_stats_buf =
 		(htt_msdu_flow_stats_tlv *)tag_buf;
@@ -748,7 +748,7 @@ static inline void dp_print_msdu_flow_stats_tlv(uint32_t *tag_buf)
  *
  * return:void
  */
-static inline void dp_print_tx_tid_stats_tlv(uint32_t *tag_buf)
+static void dp_print_tx_tid_stats_tlv(uint32_t *tag_buf)
 {
 	htt_tx_tid_stats_tlv *dp_stats_buf =
 		(htt_tx_tid_stats_tlv *)tag_buf;
@@ -803,7 +803,7 @@ static inline void dp_print_tx_tid_stats_tlv(uint32_t *tag_buf)
  *
  * return:void
  */
-static inline void dp_print_tx_tid_stats_v1_tlv(uint32_t *tag_buf)
+static void dp_print_tx_tid_stats_v1_tlv(uint32_t *tag_buf)
 {
 	htt_tx_tid_stats_v1_tlv *dp_stats_buf =
 		(htt_tx_tid_stats_v1_tlv *)tag_buf;
@@ -858,7 +858,7 @@ static inline void dp_print_tx_tid_stats_v1_tlv(uint32_t *tag_buf)
  *
  * return:void
  */
-static inline void dp_print_rx_tid_stats_tlv(uint32_t *tag_buf)
+static void dp_print_rx_tid_stats_tlv(uint32_t *tag_buf)
 {
 	htt_rx_tid_stats_tlv *dp_stats_buf =
 		(htt_rx_tid_stats_tlv *)tag_buf;
@@ -897,7 +897,7 @@ static inline void dp_print_rx_tid_stats_tlv(uint32_t *tag_buf)
  *
  * return:void
  */
-static inline void dp_print_counter_tlv(uint32_t *tag_buf)
+static void dp_print_counter_tlv(uint32_t *tag_buf)
 {
 	htt_counter_tlv *dp_stats_buf =
 		(htt_counter_tlv *)tag_buf;
@@ -928,7 +928,7 @@ static inline void dp_print_counter_tlv(uint32_t *tag_buf)
  *
  * return:void
  */
-static inline void dp_print_peer_stats_cmn_tlv(uint32_t *tag_buf)
+static void dp_print_peer_stats_cmn_tlv(uint32_t *tag_buf)
 {
 	htt_peer_stats_cmn_tlv *dp_stats_buf =
 		(htt_peer_stats_cmn_tlv *)tag_buf;
@@ -956,7 +956,7 @@ static inline void dp_print_peer_stats_cmn_tlv(uint32_t *tag_buf)
  *
  * return:void
  */
-static inline void dp_print_peer_details_tlv(uint32_t *tag_buf)
+static void dp_print_peer_details_tlv(uint32_t *tag_buf)
 {
 	htt_peer_details_tlv *dp_stats_buf =
 		(htt_peer_details_tlv *)tag_buf;
@@ -984,7 +984,7 @@ static inline void dp_print_peer_details_tlv(uint32_t *tag_buf)
  *
  * return:void
  */
-static inline void dp_print_tx_peer_rate_stats_tlv(uint32_t *tag_buf)
+static void dp_print_tx_peer_rate_stats_tlv(uint32_t *tag_buf)
 {
 	htt_tx_peer_rate_stats_tlv *dp_stats_buf =
 		(htt_tx_peer_rate_stats_tlv *)tag_buf;
@@ -1155,7 +1155,7 @@ fail1:
  *
  * return:void
  */
-static inline void dp_print_rx_peer_rate_stats_tlv(uint32_t *tag_buf)
+static void dp_print_rx_peer_rate_stats_tlv(uint32_t *tag_buf)
 {
 	htt_rx_peer_rate_stats_tlv *dp_stats_buf =
 		(htt_rx_peer_rate_stats_tlv *)tag_buf;
@@ -1325,7 +1325,7 @@ fail1:
  *
  * return:void
  */
-static inline void dp_print_tx_hwq_mu_mimo_sch_stats_tlv(uint32_t *tag_buf)
+static void dp_print_tx_hwq_mu_mimo_sch_stats_tlv(uint32_t *tag_buf)
 {
 	htt_tx_hwq_mu_mimo_sch_stats_tlv *dp_stats_buf =
 		(htt_tx_hwq_mu_mimo_sch_stats_tlv *)tag_buf;
@@ -1345,7 +1345,7 @@ static inline void dp_print_tx_hwq_mu_mimo_sch_stats_tlv(uint32_t *tag_buf)
  *
  * return:void
  */
-static inline void dp_print_tx_hwq_mu_mimo_mpdu_stats_tlv(uint32_t *tag_buf)
+static void dp_print_tx_hwq_mu_mimo_mpdu_stats_tlv(uint32_t *tag_buf)
 {
 	htt_tx_hwq_mu_mimo_mpdu_stats_tlv *dp_stats_buf =
 		(htt_tx_hwq_mu_mimo_mpdu_stats_tlv *)tag_buf;
@@ -1389,7 +1389,7 @@ static inline void dp_print_tx_hwq_mu_mimo_cmn_stats_tlv(uint32_t *tag_buf)
  *
  * return:void
  */
-static inline void dp_print_tx_hwq_stats_cmn_tlv(uint32_t *tag_buf)
+static void dp_print_tx_hwq_stats_cmn_tlv(uint32_t *tag_buf)
 {
 	htt_tx_hwq_stats_cmn_tlv *dp_stats_buf =
 		(htt_tx_hwq_stats_cmn_tlv *)tag_buf;
@@ -1444,7 +1444,7 @@ static inline void dp_print_tx_hwq_stats_cmn_tlv(uint32_t *tag_buf)
  *
  *return:void
  */
-static inline void dp_print_tx_hwq_difs_latency_stats_tlv_v(uint32_t *tag_buf)
+static void dp_print_tx_hwq_difs_latency_stats_tlv_v(uint32_t *tag_buf)
 {
 	htt_tx_hwq_difs_latency_stats_tlv_v *dp_stats_buf =
 		(htt_tx_hwq_difs_latency_stats_tlv_v *)tag_buf;
@@ -1481,7 +1481,7 @@ static inline void dp_print_tx_hwq_difs_latency_stats_tlv_v(uint32_t *tag_buf)
  *
  * return:void
  */
-static inline void dp_print_tx_hwq_cmd_result_stats_tlv_v(uint32_t *tag_buf)
+static void dp_print_tx_hwq_cmd_result_stats_tlv_v(uint32_t *tag_buf)
 {
 	htt_tx_hwq_cmd_result_stats_tlv_v *dp_stats_buf =
 		(htt_tx_hwq_cmd_result_stats_tlv_v *)tag_buf;
@@ -1513,7 +1513,7 @@ static inline void dp_print_tx_hwq_cmd_result_stats_tlv_v(uint32_t *tag_buf)
  *
  * return:void
  */
-static inline void dp_print_tx_hwq_cmd_stall_stats_tlv_v(uint32_t *tag_buf)
+static void dp_print_tx_hwq_cmd_stall_stats_tlv_v(uint32_t *tag_buf)
 {
 	htt_tx_hwq_cmd_stall_stats_tlv_v *dp_stats_buf =
 		(htt_tx_hwq_cmd_stall_stats_tlv_v *)tag_buf;
@@ -1546,7 +1546,7 @@ static inline void dp_print_tx_hwq_cmd_stall_stats_tlv_v(uint32_t *tag_buf)
  *
  * return:void
  */
-static inline void dp_print_tx_hwq_fes_result_stats_tlv_v(uint32_t *tag_buf)
+static void dp_print_tx_hwq_fes_result_stats_tlv_v(uint32_t *tag_buf)
 {
 	htt_tx_hwq_fes_result_stats_tlv_v *dp_stats_buf =
 		(htt_tx_hwq_fes_result_stats_tlv_v *)tag_buf;
@@ -1578,11 +1578,10 @@ static inline void dp_print_tx_hwq_fes_result_stats_tlv_v(uint32_t *tag_buf)
  *
  * return:void
  */
-static inline void dp_print_tx_selfgen_cmn_stats_tlv(uint32_t *tag_buf)
+static void dp_print_tx_selfgen_cmn_stats_tlv(uint32_t *tag_buf)
 {
 	htt_tx_selfgen_cmn_stats_tlv *dp_stats_buf =
 		(htt_tx_selfgen_cmn_stats_tlv *)tag_buf;
-
 	DP_PRINT_STATS("HTT_TX_SELFGEN_CMN_STATS_TLV:");
 	DP_PRINT_STATS("mac_id__word = %u",
 		       dp_stats_buf->mac_id__word);
@@ -1616,7 +1615,7 @@ static inline void dp_print_tx_selfgen_cmn_stats_tlv(uint32_t *tag_buf)
  *
  * return:void
  */
-static inline void dp_print_tx_selfgen_ac_stats_tlv(uint32_t *tag_buf)
+static void dp_print_tx_selfgen_ac_stats_tlv(uint32_t *tag_buf)
 {
 	htt_tx_selfgen_ac_stats_tlv *dp_stats_buf =
 		(htt_tx_selfgen_ac_stats_tlv *)tag_buf;
@@ -1644,7 +1643,7 @@ static inline void dp_print_tx_selfgen_ac_stats_tlv(uint32_t *tag_buf)
  *
  * return:void
  */
-static inline void dp_print_tx_selfgen_ax_stats_tlv(uint32_t *tag_buf)
+static void dp_print_tx_selfgen_ax_stats_tlv(uint32_t *tag_buf)
 {
 	htt_tx_selfgen_ax_stats_tlv *dp_stats_buf =
 		(htt_tx_selfgen_ax_stats_tlv *)tag_buf;
@@ -1688,7 +1687,7 @@ static inline void dp_print_tx_selfgen_ax_stats_tlv(uint32_t *tag_buf)
  *
  * return:void
  */
-static inline void dp_print_tx_selfgen_ac_err_stats_tlv(uint32_t *tag_buf)
+static void dp_print_tx_selfgen_ac_err_stats_tlv(uint32_t *tag_buf)
 {
 	htt_tx_selfgen_ac_err_stats_tlv *dp_stats_buf =
 		(htt_tx_selfgen_ac_err_stats_tlv *)tag_buf;
@@ -1710,13 +1709,115 @@ static inline void dp_print_tx_selfgen_ac_err_stats_tlv(uint32_t *tag_buf)
 		       dp_stats_buf->ac_mu_mimo_brp3_err);
 }
 
+/* dp_print_tx_selfgen_be_err_stats_tlv: display htt_tx_selfgen_be_err_stats_tlv
+ * @tag_buf: buffer containing the tlv htt_tx_selfgen_be_err_stats_tlv
+ *
+ * return:void
+ */
+static void dp_print_tx_selfgen_be_err_stats_tlv(uint32_t *tag_buf)
+{
+	htt_tx_selfgen_be_err_stats_tlv *dp_stats_buf =
+		(htt_tx_selfgen_be_err_stats_tlv *)tag_buf;
+	uint16_t i;
+
+	DP_PRINT_STATS("HTT_TX_SELFGEN_BE_ERR_STATS_TLV:");
+	DP_PRINT_STATS("be_su_ndp_err = %u",
+		       dp_stats_buf->be_su_ndp_err);
+	DP_PRINT_STATS("be_su_ndpa_err = %u",
+		       dp_stats_buf->be_su_ndpa_err);
+	DP_PRINT_STATS("be_mu_mimo_ndpa_err = %u",
+		       dp_stats_buf->be_mu_mimo_ndpa_err);
+	DP_PRINT_STATS("be_mu_mimo_ndp_err = %u",
+		       dp_stats_buf->be_mu_mimo_ndp_err);
+	for (i = 0; i < (HTT_TX_PDEV_STATS_NUM_BE_MUMIMO_USER_STATS - 1); i++)
+		DP_PRINT_STATS("be_mu_mimo_brp_err_%d: %u",
+			       i, dp_stats_buf->be_mu_mimo_brp_err[i]);
+	DP_PRINT_STATS("be_basic_trigger_err = %u",
+		       dp_stats_buf->be_basic_trigger_err);
+	DP_PRINT_STATS("be_bsr_trigger_err = %u",
+		       dp_stats_buf->be_bsr_trigger_err);
+	DP_PRINT_STATS("be_mu_bar_trigger_err = %u",
+		       dp_stats_buf->be_mu_bar_trigger_err);
+	DP_PRINT_STATS("be_mu_rts_trigger_err = %u",
+		       dp_stats_buf->be_mu_rts_trigger_err);
+	DP_PRINT_STATS("be_ulmumimo_trigger_err = %u",
+		       dp_stats_buf->be_ulmumimo_trigger_err);
+	for (i = 0; i < (HTT_TX_PDEV_STATS_NUM_BE_MUMIMO_USER_STATS - 1); i++)
+		DP_PRINT_STATS("be_mu_mimo_brp_err_num_cbf_received _%d: %u", i,
+			       dp_stats_buf->be_mu_mimo_brp_err_num_cbf_received[i]);
+	DP_PRINT_STATS("be_su_ndpa_flushed = %u",
+		       dp_stats_buf->be_su_ndpa_flushed);
+	DP_PRINT_STATS("be_su_ndp_flushed = %u",
+		       dp_stats_buf->be_su_ndp_flushed);
+	DP_PRINT_STATS("be_mu_mimo_ndpa_flushed = %u",
+		       dp_stats_buf->be_mu_mimo_ndpa_flushed);
+	DP_PRINT_STATS("be_mu_mimo_ndp_flushed = %u",
+		       dp_stats_buf->be_mu_mimo_ndp_flushed);
+	for (i = 0; i < (HTT_TX_PDEV_STATS_NUM_BE_MUMIMO_USER_STATS - 1); i++)
+		DP_PRINT_STATS("be_mu_mimo_brpoll_flushed_%d: %u",
+			       i, dp_stats_buf->be_mu_mimo_brpoll_flushed[i]);
+	for (i = 0; i < (HTT_TX_PDEV_STATS_NUM_BE_MUMIMO_USER_STATS - 1); i++)
+		DP_PRINT_STATS("be_ul_mumimo_trigger_err_%d: %u",
+			       i, dp_stats_buf->be_ul_mumimo_trigger_err[i]);
+}
+
+/*
+ * dp_print_tx_selfgen_be_stats_tlv: display htt_tx_selfgen_be_stats_tlv
+ * @tag_buf: buffer containing the tlv htt_tx_selfgen_be_stats_tlv
+ *
+ * return:void
+ */
+static void dp_print_tx_selfgen_be_stats_tlv(uint32_t *tag_buf)
+{
+	htt_tx_selfgen_be_stats_tlv *dp_stats_buf =
+		(htt_tx_selfgen_be_stats_tlv *)tag_buf;
+	uint16_t i;
+
+	DP_PRINT_STATS("HTT_TX_SELFGEN_BE_STATS_TLV:");
+	DP_PRINT_STATS("be_su_ndpa = %u",
+		       dp_stats_buf->be_su_ndpa);
+	DP_PRINT_STATS("be_su_ndp = %u",
+		       dp_stats_buf->be_su_ndp);
+	DP_PRINT_STATS("be_mu_mimo_ndpa = %u",
+		       dp_stats_buf->be_mu_mimo_ndpa);
+	DP_PRINT_STATS("be_mu_mimo_ndp = %u",
+		       dp_stats_buf->be_mu_mimo_ndp);
+	for (i = 0; i < (HTT_TX_PDEV_STATS_NUM_BE_MUMIMO_USER_STATS - 1); i++)
+		DP_PRINT_STATS("be_mu_mimo_brpoll_%d = %u",
+			       i, dp_stats_buf->be_mu_mimo_brpoll[i]);
+	DP_PRINT_STATS("be_basic_trigger = %u",
+		       dp_stats_buf->be_basic_trigger);
+	DP_PRINT_STATS("be_bsr_trigger = %u",
+		       dp_stats_buf->be_bsr_trigger);
+	DP_PRINT_STATS("be_mu_bar_trigger = %u",
+		       dp_stats_buf->be_mu_bar_trigger);
+	DP_PRINT_STATS("be_mu_rts_trigger = %u",
+		       dp_stats_buf->be_mu_rts_trigger);
+	DP_PRINT_STATS("be_ulmumimo_trigger = %u",
+		       dp_stats_buf->be_ulmumimo_trigger);
+	DP_PRINT_STATS("be_su_ndpa_queued = %u",
+		       dp_stats_buf->be_su_ndpa_queued);
+	DP_PRINT_STATS("be_su_ndp_queued = %u",
+		       dp_stats_buf->be_su_ndp_queued);
+	DP_PRINT_STATS("be_mu_mimo_ndpa_queued = %u",
+		       dp_stats_buf->be_mu_mimo_ndpa_queued);
+	DP_PRINT_STATS("be_mu_mimo_ndp_queued = %u",
+		       dp_stats_buf->be_mu_mimo_ndp_queued);
+	for (i = 0; i < (HTT_TX_PDEV_STATS_NUM_BE_MUMIMO_USER_STATS - 1); i++)
+		DP_PRINT_STATS("be_mu_mimo_brpoll_queued_%d = %u",
+			       i, dp_stats_buf->be_mu_mimo_brpoll_queued[i]);
+	for (i = 0; i < (HTT_TX_PDEV_STATS_NUM_BE_MUMIMO_USER_STATS - 1); i++)
+		DP_PRINT_STATS("be_ul_mumimo_trigger_%d = %u",
+			       i, dp_stats_buf->be_ul_mumimo_trigger[i]);
+}
+
 /*
  * dp_print_tx_selfgen_ax_err_stats_tlv: display htt_tx_selfgen_ax_err_stats_tlv
  * @tag_buf: buffer containing the tlv htt_tx_selfgen_ax_err_stats_tlv
  *
  * return:void
  */
-static inline void dp_print_tx_selfgen_ax_err_stats_tlv(uint32_t *tag_buf)
+static void dp_print_tx_selfgen_ax_err_stats_tlv(uint32_t *tag_buf)
 {
 	htt_tx_selfgen_ax_err_stats_tlv *dp_stats_buf =
 		(htt_tx_selfgen_ax_err_stats_tlv *)tag_buf;
@@ -1755,12 +1856,203 @@ static inline void dp_print_tx_selfgen_ax_err_stats_tlv(uint32_t *tag_buf)
 }
 
 /*
+ * dp_print_tx_sounding_stats_tlv: display htt_tx_sounding_stats_tlv
+ * @tag_buf: buffer containing the tlv htt_tx_soundig_stats_tlv
+ *
+ * return:void
+ */
+static void dp_print_tx_sounding_stats_tlv(uint32_t *tag_buf)
+{
+	htt_tx_sounding_stats_tlv *dp_stats_buf =
+		(htt_tx_sounding_stats_tlv *)tag_buf;
+	uint16_t i;
+	uint16_t max_bw = HTT_TX_PDEV_STATS_NUM_BW_COUNTERS;
+	bool cv_stats = false;
+
+	switch (dp_stats_buf->tx_sounding_mode) {
+	case HTT_TX_AC_SOUNDING_MODE:
+		DP_PRINT_STATS("\n HTT_TX_AC_SOUNDING_STATS_TLV: ");
+		DP_PRINT_STATS("ac_cbf_20 =  IBF : %d, SU_SIFS : %d, "
+			"SU_RBO : %d, MU_SIFS : %d, MU_RBO : %d:",
+			dp_stats_buf->cbf_20[0], dp_stats_buf->cbf_20[1],
+			dp_stats_buf->cbf_20[2], dp_stats_buf->cbf_20[3],
+			dp_stats_buf->cbf_20[4]);
+		DP_PRINT_STATS("ac_cbf_40 =  IBF : %d, SU_SIFS : %d, "
+			"SU_RBO : %d, MU_SIFS : %d, MU_RBO : %d:",
+			dp_stats_buf->cbf_40[0], dp_stats_buf->cbf_40[1],
+			dp_stats_buf->cbf_40[2], dp_stats_buf->cbf_40[3],
+			dp_stats_buf->cbf_40[4]);
+		DP_PRINT_STATS("ac_cbf_80 =  IBF : %d, SU_SIFS : %d, "
+			"SU_RBO : %d, MU_SIFS : %d, MU_RBO : %d:",
+			dp_stats_buf->cbf_80[0], dp_stats_buf->cbf_80[1],
+			dp_stats_buf->cbf_80[2], dp_stats_buf->cbf_80[3],
+			dp_stats_buf->cbf_80[4]);
+		DP_PRINT_STATS("ac_cbf_160 =  IBF : %d, SU_SIFS : %d, "
+			"SU_RBO : %d, MU_SIFS : %d, MU_RBO : %d:",
+			dp_stats_buf->cbf_160[0], dp_stats_buf->cbf_160[1],
+			dp_stats_buf->cbf_160[2], dp_stats_buf->cbf_160[3],
+			dp_stats_buf->cbf_160[4]);
+		for (i = 0;
+		     i < HTT_TX_PDEV_STATS_NUM_AC_MUMIMO_USER_STATS;
+		     i++) {
+				DP_PRINT_STATS("Sounding User %d = 20MHz: %d, "
+				       "40MHz : %d, 80MHz: %d, 160MHz: %d", i,
+				dp_stats_buf->sounding[(i * max_bw) + 0],
+				dp_stats_buf->sounding[(i * max_bw) + 1],
+				dp_stats_buf->sounding[(i * max_bw) + 2],
+				dp_stats_buf->sounding[(i * max_bw) + 3]);
+		}
+		break;
+	case HTT_TX_AX_SOUNDING_MODE:
+		DP_PRINT_STATS("\n HTT_TX_AX_SOUNDING_STATS_TLV: ");
+		DP_PRINT_STATS("ax_cbf_20 =  IBF : %d, SU_SIFS : %d, "
+			"SU_RBO : %d, MU_SIFS : %d, MU_RBO : %d:",
+			dp_stats_buf->cbf_20[0], dp_stats_buf->cbf_20[1],
+			dp_stats_buf->cbf_20[2], dp_stats_buf->cbf_20[3],
+			dp_stats_buf->cbf_20[4]);
+		DP_PRINT_STATS("ax_cbf_40 =  IBF : %d, SU_SIFS : %d, "
+			"SU_RBO : %d, MU_SIFS : %d, MU_RBO : %d:",
+			dp_stats_buf->cbf_40[0], dp_stats_buf->cbf_40[1],
+			dp_stats_buf->cbf_40[2], dp_stats_buf->cbf_40[3],
+			dp_stats_buf->cbf_40[4]);
+		DP_PRINT_STATS("ax_cbf_80 =  IBF : %d, SU_SIFS : %d, "
+			"SU_RBO : %d, MU_SIFS : %d, MU_RBO : %d:",
+			dp_stats_buf->cbf_80[0], dp_stats_buf->cbf_80[1],
+			dp_stats_buf->cbf_80[2], dp_stats_buf->cbf_80[3],
+			dp_stats_buf->cbf_80[4]);
+		DP_PRINT_STATS("ax_cbf_160 =  IBF : %d, SU_SIFS : %d, "
+			"SU_RBO : %d, MU_SIFS : %d, MU_RBO : %d:",
+			dp_stats_buf->cbf_160[0], dp_stats_buf->cbf_160[1],
+			dp_stats_buf->cbf_160[2], dp_stats_buf->cbf_160[3],
+			dp_stats_buf->cbf_160[4]);
+		for (i = 0;
+		     i < HTT_TX_PDEV_STATS_NUM_AX_MUMIMO_USER_STATS;
+		     i++) {
+			DP_PRINT_STATS("Sounding User %d = 20MHz: %d, "
+				       "40MHz : %d, 80MHz: %d, 160MHz: %d", i,
+				dp_stats_buf->sounding[(i * max_bw) + 0],
+				dp_stats_buf->sounding[(i * max_bw) + 1],
+				dp_stats_buf->sounding[(i * max_bw) + 2],
+				dp_stats_buf->sounding[(i * max_bw) + 3]);
+		}
+		break;
+	case HTT_TX_BE_SOUNDING_MODE:
+		DP_PRINT_STATS("\n HTT_TX_BE_SOUNDING_STATS_TLV: ");
+		DP_PRINT_STATS("be_cbf_20 =  IBF : %d, SU_SIFS : %d, "
+			"SU_RBO : %d, MU_SIFS : %d, MU_RBO : %d:",
+			dp_stats_buf->cbf_20[0], dp_stats_buf->cbf_20[1],
+			dp_stats_buf->cbf_20[2], dp_stats_buf->cbf_20[3],
+			dp_stats_buf->cbf_20[4]);
+		DP_PRINT_STATS("be_cbf_40 =  IBF : %d, SU_SIFS : %d, "
+			"SU_RBO : %d, MU_SIFS : %d, MU_RBO : %d:",
+			dp_stats_buf->cbf_40[0], dp_stats_buf->cbf_40[1],
+			dp_stats_buf->cbf_40[2], dp_stats_buf->cbf_40[3],
+			dp_stats_buf->cbf_40[4]);
+		DP_PRINT_STATS("be_cbf_80 =  IBF : %d, SU_SIFS : %d, "
+			"SU_RBO : %d, MU_SIFS : %d, MU_RBO : %d:",
+			dp_stats_buf->cbf_80[0], dp_stats_buf->cbf_80[1],
+			dp_stats_buf->cbf_80[2], dp_stats_buf->cbf_80[3],
+			dp_stats_buf->cbf_80[4]);
+		DP_PRINT_STATS("be_cbf_160 =  IBF : %d, SU_SIFS : %d, "
+			"SU_RBO : %d, MU_SIFS : %d, MU_RBO : %d:",
+			dp_stats_buf->cbf_160[0], dp_stats_buf->cbf_160[1],
+			dp_stats_buf->cbf_160[2], dp_stats_buf->cbf_160[3],
+			dp_stats_buf->cbf_160[4]);
+		DP_PRINT_STATS("be_cbf_320 =  IBF : %d, SU_SIFS : %d, "
+			"SU_RBO : %d, MU_SIFS : %d, MU_RBO : %d:",
+			dp_stats_buf->cbf_320[0], dp_stats_buf->cbf_320[1],
+			dp_stats_buf->cbf_320[2], dp_stats_buf->cbf_320[3],
+			dp_stats_buf->cbf_320[4]);
+		for (i = 0;
+		     i < HTT_TX_PDEV_STATS_NUM_BE_MUMIMO_USER_STATS;
+		     i++) {
+			DP_PRINT_STATS("Sounding User %d = 20MHz: %d, "
+				       "40MHz : %d, 80MHz: %d, 160MHz: %d, "
+				       "320MHz: %d", i,
+				dp_stats_buf->sounding[(i * max_bw) + 0],
+				dp_stats_buf->sounding[(i * max_bw) + 1],
+				dp_stats_buf->sounding[(i * max_bw) + 2],
+				dp_stats_buf->sounding[(i * max_bw) + 3],
+				dp_stats_buf->sounding_320[i]);
+		}
+		cv_stats = true;
+		break;
+	default:
+		break;
+	}
+
+	if (cv_stats) {
+		DP_PRINT_STATS("\n CV UPLOAD HANDLER STATS:");
+		DP_PRINT_STATS("cv_nc_mismatch_err         : %u",
+			       dp_stats_buf->cv_nc_mismatch_err);
+		DP_PRINT_STATS("cv_fcs_err                 : %u",
+			       dp_stats_buf->cv_fcs_err);
+		DP_PRINT_STATS("cv_frag_idx_mismatch       : %u",
+			       dp_stats_buf->cv_frag_idx_mismatch);
+		DP_PRINT_STATS("cv_invalid_peer_id         : %u",
+			       dp_stats_buf->cv_invalid_peer_id);
+		DP_PRINT_STATS("cv_no_txbf_setup           : %u",
+			       dp_stats_buf->cv_no_txbf_setup);
+		DP_PRINT_STATS("cv_expiry_in_update        : %u",
+			       dp_stats_buf->cv_expiry_in_update);
+		DP_PRINT_STATS("cv_pkt_bw_exceed           : %u",
+			       dp_stats_buf->cv_pkt_bw_exceed);
+		DP_PRINT_STATS("cv_dma_not_done_err        : %u",
+			       dp_stats_buf->cv_dma_not_done_err);
+		DP_PRINT_STATS("cv_update_failed           : %u\n",
+			       dp_stats_buf->cv_update_failed);
+
+		DP_PRINT_STATS("\n CV QUERY STATS:");
+		DP_PRINT_STATS("cv_total_query             : %u",
+			       dp_stats_buf->cv_total_query);
+		DP_PRINT_STATS("cv_total_pattern_query     : %u",
+			       dp_stats_buf->cv_total_pattern_query);
+		DP_PRINT_STATS("cv_total_bw_query          : %u",
+			       dp_stats_buf->cv_total_bw_query);
+		DP_PRINT_STATS("cv_total_query             : %u",
+			       dp_stats_buf->cv_total_query);
+		DP_PRINT_STATS("cv_invalid_bw_coding       : %u",
+			       dp_stats_buf->cv_invalid_bw_coding);
+		DP_PRINT_STATS("cv_forced_sounding         : %u",
+			       dp_stats_buf->cv_forced_sounding);
+		DP_PRINT_STATS("cv_standalone_sounding     : %u",
+			       dp_stats_buf->cv_standalone_sounding);
+		DP_PRINT_STATS("cv_nc_mismatch             : %u",
+			       dp_stats_buf->cv_nc_mismatch);
+		DP_PRINT_STATS("cv_fb_type_mismatch        : %u",
+			       dp_stats_buf->cv_fb_type_mismatch);
+		DP_PRINT_STATS("cv_ofdma_bw_mismatch       : %u",
+			       dp_stats_buf->cv_ofdma_bw_mismatch);
+		DP_PRINT_STATS("cv_bw_mismatch             : %u",
+			       dp_stats_buf->cv_bw_mismatch);
+		DP_PRINT_STATS("cv_pattern_mismatch        : %u",
+			       dp_stats_buf->cv_pattern_mismatch);
+		DP_PRINT_STATS("cv_preamble_mismatch       : %u",
+			       dp_stats_buf->cv_preamble_mismatch);
+		DP_PRINT_STATS("cv_nr_mismatch             : %u",
+			       dp_stats_buf->cv_nr_mismatch);
+		DP_PRINT_STATS("cv_in_use_cnt_exceeded     : %u",
+			       dp_stats_buf->cv_in_use_cnt_exceeded);
+		DP_PRINT_STATS("cv_found                   : %u",
+			       dp_stats_buf->cv_found);
+		DP_PRINT_STATS("cv_not found               : %u",
+			       dp_stats_buf->cv_not_found);
+		DP_PRINT_STATS("cv_ntbr_sounding           : %u",
+			       dp_stats_buf->cv_ntbr_sounding);
+		DP_PRINT_STATS("cv_found_upload_in_progress: %u",
+			       dp_stats_buf->cv_found_upload_in_progress);
+		DP_PRINT_STATS("cv_expired_during_query    : %u\n",
+			       dp_stats_buf->cv_expired_during_query);
+	}
+}
+
+/*
  * dp_print_tx_pdev_mu_mimo_sch_stats_tlv: display htt_tx_pdev_mu_mimo_sch_stats
  * @tag_buf: buffer containing the tlv htt_tx_pdev_mu_mimo_sch_stats_tlv
  *
  * return:void
  */
-static inline void dp_print_tx_pdev_mu_mimo_sch_stats_tlv(uint32_t *tag_buf)
+static void dp_print_tx_pdev_mu_mimo_sch_stats_tlv(uint32_t *tag_buf)
 {
 	uint8_t i;
 	htt_tx_pdev_mu_mimo_sch_stats_tlv *dp_stats_buf =
@@ -1803,7 +2095,7 @@ static inline void dp_print_tx_pdev_mu_mimo_sch_stats_tlv(uint32_t *tag_buf)
  *
  * return:void
  */
-static inline void dp_print_tx_pdev_mu_mimo_mpdu_stats_tlv(uint32_t *tag_buf)
+static void dp_print_tx_pdev_mu_mimo_mpdu_stats_tlv(uint32_t *tag_buf)
 {
 	htt_tx_pdev_mpdu_stats_tlv *dp_stats_buf =
 		(htt_tx_pdev_mpdu_stats_tlv *)tag_buf;
@@ -1931,7 +2223,7 @@ static inline void dp_print_tx_pdev_mu_mimo_mpdu_stats_tlv(uint32_t *tag_buf)
  *
  * return:void
  */
-static inline void dp_print_sched_txq_cmd_posted_tlv_v(uint32_t *tag_buf)
+static void dp_print_sched_txq_cmd_posted_tlv_v(uint32_t *tag_buf)
 {
 	htt_sched_txq_cmd_posted_tlv_v *dp_stats_buf =
 		(htt_sched_txq_cmd_posted_tlv_v *)tag_buf;
@@ -1964,7 +2256,7 @@ static inline void dp_print_sched_txq_cmd_posted_tlv_v(uint32_t *tag_buf)
  *
  * return:void
  */
-static inline void dp_print_sched_txq_cmd_reaped_tlv_v(uint32_t *tag_buf)
+static void dp_print_sched_txq_cmd_reaped_tlv_v(uint32_t *tag_buf)
 {
 	htt_sched_txq_cmd_reaped_tlv_v *dp_stats_buf =
 		(htt_sched_txq_cmd_reaped_tlv_v *)tag_buf;
@@ -1998,7 +2290,7 @@ static inline void dp_print_sched_txq_cmd_reaped_tlv_v(uint32_t *tag_buf)
  *
  * return:void
  */
-static inline void dp_print_tx_pdev_stats_sched_per_txq_tlv(uint32_t *tag_buf)
+static void dp_print_tx_pdev_stats_sched_per_txq_tlv(uint32_t *tag_buf)
 {
 	htt_tx_pdev_stats_sched_per_txq_tlv *dp_stats_buf =
 		(htt_tx_pdev_stats_sched_per_txq_tlv *)tag_buf;
@@ -2052,7 +2344,7 @@ static inline void dp_print_tx_pdev_stats_sched_per_txq_tlv(uint32_t *tag_buf)
  *
  * return:void
  */
-static inline void dp_print_stats_tx_sched_cmn_tlv(uint32_t *tag_buf)
+static void dp_print_stats_tx_sched_cmn_tlv(uint32_t *tag_buf)
 {
 	htt_stats_tx_sched_cmn_tlv *dp_stats_buf =
 		(htt_stats_tx_sched_cmn_tlv *)tag_buf;
@@ -2070,7 +2362,7 @@ static inline void dp_print_stats_tx_sched_cmn_tlv(uint32_t *tag_buf)
  *
  * return:void
  */
-static inline void dp_print_tx_tqm_gen_mpdu_stats_tlv_v(uint32_t *tag_buf)
+static void dp_print_tx_tqm_gen_mpdu_stats_tlv_v(uint32_t *tag_buf)
 {
 	htt_tx_tqm_gen_mpdu_stats_tlv_v *dp_stats_buf =
 		(htt_tx_tqm_gen_mpdu_stats_tlv_v *)tag_buf;
@@ -2104,7 +2396,7 @@ static inline void dp_print_tx_tqm_gen_mpdu_stats_tlv_v(uint32_t *tag_buf)
  *
  * return:void
  */
-static inline void dp_print_tx_tqm_list_mpdu_stats_tlv_v(uint32_t *tag_buf)
+static void dp_print_tx_tqm_list_mpdu_stats_tlv_v(uint32_t *tag_buf)
 {
 	htt_tx_tqm_list_mpdu_stats_tlv_v *dp_stats_buf =
 		(htt_tx_tqm_list_mpdu_stats_tlv_v *)tag_buf;
@@ -2139,7 +2431,7 @@ static inline void dp_print_tx_tqm_list_mpdu_stats_tlv_v(uint32_t *tag_buf)
  *
  * return:void
  */
-static inline void dp_print_tx_tqm_list_mpdu_cnt_tlv_v(uint32_t *tag_buf)
+static void dp_print_tx_tqm_list_mpdu_cnt_tlv_v(uint32_t *tag_buf)
 {
 	htt_tx_tqm_list_mpdu_cnt_tlv_v *dp_stats_buf =
 		(htt_tx_tqm_list_mpdu_cnt_tlv_v *)tag_buf;
@@ -2173,7 +2465,7 @@ static inline void dp_print_tx_tqm_list_mpdu_cnt_tlv_v(uint32_t *tag_buf)
  *
  * return:void
  */
-static inline void dp_print_tx_tqm_pdev_stats_tlv_v(uint32_t *tag_buf)
+static void dp_print_tx_tqm_pdev_stats_tlv_v(uint32_t *tag_buf)
 {
 	htt_tx_tqm_pdev_stats_tlv_v *dp_stats_buf =
 		(htt_tx_tqm_pdev_stats_tlv_v *)tag_buf;
@@ -2241,7 +2533,7 @@ static inline void dp_print_tx_tqm_pdev_stats_tlv_v(uint32_t *tag_buf)
  *
  * return:void
  */
-static inline void dp_print_tx_tqm_cmn_stats_tlv(uint32_t *tag_buf)
+static void dp_print_tx_tqm_cmn_stats_tlv(uint32_t *tag_buf)
 {
 	htt_tx_tqm_cmn_stats_tlv *dp_stats_buf =
 		(htt_tx_tqm_cmn_stats_tlv *)tag_buf;
@@ -2271,7 +2563,7 @@ static inline void dp_print_tx_tqm_cmn_stats_tlv(uint32_t *tag_buf)
  *
  * return:void
  */
-static inline void dp_print_tx_tqm_error_stats_tlv(uint32_t *tag_buf)
+static void dp_print_tx_tqm_error_stats_tlv(uint32_t *tag_buf)
 {
 	htt_tx_tqm_error_stats_tlv *dp_stats_buf =
 		(htt_tx_tqm_error_stats_tlv *)tag_buf;
@@ -2291,7 +2583,7 @@ static inline void dp_print_tx_tqm_error_stats_tlv(uint32_t *tag_buf)
  *
  * return:void
  */
-static inline void dp_print_tx_tqm_cmdq_status_tlv(uint32_t *tag_buf)
+static void dp_print_tx_tqm_cmdq_status_tlv(uint32_t *tag_buf)
 {
 	htt_tx_tqm_cmdq_status_tlv *dp_stats_buf =
 		(htt_tx_tqm_cmdq_status_tlv *)tag_buf;
@@ -2329,7 +2621,7 @@ static inline void dp_print_tx_tqm_cmdq_status_tlv(uint32_t *tag_buf)
  *
  * return:void
  */
-static inline void dp_print_tx_de_eapol_packets_stats_tlv(uint32_t *tag_buf)
+static void dp_print_tx_de_eapol_packets_stats_tlv(uint32_t *tag_buf)
 {
 	htt_tx_de_eapol_packets_stats_tlv *dp_stats_buf =
 		(htt_tx_de_eapol_packets_stats_tlv *)tag_buf;
@@ -2356,7 +2648,7 @@ static inline void dp_print_tx_de_eapol_packets_stats_tlv(uint32_t *tag_buf)
  *
  * return:void
  */
-static inline void dp_print_tx_de_classify_failed_stats_tlv(uint32_t *tag_buf)
+static void dp_print_tx_de_classify_failed_stats_tlv(uint32_t *tag_buf)
 {
 	htt_tx_de_classify_failed_stats_tlv *dp_stats_buf =
 		(htt_tx_de_classify_failed_stats_tlv *)tag_buf;
@@ -2392,7 +2684,7 @@ static inline void dp_print_tx_de_classify_failed_stats_tlv(uint32_t *tag_buf)
  *
  * return:void
  */
-static inline void dp_print_tx_de_classify_stats_tlv(uint32_t *tag_buf)
+static void dp_print_tx_de_classify_stats_tlv(uint32_t *tag_buf)
 {
 	htt_tx_de_classify_stats_tlv *dp_stats_buf =
 		(htt_tx_de_classify_stats_tlv *)tag_buf;
@@ -2465,7 +2757,7 @@ static inline void dp_print_tx_de_classify_stats_tlv(uint32_t *tag_buf)
  *
  * return:void
  */
-static inline void dp_print_tx_de_classify_status_stats_tlv(uint32_t *tag_buf)
+static void dp_print_tx_de_classify_status_stats_tlv(uint32_t *tag_buf)
 {
 	htt_tx_de_classify_status_stats_tlv *dp_stats_buf =
 		(htt_tx_de_classify_status_stats_tlv *)tag_buf;
@@ -2496,7 +2788,7 @@ static inline void dp_print_tx_de_classify_status_stats_tlv(uint32_t *tag_buf)
  *
  * return:void
  */
-static inline void dp_print_tx_de_enqueue_packets_stats_tlv(uint32_t *tag_buf)
+static void dp_print_tx_de_enqueue_packets_stats_tlv(uint32_t *tag_buf)
 {
 	htt_tx_de_enqueue_packets_stats_tlv *dp_stats_buf =
 		(htt_tx_de_enqueue_packets_stats_tlv *)tag_buf;
@@ -2517,7 +2809,7 @@ static inline void dp_print_tx_de_enqueue_packets_stats_tlv(uint32_t *tag_buf)
  *
  * return:void
  */
-static inline void dp_print_tx_de_enqueue_discard_stats_tlv(uint32_t *tag_buf)
+static void dp_print_tx_de_enqueue_discard_stats_tlv(uint32_t *tag_buf)
 {
 	htt_tx_de_enqueue_discard_stats_tlv *dp_stats_buf =
 		(htt_tx_de_enqueue_discard_stats_tlv *)tag_buf;
@@ -2537,7 +2829,7 @@ static inline void dp_print_tx_de_enqueue_discard_stats_tlv(uint32_t *tag_buf)
  *
  * return:void
  */
-static inline void dp_print_tx_de_compl_stats_tlv(uint32_t *tag_buf)
+static void dp_print_tx_de_compl_stats_tlv(uint32_t *tag_buf)
 {
 	htt_tx_de_compl_stats_tlv *dp_stats_buf =
 		(htt_tx_de_compl_stats_tlv *)tag_buf;
@@ -2561,7 +2853,7 @@ static inline void dp_print_tx_de_compl_stats_tlv(uint32_t *tag_buf)
  *
  * return:void
  */
-static inline void dp_print_tx_de_cmn_stats_tlv(uint32_t *tag_buf)
+static void dp_print_tx_de_cmn_stats_tlv(uint32_t *tag_buf)
 {
 	htt_tx_de_cmn_stats_tlv *dp_stats_buf =
 		(htt_tx_de_cmn_stats_tlv *)tag_buf;
@@ -2589,7 +2881,7 @@ static inline void dp_print_tx_de_cmn_stats_tlv(uint32_t *tag_buf)
  *
  * return:void
  */
-static inline void dp_print_ring_if_stats_tlv(uint32_t *tag_buf)
+static void dp_print_ring_if_stats_tlv(uint32_t *tag_buf)
 {
 	htt_ring_if_stats_tlv *dp_stats_buf =
 		(htt_ring_if_stats_tlv *)tag_buf;
@@ -2652,7 +2944,7 @@ static inline void dp_print_ring_if_stats_tlv(uint32_t *tag_buf)
  *
  * return:void
  */
-static inline void dp_print_ring_if_cmn_tlv(uint32_t *tag_buf)
+static void dp_print_ring_if_cmn_tlv(uint32_t *tag_buf)
 {
 	htt_ring_if_cmn_tlv *dp_stats_buf =
 		(htt_ring_if_cmn_tlv *)tag_buf;
@@ -2670,7 +2962,7 @@ static inline void dp_print_ring_if_cmn_tlv(uint32_t *tag_buf)
  *
  * return:void
  */
-static inline void dp_print_sfm_client_user_tlv_v(uint32_t *tag_buf)
+static void dp_print_sfm_client_user_tlv_v(uint32_t *tag_buf)
 {
 	htt_sfm_client_user_tlv_v *dp_stats_buf =
 		(htt_sfm_client_user_tlv_v *)tag_buf;
@@ -2702,7 +2994,7 @@ static inline void dp_print_sfm_client_user_tlv_v(uint32_t *tag_buf)
  *
  * return:void
  */
-static inline void dp_print_sfm_client_tlv(uint32_t *tag_buf)
+static void dp_print_sfm_client_tlv(uint32_t *tag_buf)
 {
 	htt_sfm_client_tlv *dp_stats_buf =
 		(htt_sfm_client_tlv *)tag_buf;
@@ -2730,7 +3022,7 @@ static inline void dp_print_sfm_client_tlv(uint32_t *tag_buf)
  *
  * return:void
  */
-static inline void dp_print_sfm_cmn_tlv(uint32_t *tag_buf)
+static void dp_print_sfm_cmn_tlv(uint32_t *tag_buf)
 {
 	htt_sfm_cmn_tlv *dp_stats_buf =
 		(htt_sfm_cmn_tlv *)tag_buf;
@@ -2754,7 +3046,7 @@ static inline void dp_print_sfm_cmn_tlv(uint32_t *tag_buf)
  *
  * return:void
  */
-static inline void dp_print_sring_stats_tlv(uint32_t *tag_buf)
+static void dp_print_sring_stats_tlv(uint32_t *tag_buf)
 {
 	htt_sring_stats_tlv *dp_stats_buf =
 		(htt_sring_stats_tlv *)tag_buf;
@@ -2786,7 +3078,7 @@ static inline void dp_print_sring_stats_tlv(uint32_t *tag_buf)
  *
  * return:void
  */
-static inline void dp_print_sring_cmn_tlv(uint32_t *tag_buf)
+static void dp_print_sring_cmn_tlv(uint32_t *tag_buf)
 {
 	htt_sring_cmn_tlv *dp_stats_buf =
 		(htt_sring_cmn_tlv *)tag_buf;
@@ -3677,7 +3969,7 @@ fail1:
  *
  * return:void
  */
-static inline void dp_print_rx_soc_fw_stats_tlv(uint32_t *tag_buf)
+static void dp_print_rx_soc_fw_stats_tlv(uint32_t *tag_buf)
 {
 	htt_rx_soc_fw_stats_tlv *dp_stats_buf =
 		(htt_rx_soc_fw_stats_tlv *)tag_buf;
@@ -3715,7 +4007,7 @@ static inline void dp_print_rx_soc_fw_stats_tlv(uint32_t *tag_buf)
  *
  * return:void
  */
-static inline void dp_print_rx_soc_fw_refill_ring_empty_tlv_v(uint32_t *tag_buf)
+static void dp_print_rx_soc_fw_refill_ring_empty_tlv_v(uint32_t *tag_buf)
 {
 	htt_rx_soc_fw_refill_ring_empty_tlv_v *dp_stats_buf =
 		(htt_rx_soc_fw_refill_ring_empty_tlv_v *)tag_buf;
@@ -3750,7 +4042,7 @@ static inline void dp_print_rx_soc_fw_refill_ring_empty_tlv_v(uint32_t *tag_buf)
  *
  * return:void
  */
-static inline void dp_print_rx_soc_fw_refill_ring_num_refill_tlv_v(
+static void dp_print_rx_soc_fw_refill_ring_num_refill_tlv_v(
 		uint32_t *tag_buf)
 {
 	htt_rx_soc_fw_refill_ring_num_refill_tlv_v *dp_stats_buf =
@@ -3785,7 +4077,7 @@ static inline void dp_print_rx_soc_fw_refill_ring_num_refill_tlv_v(
  *
  * return:void
  */
-static inline void dp_print_rx_pdev_fw_stats_tlv(uint32_t *tag_buf)
+static void dp_print_rx_pdev_fw_stats_tlv(uint32_t *tag_buf)
 {
 	htt_rx_pdev_fw_stats_tlv *dp_stats_buf =
 		(htt_rx_pdev_fw_stats_tlv *)tag_buf;
@@ -3907,7 +4199,7 @@ static inline void dp_print_rx_pdev_fw_stats_tlv(uint32_t *tag_buf)
  *
  * return:void
  */
-static inline void dp_print_rx_pdev_fw_ring_mpdu_err_tlv_v(uint32_t *tag_buf)
+static void dp_print_rx_pdev_fw_ring_mpdu_err_tlv_v(uint32_t *tag_buf)
 {
 	htt_rx_pdev_fw_ring_mpdu_err_tlv_v *dp_stats_buf =
 		(htt_rx_pdev_fw_ring_mpdu_err_tlv_v *)tag_buf;
@@ -3937,7 +4229,7 @@ static inline void dp_print_rx_pdev_fw_ring_mpdu_err_tlv_v(uint32_t *tag_buf)
  *
  * return:void
  */
-static inline void dp_print_rx_pdev_fw_mpdu_drop_tlv_v(uint32_t *tag_buf)
+static void dp_print_rx_pdev_fw_mpdu_drop_tlv_v(uint32_t *tag_buf)
 {
 	htt_rx_pdev_fw_mpdu_drop_tlv_v *dp_stats_buf =
 		(htt_rx_pdev_fw_mpdu_drop_tlv_v *)tag_buf;
@@ -3970,7 +4262,7 @@ static inline void dp_print_rx_pdev_fw_mpdu_drop_tlv_v(uint32_t *tag_buf)
  * tag_buf - Buffer
  * Return - NULL
  */
-static inline void dp_print_rx_soc_fw_refill_ring_num_rxdma_err_tlv(uint32_t *tag_buf)
+static void dp_print_rx_soc_fw_refill_ring_num_rxdma_err_tlv(uint32_t *tag_buf)
 {
 	htt_rx_soc_fw_refill_ring_num_rxdma_err_tlv_v *dp_stats_buf =
 		(htt_rx_soc_fw_refill_ring_num_rxdma_err_tlv_v *)tag_buf;
@@ -4001,7 +4293,7 @@ static inline void dp_print_rx_soc_fw_refill_ring_num_rxdma_err_tlv(uint32_t *ta
  * tag_buf - Buffer
  * Return - NULL
  */
-static inline void dp_print_rx_soc_fw_refill_ring_num_reo_err_tlv(uint32_t *tag_buf)
+static void dp_print_rx_soc_fw_refill_ring_num_reo_err_tlv(uint32_t *tag_buf)
 {
 	htt_rx_soc_fw_refill_ring_num_reo_err_tlv_v *dp_stats_buf =
 		(htt_rx_soc_fw_refill_ring_num_reo_err_tlv_v *)tag_buf;
@@ -4031,7 +4323,7 @@ static inline void dp_print_rx_soc_fw_refill_ring_num_reo_err_tlv(uint32_t *tag_
  * tag_buf - Buffer
  * Return - NULL
  */
-static inline void dp_print_rx_reo_debug_stats_tlv(uint32_t *tag_buf)
+static void dp_print_rx_reo_debug_stats_tlv(uint32_t *tag_buf)
 {
 	htt_rx_reo_resource_stats_tlv_v *dp_stats_buf =
 			(htt_rx_reo_resource_stats_tlv_v *)tag_buf;
@@ -4066,7 +4358,7 @@ static inline void dp_print_rx_reo_debug_stats_tlv(uint32_t *tag_buf)
  * tag_buf - Buffer
  * Return - NULL
  */
-static inline void dp_print_rx_pdev_fw_stats_phy_err_tlv(uint32_t *tag_buf)
+static void dp_print_rx_pdev_fw_stats_phy_err_tlv(uint32_t *tag_buf)
 {
 	htt_rx_pdev_fw_stats_phy_err_tlv *dp_stats_buf =
 		(htt_rx_pdev_fw_stats_phy_err_tlv *)tag_buf;
@@ -4308,6 +4600,18 @@ void dp_htt_stats_print_tag(struct dp_pdev *pdev,
 
 	case HTT_STATS_TX_SELFGEN_AX_ERR_STATS_TAG:
 		dp_print_tx_selfgen_ax_err_stats_tlv(tag_buf);
+		break;
+
+	case  HTT_STATS_TX_SELFGEN_BE_STATS_TAG:
+		dp_print_tx_selfgen_be_stats_tlv(tag_buf);
+		break;
+
+	case HTT_STATS_TX_SELFGEN_BE_ERR_STATS_TAG:
+		dp_print_tx_selfgen_be_err_stats_tlv(tag_buf);
+		break;
+
+	case HTT_STATS_TX_SOUNDING_STATS_TAG:
+		dp_print_tx_sounding_stats_tlv(tag_buf);
 		break;
 
 	case HTT_STATS_TX_HWQ_MUMIMO_SCH_STATS_TAG:
@@ -5594,8 +5898,7 @@ dp_print_ring_stats(struct dp_pdev *pdev)
 	int mac_id;
 	int lmac_id;
 
-	if (hif_pm_runtime_get_sync(pdev->soc->hif_handle,
-				    RTPM_ID_DP_PRINT_RING_STATS))
+	if (hif_rtpm_get(HIF_RTPM_GET_SYNC, HIF_RTPM_ID_DP_RING_STATS))
 		return;
 
 	dp_print_ring_stat_from_hal(pdev->soc,
@@ -5680,8 +5983,7 @@ dp_print_ring_stats(struct dp_pdev *pdev)
 					    [lmac_id],
 					    RXDMA_DST);
 	}
-	hif_pm_runtime_put(pdev->soc->hif_handle,
-			   RTPM_ID_DP_PRINT_RING_STATS);
+	hif_rtpm_put(HIF_RTPM_PUT_ASYNC, HIF_RTPM_ID_DP_RING_STATS);
 }
 
 /**

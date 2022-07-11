@@ -101,7 +101,7 @@
 				  center_freq - HALF_20MHZ_BW)
 #define SIX_GIG_ENDING_EDGE_FREQ    (channel_map_global[MAX_6GHZ_CHANNEL]. \
 				  center_freq + HALF_20MHZ_BW)
-
+#define SIXG_START_FREQ         5950
 #define FREQ_LEFT_SHIFT         55
 #define SIX_GHZ_NON_ORPHAN_START_FREQ \
 	(channel_map_global[MIN_6GHZ_NON_ORPHAN_CHANNEL].center_freq  - 5)
@@ -2383,14 +2383,31 @@ qdf_freq_t reg_get_thresh_priority_freq(struct wlan_objmgr_pdev *pdev);
  * AP's operating bandwidth to return the best power mode, which is calculated
  * based on the maximum EIRP power among the 3 AP types, i.e, LPI, SP and VLP
  * @pdev: Pointer to pdev
- * @freq: Primary channel center frequency in mhz
+ * @freq: Primary channel center frequency in MHz
+ * @cen320: Band center of 320 MHz. (For other BW, this param is ignored during
+ * processing)
  * @bw: AP's operating bandwidth in mhz
  *
  * Return: Best power mode
  */
 enum reg_6g_ap_type reg_get_best_pwr_mode(struct wlan_objmgr_pdev *pdev,
 					  qdf_freq_t freq,
+					  qdf_freq_t cen320,
 					  uint16_t bw);
+
+/**
+ * reg_get_eirp_pwr() - Get eirp power based on the AP power mode
+ * @pdev: Pointer to pdev
+ * @freq: Frequency in MHz
+ * @cen320: 320 MHz Band center frequency
+ * @bw: Bandwidth in MHz
+ * @ap_pwr_type: AP power type
+ *
+ * Return: EIRP power
+ */
+uint8_t reg_get_eirp_pwr(struct wlan_objmgr_pdev *pdev, qdf_freq_t freq,
+			 qdf_freq_t cen320,
+			 uint16_t bw, enum reg_6g_ap_type ap_pwr_type);
 #endif /* CONFIG_BAND_6GHZ */
 
 /**
@@ -2465,7 +2482,7 @@ reg_get_ch_state_based_on_nol_flag(struct wlan_objmgr_pdev *pdev,
 				   bool treat_nol_chan_as_disabled);
 
 /**
- * reg_get_min_max_bw_cur_chan_list() - Given a frequency index, find out the
+ * reg_get_min_max_bw_reg_chan_list() - Given a frequency index, find out the
  * min/max bw of the channel.
  *
  * @pdev: pdev pointer.
@@ -2476,7 +2493,7 @@ reg_get_ch_state_based_on_nol_flag(struct wlan_objmgr_pdev *pdev,
  *
  * Return: true/false.
  */
-QDF_STATUS reg_get_min_max_bw_cur_chan_list(struct wlan_objmgr_pdev *pdev,
+QDF_STATUS reg_get_min_max_bw_reg_chan_list(struct wlan_objmgr_pdev *pdev,
 					    enum channel_enum freq_idx,
 					    enum supported_6g_pwr_types
 					    in_6g_pwr_mode,
@@ -2500,4 +2517,72 @@ enum channel_state reg_get_chan_state(struct wlan_objmgr_pdev *pdev,
 				      enum supported_6g_pwr_types
 				      in_6g_pwr_mode,
 				      bool treat_nol_chan_as_disabled);
+
+/**
+ * reg_get_chan_state_for_320() - Get the channel state of a 320 MHz
+ * bonded channel.
+ * @pdev: Pointer to wlan_objmgr_pdev
+ * @freq: Primary frequency
+ * @center_320: Band center of 320 MHz
+ * @ch_width: Channel width
+ * @bonded_chan_ptr_ptr: Pointer to bonded channel pointer
+ * @treat_nol_chan_as_disabled: Bool to treat nol chan as enabled/disabled
+ * @in_pwr_type: Input 6g power type
+ *
+ * Return: Channel state
+ */
+#ifdef WLAN_FEATURE_11BE
+enum channel_state
+reg_get_chan_state_for_320(struct wlan_objmgr_pdev *pdev,
+			   uint16_t freq,
+			   qdf_freq_t center_320,
+			   enum phy_ch_width ch_width,
+			   const struct bonded_channel_freq
+			   **bonded_chan_ptr_ptr,
+			   enum supported_6g_pwr_types in_pwr_type,
+			   bool treat_nol_chan_as_disabled);
+#else
+static inline enum channel_state
+reg_get_chan_state_for_320(struct wlan_objmgr_pdev *pdev,
+			   uint16_t freq,
+			   qdf_freq_t center_320,
+			   enum phy_ch_width ch_width,
+			   const struct bonded_channel_freq
+			   **bonded_chan_ptr_ptr,
+			   enum supported_6g_pwr_types in_pwr_type,
+			   bool treat_nol_chan_as_disabled)
+{
+	return CHANNEL_STATE_INVALID;
+}
 #endif
+
+/**
+ * reg_get_regd_rules() - provides the reg domain rules info
+ * @pdev: pdev pointer
+ * @reg_rules: regulatory rules
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS reg_get_regd_rules(struct wlan_objmgr_pdev *pdev,
+			      struct reg_rule_info *reg_rules);
+#endif
+
+/**
+ * reg_get_max_bw_5G_for_fo() - get max bw
+ * @pdev: PDEV object
+ *
+ * API to get max bw from pdev.
+ *
+ * Return: max bw
+ */
+uint16_t reg_get_max_bw_5G_for_fo(struct wlan_objmgr_pdev *pdev);
+
+/**
+ * reg_is_offload_enabled() - get offload_enabled
+ * @pdev: PDEV object
+ *
+ * API to get offload_enabled from psoc.
+ *
+ * Return: true if offload enaled
+ */
+bool reg_is_offload_enabled(struct wlan_objmgr_pdev *pdev);

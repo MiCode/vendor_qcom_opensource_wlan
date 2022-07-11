@@ -24,6 +24,7 @@
 #include <dp_mon.h>
 #include <dp_tx_mon_2.0.h>
 #include <dp_mon_2.0.h>
+#include <dp_lite_mon.h>
 
 #if defined(WLAN_TX_PKT_CAPTURE_ENH_BE) && defined(QCA_MONITOR_2_0_SUPPORT)
 /**
@@ -251,6 +252,7 @@ dp_tx_mon_generate_cts2self_frm(struct dp_pdev *pdev,
 
 	qdf_nbuf_set_pktlen(mpdu_nbuf, sizeof(*wh_min));
 	dp_tx_mon_enqueue_mpdu_nbuf(tx_ppdu_info, 0, mpdu_nbuf);
+	TXMON_PPDU_HAL(tx_ppdu_info, is_used) = 1;
 }
 
 /**
@@ -318,6 +320,7 @@ dp_tx_mon_generate_rts_frm(struct dp_pdev *pdev,
 
 	qdf_nbuf_set_pktlen(mpdu_nbuf, sizeof(*wh_min));
 	dp_tx_mon_enqueue_mpdu_nbuf(tx_ppdu_info, 0, mpdu_nbuf);
+	TXMON_PPDU_HAL(tx_ppdu_info, is_used) = 1;
 }
 
 /**
@@ -377,6 +380,7 @@ dp_tx_mon_generate_ack_frm(struct dp_pdev *pdev,
 	qdf_nbuf_set_pktlen(mpdu_nbuf, sizeof(*wh_addr1));
 
 	dp_tx_mon_enqueue_mpdu_nbuf(tx_ppdu_info, user_id, mpdu_nbuf);
+	TXMON_PPDU_HAL(tx_ppdu_info, is_used) = 1;
 }
 
 /**
@@ -450,6 +454,7 @@ dp_tx_mon_generate_3addr_qos_null_frm(struct dp_pdev *pdev,
 
 	qdf_nbuf_set_pktlen(mpdu_nbuf, sizeof(*wh_addr3));
 	dp_tx_mon_enqueue_mpdu_nbuf(tx_ppdu_info, num_users, mpdu_nbuf);
+	TXMON_PPDU_HAL(tx_ppdu_info, is_used) = 1;
 }
 
 /**
@@ -525,6 +530,7 @@ dp_tx_mon_generate_4addr_qos_null_frm(struct dp_pdev *pdev,
 
 	qdf_nbuf_set_pktlen(mpdu_nbuf, sizeof(*wh_addr4));
 	dp_tx_mon_enqueue_mpdu_nbuf(tx_ppdu_info, num_users, mpdu_nbuf);
+	TXMON_PPDU_HAL(tx_ppdu_info, is_used) = 1;
 }
 
 #define TXMON_BA_CTRL_SZ		2
@@ -612,9 +618,8 @@ dp_tx_mon_generate_mu_block_ack_frm(struct dp_pdev *pdev,
 		     TXMON_STATUS_INFO(tx_status_info, addr1),
 		     QDF_MAC_ADDR_SIZE);
 
-	frm = (uint8_t *)&wh_addr2[6];
+	frm = (uint8_t *)&wh_addr2[1];
 
-	frm += 1;
 	/* BA control */
 	*((uint16_t *)frm) = qdf_cpu_to_le16(TXMON_PPDU_USR(tx_ppdu_info,
 							    0, ba_control));
@@ -643,6 +648,7 @@ dp_tx_mon_generate_mu_block_ack_frm(struct dp_pdev *pdev,
 
 	/* always enqueue to first active user */
 	dp_tx_mon_enqueue_mpdu_nbuf(tx_ppdu_info, 0, mpdu_nbuf);
+	TXMON_PPDU_HAL(tx_ppdu_info, is_used) = 1;
 }
 
 /**
@@ -734,7 +740,8 @@ dp_tx_mon_generate_block_ack_frm(struct dp_pdev *pdev,
 	wh_addr2->i_fc[0] = (IEEE80211_FC0_VERSION_0 |
 			     IEEE80211_FC0_TYPE_CTL |
 			     IEEE80211_FC0_BLOCK_ACK);
-	*(u_int16_t *)(&wh_addr2->i_aidordur) = qdf_cpu_to_le16(0x0000);
+	/* duration */
+	*(u_int16_t *)(&wh_addr2->i_aidordur) = qdf_cpu_to_le16(0x0020);
 
 	qdf_mem_copy(wh_addr2->i_addr2,
 		     TXMON_STATUS_INFO(tx_status_info, addr2),
@@ -743,34 +750,27 @@ dp_tx_mon_generate_block_ack_frm(struct dp_pdev *pdev,
 		     TXMON_STATUS_INFO(tx_status_info, addr1),
 		     QDF_MAC_ADDR_SIZE);
 
-	frm = (uint8_t *)&wh_addr2[6];
-
-	frm += 1;
+	frm = (uint8_t *)&wh_addr2[1];
 	/* BA control */
 	*((uint16_t *)frm) = qdf_cpu_to_le16(TXMON_PPDU_USR(tx_ppdu_info,
-							    0, ba_control));
+							    user_id,
+							    ba_control));
 	frm += 2;
-	*((uint16_t *)frm) = qdf_cpu_to_le16((TXMON_PPDU_USR(tx_ppdu_info,
-							     user_id, tid) <<
-					      DP_IEEE80211_BAR_CTL_TID_S) |
-					     (TXMON_PPDU_USR(tx_ppdu_info,
-							     user_id,
-							     aid) & 0x7FF));
-	frm += 2;
-	*((uint16_t *)frm) = TXMON_PPDU_USR(tx_ppdu_info, user_id,
-					    start_seq) & 0xFFF;
-
+	*((uint16_t *)frm) = qdf_cpu_to_le16(TXMON_PPDU_USR(tx_ppdu_info,
+							    user_id,
+							    start_seq) & 0xFFF);
 	frm += 2;
 	qdf_mem_copy(frm,
 		     TXMON_PPDU_USR(tx_ppdu_info, user_id, ba_bitmap),
 		     4 << TXMON_PPDU_USR(tx_ppdu_info, user_id, ba_bitmap_sz));
-
-	frm += 4 << TXMON_PPDU_USR(tx_ppdu_info, user_id, ba_bitmap_sz);
+	frm += (4 << TXMON_PPDU_USR(tx_ppdu_info, user_id, ba_bitmap_sz));
 
 	qdf_nbuf_set_pktlen(mpdu_nbuf,
 			    (frm - (uint8_t *)qdf_nbuf_data(mpdu_nbuf)));
 
 	dp_tx_mon_enqueue_mpdu_nbuf(tx_ppdu_info, 0, mpdu_nbuf);
+
+	TXMON_PPDU_HAL(tx_ppdu_info, is_used) = 1;
 }
 
 /**
@@ -927,6 +927,156 @@ dp_tx_mon_generate_prot_frm(struct dp_pdev *pdev,
 }
 
 /**
+ * dp_lite_mon_filter_subtype() - filter frames with subtype
+ * @mon_pdev_be: mon pdev Handle
+ * @ppdu_info: pointer to hal_tx_ppdu_info structure
+ *
+ * Return: QDF_STATUS
+ */
+static inline QDF_STATUS
+dp_lite_mon_filter_subtype(struct dp_mon_pdev_be *mon_pdev_be,
+			   struct hal_tx_ppdu_info *ppdu_info)
+{
+	struct dp_mon_pdev *mon_pdev = &mon_pdev_be->mon_pdev;
+	uint16_t frame_control;
+	struct dp_lite_mon_tx_config *lite_mon_tx_config =
+			mon_pdev_be->lite_mon_tx_config;
+	uint16_t mgmt_filter, ctrl_filter, data_filter, type, subtype;
+
+	if (!dp_lite_mon_is_tx_enabled(mon_pdev))
+		return QDF_STATUS_SUCCESS;
+
+	if (!TXMON_HAL_STATUS(ppdu_info, frame_control_info_valid)) {
+		dp_mon_err("Queue extension is invalid");
+		return QDF_STATUS_E_ABORTED;
+	}
+
+	frame_control = TXMON_HAL_STATUS(ppdu_info, frame_control);
+	qdf_spin_lock_bh(&lite_mon_tx_config->lite_mon_tx_lock);
+	mgmt_filter = lite_mon_tx_config->tx_config.mgmt_filter[DP_MON_FRM_FILTER_MODE_FP];
+	ctrl_filter = lite_mon_tx_config->tx_config.ctrl_filter[DP_MON_FRM_FILTER_MODE_FP];
+	data_filter = lite_mon_tx_config->tx_config.data_filter[DP_MON_FRM_FILTER_MODE_FP];
+	qdf_spin_unlock_bh(&lite_mon_tx_config->lite_mon_tx_lock);
+
+	type = (frame_control & FRAME_CONTROL_TYPE_MASK) >>
+		FRAME_CONTROL_TYPE_SHIFT;
+	subtype = (frame_control & FRAME_CONTROL_SUBTYPE_MASK) >>
+		FRAME_CONTROL_SUBTYPE_SHIFT;
+
+	switch (type) {
+	case FRAME_CTRL_TYPE_MGMT:
+		if (mgmt_filter >> subtype & 0x1)
+			return QDF_STATUS_SUCCESS;
+		else
+			return QDF_STATUS_E_ABORTED;
+	case FRAME_CTRL_TYPE_CTRL:
+		if (ctrl_filter >> subtype & 0x1)
+			return QDF_STATUS_SUCCESS;
+		else
+			return QDF_STATUS_E_ABORTED;
+	case FRAME_CTRL_TYPE_DATA:
+		/* Allowing all data frames */
+		return QDF_STATUS_SUCCESS;
+	default:
+		dp_mon_err("Unknown frame type in framecontrol\n");
+		return QDF_STATUS_E_INVAL;
+	}
+}
+
+/**
+ * dp_tx_mon_generated_response_frm() - API to handle generated response frame
+ * @pdev: pdev Handle
+ * @tx_ppdu_info: pointer to tx ppdu info structure
+ *
+ * Return: QDF_STATUS
+ */
+static QDF_STATUS
+dp_tx_mon_generated_response_frm(struct dp_pdev *pdev,
+				 struct dp_tx_ppdu_info *tx_ppdu_info)
+{
+	struct dp_mon_pdev *mon_pdev;
+	struct dp_mon_pdev_be *mon_pdev_be;
+	struct dp_pdev_tx_capture_be *tx_cap_be;
+	struct hal_tx_status_info *tx_status_info;
+	QDF_STATUS status = QDF_STATUS_SUCCESS;
+	uint8_t gen_response = 0;
+
+	/* sanity check */
+	if (qdf_unlikely(!pdev))
+		return QDF_STATUS_E_NOMEM;
+
+	mon_pdev = pdev->monitor_pdev;
+	if (qdf_unlikely(!mon_pdev))
+		return QDF_STATUS_E_NOMEM;
+
+	mon_pdev_be = dp_get_be_mon_pdev_from_dp_mon_pdev(mon_pdev);
+	if (qdf_unlikely(!mon_pdev_be))
+		return QDF_STATUS_E_NOMEM;
+
+	tx_cap_be = &mon_pdev_be->tx_capture_be;
+
+	tx_status_info = &tx_cap_be->data_status_info;
+	gen_response = TXMON_STATUS_INFO(tx_status_info, generated_response);
+
+	switch (gen_response) {
+	case TXMON_GEN_RESP_SELFGEN_ACK:
+	{
+		TXMON_PPDU_COM(tx_ppdu_info,
+			       frame_control) = ((IEEE80211_FC0_TYPE_CTL <<
+						  IEEE80211_FC0_TYPE_SHIFT) |
+						 (IEEE80211_FC0_SUBTYPE_ACK <<
+						  IEEE80211_FC0_SUBTYPE_SHIFT));
+		TXMON_PPDU_COM(tx_ppdu_info,
+			       frame_control_info_valid) = 1;
+		dp_tx_mon_generate_ack_frm(pdev, tx_ppdu_info);
+		break;
+	}
+	case TXMON_GEN_RESP_SELFGEN_CTS:
+	{
+		TXMON_PPDU_COM(tx_ppdu_info,
+			       frame_control) = ((IEEE80211_FC0_TYPE_CTL <<
+						  IEEE80211_FC0_TYPE_SHIFT) |
+						 (IEEE80211_FC0_SUBTYPE_CTS <<
+						  IEEE80211_FC0_SUBTYPE_SHIFT));
+		TXMON_PPDU_COM(tx_ppdu_info,
+			       frame_control_info_valid) = 1;
+		dp_tx_mon_generate_cts2self_frm(pdev, tx_ppdu_info);
+		break;
+	}
+	case TXMON_GEN_RESP_SELFGEN_BA:
+	{
+		TXMON_PPDU_COM(tx_ppdu_info,
+			       frame_control) = ((IEEE80211_FC0_TYPE_CTL <<
+						  IEEE80211_FC0_TYPE_SHIFT) |
+						 (IEEE80211_FC0_BLOCK_ACK <<
+						  IEEE80211_FC0_SUBTYPE_SHIFT));
+		TXMON_PPDU_COM(tx_ppdu_info,
+			       frame_control_info_valid) = 1;
+		dp_tx_mon_generate_block_ack_frm(pdev, tx_ppdu_info);
+		break;
+	}
+	case TXMON_GEN_RESP_SELFGEN_MBA:
+	{
+		break;
+	}
+	case TXMON_GEN_RESP_SELFGEN_CBF:
+	{
+		break;
+	}
+	case TXMON_GEN_RESP_SELFGEN_TRIG:
+	{
+		break;
+	}
+	case TXMON_GEN_RESP_SELFGEN_NDP_LMR:
+	{
+		break;
+	}
+	};
+
+	return status;
+}
+
+/**
  * dp_tx_mon_update_ppdu_info_status() - API to update frame as information
  * is stored only for that processing
  *
@@ -993,17 +1143,21 @@ dp_tx_mon_update_ppdu_info_status(struct dp_pdev *pdev,
 							tx_data_ppdu_info);
 		break;
 	}
+	case HAL_MON_TX_FES_STATUS_START_PROT:
+	{
+		/* update tsft to local */
+		break;
+	}
+	case HAL_MON_TX_FES_STATUS_START_PPDU:
+	{
+		/* update tsft to local */
+		break;
+	}
 	case HAL_MON_TX_FES_STATUS_PROT:
 	{
 		TXMON_PPDU_HAL(tx_prot_ppdu_info, is_used) = 1;
-		/* update timestamp */
-		TXMON_PPDU_COM(tx_prot_ppdu_info,
-			       tsft) = TXMON_PPDU_COM(tx_prot_ppdu_info,
-						      tsft) << 1;
 		TXMON_PPDU_COM(tx_prot_ppdu_info, ppdu_timestamp) =
 			TXMON_PPDU_COM(tx_prot_ppdu_info, ppdu_timestamp) << 1;
-		TXMON_PPDU_USR(tx_prot_ppdu_info, 0, duration) =
-			TXMON_PPDU_USR(tx_prot_ppdu_info, 0, duration) << 1;
 
 		/* based on medium protection type we need to generate frame */
 		dp_tx_mon_generate_prot_frm(pdev, tx_prot_ppdu_info);
@@ -1057,11 +1211,20 @@ dp_tx_mon_update_ppdu_info_status(struct dp_pdev *pdev,
 	}
 	case HAL_MON_RESPONSE_END_STATUS_INFO:
 	{
+		dp_tx_mon_generated_response_frm(pdev, tx_data_ppdu_info);
+		status = dp_lite_mon_filter_subtype(mon_pdev_be,
+						    &tx_data_ppdu_info->hal_txmon);
 		break;
 	}
 	case HAL_MON_TX_FES_STATUS_START:
 	{
 		/* update the medium protection type */
+		break;
+	}
+	case HAL_MON_TX_QUEUE_EXTENSION:
+	{
+		status = dp_lite_mon_filter_subtype(mon_pdev_be,
+						    &tx_data_ppdu_info->hal_txmon);
 		break;
 	}
 	default:
@@ -1093,7 +1256,7 @@ QDF_STATUS dp_tx_mon_process_tlv_2_0(struct dp_pdev *pdev)
 	uint8_t *tx_tlv;
 	uint8_t *tx_tlv_start;
 	uint32_t tlv_status;
-	uint32_t status;
+	uint32_t status = QDF_STATUS_SUCCESS;
 	uint8_t num_users = 0;
 	uint8_t cur_frag_q_idx;
 	uint32_t end_offset = 0;
@@ -1149,7 +1312,8 @@ QDF_STATUS dp_tx_mon_process_tlv_2_0(struct dp_pdev *pdev)
 	}
 
 	/* iterate status buffer queue */
-	while (tx_cap_be->cur_frag_q_idx < tx_cap_be->last_frag_q_idx) {
+	while (tx_cap_be->cur_frag_q_idx < tx_cap_be->last_frag_q_idx &&
+	       status == QDF_STATUS_SUCCESS) {
 		/* get status buffer from frag_q_vec */
 		status_frag = tx_cap_be->frag_q_vec[cur_frag_q_idx].frag_buf;
 		end_offset = tx_cap_be->frag_q_vec[cur_frag_q_idx].end_offset;
@@ -1181,6 +1345,14 @@ QDF_STATUS dp_tx_mon_process_tlv_2_0(struct dp_pdev *pdev)
 							tx_tlv,
 							status_frag,
 							tlv_status);
+
+			if (status != QDF_STATUS_SUCCESS) {
+				dp_tx_mon_status_free_packet_buf(pdev,
+								 status_frag,
+								 end_offset);
+				break;
+			}
+
 			/* need api definition for hal_tx_status_get_next_tlv */
 			tx_tlv = hal_tx_status_get_next_tlv(tx_tlv);
 			if ((tx_tlv - tx_tlv_start) >= end_offset)
@@ -1361,7 +1533,8 @@ QDF_STATUS dp_tx_mon_process_status_tlv(struct dp_soc *soc,
 		goto free_status_buffer;
 	}
 
-	if (tx_cap_be->mode == TX_MON_BE_DISABLE)
+	if (tx_cap_be->mode == TX_MON_BE_DISABLE &&
+	    !dp_lite_mon_is_tx_enabled(mon_pdev))
 		goto free_status_buffer;
 
 	if (tx_cap_be->be_ppdu_id != mon_ring_desc->ppdu_id &&
