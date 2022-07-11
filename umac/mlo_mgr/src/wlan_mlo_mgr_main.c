@@ -426,9 +426,11 @@ static QDF_STATUS mlo_dev_ctx_init(struct wlan_objmgr_vdev *vdev)
 	vdev->mlo_dev_ctx = ml_dev;
 
 	mlo_dev_lock_create(ml_dev);
+	tsf_recalculation_lock_create(ml_dev);
 	if (wlan_vdev_mlme_get_opmode(vdev) == QDF_STA_MODE) {
 		ml_dev->sta_ctx = qdf_mem_malloc(sizeof(struct wlan_mlo_sta));
 		if (!ml_dev->sta_ctx) {
+			tsf_recalculation_lock_destroy(ml_dev);
 			mlo_dev_lock_destroy(ml_dev);
 			qdf_mem_free(ml_dev);
 			return QDF_STATUS_E_NOMEM;
@@ -436,6 +438,7 @@ static QDF_STATUS mlo_dev_ctx_init(struct wlan_objmgr_vdev *vdev)
 		copied_conn_req_lock_create(ml_dev->sta_ctx);
 	} else if (wlan_vdev_mlme_get_opmode(vdev) == QDF_SAP_MODE) {
 		if (mlo_ap_ctx_init(ml_dev) != QDF_STATUS_SUCCESS) {
+			tsf_recalculation_lock_destroy(ml_dev);
 			mlo_dev_lock_destroy(ml_dev);
 			qdf_mem_free(ml_dev);
 			mlo_err("Failed to allocate memory for ap ctx");
@@ -522,6 +525,7 @@ static QDF_STATUS mlo_dev_ctx_deinit(struct wlan_objmgr_vdev *vdev)
 		else if (wlan_vdev_mlme_get_opmode(vdev) == QDF_SAP_MODE)
 			qdf_mem_free(ml_dev->ap_ctx);
 
+		tsf_recalculation_lock_destroy(ml_dev);
 		mlo_dev_lock_destroy(ml_dev);
 		qdf_mem_free(ml_dev);
 	}

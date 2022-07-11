@@ -288,6 +288,7 @@ struct wlan_mlo_peer_list {
  * @mlo_peer: list peers in this MLO connection
  * @wlan_max_mlo_peer_count: peer count across the links of specific MLO
  * @mlo_dev_lock: lock to access struct
+ * @tsf_recalculation_lock: Lock to protect TSF (re)calculation
  * @ref_cnt: reference count
  * @ref_id_dbg: Reference count debug information
  * @sta_ctx: MLO STA related information
@@ -303,8 +304,10 @@ struct wlan_mlo_dev_context {
 	uint16_t wlan_max_mlo_peer_count;
 #ifdef WLAN_MLO_USE_SPINLOCK
 	qdf_spinlock_t mlo_dev_lock;
+	qdf_spinlock_t tsf_recalculation_lock;
 #else
 	qdf_mutex_t mlo_dev_lock;
+	qdf_mutex_t tsf_recalculation_lock;
 #endif
 	qdf_atomic_t ref_cnt;
 	qdf_atomic_t ref_id_dbg[WLAN_REF_ID_MAX];
