@@ -1581,7 +1581,13 @@ util_scan_entry_ehtop(struct scan_cache_entry *scan_entry)
 {
 	return scan_entry->ie_list.ehtop;
 }
+#else
 
+static inline uint8_t*
+util_scan_entry_ehtcap(struct scan_cache_entry *scan_entry)
+{
+	return NULL;
+}
 #endif
 
 /**
