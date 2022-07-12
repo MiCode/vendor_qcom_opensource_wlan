@@ -390,6 +390,10 @@ static int init_deinit_service_ready_event_handler(ol_scn_t scn_handle,
 		cdp_soc_set_param(wlan_psoc_get_dp_handle(psoc),
 				  DP_SOC_PARAM_MULTI_PEER_GRP_CMD_SUPPORT, 1);
 
+	if (wmi_service_enabled(wmi_handle, wmi_service_vdev_delete_all_peer))
+		wlan_psoc_nif_fw_ext2_cap_set(psoc,
+					      WLAN_VDEV_DELETE_ALL_PEER_SUPPORT);
+
 	init_deinit_update_rssi_dbm_conv_support(wmi_handle, psoc);
 
 	init_deinit_update_multi_client_ll_caps(wmi_handle, psoc);

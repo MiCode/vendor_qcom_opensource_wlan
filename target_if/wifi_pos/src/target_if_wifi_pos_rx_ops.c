@@ -166,23 +166,31 @@ int target_if_wifi_pos_pasn_peer_create_ev_handler(ol_scn_t scn,
 
 	data = qdf_mem_malloc(sizeof(*data));
 	if (!data)
-		return QDF_STATUS_E_NOMEM;
+		return -ENOMEM;
 
 	psoc = target_if_get_psoc_from_scn_hdl(scn);
 	if (!psoc) {
 		target_if_err("psoc is null");
 		qdf_mem_free(data);
-		return QDF_STATUS_NOT_INITIALIZED;
+		return -EINVAL;
 	}
 
 	wlan_objmgr_psoc_get_ref(psoc, WLAN_WIFI_POS_TGT_IF_ID);
+
+	if (!wlan_psoc_nif_fw_ext2_cap_get(psoc,
+					   WLAN_VDEV_DELETE_ALL_PEER_SUPPORT)) {
+		wlan_objmgr_psoc_release_ref(psoc, WLAN_WIFI_POS_TGT_IF_ID);
+		qdf_mem_free(data);
+		target_if_debug("Firmware doesn't support Peer delete all");
+		return -EPERM;
+	}
 
 	wmi_handle = get_wmi_unified_hdl_from_psoc(psoc);
 	if (!wmi_handle) {
 		wlan_objmgr_psoc_release_ref(psoc, WLAN_WIFI_POS_TGT_IF_ID);
 		qdf_mem_free(data);
 		target_if_err("wmi_handle is null");
-		return QDF_STATUS_NOT_INITIALIZED;
+		return -EINVAL;
 	}
 
 	status = wmi_extract_pasn_peer_create_req(wmi_handle, buf, data);
@@ -190,7 +198,7 @@ int target_if_wifi_pos_pasn_peer_create_ev_handler(ol_scn_t scn,
 		wifi_pos_err("Extract PASN peer create failed");
 		wlan_objmgr_psoc_release_ref(psoc, WLAN_WIFI_POS_TGT_IF_ID);
 		qdf_mem_free(data);
-		return QDF_STATUS_E_NULL_VALUE;
+		return -EINVAL;
 	}
 
 	rx_ops = wifi_pos_get_rx_ops(psoc);
@@ -199,7 +207,7 @@ int target_if_wifi_pos_pasn_peer_create_ev_handler(ol_scn_t scn,
 			     !rx_ops ? "rx_ops" : "rx_ops_cb");
 		wlan_objmgr_psoc_release_ref(psoc, WLAN_WIFI_POS_TGT_IF_ID);
 		qdf_mem_free(data);
-		return QDF_STATUS_E_NULL_VALUE;
+		return -EINVAL;
 	}
 
 	rx_ops->wifi_pos_ranging_peer_create_cb(psoc, data->peer_info,
