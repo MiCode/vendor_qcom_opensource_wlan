@@ -2090,6 +2090,64 @@ cm_resume_connect_after_peer_create(struct cnx_mgr *cm_ctx, wlan_cm_id *cm_id)
 	return status;
 }
 
+#if defined(WLAN_FEATURE_11BE_MLO) && defined(WLAN_FEATURE_11BE_MLO_ADV_FEATURE)
+static void cm_inform_bcn_probe_handler(struct cnx_mgr *cm_ctx,
+					struct scan_cache_entry *bss,
+					wlan_cm_id cm_id)
+{
+	struct element_info *bcn_probe_rsp;
+	int32_t rssi;
+	qdf_freq_t freq;
+
+	bcn_probe_rsp = &bss->raw_frame;
+	rssi = bss->rssi_raw;
+	freq = util_scan_entry_channel_frequency(bss);
+
+	cm_inform_bcn_probe(cm_ctx, bcn_probe_rsp->ptr, bcn_probe_rsp->len,
+			    freq, rssi, cm_id);
+}
+
+static void cm_update_partner_link_scan_db(struct cnx_mgr *cm_ctx,
+					   wlan_cm_id cm_id,
+					   qdf_list_t *candidate_list,
+					   struct scan_cache_entry *cur_bss)
+{
+	qdf_list_node_t *cur_node = NULL, *next_node = NULL;
+	struct scan_cache_node *candidate;
+	struct scan_cache_entry *bss;
+
+	qdf_list_peek_front(candidate_list, &cur_node);
+
+	while (cur_node) {
+		qdf_list_peek_next(candidate_list, cur_node, &next_node);
+		candidate = qdf_container_of(cur_node, struct scan_cache_node,
+					     node);
+		bss = candidate->entry;
+		/*
+		 * If BSS is ML and not current bss and BSS mld mac is same as
+		 * cur bss then inform it to scan cache to avoid scan cache
+		 * ageing out.
+		 */
+		if (!qdf_is_macaddr_equal(&bss->bssid, &cur_bss->bssid) &&
+		    bss->ml_info.num_links &&
+		    cur_bss->ml_info.num_links &&
+		    qdf_is_macaddr_equal(&bss->ml_info.mld_mac_addr,
+					 &cur_bss->ml_info.mld_mac_addr))
+			cm_inform_bcn_probe_handler(cm_ctx, bss, cm_id);
+		cur_node = next_node;
+		next_node = NULL;
+	}
+}
+#else
+static
+inline void cm_update_partner_link_scan_db(struct cnx_mgr *cm_ctx,
+					   wlan_cm_id cm_id,
+					   qdf_list_t *candidate_list,
+					   struct scan_cache_entry *cur_bss)
+{
+}
+#endif
+
 /**
  * cm_update_scan_db_on_connect_success() - update scan db with beacon or
  * probe resp
@@ -2141,6 +2199,15 @@ cm_update_scan_db_on_connect_success(struct cnx_mgr *cm_ctx,
 
 	cm_inform_bcn_probe(cm_ctx, bcn_probe_rsp->ptr, bcn_probe_rsp->len,
 			    resp->freq, rssi, resp->cm_id);
+
+	/*
+	 * If vdev is an MLO vdev and not reassoc then use partner link info to
+	 * inform partner link scan entry to kernel.
+	 */
+	if (!resp->is_reassoc && wlan_vdev_mlme_is_mlo_vdev(cm_ctx->vdev))
+		cm_update_partner_link_scan_db(cm_ctx, resp->cm_id,
+				cm_req->connect_req.candidate_list,
+				cur_candidate->entry);
 }
 
 #ifdef WLAN_FEATURE_11BE_MLO
