@@ -1273,11 +1273,9 @@ dp_mon_register_feature_ops_2_0(struct dp_soc *soc)
 	mon_ops->mon_htt_ppdu_stats_detach = dp_htt_ppdu_stats_detach;
 	mon_ops->mon_print_pdev_rx_mon_stats = dp_print_pdev_rx_mon_stats;
 	mon_ops->mon_set_bsscolor = dp_mon_set_bsscolor;
-	mon_ops->mon_pdev_get_filter_ucast_data =
-				dp_pdev_get_filter_ucast_data;
-	mon_ops->mon_pdev_get_filter_mcast_data =
-				dp_pdev_get_filter_mcast_data;
-	mon_ops->mon_pdev_get_filter_non_data = dp_pdev_get_filter_non_data;
+	mon_ops->mon_pdev_get_filter_ucast_data = NULL;
+	mon_ops->mon_pdev_get_filter_mcast_data = NULL;
+	mon_ops->mon_pdev_get_filter_non_data = NULL;
 	mon_ops->mon_neighbour_peer_add_ast = NULL;
 #ifndef DISABLE_MON_CONFIG
 	mon_ops->mon_tx_process = dp_tx_mon_process_2_0;
@@ -1306,19 +1304,17 @@ dp_mon_register_feature_ops_2_0(struct dp_soc *soc)
 	mon_ops->mon_set_bpr_enable = dp_set_bpr_enable_2_0;
 #endif
 #ifdef ATH_SUPPORT_NAC
-	mon_ops->mon_set_filter_neigh_peers = dp_set_filter_neigh_peers;
+	mon_ops->mon_set_filter_neigh_peers = NULL;
 #endif
 #ifdef WLAN_ATF_ENABLE
 	mon_ops->mon_set_atf_stats_enable = dp_set_atf_stats_enable;
 #endif
 #ifdef FEATURE_NAC_RSSI
-	mon_ops->mon_filter_neighbour_peer = dp_filter_neighbour_peer;
+	mon_ops->mon_filter_neighbour_peer = NULL;
 #endif
 #ifdef QCA_MCOPY_SUPPORT
-	mon_ops->mon_filter_setup_mcopy_mode =
-				dp_mon_filter_setup_mcopy_mode_2_0;
-	mon_ops->mon_filter_reset_mcopy_mode =
-				dp_mon_filter_reset_mcopy_mode_2_0;
+	mon_ops->mon_filter_setup_mcopy_mode = NULL;
+	mon_ops->mon_filter_reset_mcopy_mode = NULL;
 	mon_ops->mon_mcopy_check_deliver = NULL;
 #endif
 #ifdef QCA_ENHANCED_STATS_SUPPORT
@@ -1339,8 +1335,7 @@ dp_mon_register_feature_ops_2_0(struct dp_soc *soc)
 #endif
 #endif
 #ifdef WLAN_RX_PKT_CAPTURE_ENH
-	mon_ops->mon_filter_setup_rx_enh_capture =
-				dp_mon_filter_setup_rx_enh_capture_2_0;
+	mon_ops->mon_filter_setup_rx_enh_capture = NULL;
 #endif
 #ifdef WDI_EVENT_ENABLE
 	mon_ops->mon_set_pktlog_wifi3 = dp_set_pktlog_wifi3;
@@ -1369,7 +1364,7 @@ dp_mon_register_feature_ops_2_0(struct dp_soc *soc)
 	mon_ops->rx_mon_enable = dp_rx_mon_enable_set;
 	mon_ops->rx_wmask_subscribe = dp_rx_mon_word_mask_subscribe;
 	mon_ops->rx_enable_mpdu_logging = dp_rx_mon_enable_mpdu_logging;
-	mon_ops->mon_neighbour_peers_detach = dp_neighbour_peers_detach;
+	mon_ops->mon_neighbour_peers_detach = NULL;
 	mon_ops->mon_vdev_set_monitor_mode_buf_rings =
 				dp_vdev_set_monitor_mode_buf_rings_2_0;
 	mon_ops->mon_vdev_set_monitor_mode_rings =
@@ -1481,7 +1476,7 @@ struct dp_mon_ops monitor_ops_2_0 = {
 struct cdp_mon_ops dp_ops_mon_2_0 = {
 	.txrx_reset_monitor_mode = dp_reset_monitor_mode,
 	/* Added support for HK advance filter */
-	.txrx_set_advance_monitor_filter = dp_pdev_set_advance_monitor_filter,
+	.txrx_set_advance_monitor_filter = NULL,
 	.txrx_deliver_tx_mgmt = dp_deliver_tx_mgmt,
 	.config_full_mon_mode = NULL,
 	.soc_config_full_mon_mode = NULL,

@@ -122,13 +122,11 @@ fail:
 void dp_rx_mon_hdr_length_set(uint32_t *msg_word,
 			      struct htt_rx_ring_tlv_filter *tlv_filter)
 {
-#ifdef FW_SUPPORT_NOT_YET
 	if (!msg_word || !tlv_filter)
 		return;
 
 	HTT_RX_RING_SELECTION_CFG_RX_HDR_LEN_SET(*msg_word,
 						 tlv_filter->rx_hdr_length);
-#endif
 }
 
 void dp_rx_mon_packet_length_set(uint32_t *msg_word,
@@ -1143,26 +1141,6 @@ dp_mon_filter_reset_undecoded_metadata_capture_2_0(struct dp_pdev *pdev)
 {
 }
 #endif
-
-#ifdef QCA_MCOPY_SUPPORT
-void dp_mon_filter_setup_mcopy_mode_2_0(struct dp_pdev *pdev)
-{
-}
-
-void dp_mon_filter_reset_mcopy_mode_2_0(struct dp_pdev *pdev)
-{
-}
-#endif
-
-#ifdef WLAN_RX_PKT_CAPTURE_ENH
-void dp_mon_filter_setup_rx_enh_capture_2_0(struct dp_pdev *pdev)
-{
-}
-
-void dp_mon_filter_reset_rx_enh_capture_2_0(struct dp_pdev *pdev)
-{
-}
-#endif /* WLAN_RX_PKT_CAPTURE_ENH */
 
 void dp_tx_mon_filter_set_downstream_tlvs(struct htt_tx_ring_tlv_filter *filter)
 {
