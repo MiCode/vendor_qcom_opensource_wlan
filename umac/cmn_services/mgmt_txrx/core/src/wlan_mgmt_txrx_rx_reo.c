@@ -915,20 +915,20 @@ mgmt_rx_reo_snapshots_check_sanity
 	return QDF_STATUS_SUCCESS;
 
 fail:
-	mgmt_rx_reo_err("HW SS: valid = %u, ctr = %u, ts = %u",
-			mac_hw_ss->valid, mac_hw_ss->mgmt_pkt_ctr,
-			mac_hw_ss->global_timestamp);
-	mgmt_rx_reo_err("FW forwarded SS: valid = %u, ctr = %u, ts = %u",
-			fw_forwarded_ss->valid,
-			fw_forwarded_ss->mgmt_pkt_ctr,
-			fw_forwarded_ss->global_timestamp);
-	mgmt_rx_reo_err("FW consumed SS: valid = %u, ctr = %u, ts = %u",
-			fw_consumed_ss->valid,
-			fw_consumed_ss->mgmt_pkt_ctr,
-			fw_consumed_ss->global_timestamp);
-	mgmt_rx_reo_err("HOST SS: valid = %u, ctr = %u, ts = %u",
-			host_ss->valid, host_ss->mgmt_pkt_ctr,
-			host_ss->global_timestamp);
+	mgmt_rx_reo_debug("HW SS: valid = %u, ctr = %u, ts = %u",
+			  mac_hw_ss->valid, mac_hw_ss->mgmt_pkt_ctr,
+			  mac_hw_ss->global_timestamp);
+	mgmt_rx_reo_debug("FW forwarded SS: valid = %u, ctr = %u, ts = %u",
+			  fw_forwarded_ss->valid,
+			  fw_forwarded_ss->mgmt_pkt_ctr,
+			  fw_forwarded_ss->global_timestamp);
+	mgmt_rx_reo_debug("FW consumed SS: valid = %u, ctr = %u, ts = %u",
+			  fw_consumed_ss->valid,
+			  fw_consumed_ss->mgmt_pkt_ctr,
+			  fw_consumed_ss->global_timestamp);
+	mgmt_rx_reo_debug("HOST SS: valid = %u, ctr = %u, ts = %u",
+			  host_ss->valid, host_ss->mgmt_pkt_ctr,
+			  host_ss->global_timestamp);
 
 	return status;
 }
@@ -1093,14 +1093,6 @@ wlan_mgmt_rx_reo_algo_calculate_wait_count(
 			return status;
 		}
 
-		status = mgmt_rx_reo_snapshots_check_sanity
-			(mac_hw_ss, fw_forwarded_ss, fw_consumed_ss, host_ss);
-		if (QDF_IS_STATUS_ERROR(status)) {
-			mgmt_rx_reo_err("Snapshot sanity for link %u failed",
-					link);
-			qdf_assert_always(0);
-		}
-
 		desc->shared_snapshots[link][MGMT_RX_REO_SHARED_SNAPSHOT_MAC_HW] =
 								*mac_hw_ss;
 		desc->shared_snapshots[link][MGMT_RX_REO_SHARED_SNAPSHOT_FW_FORWADED] =
@@ -1108,6 +1100,14 @@ wlan_mgmt_rx_reo_algo_calculate_wait_count(
 		desc->shared_snapshots[link][MGMT_RX_REO_SHARED_SNAPSHOT_FW_CONSUMED] =
 								*fw_consumed_ss;
 		desc->host_snapshot[link] = *host_ss;
+
+		status = mgmt_rx_reo_snapshots_check_sanity
+			(mac_hw_ss, fw_forwarded_ss, fw_consumed_ss, host_ss);
+		if (QDF_IS_STATUS_ERROR(status)) {
+			mgmt_rx_reo_err("Snapshot sanity for link %u failed",
+					link);
+			return status;
+		}
 
 		mgmt_rx_reo_info("link_id = %u HW SS: valid = %u, ctr = %u, ts = %u",
 				 link, mac_hw_ss->valid,
