@@ -3095,8 +3095,14 @@ dp_mon_filter_reset_tx_lite_mon(struct dp_mon_pdev_be *be_mon_pdev)
 				DP_MON_FILTER_LITE_MON_MODE;
 	enum dp_mon_filter_srng_type srng_type =
 				DP_MON_FILTER_SRNG_TYPE_TXMON_DEST;
+	struct dp_lite_mon_tx_config *config = NULL;
 
 	be_mon_pdev->filter_be[filter_mode][srng_type] = filter;
+	config = be_mon_pdev->lite_mon_tx_config;
+	if (!config)
+		return;
+	config->subtype_filtering = false;
+
 }
 
 void
@@ -3136,6 +3142,9 @@ dp_mon_filter_setup_tx_lite_mon(struct dp_mon_pdev_be *be_mon_pdev)
 		if ((config->tx_config.level == CDP_LITE_MON_LEVEL_MPDU) ||
 		    (config->tx_config.level == CDP_LITE_MON_LEVEL_PPDU))
 			tx_tlv_filter->mgmt_mpdu_log = 1;
+		if (config->tx_config.mgmt_filter[DP_MON_FRM_FILTER_MODE_FP] !=
+		    CDP_LITE_MON_FILTER_ALL)
+			config->subtype_filtering = true;
 	}
 
 	/* configure ctrl filters */
@@ -3146,6 +3155,9 @@ dp_mon_filter_setup_tx_lite_mon(struct dp_mon_pdev_be *be_mon_pdev)
 		if ((config->tx_config.level == CDP_LITE_MON_LEVEL_MPDU) ||
 		    (config->tx_config.level == CDP_LITE_MON_LEVEL_PPDU))
 			tx_tlv_filter->ctrl_mpdu_log = 1;
+		if (config->tx_config.ctrl_filter[DP_MON_FRM_FILTER_MODE_FP] !=
+		    CDP_LITE_MON_FILTER_ALL)
+			config->subtype_filtering = true;
 	}
 	/* configure data filters */
 	if (config->tx_config.data_filter[DP_MON_FRM_FILTER_MODE_FP]) {
@@ -3155,6 +3167,9 @@ dp_mon_filter_setup_tx_lite_mon(struct dp_mon_pdev_be *be_mon_pdev)
 		if ((config->tx_config.level == CDP_LITE_MON_LEVEL_MPDU) ||
 		    (config->tx_config.level == CDP_LITE_MON_LEVEL_PPDU))
 			tx_tlv_filter->data_mpdu_log = 1;
+		if (config->tx_config.data_filter[DP_MON_FRM_FILTER_MODE_FP] !=
+		    CDP_LITE_MON_FILTER_ALL)
+			config->subtype_filtering = true;
 	}
 
 	dp_mon_filter_show_tx_filter_be(mode, &filter);

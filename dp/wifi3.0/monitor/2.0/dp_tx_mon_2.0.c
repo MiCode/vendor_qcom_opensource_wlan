@@ -506,7 +506,7 @@ struct dp_tx_ppdu_info *dp_tx_mon_get_ppdu_info(struct dp_pdev *pdev,
 	TXMON_PPDU_HAL(tx_ppdu_info, is_used) = 0;
 	TXMON_PPDU_HAL(tx_ppdu_info, num_users) = num_user;
 	TXMON_PPDU_HAL(tx_ppdu_info, ppdu_id) = ppdu_id;
-	tx_ppdu_info->ppdu_id = ppdu_id;
+	TXMON_PPDU(tx_ppdu_info, ppdu_id) = ppdu_id;
 
 	for (i = 0; i < num_user; i++) {
 		qdf_nbuf_queue_t *mpdu_q;
@@ -658,10 +658,141 @@ static void dp_fill_lite_mon_vdev(struct cdp_tx_indication_info *tx_cap_info,
 	if (lite_mon_vdev)
 		tx_cap_info->osif_vdev = lite_mon_vdev->osif_vdev;
 }
+
+/**
+ * dp_lite_mon_filter_ppdu() - Filter frames at ppdu level
+ * @mpdu_count: mpdu count in the nbuf queue
+ * @level: Lite monitor filter level
+ *
+ * Return: QDF_STATUS
+ */
+static inline QDF_STATUS
+dp_lite_mon_filter_ppdu(uint8_t mpdu_count, uint8_t level)
+{
+	if (level == CDP_LITE_MON_LEVEL_PPDU && mpdu_count > 1)
+		return QDF_STATUS_E_CANCELED;
+
+	return QDF_STATUS_SUCCESS;
+}
+
+/**
+ * dp_lite_mon_filter_subtype() - filter frames with subtype
+ * @tx_ppdu_info: pointer to dp_tx_ppdu_info structure
+ * @config: Lite monitor configuration
+ *
+ * Return: QDF_STATUS
+ */
+static inline QDF_STATUS
+dp_lite_mon_filter_subtype(struct dp_tx_ppdu_info *tx_ppdu_info,
+			   struct dp_lite_mon_tx_config *config, qdf_nbuf_t buf)
+{
+	uint16_t mgmt_filter, ctrl_filter, data_filter, type, subtype;
+	struct ieee80211_frame_min_one *wh;
+	uint8_t is_mcast = 0;
+	qdf_nbuf_t nbuf;
+
+	/* Return here if subtype filtering is not required */
+	if (!config->subtype_filtering)
+		return QDF_STATUS_SUCCESS;
+
+	mgmt_filter = config->tx_config.mgmt_filter[DP_MON_FRM_FILTER_MODE_FP];
+	ctrl_filter = config->tx_config.ctrl_filter[DP_MON_FRM_FILTER_MODE_FP];
+	data_filter = config->tx_config.data_filter[DP_MON_FRM_FILTER_MODE_FP];
+
+	if (dp_tx_mon_nbuf_get_num_frag(buf)) {
+		wh = (struct ieee80211_frame_min_one *)qdf_nbuf_get_frag_addr(buf, 0);
+	} else {
+		nbuf = qdf_nbuf_get_ext_list(buf);
+		if (nbuf)
+			wh = (struct ieee80211_frame_min_one *)qdf_nbuf_data(nbuf);
+		else
+			return QDF_STATUS_E_INVAL;
+	}
+
+	type = (wh->i_fc[0] & IEEE80211_FC0_TYPE_MASK);
+	subtype = ((wh->i_fc[0] & IEEE80211_FC0_SUBTYPE_MASK) >>
+		IEEE80211_FC0_SUBTYPE_SHIFT);
+
+	switch (type) {
+	case IEEE80211_FC0_TYPE_MGT:
+		if (mgmt_filter >> subtype & 0x1)
+			return QDF_STATUS_SUCCESS;
+		else
+			return QDF_STATUS_E_ABORTED;
+	case IEEE80211_FC0_TYPE_CTL:
+		if (ctrl_filter >> subtype & 0x1)
+			return QDF_STATUS_SUCCESS;
+		else
+			return QDF_STATUS_E_ABORTED;
+	case IEEE80211_FC0_TYPE_DATA:
+		is_mcast = DP_FRAME_IS_MULTICAST(wh->i_addr1);
+		if ((is_mcast && (data_filter & FILTER_DATA_MCAST)) ||
+		    (!is_mcast && (data_filter & FILTER_DATA_UCAST)))
+			return QDF_STATUS_SUCCESS;
+		return QDF_STATUS_E_ABORTED;
+	default:
+		return QDF_STATUS_E_INVAL;
+	}
+}
+
+/**
+ * dp_tx_lite_mon_filtering() - Additional filtering for lite monitor
+ * @pdev: Pointer to physical device
+ * @tx_ppdu_info: pointer to dp_tx_ppdu_info structure
+ * @buf: qdf nbuf structure of buffer
+ * @mpdu_count: mpdu count in the nbuf queue
+ *
+ * Return: QDF_STATUS
+ */
+static inline QDF_STATUS
+dp_tx_lite_mon_filtering(struct dp_pdev *pdev,
+			 struct dp_tx_ppdu_info *tx_ppdu_info,
+			 qdf_nbuf_t buf, int mpdu_count)
+{
+	struct dp_mon_pdev *mon_pdev = pdev->monitor_pdev;
+	struct dp_mon_pdev_be *mon_pdev_be =
+		dp_get_be_mon_pdev_from_dp_mon_pdev(mon_pdev);
+	struct dp_lite_mon_tx_config *config =
+		mon_pdev_be->lite_mon_tx_config;
+	QDF_STATUS ret;
+
+	if (!dp_lite_mon_is_tx_enabled(mon_pdev))
+		return QDF_STATUS_SUCCESS;
+
+	/* PPDU level filtering */
+	ret = dp_lite_mon_filter_ppdu(mpdu_count, config->tx_config.level);
+	if (ret)
+		return ret;
+
+	/* Subtype filtering */
+	ret = dp_lite_mon_filter_subtype(tx_ppdu_info, config, buf);
+	if (ret)
+		return ret;
+
+	return QDF_STATUS_SUCCESS;
+}
+
 #else
 static void dp_fill_lite_mon_vdev(struct cdp_tx_indication_info *tx_cap_info,
 				  struct dp_mon_pdev_be *mon_pdev_be)
 {
+}
+
+/**
+ * dp_tx_lite_mon_filtering() - Additional filtering for lite monitor
+ * @pdev: Pointer to physical device
+ * @tx_ppdu_info: pointer to dp_tx_ppdu_info structure
+ * @buf: qdf nbuf structure of buffer
+ * @mpdu_count: mpdu count in the nbuf queue
+ *
+ * Return: QDF_STATUS
+ */
+static inline QDF_STATUS
+dp_tx_lite_mon_filtering(struct dp_pdev *pdev,
+			 struct dp_tx_ppdu_info *tx_ppdu_info,
+			 qdf_nbuf_t buf, int mpdu_count)
+{
+	return QDF_STATUS_SUCCESS;
 }
 #endif
 
@@ -670,12 +801,13 @@ static void dp_fill_lite_mon_vdev(struct cdp_tx_indication_info *tx_cap_info,
  * @pdev: pdev Handle
  * @mpdu: pointer to mpdu
  * @num_frag: number of frag in mpdu
+ * @ppdu_id: ppdu id of the mpdu
  *
  * Return: void
  */
 static void
 dp_tx_mon_send_to_stack(struct dp_pdev *pdev, qdf_nbuf_t mpdu,
-			uint32_t num_frag)
+			uint32_t num_frag, uint32_t ppdu_id)
 {
 	struct dp_mon_pdev *mon_pdev = pdev->monitor_pdev;
 	struct dp_mon_pdev_be *mon_pdev_be =
@@ -688,6 +820,7 @@ dp_tx_mon_send_to_stack(struct dp_pdev *pdev, qdf_nbuf_t mpdu,
 
 	tx_capture_info.radiotap_done = 1;
 	tx_capture_info.mpdu_nbuf = mpdu;
+	tx_capture_info.mpdu_info.ppdu_id = ppdu_id;
 	if (!dp_lite_mon_is_tx_enabled(mon_pdev)) {
 		dp_wdi_event_handler(WDI_EVENT_TX_PKT_CAPTURE,
 				     pdev->soc,
@@ -723,6 +856,7 @@ dp_tx_mon_send_per_usr_mpdu(struct dp_pdev *pdev,
 {
 	qdf_nbuf_queue_t *usr_mpdu_q = NULL;
 	qdf_nbuf_t buf = NULL;
+	uint8_t mpdu_count = 0;
 
 	usr_mpdu_q = &TXMON_PPDU_USR(ppdu_info, user_idx, mpdu_q);
 
@@ -732,10 +866,17 @@ dp_tx_mon_send_per_usr_mpdu(struct dp_pdev *pdev,
 		ppdu_info->hal_txmon.rx_status.rx_user_status =
 				&ppdu_info->hal_txmon.rx_user_status[user_idx];
 
+		if (dp_tx_lite_mon_filtering(pdev, ppdu_info, buf,
+					     ++mpdu_count)) {
+			qdf_nbuf_free(buf);
+			continue;
+		}
+
 		qdf_nbuf_update_radiotap(&ppdu_info->hal_txmon.rx_status,
 					 buf, qdf_nbuf_headroom(buf));
 
-		dp_tx_mon_send_to_stack(pdev, buf, num_frag);
+		dp_tx_mon_send_to_stack(pdev, buf, num_frag,
+					TXMON_PPDU(ppdu_info, ppdu_id));
 	}
 }
 

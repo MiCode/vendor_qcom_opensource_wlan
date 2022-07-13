@@ -178,16 +178,6 @@ dp_tx_mon_process_2_0(struct dp_soc *soc, struct dp_intr *int_ctx,
 #define INITIATOR_WINDOW 0
 #define RESPONSE_WINDOW 1
 
-#define FRAME_CONTROL_TYPE_MASK  0x0C
-#define FRAME_CONTROL_TYPE_SHIFT 2
-
-#define FRAME_CONTROL_SUBTYPE_MASK  0xF0
-#define FRAME_CONTROL_SUBTYPE_SHIFT 4
-
-#define FRAME_CTRL_TYPE_MGMT 0x0
-#define FRAME_CTRL_TYPE_CTRL 0x1
-#define FRAME_CTRL_TYPE_DATA 0x2
-
 /**
  * bf_type -  tx monitor supported Beamformed type
  */
