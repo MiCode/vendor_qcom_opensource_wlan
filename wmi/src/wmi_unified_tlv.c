@@ -5425,6 +5425,62 @@ extract_cp_stats_more_pending_tlv(wmi_unified_t wmi, void *evt_buf,
 }
 
 /**
+ * extract_halphy_stats_end_of_event_tlv - api to extract end_of_event flag
+ * from event data
+ * @wmi_handle: wmi handle
+ * @evt_buf:    event buffer
+ * @end_of_event_flag:  buffer to populate end_of_event flag
+ *
+ * Return: status of operation
+ */
+static QDF_STATUS
+extract_halphy_stats_end_of_event_tlv(wmi_unified_t wmi, void *evt_buf,
+				      uint32_t *end_of_event_flag)
+{
+	WMI_HALPHY_CTRL_PATH_STATS_EVENTID_param_tlvs *param_buf;
+	wmi_halphy_ctrl_path_stats_event_fixed_param *ev;
+
+	param_buf = (WMI_HALPHY_CTRL_PATH_STATS_EVENTID_param_tlvs *)evt_buf;
+	if (!param_buf) {
+		wmi_err_rl("param_buf is NULL");
+		return QDF_STATUS_E_FAILURE;
+	}
+	ev = (wmi_halphy_ctrl_path_stats_event_fixed_param *)
+	param_buf->fixed_param;
+
+	*end_of_event_flag = ev->end_of_event;
+	return QDF_STATUS_SUCCESS;
+}
+
+/**
+ * extract_halphy_stats_event_count - api to extract event count flag from
+ * event data
+ * @wmi_handle: wmi handle
+ * @evt_buf:    event buffer
+ * @event_count_flag:  buffer to populate event_count flag
+ *
+ * Return: status of operation
+ */
+static QDF_STATUS
+extract_halphy_stats_event_count_tlv(wmi_unified_t wmi, void *evt_buf,
+				     uint32_t *event_count_flag)
+{
+	WMI_HALPHY_CTRL_PATH_STATS_EVENTID_param_tlvs *param_buf;
+	wmi_halphy_ctrl_path_stats_event_fixed_param *ev;
+
+	param_buf = (WMI_HALPHY_CTRL_PATH_STATS_EVENTID_param_tlvs *)evt_buf;
+	if (!param_buf) {
+		wmi_err_rl("param_buf is NULL");
+		return QDF_STATUS_E_FAILURE;
+	}
+	ev = (wmi_halphy_ctrl_path_stats_event_fixed_param *)
+	param_buf->fixed_param;
+
+	*event_count_flag = ev->event_count;
+	return QDF_STATUS_SUCCESS;
+}
+
+/**
  * send_nlo_mawc_cmd_tlv() - Send MAWC NLO configuration
  * @wmi_handle: wmi handle
  * @params: configuration parameters
@@ -18841,6 +18897,10 @@ struct wmi_ops tlv_ops =  {
 #endif /* WLAN_SUPPORT_INFRA_CTRL_PATH_STATS */
 	.extract_cp_stats_more_pending =
 				extract_cp_stats_more_pending_tlv,
+	.extract_halphy_stats_end_of_event =
+				extract_halphy_stats_end_of_event_tlv,
+	.extract_halphy_stats_event_count =
+				extract_halphy_stats_event_count_tlv,
 	.send_vdev_tsf_tstamp_action_cmd = send_vdev_tsf_tstamp_action_cmd_tlv,
 	.extract_vdev_tsf_report_event = extract_vdev_tsf_report_event_tlv,
 	.extract_pdev_csa_switch_count_status =
@@ -19322,6 +19382,8 @@ static void populate_tlv_events_id(uint32_t *event_ids)
 			WMI_PEER_CREATE_CONF_EVENTID;
 	event_ids[wmi_pdev_cp_fwstats_eventid] =
 			WMI_CTRL_PATH_STATS_EVENTID;
+	event_ids[wmi_pdev_halphy_fwstats_eventid] =
+			WMI_HALPHY_CTRL_PATH_STATS_EVENTID;
 	event_ids[wmi_vdev_send_big_data_p2_eventid] =
 			WMI_VDEV_SEND_BIG_DATA_P2_EVENTID;
 	event_ids[wmi_pdev_get_dpd_status_event_id] =

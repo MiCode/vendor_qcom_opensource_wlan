@@ -4661,6 +4661,36 @@ wmi_unified_extract_cp_stats_more_pending(wmi_unified_t wmi_handle,
 					  void *evt_buf, uint32_t *more_flag);
 
 /**
+ * wmi_unified_extract_halphy_stats_end_of_event() - extract end_of_event flag
+ * @wmi_handle: wmi handle
+ * @evt_buf: event buffer
+ * @end_of_event_flag: end_of_event flag
+ *
+ * This function extracts the end_of_event_flag from fixed param
+ *
+ * Return: QDF_STATUS_SUCCESS on success and QDF_STATUS_E_FAILURE for failure
+ */
+QDF_STATUS
+wmi_unified_extract_halphy_stats_end_of_event(wmi_unified_t wmi_handle,
+					      void *evt_buf,
+					      uint32_t *end_of_event_flag);
+
+/**
+ * wmi_unified_extract_halphy_stats_event_count() - extract event_count flag
+ * @wmi_handle: wmi handle
+ * @evt_buf: event buffer
+ * @event_count_flag: event count flag
+ *
+ * This function extracts the event_count_flag from fixed param
+ *
+ * Return: QDF_STATUS_SUCCESS on success and QDF_STATUS_E_FAILURE for failure
+ */
+QDF_STATUS
+wmi_unified_extract_halphy_stats_event_count(wmi_unified_t wmi_handle,
+					     void *evt_buf,
+					     uint32_t *event_count_flag);
+
+/**
  * wmi_unified_send_vdev_tsf_tstamp_action_cmd() - send vdev tsf action command
  * @wmi: wmi handle
  * @vdev_id: vdev id

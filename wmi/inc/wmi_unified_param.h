@@ -5038,6 +5038,7 @@ typedef enum {
 	wmi_vdev_disconnect_event_id,
 	wmi_peer_create_conf_event_id,
 	wmi_pdev_cp_fwstats_eventid,
+	wmi_pdev_halphy_fwstats_eventid,
 	wmi_vdev_send_big_data_p2_eventid,
 	wmi_pdev_get_dpd_status_event_id,
 #ifdef WLAN_FEATURE_PKT_CAPTURE_V2

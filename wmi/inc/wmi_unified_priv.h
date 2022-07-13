@@ -2862,6 +2862,12 @@ QDF_STATUS (*send_halphy_stats_cmd)(wmi_unified_t wmi_handle,
 QDF_STATUS (*extract_cp_stats_more_pending)(wmi_unified_t wmi_handle,
 					    void *evt_buf,
 					    uint32_t *more_flag);
+QDF_STATUS (*extract_halphy_stats_end_of_event)(wmi_unified_t wmi_handle,
+						void *evt_buf,
+						uint32_t *end_of_event_flag);
+QDF_STATUS (*extract_halphy_stats_event_count)(wmi_unified_t wmi_handle,
+					       void *evt_buf,
+					       uint32_t *event_count_flag);
 #ifdef WLAN_SUPPORT_INFRA_CTRL_PATH_STATS
 QDF_STATUS
 (*extract_infra_cp_stats)(wmi_unified_t wmi_handle,
