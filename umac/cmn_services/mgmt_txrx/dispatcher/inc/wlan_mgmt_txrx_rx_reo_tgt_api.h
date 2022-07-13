@@ -114,7 +114,9 @@ tgt_mgmt_rx_reo_read_snapshot(
 			struct wlan_objmgr_pdev *pdev,
 			struct mgmt_rx_reo_snapshot_info *snapshot_info,
 			enum mgmt_rx_reo_shared_snapshot_id id,
-			struct mgmt_rx_reo_snapshot_params *value);
+			struct mgmt_rx_reo_snapshot_params *value,
+			struct mgmt_rx_reo_shared_snapshot (*raw_snapshot)
+			[MGMT_RX_REO_SNAPSHOT_B2B_READ_SWAR_RETRY_LIMIT]);
 
 /**
  * tgt_mgmt_rx_reo_fw_consumed_event_handler() - MGMT Rx REO FW consumed

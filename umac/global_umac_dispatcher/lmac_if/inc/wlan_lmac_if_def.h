@@ -312,7 +312,9 @@ struct wlan_lmac_if_mgmt_rx_reo_tx_ops {
 			(struct wlan_objmgr_pdev *pdev,
 			 struct mgmt_rx_reo_snapshot_info *snapshot_info,
 			 enum mgmt_rx_reo_shared_snapshot_id id,
-			 struct mgmt_rx_reo_snapshot_params *value);
+			 struct mgmt_rx_reo_snapshot_params *value,
+			 struct mgmt_rx_reo_shared_snapshot (*raw_snapshot)
+			 [MGMT_RX_REO_SNAPSHOT_B2B_READ_SWAR_RETRY_LIMIT]);
 	QDF_STATUS (*get_mgmt_rx_reo_snapshot_info)
 			(struct wlan_objmgr_pdev *pdev,
 			 enum mgmt_rx_reo_shared_snapshot_id id,

@@ -249,7 +249,8 @@ target_if_mgmt_rx_reo_read_snapshot_raw
 			(struct mgmt_rx_reo_shared_snapshot *snapshot_address,
 			 uint32_t *mgmt_rx_reo_snapshot_low,
 			 uint32_t *mgmt_rx_reo_snapshot_high,
-			 uint8_t snapshot_version)
+			 uint8_t snapshot_version,
+			 struct mgmt_rx_reo_shared_snapshot *raw_snapshot)
 {
 	uint32_t prev_snapshot_low;
 	uint32_t prev_snapshot_high;
@@ -262,16 +263,27 @@ target_if_mgmt_rx_reo_read_snapshot_raw
 				snapshot_address->mgmt_rx_reo_snapshot_low;
 		*mgmt_rx_reo_snapshot_high =
 				snapshot_address->mgmt_rx_reo_snapshot_high;
+		raw_snapshot->mgmt_rx_reo_snapshot_low =
+						*mgmt_rx_reo_snapshot_low;
+		raw_snapshot->mgmt_rx_reo_snapshot_high =
+						*mgmt_rx_reo_snapshot_high;
 		return QDF_STATUS_SUCCESS;
 	}
 
 	prev_snapshot_low = snapshot_address->mgmt_rx_reo_snapshot_low;
 	prev_snapshot_high = snapshot_address->mgmt_rx_reo_snapshot_high;
+	raw_snapshot->mgmt_rx_reo_snapshot_low = prev_snapshot_low;
+	raw_snapshot->mgmt_rx_reo_snapshot_high = prev_snapshot_high;
 
-	for (; retry_count < MGMT_RX_REO_SNAPSHOT_B2B_READ_SWAR_RETRY_LIMIT;
+	for (; retry_count < (MGMT_RX_REO_SNAPSHOT_B2B_READ_SWAR_RETRY_LIMIT - 1);
 	     retry_count++) {
 		cur_snapshot_low = snapshot_address->mgmt_rx_reo_snapshot_low;
 		cur_snapshot_high = snapshot_address->mgmt_rx_reo_snapshot_high;
+
+		raw_snapshot[retry_count + 1].mgmt_rx_reo_snapshot_low =
+							cur_snapshot_low;
+		raw_snapshot[retry_count + 1].mgmt_rx_reo_snapshot_high =
+							cur_snapshot_high;
 
 		if (prev_snapshot_low == cur_snapshot_low &&
 		    prev_snapshot_high == cur_snapshot_high)
@@ -282,7 +294,7 @@ target_if_mgmt_rx_reo_read_snapshot_raw
 	}
 
 	qdf_assert_always(retry_count !=
-			  MGMT_RX_REO_SNAPSHOT_B2B_READ_SWAR_RETRY_LIMIT);
+			  (MGMT_RX_REO_SNAPSHOT_B2B_READ_SWAR_RETRY_LIMIT - 1));
 
 	*mgmt_rx_reo_snapshot_low = cur_snapshot_low;
 	*mgmt_rx_reo_snapshot_high = cur_snapshot_high;
@@ -306,7 +318,9 @@ target_if_mgmt_rx_reo_read_snapshot(
 			struct wlan_objmgr_pdev *pdev,
 			struct mgmt_rx_reo_snapshot_info *snapshot_info,
 			enum mgmt_rx_reo_shared_snapshot_id id,
-			struct mgmt_rx_reo_snapshot_params *snapshot_value)
+			struct mgmt_rx_reo_snapshot_params *snapshot_value,
+			struct mgmt_rx_reo_shared_snapshot (*raw_snapshot)
+			[MGMT_RX_REO_SNAPSHOT_B2B_READ_SWAR_RETRY_LIMIT])
 {
 	bool snapshot_valid;
 	uint16_t mgmt_pkt_ctr;
@@ -361,7 +375,8 @@ target_if_mgmt_rx_reo_read_snapshot(
 					(snapshot_address,
 					 &mgmt_rx_reo_snapshot_low,
 					 &mgmt_rx_reo_snapshot_high,
-					 snapshot_version);
+					 snapshot_version,
+					 raw_snapshot[retry_count]);
 
 			if (QDF_IS_STATUS_ERROR(status)) {
 				mgmt_rx_reo_err("Failed to read snapshot %d",
@@ -376,8 +391,16 @@ target_if_mgmt_rx_reo_read_snapshot(
 			if (!snapshot_valid) {
 				mgmt_rx_reo_info("Invalid REO snapshot value");
 				snapshot_value->valid = false;
-				snapshot_value->mgmt_pkt_ctr = 0xFFFE;
-				snapshot_value->global_timestamp = 0xFFFFFFFE;
+				snapshot_value->mgmt_pkt_ctr =
+					low_level_ops->snapshot_get_mgmt_pkt_ctr
+					(mgmt_rx_reo_snapshot_low,
+					 snapshot_version);
+				snapshot_value->global_timestamp =
+				low_level_ops->snapshot_get_global_timestamp
+					(mgmt_rx_reo_snapshot_low,
+					 mgmt_rx_reo_snapshot_high,
+					 snapshot_version);
+				snapshot_value->retry_count = retry_count + 1;
 				return QDF_STATUS_SUCCESS;
 			}
 
@@ -409,6 +432,7 @@ target_if_mgmt_rx_reo_read_snapshot(
 			snapshot_value->valid = false;
 			snapshot_value->mgmt_pkt_ctr = 0xFFFF;
 			snapshot_value->global_timestamp = 0xFFFFFFFF;
+			snapshot_value->retry_count = retry_count;
 			qdf_assert_always(0);
 			return QDF_STATUS_E_FAILURE;
 		}
@@ -416,6 +440,7 @@ target_if_mgmt_rx_reo_read_snapshot(
 		snapshot_value->valid = true;
 		snapshot_value->mgmt_pkt_ctr = mgmt_pkt_ctr;
 		snapshot_value->global_timestamp = global_timestamp;
+		snapshot_value->retry_count = retry_count + 1;
 		status = QDF_STATUS_SUCCESS;
 		break;
 
