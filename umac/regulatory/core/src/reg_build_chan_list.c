@@ -1667,7 +1667,7 @@ reg_populate_secondary_cur_chan_list(struct wlan_regulatory_pdev_priv_obj
 				     *pdev_priv_obj)
 {
 	qdf_mem_copy(pdev_priv_obj->secondary_cur_chan_list,
-		     pdev_priv_obj->mas_chan_list,
+		     pdev_priv_obj->cur_chan_list,
 		     NUM_CHANNELS * sizeof(struct regulatory_channel));
 }
 #else /* CONFIG_REG_CLIENT */
