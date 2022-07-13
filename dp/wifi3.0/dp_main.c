@@ -7499,6 +7499,7 @@ QDF_STATUS dp_peer_mlo_setup(
 			 */
 			mld_peer->vdev = dp_vdev_get_ref_by_id(soc, vdev_id,
 							       DP_MOD_ID_CHILD);
+			mld_peer->txrx_peer->vdev = mld_peer->vdev;
 		}
 
 		/* associate mld and link peer */
