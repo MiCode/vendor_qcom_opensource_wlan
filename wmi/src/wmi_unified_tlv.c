@@ -17165,6 +17165,7 @@ extract_roam_scan_stats_tlv(wmi_unified_t wmi_handle, void *evt_buf,
 	dst->type = src_data->roam_scan_type;
 	dst->num_chan = src_data->roam_scan_channel_count;
 	dst->next_rssi_threshold = src_data->next_rssi_trigger_threshold;
+	dst->is_btcoex_active = WMI_GET_BTCONNECT_STATUS(src_data->flags);
 	dst->frame_info_count = src_data->frame_info_count;
 	if (dst->frame_info_count >  WLAN_ROAM_MAX_FRAME_INFO)
 		dst->frame_info_count =  WLAN_ROAM_MAX_FRAME_INFO;
