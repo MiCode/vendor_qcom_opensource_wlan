@@ -1459,6 +1459,9 @@ QDF_STATUS dp_peer_host_add_map_ast(struct dp_soc *soc, uint16_t peer_id,
 		return QDF_STATUS_E_INVAL;
 	}
 
+	if (!is_wds && IS_MLO_DP_MLD_PEER(peer))
+		type = CDP_TXRX_AST_TYPE_MLD;
+
 	vdev = peer->vdev;
 	if (!vdev) {
 		dp_peer_err("%pK: Peers vdev is NULL", soc);
@@ -1468,6 +1471,7 @@ QDF_STATUS dp_peer_host_add_map_ast(struct dp_soc *soc, uint16_t peer_id,
 
 	if (!dp_peer_state_cmp(peer, DP_PEER_STATE_ACTIVE)) {
 		if (type != CDP_TXRX_AST_TYPE_STATIC &&
+		    type != CDP_TXRX_AST_TYPE_MLD &&
 		    type != CDP_TXRX_AST_TYPE_SELF) {
 			status = QDF_STATUS_E_BUSY;
 			goto fail;
@@ -1479,10 +1483,14 @@ QDF_STATUS dp_peer_host_add_map_ast(struct dp_soc *soc, uint16_t peer_id,
 		      QDF_MAC_ADDR_REF(peer->mac_addr.raw), peer,
 		      QDF_MAC_ADDR_REF(mac_addr));
 
+	/*
+	 * In MLO scenario, there is possibility for same mac address
+	 * on both link mac address and MLD mac address.
+	 * Duplicate AST map needs to be handled for non-mld type.
+	 */
 	qdf_spin_lock_bh(&soc->ast_lock);
-
 	ast_entry = dp_peer_ast_hash_find_soc(soc, mac_addr);
-	if (ast_entry) {
+	if (ast_entry && type != CDP_TXRX_AST_TYPE_MLD) {
 		dp_peer_debug("AST present ID %d vid %d mac " QDF_MAC_ADDR_FMT,
 			      hw_peer_id, vdev_id,
 			      QDF_MAC_ADDR_REF(mac_addr));
@@ -1529,6 +1537,8 @@ QDF_STATUS dp_peer_host_add_map_ast(struct dp_soc *soc, uint16_t peer_id,
 		break;
 	case CDP_TXRX_AST_TYPE_WDS:
 		ast_entry->next_hop = 1;
+		break;
+	case CDP_TXRX_AST_TYPE_MLD:
 		break;
 	default:
 		dp_peer_alert("%pK: Incorrect AST entry type", soc);
@@ -2974,6 +2984,16 @@ dp_rx_mlo_peer_map_handler(struct dp_soc *soc, uint16_t peer_id,
 
 	err = dp_peer_map_ast(soc, peer, peer_mac_addr, hw_peer_id,
 			      vdev_id, ast_hash, is_wds);
+
+	/*
+	 * If AST offload and host AST DB is enabled, populate AST entries on
+	 * host based on mlo peer map event from FW
+	 */
+	if (soc->ast_offload_support && soc->host_ast_db_enable) {
+		dp_peer_host_add_map_ast(soc, ml_peer_id, peer_mac_addr,
+					 hw_peer_id, vdev_id,
+					 ast_hash, is_wds);
+	}
 
 	return err;
 }
