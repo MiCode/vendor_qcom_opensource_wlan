@@ -1044,7 +1044,15 @@ static inline void dp_peer_delete_ast_entries(struct dp_soc *soc,
 	DP_PEER_ITERATE_ASE_LIST(peer, ast_entry, temp_ast_entry)
 		dp_peer_del_ast(soc, ast_entry);
 }
+
+void dp_print_peer_ast_entries(struct dp_soc *soc, struct dp_peer *peer,
+			       void *arg);
 #else
+static inline void dp_print_peer_ast_entries(struct dp_soc *soc,
+					     struct dp_peer *peer, void *arg)
+{
+}
+
 static inline void dp_peer_delete_ast_entries(struct dp_soc *soc,
 					      struct dp_peer *peer)
 {
@@ -1800,6 +1808,15 @@ dp_tgt_txrx_peer_get_ref_by_id(struct dp_soc *soc,
 	return NULL;
 }
 
+/**
+ * dp_print_mlo_ast_stats_be() - Print AST stats for MLO peers
+ *
+ * @soc	: core DP soc context
+ *
+ * Return: void
+ */
+void dp_print_mlo_ast_stats_be(struct dp_soc *soc);
+
 #else
 
 #define IS_MLO_DP_MLD_TXRX_PEER(_peer) false
@@ -1947,6 +1964,10 @@ uint16_t dp_get_link_peer_id_by_lmac_id(struct dp_soc *soc, uint16_t peer_id,
 					uint8_t lmac_id)
 {
 	return peer_id;
+}
+
+static inline void dp_print_mlo_ast_stats_be(struct dp_soc *soc)
+{
 }
 #endif /* WLAN_FEATURE_11BE_MLO */
 

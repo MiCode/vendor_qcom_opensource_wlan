@@ -1900,6 +1900,7 @@ struct dp_arch_ops {
 				  struct dp_vdev *vdev,
 				  struct hal_tx_completion_status *ts,
 				  uint32_t *delay_us);
+	void (*print_mlo_ast_stats)(struct dp_soc *soc);
 };
 
 /**

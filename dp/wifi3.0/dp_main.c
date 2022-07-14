@@ -269,6 +269,10 @@ static uint8_t dp_soc_ring_if_nss_offloaded(struct dp_soc *soc,
 					    enum hal_ring_type ring_type,
 					    int ring_num);
 
+#ifdef FEATURE_AST
+void dp_print_mlo_ast_stats(struct dp_soc *soc);
+#endif
+
 #define DP_INTR_POLL_TIMER_MS	5
 
 #define MON_VDEV_TIMER_INIT 0x1
@@ -1673,6 +1677,19 @@ configure_msi2:
 
 #ifdef FEATURE_AST
 /**
+ * dp_print_mlo_ast_stats() - Print AST stats for MLO peers
+ *
+ * @soc : core DP soc context
+ *
+ * Return: void
+ */
+void dp_print_mlo_ast_stats(struct dp_soc *soc)
+{
+	if (soc->arch_ops.print_mlo_ast_stats)
+		soc->arch_ops.print_mlo_ast_stats(soc);
+}
+
+/**
  * dp_print_peer_ast_entries() - Dump AST entries of peer
  * @soc: Datapath soc handle
  * @peer: Datapath peer
@@ -1680,14 +1697,14 @@ configure_msi2:
  *
  * return void
  */
-static void
+void
 dp_print_peer_ast_entries(struct dp_soc *soc, struct dp_peer *peer, void *arg)
 {
 	struct dp_ast_entry *ase, *tmp_ase;
 	uint32_t num_entries = 0;
 	char type[CDP_TXRX_AST_TYPE_MAX][10] = {
 			"NONE", "STATIC", "SELF", "WDS", "HMWDS", "BSS",
-			"DA", "HMWDS_SEC"};
+			"DA", "HMWDS_SEC", "MLD"};
 
 	DP_PEER_ITERATE_ASE_LIST(peer, ase, tmp_ase) {
 	    DP_PRINT_STATS("%6d mac_addr = "QDF_MAC_ADDR_FMT
@@ -1740,6 +1757,8 @@ void dp_print_ast_stats(struct dp_soc *soc)
 			    DP_MOD_ID_GENERIC_STATS);
 
 	qdf_spin_unlock_bh(&soc->ast_lock);
+
+	dp_print_mlo_ast_stats(soc);
 }
 #else
 void dp_print_ast_stats(struct dp_soc *soc)
