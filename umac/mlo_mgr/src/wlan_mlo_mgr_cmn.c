@@ -106,7 +106,7 @@ QDF_STATUS mlo_mlme_clone_sta_security(struct wlan_objmgr_vdev *vdev,
 	struct vdev_mlme_obj *vdev_mlme;
 	QDF_STATUS status = QDF_STATUS_SUCCESS;
 
-	if (!mlo_ctx || !mlo_ctx->mlme_ops ||
+	if (!req || !mlo_ctx || !mlo_ctx->mlme_ops ||
 	    !mlo_ctx->mlme_ops->mlo_mlme_ext_validate_conn_req)
 		return QDF_STATUS_E_FAILURE;
 
