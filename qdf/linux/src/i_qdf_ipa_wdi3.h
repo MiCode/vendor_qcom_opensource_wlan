@@ -191,7 +191,7 @@ typedef struct ipa_wdi_reg_intf_in_params  __qdf_ipa_wdi_reg_intf_in_params_t;
 #define __QDF_IPA_WDI_REG_INTF_IN_PARAMS_IS_TX1_USED(in)	\
 	(((struct ipa_wdi_reg_intf_in_params *)(in))->is_tx1_used)
 #endif
-#ifdef IPA_WDI3_RX_TWO_PIPES
+#ifdef IPA_WDI3_VLAN_SUPPORT
 #define __QDF_IPA_WDI_REG_INTF_IN_PARAMS_IS_RX1_USED(in)	\
 	(((struct ipa_wdi_reg_intf_in_params *)(in))->is_rx1_used)
 #endif
@@ -317,7 +317,7 @@ typedef struct ipa_wdi_conn_in_params  __qdf_ipa_wdi_conn_in_params_t;
 	(((struct ipa_wdi_conn_in_params *)(pipe_in))->u_rx.rx)
 #define __QDF_IPA_WDI_CONN_IN_PARAMS_RX_SMMU(pipe_in)	\
 	(((struct ipa_wdi_conn_in_params *)(pipe_in))->u_rx.rx_smmu)
-#ifdef IPA_WDI3_RX_TWO_PIPES
+#ifdef IPA_WDI3_VLAN_SUPPORT
 #define __QDF_IPA_WDI_CONN_IN_PARAMS_IS_RX1_USED(pipe_in)	\
 	(((struct ipa_wdi_conn_in_params *)(pipe_in))->is_rx1_used)
 #define __QDF_IPA_WDI_CONN_IN_PARAMS_RX_ALT(pipe_in)	\
@@ -347,7 +347,7 @@ typedef struct ipa_wdi_conn_out_params  __qdf_ipa_wdi_conn_out_params_t;
 #endif
 #define __QDF_IPA_WDI_CONN_OUT_PARAMS_RX_UC_DB_PA(pipe_out)	\
 	(((struct ipa_wdi_conn_out_params *)(pipe_out))->rx_uc_db_pa)
-#ifdef IPA_WDI3_RX_TWO_PIPES
+#ifdef IPA_WDI3_VLAN_SUPPORT
 #define __QDF_IPA_WDI_CONN_OUT_PARAMS_RX_ALT_UC_DB_PA(pipe_out)	\
 	(((struct ipa_wdi_conn_out_params *)(pipe_out))->rx1_uc_db_pa)
 #endif

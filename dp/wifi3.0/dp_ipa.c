@@ -1175,7 +1175,7 @@ static void dp_rx_ipa_uc_detach(struct dp_soc *soc, struct dp_pdev *pdev)
  *
  * Return: none
  */
-#ifdef IPA_WDI3_RX_TWO_PIPES
+#ifdef IPA_WDI3_VLAN_SUPPORT
 static void dp_rx_alt_ipa_uc_detach(struct dp_soc *soc, struct dp_pdev *pdev)
 {
 	struct dp_ipa_resources *ipa_res = &pdev->ipa_resource;
@@ -1386,7 +1386,7 @@ int dp_ipa_uc_attach(struct dp_soc *soc, struct dp_pdev *pdev)
 	return QDF_STATUS_SUCCESS;	/* success */
 }
 
-#ifdef IPA_WDI3_RX_TWO_PIPES
+#ifdef IPA_WDI3_VLAN_SUPPORT
 /*
  * dp_ipa_rx_alt_ring_resource_setup() - setup IPA 2nd RX ring resources
  * @soc: data path SoC handle
@@ -1623,7 +1623,7 @@ int dp_ipa_ring_resource_setup(struct dp_soc *soc,
 	return 0;
 }
 
-#ifdef IPA_WDI3_RX_TWO_PIPES
+#ifdef IPA_WDI3_VLAN_SUPPORT
 /*
  * dp_ipa_rx_alt_ring_get_resource() - get IPA 2nd RX ring resources
  * @pdev: data path pdev handle
@@ -1728,7 +1728,7 @@ QDF_STATUS dp_ipa_get_resource(struct cdp_soc_t *soc_hdl, uint8_t pdev_id)
 		dp_ipa_set_tx_doorbell_paddr(soc, ipa_res)
 #endif
 
-#ifdef IPA_WDI3_RX_TWO_PIPES
+#ifdef IPA_WDI3_VLAN_SUPPORT
 /*
  * dp_ipa_map_rx_alt_ring_doorbell_paddr() - Map 2nd rx ring doorbell paddr
  * @pdev: data path pdev handle
@@ -2286,7 +2286,7 @@ dp_ipa_wdi_rx_smmu_params(struct dp_soc *soc,
 		soc->rx_pkt_tlv_size + L3_HEADER_PADDING;
 }
 
-#ifdef IPA_WDI3_RX_TWO_PIPES
+#ifdef IPA_WDI3_VLAN_SUPPORT
 /*
  * dp_ipa_wdi_rx_alt_pipe_smmu_params() - Setup 2nd rx pipe smmu params
  * @soc: data path soc handle
@@ -2637,7 +2637,7 @@ QDF_STATUS dp_ipa_setup(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
 	return QDF_STATUS_SUCCESS;
 }
 
-#ifdef IPA_WDI3_RX_TWO_PIPES
+#ifdef IPA_WDI3_VLAN_SUPPORT
 /*
  * dp_ipa_set_rx1_used() - Set rx1 used flag for 2nd rx offload ring
  * @in: pipe in handle

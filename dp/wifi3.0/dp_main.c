@@ -4095,7 +4095,7 @@ static void dp_soc_disable_unused_mac_intr_mask(struct dp_soc *soc,
 }
 
 #ifdef IPA_OFFLOAD
-#ifdef IPA_WDI3_RX_TWO_PIPES
+#ifdef IPA_WDI3_VLAN_SUPPORT
 /*
  * dp_soc_reset_ipa_vlan_intr_mask() - reset interrupt mask for IPA offloaded
  * ring for vlan tagged traffic
@@ -4134,7 +4134,7 @@ static void dp_soc_reset_ipa_vlan_intr_mask(struct dp_soc *soc)
 static inline
 void dp_soc_reset_ipa_vlan_intr_mask(struct dp_soc *soc)
 { }
-#endif /* IPA_WDI3_RX_TWO_PIPES */
+#endif /* IPA_WDI3_VLAN_SUPPORT */
 #else
 static inline
 void dp_soc_reset_ipa_vlan_intr_mask(struct dp_soc *soc)
@@ -5102,7 +5102,7 @@ static int dp_setup_ipa_rx_refill_buf_ring(struct dp_soc *soc,
 	return QDF_STATUS_SUCCESS;
 }
 
-#ifdef IPA_WDI3_RX_TWO_PIPES
+#ifdef IPA_WDI3_VLAN_SUPPORT
 static int dp_setup_ipa_rx_alt_refill_buf_ring(struct dp_soc *soc,
 					       struct dp_pdev *pdev)
 {
@@ -6191,7 +6191,7 @@ dp_htt_setup_rxdma_err_dst_ring(struct dp_soc *soc, int mac_id,
 			       RXDMA_DST);
 }
 
-#ifdef IPA_WDI3_RX_TWO_PIPES
+#ifdef IPA_WDI3_VLAN_SUPPORT
 static inline
 void dp_rxdma_setup_refill_ring3(struct dp_soc *soc,
 				 struct dp_pdev *pdev,

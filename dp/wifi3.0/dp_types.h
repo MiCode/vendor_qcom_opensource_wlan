@@ -2268,7 +2268,7 @@ struct dp_soc {
 #endif
 
 	struct ipa_dp_rx_rsc ipa_uc_rx_rsc;
-#ifdef IPA_WDI3_RX_TWO_PIPES
+#ifdef IPA_WDI3_VLAN_SUPPORT
 	struct ipa_dp_rx_rsc ipa_uc_rx_rsc_alt;
 #endif
 	qdf_atomic_t ipa_pipes_enabled;
@@ -2497,7 +2497,7 @@ struct dp_ipa_resources {
 	qdf_dma_addr_t tx_alt_comp_doorbell_paddr;
 	uint32_t *tx_alt_comp_doorbell_vaddr;
 #endif
-#ifdef IPA_WDI3_RX_TWO_PIPES
+#ifdef IPA_WDI3_VLAN_SUPPORT
 	qdf_shared_mem_t rx_alt_rdy_ring;
 	qdf_shared_mem_t rx_alt_refill_ring;
 	qdf_dma_addr_t rx_alt_ready_doorbell_paddr;
@@ -2804,7 +2804,7 @@ struct dp_pdev {
 
 	/* Second ring used to replenish rx buffers */
 	struct dp_srng rx_refill_buf_ring2;
-#ifdef IPA_WDI3_RX_TWO_PIPES
+#ifdef IPA_WDI3_VLAN_SUPPORT
 	/* Third ring used to replenish rx buffers */
 	struct dp_srng rx_refill_buf_ring3;
 #endif
