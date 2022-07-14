@@ -5550,9 +5550,15 @@ static void reg_set_5g_channel_params_for_freq(struct wlan_objmgr_pdev *pdev,
 						 ch_params->mhz_freq_seg0);
 			break;
 		} else if (ch_params->ch_width >= CH_WIDTH_40MHZ) {
-			if (!bonded_chan_ptr)
+			const struct bonded_channel_freq *bonded_chan_ptr2;
+
+			bonded_chan_ptr2 =
+				reg_get_bonded_chan_entry(freq,
+							  CH_WIDTH_40MHZ, 0);
+
+			if (!bonded_chan_ptr || !bonded_chan_ptr2)
 				goto update_bw;
-			if (freq == bonded_chan_ptr->start_freq)
+			if (freq == bonded_chan_ptr2->start_freq)
 				ch_params->sec_ch_offset = LOW_PRIMARY_CH;
 			else
 				ch_params->sec_ch_offset = HIGH_PRIMARY_CH;
