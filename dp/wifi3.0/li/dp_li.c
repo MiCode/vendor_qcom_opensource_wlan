@@ -573,6 +573,7 @@ void dp_initialize_arch_ops_li(struct dp_arch_ops *arch_ops)
 	arch_ops->dp_tx_desc_pool_deinit = dp_tx_desc_pool_deinit_li;
 	arch_ops->dp_rx_desc_pool_init = dp_rx_desc_pool_init_li;
 	arch_ops->dp_rx_desc_pool_deinit = dp_rx_desc_pool_deinit_li;
+	arch_ops->dp_tx_compute_hw_delay = dp_tx_compute_tx_delay_li;
 #else
 	arch_ops->dp_rx_desc_pool_init = dp_rx_desc_pool_init_generic;
 	arch_ops->dp_rx_desc_pool_deinit = dp_rx_desc_pool_deinit_generic;
@@ -607,7 +608,6 @@ void dp_initialize_arch_ops_li(struct dp_arch_ops *arch_ops)
 	arch_ops->dp_peer_rx_reorder_queue_setup =
 					dp_peer_rx_reorder_queue_setup_li;
 	arch_ops->dp_find_peer_by_destmac = dp_find_peer_by_destmac_li;
-	arch_ops->dp_tx_compute_hw_delay = dp_tx_compute_tx_delay_li;
 }
 
 #ifdef QCA_DP_TX_HW_SW_NBUF_DESC_PREFETCH
