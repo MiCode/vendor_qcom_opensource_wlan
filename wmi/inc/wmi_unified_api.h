@@ -4634,6 +4634,19 @@ QDF_STATUS wmi_unified_send_cp_stats_cmd(wmi_unified_t wmi_handle,
 
 
 /**
+ * wmi_unified_send_halphy_stats_cmd() - Send halphy stats command
+ * @wmi_handle: wmi handle
+ * @buf_ptr: buf_ptr received from wifistats
+ * @buf_len: length of buffer received from wifistats
+ *
+ * This function sends halphy stats cmd to get halphy stats.
+ *
+ * Return QDF_STATUS_SUCCESS on success and QDF_STATUS_E_FAILURE for failure
+ */
+QDF_STATUS wmi_unified_send_halphy_stats_cmd(wmi_unified_t wmi_handle,
+					     void *buf_ptr, uint32_t buf_len);
+
+/**
  * wmi_unified_extract_cp_stats_more_pending() - extract more flag
  * @wmi_handle: wmi handle
  * @evt_buf: event buffer

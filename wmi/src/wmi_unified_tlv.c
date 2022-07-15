@@ -5360,6 +5360,45 @@ static QDF_STATUS send_cp_stats_cmd_tlv(wmi_unified_t wmi_handle,
 }
 
 /**
+ * send_halphy_stats_cmd_tlv() - Send halphy stats wmi command
+ * @wmi_handle: wmi handle
+ * @buf_ptr: Buffer passed by upper layers
+ * @buf_len: Length of passed buffer by upper layer
+ *
+ * Copy the buffer passed by the upper layers and send it
+ * down to the firmware.
+ *
+ * Return: None
+ */
+static QDF_STATUS send_halphy_stats_cmd_tlv(wmi_unified_t wmi_handle,
+					    void *buf_ptr, uint32_t buf_len)
+{
+	wmi_buf_t buf = NULL;
+	QDF_STATUS status;
+	int len;
+	uint8_t *data_ptr;
+
+	len = buf_len;
+	buf = wmi_buf_alloc(wmi_handle, len);
+	if (!buf)
+		return QDF_STATUS_E_NOMEM;
+
+	data_ptr = (uint8_t *)wmi_buf_data(buf);
+	qdf_mem_copy(data_ptr, buf_ptr, len);
+
+	wmi_mtrace(WMI_REQUEST_HALPHY_CTRL_PATH_STATS_CMDID, NO_SESSION, 0);
+	status = wmi_unified_cmd_send(wmi_handle, buf,
+				      len,
+				      WMI_REQUEST_HALPHY_CTRL_PATH_STATS_CMDID);
+
+	if (QDF_IS_STATUS_ERROR(status)) {
+		wmi_buf_free(buf);
+		return QDF_STATUS_E_FAILURE;
+	}
+	return QDF_STATUS_SUCCESS;
+}
+
+/**
  * extract_cp_stats_more_pending_tlv - api to extract more flag from event data
  * @wmi_handle: wmi handle
  * @evt_buf:    event buffer
@@ -18793,6 +18832,7 @@ struct wmi_ops tlv_ops =  {
 	.send_roam_scan_ch_list_req_cmd = send_roam_scan_ch_list_req_cmd_tlv,
 	.send_injector_config_cmd = send_injector_config_cmd_tlv,
 	.send_cp_stats_cmd = send_cp_stats_cmd_tlv,
+	.send_halphy_stats_cmd = send_halphy_stats_cmd_tlv,
 #ifdef FEATURE_MEC_OFFLOAD
 	.send_pdev_set_mec_timer_cmd = send_pdev_set_mec_timer_cmd_tlv,
 #endif
