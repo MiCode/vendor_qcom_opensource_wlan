@@ -931,8 +931,8 @@ uint8_t dp_rx_mon_process_tlv_status(struct dp_pdev *pdev,
 			ppdu_info->mpdu_q[user_id][mpdu_idx] = nbuf;
 
 			status = dp_rx_mon_nbuf_add_rx_frag(nbuf, status_frag,
-							    ppdu_info->data - (unsigned char *)status_frag + 4,
 							    ppdu_info->hdr_len - DP_RX_MON_RX_HDR_OFFSET,
+							    ppdu_info->data - (unsigned char *)status_frag + 4,
 							    DP_MON_DATA_BUFFER_SIZE, true);
 			if (qdf_unlikely(status != QDF_STATUS_SUCCESS)) {
 				dp_mon_err("num_frags exceeding MAX frags");
@@ -977,8 +977,8 @@ uint8_t dp_rx_mon_process_tlv_status(struct dp_pdev *pdev,
 							 qdf_nbuf_len(tmp_nbuf));
 			}
 			dp_rx_mon_nbuf_add_rx_frag(tmp_nbuf, status_frag,
-						   ppdu_info->data - (unsigned char *)status_frag + 4,
 						   ppdu_info->hdr_len - DP_RX_MON_RX_HDR_OFFSET,
+						   ppdu_info->data - (unsigned char *)status_frag + 4,
 						   DP_MON_DATA_BUFFER_SIZE,
 						   true);
 		}
