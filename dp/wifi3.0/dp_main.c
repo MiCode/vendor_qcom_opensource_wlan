@@ -2160,7 +2160,7 @@ static inline bool dp_skip_msi_cfg(struct dp_soc *soc, int ring_type)
 {
 	if (soc->cdp_soc.ol_ops->get_con_mode &&
 	    soc->cdp_soc.ol_ops->get_con_mode() == QDF_GLOBAL_MONITOR_MODE) {
-		if (ring_type == REO_DST)
+		if (ring_type == REO_DST || ring_type == RXDMA_DST)
 			return true;
 	} else if (ring_type == RXDMA_MONITOR_STATUS) {
 		return true;
@@ -2417,20 +2417,6 @@ dp_should_timer_irq_yield(struct dp_soc *soc, uint32_t work_done,
 
 qdf_export_symbol(dp_should_timer_irq_yield);
 
-#ifdef DP_CON_MON_MSI_ENABLED
-static int dp_process_rxdma_dst_ring(struct dp_soc *soc,
-				     struct dp_intr *int_ctx,
-				     int mac_for_pdev,
-				     int total_budget)
-{
-	if (dp_soc_get_con_mode(soc) == QDF_GLOBAL_MONITOR_MODE)
-		return dp_monitor_process(soc, int_ctx, mac_for_pdev,
-					  total_budget);
-	else
-		return dp_rxdma_err_process(int_ctx, soc, mac_for_pdev,
-					    total_budget);
-}
-#else
 static int dp_process_rxdma_dst_ring(struct dp_soc *soc,
 				     struct dp_intr *int_ctx,
 				     int mac_for_pdev,
@@ -2439,7 +2425,6 @@ static int dp_process_rxdma_dst_ring(struct dp_soc *soc,
 	return dp_rxdma_err_process(int_ctx, soc, mac_for_pdev,
 				    total_budget);
 }
-#endif
 
 /**
  * dp_process_lmac_rings() - Process LMAC rings

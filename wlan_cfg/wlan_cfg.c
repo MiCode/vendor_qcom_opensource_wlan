@@ -2183,11 +2183,28 @@ struct wlan_srng_cfg wlan_srng_rxdma_monitor_buf_cfg = {
 };
 
 /* RXDMA_MONITOR_STATUS ring configuration */
+#ifdef DP_CON_MON_MSI_ENABLED
+/*
+ * Configure batch count threshold as 1 to enable interrupt
+ * when HW updated TP (monitor status buffer DMA is done),
+ * then host could reap monitor status srng. timer threshold
+ * based interrupt is only used for low threshold interrupt which
+ * can not be used for monitor status buffer reaping directly
+ * unless configure low threshold value to a big value, perhaps
+ * (number of entries - 2).
+ */
+struct wlan_srng_cfg wlan_srng_rxdma_monitor_status_cfg = {
+	.timer_threshold = WLAN_CFG_INT_TIMER_THRESHOLD_RX,
+	.batch_count_threshold = 1,
+	.low_threshold = WLAN_CFG_RXDMA_MONITOR_STATUS_RING_SIZE >> 3,
+};
+#else
 struct wlan_srng_cfg wlan_srng_rxdma_monitor_status_cfg = {
 	.timer_threshold = WLAN_CFG_INT_TIMER_THRESHOLD_RX,
 	.batch_count_threshold = 0,
 	.low_threshold = WLAN_CFG_RXDMA_MONITOR_STATUS_RING_SIZE >> 3,
 };
+#endif
 
 /* TX_MONITOR_BUF ring configuration */
 struct wlan_srng_cfg wlan_srng_tx_monitor_buf_cfg = {
