@@ -959,19 +959,19 @@ hal_rx_mpdu_start_sw_peer_id_get(hal_soc_handle_t hal_soc_hdl,
 }
 
 /**
- * hal_rx_mpdu_peer_meta_data_get() - Retrieve PEER_META_DATA
+ * hal_rx_tlv_peer_meta_data_get() - Retrieve PEER_META_DATA
  * @hal_soc_hdl: hal soc handle
  * @buf: pointer to rx pkt TLV.
  *
  * Return: peer meta data
  */
 static inline uint32_t
-hal_rx_mpdu_peer_meta_data_get(hal_soc_handle_t hal_soc_hdl,
-			       uint8_t *buf)
+hal_rx_tlv_peer_meta_data_get(hal_soc_handle_t hal_soc_hdl,
+			      uint8_t *buf)
 {
 	struct hal_soc *hal_soc = (struct hal_soc *)hal_soc_hdl;
 
-	return hal_soc->ops->hal_rx_mpdu_peer_meta_data_get(buf);
+	return hal_soc->ops->hal_rx_tlv_peer_meta_data_get(buf);
 }
 
 /*

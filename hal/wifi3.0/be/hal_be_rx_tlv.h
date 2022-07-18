@@ -229,6 +229,11 @@ struct rx_pkt_tlvs {
 #define HAL_RX_TLV_L3_TYPE_GET(_rx_pkt_tlv)	\
 	HAL_RX_MSDU_END(_rx_pkt_tlv).l3_type
 
+#ifdef RX_MSDU_END_PEER_META_DATA_OFFSET
+#define HAL_RX_TLV_MSDU_PEER_META_DATA_GET(_rx_pkt_tlv)	\
+	HAL_RX_MSDU_END(_rx_pkt_tlv).peer_meta_data
+#endif
+
 #define HAL_RX_GET_FILTER_CATEGORY(_rx_pkt_tlv) \
 	HAL_RX_MPDU_START(_rx_pkt_tlv).rxpcu_mpdu_filter_in_category
 
@@ -521,6 +526,19 @@ static inline uint32_t hal_rx_mpdu_peer_meta_data_get_be(uint8_t *buf)
 
 	return HAL_RX_TLV_PEER_META_DATA_GET(rx_pkt_tlvs);
 }
+
+#ifdef RX_MSDU_END_PEER_META_DATA_OFFSET
+/*
+ * Get peer_meta_data from RX_MSDU_END
+ */
+
+static inline uint32_t hal_rx_msdu_peer_meta_data_get_be(uint8_t *buf)
+{
+	struct rx_pkt_tlvs *rx_pkt_tlvs = (struct rx_pkt_tlvs *)buf;
+
+	return HAL_RX_TLV_MSDU_PEER_META_DATA_GET(rx_pkt_tlvs);
+}
+#endif
 
 /**
  * hal_rx_mpdu_info_ampdu_flag_get_be(): get ampdu flag bit

@@ -2910,8 +2910,8 @@ done:
 					      (uint8_t *)&wbm_err_info,
 					      sizeof(wbm_err_info));
 
-		peer_meta_data = hal_rx_mpdu_peer_meta_data_get(soc->hal_soc,
-								rx_tlv_hdr);
+		peer_meta_data = hal_rx_tlv_peer_meta_data_get(soc->hal_soc,
+							       rx_tlv_hdr);
 		peer_id = dp_rx_peer_metadata_peer_id_get(soc, peer_meta_data);
 		txrx_peer = dp_tgt_txrx_peer_get_ref_by_id(soc, peer_id,
 							   &txrx_ref_handle,
