@@ -1315,15 +1315,11 @@ struct ol_if_ops {
 			       uint8_t vdev_id, uint8_t *peer_mac_addr,
 			       enum cdp_txrx_ast_entry_type peer_type,
 			       uint32_t tx_ast_hashidx);
-#ifdef IPA_OFFLOAD
+
 	int (*peer_unmap_event)(struct cdp_ctrl_objmgr_psoc *psoc,
 				uint16_t peer_id,
 				uint8_t vdev_id, uint8_t *mac_addr);
-#else
-	int (*peer_unmap_event)(struct cdp_ctrl_objmgr_psoc *psoc,
-				uint16_t peer_id,
-				uint8_t vdev_id);
-#endif
+
 	int (*get_dp_cfg_param)(struct cdp_ctrl_objmgr_psoc *psoc,
 				enum cdp_cfg_param_type param_num);
 
