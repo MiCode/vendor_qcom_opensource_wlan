@@ -29,6 +29,7 @@
 #include "wlan_cm_public_struct.h"
 #include <net/cfg80211.h>
 #include "wlan_objmgr_vdev_obj.h"
+#include "wlan_osif_features.h"
 
 /**
  * struct osif_connect_params - extra connect params
