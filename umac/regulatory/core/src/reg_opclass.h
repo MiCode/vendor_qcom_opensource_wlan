@@ -483,15 +483,6 @@ uint16_t reg_dmn_get_chanwidth_from_opclass_auto(uint8_t *country,
 						 uint8_t opclass);
 
 #ifdef CONFIG_AFC_SUPPORT
-/**
- * struct bw_opclass_pair - The bandwidth and operating class pair.
- * @bw: The input bandwidth
- * @opclass: The output operating class
- */
-struct bw_opclass_pair {
-	uint16_t bw;
-	uint8_t opclass;
-};
 
 /**
  * reg_dmn_get_6g_opclasses_and_channels()- Get the following from the

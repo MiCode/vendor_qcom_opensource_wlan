@@ -667,63 +667,6 @@ void reg_dmn_free_6g_opclasses_and_channels(struct wlan_objmgr_pdev *pdev,
 	qdf_mem_free(opclass_lst);
 }
 
-/* The array of bandwidth to 6GHz operating class mapping */
-static const struct bw_opclass_pair bw_opclass_pair_map[] = {
-	{BW_20_MHZ,  131},
-	{BW_40_MHZ,  132},
-	{BW_80_MHZ,  133},
-	{BW_160_MHZ, 134},
-#ifdef WLAN_FEATURE_11BE
-	{BW_320_MHZ, 137},
-#endif
-};
-
-/**
- * reg_convert_bw_to_opclass() - Convert bandwidth to operating class
- *
- * @bw: Bandwidth in MHz
- */
-static uint8_t reg_convert_bw_to_opclass(uint16_t bw)
-{
-	uint8_t i, num_bws;
-
-	num_bws = QDF_ARRAY_SIZE(bw_opclass_pair_map);
-	for (i = 0; i < num_bws; i++)
-		if (bw == bw_opclass_pair_map[i].bw)
-			return bw_opclass_pair_map[i].opclass;
-
-	return 0;
-}
-
-/**
- * reg_is_6ghz_op_class_supported() - Check whether the 6GHz opclass is
- * supported. It is determined by the max bandwidth of the chip.
- *
- * @pdev: Pointer to pdev
- * @op_class: oper class
- */
-static bool reg_is_6ghz_op_class_supported(struct wlan_objmgr_pdev *pdev,
-					   uint8_t op_class)
-{
-	uint16_t max_5g_bw_supported;
-	uint8_t max_opclass;
-	struct wlan_objmgr_psoc *psoc;
-
-	psoc = wlan_pdev_get_psoc(pdev);
-
-	if (!reg_is_6ghz_op_class(pdev, op_class))
-		return false;
-
-	max_5g_bw_supported = reg_get_max_bw_5G_for_fo(pdev);
-	if (op_class == 136 && max_5g_bw_supported >= BW_20_MHZ &&
-	    reg_is_lower_6g_edge_ch_supp(psoc))
-		return true;
-
-	max_opclass = reg_convert_bw_to_opclass(max_5g_bw_supported);
-
-	return op_class <= max_opclass;
-}
-
 /**
  * reg_dmn_get_num_6g_opclasses() - Calculate the number of opclasses in the
  * 6GHz band.
@@ -742,8 +685,7 @@ static uint8_t reg_dmn_get_num_6g_opclasses(struct wlan_objmgr_pdev *pdev)
 
 		p_lst = op_class_tbl->p_cfi_lst_obj;
 		if (p_lst &&
-		    reg_is_6ghz_op_class_supported(pdev,
-						   op_class_tbl->op_class))
+		    reg_is_6ghz_op_class(pdev, op_class_tbl->op_class))
 			count++;
 
 		op_class_tbl++;
@@ -778,8 +720,7 @@ static void reg_dmn_fill_6g_opcls_chan_lists(struct wlan_objmgr_pdev *pdev,
 
 		p_lst = op_class_tbl->p_cfi_lst_obj;
 		if (p_lst &&
-		    reg_is_6ghz_op_class_supported(pdev,
-						   op_class_tbl->op_class)) {
+		    reg_is_6ghz_op_class(pdev, op_class_tbl->op_class)) {
 			uint8_t j;
 			uint8_t cfi_idx = 0;
 			uint8_t *dst;
@@ -868,8 +809,7 @@ QDF_STATUS reg_dmn_get_6g_opclasses_and_channels(struct wlan_objmgr_pdev *pdev,
 
 		p_lst = op_class_tbl->p_cfi_lst_obj;
 		if (p_lst &&
-		    reg_is_6ghz_op_class_supported(pdev,
-						   op_class_tbl->op_class)) {
+		    reg_is_6ghz_op_class(pdev, op_class_tbl->op_class)) {
 			uint8_t n_supp_cfis = 0;
 			uint8_t j;
 
