@@ -5779,6 +5779,9 @@ typedef enum {
 	wmi_service_is_my_mgmt_frame,
 	wmi_service_linkspeed_roam_trigger_support,
 
+#ifdef FEATURE_SET
+	wmi_service_feature_set_event_support,
+#endif
 	wmi_services_max,
 } wmi_conv_service_ids;
 #define WMI_SERVICE_UNAVAILABLE 0xFFFF

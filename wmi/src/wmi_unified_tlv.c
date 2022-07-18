@@ -19972,6 +19972,10 @@ static void populate_tlv_service(uint32_t *wmi_service)
 #endif
 	wmi_service[wmi_service_linkspeed_roam_trigger_support] =
 		WMI_SERVICE_LINKSPEED_ROAM_TRIGGER_SUPPORT;
+#ifdef FEATURE_SET
+	wmi_service[wmi_service_feature_set_event_support] =
+				WMI_SERVICE_FEATURE_SET_EVENT_SUPPORT;
+#endif
 }
 
 /**
