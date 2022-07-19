@@ -1088,7 +1088,7 @@ bool cm_is_vdev_disconnected(struct wlan_objmgr_vdev *vdev)
 
 	cm_ctx = cm_get_cm_ctx(vdev);
 	if (!cm_ctx)
-		return false;
+		return true;
 
 	state = cm_get_state(cm_ctx);
 
