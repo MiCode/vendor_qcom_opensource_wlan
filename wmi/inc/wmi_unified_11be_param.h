@@ -1,7 +1,7 @@
 
 /*
  * Copyright (c) 2021, The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -47,10 +47,12 @@ struct wmi_mlo_ready_params {
 /** enum wmi_mlo_teardown_reason - Reason code in WMI MLO teardown command
  * @WMI_MLO_TEARDOWN_REASON_DOWN: Wifi down
  * @WMI_MLO_TEARDOWN_REASON_SSR: Wifi Recovery
+ * @WMI_MLO_TEARDOWN_REASON_CLEANUP_DONE: SSR related cleanup done
  */
 enum wmi_mlo_teardown_reason {
 	WMI_MLO_TEARDOWN_REASON_DOWN,
 	WMI_MLO_TEARDOWN_REASON_SSR,
+	WMI_MLO_TEARDOWN_REASON_CLEANUP_DONE,
 };
 
 /** struct wmi_mlo_teardown_params - MLO teardown command params
@@ -84,10 +86,12 @@ struct wmi_mlo_setup_complete_params {
  *                                 event
  * @WMI_MLO_TEARDOWN_STATUS_SUCCESS: Success
  * @WMI_MLO_TEARDOWN_STATUS_FAILURE: Failure
+ * @WMI_MLO_TEARDOWN_STATUS_ONGOING: Ongoing
  */
 enum wmi_mlo_teardown_status {
 	WMI_MLO_TEARDOWN_STATUS_SUCCESS,
 	WMI_MLO_TEARDOWN_STATUS_FAILURE,
+	WMI_MLO_TEARDOWN_STATUS_ONGOING,
 };
 
 /** struct wmi_mlo_teardown_cmpl_params - MLO setup teardown event params
