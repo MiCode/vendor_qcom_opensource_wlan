@@ -67,10 +67,8 @@ struct dp_ipa_reo_remap_record {
 
 #ifdef IPA_WDS_EASYMESH_FEATURE
 #define WLAN_IPA_META_DATA_MASK htonl(0x000000FF)
-#define WLAN_IPA_HDR_L2_ETHERNET IPA_HDR_L2_ETHERNET_II_AST
 #else
 #define WLAN_IPA_META_DATA_MASK htonl(0x00FF0000)
-#define WLAN_IPA_HDR_L2_ETHERNET IPA_HDR_L2_ETHERNET_II
 #endif
 
 #define REO_REMAP_HISTORY_SIZE 32
@@ -2695,6 +2693,31 @@ void dp_ipa_set_v6_vlan_hdr(qdf_ipa_wdi_reg_intf_in_params_t *in,
 { }
 #endif
 
+#ifdef IPA_WDS_EASYMESH_FEATURE
+/**
+ * dp_ipa_set_wdi_hdr_type() - Set wdi hdr type for IPA
+ * @hdr_info: Header info
+ *
+ * Return: None
+ */
+static inline void
+dp_ipa_set_wdi_hdr_type(qdf_ipa_wdi_hdr_info_t *hdr_info)
+{
+	if (ucfg_ipa_is_wds_enabled())
+		QDF_IPA_WDI_HDR_INFO_HDR_TYPE(hdr_info) =
+			IPA_HDR_L2_ETHERNET_II_AST;
+	else
+		QDF_IPA_WDI_HDR_INFO_HDR_TYPE(hdr_info) =
+			IPA_HDR_L2_ETHERNET_II;
+}
+#else
+static inline void
+dp_ipa_set_wdi_hdr_type(qdf_ipa_wdi_hdr_info_t *hdr_info)
+{
+	QDF_IPA_WDI_HDR_INFO_HDR_TYPE(hdr_info) = IPA_HDR_L2_ETHERNET_II;
+}
+#endif
+
 /**
  * dp_ipa_setup_iface() - Setup IPA header and register interface
  * @ifname: Interface name
@@ -2733,7 +2756,7 @@ QDF_STATUS dp_ipa_setup_iface(char *ifname, uint8_t *mac_addr,
 
 	QDF_IPA_WDI_HDR_INFO_HDR(&hdr_info) = (uint8_t *)&uc_tx_hdr;
 	QDF_IPA_WDI_HDR_INFO_HDR_LEN(&hdr_info) = DP_IPA_UC_WLAN_TX_HDR_LEN;
-	QDF_IPA_WDI_HDR_INFO_HDR_TYPE(&hdr_info) = WLAN_IPA_HDR_L2_ETHERNET;
+	dp_ipa_set_wdi_hdr_type(&hdr_info);
 
 	QDF_IPA_WDI_HDR_INFO_DST_MAC_ADDR_OFFSET(&hdr_info) =
 		DP_IPA_UC_WLAN_HDR_DES_MAC_OFFSET;

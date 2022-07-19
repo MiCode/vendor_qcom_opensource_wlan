@@ -2600,7 +2600,7 @@ wlan_ipa_set_peer_id(struct wlan_ipa_priv *ipa_ctx,
 	struct cdp_ast_entry_info peer_ast_info = {0};
 	struct cdp_soc_t *cdp_soc;
 	qdf_ipa_wlan_msg_ex_t *msg_ex;
-	QDF_STATUS status;
+	bool status;
 
 	QDF_IPA_MSG_META_MSG_LEN(meta) =
 		(sizeof(qdf_ipa_wlan_msg_ex_t) +
@@ -2630,7 +2630,7 @@ wlan_ipa_set_peer_id(struct wlan_ipa_priv *ipa_ctx,
 	status = cdp_peer_get_ast_info_by_soc(cdp_soc, mac_addr,
 					      &peer_ast_info);
 
-	if (QDF_IS_STATUS_ERROR(status)) {
+	if (!status) {
 		qdf_mem_free(msg_ex);
 		return QDF_STATUS_E_FAILURE;
 	}

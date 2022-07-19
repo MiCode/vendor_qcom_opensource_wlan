@@ -730,7 +730,7 @@ void ucfg_ipa_flush_pending_vdev_events(struct wlan_objmgr_pdev *pdev,
 static inline
 bool ucfg_ipa_is_wds_enabled(void)
 {
-	return 0;
+	return false;
 }
 #endif /* IPA_OFFLOAD */
 #endif /* _WLAN_IPA_UCFG_API_H_ */
