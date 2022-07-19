@@ -1925,6 +1925,10 @@ static void hal_hw_txrx_ops_attach_qca5332(struct hal_soc *hal_soc)
 		hal_cookie_conversion_reg_cfg_generic_be;
 	hal_soc->ops->hal_set_ba_aging_timeout =
 		hal_set_ba_aging_timeout_be_generic;
+	hal_soc->ops->hal_tx_populate_bank_register =
+		hal_tx_populate_bank_register_be;
+	hal_soc->ops->hal_tx_vdev_mcast_ctrl_set =
+		hal_tx_vdev_mcast_ctrl_set_be;
 };
 
 struct hal_hw_srng_config hw_srng_table_5332[] = {

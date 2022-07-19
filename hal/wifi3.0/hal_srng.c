@@ -47,7 +47,8 @@ void hal_qca6490_attach(struct hal_soc *hal);
 void hal_qcn9000_attach(struct hal_soc *hal);
 #endif
 #ifdef QCA_WIFI_QCN9224
-void hal_qcn9224_attach(struct hal_soc *hal);
+void hal_qcn9224v1_attach(struct hal_soc *hal);
+void hal_qcn9224v2_attach(struct hal_soc *hal);
 #endif
 #ifdef QCA_WIFI_QCN6122
 void hal_qcn6122_attach(struct hal_soc *hal);
@@ -506,7 +507,10 @@ static void hal_target_based_configure(struct hal_soc *hal)
 	case TARGET_TYPE_QCN9224:
 		hal->use_register_windowing = true;
 		hal->static_window_map = true;
-		hal_qcn9224_attach(hal);
+		if (hal->version == 1)
+			hal_qcn9224v1_attach(hal);
+		else
+			hal_qcn9224v2_attach(hal);
 	break;
 #endif
 #ifdef QCA_WIFI_QCA5332
@@ -1097,6 +1101,7 @@ void *hal_attach(struct hif_opaque_softc *hif_handle, qdf_device_t qdf_dev)
 	qdf_spinlock_create(&hal->register_access_lock);
 	hal->register_window = 0;
 	hal->target_type = hal_get_target_type(hal_soc_to_hal_soc_handle(hal));
+	hal->version = hif_get_soc_version(hif_handle);
 	hal->ops = qdf_mem_malloc(sizeof(*hal->ops));
 
 	if (!hal->ops) {
