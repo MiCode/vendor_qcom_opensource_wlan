@@ -2631,8 +2631,6 @@ reg_is_sup_chan_entry_afc_done(struct wlan_objmgr_pdev *pdev,
 	return false;
 }
 #endif
-#endif
-
 /**
  * reg_get_max_bw_5G_for_fo() - get max bw
  * @pdev: PDEV object
@@ -2642,13 +2640,4 @@ reg_is_sup_chan_entry_afc_done(struct wlan_objmgr_pdev *pdev,
  * Return: max bw
  */
 uint16_t reg_get_max_bw_5G_for_fo(struct wlan_objmgr_pdev *pdev);
-
-/**
- * reg_is_offload_enabled() - get offload_enabled
- * @pdev: PDEV object
- *
- * API to get offload_enabled from psoc.
- *
- * Return: true if offload enaled
- */
-bool reg_is_offload_enabled(struct wlan_objmgr_pdev *pdev);
+#endif

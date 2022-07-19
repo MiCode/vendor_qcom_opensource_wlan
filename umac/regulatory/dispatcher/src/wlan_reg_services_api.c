@@ -94,9 +94,9 @@ QDF_STATUS wlan_reg_get_max_bw_5G_for_fo(struct wlan_objmgr_pdev *pdev)
 	return reg_get_max_bw_5G_for_fo(pdev);
 }
 
-bool wlan_reg_is_offload_enabled(struct wlan_objmgr_pdev *pdev)
+bool wlan_reg_is_regdb_offloaded(struct wlan_objmgr_psoc *psoc)
 {
-	return reg_is_offload_enabled(pdev);
+	return reg_is_regdb_offloaded(psoc);
 }
 
 QDF_STATUS wlan_reg_get_pwrmode_chan_list(struct wlan_objmgr_pdev *pdev,

@@ -9469,19 +9469,6 @@ QDF_STATUS reg_get_regd_rules(struct wlan_objmgr_pdev *pdev,
 	return QDF_STATUS_SUCCESS;
 }
 
-bool reg_is_offload_enabled(struct wlan_objmgr_pdev *pdev)
-{
-	struct wlan_objmgr_psoc *psoc = wlan_pdev_get_psoc(pdev);
-	struct wlan_regulatory_psoc_priv_obj *soc_reg;
-
-	soc_reg = reg_get_psoc_obj(psoc);
-	if (!soc_reg) {
-		reg_err("soc_reg is NULL");
-		return 0;
-	}
-	return soc_reg->offload_enabled;
-}
-
 #if defined(CONFIG_AFC_SUPPORT) && defined(CONFIG_BAND_6GHZ)
 bool
 reg_is_sup_chan_entry_afc_done(struct wlan_objmgr_pdev *pdev,
