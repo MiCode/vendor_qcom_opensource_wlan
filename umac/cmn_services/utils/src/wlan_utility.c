@@ -1029,33 +1029,33 @@ wlan_get_elemsubelem_fragseq_info(bool is_subelem,
 				     &elemunit_len_pos,
 				     NULL);
 	if (QDF_IS_STATUS_ERROR(ret)) {
-		qdf_rl_nofl_err("Investigate error %d when trying to get element unit info",
+		qdf_rl_nofl_err("Get elem unit info: Error %d",
 				ret);
 		return QDF_STATUS_E_FAILURE;
 	}
 
 	if (!buff) {
-		qdf_nofl_err("Buffer for element units is NULL");
+		qdf_nofl_err("Elem unit buff is NULL");
 		return QDF_STATUS_E_NULL_VALUE;
 	}
 
 	if (buff_maxsize == 0) {
-		qdf_nofl_err("Max size of buffer for element units is 0");
+		qdf_nofl_err("Max size of elem unit buff is 0");
 		return QDF_STATUS_E_INVAL;
 	}
 
 	if (!is_fragseq) {
-		qdf_nofl_err("Pointer to location for status of fragment sequence presence is NULL");
+		qdf_nofl_err("Ptr to status of frag seq presence is NULL");
 		return QDF_STATUS_E_NULL_VALUE;
 	}
 
 	if (!fragseq_totallen) {
-		qdf_nofl_err("Pointer to location for total length of fragment sequence is NULL");
+		qdf_nofl_err("Ptr to total len of frag seq is NULL");
 		return QDF_STATUS_E_NULL_VALUE;
 	}
 
 	if (!fragseq_payloadlen) {
-		qdf_nofl_err("Pointer to location of payload length of fragment sequence is NULL");
+		qdf_nofl_err("Ptr to payload len of frag seq is NULL");
 		return QDF_STATUS_E_NULL_VALUE;
 	}
 
@@ -1064,7 +1064,7 @@ wlan_get_elemsubelem_fragseq_info(bool is_subelem,
 	fragseq_currpayloadlen = 0;
 
 	if ((buff + buff_maxsize) < (curr_elemunit_ptr + elemunit_hdrlen)) {
-		qdf_rl_nofl_err("Space %zu octets after current element unit offset %zu in buffer for element units is lesser than header size of element unit %zu octets",
+		qdf_rl_nofl_err("(Space %zu after curr elem unit offset %zu in elem unit buff) < (header size of elem unit %zu)",
 				buff_maxsize - (curr_elemunit_ptr - buff),
 				curr_elemunit_ptr - buff,
 				elemunit_hdrlen);
@@ -1076,7 +1076,7 @@ wlan_get_elemsubelem_fragseq_info(bool is_subelem,
 
 	if ((buff + buff_maxsize) <
 		(curr_elemunit_ptr + curr_elemunit_totallen)) {
-		qdf_rl_nofl_err("Space %zu octets after current element unit offset %zu in buffer for element units is lesser than indicated total length of element unit %zu octets",
+		qdf_rl_nofl_err("(Space %zu after curr elem unit offset %zu in elem unit buff) < (indicated total len of elem unit %zu)",
 				buff_maxsize - (curr_elemunit_ptr - buff),
 				curr_elemunit_ptr - buff,
 				curr_elemunit_totallen);
