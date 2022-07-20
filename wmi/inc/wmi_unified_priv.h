@@ -555,10 +555,14 @@ QDF_STATUS
 (*send_pdev_utf_cmd)(wmi_unified_t wmi_handle,
 				struct pdev_utf_params *param,
 				uint8_t mac_id);
+
 QDF_STATUS
 (*send_pdev_param_cmd)(wmi_unified_t wmi_handle,
 			   struct pdev_params *param,
 				uint8_t mac_id);
+QDF_STATUS
+(*send_multiple_pdev_param_cmd)(wmi_unified_t wmi_handle,
+				struct set_multiple_pdev_vdev_param *params);
 
 QDF_STATUS
 (*send_pdev_set_hw_mode_cmd)(wmi_unified_t wmi_handle,
@@ -604,6 +608,10 @@ QDF_STATUS
 
 QDF_STATUS (*send_vdev_set_param_cmd)(wmi_unified_t wmi_handle,
 				struct vdev_set_params *param);
+
+QDF_STATUS
+(*send_multiple_vdev_param_cmd)(wmi_unified_t wmi_handle,
+				struct set_multiple_pdev_vdev_param *params);
 
 QDF_STATUS (*send_vdev_set_mu_snif_cmd)(wmi_unified_t wmi_handle,
 					struct vdev_set_mu_snif_param *param);

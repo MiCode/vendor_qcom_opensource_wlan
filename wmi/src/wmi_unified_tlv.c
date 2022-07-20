@@ -368,6 +368,70 @@ static const uint32_t pdev_param_tlv[] = {
 		WMI_PDEV_PARAM_MIN_MAX_MCS_PROBE_INTERVAL,
 	[wmi_pdev_param_nss_probe_intvl] =
 		WMI_PDEV_PARAM_MIN_MAX_NSS_PROBE_INTERVAL,
+	[wmi_pdev_param_dtim_synth] = WMI_PDEV_PARAM_DTIM_SYNTH,
+	[wmi_pdev_param_1ch_dtim_optimized_chain_selection] =
+			WMI_PDEV_PARAM_1CH_DTIM_OPTIMIZED_CHAIN_SELECTION,
+	[wmi_pdev_param_tx_sch_delay] = WMI_PDEV_PARAM_TX_SCH_DELAY,
+	[wmi_pdev_param_en_update_scram_seed] =
+					WMI_PDEV_PARAM_EN_UPDATE_SCRAM_SEED,
+	[wmi_pdev_param_secondary_retry_enable] =
+					WMI_PDEV_PARAM_SECONDARY_RETRY_ENABLE,
+	[wmi_pdev_param_set_sap_xlna_bypass] =
+					WMI_PDEV_PARAM_SET_SAP_XLNA_BYPASS,
+	[wmi_pdev_param_set_dfs_chan_ageout_time] =
+					WMI_PDEV_PARAM_SET_DFS_CHAN_AGEOUT_TIME,
+	[wmi_pdev_param_pdev_stats_tx_xretry_ext] =
+					WMI_PDEV_PARAM_PDEV_STATS_TX_XRETRY_EXT,
+	[wmi_pdev_param_smart_chainmask_scheme] =
+					WMI_PDEV_PARAM_SMART_CHAINMASK_SCHEME,
+	[wmi_pdev_param_alternative_chainmask_scheme] =
+				WMI_PDEV_PARAM_ALTERNATIVE_CHAINMASK_SCHEME,
+	[wmi_pdev_param_enable_rts_sifs_bursting] =
+					WMI_PDEV_PARAM_ENABLE_RTS_SIFS_BURSTING,
+	[wmi_pdev_param_max_mpdus_in_ampdu] = WMI_PDEV_PARAM_MAX_MPDUS_IN_AMPDU,
+	[wmi_pdev_param_set_iot_pattern] = WMI_PDEV_PARAM_SET_IOT_PATTERN,
+	[wmi_pdev_param_mwscoex_scc_chavd_delay] =
+					WMI_PDEV_PARAM_MWSCOEX_SCC_CHAVD_DELAY,
+	[wmi_pdev_param_mwscoex_pcc_chavd_delay] =
+					WMI_PDEV_PARAM_MWSCOEX_PCC_CHAVD_DELAY,
+	[wmi_pdev_param_mwscoex_set_5gnr_pwr_limit] =
+				WMI_PDEV_PARAM_MWSCOEX_SET_5GNR_PWR_LIMIT,
+	[wmi_pdev_param_mwscoex_4g_allow_quick_ftdm] =
+				WMI_PDEV_PARAM_MWSCOEX_4G_ALLOW_QUICK_FTDM,
+	[wmi_pdev_param_fast_pwr_transition] =
+					WMI_PDEV_PARAM_FAST_PWR_TRANSITION,
+	[wmi_pdev_auto_detect_power_failure] =
+					WMI_PDEV_AUTO_DETECT_POWER_FAILURE,
+	[wmi_pdev_param_gcmp_support_enable] =
+					WMI_PDEV_PARAM_GCMP_SUPPORT_ENABLE,
+	[wmi_pdev_param_abg_mode_tx_chain_num] =
+					WMI_PDEV_PARAM_ABG_MODE_TX_CHAIN_NUM,
+	[wmi_pdev_param_peer_stats_info_enable] =
+					WMI_PDEV_PARAM_PEER_STATS_INFO_ENABLE,
+	[wmi_pdev_param_enable_cck_txfir_override] =
+				WMI_PDEV_PARAM_ENABLE_CCK_TXFIR_OVERRIDE,
+	[wmi_pdev_param_twt_ac_config] = WMI_PDEV_PARAM_TWT_AC_CONFIG,
+	[wmi_pdev_param_pcie_hw_ilp] = WMI_PDEV_PARAM_PCIE_HW_ILP,
+	[wmi_pdev_param_disable_hw_assist] = WMI_PDEV_PARAM_DISABLE_HW_ASSIST,
+	[wmi_pdev_param_ant_div_usrcfg] = WMI_PDEV_PARAM_ANT_DIV_USRCFG,
+	[wmi_pdev_param_ctrl_retry_limit] = WMI_PDEV_PARAM_CTRL_RETRY_LIMIT,
+	[wmi_pdev_param_propagation_delay] = WMI_PDEV_PARAM_PROPAGATION_DELAY,
+	[wmi_pdev_param_ena_ant_div] = WMI_PDEV_PARAM_ENA_ANT_DIV,
+	[wmi_pdev_param_force_chain_ant] = WMI_PDEV_PARAM_FORCE_CHAIN_ANT,
+	[wmi_pdev_param_ant_div_selftest] = WMI_PDEV_PARAM_ANT_DIV_SELFTEST,
+	[wmi_pdev_param_ant_div_selftest_intvl] =
+					WMI_PDEV_PARAM_ANT_DIV_SELFTEST_INTVL,
+	[wmi_pdev_param_1ch_dtim_optimized_chain_selection] =
+			WMI_PDEV_PARAM_1CH_DTIM_OPTIMIZED_CHAIN_SELECTION,
+	[wmi_pdev_param_data_stall_detect_enable] =
+					WMI_PDEV_PARAM_DATA_STALL_DETECT_ENABLE,
+	[wmi_pdev_param_max_mpdus_in_ampdu] =
+					WMI_PDEV_PARAM_MAX_MPDUS_IN_AMPDU,
+	[wmi_pdev_param_stats_observation_period] =
+					WMI_PDEV_PARAM_STATS_OBSERVATION_PERIOD,
+	[wmi_pdev_param_cts2self_for_p2p_go_config] =
+				WMI_PDEV_PARAM_CTS2SELF_FOR_P2P_GO_CONFIG,
+	[wmi_pdev_param_txpower_reason_sar] = WMI_PDEV_PARAM_TXPOWER_REASON_SAR,
 };
 
 /**
@@ -576,6 +640,85 @@ static const uint32_t vdev_param_tlv[] = {
 #endif
 	[wmi_vdev_param_set_traffic_config] =
 			WMI_VDEV_PARAM_VDEV_TRAFFIC_CONFIG,
+	[wmi_vdev_param_he_range_ext] = WMI_VDEV_PARAM_HE_RANGE_EXT,
+	[wmi_vdev_param_non_data_he_range_ext] =
+					WMI_VDEV_PARAM_NON_DATA_HE_RANGE_EXT,
+	[wmi_vdev_param_ndp_inactivity_timeout] =
+					WMI_VDEV_PARAM_NDP_INACTIVITY_TIMEOUT,
+	[wmi_vdev_param_ndp_keepalive_timeout] =
+					WMI_VDEV_PARAM_NDP_KEEPALIVE_TIMEOUT,
+	[wmi_vdev_param_final_bmiss_time_sec] =
+					WMI_VDEV_PARAM_FINAL_BMISS_TIME_SEC,
+	[wmi_vdev_param_final_bmiss_time_wow_sec] =
+					WMI_VDEV_PARAM_FINAL_BMISS_TIME_WOW_SEC,
+	[wmi_vdev_param_ap_keepalive_max_idle_inactive_secs] =
+			WMI_VDEV_PARAM_AP_KEEPALIVE_MAX_IDLE_INACTIVE_TIME_SECS,
+	[wmi_vdev_param_per_band_mgmt_tx_rate] =
+					WMI_VDEV_PARAM_PER_BAND_MGMT_TX_RATE,
+	[wmi_vdev_param_max_li_of_moddtim] =
+					WMI_VDEV_PARAM_MAX_LI_OF_MODDTIM,
+	[wmi_vdev_param_moddtim_cnt] = WMI_VDEV_PARAM_MODDTIM_CNT,
+	[wmi_vdev_param_max_li_of_moddtim_ms] =
+					WMI_VDEV_PARAM_MAX_LI_OF_MODDTIM_MS,
+	[wmi_vdev_param_dyndtim_cnt] = WMI_VDEV_PARAM_DYNDTIM_CNT,
+	[wmi_vdev_param_wmm_txop_enable] = WMI_VDEV_PARAM_WMM_TXOP_ENABLE,
+	[wmi_vdev_param_enable_bcast_probe_response] =
+				WMI_VDEV_PARAM_ENABLE_BCAST_PROBE_RESPONSE,
+	[wmi_vdev_param_fils_max_channel_guard_time] =
+				WMI_VDEV_PARAM_FILS_MAX_CHANNEL_GUARD_TIME,
+	[wmi_vdev_param_probe_delay] = WMI_VDEV_PARAM_PROBE_DELAY,
+	[wmi_vdev_param_repeat_probe_time] = WMI_VDEV_PARAM_REPEAT_PROBE_TIME,
+	[wmi_vdev_param_enable_disable_oce_features] =
+				WMI_VDEV_PARAM_ENABLE_DISABLE_OCE_FEATURES,
+	[wmi_vdev_param_enable_disable_nan_config_features] =
+			WMI_VDEV_PARAM_ENABLE_DISABLE_NAN_CONFIG_FEATURES,
+	[wmi_vdev_param_rsn_capability] = WMI_VDEV_PARAM_RSN_CAPABILITY,
+	[wmi_vdev_param_smps_intolerant] = WMI_VDEV_PARAM_SMPS_INTOLERANT,
+	[wmi_vdev_param_abg_mode_tx_chain_num] = WMI_VDEV_PARAM_ABG_MODE_TX_CHAIN_NUM,
+	[wmi_vdev_param_nth_beacon_to_host] = WMI_VDEV_PARAM_NTH_BEACON_TO_HOST,
+	[wmi_vdev_param_prohibit_data_mgmt] = WMI_VDEV_PARAM_PROHIBIT_DATA_MGMT,
+	[wmi_vdev_param_skip_roam_eapol_4way_handshake] = WMI_VDEV_PARAM_SKIP_ROAM_EAPOL_4WAY_HANDSHAKE,
+	[wmi_vdev_param_skip_sae_roam_4way_handshake] = WMI_VDEV_PARAM_SKIP_SAE_ROAM_4WAY_HANDSHAKE,
+	[wmi_vdev_param_roam_11kv_ctrl] = WMI_VDEV_PARAM_ROAM_11KV_CTRL,
+	[wmi_vdev_param_disable_noa_p2p_go] = WMI_VDEV_PARAM_DISABLE_NOA_P2P_GO,
+	[wmi_vdev_param_packet_capture_mode] = WMI_VDEV_PARAM_PACKET_CAPTURE_MODE,
+	[wmi_vdev_param_smart_monitor_config] = WMI_VDEV_PARAM_SMART_MONITOR_CONFIG,
+	[wmi_vdev_param_force_dtim_cnt] = WMI_VDEV_PARAM_FORCE_DTIM_CNT,
+	[wmi_vdev_param_sho_config] = WMI_VDEV_PARAM_SHO_CONFIG,
+	[wmi_vdev_param_gtx_enable] = WMI_VDEV_PARAM_GTX_ENABLE,
+	[wmi_vdev_param_mu_edca_fw_update_en] = WMI_VDEV_PARAM_MU_EDCA_FW_UPDATE_EN,
+	[wmi_vdev_param_enable_disable_rtt_initiator_random_mac] =
+			WMI_VDEV_PARAM_ENABLE_DISABLE_RTT_INITIATOR_RANDOM_MAC,
+	[wmi_vdev_param_allow_nan_initial_discovery_of_mp0_cluster] =
+		WMI_VDEV_PARAM_ALLOW_NAN_INITIAL_DISCOVERY_OF_MP0_CLUSTER,
+	[wmi_vdev_param_txpower_scale_decr_db] = WMI_VDEV_PARAM_TXPOWER_SCALE_DECR_DB,
+	[wmi_vdev_param_txpower_scale] = WMI_VDEV_PARAM_TXPOWER_SCALE,
+	[wmi_vdev_param_agg_sw_retry_th] = WMI_VDEV_PARAM_AGG_SW_RETRY_TH,
+	[wmi_vdev_param_obsspd] = WMI_VDEV_PARAM_OBSSPD,
+	[wmi_vdev_param_multi_client_ll_feature_configuration] =
+			WMI_VDEV_PARAM_NORMAL_LATENCY_FLAGS_CONFIGURATION,
+	[wmi_vdev_param_normal_latency_flags_configuration] =
+			WMI_VDEV_PARAM_NORMAL_LATENCY_FLAGS_CONFIGURATION,
+	[wmi_vdev_param_xr_latency_flags_configuration] =
+				WMI_VDEV_PARAM_XR_LATENCY_FLAGS_CONFIGURATION,
+	[wmi_vdev_param_low_latency_flags_configuration] =
+				WMI_VDEV_PARAM_LOW_LATENCY_FLAGS_CONFIGURATION,
+	[wmi_vdev_param_ultra_low_latency_flags_configuration] =
+			WMI_VDEV_PARAM_ULTRA_LOW_LATENCY_FLAGS_CONFIGURATION,
+	[wmi_vdev_param_normal_latency_ul_dl_configuration] =
+			WMI_VDEV_PARAM_NORMAL_LATENCY_UL_DL_CONFIGURATION,
+	[wmi_vdev_param_xr_latency_ul_dl_configuration] =
+				WMI_VDEV_PARAM_XR_LATENCY_UL_DL_CONFIGURATION,
+	[wmi_vdev_param_low_latency_ul_dl_configuration] =
+				WMI_VDEV_PARAM_LOW_LATENCY_UL_DL_CONFIGURATION,
+	[wmi_vdev_param_ultra_low_latency_ul_dl_configuration] =
+			WMI_VDEV_PARAM_ULTRA_LOW_LATENCY_UL_DL_CONFIGURATION,
+	[wmi_vdev_param_default_latency_level_configuration] =
+			WMI_VDEV_PARAM_DEFAULT_LATENCY_LEVEL_CONFIGURATION,
+	[wmi_vdev_param_amsdu_aggregation_size_optimization] =
+			WMI_VDEV_PARAM_AMSDU_AGGREGATION_SIZE_OPTIMIZATION,
+	[wmi_vdev_param_non_agg_sw_retry_th] =
+					WMI_VDEV_PARAM_NON_AGG_SW_RETRY_TH,
 };
 #endif
 
@@ -1928,12 +2071,24 @@ static inline uint32_t convert_host_pdev_param_tlv(uint32_t host_param)
 		return pdev_param_tlv[host_param];
 	return WMI_UNAVAILABLE_PARAM;
 }
+
+static inline uint32_t convert_host_vdev_param_tlv(uint32_t host_param)
+{
+	if (host_param < QDF_ARRAY_SIZE(vdev_param_tlv))
+		return vdev_param_tlv[host_param];
+	return WMI_UNAVAILABLE_PARAM;
+}
 #else
 static inline uint32_t convert_host_pdev_param_tlv(uint32_t host_param)
 {
 	return host_param;
 }
-#endif
+
+static inline uint32_t convert_host_vdev_param_tlv(uint32_t host_param)
+{
+	return host_param;
+}
+#endif /* end of ENABLE_HOST_TO_TARGET_CONVERSION */
 
 /**
  * send_pdev_param_cmd_tlv() - set pdev parameters
@@ -1979,8 +2134,8 @@ send_pdev_param_cmd_tlv(wmi_unified_t wmi_handle,
 								mac_id);
 	cmd->param_id = pdev_param;
 	cmd->param_value = param->param_value;
-	wmi_debug("Setting pdev param = %x, value = %u", param->param_id,
-		 param->param_value);
+	wmi_debug("Setting pdev %d param = %x, value = %u", cmd->pdev_id,
+		  cmd->param_id, cmd->param_value);
 	wmi_mtrace(WMI_PDEV_SET_PARAM_CMDID, NO_SESSION, 0);
 	ret = wmi_unified_cmd_send(wmi_handle, buf, len,
 				   WMI_PDEV_SET_PARAM_CMDID);
@@ -1990,6 +2145,200 @@ send_pdev_param_cmd_tlv(wmi_unified_t wmi_handle,
 	}
 	return ret;
 }
+
+/**
+ * send_multi_param_cmd_using_pdev_set_param_tlv() - set pdev parameters
+ * @wmi_handle: wmi handle
+ * @params: pointer to hold set_multiple_pdev_vdev_param info
+ *
+ * Return: 0 on success, errno on failure
+ */
+static QDF_STATUS
+send_multi_param_cmd_using_pdev_set_param_tlv(wmi_unified_t wmi_handle,
+					      struct set_multiple_pdev_vdev_param *params)
+{
+	uint8_t index;
+	struct pdev_params pdevparam;
+	uint8_t n_params = params->n_params;
+
+	pdevparam.is_host_pdev_id = params->is_host_pdev_id;
+	for (index = 0; index < n_params; index++) {
+		pdevparam.param_id = params->params[index].param_id;
+		pdevparam.param_value = params->params[index].param_value;
+		if (QDF_IS_STATUS_ERROR(send_pdev_param_cmd_tlv(wmi_handle,
+								&pdevparam,
+								params->dev_id))) {
+			wmi_err("failed to send pdev setparam:%d",
+				pdevparam.param_id);
+			return QDF_STATUS_E_FAILURE;
+		}
+	}
+	return QDF_STATUS_SUCCESS;
+}
+
+#ifdef WLAN_PDEV_VDEV_SEND_MULTI_PARAM
+
+/**
+ * convert_host_pdev_vdev_param_id_to_target()- convert host params to target params
+ * @params: pointer to point set_multiple_pdev_vdev_param info
+ *
+ * Return: returns QDF_STATUS
+ */
+static QDF_STATUS
+convert_host_pdev_vdev_param_id_to_target(struct set_multiple_pdev_vdev_param *params)
+{
+	uint8_t index;
+	uint32_t dev_paramid;
+	uint8_t num = params->n_params;
+
+	if (params->param_type == MLME_PDEV_SETPARAM) {
+		for (index = 0; index < num; index++) {
+			dev_paramid = convert_host_pdev_param_tlv(params->params[index].param_id);
+			if (dev_paramid == WMI_UNAVAILABLE_PARAM) {
+				wmi_err("pdev param %d not available",
+					params->params[index].param_id);
+				return QDF_STATUS_E_INVAL;
+			}
+			params->params[index].param_id = dev_paramid;
+		}
+	} else if (params->param_type == MLME_VDEV_SETPARAM) {
+		for (index = 0; index < num; index++) {
+			dev_paramid = convert_host_vdev_param_tlv(params->params[index].param_id);
+			if (dev_paramid == WMI_UNAVAILABLE_PARAM) {
+				wmi_err("vdev param %d not available",
+					params->params[index].param_id);
+				return QDF_STATUS_E_INVAL;
+			}
+			params->params[index].param_id = dev_paramid;
+		}
+	} else {
+		wmi_err("invalid param type");
+		return QDF_STATUS_E_INVAL;
+	}
+	return QDF_STATUS_SUCCESS;
+}
+
+/**
+ * send_dev_multi_setparam_cmd_tlv()-to print the paramid and param value
+ * @setparam: buffer pointer where host is filling paramsid and value
+ * @params: pointer to hold set_multiple_pdev_vdev_param info
+ *
+ */
+static void send_dev_multi_setparam_cmd_tlv(wmi_set_param_info *setparam,
+					    struct set_multiple_pdev_vdev_param *params)
+{
+	if (params->param_type == MLME_VDEV_SETPARAM) {
+		wmi_debug("Setting vdev %d param = %x value = %u", params->dev_id,
+			  setparam->param_id, setparam->param_value);
+	} else {
+		wmi_debug("Setting pdev %d param = %x value = %u",
+			  params->dev_id, setparam->param_id, setparam->param_value);
+	}
+}
+
+/**
+ * send_multi_pdev_vdev_set_param_cmd_tlv()-set pdev/vdev params
+ * @wmi_handle: wmi handle
+ * @params: pointer to hold set_multiple_pdev_vdev_param info
+ *
+ * Return: returns QDF_STATUS
+ */
+static QDF_STATUS
+send_multi_pdev_vdev_set_param_cmd_tlv(
+				wmi_unified_t wmi_handle,
+				struct set_multiple_pdev_vdev_param *params)
+{
+	uint8_t *buf_ptr;
+	QDF_STATUS ret;
+	wmi_buf_t buf;
+	wmi_set_param_info *setparam;
+	wmi_set_multiple_pdev_vdev_param_cmd_fixed_param *cmd;
+	uint8_t num = params->n_params;
+	uint16_t len;
+	uint8_t index = 0;
+
+	if (convert_host_pdev_vdev_param_id_to_target(params))
+		return QDF_STATUS_E_INVAL;
+
+	len = sizeof(*cmd) + WMI_TLV_HDR_SIZE + (num * sizeof(*setparam));
+	buf = wmi_buf_alloc(wmi_handle, len);
+	if (!buf)
+		return QDF_STATUS_E_NOMEM;
+
+	buf_ptr = (uint8_t *)wmi_buf_data(buf);
+	cmd = (wmi_set_multiple_pdev_vdev_param_cmd_fixed_param *)buf_ptr;
+
+	WMITLV_SET_HDR(&cmd->tlv_header,
+		       WMITLV_TAG_STRUC_wmi_set_multiple_pdev_vdev_param_cmd_fixed_param,
+		       WMITLV_GET_STRUCT_TLVLEN(wmi_set_multiple_pdev_vdev_param_cmd_fixed_param));
+
+	cmd->is_vdev = params->param_type;
+	if (params->param_type == MLME_PDEV_SETPARAM) {
+		if (params->is_host_pdev_id)
+			params->dev_id = wmi_handle->ops->convert_host_pdev_id_to_target(wmi_handle,
+								params->dev_id);
+		else
+			params->dev_id = wmi_handle->ops->convert_pdev_id_host_to_target(wmi_handle,
+								params->dev_id);
+	}
+	cmd->dev_id = params->dev_id;
+	buf_ptr += sizeof(wmi_set_multiple_pdev_vdev_param_cmd_fixed_param);
+	WMITLV_SET_HDR(buf_ptr, WMITLV_TAG_ARRAY_STRUC, (num * sizeof(*setparam)));
+	buf_ptr += WMI_TLV_HDR_SIZE;
+	for (index = 0; index < num; index++) {
+		setparam = (wmi_set_param_info *)buf_ptr;
+		WMITLV_SET_HDR(&setparam->tlv_header,
+			       WMITLV_TAG_STRUC_wmi_set_param_info,
+			       WMITLV_GET_STRUCT_TLVLEN(*setparam));
+		setparam->param_id = params->params[index].param_id;
+		setparam->param_value = params->params[index].param_value;
+		send_dev_multi_setparam_cmd_tlv(setparam, params);
+		buf_ptr += sizeof(*setparam);
+	}
+	wmi_mtrace(WMI_SET_MULTIPLE_PDEV_VDEV_PARAM_CMDID,
+		   cmd->dev_id, 0);
+	ret = wmi_unified_cmd_send(wmi_handle, buf, len,
+				   WMI_SET_MULTIPLE_PDEV_VDEV_PARAM_CMDID);
+	if (QDF_IS_STATUS_ERROR(ret)) {
+		wmi_err("failed to send WMI_SET_MULTIPLE_PDEV_VDEV_PARAM_CMDID");
+		wmi_buf_free(buf);
+	}
+	return ret;
+}
+
+/**
+ * send_multiple_pdev_param_cmd_tlv() - set pdev parameters
+ * @wmi_handle: wmi handle
+ * @params: pointer to set_multiple_pdev_vdev_param structure
+ *
+ * Return: 0 on success, errno on failure
+ */
+static QDF_STATUS
+send_multiple_pdev_param_cmd_tlv(wmi_unified_t wmi_handle,
+				 struct set_multiple_pdev_vdev_param *params)
+{
+	if (!wmi_service_enabled(wmi_handle,
+				 wmi_service_combined_set_param_support))
+		return send_multi_param_cmd_using_pdev_set_param_tlv(wmi_handle,
+								     params);
+	return send_multi_pdev_vdev_set_param_cmd_tlv(wmi_handle, params);
+}
+
+#else  /* WLAN_PDEV_VDEV_SEND_MULTI_PARAM */
+/**
+ * send_multiple_pdev_param_cmd_tlv() - set pdev parameters
+ * @wmi_handle: wmi handle
+ * @params: pointer to set_multiple_pdev_vdev_param structure
+ *
+ * Return: 0 on success, errno on failure
+ */
+static QDF_STATUS
+send_multiple_pdev_param_cmd_tlv(wmi_unified_t wmi_handle,
+				 struct set_multiple_pdev_vdev_param *params)
+{
+	return send_multi_param_cmd_using_pdev_set_param_tlv(wmi_handle, params);
+}
+#endif /* end of WLAN_PDEV_VDEV_SEND_MULTI_PARAM */
 
 /**
  * send_pdev_set_hw_mode_cmd_tlv() - Send WMI_PDEV_SET_HW_MODE_CMDID to FW
@@ -2358,20 +2707,6 @@ send_dbglog_cmd_tlv(wmi_unified_t wmi_handle,
 	return status;
 }
 
-#ifdef ENABLE_HOST_TO_TARGET_CONVERSION
-static inline uint32_t convert_host_vdev_param_tlv(uint32_t host_param)
-{
-	if (host_param < QDF_ARRAY_SIZE(vdev_param_tlv))
-		return vdev_param_tlv[host_param];
-	return WMI_UNAVAILABLE_PARAM;
-}
-#else
-static inline uint32_t convert_host_vdev_param_tlv(uint32_t host_param)
-{
-	return host_param;
-}
-#endif
-
 /**
  *  send_vdev_set_param_cmd_tlv() - WMI vdev set parameter function
  *  @param wmi_handle      : handle to WMI.
@@ -2403,16 +2738,14 @@ static QDF_STATUS send_vdev_set_param_cmd_tlv(wmi_unified_t wmi_handle,
 	cmd = (wmi_vdev_set_param_cmd_fixed_param *) wmi_buf_data(buf);
 	WMITLV_SET_HDR(&cmd->tlv_header,
 		       WMITLV_TAG_STRUC_wmi_vdev_set_param_cmd_fixed_param,
-		       WMITLV_GET_STRUCT_TLVLEN
-			       (wmi_vdev_set_param_cmd_fixed_param));
+		       WMITLV_GET_STRUCT_TLVLEN(wmi_vdev_set_param_cmd_fixed_param));
 	cmd->vdev_id = param->vdev_id;
 	cmd->param_id = vdev_param;
 	cmd->param_value = param->param_value;
 	wmi_debug("Setting vdev %d param = %x, value = %u",
 		 cmd->vdev_id, cmd->param_id, cmd->param_value);
 	wmi_mtrace(WMI_VDEV_SET_PARAM_CMDID, cmd->vdev_id, 0);
-	ret = wmi_unified_cmd_send(wmi_handle, buf, len,
-				   WMI_VDEV_SET_PARAM_CMDID);
+	ret = wmi_unified_cmd_send(wmi_handle, buf, len, WMI_VDEV_SET_PARAM_CMDID);
 	if (QDF_IS_STATUS_ERROR(ret)) {
 		wmi_err("Failed to send set param command ret = %d", ret);
 		wmi_buf_free(buf);
@@ -2420,6 +2753,70 @@ static QDF_STATUS send_vdev_set_param_cmd_tlv(wmi_unified_t wmi_handle,
 
 	return ret;
 }
+
+/**
+ *  send_multi_param_cmd_using_vdev_param_tlv() - vdev set parameter function
+ *  @wmi_handle : handle to WMI.
+ *  @dev_id: device id of pdev/vdev
+ *  @params: pointer to point array of structure dev_set_param with @n_params
+ *  @n_params: total number of set params that are combined with @params
+ *
+ *  Return:  returns QDF_STATUS.
+ */
+static QDF_STATUS
+send_multi_param_cmd_using_vdev_param_tlv(wmi_unified_t wmi_handle,
+					  struct set_multiple_pdev_vdev_param *params)
+{
+	uint8_t index;
+	struct vdev_set_params vdevparam;
+
+	for (index = 0; index < params->n_params; index++) {
+		vdevparam.param_id = params->params[index].param_id;
+		vdevparam.param_value = params->params[index].param_value;
+		vdevparam.vdev_id = params->dev_id;
+		if (QDF_IS_STATUS_ERROR(send_vdev_set_param_cmd_tlv(wmi_handle, &vdevparam))) {
+			wmi_err("failed to send param:%d", vdevparam.param_id);
+			return QDF_STATUS_E_FAILURE;
+		}
+	}
+	return QDF_STATUS_SUCCESS;
+}
+
+#ifdef WLAN_PDEV_VDEV_SEND_MULTI_PARAM
+/**
+ *  send_multiple_vdev_param_cmd_tlv() - WMI vdev set parameter function
+ *  @wmi_handle : handle to WMI.
+ *  @params: pointer to hold set_multiple_pdev_vdev_param info
+ *
+ *  Return: 0  on success and errorcode on failure.
+ */
+static QDF_STATUS
+send_multiple_vdev_param_cmd_tlv(wmi_unified_t wmi_handle,
+				 struct set_multiple_pdev_vdev_param *params)
+{
+	if (!wmi_service_enabled(wmi_handle,
+				 wmi_service_combined_set_param_support))
+		return send_multi_param_cmd_using_vdev_param_tlv(wmi_handle,
+								 params);
+	return send_multi_pdev_vdev_set_param_cmd_tlv(wmi_handle, params);
+}
+
+#else /* WLAN_PDEV_VDEV_SEND_MULTI_PARAM */
+
+/**
+ *  send_multiple_vdev_param_cmd_tlv() - WMI vdev set parameter function
+ *  @wmi_handle : handle to WMI.
+ *  @params: pointer to hold set_multiple_pdev_vdev_param info
+ *
+ *  Return: 0  on success and errorcode on failure.
+ */
+static QDF_STATUS
+send_multiple_vdev_param_cmd_tlv(wmi_unified_t wmi_handle,
+				 struct set_multiple_pdev_vdev_param *params)
+{
+	return send_multi_param_cmd_using_vdev_param_tlv(wmi_handle, params);
+}
+#endif /*end of WLAN_PDEV_VDEV_SEND_MULTI_PARAM */
 
 /**
  *  send_vdev_set_mu_snif_cmd_tlv() - WMI vdev set mu snif function
@@ -18885,6 +19282,7 @@ struct wmi_ops tlv_ops =  {
 		send_peer_rx_reorder_queue_remove_cmd_tlv,
 	.send_pdev_utf_cmd = send_pdev_utf_cmd_tlv,
 	.send_pdev_param_cmd = send_pdev_param_cmd_tlv,
+	.send_multiple_pdev_param_cmd = send_multiple_pdev_param_cmd_tlv,
 	.send_pdev_set_hw_mode_cmd = send_pdev_set_hw_mode_cmd_tlv,
 	.send_suspend_cmd = send_suspend_cmd_tlv,
 	.send_resume_cmd = send_resume_cmd_tlv,
@@ -19337,6 +19735,7 @@ struct wmi_ops tlv_ops =  {
 #endif
 	.extract_health_mon_init_done_info_event =
 		extract_health_mon_init_done_info_event_tlv,
+	.send_multiple_vdev_param_cmd = send_multiple_vdev_param_cmd_tlv,
 };
 
 #ifdef WLAN_FEATURE_11BE_MLO
@@ -20318,6 +20717,10 @@ static void populate_tlv_service(uint32_t *wmi_service)
 #ifdef WLAN_FEATURE_11BE
 	wmi_service[wmi_service_radar_found_chan_freq_eq_center_freq] =
 		WMI_IS_RADAR_FOUND_CHAN_FREQ_IS_CENTER_FREQ;
+#endif
+#ifdef WLAN_PDEV_VDEV_SEND_MULTI_PARAM
+	wmi_service[wmi_service_combined_set_param_support] =
+			WMI_SERVICE_COMBINED_SET_PARAM_SUPPORT;
 #endif
 	wmi_service[wmi_service_pn_replay_check_support] =
 			WMI_SERVICE_PN_REPLAY_CHECK_SUPPORT;

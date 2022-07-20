@@ -892,6 +892,28 @@ QDF_STATUS
 wmi_unified_vdev_set_param_send(wmi_unified_t wmi_handle,
 				struct vdev_set_params *param);
 
+/**
+ * wmi_unified_multiple_vdev_param_send() - sends multiple vdev set params
+ * @wmi_handle: handle to WMI.
+ * @params: pointer to hold set_multiple_pdev_vdev_param info.
+ *
+ * Return: QDF_STATUS_SUCCESS on success and QDF_STATUS_E_FAILURE for failure
+ */
+QDF_STATUS
+wmi_unified_multiple_vdev_param_send(wmi_unified_t wmi_handle,
+				     struct set_multiple_pdev_vdev_param *params);
+
+/**
+ * wmi_unified_multiple_pdev_param_send() - sends multiple pdev set params
+ * @wmi_handle: handle to WMI.
+ * @params: pointer to hold set_multiple_pdev_vdev_param info
+ *
+ * Return: QDF_STATUS_SUCCESS on success and QDF_STATUS_E_FAILURE for failure
+ */
+QDF_STATUS
+wmi_unified_multiple_pdev_param_send(wmi_unified_t wmi_handle,
+				     struct set_multiple_pdev_vdev_param *params);
+
 #ifdef WLAN_FEATURE_ROAM_OFFLOAD
 /**
  * wmi_unified_roam_set_param_send() - WMI roam set parameter function
