@@ -74,6 +74,7 @@ struct mgmt_rx_reo_shared_snapshot {
  * Management Rx Frame snapshot for Host use. Note that this is different from
  * the structure shared between the Host and FW/HW
  * @valid: Whether this snapshot is valid
+ * @retry_count: snapshot read retry count
  * @mgmt_pkt_ctr: MGMT packet counter. This will be local to a particular
  * HW link
  * @global_timestamp: Global timestamp.This is taken from a clock which is
@@ -81,9 +82,9 @@ struct mgmt_rx_reo_shared_snapshot {
  */
 struct mgmt_rx_reo_snapshot_params {
 	bool valid;
+	uint8_t retry_count;
 	uint16_t mgmt_pkt_ctr;
 	uint32_t global_timestamp;
-	uint8_t retry_count;
 };
 
 /*
