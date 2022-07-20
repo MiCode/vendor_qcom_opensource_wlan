@@ -13299,6 +13299,25 @@ extract_svc_rdy_ext2_afc_tlv(wmi_service_ready_ext2_event_fixed_param *ev,
 #endif
 
 /**
+ * extract_ul_mumimo_support) - extract UL-MUMIMO capability from target cap
+ * @param: Pointer to hold the params
+ *
+ * Return: Void
+ */
+static void
+extract_ul_mumimo_support(struct wlan_psoc_host_service_ext2_param *param)
+{
+	uint32_t tgt_cap = param->target_cap_flags;
+
+	param->ul_mumimo_rx_2g = WMI_TARGET_CAP_UL_MU_MIMO_RX_SUPPORT_2GHZ_GET(tgt_cap);
+	param->ul_mumimo_rx_5g = WMI_TARGET_CAP_UL_MU_MIMO_RX_SUPPORT_5GHZ_GET(tgt_cap);
+	param->ul_mumimo_rx_6g = WMI_TARGET_CAP_UL_MU_MIMO_RX_SUPPORT_6GHZ_GET(tgt_cap);
+	param->ul_mumimo_tx_2g = WMI_TARGET_CAP_UL_MU_MIMO_TX_SUPPORT_2GHZ_GET(tgt_cap);
+	param->ul_mumimo_tx_5g = WMI_TARGET_CAP_UL_MU_MIMO_TX_SUPPORT_5GHZ_GET(tgt_cap);
+	param->ul_mumimo_tx_6g = WMI_TARGET_CAP_UL_MU_MIMO_TX_SUPPORT_6GHZ_GET(tgt_cap);
+}
+
+/**
  * extract_service_ready_ext2_tlv() - extract service ready ext2 params from
  * event
  * @wmi_handle: wmi handle
@@ -13355,6 +13374,7 @@ extract_service_ready_ext2_tlv(wmi_unified_t wmi_handle, uint8_t *event,
 	param->max_users_ul_mumimo = WMI_MAX_USER_PER_PPDU_UL_MUMIMO_GET(
 						ev->max_user_per_ppdu_mumimo);
 	param->target_cap_flags = ev->target_cap_flags;
+	extract_ul_mumimo_support(param);
 	wmi_debug("htt peer data :%d", ev->target_cap_flags);
 
 	extract_svc_rdy_ext2_afc_tlv(ev, param);
