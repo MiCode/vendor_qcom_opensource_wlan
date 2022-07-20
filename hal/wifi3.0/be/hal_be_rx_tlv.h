@@ -1082,8 +1082,8 @@ static inline void hal_rx_print_pn_be(uint8_t *buf)
 	uint32_t pn_95_64 = HAL_RX_TLV_MPDU_PN_95_64_GET(rx_pkt_tlvs);
 	uint32_t pn_127_96 = HAL_RX_TLV_MPDU_PN_127_96_GET(rx_pkt_tlvs);
 
-	hal_debug("PN number pn_127_96 0x%x pn_95_64 0x%x pn_63_32 0x%x pn_31_0 0x%x ",
-		  pn_127_96, pn_95_64, pn_63_32, pn_31_0);
+	hal_debug_rl("PN number pn_127_96 0x%x pn_95_64 0x%x pn_63_32 0x%x pn_31_0 0x%x ",
+		     pn_127_96, pn_95_64, pn_63_32, pn_31_0);
 }
 
 static inline void hal_rx_tlv_get_pn_num_be(uint8_t *buf, uint64_t *pn_num)
