@@ -1197,35 +1197,35 @@ static QDF_STATUS wlan_defrag_elemsubelem_fragseq(bool inline_defrag,
 				     &elemunit_len_pos,
 				     &elemunit_idext_pos);
 	if (QDF_IS_STATUS_ERROR(ret)) {
-		qdf_rl_nofl_err("Investigate error %d when trying to get element unit info",
+		qdf_rl_nofl_err("Get elem unit info: Error %d",
 				ret);
 		return QDF_STATUS_E_FAILURE;
 	}
 
 	if (!fragbuff) {
-		qdf_nofl_err("Source buffer for fragment sequence is NULL");
+		qdf_nofl_err("Src buff for frag seq is NULL");
 		return QDF_STATUS_E_NULL_VALUE;
 	}
 
 	if (fragbuff_maxsize == 0) {
-		qdf_nofl_err("Size of source buffer for fragment sequence is 0");
+		qdf_nofl_err("Size of src buff for frag seq is 0");
 		return QDF_STATUS_E_INVAL;
 	}
 
 	if (!inline_defrag) {
 		if (!defragbuff) {
-			qdf_nofl_err("Destination buffer for defragmented payload is NULL");
+			qdf_nofl_err("Dest buff for defragged payload is NULL");
 			return QDF_STATUS_E_NULL_VALUE;
 		}
 
 		if (defragbuff_maxsize == 0) {
-			qdf_nofl_err("Size of destination buffer for defragmented payload is 0");
+			qdf_nofl_err("Size of dest buff for defragged payload is 0");
 			return QDF_STATUS_E_INVAL;
 		}
 	}
 
 	if (!defragpayload_len) {
-		qdf_nofl_err("Pointer to location for length of defragmented payload is NULL");
+		qdf_nofl_err("Ptr to len of defragged payload is NULL");
 		return QDF_STATUS_E_NULL_VALUE;
 	}
 
@@ -1243,7 +1243,7 @@ static QDF_STATUS wlan_defrag_elemsubelem_fragseq(bool inline_defrag,
 		/* We treat this as an error since the caller is supposed to
 		 * check this.
 		 */
-		qdf_rl_nofl_err("Fragment sequence not found at start of source buffer for fragment sequence");
+		qdf_rl_nofl_err("Frag seq not found at start of src buff for frag seq");
 		return QDF_STATUS_E_INVAL;
 	}
 
@@ -1254,7 +1254,7 @@ static QDF_STATUS wlan_defrag_elemsubelem_fragseq(bool inline_defrag,
 	 */
 
 	if (!inline_defrag && (defragbuff_maxsize < fragseq_payloadlen)) {
-		qdf_rl_nofl_err("Size of destination buffer for defragmented payload %zu octets is smaller than the size of fragment sequence payload %zu octets",
+		qdf_rl_nofl_err("(Size of dest buff for defragged payload %zu) < (size of frag seq payload %zu)",
 				defragbuff_maxsize, fragseq_payloadlen);
 		return QDF_STATUS_E_INVAL;
 	}
