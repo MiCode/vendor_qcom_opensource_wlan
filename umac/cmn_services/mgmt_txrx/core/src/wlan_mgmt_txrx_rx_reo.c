@@ -1104,8 +1104,8 @@ wlan_mgmt_rx_reo_algo_calculate_wait_count(
 		status = mgmt_rx_reo_snapshots_check_sanity
 			(mac_hw_ss, fw_forwarded_ss, fw_consumed_ss, host_ss);
 		if (QDF_IS_STATUS_ERROR(status)) {
-			mgmt_rx_reo_err("Snapshot sanity for link %u failed",
-					link);
+			mgmt_rx_reo_err_rl("Snapshot sanity for link %u failed",
+					   link);
 			return status;
 		}
 
