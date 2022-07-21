@@ -536,7 +536,7 @@ struct reduced_neighbor_report {
  * @ecsa_ie: Pointer to eCSA IE
  * @max_cst_ie: Pointer to Max Channel Switch Time IE
  * @is_valid_link: The partner link can be used if true
- * @op_class: Operting class
+ * @op_class: Operating class
  */
 struct partner_link_info {
 	struct qdf_mac_addr link_addr;
@@ -547,7 +547,7 @@ struct partner_link_info {
 	const uint8_t *ecsa_ie;
 	const uint8_t *max_cst_ie;
 	uint8_t  is_valid_link;
-	uint32_t op_class;
+	uint8_t op_class;
 };
 
 /**

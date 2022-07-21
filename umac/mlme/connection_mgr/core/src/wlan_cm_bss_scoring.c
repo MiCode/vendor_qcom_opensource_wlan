@@ -130,11 +130,12 @@ SNR_DB_TO_BIT_PER_TONE_LUT[DB_NUM] = {0, 171, 212, 262, 323, 396, 484,
 586, 706, 844, 1000, 1176, 1370, 1583, 1812, 2058, 2317, 2588, 2870, 3161};
 #endif
 
+/* MLO link types */
 enum MLO_TYPE {
 	SLO,
 	MLSR,
 	MLMR,
-	MLO_TYPE_NUM
+	MLO_TYPE_MAX
 };
 
 static bool cm_is_better_bss(struct scan_cache_entry *bss1,
@@ -1473,37 +1474,21 @@ static uint16_t cm_get_puncture_bw(struct scan_cache_entry *entry)
 }
 #endif
 
-/**
- * struct mlo_bw_score: MLO AP total bandwidth and score percent
- * @total_bw: Total bandwidth (unit: MHz)
- * @score_pcnt: Score percent (0 - 100)
- */
-struct mlo_bw_score {
-	uint16_t total_bw;
-	uint8_t score_pcnt;
-};
-
-#define CM_BAND_WIDTH_TYPE 16
-struct mlo_bw_score mlo_link_bw_score[CM_BAND_WIDTH_TYPE] = {
-{20, 9}, {40, 18}, {60, 27}, {80, 35}, {100, 44}, {120, 53},
-{140, 56}, {160, 67}, {180, 74}, {200, 80}, {220, 86}, {240, 90},
-{260, 93}, {280, 96}, {300, 98}, {320, 100}
-};
+#define CM_BAND_WIDTH_NUM 16
+#define CM_BAND_WIDTH_UNIT 20
+uint16_t link_bw_score[CM_BAND_WIDTH_NUM] = {
+9, 18, 27, 35, 44, 53, 56, 67, 74, 80, 86, 90, 93, 96, 98, 100};
 
 static uint32_t cm_get_bw_score(uint8_t bw_weightage, uint16_t bw,
 				uint8_t prorated_pcnt)
 {
-	uint8_t i;
 	uint32_t score;
+	uint8_t index;
 
-	for (i = 0; i < CM_BAND_WIDTH_TYPE; i++)
-		if (mlo_link_bw_score[i].total_bw == bw) {
-			score = bw_weightage *
-				mlo_link_bw_score[i].score_pcnt *
-				prorated_pcnt / CM_MAX_PCT_SCORE;
-			return score;
-	}
-	score = bw_weightage * mlo_link_bw_score[0].score_pcnt
+	index = bw / CM_BAND_WIDTH_UNIT - 1;
+	if (index >= CM_BAND_WIDTH_NUM)
+		index = CM_BAND_WIDTH_NUM - 1;
+	score = bw_weightage * link_bw_score[index]
 		* prorated_pcnt / CM_MAX_PCT_SCORE;
 
 	return score;
@@ -1556,7 +1541,7 @@ static uint16_t cm_get_ch_width(struct scan_cache_entry *entry,
 #define CM_MLO_BAD_RSSI_PCT 61
 #define CM_MLO_CONGESTION_PCT_BAD_RSSI 6
 
-static uint8_t mlo_boost_pct[MLO_TYPE_NUM] = {0, 10, CM_MAX_PCT_SCORE};
+static uint8_t mlo_boost_pct[MLO_TYPE_MAX] = {0, 10, CM_MAX_PCT_SCORE};
 
 /**
  * struct mlo_rssi_pct: MLO AP rssi joint factor and score percent
@@ -1908,7 +1893,7 @@ static int cm_calculate_mlo_bss_score(struct wlan_objmgr_psoc *psoc,
 			best_total_score = total_score[i];
 			best_partner_index = i;
 		}
-		mlme_nofl_debug("ML score: link index %u rssi %d %d rssi score %d pror %u freq %u %u bw %u %u, bw score %u congest score %u %u %u, total score %u",
+		mlme_nofl_debug("ML score: link index %u rssi %d %d rssi score %u pror %u freq %u %u bw %u %u, bw score %u congest score %u %u %u, total score %u",
 				i, entry->rssi_raw,  rssi[i], rssi_score[i],
 				prorated_pct[i], freq_entry, freq[i],
 				chan_width, ch_width[i], bandwidth_score[i],
