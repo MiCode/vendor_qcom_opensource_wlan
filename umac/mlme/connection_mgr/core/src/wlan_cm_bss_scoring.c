@@ -1459,6 +1459,21 @@ static uint16_t cm_get_puncture_bw(struct scan_cache_entry *entry)
 	}
 	return num_puncture_bw * 20;
 }
+
+static bool cm_get_su_beam_former(struct scan_cache_entry *entry)
+{
+	struct wlan_ie_ehtcaps *eht_cap;
+	struct wlan_eht_cap_info *eht_cap_info;
+
+	eht_cap = (struct wlan_ie_ehtcaps *)util_scan_entry_ehtcap(entry);
+	if (eht_cap) {
+		eht_cap_info = (struct wlan_eht_cap_info *)eht_cap->eht_mac_cap;
+		if (eht_cap_info->su_beamformer)
+			return true;
+	}
+
+	return false;
+}
 #else
 static int cm_calculate_eht_score(struct scan_cache_entry *entry,
 				  struct scoring_cfg *score_config,
@@ -1471,6 +1486,11 @@ static int cm_calculate_eht_score(struct scan_cache_entry *entry,
 static uint16_t cm_get_puncture_bw(struct scan_cache_entry *entry)
 {
 	return 0;
+}
+
+static bool cm_get_su_beam_former(struct scan_cache_entry *entry)
+{
+	return false;
 }
 #endif
 
@@ -2081,6 +2101,8 @@ static int cm_calculate_bss_score(struct wlan_objmgr_psoc *psoc,
 	vht_cap = (struct wlan_ie_vhtcaps *)util_scan_entry_vhtcap(entry);
 	if (vht_cap && vht_cap->su_beam_former)
 		ap_su_beam_former = true;
+	else
+		ap_su_beam_former = cm_get_su_beam_former(entry);
 	if (phy_config->beamformee_cap && is_vht &&
 	    ap_su_beam_former &&
 	    (entry->rssi_raw > rssi_pref_5g_rssi_thresh) && !same_bucket)
