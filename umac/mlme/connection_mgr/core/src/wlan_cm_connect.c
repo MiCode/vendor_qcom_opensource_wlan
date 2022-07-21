@@ -448,17 +448,11 @@ void cm_set_vdev_link_id(struct cnx_mgr *cm_ctx,
 			 struct cm_connect_req *req)
 {
 	uint8_t link_id;
-	uint8_t i;
 
-	for (i = 0; i < req->cur_candidate->entry->ml_info.num_links; i++) {
-		if (qdf_mem_cmp(req->cur_candidate->entry->ml_info.link_info[i].link_addr.bytes,
-				req->cur_candidate->entry->mac_addr.bytes, QDF_MAC_ADDR_SIZE))
-			continue;
-		link_id = req->cur_candidate->entry->ml_info.link_info[i].link_id;
-		if (cm_ctx->vdev) {
-			mlme_debug("setting link ID to %d", link_id);
-			wlan_vdev_set_link_id(cm_ctx->vdev, link_id);
-		}
+	link_id = req->cur_candidate->entry->ml_info.self_link_id;
+	if (cm_ctx->vdev) {
+		mlme_debug("setting link ID to %d", link_id);
+		wlan_vdev_set_link_id(cm_ctx->vdev, link_id);
 	}
 }
 
