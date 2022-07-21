@@ -1196,19 +1196,28 @@ static QDF_STATUS cm_is_scan_support(struct cm_connect_req *cm_req)
 #endif
 
 #if defined(WLAN_FEATURE_11BE_MLO) && defined(WLAN_FEATURE_11BE_MLO_ADV_FEATURE)
+#define CFG_MLO_ASSOC_LINK_BAND_MAX 0x70
+
 static QDF_STATUS cm_update_mlo_filter(struct wlan_objmgr_pdev *pdev,
+				       struct cm_connect_req *cm_req,
 				       struct scan_filter *filter)
 {
 	struct wlan_objmgr_psoc *psoc;
 
 	psoc = wlan_pdev_get_psoc(pdev);
 	filter->band_bitmap = wlan_mlme_get_sta_mlo_conn_band_bmp(psoc);
-	mlme_debug("band bitmap: %d", filter->band_bitmap);
+	/* Apply assoc band filter only for assoc link */
+	if (cm_req->req.is_non_assoc_link) {
+		filter->band_bitmap =  filter->band_bitmap |
+				       CFG_MLO_ASSOC_LINK_BAND_MAX;
+	}
+	mlme_debug("band bitmap: 0x%x", filter->band_bitmap);
 
 	return QDF_STATUS_SUCCESS;
 }
 #else
 static QDF_STATUS cm_update_mlo_filter(struct wlan_objmgr_pdev *pdev,
+				       struct cm_connect_req *cm_req,
 				       struct scan_filter *filter)
 {
 	return QDF_STATUS_SUCCESS;
@@ -1255,7 +1264,7 @@ static QDF_STATUS cm_connect_get_candidates(struct wlan_objmgr_pdev *pdev,
 	cm_connect_prepare_scan_filter(pdev, cm_ctx, cm_req, filter,
 				       security_valid_for_6ghz);
 
-	cm_update_mlo_filter(pdev, filter);
+	cm_update_mlo_filter(pdev, cm_req, filter);
 
 	candidate_list = wlan_scan_get_result(pdev, filter);
 	if (candidate_list) {
