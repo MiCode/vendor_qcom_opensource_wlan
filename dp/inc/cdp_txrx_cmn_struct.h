@@ -2685,6 +2685,9 @@ enum cdp_flow_protocol_type {
 
 /**
  * cdp_rx_flow_tuple_info - RX flow tuple info used for addition/deletion
+ * @tuple_populated:
+ * @is_exception: Flows which are added to flow table but not aggregated.
+ * @bypass_fisa: Flow which are not added to flow table.
  * @dest_ip_127_96: destination IP address bit fields 96-127
  * @dest_ip_95_64: destination IP address bit fields 64-95
  * @dest_ip_63_32: destination IP address bit fields 32-63
@@ -2701,6 +2704,7 @@ struct cdp_rx_flow_tuple_info {
 #ifdef WLAN_SUPPORT_RX_FISA
 	uint8_t tuple_populated;
 	uint8_t is_exception;
+	bool bypass_fisa;
 #endif
 	uint32_t dest_ip_127_96;
 	uint32_t dest_ip_95_64;
