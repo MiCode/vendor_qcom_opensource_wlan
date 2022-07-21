@@ -481,6 +481,17 @@ bool mlo_is_sta_csa_param_handled(struct wlan_objmgr_vdev *vdev,
  * Return: none
  */
 void mlo_internal_disconnect_links(struct wlan_objmgr_vdev *vdev);
+
+/**
+ * mlo_sta_get_vdev_list() - get mlo vdev list
+ * @vdev: vdev pointer
+ * @vdev_count: vdev count
+ * @wlan_vdev_list: vdev list
+ *
+ * Return: None
+ */
+void mlo_sta_get_vdev_list(struct wlan_objmgr_vdev *vdev, uint16_t *vdev_count,
+			   struct wlan_objmgr_vdev **wlan_vdev_list);
 #else
 static inline
 QDF_STATUS mlo_connect(struct wlan_objmgr_vdev *vdev,
@@ -605,6 +616,13 @@ mlo_is_sta_csa_param_handled(struct wlan_objmgr_vdev *vdev,
 }
 
 static inline void mlo_internal_disconnect_links(struct wlan_objmgr_vdev *vdev)
+{
+}
+
+static inline
+void mlo_sta_get_vdev_list(struct wlan_objmgr_vdev *vdev,
+			   uint16_t *vdev_count,
+			   struct wlan_objmgr_vdev **wlan_vdev_list)
 {
 }
 #endif
