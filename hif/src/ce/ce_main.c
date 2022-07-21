@@ -2039,7 +2039,7 @@ static struct hif_ce_desc_event *
 {
 	struct ce_desc_hist *ce_hist = &scn->hif_ce_desc_hist;
 
-	hif_debug("get ce debug buffer ce_id %u, only_ce2/ce3=%d, idx=%u",
+	hif_debug("get ce debug buffer ce_id %u, only_ce2/ce3=0x%x, idx=%u",
 		  ce_id, IS_CE_DEBUG_ONLY_FOR_CRIT_CE,
 		  ce_hist->ce_id_hist_map[ce_id]);
 	if (IS_CE_DEBUG_ONLY_FOR_CRIT_CE &&
