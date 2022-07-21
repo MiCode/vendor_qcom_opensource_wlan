@@ -1169,6 +1169,17 @@ void dp_peer_delete(struct dp_soc *soc,
 		    struct dp_peer *peer,
 		    void *arg);
 
+/**
+ * dp_mlo_peer_delete() - delete MLO DP peer
+ *
+ * @soc: Datapath soc
+ * @peer: Datapath peer
+ * @arg: argument to iter function
+ *
+ * Return: void
+ */
+void dp_mlo_peer_delete(struct dp_soc *soc, struct dp_peer *peer, void *arg);
+
 #ifdef WLAN_FEATURE_11BE_MLO
 
 /* is MLO connection mld peer */

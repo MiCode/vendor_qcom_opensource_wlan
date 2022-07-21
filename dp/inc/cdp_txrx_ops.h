@@ -673,7 +673,8 @@ struct cdp_cmn_ops {
 
 #if defined(WLAN_FEATURE_11BE_MLO) && defined(WLAN_MLO_MULTI_CHIP)
 	void (*txrx_recovery_vdev_flush_peers)(struct cdp_soc_t *soc,
-					       uint8_t vdev_id);
+					       uint8_t vdev_id,
+					       bool mlo_peers_only);
 #endif
 };
 
