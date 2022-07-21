@@ -364,23 +364,21 @@ dfs_find_radar_affected_subchans_for_freq(struct wlan_dfs *dfs,
 		 radar_found->freq_offset, radar_found->is_chirp,
 		 flag, freq_center);
 
-	if ((WLAN_IS_CHAN_A(curchan)) || WLAN_IS_CHAN_MODE_20(curchan)) {
-		freq_offset.offset[CENTER_CH] = freq_center;
-	} else {
-		ch_width = dfs_chan_to_ch_width(curchan);
-		if (ch_width == BW_INVALID) {
-			dfs_err(dfs, WLAN_DEBUG_DFS,
-				"channel flag=%d is invalid", flag);
-			return 0;
-		}
-
-		if (radar_found->is_chirp || !(abs(sidx) % DFS_BOUNDARY_SIDX)) {
-			freq_offset.offset[LEFT_CH] -= DFS_CHIRP_OFFSET;
-			freq_offset.offset[RIGHT_CH] += DFS_CHIRP_OFFSET;
-		}
-		dfs_find_20mhz_subchans_from_offsets(&freq_offset, freq_center,
-						     ch_width);
+	ch_width = dfs_chan_to_ch_width(curchan);
+	if (ch_width == BW_INVALID) {
+		dfs_err(dfs, WLAN_DEBUG_DFS,
+			"channel flag=%d is invalid", flag);
+		return 0;
 	}
+
+	if (radar_found->is_chirp || !(abs(sidx) % DFS_BOUNDARY_SIDX)) {
+		freq_offset.offset[LEFT_CH] -= DFS_CHIRP_OFFSET;
+		freq_offset.offset[RIGHT_CH] += DFS_CHIRP_OFFSET;
+	}
+
+	dfs_find_20mhz_subchans_from_offsets(&freq_offset, freq_center,
+					     ch_width);
+
 	n_cur_subchans =
 	    dfs_get_bonding_channels_for_freq(dfs, curchan,
 					      radar_found->segment_id,

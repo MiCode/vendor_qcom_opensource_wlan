@@ -1264,6 +1264,8 @@ static bool ce_check_int_watermark(struct CE_state *CE_state,
 	return false;
 }
 
+void hif_display_ctrl_traffic_pipes_state(struct hif_opaque_softc *hif_ctx) { }
+
 #ifdef HIF_CE_LOG_INFO
 /**
  * ce_get_index_info_legacy(): Get CE index info
