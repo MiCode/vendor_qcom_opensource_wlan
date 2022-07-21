@@ -96,6 +96,14 @@ bool ipa_config_is_uc_enabled(void)
 	return g_ipa_config ? wlan_ipa_uc_is_enabled(g_ipa_config) : 0;
 }
 
+bool ipa_config_is_vlan_enabled(void)
+{
+	if (!ipa_config_is_enabled())
+		return false;
+
+	return g_ipa_config ? g_ipa_config->ipa_vlan_support : 0;
+}
+
 QDF_STATUS ipa_obj_setup(struct wlan_ipa_priv *ipa_ctx)
 {
 	return wlan_ipa_setup(ipa_ctx, g_ipa_config);
@@ -847,6 +855,8 @@ void ipa_component_config_update(struct wlan_objmgr_psoc *psoc)
 		cfg_get(psoc, CFG_DP_IPA_ENABLE_FORCE_VOTING);
 	g_ipa_config->ipa_wds =
 		cfg_get(psoc, CFG_DP_IPA_WDS_STATUS);
+	g_ipa_config->ipa_vlan_support =
+		cfg_get(psoc, CFG_DP_IPA_ENABLE_VLAN_SUPPORT);
 }
 
 void ipa_component_config_free(void)

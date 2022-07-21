@@ -363,3 +363,10 @@ qdf_ipa_wdi_hdl_t wlan_ipa_get_hdl(void *soc, uint8_t pdev_id)
 }
 
 qdf_export_symbol(wlan_ipa_get_hdl);
+
+bool wlan_ipa_is_vlan_enabled(void)
+{
+	return ipa_config_is_vlan_enabled();
+}
+
+qdf_export_symbol(wlan_ipa_is_vlan_enabled);
