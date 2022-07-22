@@ -16189,13 +16189,15 @@ static int hdd_module_init(void)
 #else
 static int __init hdd_module_init(void)
 {
-	int ret = -EINVAL;
+	if (hdd_driver_load()){
+		int ret = -EINVAL;
 
-	ret = wlan_init_sysfs();
-	if (ret)
-		hdd_err("Failed to create sysfs entry");
-
-	return ret;
+		ret = wlan_init_sysfs();
+		if (ret)
+			hdd_err("Failed to create sysfs entry");
+		return ret;
+	}
+	return 0;
 }
 #endif
 
