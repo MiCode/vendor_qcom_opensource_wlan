@@ -7746,6 +7746,101 @@ release_pdev_ref:
 	return qdf_status_to_os_return(status);
 }
 
+/**
+ * target_if_spectral_capabilities_event_handler() - Handler for the Spectral
+ * Capabilities event
+ * @scn: Pointer to scn object
+ * @data_buf: Pointer to event buffer
+ * @data_len: Length of event buffer
+ *
+ * Return: 0 for success, else failure
+ */
+static int
+target_if_spectral_capabilities_event_handler(ol_scn_t scn, uint8_t *data_buf,
+					      uint32_t data_len)
+{
+	QDF_STATUS status;
+	struct wlan_objmgr_psoc *psoc;
+	struct wmi_unified *wmi_handle;
+	struct spectral_capabilities_event_params event_params = {0};
+	struct spectral_scan_bw_capabilities *bw_caps;
+	struct spectral_fft_size_capabilities *fft_size_caps;
+
+	if (!scn) {
+		spectral_err("scn handle is null");
+		return qdf_status_to_os_return(QDF_STATUS_E_INVAL);
+	}
+
+	if (!data_buf) {
+		spectral_err("WMI event buffer null");
+		return qdf_status_to_os_return(QDF_STATUS_E_INVAL);
+	}
+
+	psoc = target_if_spectral_get_psoc_from_scn_handle(scn);
+	if (!psoc) {
+		spectral_err("psoc is null");
+		return qdf_status_to_os_return(QDF_STATUS_E_FAILURE);
+	}
+
+	wmi_handle = GET_WMI_HDL_FROM_PSOC(psoc);
+	if (!wmi_handle) {
+		spectral_err("WMI handle is null");
+		return qdf_status_to_os_return(QDF_STATUS_E_FAILURE);
+	}
+
+	status = target_if_wmi_extract_spectral_caps_fixed_param(
+				psoc, data_buf, &event_params);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		spectral_err("Failed to extract fixed parameters");
+		return qdf_status_to_os_return(QDF_STATUS_E_FAILURE);
+	}
+
+	/* There should be atleast one capability */
+	qdf_assert(event_params.num_sscan_bw_caps > 0);
+	qdf_assert(event_params.num_fft_size_caps > 0);
+
+	bw_caps = qdf_mem_malloc(
+			sizeof(*bw_caps) * event_params.num_sscan_bw_caps);
+	if (!bw_caps) {
+		spectral_err("memory allocation failed");
+		return qdf_status_to_os_return(QDF_STATUS_E_NOMEM);
+	}
+
+	status = target_if_wmi_extract_spectral_scan_bw_caps(psoc, data_buf,
+							     bw_caps);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		spectral_err("Failed to extract BW caps");
+		status = QDF_STATUS_E_FAILURE;
+		goto free_bw_caps;
+	}
+
+	fft_size_caps = qdf_mem_malloc(
+		sizeof(*fft_size_caps) * event_params.num_fft_size_caps);
+	if (!fft_size_caps) {
+		spectral_err("memory allocation failed");
+		status = QDF_STATUS_E_NOMEM;
+		goto free_bw_caps;
+	}
+
+	status = target_if_wmi_extract_spectral_fft_size_caps(psoc, data_buf,
+							      fft_size_caps);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		spectral_err("Failed to extract fft size caps");
+		status = QDF_STATUS_E_FAILURE;
+		goto free_fft_size_caps;
+	}
+
+	status = QDF_STATUS_SUCCESS;
+
+free_fft_size_caps:
+	qdf_mem_free(fft_size_caps);
+
+free_bw_caps:
+	qdf_mem_free(bw_caps);
+
+	return qdf_status_to_os_return(status);
+}
+
 static QDF_STATUS
 target_if_spectral_register_events(struct wlan_objmgr_psoc *psoc)
 {
@@ -7765,6 +7860,16 @@ target_if_spectral_register_events(struct wlan_objmgr_psoc *psoc)
 	if (ret)
 		spectral_debug("event handler not supported, ret=%d", ret);
 
+	ret = target_if_spectral_wmi_unified_register_event_handler(
+			psoc,
+			wmi_spectral_capabilities_eventid,
+			target_if_spectral_capabilities_event_handler,
+			WMI_RX_UMAC_CTX);
+	if (ret) {
+		spectral_debug("event handler not supported, ret=%d", ret);
+		return QDF_STATUS_E_FAILURE;
+	}
+
 	return QDF_STATUS_SUCCESS;
 }
 
@@ -7777,6 +7882,9 @@ target_if_spectral_unregister_events(struct wlan_objmgr_psoc *psoc)
 		spectral_err("psoc is null");
 		return QDF_STATUS_E_INVAL;
 	}
+
+	target_if_spectral_wmi_unified_unregister_event_handler(
+			psoc, wmi_spectral_capabilities_eventid);
 
 	ret = target_if_spectral_wmi_unified_unregister_event_handler(
 			psoc, wmi_pdev_sscan_fw_param_eventid);

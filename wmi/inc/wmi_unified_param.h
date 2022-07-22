@@ -5075,6 +5075,7 @@ typedef enum {
 #ifdef WLAN_FEATURE_DBAM_CONFIG
 	wmi_coex_dbam_complete_event_id,
 #endif
+	wmi_spectral_capabilities_eventid,
 	wmi_events_max,
 } wmi_conv_event_id;
 

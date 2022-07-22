@@ -3458,6 +3458,11 @@ enum qca_vendor_attr_roam_candidate_selection_criteria {
  *	on all bands supported by local device. When the value is set to
  *	%QCA_SETBAND_AUTO, all supported bands shall be enabled.
  *
+ * @QCA_ATTR_ROAM_CONTROL_RX_LINKSPEED_THRESHOLD: u16 value in Mbps.
+ *	Optional parameter. RX link speed threshold to disable roaming.
+ *	If the current RX link speed is above the threshold, roaming is not
+ *	needed. If this attribute is not configured, or if it is set to 0, the
+ *	driver will not consider the RX link speed in the roaming decision.
  */
 enum qca_vendor_attr_roam_control {
 	QCA_ATTR_ROAM_CONTROL_ENABLE = 1,
@@ -3477,6 +3482,7 @@ enum qca_vendor_attr_roam_control {
 	QCA_ATTR_ROAM_CONTROL_CANDIDATE_RSSI_THRESHOLD_5GHZ = 15,
 	QCA_ATTR_ROAM_CONTROL_CANDIDATE_RSSI_THRESHOLD_6GHZ = 16,
 	QCA_ATTR_ROAM_CONTROL_BAND_MASK = 17,
+	QCA_ATTR_ROAM_CONTROL_RX_LINKSPEED_THRESHOLD = 24,
 
 	/* keep last */
 	QCA_ATTR_ROAM_CONTROL_AFTER_LAST,
