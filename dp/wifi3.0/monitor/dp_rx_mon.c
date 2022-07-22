@@ -821,13 +821,8 @@ dp_ppdu_desc_user_rx_time_update(struct dp_pdev *pdev,
 {
 	uint32_t nss_ru_width_sum = 0;
 	struct dp_mon_peer *mon_peer = NULL;
-	uint16_t rx_time_us;
 
 	if (!pdev || !ppdu_desc || !user || !peer)
-		return;
-
-	mon_peer = peer->monitor_peer;
-	if (qdf_unlikely(!mon_peer))
 		return;
 
 	nss_ru_width_sum = ppdu_desc->usr_nss_sum * ppdu_desc->usr_ru_tones_sum;
@@ -836,14 +831,19 @@ dp_ppdu_desc_user_rx_time_update(struct dp_pdev *pdev,
 
 	if (ppdu_desc->u.ppdu_type == HAL_RX_TYPE_MU_OFDMA ||
 	    ppdu_desc->u.ppdu_type == HAL_RX_TYPE_MU_MIMO) {
-		rx_time_us = (ppdu_desc->duration *
-				user->nss * user->ofdma_ru_width) / nss_ru_width_sum;
+		user->rx_time_us = (ppdu_desc->duration *
+				    user->nss * user->ofdma_ru_width) /
+				    nss_ru_width_sum;
 	} else {
-		rx_time_us = ppdu_desc->duration;
+		user->rx_time_us = ppdu_desc->duration;
 	}
 
+	mon_peer = peer->monitor_peer;
+	if (qdf_unlikely(!mon_peer))
+		return;
+
 	DP_STATS_INC(mon_peer, airtime_consumption.consumption,
-		     rx_time_us);
+		     user->rx_time_us);
 }
 #else
 static inline void
