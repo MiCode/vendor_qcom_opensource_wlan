@@ -552,7 +552,9 @@ static int osif_connect_done(struct net_device *dev, struct cfg80211_bss *bss,
 	osif_populate_fils_params(&conn_rsp_params, &rsp->connect_ies);
 	osif_cm_save_gtk(vdev, rsp);
 
-	osif_fill_connect_resp_mlo_params(vdev, rsp, bss, &conn_rsp_params);
+	if (status == WLAN_STATUS_SUCCESS)
+		osif_fill_connect_resp_mlo_params(vdev, rsp, bss,
+						  &conn_rsp_params);
 
 	osif_debug("Connect resp status  %d", conn_rsp_params.status);
 	cfg80211_connect_done(dev, &conn_rsp_params, qdf_mem_malloc_flags());
