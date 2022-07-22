@@ -107,7 +107,7 @@ dp_rx_mon_nbuf_add_rx_frag(qdf_nbuf_t nbuf, qdf_frag_t *frag,
  *
  * @Return: void
  */
-static inline void
+void
 dp_mon_free_parent_nbuf(struct dp_mon_pdev *mon_pdev,
 			qdf_nbuf_t nbuf)
 {

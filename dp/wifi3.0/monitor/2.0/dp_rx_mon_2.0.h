@@ -182,4 +182,16 @@ dp_rx_mon_handle_full_mon(struct dp_pdev *pdev,
  * Return: Void
  */
 void dp_rx_mon_drain_wq(struct dp_pdev *pdev);
+
+/**
+ * dp_mon_free_parent_nbuf() - Free parent SKB
+ *
+ * @mon_pdev: monitor pdev
+ * @nbuf: SKB to be freed
+ *
+ * @Return: void
+ */
+void
+dp_mon_free_parent_nbuf(struct dp_mon_pdev *mon_pdev,
+			qdf_nbuf_t nbuf);
 #endif /* _DP_RX_MON_2_0_H_ */
