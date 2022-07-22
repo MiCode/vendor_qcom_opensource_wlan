@@ -16,6 +16,7 @@
 #include <dp_types.h>
 #include <wlan_cfg.h>
 #include <hif.h>
+#include <dp_htt.h>
 
 /**
  * dp_get_umac_reset_intr_ctx() - Get the interrupt context to be used by
@@ -45,6 +46,38 @@ static QDF_STATUS dp_get_umac_reset_intr_ctx(struct dp_soc *soc, int *intr_ctx)
 
 	*intr_ctx = -1;
 	return QDF_STATUS_E_FAILURE;
+}
+
+/**
+ * dp_umac_reset_send_setup_cmd(): Send the UMAC reset setup command
+ * @soc: dp soc object
+ *
+ * Return: QDF_STATUS of operation
+ */
+static QDF_STATUS
+dp_umac_reset_send_setup_cmd(struct dp_soc *soc)
+{
+	struct dp_soc_umac_reset_ctx *umac_reset_ctx;
+	int msi_vector_count, ret;
+	uint32_t msi_base_data, msi_vector_start;
+	struct dp_htt_umac_reset_setup_cmd_params params;
+
+	umac_reset_ctx = &soc->umac_reset_ctx;
+	ret = pld_get_user_msi_assignment(soc->osdev->dev, "DP",
+					  &msi_vector_count, &msi_base_data,
+					  &msi_vector_start);
+	if (ret)
+		return QDF_STATUS_E_FAILURE;
+
+	qdf_mem_zero(&params, sizeof(params));
+	params.msi_data = (umac_reset_ctx->intr_offset % msi_vector_count) +
+				msi_base_data;
+	params.shmem_addr_low =
+		qdf_get_lower_32_bits(umac_reset_ctx->shmem_paddr_aligned);
+	params.shmem_addr_high =
+		qdf_get_upper_32_bits(umac_reset_ctx->shmem_paddr_aligned);
+
+	return dp_htt_umac_reset_send_setup_cmd(soc, &params);
 }
 
 QDF_STATUS dp_soc_umac_reset_init(struct dp_soc *soc)
@@ -88,7 +121,8 @@ QDF_STATUS dp_soc_umac_reset_init(struct dp_soc *soc)
 		(uint64_t)umac_reset_ctx->shmem_paddr_unaligned,
 		DP_UMAC_RESET_SHMEM_ALIGN);
 
-	return QDF_STATUS_SUCCESS;
+	/* Send the setup cmd to the target */
+	return dp_umac_reset_send_setup_cmd(soc);
 }
 
 /**
