@@ -1556,6 +1556,9 @@ void dp_update_vdev_stats_on_peer_unmap(struct dp_vdev *vdev,
 		for (i = 0; i <  CDP_MAX_RX_RINGS; i++)	\
 			DP_STATS_AGGR_PKT(_tgtobj, _srcobj, rx.rcvd_reo[i]); \
 									\
+		for (i = 0; i <  CDP_MAX_LMACS; i++) \
+			DP_STATS_AGGR_PKT(_tgtobj, _srcobj, rx.rx_lmac[i]); \
+									\
 		_srcobj->stats.rx.unicast.num = \
 			_srcobj->stats.rx.to_stack.num - \
 					_srcobj->stats.rx.multicast.num; \
@@ -1739,6 +1742,12 @@ void dp_update_vdev_stats_on_peer_unmap(struct dp_vdev *vdev,
 					 _srcobj->rx.rcvd_reo[i].num; \
 			_tgtobj->rx.rcvd_reo[i].bytes += \
 					_srcobj->rx.rcvd_reo[i].bytes; \
+		} \
+		for (i = 0; i < CDP_MAX_LMACS; i++) { \
+			_tgtobj->rx.rx_lmac[i].num += \
+					_srcobj->rx.rx_lmac[i].num; \
+			_tgtobj->rx.rx_lmac[i].bytes += \
+					_srcobj->rx.rx_lmac[i].bytes; \
 		} \
 		DP_UPDATE_PROTOCOL_COUNT_STATS(_tgtobj, _srcobj); \
 	} while (0)

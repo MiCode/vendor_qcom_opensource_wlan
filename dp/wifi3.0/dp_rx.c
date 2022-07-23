@@ -2246,6 +2246,26 @@ void dp_rx_msdu_extd_stats_update(struct dp_soc *soc, qdf_nbuf_t nbuf,
 }
 #endif
 
+#if defined(DP_PKT_STATS_PER_LMAC) && defined(WLAN_FEATURE_11BE_MLO)
+static inline void
+dp_peer_update_rx_pkt_per_lmac(struct dp_txrx_peer *txrx_peer,
+			       qdf_nbuf_t nbuf)
+{
+	uint8_t lmac_id = qdf_nbuf_get_lmac_id(nbuf);
+
+	/* only count stats per lmac for MLO connection*/
+	DP_PEER_PER_PKT_STATS_INCC_PKT(txrx_peer, rx.rx_lmac[lmac_id], 1,
+				       QDF_NBUF_CB_RX_PKT_LEN(nbuf),
+				       txrx_peer->mld_peer);
+}
+#else
+static inline void
+dp_peer_update_rx_pkt_per_lmac(struct dp_txrx_peer *txrx_peer,
+			       qdf_nbuf_t nbuf)
+{
+}
+#endif
+
 /**
  * dp_rx_msdu_stats_update() - update per msdu stats.
  * @soc: core txrx main context
@@ -2280,6 +2300,7 @@ void dp_rx_msdu_stats_update(struct dp_soc *soc, qdf_nbuf_t nbuf,
 	DP_PEER_PER_PKT_STATS_INCC(txrx_peer, rx.amsdu_cnt, 1, !is_not_amsdu);
 	DP_PEER_PER_PKT_STATS_INCC(txrx_peer, rx.rx_retries, 1,
 				   qdf_nbuf_is_rx_retry_flag(nbuf));
+	dp_peer_update_rx_pkt_per_lmac(txrx_peer, nbuf);
 	tid_stats->msdu_cnt++;
 	if (qdf_unlikely(qdf_nbuf_is_da_mcbc(nbuf) &&
 			 (vdev->rx_decap_type == htt_cmn_pkt_type_ethernet))) {

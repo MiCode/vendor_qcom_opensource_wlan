@@ -136,6 +136,7 @@ typedef union {
  * @rx.dev.priv_cb_m.ipa_smmu_map: do IPA smmu map
  * @rx.dev.priv_cb_m.reo_dest_ind_or_sw_excpt: reo destination indication or
 					     sw execption bit from ring desc
+ * @rx.dev.priv_cb_m.lmac_id: lmac id for RX packet
  * @rx.dev.priv_cb_m.tcp_seq_num: TCP sequence number
  * @rx.dev.priv_cb_m.tcp_ack_num: TCP ACK number
  * @rx.dev.priv_cb_m.lro_ctx: LRO context
@@ -259,7 +260,7 @@ struct qdf_nbuf_cb {
 						 exc_frm:1,
 						 ipa_smmu_map:1,
 						 reo_dest_ind_or_sw_excpt:5,
-						 reserved:2,
+						 lmac_id:2,
 						 reserved1:16;
 					uint32_t tcp_seq_num;
 					uint32_t tcp_ack_num;

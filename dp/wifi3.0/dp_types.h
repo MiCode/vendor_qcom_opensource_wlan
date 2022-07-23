@@ -3732,6 +3732,7 @@ struct dp_peer_extd_tx_stats {
 /**
  * struct dp_peer_per_pkt_rx_stats - Peer Rx stats updated in per pkt Rx path
  * @rcvd_reo[CDP_MAX_RX_RINGS]: Packets received on the reo ring
+ * @rx_lmac[CDP_MAX_LMACS]: Packets received on each lmac
  * @unicast: Total unicast packets
  * @multicast: Total multicast packets
  * @bcast:  Broadcast Packet Count
@@ -3760,6 +3761,7 @@ struct dp_peer_extd_tx_stats {
  */
 struct dp_peer_per_pkt_rx_stats {
 	struct cdp_pkt_info rcvd_reo[CDP_MAX_RX_RINGS];
+	struct cdp_pkt_info rx_lmac[CDP_MAX_LMACS];
 	struct cdp_pkt_info unicast;
 	struct cdp_pkt_info multicast;
 	struct cdp_pkt_info bcast;

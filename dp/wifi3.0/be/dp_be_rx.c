@@ -129,6 +129,22 @@ dp_rx_wds_learn(struct dp_soc *soc,
 }
 #endif
 
+#if defined(DP_PKT_STATS_PER_LMAC) && defined(WLAN_FEATURE_11BE_MLO)
+static inline void
+dp_rx_set_msdu_lmac_id(qdf_nbuf_t nbuf, uint32_t peer_mdata)
+{
+	uint8_t lmac_id;
+
+	lmac_id = dp_rx_peer_metadata_lmac_id_get_be(peer_mdata);
+	qdf_nbuf_set_lmac_id(nbuf, lmac_id);
+}
+#else
+static inline void
+dp_rx_set_msdu_lmac_id(qdf_nbuf_t nbuf, uint32_t peer_mdata)
+{
+}
+#endif
+
 /**
  * dp_rx_process_be() - Brain of the Rx processing functionality
  *		     Called from the bottom half (tasklet/NET_RX_SOFTIRQ)
@@ -390,6 +406,7 @@ more_data:
 			dp_rx_peer_metadata_peer_id_get_be(soc, peer_mdata);
 		QDF_NBUF_CB_RX_VDEV_ID(rx_desc->nbuf) =
 			dp_rx_peer_metadata_vdev_id_get_be(soc, peer_mdata);
+		dp_rx_set_msdu_lmac_id(rx_desc->nbuf, peer_mdata);
 
 		/* to indicate whether this msdu is rx offload */
 		pkt_capture_offload =

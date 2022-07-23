@@ -189,6 +189,12 @@ dp_rx_peer_metadata_vdev_id_get_be(struct dp_soc *soc, uint32_t peer_metadata)
 	return metadata->vdev_id;
 }
 
+static inline uint8_t
+dp_rx_peer_metadata_lmac_id_get_be(uint32_t peer_metadata)
+{
+	return HTT_RX_PEER_META_DATA_V1_LMAC_ID_GET(peer_metadata);
+}
+
 #ifdef WLAN_FEATURE_NEAR_FULL_IRQ
 /**
  * dp_rx_nf_process() - Near Full state handler for RX rings.
