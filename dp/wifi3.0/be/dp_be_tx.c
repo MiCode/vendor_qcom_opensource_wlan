@@ -549,6 +549,20 @@ void dp_sawf_config_be(struct dp_soc *soc, uint32_t *hal_tx_desc_cached,
 		       uint16_t *fw_metadata, qdf_nbuf_t nbuf)
 {
 }
+
+static inline
+QDF_STATUS dp_sawf_tx_enqueue_peer_stats(struct dp_soc *soc,
+					 struct dp_tx_desc_s *tx_desc)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static inline
+QDF_STATUS dp_sawf_tx_enqueue_fail_peer_stats(struct dp_soc *soc,
+					      struct dp_tx_desc_s *tx_desc)
+{
+	return QDF_STATUS_SUCCESS;
+}
 #endif
 
 QDF_STATUS
@@ -594,6 +608,7 @@ dp_tx_hw_enqueue_be(struct dp_soc *soc, struct dp_vdev *vdev,
 	if (dp_sawf_tag_valid_get(tx_desc->nbuf)) {
 		dp_sawf_config_be(soc, hal_tx_desc_cached,
 				  &fw_metadata, tx_desc->nbuf);
+		dp_sawf_tx_enqueue_peer_stats(soc, tx_desc);
 	}
 
 	hal_tx_desc_set_buf_addr_be(soc->hal_soc, hal_tx_desc_cached,
@@ -644,6 +659,7 @@ dp_tx_hw_enqueue_be(struct dp_soc *soc, struct dp_vdev *vdev,
 		dp_err("HAL RING Access Failed -- %pK", hal_ring_hdl);
 		DP_STATS_INC(soc, tx.tcl_ring_full[ring_id], 1);
 		DP_STATS_INC(vdev, tx_i.dropped.enqueue_fail, 1);
+		dp_sawf_tx_enqueue_fail_peer_stats(soc, tx_desc);
 		return status;
 	}
 
@@ -652,6 +668,7 @@ dp_tx_hw_enqueue_be(struct dp_soc *soc, struct dp_vdev *vdev,
 		dp_verbose_debug("TCL ring full ring_id:%d", ring_id);
 		DP_STATS_INC(soc, tx.tcl_ring_full[ring_id], 1);
 		DP_STATS_INC(vdev, tx_i.dropped.enqueue_fail, 1);
+		dp_sawf_tx_enqueue_fail_peer_stats(soc, tx_desc);
 		goto ring_access_fail;
 	}
 
@@ -942,3 +959,81 @@ uint32_t dp_tx_comp_nf_handler(struct dp_intr *int_ctx, struct dp_soc *soc,
 	return work_done;
 }
 #endif
+
+#if defined(WLAN_FEATURE_11BE_MLO) && defined(WLAN_MLO_MULTI_CHIP) && \
+	defined(CONFIG_SAWF)
+#define PPDUID_GET_HW_LINK_ID(PPDU_ID, LINK_ID_OFFSET, LINK_ID_BITS) \
+	(((PPDU_ID) >> (LINK_ID_OFFSET)) & ((1 << (LINK_ID_BITS)) - 1))
+
+#define HW_TX_DELAY_MAX                       0x1000000
+#define TX_COMPL_SHIFT_BUFFER_TIMESTAMP_US    10
+#define HW_TX_DELAY_MASK                      0x1FFFFFFF
+#define TX_COMPL_BUFFER_TSTAMP_US(TSTAMP) \
+	(((TSTAMP) << TX_COMPL_SHIFT_BUFFER_TIMESTAMP_US) & \
+	 HW_TX_DELAY_MASK)
+
+static inline
+QDF_STATUS dp_mlo_compute_hw_delay_us(struct dp_soc *soc,
+				      struct dp_vdev *vdev,
+				      struct hal_tx_completion_status *ts,
+				      uint32_t *delay_us)
+{
+	uint32_t ppdu_id;
+	uint8_t link_id_offset, link_id_bits;
+	uint8_t hw_link_id;
+	uint32_t msdu_tqm_enqueue_tstamp_us, final_msdu_tqm_enqueue_tstamp_us;
+	uint32_t msdu_compl_tsf_tstamp_us, final_msdu_compl_tsf_tstamp_us;
+	uint32_t delay;
+	int32_t delta_tsf2, delta_tqm;
+
+	if (!ts->valid)
+		return QDF_STATUS_E_INVAL;
+
+	link_id_offset = soc->link_id_offset;
+	link_id_bits = soc->link_id_bits;
+	ppdu_id = ts->ppdu_id;
+	hw_link_id = PPDUID_GET_HW_LINK_ID(ppdu_id, link_id_offset,
+					   link_id_bits);
+
+	msdu_tqm_enqueue_tstamp_us =
+		TX_COMPL_BUFFER_TSTAMP_US(ts->buffer_timestamp);
+	msdu_compl_tsf_tstamp_us = ts->tsf;
+
+	delta_tsf2 = dp_mlo_get_delta_tsf2_wrt_mlo_offset(soc, hw_link_id);
+	delta_tqm = dp_mlo_get_delta_tqm_wrt_mlo_offset(soc);
+
+	final_msdu_tqm_enqueue_tstamp_us = (msdu_tqm_enqueue_tstamp_us +
+			delta_tqm) & HW_TX_DELAY_MASK;
+
+	final_msdu_compl_tsf_tstamp_us = (msdu_compl_tsf_tstamp_us +
+			delta_tsf2) & HW_TX_DELAY_MASK;
+
+	delay = (final_msdu_compl_tsf_tstamp_us -
+		final_msdu_tqm_enqueue_tstamp_us) & HW_TX_DELAY_MASK;
+
+	if (delay > HW_TX_DELAY_MAX)
+		return QDF_STATUS_E_FAILURE;
+
+	if (delay_us)
+		*delay_us = delay;
+
+	return QDF_STATUS_SUCCESS;
+}
+#else
+static inline
+QDF_STATUS dp_mlo_compute_hw_delay_us(struct dp_soc *soc,
+				      struct dp_vdev *vdev,
+				      struct hal_tx_completion_status *ts,
+				      uint32_t *delay_us)
+{
+	return QDF_STATUS_SUCCESS;
+}
+#endif
+
+QDF_STATUS dp_tx_compute_tx_delay_be(struct dp_soc *soc,
+				     struct dp_vdev *vdev,
+				     struct hal_tx_completion_status *ts,
+				     uint32_t *delay_us)
+{
+	return dp_mlo_compute_hw_delay_us(soc, vdev, ts, delay_us);
+}

@@ -2119,6 +2119,18 @@ wmi_extract_frame_pn_params(wmi_unified_t wmi_handle, void *evt_buf,
 }
 
 QDF_STATUS
+wmi_extract_is_conn_ap_frame(wmi_unified_t wmi_handle, void *evt_buf,
+			     struct frm_conn_ap *is_conn_ap_frm)
+{
+	if (wmi_handle->ops->extract_is_conn_ap_frame)
+		return wmi_handle->ops->extract_is_conn_ap_frame(wmi_handle,
+							evt_buf,
+							is_conn_ap_frm);
+
+	return QDF_STATUS_E_FAILURE;
+}
+
+QDF_STATUS
 wmi_extract_vdev_roam_param(wmi_unified_t wmi_handle, void *evt_buf,
 			    wmi_host_roam_event *param)
 {
@@ -3457,6 +3469,25 @@ wmi_extract_pasn_peer_delete_req(wmi_unified_t wmi, void *evt_buf,
 		return wmi->ops->extract_pasn_peer_delete_req_event(wmi,
 								    evt_buf,
 								    dst);
+
+	return QDF_STATUS_E_FAILURE;
+}
+
+QDF_STATUS
+wmi_send_rtt_pasn_auth_status_cmd(wmi_unified_t wmi,
+				  struct wlan_pasn_auth_status *data)
+{
+	if (wmi->ops->send_rtt_pasn_auth_status_cmd)
+		return wmi->ops->send_rtt_pasn_auth_status_cmd(wmi, data);
+
+	return QDF_STATUS_E_FAILURE;
+}
+
+QDF_STATUS
+wmi_send_rtt_pasn_deauth_cmd(wmi_unified_t wmi, struct qdf_mac_addr *peer_mac)
+{
+	if (wmi->ops->send_rtt_pasn_deauth_cmd)
+		return wmi->ops->send_rtt_pasn_deauth_cmd(wmi, peer_mac);
 
 	return QDF_STATUS_E_FAILURE;
 }

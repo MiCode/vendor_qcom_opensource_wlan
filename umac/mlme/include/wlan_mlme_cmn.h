@@ -356,6 +356,9 @@ struct mlme_ext_ops {
 						struct qdf_mac_addr mld_addr,
 						struct wlan_objmgr_vdev *vdev);
 #endif
+	QDF_STATUS (*mlme_ext_get_acs_inprogress)(
+						struct wlan_objmgr_vdev *vdev,
+						bool *is_acs_inprogress);
 };
 
 /**
@@ -747,6 +750,15 @@ QDF_STATUS mlme_cm_disconnect_complete_ind(struct wlan_objmgr_vdev *vdev,
  */
 QDF_STATUS mlme_cm_vdev_down_req(struct wlan_objmgr_vdev *vdev);
 
+/**
+ * mlme_ext_hdl_get_acs_in_progress() - Check if ACS is in progress
+ * @vdev: VDEV object
+ * @acs_in_progress: ACS in progress flag
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS mlme_ext_hdl_get_acs_in_progress(struct wlan_objmgr_vdev *vdev,
+					    bool *acs_in_progress);
 /**
  * mlme_cm_osif_connect_complete() - Connect complete resp to osif
  * @vdev: vdev pointer

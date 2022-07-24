@@ -896,7 +896,7 @@ wlan_dcs_awgn_get_intf_for_seg(struct wlan_host_dcs_awgn_info *awgn_info,
 static enum wlan_dcs_chan_seg wlan_dcs_get_max_seg_idx(enum phy_ch_width width)
 {
 	switch (width) {
-	case CH_WIDTH_160MHZ: /* fallthrough */
+	case CH_WIDTH_160MHZ:
 	case CH_WIDTH_80P80MHZ:
 		return WLAN_DCS_SEG_SEC80;
 	case CH_WIDTH_80MHZ:

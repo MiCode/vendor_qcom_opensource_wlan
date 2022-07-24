@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -106,5 +106,51 @@ static inline void cdp_mlo_setup_complete(ol_txrx_soc_handle soc,
 		return;
 
 	soc->ops->mlo_ops->mlo_setup_complete(mlo_ctx);
+}
+
+/*
+ * cdp_mlo_update_delta_tsf2 - Update delta_tsf2
+ * @soc: soc handle
+ * @pdev_id: pdev id
+ * @delta_tsf2: delta_tsf2
+ *
+ * return: none
+ */
+static inline void cdp_mlo_update_delta_tsf2(ol_txrx_soc_handle soc,
+					     uint8_t pdev_id,
+					     uint64_t delta_tsf2)
+{
+	if (!soc || !soc->ops) {
+		QDF_BUG(0);
+		return;
+	}
+
+	if (!soc->ops->mlo_ops ||
+	    !soc->ops->mlo_ops->mlo_update_delta_tsf2)
+		return;
+
+	soc->ops->mlo_ops->mlo_update_delta_tsf2(soc, pdev_id, delta_tsf2);
+}
+
+/*
+ * cdp_mlo_update_delta_tqm - Update delta_tqm
+ * @soc: soc handle
+ * @delta_tqm: delta_tqm
+ *
+ * return: none
+ */
+static inline void cdp_mlo_update_delta_tqm(ol_txrx_soc_handle soc,
+					    uint64_t delta_tqm)
+{
+	if (!soc || !soc->ops) {
+		QDF_BUG(0);
+		return;
+	}
+
+	if (!soc->ops->mlo_ops ||
+	    !soc->ops->mlo_ops->mlo_update_delta_tqm)
+		return;
+
+	soc->ops->mlo_ops->mlo_update_delta_tqm(soc, delta_tqm);
 }
 #endif /*_CDP_TXRX_MLO_H_*/

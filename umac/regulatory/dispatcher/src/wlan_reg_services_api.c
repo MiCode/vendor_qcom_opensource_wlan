@@ -1877,3 +1877,14 @@ wlan_reg_get_chan_state_for_320(struct wlan_objmgr_pdev *pdev,
 					  treat_nol_chan_as_disabled);
 }
 #endif
+
+#ifdef CONFIG_BAND_6GHZ
+bool wlan_is_sup_chan_entry_afc_done(struct wlan_objmgr_pdev *pdev,
+				     enum channel_enum chan_idx,
+				     enum supported_6g_pwr_types in_6g_pwr_mode)
+{
+	return reg_is_sup_chan_entry_afc_done(pdev, chan_idx, in_6g_pwr_mode);
+}
+
+qdf_export_symbol(wlan_is_sup_chan_entry_afc_done);
+#endif

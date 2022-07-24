@@ -104,8 +104,12 @@ static inline void wlan_crypto_put_be64(u8 *a, u64 val)
 	((tx_ops)->crypto_tx_ops.defaultkey)
 #define WLAN_CRYPTO_TX_OPS_SET_KEY(tx_ops) \
 	((tx_ops)->crypto_tx_ops.set_key)
+#define WLAN_CRYPTO_TX_OPS_SET_VDEV_PARAM(tx_ops) \
+	((tx_ops)->crypto_tx_ops.set_vdev_param)
 #define WLAN_CRYPTO_TX_OPS_GETPN(tx_ops) \
 	((tx_ops)->crypto_tx_ops.getpn)
+#define WLAN_CRYPTO_TX_OPS_SET_LTF_KEYSEED(tx_ops) \
+	((tx_ops)->crypto_tx_ops.set_ltf_keyseed)
 #define WLAN_CRYPTO_TX_OPS_REGISTER_EVENTS(tx_ops) \
 	((tx_ops)->crypto_tx_ops.register_events)
 #define WLAN_CRYPTO_TX_OPS_DEREGISTER_EVENTS(tx_ops) \

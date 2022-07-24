@@ -23,7 +23,6 @@
 #include "hal_be_api_mon.h"
 #include "dp_internal.h"
 #include "qdf_mem.h"   /* qdf_mem_malloc,free */
-#include <qdf_flex_mem.h>
 #include "dp_mon.h"
 #include <dp_rx_mon.h>
 #include <dp_mon_2.0.h>
@@ -37,57 +36,6 @@
 #endif
 
 #define F_MASK 0xFFFF
-
-static struct hal_rx_ppdu_info*
-dp_mon_ppdu_info_alloc(struct dp_mon_pdev_be *mon_pdev_be)
-{
-	struct hal_rx_ppdu_info *ppdu_info = NULL;
-
-	ppdu_info = qdf_flex_mem_alloc(&mon_pdev_be->rx_ppdu_info_pool);
-	if (!ppdu_info) {
-		dp_mon_debug("out of memory");
-		return NULL;
-	}
-
-	return ppdu_info;
-}
-
-/**
- * dp_mon_free_ppdu_info() - Free PPDU info
- *
- * @pdev: DP pdev handle
- * @ppdu_info: PPDU info
- *
- * Return: void
- */
-static void dp_mon_free_ppdu_info(struct dp_mon_pdev *mon_pdev,
-				  struct hal_rx_ppdu_info *ppdu_info)
-{
-	struct dp_mon_pdev_be *mon_pdev_be =
-			dp_get_be_mon_pdev_from_dp_mon_pdev(mon_pdev);
-	qdf_flex_mem_free(&mon_pdev_be->rx_ppdu_info_pool, ppdu_info);
-	mon_pdev->rx_mon_stats.total_ppdu_info_free++;
-}
-
-void dp_rx_mon_ppdu_info_pool_init(struct dp_mon_pdev *mon_pdev)
-{
-	struct dp_mon_pdev_be *mon_pdev_be =
-			dp_get_be_mon_pdev_from_dp_mon_pdev(mon_pdev);
-
-	mon_pdev_be->rx_ppdu_info_pool_head.node =
-			(qdf_list_node_t)QDF_LIST_NODE_INIT_SINGLE(QDF_LIST_ANCHOR(mon_pdev_be->rx_ppdu_info_pool.seg_list));
-	mon_pdev_be->rx_ppdu_info_pool_head.bytes =
-			mon_pdev_be->rx_ppdu_info_pool_head_bytes;
-	mon_pdev_be->rx_ppdu_info_pool.seg_list = (qdf_list_t)QDF_LIST_INIT_SINGLE(mon_pdev_be->rx_ppdu_info_pool_head.node);
-	mon_pdev_be->rx_ppdu_info_pool.reduction_limit = DP_RXMON_PPDU_INFO_SEG_MAX;
-	mon_pdev_be->rx_ppdu_info_pool.item_size = sizeof(struct hal_rx_ppdu_info);
-	qdf_flex_mem_init(&mon_pdev_be->rx_ppdu_info_pool);
-}
-
-void dp_rx_mon_ppdu_info_pool_deinit(struct dp_mon_pdev_be *mon_pdev_be)
-{
-	qdf_flex_mem_deinit(&mon_pdev_be->rx_ppdu_info_pool);
-}
 
 #ifdef QCA_TEST_MON_PF_TAGS_STATS
 
@@ -271,7 +219,7 @@ dp_rx_mon_free_ppdu_info(struct dp_pdev *pdev,
 			 struct hal_rx_ppdu_info *ppdu_info)
 {
 	uint8_t user;
-	struct dp_mon_pdev *mon_pdev = pdev->monitor_pdev;
+	struct dp_mon_pdev *mon_pdev;
 
 	mon_pdev = (struct dp_mon_pdev *)pdev->monitor_pdev;
 	for (user = 0; user < ppdu_info->com_info.num_users; user++) {
@@ -287,7 +235,6 @@ dp_rx_mon_free_ppdu_info(struct dp_pdev *pdev,
 			dp_mon_free_parent_nbuf(mon_pdev, mpdu);
 		}
 	}
-	dp_mon_free_ppdu_info(mon_pdev, ppdu_info);
 }
 
 void dp_rx_mon_drain_wq(struct dp_pdev *pdev)
@@ -391,7 +338,7 @@ dp_rx_mon_process_ppdu_info(struct dp_pdev *pdev,
 				status = dp_lite_mon_rx_mpdu_process(pdev, ppdu_info,
 								     mpdu, mpdu_idx, user);
 				if (status != QDF_STATUS_SUCCESS) {
-					qdf_nbuf_free(mpdu);
+					dp_mon_free_parent_nbuf(mon_pdev, mpdu);
 					continue;
 				}
 			} else {
@@ -401,8 +348,12 @@ dp_rx_mon_process_ppdu_info(struct dp_pdev *pdev,
 						continue;
 					}
 
-					dp_rx_mon_handle_full_mon(pdev,
-								  ppdu_info, mpdu);
+					status = dp_rx_mon_handle_full_mon(pdev,
+									   ppdu_info, mpdu);
+					if (status != QDF_STATUS_SUCCESS) {
+						dp_mon_free_parent_nbuf(mon_pdev, mpdu);
+						continue;
+					}
 				} else {
 					dp_mon_free_parent_nbuf(mon_pdev, mpdu);
 					continue;
@@ -429,7 +380,6 @@ dp_rx_mon_process_ppdu_info(struct dp_pdev *pdev,
 			}
 		}
 	}
-	dp_mon_free_ppdu_info(mon_pdev, ppdu_info);
 }
 
 /**
@@ -472,6 +422,7 @@ void dp_rx_mon_process_ppdu(void *context)
 
 		mon_pdev_be->rx_mon_queue_depth--;
 		dp_rx_mon_process_ppdu_info(pdev, ppdu_info);
+		qdf_mem_free(ppdu_info);
 	}
 	qdf_spin_unlock_bh(&mon_pdev_be->rx_mon_wq_lock);
 }
@@ -486,10 +437,9 @@ void dp_rx_mon_process_ppdu(void *context)
  */
 
 static QDF_STATUS
-dp_rx_mon_add_ppdu_info_to_wq(struct dp_pdev *pdev,
+dp_rx_mon_add_ppdu_info_to_wq(struct dp_mon_pdev *mon_pdev,
 			      struct hal_rx_ppdu_info *ppdu_info)
 {
-	struct dp_mon_pdev *mon_pdev = pdev->monitor_pdev;
 	struct dp_mon_pdev_be *mon_pdev_be =
 		dp_get_be_mon_pdev_from_dp_mon_pdev(mon_pdev);
 
@@ -500,15 +450,9 @@ dp_rx_mon_add_ppdu_info_to_wq(struct dp_pdev *pdev,
 
 	if (qdf_likely(ppdu_info)) {
 		qdf_spin_lock_bh(&mon_pdev_be->rx_mon_wq_lock);
-		if (mon_pdev_be->rx_mon_queue_depth < DP_RX_MON_WQ_THRESHOLD) {
-			TAILQ_INSERT_TAIL(&mon_pdev_be->rx_mon_queue,
-					  ppdu_info, ppdu_list_elem);
-			mon_pdev_be->rx_mon_queue_depth++;
-			mon_pdev->rx_mon_stats.total_ppdu_info_enq++;
-		} else {
-			mon_pdev->rx_mon_stats.total_ppdu_info_drop++;
-			dp_rx_mon_free_ppdu_info(pdev, ppdu_info);
-		}
+		TAILQ_INSERT_TAIL(&mon_pdev_be->rx_mon_queue,
+				  ppdu_info, ppdu_list_elem);
+		mon_pdev_be->rx_mon_queue_depth++;
 		qdf_spin_unlock_bh(&mon_pdev_be->rx_mon_wq_lock);
 
 		if (mon_pdev_be->rx_mon_queue_depth > DP_MON_QUEUE_DEPTH_MAX) {
@@ -519,7 +463,7 @@ dp_rx_mon_add_ppdu_info_to_wq(struct dp_pdev *pdev,
 	return QDF_STATUS_SUCCESS;
 }
 
-void
+QDF_STATUS
 dp_rx_mon_handle_full_mon(struct dp_pdev *pdev,
 			  struct hal_rx_ppdu_info *ppdu_info,
 			  qdf_nbuf_t mpdu)
@@ -549,6 +493,11 @@ dp_rx_mon_handle_full_mon(struct dp_pdev *pdev,
 	 ---------------------------------------------------------------------------
 	 **************************************************************************/
 
+	if (!mpdu) {
+		dp_mon_debug("nbuf is NULL, return");
+		return QDF_STATUS_E_FAILURE;
+	}
+
 	head_msdu = mpdu;
 
 	mpdu_meta = (struct hal_rx_mon_mpdu_info *)qdf_nbuf_data(mpdu);
@@ -557,7 +506,13 @@ dp_rx_mon_handle_full_mon(struct dp_pdev *pdev,
 		qdf_nbuf_trim_add_frag_size(mpdu,
 					    qdf_nbuf_get_nr_frags(mpdu) - 1,
 					    -HAL_RX_FCS_LEN, 0);
-		return;
+		return QDF_STATUS_SUCCESS;
+	}
+
+	num_frags = qdf_nbuf_get_nr_frags(mpdu);
+	if (qdf_unlikely(num_frags < DP_MON_MIN_FRAGS_FOR_RESTITCH)) {
+		dp_mon_debug("not enough frags(%d) for restitch", num_frags);
+		return QDF_STATUS_E_FAILURE;
 	}
 
 	l2_hdr_offset = DP_RX_MON_NONRAW_L2_HDR_PAD_BYTE;
@@ -824,6 +779,8 @@ dp_rx_mon_handle_full_mon(struct dp_pdev *pdev,
 			msdu_cur = qdf_nbuf_queue_next(msdu_cur);
 		}
 	}
+
+	return QDF_STATUS_SUCCESS;
 }
 
 /**
@@ -978,6 +935,10 @@ uint8_t dp_rx_mon_process_tlv_status(struct dp_pdev *pdev,
 			}
 			ppdu_info->mpdu_info[ppdu_info->user_id].mpdu_start_received = true;
 			ppdu_info->mpdu_info[user_id].first_rx_hdr_rcvd = true;
+			/* initialize decap type to invalid, this will be set to appropriate
+			 * value once the mpdu start tlv is received
+			 */
+			ppdu_info->mpdu_info[user_id].decap_type = DP_MON_DECAP_FORMAT_INVALID;
 		} else {
 			if (ppdu_info->mpdu_info[user_id].decap_type ==
 					HAL_HW_RX_DECAP_FORMAT_RAW) {
@@ -1053,6 +1014,18 @@ uint8_t dp_rx_mon_process_tlv_status(struct dp_pdev *pdev,
 			/* WAR: RX_HDR is not received for this MPDU, drop this frame */
 			DP_STATS_INC(mon_soc, frag_free, 1);
 			qdf_frag_free(addr);
+			return num_buf_reaped;
+		}
+
+		if (mpdu_info->decap_type == DP_MON_DECAP_FORMAT_INVALID) {
+			/* decap type is invalid, drop the frame */
+			mon_pdev->rx_mon_stats.mpdu_decap_type_invalid++;
+			DP_STATS_INC(mon_soc, frag_free, 1);
+			mon_pdev->rx_mon_stats.parent_buf_free++;
+			qdf_frag_free(addr);
+			qdf_nbuf_free(nbuf);
+			/* we have freed the nbuf mark the q entry null */
+			ppdu_info->mpdu_q[user_id][mpdu_idx] = NULL;
 			return num_buf_reaped;
 		}
 
@@ -1132,6 +1105,8 @@ uint8_t dp_rx_mon_process_tlv_status(struct dp_pdev *pdev,
 		/* update msdu metadata at last buffer of msdu in MPDU */
 		nbuf = ppdu_info->mpdu_q[user_id][mpdu_idx];
 		if (!nbuf) {
+			/* reset msdu info for next msdu for same user */
+			qdf_mem_zero(msdu_info, sizeof(*msdu_info));
 			dp_mon_err(" <%d> nbuf is NULL, return user: %d mpdu_idx: %d", __LINE__, user_id, mpdu_idx);
 			break;
 		}
@@ -1157,7 +1132,7 @@ uint8_t dp_rx_mon_process_tlv_status(struct dp_pdev *pdev,
 		dp_rx_mon_pf_tag_to_buf_headroom_2_0(nbuf, ppdu_info, pdev,
 						     soc);
 		/* reset msdu info for next msdu for same user */
-		qdf_mem_zero(msdu_info, sizeof(msdu_info));
+		qdf_mem_zero(msdu_info, sizeof(*msdu_info));
 
 		/* If flow classification is enabled,
 		 * update cce_metadata and fse_metadata
@@ -1185,6 +1160,8 @@ uint8_t dp_rx_mon_process_tlv_status(struct dp_pdev *pdev,
 		mpdu_info = &ppdu_info->mpdu_info[user_id];
 		nbuf = ppdu_info->mpdu_q[user_id][mpdu_idx];
 		if (!nbuf) {
+			/* reset mpdu info for next mpdu for same user */
+			qdf_mem_zero(mpdu_info, sizeof(*mpdu_info));
 			dp_mon_err(" <%d> nbuf is NULL, return user: %d mpdu_idx: %d", __LINE__, user_id, mpdu_idx);
 			break;
 		}
@@ -1197,10 +1174,9 @@ uint8_t dp_rx_mon_process_tlv_status(struct dp_pdev *pdev,
 		mpdu_meta->full_pkt = mpdu_info->full_pkt;
 		mpdu_meta->truncated = mpdu_info->truncated;
 
-		num_frags = qdf_nbuf_get_nr_frags(nbuf);
 		ppdu_info->mpdu_q[user_id][mpdu_idx] = nbuf;
-		/* reset msdu info for next msdu for same user */
-		qdf_mem_zero(mpdu_info, sizeof(mpdu_info));
+		/* reset mpdu info for next mpdu for same user */
+		qdf_mem_zero(mpdu_info, sizeof(*mpdu_info));
 		ppdu_info->mpdu_info[ppdu_info->user_id].mpdu_start_received = false;
 		ppdu_info->mpdu_count[user_id]++;
 	}
@@ -1244,13 +1220,13 @@ dp_rx_mon_process_status_tlv(struct dp_pdev *pdev)
 		return NULL;
 	}
 
-	ppdu_info = dp_mon_ppdu_info_alloc(mon_pdev_be);
+	ppdu_info = qdf_mem_malloc(sizeof(*ppdu_info));
 
 	if (!ppdu_info) {
 		dp_mon_err("ppdu_info malloc failed pdev: %pK", pdev);
 		return NULL;
 	}
-	mon_pdev->rx_mon_stats.total_ppdu_info_alloc++;
+
 	status_buf_count = mon_pdev_be->desc_count;
 	for (idx = 0; idx < status_buf_count; idx++) {
 		mon_desc = mon_pdev_be->status[idx];
@@ -1495,11 +1471,11 @@ dp_rx_mon_srng_process_2_0(struct dp_soc *soc, struct dp_intr *int_ctx,
 			dp_rx_handle_cfr(soc, pdev, ppdu_info);
 
 		/* Call API to add PPDU info workqueue */
-		status = dp_rx_mon_add_ppdu_info_to_wq(pdev, ppdu_info);
+		status = dp_rx_mon_add_ppdu_info_to_wq(mon_pdev, ppdu_info);
 
 		if (status != QDF_STATUS_SUCCESS) {
 			if (ppdu_info)
-				dp_mon_free_ppdu_info(mon_pdev, ppdu_info);
+				qdf_mem_free(ppdu_info);
 		}
 
 		work_done++;
@@ -1717,63 +1693,3 @@ dp_rx_mon_populate_ppdu_info_2_0(struct hal_rx_ppdu_info *hal_ppdu_info,
 }
 #endif
 #endif
-#ifdef QCA_RSSI_DB2DBM
-void
-dp_mon_rx_stats_update_rssi_dbm_params_2_0(struct dp_soc *soc,
-					   struct dp_mon_pdev *mon_pdev)
-{
-	struct dp_mon_pdev_be *mon_pdev_be =
-				dp_get_be_mon_pdev_from_dp_mon_pdev(mon_pdev);
-	mon_pdev->ppdu_info.rx_status.rssi_temp_offset =
-		mon_pdev_be->rssi_temp_offset;
-	mon_pdev->ppdu_info.rx_status.xlna_bypass_offset =
-		mon_pdev_be->xlna_bypass_offset;
-	mon_pdev->ppdu_info.rx_status.xlna_bypass_threshold =
-		mon_pdev_be->xlna_bypass_threshold;
-	mon_pdev->ppdu_info.rx_status.min_nf_dbm =
-		mon_pdev_be->min_nf_dbm;
-	mon_pdev->ppdu_info.rx_status.xbar_config =
-		mon_pdev_be->xbar_config;
-	mon_pdev->ppdu_info.rx_status.rssi_dbm_conv_support =
-		soc->features.rssi_dbm_conv_support;
-}
-#endif
-
-void dp_mon_rx_print_advanced_stats_2_0(struct dp_soc *soc,
-					struct dp_pdev *pdev)
-{
-	struct cdp_pdev_mon_stats *rx_mon_stats;
-	struct dp_mon_pdev *mon_pdev = pdev->monitor_pdev;
-	struct dp_mon_soc *mon_soc = pdev->soc->monitor_soc;
-	struct dp_mon_pdev_be *mon_pdev_be =
-				dp_get_be_mon_pdev_from_dp_mon_pdev(mon_pdev);
-
-	rx_mon_stats = &mon_pdev->rx_mon_stats;
-
-	DP_PRINT_STATS("total_ppdu_info_alloc = %d",
-		       rx_mon_stats->total_ppdu_info_alloc);
-	DP_PRINT_STATS("total_ppdu_info_free = %d",
-		       rx_mon_stats->total_ppdu_info_free);
-	DP_PRINT_STATS("total_ppdu_info_enq = %d",
-		       rx_mon_stats->total_ppdu_info_enq);
-	DP_PRINT_STATS("total_ppdu_info_drop = %d",
-		       rx_mon_stats->total_ppdu_info_drop);
-	DP_PRINT_STATS("rx_hdr_not_received = %d",
-		       rx_mon_stats->rx_hdr_not_received);
-	DP_PRINT_STATS("parent_buf_alloc = %d",
-		       rx_mon_stats->parent_buf_alloc);
-	DP_PRINT_STATS("parent_buf_free = %d",
-		       rx_mon_stats->parent_buf_free);
-	DP_PRINT_STATS("mpdus_buf_to_stack = %d",
-		       rx_mon_stats->mpdus_buf_to_stack);
-	DP_PRINT_STATS("frag_alloc = %d",
-		       mon_soc->stats.frag_alloc);
-	DP_PRINT_STATS("frag_free = %d",
-		       mon_soc->stats.frag_free);
-	DP_PRINT_STATS("status_buf_count = %d",
-		       rx_mon_stats->status_buf_count);
-	DP_PRINT_STATS("pkt_buf_count = %d",
-		       rx_mon_stats->pkt_buf_count);
-	DP_PRINT_STATS("rx_mon_queue_depth= %d",
-		       mon_pdev_be->rx_mon_queue_depth);
-}

@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2014-2019,2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -931,6 +932,271 @@ typedef enum {
 	 */
 
 	EVENT_WLAN_AUTH_INFO = 0xC92,
+
+	/*
+	 * <diag_event>
+	 * EVENT_WLAN_CONN
+	 * @diag_cmn: Common diag info
+	 * @version: Structure Version
+	 * @ssid_len: Length of SSID
+	 * @auth_algo: Authentication algorithm number field as defined in
+	 * IEEE 802.11 - 2020 standard section 9.4.1.1
+	 * @bt_coex: Is there active bluetooth connection
+	 * @ssid: SSID
+	 * @bssid_hint: BSSID hint provided in the connect request
+	 * @reason: failure reason. Refer enum wlan_cm_connect_fail_reason
+	 * @akm: Auth key management suite defined in IEEE Std 802.11‐2020
+	 * Table 9-151—AKM suite selectors.
+	 * @subtype: Event subtype defined in enum qca_conn_diag_log_event_type.
+	 * @freq: Frequency in MHz
+	 * @freq_hint: Frequency Hint in MHz
+	 * @pairwise_cipher: Pairwise suite value as defined in IEEE 802.11 2020
+	 * Table 12-10—Integrity and key wrap algorithms.
+	 * @grp_cipher: Group cipher suite value as defined in
+	 * Table 12-10—Integrity and key wrap algorithm in IEEE 802.11 2020.
+	 * grp_mgmt: Group manangement cipher suite as defined in
+	 * Table 12-10—Integrity and key wrap algorithms in IEEE 802.11 2020.
+	 *
+	 * This event is used to send connection parameters for
+	 * connecting/connecting fail events
+	 *
+	 * Supported Feature: STA
+	 *
+	 * </diag_event>
+	 */
+
+	EVENT_WLAN_CONN = 0xD17,
+
+	/*
+	 * <diag_event>
+	 * EVENT_WLAN_MGMT
+	 * @diag_cmn: Common diag info
+	 * @version: Structure Version
+	 * @auth_algo: authentication algorithm number defined in
+	 * IEEE Std 802.11‐2020
+	 * @auth_frame_type: Authentication frame sub-type for SAE
+	 * authentication
+	 * defined in Section 9.4.1.1 Authentication Algorithm Number field in
+	 * IEEE Std 802.11‐2020.
+	 * @auth_seq_num: Authentication frame transaction sequence number
+	 * @status: Frame status code as defined in IEEE Std
+	 * 802.11‐2020 Table 9-50—Status codes.
+	 * @tx_status: Frame TX status defined by enum qdf_dp_tx_rx_status
+	 * @reason: reason code defined in Table 9-49 Reason codes field’
+	 * from the IEEE 802.11 standard document.
+	 * @eap_len: EAP data length
+	 * @eap_type: EAP type. Values defined by IANA at:
+	 * https://www.iana.org/assignments/eap-numbers
+	 * @is_retry_frame: Retry frame indicator
+	 * @subtype: Diag event defined in  enum qca_conn_diag_log_event_type
+	 * @assoc_id: Association ID
+	 * @sn: Frame sequence number
+	 * @rssi: Peer RSSI in dBm
+	 *
+	 * This event is used to send management frame info for
+	 * Management events such as Auth Req/Resp, Assoc Req/Resp,
+	 * Reassoc Req/Resp, Disassoc Req/Resp, Deauth TX/RX and Disconnection.
+	 *
+	 * Supported Feature: STA
+	 *
+	 * </diag_event>
+	 */
+
+	EVENT_WLAN_MGMT = 0xD1B,
+
+	/*
+	 * <diag_event>
+	 * EVENT_WLAN_ROAM_SCAN_START
+	 * @diag_cmn: Common diag info
+	 * @version: Structure Version
+	 * @is_full_scan: True if the scan is Full scan.
+	 * False if the roam scan is partial channel map scan
+	 * @cu:  Current connected channel load in percentage
+	 * @trigger_reason: Roam trigger reason defined by
+	 * enum roam_trigger_reason
+	 * @trigger_sub_reason: Roam scan trigger sub reason indicating if
+	 * periodic/inactivity scan timer initiated roam. Defined by enum
+	 * roam_trigger_sub_reason
+	 * @rssi: Connected AP RSSI in dBm
+	 * @rssi_thresh: Roam scan trigger threshold in dBm
+	 *
+	 * This event is used to send Roam Scan Start event related info.
+	 *
+	 * Supported Feature: STA
+	 *
+	 * </diag_event>
+	 */
+
+	EVENT_WLAN_ROAM_SCAN_START = 0xD1C,
+
+	/*
+	 * <diag_event>
+	 * EVENT_WLAN_ROAM_SCAN_DONE
+	 * @diag_cmn: Common diag info
+	 * @version: Structure Version
+	 * @cand_ap_count: Roam candidate AP count
+	 * @btcoex_active: Is there active bluetooth connection
+	 * @num_scanned_freq: Number of scanned frequencies
+	 * @scan_freq: Array of scanned frequencies value in MHz
+	 *
+	 * This event is used to send Roam Scan Done event info.
+	 *
+	 * Supported Feature: STA
+	 *
+	 * </diag_event>
+	 */
+
+	EVENT_WLAN_ROAM_SCAN_DONE = 0xD1D,
+
+	/*
+	 * <diag_event>
+	 * EVENT_WLAN_ROAM_CAND_INFO
+	 * @diag_cmn: Common diag info
+	 * @version: Structure Version
+	 * @is_current_ap: Is the entry candidate AP or connected AP
+	 * @idx: Entry index
+	 * @cu_load: Channel utilization load of the AP in percentage
+	 * @subtype: diag event subtype defined in
+	 * enum qca_conn_diag_log_event_type
+	 * @total_score: Total candidate AP score
+	 * @freq: Candidate AP channel frequency in MHz
+	 * @rssi: Candidate AP RSSI in dBm
+	 * @etp: Estimated throughput value of the AP in Kbps
+	 *
+	 * This event is used to send Roam candidate info
+	 *
+	 * Supported Feature: STA
+	 *
+	 * </diag_event>
+	 */
+
+	EVENT_WLAN_ROAM_CAND_INFO = 0xD1E,
+
+	/*
+	 * <diag_event>
+	 * EVENT_WLAN_ROAM_RESULT
+	 * @diag_cmn: Common diag info
+	 * @version: Structure Version
+	 * @is_roam_successful: True if roamed successfully or
+	 * false if roaming failed
+	 * @roam_fail_reason: Roam failure reason code defined in enum
+	 * wlan_roam_failure_reason_code
+	 *
+	 * This event is used to send Roam result info
+	 *
+	 * Supported Feature: STA
+	 *
+	 * </diag_event>
+	 */
+
+	EVENT_WLAN_ROAM_RESULT = 0xD1F,
+
+	/*
+	 * <diag_event>
+	 * EVENT_WLAN_ROAM_CANCEL
+	 * @diag_cmn: Common diag info
+	 * @version: Structure Version
+	 * @is_roam_successful: True if roamed successfully or
+	 * false if roaming failed
+	 * @roam_fail_reason: Roam failure reason code defined in enum
+	 * wlan_roam_failure_reason_code
+	 *
+	 * This event is used to send Roam cancel related info
+	 *
+	 * Supported Feature: STA
+	 *
+	 * </diag_event>
+	 */
+
+	EVENT_WLAN_ROAM_CANCEL = 0xD20,
+
+	/*
+	 * <diag_event>
+	 * EVENT_WLAN_BTM
+	 * @diag_cmn: Common diag info
+	 * @version: Structure Version
+	 * @reason: Query Reason field. Contains one of the values
+	 * defined in IEEE
+	 * Std 802.11‐2020 Table 9-198—Transition and Transition
+	 * Query reasons
+	 * @mode: BTM Request Mode field
+	 * @sub_reason: WTC sub reason code field in the BTM WTC vendor
+	 * specific IE
+	 * @cand_lst_cnt: Candidates list in the BTM frame
+	 * @status: BSS Transition management status codes defined in
+	 * 802.11‐2020 Table 9-428—BTM status code definitions
+	 * @delay: BSS Termination Delay field
+	 * @is_disassoc_imminent: Disassociation imminent bit
+	 * @token: dialog token. Dialog Token is a nonzero value chosen by
+	 * the STA
+	 * @wtc_duration: WTC duration field in minutes
+	 * while sending the BTM frame to identify the query/request/response
+	 * transaction
+	 * @subtype: Event Subtype
+	 * @validity_timer: Validity interval in TBTT
+	 * @disassoc_timer: Time after which the AP disassociates the STA,
+	 * defined in TBTT.
+	 *
+	 * This event is used to send BTM info
+	 *
+	 * Supported Feature: STA
+	 *
+	 * </diag_event>
+	 */
+
+	EVENT_WLAN_BTM = 0xD21,
+
+	/*
+	 * <diag_event>
+	 * EVENT_WLAN_BTM_CAND
+	 * @diag_cmn: Common diag info
+	 * @version: Structure Version
+	 * @idx: Candidate index
+	 * @preference: Candidate preference
+	 *
+	 * This event is used to send BTM Candidate info
+	 *
+	 * Supported Feature: STA
+	 *
+	 * </diag_event>
+	 */
+
+	EVENT_WLAN_BTM_CAND = 0xD22,
+
+	/*
+	 * <diag_event>
+	 * EVENT_WLAN_CONN_DP
+	 * @diag_cmn: Common diag info
+	 * @version: Structure Version
+	 * @auth_algo: authentication algorithm number defined in
+	 * IEEE Std 802.11‐2020
+	 * @auth_frame_type: Authentication frame sub-type for SAE
+	 * authentication defined in Section 9.4.1.1 Authentication
+	 * Algorithm Number field in IEEE Std 802.11‐2020.
+	 * @auth_seq_num: Authentication frame transaction sequence number
+	 * @status: Frame status code as defined in IEEE Std
+	 * 802.11‐2020 Table 9-50—Status codes.
+	 * @tx_status: Frame TX status defined by enum qdf_dp_tx_rx_status
+	 * @reason: reason code defined in Table 9-49 Reason codes field’
+	 * from the IEEE 802.11 standard document.
+	 * @eap_len: EAP data length
+	 * @eap_type: EAP type. Values defined by IANA at:
+	 * https://www.iana.org/assignments/eap-numbers
+	 * @is_retry_frame: Retry frame indicator
+	 * @subtype: Diag event defined in  enum qca_conn_diag_log_event_type
+	 * @assoc_id: Association ID
+	 * @sn: Frame sequence number
+	 * @rssi: Peer RSSI in dBm
+	 *
+	 * This event is used to send Datapath related info such as DHCP
+	 * handshake and EAPOL.
+	 *
+	 * Supported Feature: STA
+	 *
+	 * </diag_event>
+	 */
+
+	EVENT_WLAN_CONN_DP = 0xD23,
 
 	EVENT_MAX_ID = 0x0FFF
 } event_id_enum_type;

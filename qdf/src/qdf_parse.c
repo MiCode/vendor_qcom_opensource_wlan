@@ -54,7 +54,7 @@ static QDF_STATUS qdf_ini_read_values(char **main_cursor,
 			case '\n':
 				*cursor = '\0';
 				cursor++;
-				/* fall through */
+				fallthrough;
 			case '\0':
 				eol = true;
 				break;
@@ -79,7 +79,7 @@ static QDF_STATUS qdf_ini_read_values(char **main_cursor,
 				 */
 				comment = true;
 				*cursor = '\0';
-				/* fall through */
+				fallthrough;
 			default:
 				cursor++;
 				break;

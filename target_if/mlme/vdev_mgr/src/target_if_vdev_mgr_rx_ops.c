@@ -526,6 +526,8 @@ static int target_if_vdev_mgr_peer_delete_all_response_handler(
 		goto err;
 	}
 
+	vdev_peer_del_all_resp.peer_type_bitmap = vdev_rsp->peer_type_bitmap;
+
 	status = rx_ops->vdev_mgr_peer_delete_all_response(
 						psoc,
 						&vdev_peer_del_all_resp);

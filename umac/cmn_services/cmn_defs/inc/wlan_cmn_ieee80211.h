@@ -343,6 +343,9 @@
 #define WLAN_HE_6GHZ_CHWIDTH_80           2 /* 80MHz Oper Ch width */
 #define WLAN_HE_6GHZ_CHWIDTH_160_80_80    3 /* 160/80+80 MHz Oper Ch width */
 
+#define WLAN_HE_NON_SRG_PD_SR_DISALLOWED 0x02
+#define WLAN_HE_NON_SRG_OFFSET_PRESENT 0x04
+
 #ifdef WLAN_FEATURE_11BE
 #define WLAN_EHT_CHWIDTH_20           0 /* 20MHz Oper Ch width */
 #define WLAN_EHT_CHWIDTH_40           1 /* 40MHz Oper Ch width */
@@ -365,6 +368,12 @@
 #define WLAN_BSS_MEMBERSHIP_SELECTOR_EPD          124
 #define WLAN_BSS_MEMBERSHIP_SELECTOR_SAE_H2E      123
 #define WLAN_BSS_MEMBERSHIP_SELECTOR_HE_PHY       122
+
+/* EXT cap bit definitions based on IEEE 802.11az D4.0 - 9.4.2.26 */
+#define WLAN_EXT_CAPA11_NTB_RANGING_RESPONDER          BIT(2)
+#define WLAN_EXT_CAPA11_TB_RANGING_RESPONDER           BIT(3)
+#define WLAN_EXT_CAPA11_PASSIVE_TB_RANGING_RESPONDER   BIT(4)
+#define WLAN_EXT_CAPA11_PASSIVE_TB_RANGING_INITIATOR   BIT(5)
 
 #define WLAN_CHAN_IS_5GHZ(chanidx) \
 	((chanidx > 30) ? true : false)
@@ -1018,6 +1027,9 @@ enum wlan_status_code {
 #define KEK_KEY_LEN 16
 #define KCK_192BIT_KEY_LEN 24
 #define KEK_256BIT_KEY_LEN 32
+
+#define WLAN_MAX_SECURE_LTF_KEYSEED_LEN 48
+#define WLAN_MIN_SECURE_LTF_KEYSEED_LEN 32
 
 #define WLAN_WPA_OUI 0xf25000
 #define WLAN_WPA_OUI_TYPE 0x01

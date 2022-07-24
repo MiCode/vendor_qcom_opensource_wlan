@@ -309,6 +309,18 @@ QDF_STATUS mlme_cm_connect_start_ind(struct wlan_objmgr_vdev *vdev,
 	return ret;
 }
 
+QDF_STATUS mlme_ext_hdl_get_acs_in_progress(struct wlan_objmgr_vdev *vdev,
+					    bool *acs_in_progress)
+{
+	QDF_STATUS ret = QDF_STATUS_SUCCESS;
+
+	if ((glbl_ops) && glbl_ops->mlme_ext_get_acs_inprogress)
+		ret = glbl_ops->mlme_ext_get_acs_inprogress(vdev,
+							    acs_in_progress);
+
+	return ret;
+}
+
 QDF_STATUS mlme_cm_bss_select_ind(struct wlan_objmgr_vdev *vdev,
 				  struct wlan_cm_vdev_connect_req *req)
 {

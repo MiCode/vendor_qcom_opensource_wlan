@@ -36,6 +36,7 @@
 #include "wlan_objmgr_vdev_obj.h"
 #include "wlan_ptt_sock_svc.h"
 #include "target_if.h"
+#include "wlan_objmgr_peer_obj.h"
 
 #ifndef CNSS_GENL
 #include <wlan_objmgr_global_obj_i.h>
@@ -993,7 +994,8 @@ QDF_STATUS  wifi_pos_psoc_obj_destroyed_notification(
 	return status;
 }
 
-static void
+#if defined(WIFI_POS_CONVERGED) && defined(WLAN_FEATURE_RTT_11AZ_SUPPORT)
+void
 wifi_pos_init_11az_context(struct wifi_pos_vdev_priv_obj *vdev_pos_obj)
 {
 	struct wifi_pos_11az_context *pasn_context;
@@ -1016,6 +1018,7 @@ wifi_pos_init_11az_context(struct wifi_pos_vdev_priv_obj *vdev_pos_obj)
 	pasn_context->num_unsecure_peers = 0;
 	pasn_context->num_failed_peers = 0;
 }
+#endif
 
 QDF_STATUS
 wifi_pos_vdev_created_notification(struct wlan_objmgr_vdev *vdev,
@@ -1063,6 +1066,64 @@ wifi_pos_vdev_destroyed_notification(struct wlan_objmgr_vdev *vdev,
 		wifi_pos_err("Detach vdev private obj failed");
 
 	qdf_mem_free(vdev_pos_obj);
+
+	return status;
+}
+
+QDF_STATUS
+wifi_pos_peer_object_created_notification(struct wlan_objmgr_peer *peer,
+					  void *arg)
+{
+	struct wlan_wifi_pos_peer_priv_obj *peer_priv;
+	QDF_STATUS status;
+
+	if (!peer) {
+		wifi_pos_err("Peer is NULL");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	peer_priv = qdf_mem_malloc(sizeof(*peer_priv));
+	if (!peer_priv)
+		return QDF_STATUS_E_NOMEM;
+
+	status = wlan_objmgr_peer_component_obj_attach(peer,
+						       WLAN_UMAC_COMP_WIFI_POS,
+						       (void *)peer_priv,
+						       QDF_STATUS_SUCCESS);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		wifi_pos_err("unable to attach peer_priv obj to peer obj");
+		qdf_mem_free(peer_priv);
+	}
+
+	return status;
+}
+
+QDF_STATUS
+wifi_pos_peer_object_destroyed_notification(struct wlan_objmgr_peer *peer,
+					    void *arg)
+{
+	struct wlan_wifi_pos_peer_priv_obj *peer_priv;
+	QDF_STATUS status;
+
+	if (!peer) {
+		wifi_pos_err("Peer is NULL");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	peer_priv = wlan_objmgr_peer_get_comp_private_obj(peer,
+							  WLAN_UMAC_COMP_WIFI_POS);
+	if (!peer_priv) {
+		wifi_pos_err("peer MLME component object is NULL");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	status = wlan_objmgr_peer_component_obj_detach(peer,
+						       WLAN_UMAC_COMP_WIFI_POS,
+						       (void *)peer_priv);
+	if (QDF_IS_STATUS_ERROR(status))
+		wifi_pos_err("unable to dettach peer_priv obj to peer obj");
+
+	qdf_mem_free(peer_priv);
 
 	return status;
 }

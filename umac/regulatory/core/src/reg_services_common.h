@@ -2565,6 +2565,31 @@ reg_get_chan_state_for_320(struct wlan_objmgr_pdev *pdev,
  */
 QDF_STATUS reg_get_regd_rules(struct wlan_objmgr_pdev *pdev,
 			      struct reg_rule_info *reg_rules);
+
+#if defined(CONFIG_AFC_SUPPORT) && defined(CONFIG_BAND_6GHZ)
+/**
+ * reg_is_sup_chan_entry_afc_done() - Checks if the super chan entry of given
+ * channel idx and power mode has REGULATORY_CHAN_AFC_NOT_DONE flag cleared.
+ *
+ * @pdev: pdev pointer.
+ * @freq: input channel idx.
+ * @in_6g_pwr_mode: input power mode
+ *
+ * Return: True if REGULATORY_CHAN_AFC_NOT_DONE flag is clear for the super
+ * chan entry.
+ */
+bool reg_is_sup_chan_entry_afc_done(struct wlan_objmgr_pdev *pdev,
+				    enum channel_enum chan_idx,
+				    enum supported_6g_pwr_types in_6g_pwr_mode);
+#else
+static inline bool
+reg_is_sup_chan_entry_afc_done(struct wlan_objmgr_pdev *pdev,
+			       enum channel_enum chan_idx,
+			       enum supported_6g_pwr_types in_6g_pwr_mode)
+{
+	return false;
+}
+#endif
 #endif
 
 /**

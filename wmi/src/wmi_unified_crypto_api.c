@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -29,6 +30,16 @@ wmi_extract_install_key_comp_event(wmi_unified_t wmi_handle, void *evt_buf,
 	if (wmi_handle->ops->extract_install_key_comp_event)
 		return wmi_handle->ops->extract_install_key_comp_event(
 			wmi_handle, evt_buf, len, param);
+
+	return QDF_STATUS_E_FAILURE;
+}
+
+QDF_STATUS
+wmi_send_vdev_set_ltf_key_seed_cmd(wmi_unified_t wmi,
+				   struct wlan_crypto_ltf_keyseed_data *data)
+{
+	if (wmi->ops->send_vdev_set_ltf_key_seed_cmd)
+		return wmi->ops->send_vdev_set_ltf_key_seed_cmd(wmi, data);
 
 	return QDF_STATUS_E_FAILURE;
 }

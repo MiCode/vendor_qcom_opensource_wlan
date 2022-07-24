@@ -38,8 +38,13 @@ static struct wlan_cfg_tcl_wbm_ring_num_map g_tcl_wbm_map_array[MAX_TCL_DATA_RIN
 	{.tcl_ring_num = 0, .wbm_ring_num = 0, .wbm_rbm_id = HAL_BE_WBM_SW0_BM_ID, .for_ipa = 0},
 	{1, 4, HAL_BE_WBM_SW4_BM_ID, 0},
 	{2, 2, HAL_BE_WBM_SW2_BM_ID, 0},
+#ifdef QCA_WIFI_KIWI_V2
+	{3, 5, HAL_BE_WBM_SW5_BM_ID, 0},
+	{4, 6, HAL_BE_WBM_SW6_BM_ID, 0}
+#else
 	{3, 6, HAL_BE_WBM_SW5_BM_ID, 0},
 	{4, 7, HAL_BE_WBM_SW6_BM_ID, 0}
+#endif
 };
 #else
 #define DP_TX_VDEV_ID_CHECK_ENABLE 1
@@ -687,11 +692,15 @@ static QDF_STATUS dp_pdev_attach_be(struct dp_pdev *pdev,
 				    struct cdp_pdev_attach_params *params)
 {
 	dp_pdev_mlo_fill_params(pdev, params);
+	dp_mlo_update_link_to_pdev_map(pdev->soc, pdev);
+
 	return QDF_STATUS_SUCCESS;
 }
 
 static QDF_STATUS dp_pdev_detach_be(struct dp_pdev *pdev)
 {
+	dp_mlo_update_link_to_pdev_unmap(pdev->soc, pdev);
+
 	return QDF_STATUS_SUCCESS;
 }
 
@@ -1775,6 +1784,7 @@ void dp_initialize_arch_ops_be(struct dp_arch_ops *arch_ops)
 					dp_peer_rx_reorder_queue_setup_be;
 	arch_ops->txrx_print_peer_stats = dp_print_peer_txrx_stats_be;
 	arch_ops->dp_find_peer_by_destmac = dp_find_peer_by_destmac_be;
+	arch_ops->dp_tx_compute_hw_delay = dp_tx_compute_tx_delay_be;
 	dp_init_near_full_arch_ops_be(arch_ops);
 	arch_ops->get_rx_hash_key = dp_get_rx_hash_key_be;
 }

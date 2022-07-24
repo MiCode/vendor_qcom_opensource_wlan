@@ -341,6 +341,9 @@ struct vdev_mlme_proto {
  * @bssid: bssid
  * @phy_mode: phy mode
  * @special_vdev_mode: indicates special vdev mode
+ * @he_spr_sr_ctrl:     Spatial reuse SR control
+ * @he_spr_non_srg_pd_max_offset: Non-SRG PD max offset
+ * @he_spr_enabled:     Spatial reuse enabled or not
  */
 struct vdev_mlme_mgmt_generic {
 	uint32_t rts_threshold;
@@ -367,6 +370,11 @@ struct vdev_mlme_mgmt_generic {
 	uint8_t bssid[QDF_MAC_ADDR_SIZE];
 	uint32_t phy_mode;
 	bool special_vdev_mode;
+#ifdef WLAN_FEATURE_11AX
+	uint8_t he_spr_sr_ctrl;
+	uint8_t he_spr_non_srg_pd_max_offset;
+	bool he_spr_enabled;
+#endif
 };
 
 /*
@@ -1161,6 +1169,141 @@ static inline uint16_t wlan_vdev_mlme_get_he_mcs_12_13_map(
 
 	return vdev_mlme->mgmt.sta.he_mcs_12_13_map;
 }
+
+/**
+ * wlan_vdev_mlme_get_sr_ctrl() - get spatial reuse SR control
+ * @vdev: VDEV object
+ *
+ * API to retrieve the spatil reuse SR control from VDEV
+ *
+ * Caller need to acquire lock with wlan_vdev_obj_lock()
+ *
+ * Return:
+ * @he_spr_sr_ctrl: SR control
+ */
+static inline uint8_t wlan_vdev_mlme_get_sr_ctrl(struct wlan_objmgr_vdev *vdev)
+{
+	struct vdev_mlme_obj *vdev_mlme;
+
+	vdev_mlme = wlan_vdev_mlme_get_cmpt_obj(vdev);
+	if (!vdev_mlme)
+		return 0;
+
+	return vdev_mlme->mgmt.generic.he_spr_sr_ctrl;
+}
+
+/**
+ * wlan_vdev_mlme_get_pd_offset() - get spatial reuse pd offset
+ * @vdev: VDEV object
+ *
+ * API to retrieve the spatil reuse pd offset from VDEV
+ *
+ * Caller need to acquire lock with wlan_vdev_obj_lock()
+ *
+ * Return:
+ * @he_spr_non_srg_pd_max_offset: max pd offset
+ */
+static inline uint8_t wlan_vdev_mlme_get_pd_offset(
+						struct wlan_objmgr_vdev *vdev)
+{
+	struct vdev_mlme_obj *vdev_mlme;
+
+	vdev_mlme = wlan_vdev_mlme_get_cmpt_obj(vdev);
+	if (!vdev_mlme)
+		return 0;
+
+	return vdev_mlme->mgmt.generic.he_spr_non_srg_pd_max_offset;
+}
+
+/**
+ * wlan_vdev_mlme_get_he_spr_enabled() - spatial reuse enabled or not
+ * @vdev: VDEV object
+ *
+ * API to check whether the spatil reuse enabled or not
+ *
+ * Caller need to acquire lock with wlan_vdev_obj_lock()
+ *
+ * Return:
+ * @he_spr_enabled: Spatial reuse enabled or not
+ */
+static inline bool wlan_vdev_mlme_get_he_spr_enabled(
+						struct wlan_objmgr_vdev *vdev)
+{
+	struct vdev_mlme_obj *vdev_mlme;
+
+	vdev_mlme = wlan_vdev_mlme_get_cmpt_obj(vdev);
+	if (!vdev_mlme)
+		return false;
+
+	return vdev_mlme->mgmt.generic.he_spr_enabled;
+}
+
+/**
+ * wlan_vdev_mlme_set_sr_ctrl() - set spatial reuse SR control
+ * @vdev: VDEV object
+ *
+ * API to set the spatil reuse SR control
+ *
+ * Caller need to acquire lock with wlan_vdev_obj_lock()
+ *
+ * Return: void
+ */
+static inline void wlan_vdev_mlme_set_sr_ctrl(struct wlan_objmgr_vdev *vdev,
+					      uint8_t sr_ctrl)
+{
+	struct vdev_mlme_obj *vdev_mlme;
+
+	vdev_mlme = wlan_vdev_mlme_get_cmpt_obj(vdev);
+	if (!vdev_mlme)
+		return;
+
+	vdev_mlme->mgmt.generic.he_spr_sr_ctrl = sr_ctrl;
+}
+
+/**
+ * wlan_vdev_mlme_set_pd_offset() - set spatial reuse pd max offset
+ * @vdev: VDEV object
+ *
+ * API to set the spatil reuse pd max offset
+ *
+ * Caller need to acquire lock with wlan_vdev_obj_lock()
+ *
+ * Return: void
+ */
+static inline void wlan_vdev_mlme_set_pd_offset(struct wlan_objmgr_vdev *vdev,
+						uint8_t pd_max_offset)
+{
+	struct vdev_mlme_obj *vdev_mlme;
+
+	vdev_mlme = wlan_vdev_mlme_get_cmpt_obj(vdev);
+	if (!vdev_mlme)
+		return;
+
+	vdev_mlme->mgmt.generic.he_spr_non_srg_pd_max_offset = pd_max_offset;
+}
+
+/**
+ * wlan_vdev_mlme_set_he_spr_enabled() - set spatial reuse enabled
+ * @vdev: VDEV object
+ *
+ * API to set the spatil reuse enabled
+ *
+ * Caller need to acquire lock with wlan_vdev_obj_lock()
+ *
+ * Return: void
+ */
+static inline void wlan_vdev_mlme_set_he_spr_enabled(
+						struct wlan_objmgr_vdev *vdev,
+						bool enable_he_spr)
+{
+	struct vdev_mlme_obj *vdev_mlme;
+
+	vdev_mlme = wlan_vdev_mlme_get_cmpt_obj(vdev);
+	if (!vdev_mlme)
+		return;
+
+	vdev_mlme->mgmt.generic.he_spr_enabled = enable_he_spr;
+}
 #else
 static inline void wlan_vdev_mlme_set_he_mcs_12_13_map(
 				struct wlan_objmgr_vdev *vdev,
@@ -1172,6 +1315,39 @@ static inline uint16_t wlan_vdev_mlme_get_he_mcs_12_13_map(
 				struct wlan_objmgr_vdev *vdev)
 {
 	return 0;
+}
+
+static inline uint8_t wlan_vdev_mlme_get_sr_ctrl(struct wlan_objmgr_vdev *vdev)
+{
+	return 0;
+}
+
+static inline uint8_t wlan_vdev_mlme_get_pd_offset(
+						struct wlan_objmgr_vdev *vdev)
+{
+	return 0;
+}
+
+static inline bool wlan_vdev_mlme_get_he_spr_enabled(
+						struct wlan_objmgr_vdev *vdev)
+{
+	return 0;
+}
+
+static inline void wlan_vdev_mlme_set_sr_ctrl(struct wlan_objmgr_vdev *vdev,
+					      uint8_t sr_ctrl)
+{
+}
+
+static inline void wlan_vdev_mlme_set_pd_offset(struct wlan_objmgr_vdev *vdev,
+						uint8_t pd_max_offset)
+{
+}
+
+static inline void wlan_vdev_mlme_set_he_spr_enabled(
+						struct wlan_objmgr_vdev *vdev,
+						bool enable_he_spr)
+{
 }
 #endif
 

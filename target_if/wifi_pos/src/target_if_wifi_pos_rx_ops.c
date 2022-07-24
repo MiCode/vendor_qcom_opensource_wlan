@@ -281,5 +281,8 @@ void target_if_wifi_pos_register_rx_ops(struct wlan_lmac_if_rx_ops *rx_ops)
 			wifi_pos_handle_ranging_peer_create_rsp;
 	wifi_pos_rx_ops->wifi_pos_ranging_peer_delete_cb =
 			wifi_pos_handle_ranging_peer_delete;
+	wifi_pos_rx_ops->wifi_pos_vdev_delete_all_ranging_peers_rsp_cb =
+			wifi_pos_vdev_delete_all_ranging_peers_rsp;
 }
 #endif
+

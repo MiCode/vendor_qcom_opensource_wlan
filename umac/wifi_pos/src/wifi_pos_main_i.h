@@ -34,6 +34,21 @@
 /* forward reference */
 struct wlan_objmgr_psoc;
 
+#if defined(WIFI_POS_CONVERGED) && defined(WLAN_FEATURE_RTT_11AZ_SUPPORT)
+/**
+ * wifi_pos_init_11az_context  - Initialize 11az context
+ * @vdev_pos_obj: Vdev private object of WIFI Pos component
+ *
+ * Return: None
+ */
+void
+wifi_pos_init_11az_context(struct wifi_pos_vdev_priv_obj *vdev_pos_obj);
+#else
+static inline void
+wifi_pos_init_11az_context(struct wifi_pos_vdev_priv_obj *vdev_pos_obj)
+{}
+#endif
+
 /**
  * wifi_pos_psoc_obj_created_notification: callback registered to be called when
  * psoc object is created.
@@ -84,6 +99,30 @@ wifi_pos_vdev_created_notification(struct wlan_objmgr_vdev *vdev,
 QDF_STATUS
 wifi_pos_vdev_destroyed_notification(struct wlan_objmgr_vdev *vdev,
 				     void *arg_list);
+
+/**
+ * wifi_pos_peer_object_created_notification() - Handle peer object created
+ * notification.
+ * @peer: Objmgr peer
+ * @arg: Argument
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+wifi_pos_peer_object_created_notification(struct wlan_objmgr_peer *peer,
+					  void *arg);
+
+/**
+ * wifi_pos_peer_object_destroyed_notification() - Handler for peer object
+ * deleted notification
+ * @peer: Objmgr peer
+ * @arg: Argument
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+wifi_pos_peer_object_destroyed_notification(struct wlan_objmgr_peer *peer,
+					    void *arg);
 
 /**
  * wifi_pos_oem_rsp_handler: lmac rx ops registered

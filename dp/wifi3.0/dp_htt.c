@@ -2943,6 +2943,21 @@ dp_offload_ind_handler(struct htt_soc *soc, uint32_t *msg_word)
 #endif
 
 #ifdef WLAN_FEATURE_11BE_MLO
+#ifdef WLAN_MLO_MULTI_CHIP
+static inline void dp_update_mlo_ts_offset(struct dp_soc *soc,
+					   uint32_t ts_lo, uint32_t ts_hi)
+{
+	uint64_t mlo_offset;
+
+	mlo_offset = ((uint64_t)(ts_hi) << 32 | ts_lo);
+	soc->cdp_soc.ops->mlo_ops->mlo_update_mlo_ts_offset
+		((struct cdp_soc_t *)soc, mlo_offset);
+}
+#else
+static inline void dp_update_mlo_ts_offset(struct dp_soc *soc,
+					   uint32_t ts_lo, uint32_t ts_hi)
+{}
+#endif
 static void dp_htt_mlo_peer_map_handler(struct htt_soc *soc,
 					uint32_t *msg_word)
 {
@@ -3097,6 +3112,10 @@ dp_rx_mlo_timestamp_ind_handler(struct dp_soc *soc,
 		     pdev->timestamp.mlo_offset_hi_us);
 
 	qdf_spin_unlock_bh(&soc->htt_stats.lock);
+
+	dp_update_mlo_ts_offset(soc,
+				pdev->timestamp.mlo_offset_lo_us,
+				pdev->timestamp.mlo_offset_hi_us);
 }
 #else
 static void dp_htt_mlo_peer_map_handler(struct htt_soc *soc,

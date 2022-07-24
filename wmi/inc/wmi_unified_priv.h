@@ -1885,6 +1885,10 @@ QDF_STATUS (*extract_mgmt_rx_params)(wmi_unified_t wmi_handle, void *evt_buf,
 QDF_STATUS (*extract_frame_pn_params)(wmi_unified_t wmi_handle, void *evt_buf,
 				      struct frame_pn_params *pn_params);
 
+QDF_STATUS (*extract_is_conn_ap_frame)(wmi_unified_t wmi_handle,
+				       void *evt_buf,
+				       struct frm_conn_ap *is_conn_ap);
+
 QDF_STATUS (*extract_vdev_stopped_param)(wmi_unified_t wmi_handle,
 		void *evt_buf, uint32_t *vdev_id);
 
@@ -2735,6 +2739,13 @@ QDF_STATUS (*extract_pasn_peer_delete_req_event)
 			(wmi_unified_t wmi_handle,
 			 void *evt_buf,
 			 struct wifi_pos_pasn_peer_data *dst);
+
+QDF_STATUS (*send_rtt_pasn_auth_status_cmd)
+			(wmi_unified_t wmi_handle,
+			 struct wlan_pasn_auth_status *data);
+
+QDF_STATUS (*send_rtt_pasn_deauth_cmd)(wmi_unified_t wmi_handle,
+				       struct qdf_mac_addr *peer_mac);
 #endif
 
 QDF_STATUS (*extract_hw_mode_resp_event)(wmi_unified_t wmi_handle,
@@ -2904,6 +2915,10 @@ QDF_STATUS
 (*extract_install_key_comp_event)(wmi_unified_t wmi_handle,
 				  void *evt_buf, uint32_t len,
 				  struct wmi_install_key_comp_event *param);
+
+QDF_STATUS (*send_vdev_set_ltf_key_seed_cmd)
+			(wmi_unified_t wmi_handle,
+			 struct wlan_crypto_ltf_keyseed_data *data);
 
 #ifdef WLAN_ENH_CFR_ENABLE
 QDF_STATUS

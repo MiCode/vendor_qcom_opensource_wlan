@@ -1663,7 +1663,7 @@ scm_scan_event_handler(struct scheduler_msg *msg)
 		if (event->reason == SCAN_REASON_COMPLETED)
 			scm_11d_decide_country_code(vdev);
 		/* release the command */
-		/* fallthrough */
+		fallthrough;
 	case SCAN_EVENT_TYPE_START_FAILED:
 	case SCAN_EVENT_TYPE_DEQUEUED:
 		scm_release_serialization_command(vdev, event->scan_id);

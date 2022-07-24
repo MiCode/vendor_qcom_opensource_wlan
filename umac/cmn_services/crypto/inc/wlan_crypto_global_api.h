@@ -968,6 +968,19 @@ static inline void wlan_crypto_reset_vdev_prarams(struct wlan_objmgr_vdev *vdev)
 #endif /* CRYPTO_SET_KEY_CONVERGED */
 
 /**
+ * wlan_crypto_vdev_set_param() - Send vdev set param to firmware.
+ * @psoc: Pointer to PSOC object
+ * @vdev_id: vdev id
+ * @param_id: Param id
+ * @param_value: Param value
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+wlan_crypto_vdev_set_param(struct wlan_objmgr_psoc *psoc, uint32_t vdev_id,
+			   uint32_t param_id, uint32_t param_value);
+
+/**
  * wlan_crypto_get_peer_pmksa() - called to get pmksa based on pmksa parameter
  * @vdev: vdev
  * @pmksa: bssid
@@ -1098,6 +1111,19 @@ static inline void
 wlan_crypto_set_sae_single_pmk_info(struct wlan_objmgr_vdev *vdev,
 				    struct wlan_crypto_pmksa *roam_sync_pmksa)
 {
+}
+#endif
+
+#if defined(WIFI_POS_CONVERGED) && defined(WLAN_FEATURE_RTT_11AZ_SUPPORT)
+QDF_STATUS
+wlan_crypto_set_ltf_keyseed(struct wlan_objmgr_psoc *psoc,
+			    struct wlan_crypto_ltf_keyseed_data *data);
+#else
+static inline QDF_STATUS
+wlan_crypto_set_ltf_keyseed(struct wlan_objmgr_psoc *psoc,
+			    struct wlan_crypto_ltf_keyseed_data *data)
+{
+	return QDF_STATUS_SUCCESS;
 }
 #endif
 

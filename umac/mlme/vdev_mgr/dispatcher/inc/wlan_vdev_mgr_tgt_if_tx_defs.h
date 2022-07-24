@@ -757,9 +757,12 @@ struct vdev_down_params {
 /**
  * struct peer_delete_all_params - peer delete all request parameter
  * @vdev_id: vdev id
+ * @peer_type_bitmap: Bitmap of type with bits corresponding to value from
+ * enum wlan_peer_type
  */
 struct peer_delete_all_params {
 	uint8_t vdev_id;
+	uint32_t peer_type_bitmap;
 };
 
 #define AC_MAX 4

@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2019 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -45,4 +46,16 @@ QDF_STATUS target_if_crypto_set_key(struct wlan_objmgr_vdev *vdev,
 				    struct wlan_crypto_key *req,
 				    enum wlan_crypto_key_type key_type);
 
+/**
+ * target_if_crypto_vdev_set_param() - Set crypto related vdev params to fw
+ * @psoc: Pointer to psoc
+ * @vdev_id: vdev id
+ * @param_id: param id
+ * @param_value: param value
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+target_if_crypto_vdev_set_param(struct wlan_objmgr_psoc *psoc, uint32_t vdev_id,
+				uint32_t param_id, uint32_t param_value);
 #endif

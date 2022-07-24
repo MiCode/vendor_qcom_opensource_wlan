@@ -1208,7 +1208,7 @@ hal_rx_parse_ru_allocation(struct hal_soc *hal_soc, void *tlv,
 		ppdu_info->rx_status.eht_data[2] |=
 				(ofdma_cmn_eb2->ru_allocation2_3 <<
 				 QDF_MON_STATUS_EHT_RU_ALLOCATION2_3_SHIFT);
-		/* fallthrough */
+		fallthrough;
 	case HAL_EHT_BW_160:
 		num_ru_allocation_known += 2;
 
@@ -1218,14 +1218,14 @@ hal_rx_parse_ru_allocation(struct hal_soc *hal_soc, void *tlv,
 		ppdu_info->rx_status.eht_data[2] |=
 				(ofdma_cmn_eb2->ru_allocation2_1 <<
 				 QDF_MON_STATUS_EHT_RU_ALLOCATION2_1_SHIFT);
-		/* fallthrough */
+		fallthrough;
 	case HAL_EHT_BW_80:
 		num_ru_allocation_known += 1;
 
 		ppdu_info->rx_status.eht_data[1] |=
 				(ofdma_cmn_eb1->ru_allocation1_2 <<
 				 QDF_MON_STATUS_EHT_RU_ALLOCATION1_2_SHIFT);
-		/* fallthrough */
+		fallthrough;
 	case HAL_EHT_BW_40:
 	case HAL_EHT_BW_20:
 		num_ru_allocation_known += 1;

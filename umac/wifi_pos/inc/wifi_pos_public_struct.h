@@ -67,6 +67,7 @@ enum wifi_pos_pasn_peer_delete_actions {
  * derivation
  * @force_self_mac_usage: If this flag is true, the supplicant
  * should use the provided self mac address
+ * @is_ltf_keyseed_required: Is set LTF keyseed required
  * @control_flags: Control flags to indicate if its required to flush
  * the keys
  */
@@ -75,6 +76,7 @@ struct wlan_pasn_request {
 	enum wifi_pos_pasn_peer_type peer_type;
 	struct qdf_mac_addr self_mac;
 	bool force_self_mac_usage;
+	bool is_ltf_keyseed_required;
 	uint16_t control_flags;
 };
 
@@ -102,8 +104,63 @@ struct wifi_pos_11az_context {
 /**
  * struct wifi_pos_vdev_priv_obj  - Wifi Pos module vdev private object
  * @pasn_context: 11az security peers context.
+ * @num_pasn_peers: Total number of PASN peers
+ * @is_delete_all_pasn_peer_in_progress: Delete all the VDEV PASN peers in
+ * progress
  */
 struct wifi_pos_vdev_priv_obj {
 	struct wifi_pos_11az_context pasn_context;
+	uint8_t num_pasn_peers;
+	bool is_delete_all_pasn_peer_in_progress;
+};
+
+/**
+ * enum wlan_pasn_auth_status_code  - PASN auth status code
+ * @WLAN_PASN_AUTH_STATUS_SUCCESS: PASN auth is successful
+ * @WLAN_PASN_AUTH_STATUS_PASN_FAILED: PASN authentication failed
+ * @WLAN_PASN_AUTH_STATUS_PEER_CREATE_FAILED: PASN peer create confirm received
+ * with failure status.
+ * @WLAN_PASN_AUTH_STATUS_PEER_ALREADY_EXISTS: Peer already exists
+ * @WLAN_PASN_AUTH_STATUS_HOST_INTERNAL_ERROR: WLAN driver internal error
+ */
+enum wlan_pasn_auth_status_code {
+	WLAN_PASN_AUTH_STATUS_SUCCESS = 0,
+	WLAN_PASN_AUTH_STATUS_PASN_FAILED = 1,
+	WLAN_PASN_AUTH_STATUS_PEER_CREATE_FAILED = 2,
+	WLAN_PASN_AUTH_STATUS_PEER_ALREADY_EXISTS = 3,
+	WLAN_PASN_AUTH_STATUS_HOST_INTERNAL_ERROR = 4,
+};
+
+/**
+ * struct wlan_pasn_auth_status_peer_info - PASN authentication status peer
+ * info
+ * @peer_mac: Peer mac address
+ * @self_mac: Self mac address
+ * @status: PASN auth status code
+ */
+struct wlan_pasn_auth_status_peer_info {
+	struct qdf_mac_addr peer_mac;
+	struct qdf_mac_addr self_mac;
+	enum wlan_pasn_auth_status_code status;
+};
+
+/**
+ * struct wlan_pasn_auth_status  - PASN authentication status
+ * @vdev_id:  vdev_id
+ * @num_peers: Number of peers for which auth status is to be sent
+ * @auth_status: Auth status details
+ */
+struct wlan_pasn_auth_status {
+	uint8_t vdev_id;
+	uint8_t num_peers;
+	struct wlan_pasn_auth_status_peer_info auth_status[WLAN_MAX_11AZ_PEERS];
+};
+
+/**
+ * struct wlan_wifi_pos_peer_priv_obj - WLAN wifi pos peer private object
+ * @is_ltf_keyseed_required: Is LTF keyseed required for peer
+ */
+struct wlan_wifi_pos_peer_priv_obj {
+	bool is_ltf_keyseed_required;
 };
 #endif /* _WIFI_POS_PUBLIC_STRUCT_H_ */

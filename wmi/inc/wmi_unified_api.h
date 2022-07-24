@@ -2994,6 +2994,18 @@ wmi_extract_frame_pn_params(wmi_unified_t wmi_handle, void *evt_buf,
 			    struct frame_pn_params *pn_params);
 
 /**
+ * wmi_extract_is_conn_ap_frame() - extract is_conn_ap_frame param from event
+ * @wmi_handle: wmi handle
+ * @evt_buf: pointer to event buffer
+ * @is_conn_ap: is_conn_ap param
+ *
+ * Return: QDF_STATUS_SUCCESS on success and QDF_STATUS_E_FAILURE for failure
+ */
+QDF_STATUS
+wmi_extract_is_conn_ap_frame(wmi_unified_t wmi_handle, void *evt_buf,
+			     struct frm_conn_ap *is_conn_ap);
+
+/**
  * wmi_extract_vdev_roam_param() - extract vdev roam param from event
  * @wmi_handle: wmi handle
  * @evt_buf: pointer to event buffer
@@ -4411,6 +4423,28 @@ wmi_extract_pasn_peer_create_req(wmi_unified_t wmi, void *evt_buf,
 QDF_STATUS
 wmi_extract_pasn_peer_delete_req(wmi_unified_t wmi, void *evt_buf,
 				 struct wifi_pos_pasn_peer_data *dst);
+
+/**
+ * wmi_send_rtt_pasn_auth_status_cmd  - Send PASN authentication status of all
+ * the PASN peers.
+ * @wmi: WMI handle
+ * @data: Auth status data
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+wmi_send_rtt_pasn_auth_status_cmd(wmi_unified_t wmi,
+				  struct wlan_pasn_auth_status *data);
+
+/**
+ * wmi_send_rtt_pasn_deauth_cmd  - Send RTT pasn deauthentication command
+ * @wmi: WMI handle
+ * @peer_mac: peer mac address
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+wmi_send_rtt_pasn_deauth_cmd(wmi_unified_t wmi, struct qdf_mac_addr *peer_mac);
 #endif
 
 /**

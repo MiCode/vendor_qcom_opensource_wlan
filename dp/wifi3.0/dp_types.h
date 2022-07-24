@@ -1863,6 +1863,11 @@ struct dp_arch_ops {
 	struct dp_peer *(*dp_find_peer_by_destmac)(struct dp_soc *soc,
 						   uint8_t *dest_mac_addr,
 						   uint8_t vdev_id);
+	QDF_STATUS
+	(*dp_tx_compute_hw_delay)(struct dp_soc *soc,
+				  struct dp_vdev *vdev,
+				  struct hal_tx_completion_status *ts,
+				  uint32_t *delay_us);
 };
 
 /**

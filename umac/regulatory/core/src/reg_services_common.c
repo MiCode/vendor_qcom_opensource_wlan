@@ -9240,3 +9240,31 @@ bool reg_is_offload_enabled(struct wlan_objmgr_pdev *pdev)
 	}
 	return soc_reg->offload_enabled;
 }
+
+#if defined(CONFIG_AFC_SUPPORT) && defined(CONFIG_BAND_6GHZ)
+bool
+reg_is_sup_chan_entry_afc_done(struct wlan_objmgr_pdev *pdev,
+			       enum channel_enum chan_idx,
+			       enum supported_6g_pwr_types in_6g_pwr_mode)
+{
+	const struct super_chan_info *super_chan_ent;
+	QDF_STATUS status;
+
+	status = reg_get_superchan_entry(pdev, chan_idx,
+					 &super_chan_ent);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		reg_debug("Failed to get super channel entry for chan_idx %d",
+			  chan_idx);
+		return false;
+	}
+
+	if (in_6g_pwr_mode == REG_BEST_PWR_MODE)
+		in_6g_pwr_mode = super_chan_ent->best_power_mode;
+
+	if (in_6g_pwr_mode != REG_AP_SP)
+		return false;
+
+	return !(super_chan_ent->chan_flags_arr[in_6g_pwr_mode] &
+		 REGULATORY_CHAN_AFC_NOT_DONE);
+}
+#endif

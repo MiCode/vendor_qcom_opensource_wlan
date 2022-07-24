@@ -827,6 +827,7 @@ dp_print_pdev_rx_mon_stats(struct dp_pdev *pdev)
 	uint32_t *dest_ring_ppdu_ids;
 	int i, idx;
 	struct dp_mon_pdev *mon_pdev = pdev->monitor_pdev;
+	struct dp_mon_soc *mon_soc = pdev->soc->monitor_soc;
 
 	rx_mon_stats = &mon_pdev->rx_mon_stats;
 
@@ -872,6 +873,8 @@ dp_print_pdev_rx_mon_stats(struct dp_pdev *pdev)
 		       rx_mon_stats->dest_ppdu_drop);
 	DP_PRINT_STATS("mpdu_ppdu_id_mismatch_drop = %u",
 		       rx_mon_stats->mpdu_ppdu_id_mismatch_drop);
+	DP_PRINT_STATS("mpdu_decap_type_invalid = %u",
+		       rx_mon_stats->mpdu_decap_type_invalid);
 	stat_ring_ppdu_ids =
 		(uint32_t *)qdf_mem_malloc(sizeof(uint32_t) * MAX_PPDU_ID_HIST);
 	dest_ring_ppdu_ids =
@@ -902,8 +905,24 @@ dp_print_pdev_rx_mon_stats(struct dp_pdev *pdev)
 	qdf_mem_free(dest_ring_ppdu_ids);
 	DP_PRINT_STATS("mon_rx_dest_stuck = %d",
 		       rx_mon_stats->mon_rx_dest_stuck);
+
+	DP_PRINT_STATS("rx_hdr_not_received = %d",
+		       rx_mon_stats->rx_hdr_not_received);
+	DP_PRINT_STATS("parent_buf_alloc = %d",
+		       rx_mon_stats->parent_buf_alloc);
+	DP_PRINT_STATS("parent_buf_free = %d",
+		       rx_mon_stats->parent_buf_free);
+	DP_PRINT_STATS("mpdus_buf_to_stack = %d",
+		       rx_mon_stats->mpdus_buf_to_stack);
+	DP_PRINT_STATS("frag_alloc = %d",
+		       mon_soc->stats.frag_alloc);
+	DP_PRINT_STATS("frag_free = %d",
+		       mon_soc->stats.frag_free);
+	DP_PRINT_STATS("status_buf_count = %d",
+		       rx_mon_stats->status_buf_count);
+	DP_PRINT_STATS("pkt_buf_count = %d",
+		       rx_mon_stats->pkt_buf_count);
 	dp_pdev_get_undecoded_capture_stats(mon_pdev, rx_mon_stats);
-	dp_mon_rx_print_advanced_stats(pdev->soc, pdev);
 }
 
 #ifdef QCA_SUPPORT_BPR
@@ -5707,6 +5726,135 @@ void dp_mon_ppdu_stats_handler_deregister(struct dp_mon_soc *mon_soc)
 }
 #endif
 
+#ifdef QCA_RSSI_DB2DBM
+/*
+ * dp_mon_compute_min_nf() - calculate the min nf value in the
+ *                      active chains 20MHZ subbands.
+ * computation: Need to calculate nfInDbm[][] to A_MIN(nfHwDbm[][])
+ *              considering row index as active chains and column
+ *              index as 20MHZ subbands per chain.
+ * example: chain_mask = 0x07 (consider 3 active chains 0,1,2 index)
+ *          BandWidth = 40MHZ (40MHZ includes two 20MHZ subbands so need to
+ *                      consider 0,1 index calculate min_nf value)
+ *
+ *@conv_params: cdp_rssi_dbm_conv_param_dp structure value
+ *@chain_idx: active chain index in nfHwdbm array
+ *
+ * Return: QDF_STATUS_SUCCESS if value set successfully
+ *         QDF_STATUS_E_INVAL false if error
+ */
+static QDF_STATUS
+dp_mon_compute_min_nf(struct cdp_rssi_dbm_conv_param_dp *conv_params,
+		      int8_t *min_nf, int chain_idx)
+{
+	int j;
+	*min_nf = conv_params->nf_hw_dbm[chain_idx][0];
+
+	switch (conv_params->curr_bw) {
+	case CHAN_WIDTH_20:
+	case CHAN_WIDTH_5:
+	case CHAN_WIDTH_10:
+		break;
+	case CHAN_WIDTH_40:
+		for (j = 1; j < SUB40BW; j++) {
+			if (conv_params->nf_hw_dbm[chain_idx][j] < *min_nf)
+				*min_nf = conv_params->nf_hw_dbm[chain_idx][j];
+		}
+		break;
+	case CHAN_WIDTH_80:
+		for (j = 1; j < SUB80BW; j++) {
+			if (conv_params->nf_hw_dbm[chain_idx][j] < *min_nf)
+				*min_nf = conv_params->nf_hw_dbm[chain_idx][j];
+		}
+		break;
+	case CHAN_WIDTH_160:
+	case CHAN_WIDTH_80P80:
+	case CHAN_WIDTH_165:
+		for (j = 1; j < SUB160BW; j++) {
+			if (conv_params->nf_hw_dbm[chain_idx][j] < *min_nf)
+				*min_nf = conv_params->nf_hw_dbm[chain_idx][j];
+		}
+		break;
+	case CHAN_WIDTH_160P160:
+	case CHAN_WIDTH_320:
+		for (j = 1; j < SUB320BW; j++) {
+			if (conv_params->nf_hw_dbm[chain_idx][j] < *min_nf)
+				*min_nf = conv_params->nf_hw_dbm[chain_idx][j];
+		}
+		break;
+	default:
+		dp_cdp_err("Invalid bandwidth %u", conv_params->curr_bw);
+		return QDF_STATUS_E_INVAL;
+	}
+	return QDF_STATUS_SUCCESS;
+}
+
+/*
+ * dp_mon_pdev_params_rssi_dbm_conv() --> to set rssi in dbm converstion
+ *                                      params into monitor pdev.
+ *@cdp_soc: dp soc handle.
+ *@params: cdp_rssi_db2dbm_param_dp structure value.
+ *
+ * Return: QDF_STATUS_SUCCESS if value set successfully
+ *         QDF_STATUS_E_INVAL false if error
+ */
+QDF_STATUS
+dp_mon_pdev_params_rssi_dbm_conv(struct cdp_soc_t *cdp_soc,
+				 struct cdp_rssi_db2dbm_param_dp *params)
+{
+	struct cdp_rssi_db2dbm_param_dp *dp_rssi_params = params;
+	uint8_t pdev_id = params->pdev_id;
+	struct dp_soc *soc = (struct dp_soc *)cdp_soc;
+	struct dp_pdev *pdev =
+		dp_get_pdev_from_soc_pdev_id_wifi3(soc, pdev_id);
+	struct dp_mon_pdev *mon_pdev;
+	struct cdp_rssi_temp_off_param_dp temp_off_param;
+	struct cdp_rssi_dbm_conv_param_dp conv_params;
+	int8_t min_nf = 0;
+	int i;
+
+	if (!soc->features.rssi_dbm_conv_support) {
+		dp_cdp_err("rssi dbm converstion support is false");
+		return QDF_STATUS_E_INVAL;
+	}
+	if (!pdev || !pdev->monitor_pdev) {
+		dp_cdp_err("Invalid pdev_id %u", pdev_id);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	mon_pdev = pdev->monitor_pdev;
+
+	if (dp_rssi_params->rssi_temp_off_present) {
+		temp_off_param = dp_rssi_params->temp_off_param;
+		mon_pdev->ppdu_info.rx_status.rssi_temp_offset =
+					temp_off_param.rssi_temp_offset;
+	}
+	if (dp_rssi_params->rssi_dbm_info_present) {
+		conv_params = dp_rssi_params->rssi_dbm_param;
+		for (i = 0; i < CDP_MAX_NUM_ANTENNA; i++) {
+			if (conv_params.curr_rx_chainmask & (0x01 << i)) {
+				if (QDF_STATUS_E_INVAL == dp_mon_compute_min_nf
+						(&conv_params, &min_nf, i))
+					return QDF_STATUS_E_INVAL;
+			} else {
+				continue;
+			}
+		}
+		mon_pdev->ppdu_info.rx_status.xlna_bypass_offset =
+					conv_params.xlna_bypass_offset;
+		mon_pdev->ppdu_info.rx_status.xlna_bypass_threshold =
+					conv_params.xlna_bypass_threshold;
+		mon_pdev->ppdu_info.rx_status.xbar_config =
+					conv_params.xbar_config;
+
+		mon_pdev->ppdu_info.rx_status.min_nf_dbm = min_nf;
+		mon_pdev->ppdu_info.rx_status.rssi_dbm_conv_support =
+					soc->features.rssi_dbm_conv_support;
+	}
+	return QDF_STATUS_SUCCESS;
+}
+#endif
+
 void dp_mon_intr_ops_deregister(struct dp_soc *soc)
 {
 	struct dp_mon_soc *mon_soc = soc->monitor_soc;
@@ -5810,7 +5958,6 @@ void dp_mon_feature_ops_deregister(struct dp_soc *soc)
 	mon_ops->mon_rx_populate_ppdu_usr_info = NULL;
 	mon_ops->mon_rx_populate_ppdu_info = NULL;
 #endif
-	mon_ops->mon_rx_stats_update_rssi_dbm_params = NULL;
 }
 
 QDF_STATUS dp_mon_soc_attach(struct dp_soc *soc)

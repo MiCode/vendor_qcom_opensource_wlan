@@ -418,7 +418,7 @@ send_mlo_link_set_active_cmd_tlv(wmi_unified_t wmi_handle,
 	case WMI_MLO_LINK_FORCE_ACTIVE_LINK_NUM:
 	case WMI_MLO_LINK_FORCE_INACTIVE_LINK_NUM:
 		num_link_num_param = param->num_link_entry;
-		/* fallthrough */
+		fallthrough;
 	case WMI_MLO_LINK_FORCE_ACTIVE:
 	case WMI_MLO_LINK_FORCE_INACTIVE:
 	case WMI_MLO_LINK_NO_FORCE:

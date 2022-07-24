@@ -804,6 +804,16 @@ struct frame_pn_params {
 };
 
 /**
+ * struct frm_conn_ap - connected ap
+ * @mgmt_frm_sub_type: type of frame
+ * @is_conn_ap_frm:     set if frm is from connected ap
+ */
+struct frm_conn_ap {
+	uint8_t mgmt_frm_sub_type;
+	uint8_t is_conn_ap_frm;
+};
+
+/**
  * struct mgmt_rx_event_ext_params - Host mgmt extended params
  * @ba_win_size: Block-Ack window size
  * @reo_win_size: Reo win size
@@ -838,6 +848,7 @@ struct mgmt_rx_event_ext_params {
  * @reo_params: Pointer to MGMT Rx REO params
  * @pn_params: Frame PN params
  * @ext_params: Extended params
+ * @frm_con_ap: Frame is from connected ap
  */
 struct mgmt_rx_event_params {
 	uint32_t    chan_freq;
@@ -859,6 +870,7 @@ struct mgmt_rx_event_params {
 #endif
 	struct frame_pn_params pn_params;
 	struct mgmt_rx_event_ext_params *ext_params;
+	struct frm_conn_ap is_conn_ap;
 };
 
 #ifdef WLAN_MGMT_RX_REO_SUPPORT

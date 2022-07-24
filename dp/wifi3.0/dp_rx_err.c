@@ -461,9 +461,8 @@ dp_rx_pn_error_handle(struct dp_soc *soc, hal_ring_desc_t ring_desc,
 		/*
 		 * TODO: Check for peer specific policies & set peer_pn_policy
 		 */
-		QDF_TRACE(QDF_MODULE_ID_TXRX, QDF_TRACE_LEVEL_ERROR,
-			 "discard rx due to PN error for peer  %pK",
-			 txrx_peer);
+		dp_err_rl("discard rx due to PN error for peer  %pK",
+			  txrx_peer);
 
 		dp_txrx_peer_unref_delete(txrx_ref_handle, DP_MOD_ID_RX_ERR);
 	}
@@ -712,7 +711,6 @@ _dp_rx_bar_frame_handle(struct dp_soc *soc, qdf_nbuf_t nbuf,
 	if (err_status == HAL_REO_ERROR_DETECTED) {
 		switch (error_code) {
 		case HAL_REO_ERR_BAR_FRAME_2K_JUMP:
-			/* fallthrough */
 		case HAL_REO_ERR_BAR_FRAME_OOR:
 			dp_rx_err_handle_bar(soc, peer, nbuf);
 			DP_STATS_INC(soc, rx.err.reo_error[error_code], 1);

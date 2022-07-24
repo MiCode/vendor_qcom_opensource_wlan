@@ -22,6 +22,7 @@
 #include "wmi_version.h"
 #include "wmi_unified_priv.h"
 #include "wmi_version_allowlist.h"
+#include "wifi_pos_public_struct.h"
 #include <qdf_module.h>
 #include <wlan_defs.h>
 #include <wlan_cmn.h>
@@ -1395,6 +1396,30 @@ static QDF_STATUS send_peer_delete_cmd_tlv(wmi_unified_t wmi,
 	return 0;
 }
 
+static void
+wmi_get_converted_peer_bitmap(uint32_t src_peer_bitmap, uint32_t *dst_bitmap)
+{
+	if  (QDF_HAS_PARAM(src_peer_bitmap, WLAN_PEER_SELF))
+		WMI_VDEV_DELETE_ALL_PEER_BITMAP_SET(dst_bitmap,
+						    WMI_PEER_TYPE_DEFAULT);
+
+	if  (QDF_HAS_PARAM(src_peer_bitmap, WLAN_PEER_AP))
+		WMI_VDEV_DELETE_ALL_PEER_BITMAP_SET(dst_bitmap,
+						    WMI_PEER_TYPE_BSS);
+
+	if  (QDF_HAS_PARAM(src_peer_bitmap, WLAN_PEER_TDLS))
+		WMI_VDEV_DELETE_ALL_PEER_BITMAP_SET(dst_bitmap,
+						    WMI_PEER_TYPE_TDLS);
+
+	if  (QDF_HAS_PARAM(src_peer_bitmap, WLAN_PEER_NDP))
+		WMI_VDEV_DELETE_ALL_PEER_BITMAP_SET(dst_bitmap,
+						    WMI_PEER_TYPE_NAN_DATA);
+
+	if  (QDF_HAS_PARAM(src_peer_bitmap, WLAN_PEER_RTT_PASN))
+		WMI_VDEV_DELETE_ALL_PEER_BITMAP_SET(dst_bitmap,
+						    WMI_PEER_TYPE_PASN);
+}
+
 /**
  * send_peer_delete_all_cmd_tlv() - send PEER delete all command to fw
  * @wmi: wmi handle
@@ -1421,8 +1446,11 @@ static QDF_STATUS send_peer_delete_all_cmd_tlv(
 		WMITLV_GET_STRUCT_TLVLEN
 				(wmi_vdev_delete_all_peer_cmd_fixed_param));
 	cmd->vdev_id = param->vdev_id;
+	wmi_get_converted_peer_bitmap(param->peer_type_bitmap,
+				      cmd->peer_type_bitmap);
 
-	wmi_debug("vdev_id %d", cmd->vdev_id);
+	wmi_debug("vdev_id %d peer_type_bitmap:%d", cmd->vdev_id,
+		  param->peer_type_bitmap);
 	wmi_mtrace(WMI_VDEV_DELETE_ALL_PEER_CMDID, cmd->vdev_id, 0);
 	if (wmi_unified_cmd_send(wmi, buf, len,
 				 WMI_VDEV_DELETE_ALL_PEER_CMDID)) {
@@ -4925,7 +4953,6 @@ static QDF_STATUS send_setup_install_key_cmd_tlv(wmi_unified_t wmi_handle,
 		cmd->is_group_key_ix_valid = 1;
 		cmd->group_key_ix = key_params->group_key_idx;
 	}
-
 
 	WMI_CHAR_ARRAY_TO_MAC_ADDR(key_params->peer_mac, &cmd->peer_macaddr);
 	cmd->key_flags |= key_params->key_flags;
@@ -11917,6 +11944,43 @@ static QDF_STATUS extract_frame_pn_params_tlv(wmi_unified_t wmi_handle,
 }
 
 /**
+ * extract_is_conn_ap_param_tlv() - extract is_conn_ap_frame param from event
+ * @wmi_handle: wmi handle
+ * @evt_buf: pointer to event buffer
+ * @is_conn_ap: Pointer for is_conn_ap frame
+ *
+ * Return: QDF_STATUS_SUCCESS for success or error code
+ */
+static QDF_STATUS extract_is_conn_ap_frm_param_tlv(
+						wmi_unified_t wmi_handle,
+						void *evt_buf,
+						struct frm_conn_ap *is_conn_ap)
+{
+	WMI_MGMT_RX_EVENTID_param_tlvs *param_tlvs;
+	wmi_is_my_mgmt_frame *my_frame_tlv;
+
+	param_tlvs = evt_buf;
+	if (!param_tlvs) {
+		wmi_err("Got NULL point message from FW");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	if (!is_conn_ap) {
+		wmi_err(" is connected ap param is NULL");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	my_frame_tlv = param_tlvs->my_frame;
+	if (!my_frame_tlv)
+		return QDF_STATUS_SUCCESS;
+
+	is_conn_ap->mgmt_frm_sub_type = my_frame_tlv->mgmt_frm_sub_type;
+	is_conn_ap->is_conn_ap_frm = my_frame_tlv->is_my_frame;
+
+	return QDF_STATUS_SUCCESS;
+}
+
+/**
  * extract_vdev_roam_param_tlv() - extract vdev roam param from event
  * @wmi_handle: wmi handle
  * @param evt_buf: pointer to event buffer
@@ -16251,6 +16315,8 @@ extract_oem_response_param_tlv(wmi_unified_t wmi_handle, void *resp_buf,
 #endif /* WIFI_POS_CONVERGED */
 
 #if defined(WIFI_POS_CONVERGED) && defined(WLAN_FEATURE_RTT_11AZ_SUPPORT)
+#define WLAN_PASN_LTF_KEY_SEED_REQUIRED 0x2
+
 static QDF_STATUS
 extract_pasn_peer_create_req_event_tlv(wmi_unified_t wmi_handle, void *evt_buf,
 				       struct wifi_pos_pasn_peer_data *dst)
@@ -16307,6 +16373,8 @@ extract_pasn_peer_create_req_event_tlv(wmi_unified_t wmi_handle, void *evt_buf,
 		else
 			dst->peer_info[i].peer_type =
 					WLAN_WIFI_POS_PASN_UNSECURE_PEER;
+		if (security_mode & WLAN_PASN_LTF_KEY_SEED_REQUIRED)
+			dst->peer_info[i].is_ltf_keyseed_required = true;
 
 		dst->peer_info[i].force_self_mac_usage =
 			WMI_RTT_PASN_PEER_CREATE_FORCE_SELF_MAC_USE_GET(
@@ -16372,7 +16440,150 @@ extract_pasn_peer_delete_req_event_tlv(wmi_unified_t wmi_handle, void *evt_buf,
 
 	return QDF_STATUS_SUCCESS;
 }
+
+static QDF_STATUS
+send_rtt_pasn_auth_status_cmd_tlv(wmi_unified_t wmi_handle,
+				  struct wlan_pasn_auth_status *data)
+{
+	QDF_STATUS status;
+	wmi_buf_t buf;
+	wmi_rtt_pasn_auth_status_cmd_fixed_param *fixed_param;
+	uint8_t *buf_ptr;
+	uint8_t i;
+	size_t len = sizeof(*fixed_param) +
+		     data->num_peers * sizeof(wmi_rtt_pasn_auth_status_param) +
+		     WMI_TLV_HDR_SIZE;
+
+	buf = wmi_buf_alloc(wmi_handle, len);
+	if (!buf) {
+		wmi_err("wmi_buf_alloc failed");
+		return QDF_STATUS_E_FAILURE;
+	}
+	buf_ptr = (uint8_t *)wmi_buf_data(buf);
+	fixed_param =
+		(wmi_rtt_pasn_auth_status_cmd_fixed_param *)wmi_buf_data(buf);
+	WMITLV_SET_HDR(&fixed_param->tlv_header,
+		       WMITLV_TAG_STRUC_wmi_rtt_pasn_auth_status_cmd_fixed_param,
+		       WMITLV_GET_STRUCT_TLVLEN(
+		       wmi_rtt_pasn_auth_status_cmd_fixed_param));
+	buf_ptr += sizeof(*fixed_param);
+
+	WMITLV_SET_HDR(buf_ptr, WMITLV_TAG_ARRAY_STRUC,
+		       (data->num_peers *
+			sizeof(wmi_rtt_pasn_auth_status_param)));
+	buf_ptr += WMI_TLV_HDR_SIZE;
+
+	for (i = 0; i < data->num_peers; i++) {
+		wmi_rtt_pasn_auth_status_param *auth_status_tlv =
+				(wmi_rtt_pasn_auth_status_param *)buf_ptr;
+
+		WMITLV_SET_HDR(&auth_status_tlv->tlv_header,
+			       WMITLV_TAG_STRUC_wmi_rtt_pasn_auth_status_param,
+			       WMITLV_GET_STRUCT_TLVLEN(wmi_rtt_pasn_auth_status_param));
+
+		WMI_CHAR_ARRAY_TO_MAC_ADDR(data->auth_status[i].peer_mac.bytes,
+					   &auth_status_tlv->peer_mac_addr);
+		WMI_CHAR_ARRAY_TO_MAC_ADDR(data->auth_status[i].self_mac.bytes,
+					   &auth_status_tlv->source_mac_addr);
+		auth_status_tlv->status = data->auth_status[i].status;
+
+		buf_ptr += sizeof(wmi_rtt_pasn_auth_status_param);
+	}
+
+	wmi_mtrace(WMI_RTT_PASN_AUTH_STATUS_CMD, 0, 0);
+	status = wmi_unified_cmd_send(wmi_handle, buf, len,
+				      WMI_RTT_PASN_AUTH_STATUS_CMD);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		wmi_err("Failed to send Auth status command ret = %d", status);
+		wmi_buf_free(buf);
+	}
+
+	return status;
+}
+
+static QDF_STATUS
+send_rtt_pasn_deauth_cmd_tlv(wmi_unified_t wmi_handle,
+			     struct qdf_mac_addr *peer_mac)
+{
+	QDF_STATUS status;
+	wmi_buf_t buf;
+	wmi_rtt_pasn_deauth_cmd_fixed_param *fixed_param;
+	size_t len = sizeof(*fixed_param);
+
+	buf = wmi_buf_alloc(wmi_handle, len);
+	if (!buf) {
+		wmi_err("wmi_buf_alloc failed");
+		return QDF_STATUS_E_FAILURE;
+	}
+	fixed_param =
+		(wmi_rtt_pasn_deauth_cmd_fixed_param *)wmi_buf_data(buf);
+	WMITLV_SET_HDR(&fixed_param->tlv_header,
+		       WMITLV_TAG_STRUC_wmi_rtt_pasn_deauth_cmd_fixed_param,
+		       WMITLV_GET_STRUCT_TLVLEN(
+		       wmi_rtt_pasn_deauth_cmd_fixed_param));
+	WMI_CHAR_ARRAY_TO_MAC_ADDR(peer_mac->bytes,
+				   &fixed_param->peer_mac_addr);
+
+	wmi_mtrace(WMI_RTT_PASN_DEAUTH_CMD, 0, 0);
+	status = wmi_unified_cmd_send(wmi_handle, buf, len,
+				      WMI_RTT_PASN_DEAUTH_CMD);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		wmi_err("Failed to send pasn deauth command ret = %d", status);
+		wmi_buf_free(buf);
+	}
+
+	return status;
+}
 #endif /* WLAN_FEATURE_RTT_11AZ_SUPPORT */
+
+static QDF_STATUS
+send_vdev_set_ltf_key_seed_cmd_tlv(wmi_unified_t wmi_handle,
+				   struct wlan_crypto_ltf_keyseed_data *data)
+{
+	QDF_STATUS status;
+	wmi_buf_t buf;
+	wmi_vdev_set_ltf_key_seed_cmd_fixed_param *fixed_param;
+	uint8_t *buf_ptr;
+	size_t len = sizeof(*fixed_param) + data->key_seed_len +
+		     WMI_TLV_HDR_SIZE;
+
+	buf = wmi_buf_alloc(wmi_handle, len);
+	if (!buf) {
+		wmi_err("wmi_buf_alloc failed");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	buf_ptr = (uint8_t *)wmi_buf_data(buf);
+	fixed_param =
+		(wmi_vdev_set_ltf_key_seed_cmd_fixed_param *)wmi_buf_data(buf);
+	WMITLV_SET_HDR(&fixed_param->tlv_header,
+		       WMITLV_TAG_STRUC_wmi_vdev_set_ltf_key_seed_cmd_fixed_param,
+		       WMITLV_GET_STRUCT_TLVLEN(
+		       wmi_vdev_set_ltf_key_seed_cmd_fixed_param));
+
+	fixed_param->vdev_id = data->vdev_id;
+	WMI_CHAR_ARRAY_TO_MAC_ADDR(data->peer_mac_addr.bytes,
+				   &fixed_param->peer_macaddr);
+	fixed_param->key_seed_len = data->key_seed_len;
+	fixed_param->rsn_authmode = data->rsn_authmode;
+
+	buf_ptr += sizeof(*fixed_param);
+	WMITLV_SET_HDR(buf_ptr, WMITLV_TAG_ARRAY_BYTE,
+		       (fixed_param->key_seed_len * sizeof(A_UINT8)));
+	buf_ptr += WMI_TLV_HDR_SIZE;
+
+	qdf_mem_copy(buf_ptr, data->key_seed, fixed_param->key_seed_len);
+
+	wmi_mtrace(WMI_VDEV_SET_LTF_KEY_SEED_CMDID, 0, 0);
+	status = wmi_unified_cmd_send(wmi_handle, buf, len,
+				      WMI_VDEV_SET_LTF_KEY_SEED_CMDID);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		wmi_err("Failed to send ltf keyseed command ret = %d", status);
+		wmi_buf_free(buf);
+	}
+
+	return status;
+}
 
 /**
  * extract_hw_mode_resp_event_status_tlv() - Extract HW mode change status
@@ -18201,6 +18412,7 @@ struct wmi_ops tlv_ops =  {
 	.extract_dbglog_data_len = extract_dbglog_data_len_tlv,
 	.extract_mgmt_rx_params = extract_mgmt_rx_params_tlv,
 	.extract_frame_pn_params = extract_frame_pn_params_tlv,
+	.extract_is_conn_ap_frame = extract_is_conn_ap_frm_param_tlv,
 	.extract_vdev_roam_param = extract_vdev_roam_param_tlv,
 	.extract_vdev_scan_ev_param = extract_vdev_scan_ev_param_tlv,
 #ifdef FEATURE_WLAN_SCAN_PNO
@@ -18380,6 +18592,10 @@ struct wmi_ops tlv_ops =  {
 			extract_pasn_peer_create_req_event_tlv,
 	.extract_pasn_peer_delete_req_event =
 			extract_pasn_peer_delete_req_event_tlv,
+	.send_rtt_pasn_auth_status_cmd =
+		send_rtt_pasn_auth_status_cmd_tlv,
+	.send_rtt_pasn_deauth_cmd =
+		send_rtt_pasn_deauth_cmd_tlv,
 #endif
 #ifdef WLAN_MWS_INFO_DEBUGFS
 	.send_mws_coex_status_req_cmd = send_mws_coex_status_req_cmd_tlv,
@@ -18429,6 +18645,8 @@ struct wmi_ops tlv_ops =  {
 #endif
 	.extract_dpd_status_ev_param = extract_dpd_status_ev_param_tlv,
 	.extract_install_key_comp_event = extract_install_key_comp_event_tlv,
+	.send_vdev_set_ltf_key_seed_cmd =
+			send_vdev_set_ltf_key_seed_cmd_tlv,
 	.extract_halphy_cal_status_ev_param = extract_halphy_cal_status_ev_param_tlv,
 	.send_set_halphy_cal = send_set_halphy_cal_tlv,
 	.extract_halphy_cal_ev_param = extract_halphy_cal_ev_param_tlv,

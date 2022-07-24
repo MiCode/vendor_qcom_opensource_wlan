@@ -226,4 +226,18 @@ uint32_t dp_tx_comp_nf_handler(struct dp_intr *int_ctx, struct dp_soc *soc,
 	return 0;
 }
 #endif /* WLAN_FEATURE_NEAR_FULL_IRQ */
+
+/**
+ * dp_tx_compute_tx_delay_be() - Compute HW Tx completion delay
+ * @soc: Handle to DP Soc structure
+ * @vdev: vdev
+ * @ts: Tx completion status
+ * @delay_us: Delay to be calculated in microseconds
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS dp_tx_compute_tx_delay_be(struct dp_soc *soc,
+				     struct dp_vdev *vdev,
+				     struct hal_tx_completion_status *ts,
+				     uint32_t *delay_us);
 #endif

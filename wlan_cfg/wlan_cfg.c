@@ -130,13 +130,20 @@ struct dp_int_mask_assignment {
  * the below TX mask.
  */
 static const uint8_t tx_ring_mask_msi[WLAN_CFG_INT_NUM_CONTEXTS] = {
-	[0] = WLAN_CFG_TX_RING_MASK_0, [1] = WLAN_CFG_TX_RING_MASK_6,
-	[2] = WLAN_CFG_TX_RING_MASK_7};
-#else
+	[0] = WLAN_CFG_TX_RING_MASK_0, [1] = WLAN_CFG_TX_RING_MASK_4,
+	[2] = WLAN_CFG_TX_RING_MASK_2};
+#else /* !IPA_OFFLOAD */
+#ifdef QCA_WIFI_KIWI_V2
+static const uint8_t tx_ring_mask_msi[WLAN_CFG_INT_NUM_CONTEXTS] = {
+	[0] = WLAN_CFG_TX_RING_MASK_0, [1] = WLAN_CFG_TX_RING_MASK_4,
+	[2] = WLAN_CFG_TX_RING_MASK_2, [3] = WLAN_CFG_TX_RING_MASK_5,
+	[4] = WLAN_CFG_TX_RING_MASK_6};
+#else /* !QCA_WIFI_KIWI_V2 */
 static const uint8_t tx_ring_mask_msi[WLAN_CFG_INT_NUM_CONTEXTS] = {
 	[0] = WLAN_CFG_TX_RING_MASK_0, [1] = WLAN_CFG_TX_RING_MASK_4,
 	[2] = WLAN_CFG_TX_RING_MASK_2, [3] = WLAN_CFG_TX_RING_MASK_6,
 	[4] = WLAN_CFG_TX_RING_MASK_7};
+#endif /* QCA_WIFI_KIWI_V2 */
 #endif /* IPA_OFFLOAD */
 
 static inline const

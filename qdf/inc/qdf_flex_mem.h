@@ -52,7 +52,7 @@ struct qdf_flex_mem_pool {
 	qdf_list_t seg_list;
 	struct qdf_spinlock lock;
 	uint16_t reduction_limit;
-	uint32_t item_size;
+	uint16_t item_size;
 };
 
 /**
