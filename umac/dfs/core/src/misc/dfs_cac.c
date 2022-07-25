@@ -168,11 +168,9 @@ void dfs_process_cac_completion(void *context)
 static enum qdf_hrtimer_restart_status
 dfs_cac_timeout(qdf_hrtimer_data_t *arg)
 {
-	struct wlan_dfs *dfs = NULL;
-	void *ptr = (void *)arg;
-	qdf_hrtimer_data_t *thr = container_of(ptr, qdf_hrtimer_data_t, u);
+	struct wlan_dfs *dfs;
 
-	dfs = container_of(thr, struct wlan_dfs, dfs_cac_timer);
+	dfs = container_of(arg, struct wlan_dfs, dfs_cac_timer);
 
 	if (dfs_is_hw_mode_switch_in_progress(dfs))
 		dfs->dfs_defer_params.is_cac_completed = true;

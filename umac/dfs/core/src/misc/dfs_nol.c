@@ -235,10 +235,8 @@ static enum qdf_hrtimer_restart_status
 dfs_remove_from_nol(qdf_hrtimer_data_t *arg)
 {
 	struct dfs_nolelem *nol_arg;
-	void *ptr = (void *)arg;
-	qdf_hrtimer_data_t *thr = container_of(ptr, qdf_hrtimer_data_t, u);
 
-	nol_arg = container_of(thr, struct dfs_nolelem, nol_timer);
+	nol_arg = container_of(arg, struct dfs_nolelem, nol_timer);
 
 	qdf_sched_work(NULL, &nol_arg->nol_timer_completion_work);
 
