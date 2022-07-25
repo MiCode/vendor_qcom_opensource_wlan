@@ -1222,7 +1222,12 @@ wlan_ipa_get_peer_auth_state(ol_txrx_soc_handle dp_soc, uint8_t *peer_mac,
 		is_authenticated = wlan_ipa_get_peer_state(dp_soc,
 							   iface->session_id,
 							   peer_mac);
+	} else {
+		is_authenticated = wlan_ipa_get_peer_state(dp_soc,
+							   iface->session_id,
+							   peer_mac);
 	}
+
 	return is_authenticated;
 }
 #else
