@@ -2365,10 +2365,10 @@ static void dp_ipa_wdi_rx_alt_pipe_params(struct dp_soc *soc,
 
 	if (over_gsi) {
 		if (hdl == DP_IPA_HDL_FIRST)
-			QDF_IPA_WDI_SETUP_INFO_SMMU_CLIENT(rx_smmu) =
+			QDF_IPA_WDI_SETUP_INFO_CLIENT(rx) =
 				IPA_CLIENT_WLAN2_PROD1;
 		else if (hdl == DP_IPA_HDL_SECOND)
-			QDF_IPA_WDI_SETUP_INFO_SMMU_CLIENT(rx_smmu) =
+			QDF_IPA_WDI_SETUP_INFO_CLIENT(rx) =
 				IPA_CLIENT_WLAN3_PROD1;
 	} else {
 		QDF_IPA_WDI_SETUP_INFO_CLIENT(rx) =
