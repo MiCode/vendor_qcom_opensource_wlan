@@ -1186,6 +1186,7 @@ uint8_t dp_rx_process_invalid_peer(struct dp_soc *soc, qdf_nbuf_t mpdu,
 	qdf_nbuf_t curr_nbuf, next_nbuf;
 	uint8_t *rx_tlv_hdr = qdf_nbuf_data(mpdu);
 	uint8_t *rx_pkt_hdr = NULL;
+	int i = 0;
 
 	if (!HAL_IS_DECAP_FORMAT_RAW(soc->hal_soc, rx_tlv_hdr)) {
 		dp_rx_debug("%pK: Drop decapped frames", soc);
@@ -1206,21 +1207,46 @@ uint8_t dp_rx_process_invalid_peer(struct dp_soc *soc, qdf_nbuf_t mpdu,
 		goto free;
 	}
 
-	pdev = dp_get_pdev_for_lmac_id(soc, mac_id);
+	/* In DMAC case the rx_desc_pools are common across PDEVs
+	 * so PDEV cannot be derived from the pool_id.
+	 *
+	 * link_id need to derived from the TLV tag word which is
+	 * disabled by default. For now adding a WAR to get vdev
+	 * with brute force this need to fixed with word based subscription
+	 * support is added by enabling TLV tag word
+	 */
+	if (soc->features.dmac_cmn_src_rxbuf_ring_enabled) {
+		for (i = 0; i < MAX_PDEV_CNT; i++) {
+			pdev = soc->pdev_list[i];
 
-	if (!pdev || qdf_unlikely(pdev->is_pdev_down)) {
-		dp_rx_err("%pK: PDEV %s", soc, !pdev ? "not found" : "down");
-		goto free;
-	}
+			if (!pdev || qdf_unlikely(pdev->is_pdev_down))
+				continue;
 
-	if (dp_monitor_filter_neighbour_peer(pdev, rx_pkt_hdr) ==
-	    QDF_STATUS_SUCCESS)
-		return 0;
+			TAILQ_FOREACH(vdev, &pdev->vdev_list, vdev_list_elem) {
+				if (qdf_mem_cmp(wh->i_addr1, vdev->mac_addr.raw,
+						QDF_MAC_ADDR_SIZE) == 0) {
+					goto out;
+				}
+			}
+		}
+	} else {
+		pdev = dp_get_pdev_for_lmac_id(soc, mac_id);
 
-	TAILQ_FOREACH(vdev, &pdev->vdev_list, vdev_list_elem) {
-		if (qdf_mem_cmp(wh->i_addr1, vdev->mac_addr.raw,
-				QDF_MAC_ADDR_SIZE) == 0) {
-			goto out;
+		if (!pdev || qdf_unlikely(pdev->is_pdev_down)) {
+			dp_rx_err("%pK: PDEV %s",
+				  soc, !pdev ? "not found" : "down");
+			goto free;
+		}
+
+		if (dp_monitor_filter_neighbour_peer(pdev, rx_pkt_hdr) ==
+		    QDF_STATUS_SUCCESS)
+			return 0;
+
+		TAILQ_FOREACH(vdev, &pdev->vdev_list, vdev_list_elem) {
+			if (qdf_mem_cmp(wh->i_addr1, vdev->mac_addr.raw,
+					QDF_MAC_ADDR_SIZE) == 0) {
+				goto out;
+			}
 		}
 	}
 
@@ -1228,7 +1254,6 @@ uint8_t dp_rx_process_invalid_peer(struct dp_soc *soc, qdf_nbuf_t mpdu,
 		dp_rx_err("%pK: VDEV not found", soc);
 		goto free;
 	}
-
 out:
 	msg.wh = wh;
 	qdf_nbuf_pull_head(mpdu, soc->rx_pkt_tlv_size);
