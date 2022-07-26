@@ -7490,13 +7490,15 @@ target_if_wmi_extract_spectral_fft_size_caps(
  * information in spectral scan session
  * @spectral: Spectral LMAC object
  * @det_info: Pointer to spectral session detector information
+ * @smode: Spectral scan mode
  *
  * Return: QDF_STATUS of operation
  */
 static QDF_STATUS
 target_if_update_det_info_in_spectral_session(
 	struct target_if_spectral *spectral,
-	const struct spectral_session_det_info *det_info)
+	const struct spectral_session_det_info *det_info,
+	enum spectral_scan_mode smode)
 {
 	struct per_session_det_map *det_map;
 	struct per_session_dest_det_info *dest_det_info;
@@ -7517,6 +7519,9 @@ target_if_update_det_info_in_spectral_session(
 	dest_det_info->end_freq = det_info->end_freq;
 
 	qdf_spin_unlock_bh(&spectral->session_det_map_lock);
+
+	/* This detector will be used for this smode throughout this session */
+	spectral->rparams.detid_mode_table[det_info->det_id] = smode;
 
 	return QDF_STATUS_SUCCESS;
 }
@@ -7722,7 +7727,8 @@ target_if_spectral_fw_param_event_handler(ol_scn_t scn, uint8_t *data_buf,
 			}
 
 			status = target_if_update_det_info_in_spectral_session(
-					spectral, &det_info);
+					spectral, &det_info,
+					event_params.smode);
 			if (QDF_IS_STATUS_ERROR(status)) {
 				spectral_err("Unable to update detector info");
 				goto release_pdev_ref;
