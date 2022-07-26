@@ -1923,6 +1923,14 @@ void *hif_get_dev_ba(struct hif_opaque_softc *hif_handle);
 void *hif_get_dev_ba_ce(struct hif_opaque_softc *hif_handle);
 
 /**
+ * hif_get_soc_version() - get soc major version from target info
+ * @hif_ctx - the HIF context
+ *
+ * Return: version number
+ */
+uint32_t hif_get_soc_version(struct hif_opaque_softc *hif_handle);
+
+/**
  * hif_set_initial_wakeup_cb() - set the initial wakeup event handler function
  * @hif_ctx - the HIF context to assign the callback to
  * @callback - the callback to assign

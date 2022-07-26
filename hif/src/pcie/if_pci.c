@@ -3657,6 +3657,7 @@ static void hif_pci_get_soc_info_pld(struct hif_pci_softc *sc,
 	scn->cmem_size = info.dev_mem_info[0].size;
 	scn->target_info.target_version = info.soc_id;
 	scn->target_info.target_revision = 0;
+	scn->target_info.soc_version = info.device_version.major_version;
 }
 
 static void hif_pci_get_soc_info_nopld(struct hif_pci_softc *sc,
