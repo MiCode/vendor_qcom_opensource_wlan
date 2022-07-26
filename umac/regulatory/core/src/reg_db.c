@@ -21,7 +21,7 @@
 /**
  * DOC: reg_db.c
  * This file implements QCA regulatory database.
- * Current implementation conforms to database version 38.
+ * Current implementation conforms to database version 40.
  */
 
 #include <qdf_types.h>
