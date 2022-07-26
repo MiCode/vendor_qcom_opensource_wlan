@@ -2947,6 +2947,90 @@ util_get_bvmlie_eml_cap(uint8_t *mlieseq, qdf_size_t mlieseqlen,
 }
 
 QDF_STATUS
+util_get_bvmlie_msd_cap(uint8_t *mlieseq, qdf_size_t mlieseqlen,
+			bool *msd_cap_found,
+			uint16_t *msd_cap)
+{
+	struct wlan_ie_multilink *mlie_fixed;
+	enum wlan_ml_variant variant;
+	uint16_t mlcontrol;
+	uint8_t msd_cap_offset;
+	uint8_t commoninfo_len;
+	uint16_t presencebitmap;
+
+	if (!mlieseq || !mlieseqlen || !msd_cap_found || !msd_cap)
+		return QDF_STATUS_E_NULL_VALUE;
+
+	*msd_cap = 0;
+	*msd_cap_found = false;
+
+	if (mlieseqlen < sizeof(struct wlan_ie_multilink))
+		return QDF_STATUS_E_INVAL;
+
+	mlie_fixed = (struct wlan_ie_multilink *)mlieseq;
+
+	if ((mlie_fixed->elem_id != WLAN_ELEMID_EXTN_ELEM) ||
+	    (mlie_fixed->elem_id_ext != WLAN_EXTN_ELEMID_MULTI_LINK))
+		return QDF_STATUS_E_INVAL;
+
+	mlcontrol = qdf_le16_to_cpu(mlie_fixed->mlcontrol);
+
+	variant = QDF_GET_BITS(mlcontrol, WLAN_ML_CTRL_TYPE_IDX,
+			       WLAN_ML_CTRL_TYPE_BITS);
+
+	if (variant != WLAN_ML_VARIANT_BASIC)
+		return QDF_STATUS_E_INVAL;
+
+	presencebitmap = QDF_GET_BITS(mlcontrol, WLAN_ML_CTRL_PBM_IDX,
+				      WLAN_ML_CTRL_PBM_BITS);
+
+	/* msd_cap_offset stores the offset of MSD capabilities within
+	 * Common Info
+	 */
+	msd_cap_offset = WLAN_ML_BV_CINFO_LENGTH_SIZE + QDF_MAC_ADDR_SIZE;
+	if (presencebitmap & WLAN_ML_BV_CTRL_PBM_LINKIDINFO_P)
+		msd_cap_offset += WLAN_ML_BV_CINFO_LINKIDINFO_SIZE;
+	if (presencebitmap & WLAN_ML_BV_CTRL_PBM_BSSPARAMCHANGECNT_P)
+		msd_cap_offset += WLAN_ML_BSSPARAMCHNGCNT_SIZE;
+	if (presencebitmap & WLAN_ML_BV_CTRL_PBM_MEDIUMSYNCDELAYINFO_P) {
+		/* Common Info starts at
+		 * mlieseq + sizeof(struct wlan_ie_multilink).
+		 * Check if there is sufficient space in the buffer for
+		 * the Common Info Length.
+		 */
+		if (mlieseqlen < (sizeof(struct wlan_ie_multilink) +
+				  WLAN_ML_BV_CINFO_LENGTH_SIZE))
+			return QDF_STATUS_E_PROTO;
+
+		/* Check if the value indicated in the Common Info Length
+		 * subfield is sufficient to access the MSD capabilities.
+		 */
+		commoninfo_len = *(mlieseq + sizeof(struct wlan_ie_multilink));
+		if (commoninfo_len < (msd_cap_offset +
+				      WLAN_ML_BV_CINFO_MEDMSYNCDELAYINFO_SIZE))
+			return QDF_STATUS_E_PROTO;
+
+		/* Common Info starts at mlieseq + sizeof(struct
+		 * wlan_ie_multilink). Check if there is sufficient space in
+		 * Common Info for the MSD capability.
+		 */
+		if (mlieseqlen < (sizeof(struct wlan_ie_multilink) +
+				  msd_cap_offset +
+				  WLAN_ML_BV_CINFO_MEDMSYNCDELAYINFO_SIZE))
+			return QDF_STATUS_E_PROTO;
+
+		*msd_cap_found = true;
+		*msd_cap = qdf_le16_to_cpu(*(uint16_t *)(mlieseq +
+							 sizeof(struct wlan_ie_multilink) +
+							 msd_cap_offset));
+	} else {
+		mlo_debug("MSD caps not found in assoc rsp");
+	}
+
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS
 util_get_bvmlie_mldmacaddr(uint8_t *mlieseq, qdf_size_t mlieseqlen,
 			   struct qdf_mac_addr *mldmacaddr)
 {

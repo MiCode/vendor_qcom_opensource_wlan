@@ -569,6 +569,18 @@ struct wlan_mlo_eml_cap {
 };
 
 /**
+ * struct wlan_mlo_msd_cap - MSD capabilities of MLD
+ * @medium_sync_duration: Medium Sync Duration
+ * @medium_sync_ofdm_ed_thresh: MSD threshold value
+ * @medium_sync_max_txop_num: Max number of TXOP
+ */
+struct wlan_mlo_msd_cap {
+	uint16_t medium_sync_duration:8,
+		 medium_sync_ofdm_ed_thresh:4,
+		 medium_sync_max_txop_num:4;
+};
+
+/**
  * struct wlan_mlo_mld_cap - MLD capabilities of MLD
  * @max_simult_link: Maximum number of simultaneous links
  * @srs_support: SRS support
@@ -607,6 +619,9 @@ struct wlan_mlo_mld_cap {
  * @nawds_config: eack link peer's NAWDS configuration
  * @pending_auth: Holds pending auth request
  * @t2lm_policy: TID-to-link mapping information
+ * @msd_cap_present: Medium Sync Capability present bit
+ * @mlpeer_emlcap: EML capability information for ML peer
+ * @mlpeer_msdcap: Medium Sync Delay capability information for ML peer
  */
 struct wlan_mlo_peer_context {
 	qdf_list_node_t peer_node;
@@ -637,7 +652,9 @@ struct wlan_mlo_peer_context {
 #ifdef WLAN_FEATURE_11BE
 	struct wlan_mlo_peer_t2lm_policy t2lm_policy;
 #endif
+	bool msd_cap_present;
 	struct wlan_mlo_eml_cap mlpeer_emlcap;
+	struct wlan_mlo_msd_cap mlpeer_msdcap;
 };
 
 /*

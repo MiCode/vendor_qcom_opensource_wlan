@@ -225,6 +225,29 @@ util_get_bvmlie_eml_cap(uint8_t *mlieseq, qdf_size_t mlieseqlen,
 			uint16_t *eml_cap);
 
 /**
+ * util_get_bvmlie_msd_cap() - Get the MSD capabilities for Basic variant
+ * MLO IE
+ * @mlieseq: Starting address of the Multi-Link element or Multi-Link element
+ * fragment sequence
+ * @mlieseqlen: Total length of the Multi-Link element or Multi-Link element
+ * fragment sequence
+ * @msd_cap_found: Pointer to the location where a boolean status should be
+ * updated indicating whether the MSD cabalility was found or not. This should
+ * be ignored by the caller if the function returns error.
+ * @msd_cap: Pointer to the location where the MSD capabilities should be
+ * updated. This should be ignored by the caller if the function indicates
+ * that the MSD capability was not found.
+ *
+ * Get the MSD capabilities from a given Basic variant Multi-Link element or
+ * element fragment sequence.
+ *
+ * Return: QDF_STATUS_SUCCESS in the case of success, QDF_STATUS value giving
+ * the reason for error in the case of failure
+ */
+QDF_STATUS
+util_get_bvmlie_msd_cap(uint8_t *mlieseq, qdf_size_t mlieseqlen,
+			bool *msd_cap_found, uint16_t *msd_cap);
+/**
  * util_get_bvmlie_primary_linkid() - Get the link identifier
  * @mlieseq: Starting address of the Multi-Link element or Multi-Link element
  * fragment sequence
@@ -459,6 +482,14 @@ static inline QDF_STATUS
 util_get_bvmlie_eml_cap(uint8_t *mlieseq, qdf_size_t mlieseqlen,
 			bool *eml_cap_found,
 			uint16_t *eml_cap)
+{
+	return QDF_STATUS_E_NOSUPPORT;
+}
+
+static inline QDF_STATUS
+util_get_bvmlie_msd_cap(uint8_t *mlieseq, qdf_size_t mlieseqlen,
+			bool *msd_cap_found,
+			uint16_t *msd_cap)
 {
 	return QDF_STATUS_E_NOSUPPORT;
 }
