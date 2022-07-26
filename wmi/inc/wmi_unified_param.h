@@ -5763,6 +5763,8 @@ typedef enum {
 	wmi_service_tdls_wideband_support,
 #endif
 	wmi_service_is_my_mgmt_frame,
+	wmi_service_linkspeed_roam_trigger_support,
+
 	wmi_services_max,
 } wmi_conv_service_ids;
 #define WMI_SERVICE_UNAVAILABLE 0xFFFF

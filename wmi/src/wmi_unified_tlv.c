@@ -17557,8 +17557,8 @@ send_roam_set_param_cmd_tlv(wmi_unified_t wmi_handle,
 	wmi_debug("Setting vdev %d roam_param = %x, value = %u",
 		  cmd->vdev_id, cmd->param_id, cmd->param_value);
 	wmi_mtrace(WMI_ROAM_SET_PARAM_CMDID, cmd->vdev_id, 0);
-	ret = wmi_unified_cmd_send(wmi_handle, buf, len,
-				   WMI_ROAM_SET_PARAM_CMDID);
+	ret = wmi_unified_cmd_send_over_qmi(wmi_handle, buf, len,
+					    WMI_ROAM_SET_PARAM_CMDID);
 	if (QDF_IS_STATUS_ERROR(ret)) {
 		wmi_err("Failed to send roam set param command, ret = %d", ret);
 		wmi_buf_free(buf);
@@ -19948,6 +19948,8 @@ static void populate_tlv_service(uint32_t *wmi_service)
 	wmi_service[wmi_service_configure_vendor_handoff_control_support] =
 				WMI_SERVICE_FW_INI_PARSE_SUPPORT;
 #endif
+	wmi_service[wmi_service_linkspeed_roam_trigger_support] =
+		WMI_SERVICE_LINKSPEED_ROAM_TRIGGER_SUPPORT;
 }
 
 /**
