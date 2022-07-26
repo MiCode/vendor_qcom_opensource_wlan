@@ -35,6 +35,7 @@ enum umac_reset_action {
 };
 
 #ifdef DP_UMAC_HW_RESET_SUPPORT
+
 #define dp_umac_reset_alert(params...) \
 	QDF_TRACE_FATAL(QDF_MODULE_ID_DP_UMAC_RESET, params)
 #define dp_umac_reset_err(params...) \
@@ -49,6 +50,8 @@ enum umac_reset_action {
 	QDF_TRACE_DEBUG(QDF_MODULE_ID_DP_UMAC_RESET, params)
 
 #define DP_UMAC_RESET_SHMEM_ALIGN 8
+#define DP_UMAC_RESET_SHMEM_MAGIC_NUM (0xDEADBEEF)
+
 /**
  * enum umac_reset_state - States required by the UMAC reset state machine
  * @UMAC_RESET_STATE_WAIT_FOR_DO_PRE_RESET: Waiting for the DO_PRE_RESET event
@@ -126,9 +129,9 @@ struct umac_reset_rx_actions {
  * @shmem_vaddr_unaligned: Virtual address of the shared memory (unaligned)
  * @shmem_paddr_aligned: Physical address of the shared memory (aligned)
  * @shmem_vaddr_aligned: Virtual address of the shared memory (aligned)
+ * @shmem_size: Size of the shared memory
  * @intr_offset: Offset of the UMAC reset interrupt w.r.t DP base interrupt
  * @current_state: current state of the UMAC reset state machine
- * @supported: Whether UMAC reset is supported on this soc
  * @shmem_exp_magic_num: Expected magic number in the shared memory
  * @rx_actions: callbacks for handling UMAC reset actions
  */
@@ -137,9 +140,9 @@ struct dp_soc_umac_reset_ctx {
 	void *shmem_vaddr_unaligned;
 	qdf_dma_addr_t shmem_paddr_aligned;
 	htt_umac_hang_recovery_msg_shmem_t *shmem_vaddr_aligned;
+	size_t shmem_size;
 	int intr_offset;
 	enum umac_reset_state current_state;
-	bool supported;
 	uint32_t shmem_exp_magic_num;
 	struct umac_reset_rx_actions rx_actions;
 };
@@ -151,6 +154,14 @@ struct dp_soc_umac_reset_ctx {
  * Return: QDF status of operation
  */
 QDF_STATUS dp_soc_umac_reset_init(struct dp_soc *soc);
+
+/**
+ * dp_soc_umac_reset_deinit() - De-initialize UMAC reset context
+ * @txrx_soc: DP soc object
+ *
+ * Return: QDF status of operation
+ */
+QDF_STATUS dp_soc_umac_reset_deinit(struct cdp_soc_t *txrx_soc);
 
 /**
  * dp_umac_reset_interrupt_attach() - Register handlers for UMAC reset interrupt
@@ -196,6 +207,12 @@ QDF_STATUS dp_umac_reset_notify_action_completion(
 #else
 static inline
 QDF_STATUS dp_soc_umac_reset_init(struct dp_soc *soc)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static inline
+QDF_STATUS dp_soc_umac_reset_deinit(struct cdp_soc_t *txrx_soc)
 {
 	return QDF_STATUS_SUCCESS;
 }

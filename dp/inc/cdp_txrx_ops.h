@@ -676,6 +676,7 @@ struct cdp_cmn_ops {
 					       uint8_t vdev_id,
 					       bool mlo_peers_only);
 #endif
+	QDF_STATUS (*txrx_umac_reset_deinit)(ol_txrx_soc_handle soc);
 };
 
 struct cdp_ctrl_ops {

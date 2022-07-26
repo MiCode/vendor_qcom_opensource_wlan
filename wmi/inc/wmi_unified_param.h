@@ -5732,6 +5732,7 @@ typedef enum {
 	wmi_service_mgmt_rx_reo_supported,
 	wmi_service_phy_dma_byte_swap_support,
 	wmi_service_spectral_session_info_support,
+	wmi_service_umac_hang_recovery_support,
 	wmi_service_mu_snif,
 #ifdef WLAN_FEATURE_DYNAMIC_MAC_ADDR_UPDATE
 	wmi_service_dynamic_update_vdev_macaddr_support,
