@@ -3411,10 +3411,6 @@ target_if_find_sscan_pdev_phya1(struct wlan_objmgr_psoc *psoc,
 		       cur_mac_phy_caps->supported_bands,
 		       cur_mac_phy_caps->phy_id);
 
-	/* No need to do anything if the current pdev is not a 5GHz pdev */
-	if (!(cur_mac_phy_caps->supported_bands & WMI_HOST_WLAN_5G_CAPABILITY))
-		return;
-
 	/* No need to do anything if the current pdev is same as sscan_pdev */
 	if (sscan_pdev_phy_info->phy_id == cur_mac_phy_caps->phy_id)
 		return;
@@ -3455,7 +3451,7 @@ target_if_spectral_detector_list_init(struct target_if_spectral *spectral)
 
 	/**
 	 * Special handling is required for SBS mode where the detector
-	 * list should be following for the 5GHz pdevs.
+	 * list should be the following.
 	 * For the pdev that use PHYA0:
 	 *    detector 0 for normal mode
 	 *    detector 2 for agile mode
@@ -3479,6 +3475,7 @@ target_if_spectral_detector_list_init(struct target_if_spectral *spectral)
 
 	if (is_hw_mode_sbs) {
 		struct wlan_psoc_host_mac_phy_caps *mac_phy_caps;
+		struct target_if_sscan_pdev_phy_info pdev_phy_info;
 
 		mac_phy_caps =
 			target_if_get_pdev_mac_phy_caps(spectral->pdev_obj);
@@ -3492,22 +3489,16 @@ target_if_spectral_detector_list_init(struct target_if_spectral *spectral)
 			       mac_phy_caps->supported_bands,
 			       mac_phy_caps->phy_id);
 
-		 /* We only care about 5GHz pdevs */
-		if (mac_phy_caps->supported_bands &
-		    WMI_HOST_WLAN_5G_CAPABILITY) {
-			struct target_if_sscan_pdev_phy_info pdev_phy_info;
+		pdev_phy_info.phy_id = mac_phy_caps->phy_id;
+		pdev_phy_info.is_using_phya1 = &is_using_phya1;
 
-			pdev_phy_info.phy_id = mac_phy_caps->phy_id;
-			pdev_phy_info.is_using_phya1 = &is_using_phya1;
-
-			/* Iterate over all pdevs on this psoc */
-			wlan_objmgr_iterate_obj_list
-				(wlan_pdev_get_psoc(spectral->pdev_obj),
-				 WLAN_PDEV_OP,
-				 target_if_find_sscan_pdev_phya1,
-				 &pdev_phy_info, 0,
-				 WLAN_SPECTRAL_ID);
-		}
+		/* Iterate over all pdevs on this psoc */
+		wlan_objmgr_iterate_obj_list
+			(wlan_pdev_get_psoc(spectral->pdev_obj),
+			 WLAN_PDEV_OP,
+			 target_if_find_sscan_pdev_phya1,
+			 &pdev_phy_info, 0,
+			 WLAN_SPECTRAL_ID);
 	}
 
 	/**
