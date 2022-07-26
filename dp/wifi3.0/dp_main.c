@@ -11144,6 +11144,7 @@ dp_txrx_stats_publish(struct cdp_soc_t *soc, uint8_t pdev_id,
 		      struct cdp_stats_extd *buf)
 {
 	struct cdp_txrx_stats_req req = {0,};
+	QDF_STATUS status;
 	struct dp_pdev *pdev =
 		dp_get_pdev_from_soc_pdev_id_wifi3((struct dp_soc *)soc,
 						   pdev_id);
@@ -11151,15 +11152,16 @@ dp_txrx_stats_publish(struct cdp_soc_t *soc, uint8_t pdev_id,
 	if (!pdev)
 		return TXRX_STATS_LEVEL_OFF;
 
-	if (pdev->pending_fw_response)
+	if (pdev->pending_fw_stats_response)
 		return TXRX_STATS_LEVEL_OFF;
 
 	dp_aggregate_pdev_stats(pdev);
 
-	pdev->pending_fw_response = true;
+	pdev->pending_fw_stats_response = true;
 	req.stats = (enum cdp_stats)HTT_DBG_EXT_STATS_PDEV_TX;
 	req.cookie_val = DBG_STATS_COOKIE_DP_STATS;
 	pdev->fw_stats_tlv_bitmap_rcvd = 0;
+	qdf_event_reset(&pdev->fw_stats_event);
 	dp_h2t_ext_stats_msg_send(pdev, req.stats, req.param0,
 				req.param1, req.param2, req.param3, 0,
 				req.cookie_val, 0);
@@ -11170,10 +11172,17 @@ dp_txrx_stats_publish(struct cdp_soc_t *soc, uint8_t pdev_id,
 				req.param1, req.param2, req.param3, 0,
 				req.cookie_val, 0);
 
-	qdf_event_reset(&pdev->fw_stats_event);
-	qdf_wait_single_event(&pdev->fw_stats_event, DP_MAX_SLEEP_TIME);
+	status =
+		qdf_wait_single_event(&pdev->fw_stats_event, DP_MAX_SLEEP_TIME);
+
+	if (status != QDF_STATUS_SUCCESS) {
+		if (status == QDF_STATUS_E_TIMEOUT)
+			qdf_debug("TIMEOUT_OCCURS");
+		pdev->pending_fw_stats_response = false;
+		return TXRX_STATS_LEVEL_OFF;
+	}
 	qdf_mem_copy(buf, &pdev->stats, sizeof(struct cdp_pdev_stats));
-	pdev->pending_fw_response = false;
+	pdev->pending_fw_stats_response = false;
 
 	return TXRX_STATS_LEVEL;
 }

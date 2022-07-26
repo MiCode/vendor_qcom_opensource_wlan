@@ -2988,6 +2988,8 @@ struct dp_pdev {
 
 	/* qdf_event for fw_peer_stats */
 	qdf_event_t fw_peer_stats_event;
+
+	/* qdf_event for fw_stats */
 	qdf_event_t fw_stats_event;
 
 	/* User configured max number of tx buffers */
@@ -3073,8 +3075,12 @@ struct dp_pdev {
 	ol_txrx_pktdump_cb dp_tx_packetdump_cb;
 	ol_txrx_pktdump_cb dp_rx_packetdump_cb;
 #endif
+
+	/* Firmware Stats for TLV received from Firmware */
 	uint64_t fw_stats_tlv_bitmap_rcvd;
-	bool pending_fw_response;
+
+	/* For Checking Pending Firmware Response */
+	bool pending_fw_stats_response;
 };
 
 struct dp_peer;

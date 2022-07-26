@@ -3919,13 +3919,6 @@ QDF_STATUS dp_h2t_ext_stats_msg_send(struct dp_pdev *pdev,
 		return QDF_STATUS_E_FAILURE;
 	}
 
-	dp_htt_tx_stats_info("%pK: cookie <-> %d\n config_param_0 %u\n"
-			     "config_param_1 %u\n config_param_2 %u\n"
-			     "config_param_4 %u\n -------------",
-			     pdev->soc, cookie_val,
-			     config_param_0,
-			     config_param_1, config_param_2, config_param_3);
-
 	msg_word = (uint32_t *) qdf_nbuf_data(msg);
 
 	qdf_nbuf_push_head(msg, HTC_HDR_ALIGNMENT_PADDING);
