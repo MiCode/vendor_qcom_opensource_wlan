@@ -1147,8 +1147,8 @@ os_if_wifi_pos_initiate_pasn_auth(struct wlan_objmgr_vdev *vdev,
 	}
 
 	for (i = 0; i < num_pasn_peers; i++) {
-		osif_debug("PASN peer_mac[%d]:" QDF_MAC_ADDR_FMT "src_mac:" QDF_MAC_ADDR_FMT, i,
-			   QDF_MAC_ADDR_REF(pasn_peer[i].peer_mac.bytes),
+		osif_debug("PASN peer_mac[%d]: " QDF_MAC_ADDR_FMT " src_mac: " QDF_MAC_ADDR_FMT,
+			   i, QDF_MAC_ADDR_REF(pasn_peer[i].peer_mac.bytes),
 			   QDF_MAC_ADDR_REF(pasn_peer[i].self_mac.bytes));
 		nest_attr = nla_nest_start(skb, i);
 		if (!nest_attr) {
@@ -1164,7 +1164,7 @@ os_if_wifi_pos_initiate_pasn_auth(struct wlan_objmgr_vdev *vdev,
 			goto nla_put_failure;
 		}
 
-		if (pasn_peer[i].force_self_mac_usage &&
+		if (!qdf_is_macaddr_zero(&pasn_peer[i].self_mac) &&
 		    nla_put(skb, QCA_WLAN_VENDOR_ATTR_PASN_PEER_SRC_ADDR,
 			    ETH_ALEN, pasn_peer[i].self_mac.bytes)) {
 			osif_err("NLA put failed");
