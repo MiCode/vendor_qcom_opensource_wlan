@@ -189,13 +189,32 @@ typedef enum wlan_crypto_rsn_cap {
 	WLAN_CRYPTO_RSN_CAP_OCV_SUPPORTED  = 0x4000,
 } wlan_crypto_rsn_cap;
 
+/**
+ * wlan_crypto_rsnx_cap - RSNXE capabilities
+ * WLAN_CRYPTO_RSNX_CAP_PROTECTED_TWT: Protected TWT
+ * WLAN_CRYPTO_RSNX_CAP_SAE_H2E: SAE Hash to Element
+ * WLAN_CRYPTO_RSNX_CAP_SAE_PK: SAE PK
+ * WLAN_CRYPTO_RSNX_CAP_SECURE_LTF: Secure LTF
+ * WLAN_CRYPTO_RSNX_CAP_SECURE_RTT: Secure RTT
+ * WLAN_CRYPTO_RSNX_CAP_PROT_RANGE_NEG: Protected Range Negotiation
+ * WLAN_CRYPTO_RSNX_CAP_URNM_MFPR: Same as WLAN_CRYPTO_RSNX_CAP_PROT_RANGE_NEG
+ *                                 and it's just a spec format.
+ *
+ * Definition: (IEEE Std 802.11-2020, 9.4.2.241, Table 9-780)
+ * The Extended RSN Capabilities field, except its first 4 bits, is a
+ * bit field indicating the extended RSN capabilities being advertised
+ * by the STA transmitting the element. The length of the Extended
+ * RSN Capabilities field is a variable n, in octets, as indicated by
+ * the first 4 bits in the field.
+ */
 enum wlan_crypto_rsnx_cap {
 	WLAN_CRYPTO_RSNX_CAP_PROTECTED_TWT = 0x10,
 	WLAN_CRYPTO_RSNX_CAP_SAE_H2E = 0x20,
 	WLAN_CRYPTO_RSNX_CAP_SAE_PK = 0x40,
-	WLAN_CRYPTO_RSNX_CAP_SECURE_LTF = 0x400,
-	WLAN_CRYPTO_RSNX_CAP_SECURE_RTT = 0x1000,
-	WLAN_CRYPTO_RSNX_CAP_URNM_MFPR = 0x2000,
+	WLAN_CRYPTO_RSNX_CAP_SECURE_LTF = 0x100,
+	WLAN_CRYPTO_RSNX_CAP_SECURE_RTT = 0x200,
+	WLAN_CRYPTO_RSNX_CAP_PROT_RANGE_NEG = 0x400,
+	WLAN_CRYPTO_RSNX_CAP_URNM_MFPR = WLAN_CRYPTO_RSNX_CAP_PROT_RANGE_NEG,
 };
 
 /**
@@ -547,5 +566,25 @@ struct wlan_lmac_if_crypto_rx_ops {
 				(crypto_rx_ops->set_peer_wep_keys)
 #define WLAN_CRYPTO_RX_OPS_GET_RXPN(crypto_rx_ops) \
 				((crypto_rx_ops)->get_rxpn)
+
+#define WLAN_CRYPTO_IS_WPA_WPA2(akm) \
+	(QDF_HAS_PARAM(akm, WLAN_CRYPTO_KEY_MGMT_IEEE8021X) || \
+	 QDF_HAS_PARAM(akm, WLAN_CRYPTO_KEY_MGMT_PSK) || \
+	 QDF_HAS_PARAM(akm, WLAN_CRYPTO_KEY_MGMT_FT_IEEE8021X) || \
+	 QDF_HAS_PARAM(akm, WLAN_CRYPTO_KEY_MGMT_FT_PSK) || \
+	 QDF_HAS_PARAM(akm, WLAN_CRYPTO_KEY_MGMT_IEEE8021X_SHA256) || \
+	 QDF_HAS_PARAM(akm, WLAN_CRYPTO_KEY_MGMT_PSK_SHA256) || \
+	 QDF_HAS_PARAM(akm, WLAN_CRYPTO_KEY_MGMT_WPS) || \
+	 QDF_HAS_PARAM(akm, WLAN_CRYPTO_KEY_MGMT_WAPI_PSK) || \
+	 QDF_HAS_PARAM(akm, WLAN_CRYPTO_KEY_MGMT_WAPI_CERT) || \
+	 QDF_HAS_PARAM(akm, WLAN_CRYPTO_KEY_MGMT_CCKM) || \
+	 QDF_HAS_PARAM(akm, WLAN_CRYPTO_KEY_MGMT_OSEN) || \
+	 QDF_HAS_PARAM(akm, WLAN_CRYPTO_KEY_MGMT_IEEE8021X_SUITE_B) || \
+	 QDF_HAS_PARAM(akm, WLAN_CRYPTO_KEY_MGMT_FILS_SHA256) || \
+	 QDF_HAS_PARAM(akm, WLAN_CRYPTO_KEY_MGMT_FILS_SHA384) || \
+	 QDF_HAS_PARAM(akm, WLAN_CRYPTO_KEY_MGMT_FT_FILS_SHA256) || \
+	 QDF_HAS_PARAM(akm, WLAN_CRYPTO_KEY_MGMT_FT_FILS_SHA384) || \
+	 QDF_HAS_PARAM(akm, WLAN_CRYPTO_KEY_MGMT_FT_PSK_SHA384) || \
+	 QDF_HAS_PARAM(akm, WLAN_CRYPTO_KEY_MGMT_PSK_SHA384))
 
 #endif /* end of _WLAN_CRYPTO_GLOBAL_DEF_H_ */
