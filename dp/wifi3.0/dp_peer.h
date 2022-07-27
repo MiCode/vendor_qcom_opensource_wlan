@@ -535,73 +535,6 @@ dp_peer_state_cmp(struct dp_peer *peer,
 	return is_status_equal;
 }
 
-/**
- * dp_peer_update_state() - update dp peer state
- *
- * @soc		: core DP soc context
- * @peer	: DP peer
- * @state	: new state
- *
- * Return: None
- */
-static inline void
-dp_peer_update_state(struct dp_soc *soc,
-		     struct dp_peer *peer,
-		     enum dp_peer_state state)
-{
-	uint8_t peer_state;
-
-	qdf_spin_lock_bh(&peer->peer_state_lock);
-	peer_state = peer->peer_state;
-
-	switch (state) {
-	case DP_PEER_STATE_INIT:
-		DP_PEER_STATE_ASSERT
-			(peer, state, (peer_state != DP_PEER_STATE_ACTIVE) ||
-			 (peer_state != DP_PEER_STATE_LOGICAL_DELETE));
-		break;
-
-	case DP_PEER_STATE_ACTIVE:
-		DP_PEER_STATE_ASSERT(peer, state,
-				     (peer_state == DP_PEER_STATE_INIT));
-		break;
-
-	case DP_PEER_STATE_LOGICAL_DELETE:
-		DP_PEER_STATE_ASSERT(peer, state,
-				     (peer_state == DP_PEER_STATE_ACTIVE) ||
-				     (peer_state == DP_PEER_STATE_INIT));
-		break;
-
-	case DP_PEER_STATE_INACTIVE:
-		DP_PEER_STATE_ASSERT
-			(peer, state,
-			 (peer_state == DP_PEER_STATE_LOGICAL_DELETE));
-		break;
-
-	case DP_PEER_STATE_FREED:
-		if (peer->sta_self_peer)
-			DP_PEER_STATE_ASSERT
-			(peer, state, (peer_state == DP_PEER_STATE_INIT));
-		else
-			DP_PEER_STATE_ASSERT
-				(peer, state,
-				 (peer_state == DP_PEER_STATE_INACTIVE) ||
-				 (peer_state == DP_PEER_STATE_LOGICAL_DELETE));
-		break;
-
-	default:
-		qdf_spin_unlock_bh(&peer->peer_state_lock);
-		dp_alert("Invalid peer state %u for peer "QDF_MAC_ADDR_FMT,
-			 state, QDF_MAC_ADDR_REF(peer->mac_addr.raw));
-		return;
-	}
-	peer->peer_state = state;
-	qdf_spin_unlock_bh(&peer->peer_state_lock);
-	dp_info("Updating peer state from %u to %u mac "QDF_MAC_ADDR_FMT"\n",
-		peer_state, state,
-		QDF_MAC_ADDR_REF(peer->mac_addr.raw));
-}
-
 void dp_print_ast_stats(struct dp_soc *soc);
 QDF_STATUS dp_rx_peer_map_handler(struct dp_soc *soc, uint16_t peer_id,
 				  uint16_t hw_peer_id, uint8_t vdev_id,
@@ -2100,6 +2033,78 @@ void dp_peer_rx_bufq_resources_deinit(struct dp_txrx_peer *txrx_peer)
 {
 }
 #endif
+
+/**
+ * dp_peer_update_state() - update dp peer state
+ *
+ * @soc		: core DP soc context
+ * @peer	: DP peer
+ * @state	: new state
+ *
+ * Return: None
+ */
+static inline void
+dp_peer_update_state(struct dp_soc *soc,
+		     struct dp_peer *peer,
+		     enum dp_peer_state state)
+{
+	uint8_t peer_state;
+
+	qdf_spin_lock_bh(&peer->peer_state_lock);
+	peer_state = peer->peer_state;
+
+	switch (state) {
+	case DP_PEER_STATE_INIT:
+		DP_PEER_STATE_ASSERT
+			(peer, state, (peer_state != DP_PEER_STATE_ACTIVE) ||
+			 (peer_state != DP_PEER_STATE_LOGICAL_DELETE));
+		break;
+
+	case DP_PEER_STATE_ACTIVE:
+		DP_PEER_STATE_ASSERT(peer, state,
+				     (peer_state == DP_PEER_STATE_INIT));
+		break;
+
+	case DP_PEER_STATE_LOGICAL_DELETE:
+		DP_PEER_STATE_ASSERT(peer, state,
+				     (peer_state == DP_PEER_STATE_ACTIVE) ||
+				     (peer_state == DP_PEER_STATE_INIT));
+		break;
+
+	case DP_PEER_STATE_INACTIVE:
+		if (IS_MLO_DP_MLD_PEER(peer))
+			DP_PEER_STATE_ASSERT
+				(peer, state,
+				 (peer_state == DP_PEER_STATE_ACTIVE));
+		else
+			DP_PEER_STATE_ASSERT
+				(peer, state,
+				 (peer_state == DP_PEER_STATE_LOGICAL_DELETE));
+		break;
+
+	case DP_PEER_STATE_FREED:
+		if (peer->sta_self_peer)
+			DP_PEER_STATE_ASSERT
+			(peer, state, (peer_state == DP_PEER_STATE_INIT));
+		else
+			DP_PEER_STATE_ASSERT
+				(peer, state,
+				 (peer_state == DP_PEER_STATE_INACTIVE) ||
+				 (peer_state == DP_PEER_STATE_LOGICAL_DELETE));
+		break;
+
+	default:
+		qdf_spin_unlock_bh(&peer->peer_state_lock);
+		dp_alert("Invalid peer state %u for peer " QDF_MAC_ADDR_FMT,
+			 state, QDF_MAC_ADDR_REF(peer->mac_addr.raw));
+		return;
+	}
+	peer->peer_state = state;
+	qdf_spin_unlock_bh(&peer->peer_state_lock);
+	dp_info("Updating peer state from %u to %u mac " QDF_MAC_ADDR_FMT "\n",
+		peer_state, state,
+		QDF_MAC_ADDR_REF(peer->mac_addr.raw));
+}
 
 #ifdef REO_SHARED_QREF_TABLE_EN
 void dp_peer_rx_reo_shared_qaddr_delete(struct dp_soc *soc,
