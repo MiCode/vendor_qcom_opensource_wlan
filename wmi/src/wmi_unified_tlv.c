@@ -8567,6 +8567,314 @@ void wmi_copy_resource_config(wmi_resource_config *resource_cfg,
 
 }
 
+#ifdef FEATURE_SET
+/**
+ * convert_host_to_target_vendor1_req2_version() -Convert host vendor1
+ * requirement2 version to target vendor1 requirement2 version
+ * @vendor1_req2_ver: Host vendor1 requirement2 version
+ *
+ * Return: Target vendor1 requirement2 version
+ */
+static WMI_VENDOR1_REQ2_VERSION convert_host_to_target_vendor1_req2_version(
+				WMI_HOST_VENDOR1_REQ2_VERSION vendor1_req2_ver)
+{
+	switch (vendor1_req2_ver) {
+	case WMI_HOST_VENDOR1_REQ2_VERSION_3_00:
+		return WMI_VENDOR1_REQ2_VERSION_3_00;
+	case WMI_HOST_VENDOR1_REQ2_VERSION_3_01:
+		return WMI_VENDOR1_REQ2_VERSION_3_01;
+	case WMI_HOST_VENDOR1_REQ2_VERSION_3_20:
+		return WMI_VENDOR1_REQ2_VERSION_3_20;
+	default:
+		return WMI_VENDOR1_REQ2_VERSION_3_00;
+	}
+}
+
+/**
+ * convert_host_to_target_vendor1_req1_version() -Convert host vendor1
+ * requirement1 version to target vendor1 requirement1 version
+ * @vendor1_req1_ver: Host vendor1 requirement1 version
+ *
+ * Return: Target vendor1 requirement1 version
+ */
+static WMI_VENDOR1_REQ1_VERSION convert_host_to_target_vendor1_req1_version(
+				WMI_HOST_VENDOR1_REQ1_VERSION vendor1_req1_ver)
+{
+	switch (vendor1_req1_ver) {
+	case WMI_HOST_VENDOR1_REQ1_VERSION_3_00:
+		return WMI_VENDOR1_REQ1_VERSION_3_00;
+	case WMI_HOST_VENDOR1_REQ1_VERSION_3_01:
+		return WMI_VENDOR1_REQ1_VERSION_3_01;
+	case WMI_HOST_VENDOR1_REQ1_VERSION_3_20:
+		return WMI_VENDOR1_REQ1_VERSION_3_20;
+	default:
+		return WMI_VENDOR1_REQ1_VERSION_3_00;
+	}
+}
+
+/**
+ * convert_host_to_target_wifi_standard() -Convert host wifi standard to
+ * target wifi standard
+ * @wifi_standard: Host wifi standard
+ *
+ * Return: Target wifi standard
+ */
+static WMI_WIFI_STANDARD convert_host_to_target_wifi_standard(
+					WMI_HOST_WIFI_STANDARD wifi_standard)
+{
+	switch (wifi_standard) {
+	case WMI_HOST_WIFI_STANDARD_4:
+		return WMI_WIFI_STANDARD_4;
+	case WMI_HOST_WIFI_STANDARD_5:
+		return WMI_WIFI_STANDARD_5;
+	case WMI_HOST_WIFI_STANDARD_6:
+		return WMI_WIFI_STANDARD_6;
+	case WMI_HOST_WIFI_STANDARD_6E:
+		return WMI_WIFI_STANDARD_6E;
+	case WMI_HOST_WIFI_STANDARD_7:
+		return WMI_WIFI_STANDARD_7;
+	default:
+		return WMI_WIFI_STANDARD_4;
+	}
+}
+
+/**
+ * convert_host_to_target_band_concurrency() -Convert host band concurrency to
+ * target band concurrency
+ * @band_concurrency: Host Band concurrency
+ *
+ * Return: Target band concurrency
+ */
+static WMI_BAND_CONCURRENCY convert_host_to_target_band_concurrency(
+				WMI_HOST_BAND_CONCURRENCY band_concurrency)
+{
+	switch (band_concurrency) {
+	case WMI_HOST_BAND_CONCURRENCY_DBS:
+		return WMI_HOST_DBS;
+	case WMI_HOST_BAND_CONCURRENCY_DBS_SBS:
+		return WMI_HOST_DBS_SBS;
+	default:
+		return 0;
+	}
+}
+
+/**
+ * convert_host_to_target_num_antennas() -Convert host num antennas to
+ * target num antennas
+ * @num_antennas: Host num antennas
+ *
+ * Return: Target num antennas
+ */
+static WMI_NUM_ANTENNAS convert_host_to_target_num_antennas(
+				WMI_HOST_NUM_ANTENNAS num_antennas)
+{
+	switch (num_antennas) {
+	case WMI_HOST_SISO:
+		return WMI_SISO;
+	case WMI_HOST_MIMO_2X2:
+		return WMI_MIMO_2X2;
+	default:
+		return WMI_SISO;
+	}
+}
+
+/**
+ * copy_feature_set_info() -Copy feaure set info from host to target
+ * @feature_set_bitmap: Target feature set pointer
+ * @feature_set: Host feature set structure
+ *
+ * Return: None
+ */
+static inline void copy_feature_set_info(uint32_t *feature_set_bitmap,
+					 struct target_feature_set *feature_set)
+{
+	WMI_NUM_ANTENNAS num_antennas;
+	WMI_BAND_CONCURRENCY band_concurrency;
+	WMI_WIFI_STANDARD wifi_standard;
+	WMI_VENDOR1_REQ1_VERSION vendor1_req1_version;
+	WMI_VENDOR1_REQ2_VERSION vendor1_req2_version;
+
+	num_antennas = convert_host_to_target_num_antennas(
+					feature_set->num_antennas);
+	band_concurrency = convert_host_to_target_band_concurrency(
+					feature_set->concurrency_support);
+	wifi_standard = convert_host_to_target_wifi_standard(
+						feature_set->wifi_standard);
+	vendor1_req1_version = convert_host_to_target_vendor1_req1_version(
+					feature_set->vendor_req_1_version);
+	vendor1_req2_version = convert_host_to_target_vendor1_req2_version(
+					feature_set->vendor_req_2_version);
+
+	WMI_SET_WIFI_STANDARD(feature_set_bitmap, wifi_standard);
+	WMI_SET_BAND_CONCURRENCY_SUPPORT(feature_set_bitmap, band_concurrency);
+	WMI_SET_PNO_SCAN_IN_UNASSOC_STATE(feature_set_bitmap,
+					  feature_set->pno_in_unassoc_state);
+	WMI_SET_PNO_SCAN_IN_ASSOC_STATE(feature_set_bitmap,
+					feature_set->pno_in_assoc_state);
+	WMI_SET_TWT_FEATURE_SUPPORT(feature_set_bitmap,
+				    feature_set->enable_twt);
+	WMI_SET_TWT_REQUESTER(feature_set_bitmap,
+			      feature_set->enable_twt_requester);
+	WMI_SET_TWT_BROADCAST(feature_set_bitmap,
+			      feature_set->enable_twt_broadcast);
+	WMI_SET_TWT_FLEXIBLE(feature_set_bitmap,
+			     feature_set->enable_twt_flexible);
+	WMI_SET_WIFI_OPT_FEATURE_SUPPORT(feature_set_bitmap,
+					 feature_set->enable_wifi_optimizer);
+	WMI_SET_RFC8325_FEATURE_SUPPORT(feature_set_bitmap,
+					feature_set->enable_rfc835);
+	WMI_SET_MHS_5G_SUPPORT(feature_set_bitmap,
+			       feature_set->sap_5g_supported);
+	WMI_SET_MHS_6G_SUPPORT(feature_set_bitmap,
+			       feature_set->sap_6g_supported);
+	WMI_SET_MHS_MAX_CLIENTS_SUPPORT(feature_set_bitmap,
+					feature_set->sap_max_num_clients);
+	WMI_SET_MHS_SET_COUNTRY_CODE_HAL_SUPPORT(
+				feature_set_bitmap,
+				feature_set->set_country_code_hal_supported);
+	WMI_SET_MHS_GETVALID_CHANNELS_SUPPORT(
+				feature_set_bitmap,
+				feature_set->get_valid_channel_supported);
+	WMI_SET_MHS_DOT11_MODE_SUPPORT(feature_set_bitmap,
+				       feature_set->supported_dot11mode);
+	WMI_SET_MHS_WPA3_SUPPORT(feature_set_bitmap,
+				 feature_set->sap_wpa3_support);
+	WMI_SET_VENDOR_REQ_1_VERSION(feature_set_bitmap, vendor1_req1_version);
+	WMI_SET_ROAMING_HIGH_CU_ROAM_TRIGGER(
+				feature_set_bitmap,
+				feature_set->roaming_high_cu_roam_trigger);
+	WMI_SET_ROAMING_EMERGENCY_TRIGGER(
+				feature_set_bitmap,
+				feature_set->roaming_emergency_trigger);
+	WMI_SET_ROAMING_BTM_TRIGGER(feature_set_bitmap,
+				    feature_set->roaming_btm_trihgger);
+	WMI_SET_ROAMING_IDLE_TRIGGER(feature_set_bitmap,
+				     feature_set->roaming_idle_trigger);
+	WMI_SET_ROAMING_WTC_TRIGGER(feature_set_bitmap,
+				    feature_set->roaming_wtc_trigger);
+	WMI_SET_ROAMING_BTCOEX_TRIGGER(feature_set_bitmap,
+				       feature_set->roaming_btcoex_trigger);
+	WMI_SET_ROAMING_BTW_WPA_WPA2(feature_set_bitmap,
+				     feature_set->roaming_btw_wpa_wpa2);
+	WMI_SET_ROAMING_MANAGE_CHAN_LIST_API(
+				feature_set_bitmap,
+				feature_set->roaming_manage_chan_list_api);
+	WMI_SET_ROAMING_ADAPTIVE_11R(feature_set_bitmap,
+				     feature_set->roaming_adaptive_11r);
+	WMI_SET_ROAMING_CTRL_API_GET_SET(feature_set_bitmap,
+					 feature_set->roaming_ctrl_api_get_set);
+	WMI_SET_ROAMING_CTRL_API_REASSOC(feature_set_bitmap,
+					 feature_set->roaming_ctrl_api_reassoc);
+	WMI_SET_ROAMING_CTRL_GET_CU(feature_set_bitmap,
+				    feature_set->roaming_ctrl_get_cu);
+	WMI_SET_VENDOR_REQ_2_VERSION(feature_set_bitmap, vendor1_req2_version);
+	WMI_SET_ASSURANCE_DISCONNECT_REASON_API(
+				feature_set_bitmap,
+				feature_set->assurance_disconnect_reason_api);
+	WMI_SET_FRAME_PCAP_LOG_MGMT(feature_set_bitmap,
+				    feature_set->frame_pcap_log_mgmt);
+	WMI_SET_FRAME_PCAP_LOG_CTRL(feature_set_bitmap,
+				    feature_set->frame_pcap_log_ctrl);
+	WMI_SET_FRAME_PCAP_LOG_DATA(feature_set_bitmap,
+				    feature_set->frame_pcap_log_data);
+	WMI_SET_SECURITY_WPA3_SAE_H2E(feature_set_bitmap,
+				      feature_set->security_wpa3_sae_h2e);
+	WMI_SET_SECURITY_WPA3_SAE_FT(feature_set_bitmap,
+				     feature_set->security_wpa3_sae_ft);
+	WMI_SET_SECURITY_WPA3_ENTERP_SUITEB(
+				feature_set_bitmap,
+				feature_set->security_wpa3_enterp_suitb);
+	WMI_SET_SECURITY_WPA3_ENTERP_SUITEB_192bit(
+				feature_set_bitmap,
+				feature_set->security_wpa3_enterp_suitb_192bit);
+	WMI_SET_SECURITY_FILS_SHA256(feature_set_bitmap,
+				     feature_set->security_fills_sha_256);
+	WMI_SET_SECURITY_FILS_SHA384(feature_set_bitmap,
+				     feature_set->security_fills_sha_384);
+	WMI_SET_SECURITY_FILS_SHA256_FT(feature_set_bitmap,
+					feature_set->security_fills_sha_256_FT);
+	WMI_SET_SECURITY_FILS_SHA384_FT(feature_set_bitmap,
+					feature_set->security_fills_sha_384_FT);
+	WMI_SET_SECURITY_ENCHANCED_OPEN(feature_set_bitmap,
+					feature_set->security_enhanced_open);
+	WMI_SET_NAN_SUPPORT(feature_set_bitmap, feature_set->enable_nan);
+	WMI_SET_TDLS_SUPPORT(feature_set_bitmap, feature_set->enable_tdls);
+	WMI_SET_P2P6E_SUPPORT(feature_set_bitmap, feature_set->enable_p2p_6e);
+	WMI_SET_TDLS_OFFCHAN_SUPPORT(feature_set_bitmap,
+				     feature_set->enable_tdls_offchannel);
+	WMI_SET_TDLS_CAP_ENHANCE(feature_set_bitmap,
+				 feature_set->enable_tdls_capability_enhance);
+	WMI_SET_MAX_TDLS_PEERS_SUPPORT(feature_set_bitmap,
+				       feature_set->max_tdls_peers);
+	WMI_SET_STA_DUAL_P2P_SUPPORT(feature_set_bitmap,
+				     feature_set->sta_dual_p2p_support);
+	WMI_SET_PEER_BIGDATA_GETBSSINFO_API_SUPPORT(
+				feature_set_bitmap,
+				feature_set->peer_bigdata_getbssinfo_support);
+	WMI_SET_PEER_BIGDATA_GETASSOCREJECTINFO_API_SUPPORT(
+			feature_set_bitmap,
+			feature_set->peer_bigdata_assocreject_info_support);
+	WMI_SET_PEER_BIGDATA_GETSTAINFO_API_SUPPORT(
+					feature_set_bitmap,
+					feature_set->peer_getstainfo_support);
+	WMI_SET_FEATURE_SET_VERSION(feature_set_bitmap,
+				    feature_set->feature_set_version);
+	WMI_SET_NUM_ANTENNAS(feature_set_bitmap, num_antennas);
+}
+
+/**
+ * feature_set_cmd_send_tlv() -Send feature set command
+ * @wmi_handle: WMI handle
+ * @feature_set: Feature set structure
+ *
+ * Return: QDF_STATUS_SUCCESS on success else reurn failure
+ */
+static QDF_STATUS feature_set_cmd_send_tlv(
+				struct wmi_unified *wmi_handle,
+				struct target_feature_set *feature_set)
+{
+	wmi_pdev_featureset_cmd_fixed_param *cmd;
+	wmi_buf_t buf;
+	uint16_t len;
+	QDF_STATUS ret;
+	uint8_t *buf_ptr;
+	uint32_t *feature_set_bitmap;
+
+	len = sizeof(*cmd) + WMI_TLV_HDR_SIZE +
+		WMI_FEATURE_SET_BITMAP_ARRAY_LEN32 * sizeof(uint32_t);
+	buf = wmi_buf_alloc(wmi_handle, len);
+
+	if (!buf)
+		return QDF_STATUS_E_NOMEM;
+
+	wmi_debug("Send feature set param");
+
+	buf_ptr = (uint8_t *)wmi_buf_data(buf);
+
+	cmd = (wmi_pdev_featureset_cmd_fixed_param *)wmi_buf_data(buf);
+
+	WMITLV_SET_HDR(&cmd->tlv_header,
+		       WMITLV_TAG_STRUC_wmi_pdev_featureset_cmd_fixed_param,
+		       WMITLV_GET_STRUCT_TLVLEN(
+		       wmi_pdev_featureset_cmd_fixed_param));
+
+	feature_set_bitmap = (uint32_t *)(buf_ptr + sizeof(*cmd) +
+					  WMI_TLV_HDR_SIZE);
+	WMITLV_SET_HDR(buf_ptr + sizeof(*cmd), WMITLV_TAG_ARRAY_UINT32,
+		       (WMI_FEATURE_SET_BITMAP_ARRAY_LEN32 * sizeof(uint32_t)));
+	copy_feature_set_info(feature_set_bitmap, feature_set);
+
+	wmi_mtrace(WMI_PDEV_FEATURESET_CMDID, NO_SESSION, 0);
+
+	ret = wmi_unified_cmd_send(wmi_handle, buf, len,
+				   WMI_PDEV_FEATURESET_CMDID);
+	if (QDF_IS_STATUS_ERROR(ret))
+		wmi_buf_free(buf);
+
+	return ret;
+}
+#endif
+
 /* copy_hw_mode_id_in_init_cmd() - Helper routine to copy hw_mode in init cmd
  * @wmi_handle: pointer to wmi handle
  * @buf_ptr: pointer to current position in init command buffer
@@ -18973,6 +19281,9 @@ struct wmi_ops tlv_ops =  {
 #ifdef WLAN_FEATURE_DBAM_CONFIG
 	.send_dbam_config_cmd = send_dbam_config_cmd_tlv,
 	.extract_dbam_config_resp_event = extract_dbam_config_resp_event_tlv,
+#endif
+#ifdef FEATURE_SET
+	.feature_set_cmd_send = feature_set_cmd_send_tlv,
 #endif
 };
 

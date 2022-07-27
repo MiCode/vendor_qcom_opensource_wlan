@@ -3989,3 +3989,15 @@ QDF_STATUS wmi_extract_pdev_telemetry_stats(
 
 	return QDF_STATUS_E_FAILURE;
 }
+
+#ifdef FEATURE_SET
+QDF_STATUS wmi_feature_set_cmd_send(wmi_unified_t wmi_handle,
+				    struct target_feature_set *feature_set)
+{
+	if (wmi_handle->ops->feature_set_cmd_send)
+		return wmi_handle->ops->feature_set_cmd_send(wmi_handle,
+							     feature_set);
+
+	return QDF_STATUS_E_FAILURE;
+}
+#endif

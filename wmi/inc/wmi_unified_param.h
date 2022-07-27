@@ -5834,6 +5834,192 @@ struct wmi_host_fw_abi_ver {
 	uint32_t    abi_version;
 };
 
+#ifdef FEATURE_SET
+/**
+ * enum WMI_HOST_WIFI_STANDARD - Supported wifi standard
+ * @WMI_HOST_WIFI_STANDARD_4: Wifi standard 4
+ * @WMI_HOST_WIFI_STANDARD_5:Wifi standard 5
+ * @WMI_HOST_WIFI_STANDARD_6: Wifi standard 6
+ * @WMI_HOST_WIFI_STANDARD_6E: Wifi standard 6E
+ * WMI_HOST_WIFI_STANDARD_7: Wifi standard 7
+ */
+typedef enum {
+	WMI_HOST_WIFI_STANDARD_4 = 0,
+	WMI_HOST_WIFI_STANDARD_5 = 1,
+	WMI_HOST_WIFI_STANDARD_6 = 2,
+	WMI_HOST_WIFI_STANDARD_6E = 3,
+	WMI_HOST_WIFI_STANDARD_7 = 4,
+} WMI_HOST_WIFI_STANDARD;
+
+/**
+ * enum WMI_HOST_BAND_CONCURRENCY - Enum to represent supported concurrency
+ * @WMI_HOST_BAND_CONCURRENCY_NONE: No concurrency is supported
+ * @WMI_HOST_BAND_CONCURRENCY_DBS:DBS is supported
+ * @WMI_HOST_BAND_CONCURRENCY_DBS_SBS: DBS and SBS are supported
+ */
+typedef enum {
+	WMI_HOST_BAND_CONCURRENCY_NONE = 0,
+	WMI_HOST_BAND_CONCURRENCY_DBS = 1,
+	WMI_HOST_BAND_CONCURRENCY_DBS_SBS = 2,
+} WMI_HOST_BAND_CONCURRENCY;
+
+/**
+ * enum WMI_HOST_VENDOR1_REQ1_VERSION - Vendor 1 requirement 1 version
+ * @WMI_HOST_VENDOR1_REQ2_VERSION_3_00: Major version 3, mnor version 00
+ * @WMI_HOST_VENDOR1_REQ2_VERSION_3_01: Major version 3, mnor version 01
+ * @WMI_HOST_VENDOR1_REQ2_VERSION_3_20: Major version 3, mnor version 20
+ */
+typedef enum {
+	WMI_HOST_VENDOR1_REQ1_VERSION_3_00 = 0,
+	WMI_HOST_VENDOR1_REQ1_VERSION_3_01 = 1,
+	WMI_HOST_VENDOR1_REQ1_VERSION_3_20 = 2,
+} WMI_HOST_VENDOR1_REQ1_VERSION;
+
+/**
+ * enum WMI_HOST_VENDOR1_REQ2_VERSION - Vendor 1 requirement 2 version
+ * @WMI_HOST_VENDOR1_REQ2_VERSION_3_00: Major version 3, mnor version 00
+ * @WMI_HOST_VENDOR1_REQ2_VERSION_3_01: Major version 3, mnor version 01
+ * @WMI_HOST_VENDOR1_REQ2_VERSION_3_20: Major version 3, mnor version 20
+ */
+typedef enum {
+	WMI_HOST_VENDOR1_REQ2_VERSION_3_00 = 0,
+	WMI_HOST_VENDOR1_REQ2_VERSION_3_01 = 1,
+	WMI_HOST_VENDOR1_REQ2_VERSION_3_20 = 2,
+} WMI_HOST_VENDOR1_REQ2_VERSION;
+
+/**
+ * enum WMI_HOST_NUM_ANTENNAS - Number of antennas
+ * @WMI_HOST_SISO: When 1x1 is supported
+ * @WMI_HOST_MIMO_2X2: When 2x2 MIMO is supported
+ */
+
+typedef enum {
+	WMI_HOST_SISO = 1,
+	WMI_HOST_MIMO_2X2 = 2,
+} WMI_HOST_NUM_ANTENNAS;
+
+/**
+ * struct target_feature_set - Feature set structure
+ * @wifi_standard: Wifi standard
+ * @concurrency_support: Indicates supported concurrencies
+ * @pno_in_unassoc_state: Indicates PNO support in un assoc state
+ * @pno_in_assoc_state: Indicates PNO support in assoc state
+ * @enable_twt: Enable TWT
+ * enable_twt_requester Enable TWT requester
+ * @enable_twt_broadcast: Enable TWT broadcast
+ * @enable_twt_flexible: Enable flexible TWT
+ * @enable_wifi_optimizer: indicates wifi optimizer is enabled or disabled
+ * @enable_rfc835: indicates rfc835 is enabled or disabled
+ * @sap_5g_supported: Indicates SAP 5g is supported or not
+ * @sap_6g_supported: Indicates SAP 6g is supported or not
+ * @sap_max_num_clients: Max clients supported by SAP
+ * @set_country_code_hal_supported: Indicates country code hal supported or not
+ * @get_valid_channel_supported: Indicates get vaid channel supported or not
+ * @supported_dot11mode: Indicates supported dot11 mode
+ * @sap_wpa3_support: Indicates wpa3 support for SAP
+ * @vendor_req_1_version: Indicates vendor1 req1 version
+ * @roaming_high_cu_roam_trigger: Roaming high CPU trigger enabled or disabled
+ * @roaming_emergency_trigger: Roaming emergency trigger enabled or disabled
+ * @roaming_btm_trihgger: Roaming btm trigger enabled or disabled
+ * @roaming_idle_trigger: Roaming idle trigger enabled or disabled
+ * @roaming_wtc_trigger: Roaming wtc trigger enabled or disabled
+ * @roaming_btcoex_trigger: Roaming btcoex trigger enabled or disabled
+ * @roaming_btw_wpa_wpa2: Roaming btw wpa wpa2 enabled or disabled
+ * @roaming_manage_chan_list_api: Roaming manage chan list api enabled or
+ * disabled
+ * @roaming_adaptive_11r: Roaming adaptive 11r enabled or disabled
+ * @roaming_ctrl_api_get_set: Roaming ctrl api get set enabled or disabled
+ * @roaming_ctrl_api_reassoc: Roaming ctrl api reassoc enabled or disabled
+ * @roaming_ctrl_get_cu: Roaming ctrl get cu enabled or disabled
+ * @vendor_req_2_version: Vendor requirement version 2
+ * @assurance_disconnect_reason_api: Assurance disconnect API supported or not
+ * @frame_pcap_log_mgmt: Frame pcap logging mgmt supported or not
+ * @rame_pcap_log_ctrl: Frame pcap logging ctrl supported or not
+ * @frame_pcap_log_data: Frame pcap logging data supported or not
+ * @security_wpa3_sae_h2e: Security wpa3 sae h2e supported or not
+ * @security_wpa3_sae_ft: Security wpa3 sae ft supported or not
+ * @security_wpa3_enterp_suitb: Security wpa3 enterprise suitb supported or not
+ * @security_wpa3_enterp_suitb_192bit: Security wpa3 enterprise suitb 192bit
+ * @supported or not
+ * @security_fills_sha_256: Security fills sha 256 supported or not
+ * @security_fills_sha_384: Security fills sha 384 supported or not
+ * @security_fills_sha_256_FT: Security fills sha 256 FT supported or not
+ * @security_fills_sha_384_FT: Security fills sha 384 FT supported or not
+ * @security_enhanced_open: Security enhanced open supported or not
+ * @enable_nan: enable NAN
+ * @enable_tdls: Enable tdls
+ * @enable_p2p_6e: Enable p2p 6e
+ * @enable_tdls_offchannel: Enable tdls offchannel
+ * @enable_tdls_capability_enhance: Enable tdls capability enhance
+ * @max_tdls_peers: Max tdls peers
+ * @sta_dual_p2p_support: Indicates sta+p2p+p2p support
+ * @peer_bigdata_getbssinfo_support: Indicates bigdata getbssinfo support
+ * @peer_bigdata_assocreject_info_support: Indicates bigdata assoc reject
+  *@info support
+ * @peer_getstainfo_support: Indicates getstainfo support
+ * @feature_set_version: Indicates feature set version info
+ * @num_antennas: Indicates number of antennas supported
+ */
+struct target_feature_set {
+	WMI_HOST_WIFI_STANDARD wifi_standard;
+	WMI_HOST_BAND_CONCURRENCY concurrency_support;
+	bool pno_in_unassoc_state;
+	bool pno_in_assoc_state;
+	bool enable_twt;
+	bool enable_twt_requester;
+	bool enable_twt_broadcast;
+	bool enable_twt_flexible;
+	bool enable_wifi_optimizer;
+	bool enable_rfc835;
+	bool sap_5g_supported;
+	bool sap_6g_supported;
+	uint8_t sap_max_num_clients;
+	bool set_country_code_hal_supported;
+	bool get_valid_channel_supported;
+	uint8_t supported_dot11mode;
+	bool sap_wpa3_support;
+	WMI_HOST_VENDOR1_REQ1_VERSION vendor_req_1_version;
+	bool roaming_high_cu_roam_trigger;
+	bool roaming_emergency_trigger;
+	bool roaming_btm_trihgger;
+	bool roaming_idle_trigger;
+	bool roaming_wtc_trigger;
+	bool roaming_btcoex_trigger;
+	bool roaming_btw_wpa_wpa2;
+	bool roaming_manage_chan_list_api;
+	bool roaming_adaptive_11r;
+	bool roaming_ctrl_api_get_set;
+	bool roaming_ctrl_api_reassoc;
+	bool roaming_ctrl_get_cu;
+	WMI_HOST_VENDOR1_REQ2_VERSION vendor_req_2_version;
+	bool assurance_disconnect_reason_api;
+	bool frame_pcap_log_mgmt;
+	bool frame_pcap_log_ctrl;
+	bool frame_pcap_log_data;
+	bool security_wpa3_sae_h2e;
+	bool security_wpa3_sae_ft;
+	bool security_wpa3_enterp_suitb;
+	bool security_wpa3_enterp_suitb_192bit;
+	bool security_fills_sha_256;
+	bool security_fills_sha_384;
+	bool security_fills_sha_256_FT;
+	bool security_fills_sha_384_FT;
+	bool security_enhanced_open;
+	bool enable_nan;
+	bool enable_tdls;
+	bool enable_p2p_6e;
+	bool enable_tdls_offchannel;
+	bool enable_tdls_capability_enhance;
+	uint8_t max_tdls_peers;
+	bool sta_dual_p2p_support;
+	bool peer_bigdata_getbssinfo_support;
+	bool peer_bigdata_assocreject_info_support;
+	bool peer_getstainfo_support;
+	uint16_t feature_set_version;
+	WMI_HOST_NUM_ANTENNAS num_antennas;
+};
+#endif
+
 /**
  * struct target_resource_config - Resource config sent from host to target
  *               abstracted out to include union of both configs

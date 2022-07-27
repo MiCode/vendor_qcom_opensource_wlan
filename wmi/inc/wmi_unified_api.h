@@ -4941,4 +4941,17 @@ QDF_STATUS wmi_unified_pn_mgmt_rxfilter_send_cmd(
 QDF_STATUS wmi_extract_pdev_telemetry_stats(
 		wmi_unified_t wmi_handle, void *evt_buf,
 		struct wmi_host_pdev_telemetry_stats *pdev_stats);
+
+#ifdef FEATURE_SET
+/**
+ * wmi_feature_set_cmd_send - Send feature set command to fw
+ * @wmi_handle: wmi handle
+ * @feature_set: pointer feature set info which needs to be send to fw
+ *
+ * Return: QDF_STATUS_SUCCESS for success or error code
+ */
+QDF_STATUS wmi_feature_set_cmd_send(
+			wmi_unified_t wmi_handle,
+			struct target_feature_set *feature_set);
+#endif
 #endif /* _WMI_UNIFIED_API_H_ */

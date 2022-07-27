@@ -3080,6 +3080,12 @@ QDF_STATUS
 (*send_peer_txq_flush_config_cmd)(wmi_unified_t wmi_handle,
 				  struct peer_txq_flush_config_params *param);
 #endif
+
+#ifdef FEATURE_SET
+QDF_STATUS
+(*feature_set_cmd_send)(wmi_unified_t wmi_handle,
+			struct target_feature_set *feature_set);
+#endif
 };
 
 /* Forward declartion for psoc*/
