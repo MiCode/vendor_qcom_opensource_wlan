@@ -295,6 +295,7 @@
  * @WLAN_UMAC_COMP_TWT:           Target Wake Time (TWT) Component
  * @WLAN_UMAC_COMP_PRE_CAC:       PRE CAC component
  * @WLAN_COMP_DP:                 DP component
+ * @WLAN_UMAC_COMP_COAP:          Constrained Application Protocol component
  * @WLAN_UMAC_COMP_ID_MAX:        Maximum components in UMAC
  *
  * This id is static.
@@ -349,6 +350,7 @@ enum wlan_umac_comp_id {
 	WLAN_UMAC_COMP_PRE_CAC            = 45,
 	WLAN_COMP_DP                      = 46,
 	WLAN_COMP_TELEMETRY_AGENT         = 47,
+	WLAN_UMAC_COMP_COAP               = 48,
 	WLAN_UMAC_COMP_ID_MAX,
 };
 

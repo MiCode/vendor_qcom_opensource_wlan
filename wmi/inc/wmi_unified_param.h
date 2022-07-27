@@ -5102,6 +5102,9 @@ typedef enum {
 	wmi_coex_dbam_complete_event_id,
 #endif
 	wmi_spectral_capabilities_eventid,
+#ifdef WLAN_FEATURE_COAP
+	wmi_wow_coap_buf_info_eventid,
+#endif
 	wmi_events_max,
 } wmi_conv_event_id;
 
