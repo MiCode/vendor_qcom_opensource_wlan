@@ -3598,6 +3598,7 @@ struct category_name_info g_qdf_category_name[MAX_SUPPORTED_CATEGORY] = {
 	[QDF_MODULE_ID_DP_SAWF] = {"DP_SAWF"},
 	[QDF_MODULE_ID_SCS] = {"SCS"},
 	[QDF_MODULE_ID_DP_UMAC_RESET] = {"UMAC_HW_RESET"},
+	[QDF_MODULE_ID_COAP] = {"COAP"},
 	[QDF_MODULE_ID_ANY] = {"ANY"},
 };
 qdf_export_symbol(g_qdf_category_name);
@@ -4177,6 +4178,7 @@ static void set_default_trace_levels(struct category_info *cinfo)
 		[QDF_MODULE_ID_DP_SAWF] = QDF_TRACE_LEVEL_ERROR,
 		[QDF_MODULE_ID_SCS] = QDF_TRACE_LEVEL_ERROR,
 		[QDF_MODULE_ID_DP_UMAC_RESET] = QDF_TRACE_LEVEL_ERROR,
+		[QDF_MODULE_ID_COAP] = QDF_TRACE_LEVEL_ERROR,
 		[QDF_MODULE_ID_ANY] = QDF_TRACE_LEVEL_INFO,
 	};
 
