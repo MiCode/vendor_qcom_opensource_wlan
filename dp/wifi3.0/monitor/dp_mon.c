@@ -3700,7 +3700,7 @@ static void dp_process_ppdu_stats_user_common_array_tlv(
 
 	ppdu_user_desc->success_msdus =
 		HTT_PPDU_STATS_ARRAY_ITEM_TLV_TX_SUCC_MSDUS_GET(*tag_buf);
-	ppdu_user_desc->retry_bytes =
+	ppdu_user_desc->retry_msdus =
 		HTT_PPDU_STATS_ARRAY_ITEM_TLV_TX_RETRY_MSDUS_GET(*tag_buf);
 	tag_buf++;
 	ppdu_user_desc->failed_msdus =
