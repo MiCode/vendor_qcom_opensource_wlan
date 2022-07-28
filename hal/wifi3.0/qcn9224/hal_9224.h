@@ -705,6 +705,86 @@ uint8_t hal_rx_wbm_err_msdu_continuation_get_9224(void *wbm_desc)
 	WBM_RELEASE_RING_RX_RX_MSDU_DESC_INFO_DETAILS_MSDU_CONTINUATION_LSB;
 }
 
+#if (defined(WLAN_SA_API_ENABLE)) && (defined(QCA_WIFI_QCA9574))
+#define HAL_RX_UPDATE_SU_EVM_INFO(rx_tlv, ppdu_info, evm, pilot) \
+	(ppdu_info)->evm_info.pilot_evm[pilot] = HAL_RX_GET(rx_tlv, \
+				PHYRX_OTHER_RECEIVE_INFO, \
+				SU_EVM_DETAILS_##evm##_PILOT_##pilot##_EVM)
+
+static inline void
+hal_rx_update_su_evm_info(void *rx_tlv,
+			  void *ppdu_info_hdl)
+{
+	struct hal_rx_ppdu_info *ppdu_info =
+			(struct hal_rx_ppdu_info *)ppdu_info_hdl;
+
+	HAL_RX_UPDATE_SU_EVM_INFO(rx_tlv, ppdu_info, 1, 0);
+	HAL_RX_UPDATE_SU_EVM_INFO(rx_tlv, ppdu_info, 2, 1);
+	HAL_RX_UPDATE_SU_EVM_INFO(rx_tlv, ppdu_info, 3, 2);
+	HAL_RX_UPDATE_SU_EVM_INFO(rx_tlv, ppdu_info, 4, 3);
+	HAL_RX_UPDATE_SU_EVM_INFO(rx_tlv, ppdu_info, 5, 4);
+	HAL_RX_UPDATE_SU_EVM_INFO(rx_tlv, ppdu_info, 6, 5);
+	HAL_RX_UPDATE_SU_EVM_INFO(rx_tlv, ppdu_info, 7, 6);
+	HAL_RX_UPDATE_SU_EVM_INFO(rx_tlv, ppdu_info, 8, 7);
+	HAL_RX_UPDATE_SU_EVM_INFO(rx_tlv, ppdu_info, 9, 8);
+	HAL_RX_UPDATE_SU_EVM_INFO(rx_tlv, ppdu_info, 10, 9);
+	HAL_RX_UPDATE_SU_EVM_INFO(rx_tlv, ppdu_info, 11, 10);
+	HAL_RX_UPDATE_SU_EVM_INFO(rx_tlv, ppdu_info, 12, 11);
+	HAL_RX_UPDATE_SU_EVM_INFO(rx_tlv, ppdu_info, 13, 12);
+	HAL_RX_UPDATE_SU_EVM_INFO(rx_tlv, ppdu_info, 14, 13);
+	HAL_RX_UPDATE_SU_EVM_INFO(rx_tlv, ppdu_info, 15, 14);
+	HAL_RX_UPDATE_SU_EVM_INFO(rx_tlv, ppdu_info, 16, 15);
+	HAL_RX_UPDATE_SU_EVM_INFO(rx_tlv, ppdu_info, 17, 16);
+	HAL_RX_UPDATE_SU_EVM_INFO(rx_tlv, ppdu_info, 18, 17);
+	HAL_RX_UPDATE_SU_EVM_INFO(rx_tlv, ppdu_info, 19, 18);
+	HAL_RX_UPDATE_SU_EVM_INFO(rx_tlv, ppdu_info, 20, 19);
+	HAL_RX_UPDATE_SU_EVM_INFO(rx_tlv, ppdu_info, 21, 20);
+	HAL_RX_UPDATE_SU_EVM_INFO(rx_tlv, ppdu_info, 22, 21);
+	HAL_RX_UPDATE_SU_EVM_INFO(rx_tlv, ppdu_info, 23, 22);
+	HAL_RX_UPDATE_SU_EVM_INFO(rx_tlv, ppdu_info, 24, 23);
+	HAL_RX_UPDATE_SU_EVM_INFO(rx_tlv, ppdu_info, 25, 24);
+	HAL_RX_UPDATE_SU_EVM_INFO(rx_tlv, ppdu_info, 26, 25);
+	HAL_RX_UPDATE_SU_EVM_INFO(rx_tlv, ppdu_info, 27, 26);
+	HAL_RX_UPDATE_SU_EVM_INFO(rx_tlv, ppdu_info, 28, 27);
+	HAL_RX_UPDATE_SU_EVM_INFO(rx_tlv, ppdu_info, 29, 28);
+	HAL_RX_UPDATE_SU_EVM_INFO(rx_tlv, ppdu_info, 30, 29);
+	HAL_RX_UPDATE_SU_EVM_INFO(rx_tlv, ppdu_info, 31, 30);
+	HAL_RX_UPDATE_SU_EVM_INFO(rx_tlv, ppdu_info, 32, 31);
+}
+
+static void hal_rx_get_evm_info(void *rx_tlv_hdr, void *ppdu_info_hdl)
+{
+	struct hal_rx_ppdu_info *ppdu_info  = ppdu_info_hdl;
+	void *rx_tlv = (uint8_t *)rx_tlv_hdr + HAL_RX_TLV32_HDR_SIZE;
+	uint32_t tlv_tag;
+
+	tlv_tag = HAL_RX_GET_USER_TLV32_TYPE(rx_tlv_hdr);
+
+	switch (tlv_tag) {
+	case WIFIPHYRX_OTHER_RECEIVE_INFO_EVM_DETAILS_E:
+
+		/* Skip TLV length to get TLV content */
+		rx_tlv = (uint8_t *)rx_tlv + HAL_RX_TLV32_HDR_SIZE;
+
+		ppdu_info->evm_info.number_of_symbols = HAL_RX_GET(rx_tlv,
+				PHYRX_OTHER_RECEIVE_INFO,
+				SU_EVM_DETAILS_0_NUMBER_OF_SYMBOLS);
+		ppdu_info->evm_info.pilot_count = HAL_RX_GET(rx_tlv,
+				PHYRX_OTHER_RECEIVE_INFO,
+				SU_EVM_DETAILS_0_PILOT_COUNT);
+		ppdu_info->evm_info.nss_count = HAL_RX_GET(rx_tlv,
+				PHYRX_OTHER_RECEIVE_INFO,
+				SU_EVM_DETAILS_0_NSS_COUNT);
+		hal_rx_update_su_evm_info(rx_tlv, ppdu_info_hdl);
+		break;
+	}
+}
+#else /* WLAN_SA_API_ENABLE && QCA_WIFI_QCA9574 */
+static void hal_rx_get_evm_info(void *tlv_tag, void *ppdu_info_hdl)
+{
+}
+#endif /* WLAN_SA_API_ENABLE && QCA_WIFI_QCA9574 */
+
 /**
  * hal_rx_proc_phyrx_other_receive_info_tlv_9224(): API to get tlv info
  *
@@ -719,6 +799,9 @@ void hal_rx_proc_phyrx_other_receive_info_tlv_9224(void *rx_tlv_hdr,
 	void *rx_tlv = (uint8_t *)rx_tlv_hdr + HAL_RX_TLV32_HDR_SIZE;
 	void *other_tlv_hdr = NULL;
 	void *other_tlv = NULL;
+
+	/* Get evm info for Smart Antenna */
+	hal_rx_get_evm_info(rx_tlv_hdr, ppdu_info_hdl);
 
 	tlv_tag = HAL_RX_GET_USER_TLV32_TYPE(rx_tlv_hdr);
 	tlv_len = HAL_RX_GET_USER_TLV32_LEN(rx_tlv_hdr);
