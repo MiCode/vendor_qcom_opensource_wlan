@@ -24,7 +24,6 @@
 #include <wlan_mgmt_txrx_rx_reo_tgt_api.h>
 #include "wlan_mgmt_txrx_main_i.h"
 #include <qdf_util.h>
-#include <wlan_cfr_utils_api.h>
 #include <wlan_mlo_mgr_cmn.h>
 
 static struct mgmt_rx_reo_context g_rx_reo_ctx;
