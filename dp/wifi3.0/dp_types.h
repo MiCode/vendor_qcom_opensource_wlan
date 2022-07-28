@@ -1904,7 +1904,9 @@ struct dp_arch_ops {
 
 	/* Misc Arch Ops */
 	qdf_size_t (*txrx_get_context_size)(enum dp_context_type);
+#ifdef WIFI_MONITOR_SUPPORT
 	qdf_size_t (*txrx_get_mon_context_size)(enum dp_context_type);
+#endif
 	int (*dp_srng_test_and_update_nf_params)(struct dp_soc *soc,
 						 struct dp_srng *dp_srng,
 						 int *max_reap_limit);

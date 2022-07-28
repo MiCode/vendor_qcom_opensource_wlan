@@ -21,6 +21,7 @@
 #define _DP_INTERNAL_H_
 
 #include "dp_types.h"
+#include "dp_htt.h"
 
 #define RX_BUFFER_SIZE_PKTLOG_LITE 1024
 
@@ -562,8 +563,9 @@ static inline void dp_monitor_pktlogmod_exit(struct dp_pdev *pdev)
 }
 
 static inline
-void dp_monitor_vdev_set_monitor_mode_buf_rings(struct dp_pdev *pdev)
+QDF_STATUS dp_monitor_vdev_set_monitor_mode_buf_rings(struct dp_pdev *pdev)
 {
+	return QDF_STATUS_E_FAILURE;
 }
 
 static inline
@@ -717,6 +719,18 @@ dp_monitor_get_chan_band(struct dp_pdev *pdev)
 	return 0;
 }
 
+static inline int
+dp_monitor_get_chan_num(struct dp_pdev *pdev)
+{
+	return 0;
+}
+
+static inline qdf_freq_t
+dp_monitor_get_chan_freq(struct dp_pdev *pdev)
+{
+	return 0;
+}
+
 static inline void dp_monitor_get_mpdu_status(struct dp_pdev *pdev,
 					      struct dp_soc *soc,
 					      uint8_t *rx_tlv_hdr)
@@ -803,6 +817,104 @@ static inline bool dp_monitor_is_configured(struct dp_pdev *pdev)
 static inline void
 dp_mon_rx_hdr_length_set(struct dp_soc *soc, uint32_t *msg_word,
 			 struct htt_rx_ring_tlv_filter *tlv_filter)
+{
+}
+
+static inline void dp_monitor_soc_init(struct dp_soc *soc)
+{
+}
+
+static inline void dp_monitor_soc_deinit(struct dp_soc *soc)
+{
+}
+
+static inline
+QDF_STATUS dp_monitor_config_undecoded_metadata_capture(struct dp_pdev *pdev,
+							int val)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static inline QDF_STATUS
+dp_monitor_config_undecoded_metadata_phyrx_error_mask(struct dp_pdev *pdev,
+						      int mask1, int mask2)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static inline QDF_STATUS
+dp_monitor_get_undecoded_metadata_phyrx_error_mask(struct dp_pdev *pdev,
+						   int *mask, int *mask_cont)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static inline QDF_STATUS dp_monitor_soc_htt_srng_setup(struct dp_soc *soc)
+{
+	return QDF_STATUS_E_FAILURE;
+}
+
+static inline bool dp_is_monitor_mode_using_poll(struct dp_soc *soc)
+{
+	return false;
+}
+
+static inline
+uint32_t dp_tx_mon_buf_refill(struct dp_intr *int_ctx)
+{
+	return 0;
+}
+
+static inline uint32_t
+dp_tx_mon_process(struct dp_soc *soc, struct dp_intr *int_ctx,
+		  uint32_t mac_id, uint32_t quota)
+{
+	return 0;
+}
+
+static inline
+uint32_t dp_rx_mon_buf_refill(struct dp_intr *int_ctx)
+{
+	return 0;
+}
+
+static inline bool dp_monitor_is_tx_cap_enabled(struct dp_peer *peer)
+{
+	return 0;
+}
+
+static inline bool dp_monitor_is_rx_cap_enabled(struct dp_peer *peer)
+{
+	return 0;
+}
+
+static inline void
+dp_rx_mon_enable(struct dp_soc *soc, uint32_t *msg_word,
+		 struct htt_rx_ring_tlv_filter *tlv_filter)
+{
+}
+
+static inline void
+dp_mon_rx_packet_length_set(struct dp_soc *soc, uint32_t *msg_word,
+			    struct htt_rx_ring_tlv_filter *tlv_filter)
+{
+}
+
+static inline void
+dp_mon_rx_enable_mpdu_logging(struct dp_soc *soc, uint32_t *msg_word,
+			      struct htt_rx_ring_tlv_filter *tlv_filter)
+{
+}
+
+static inline void
+dp_mon_rx_wmask_subscribe(struct dp_soc *soc, uint32_t *msg_word,
+			  struct htt_rx_ring_tlv_filter *tlv_filter)
+{
+}
+
+static inline
+void dp_monitor_peer_telemetry_stats(struct dp_peer *peer,
+				     struct cdp_peer_telemetry_stats *stats)
 {
 }
 #endif

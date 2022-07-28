@@ -506,6 +506,7 @@ QDF_STATUS dp_vdev_set_monitor_mode_rings(struct dp_pdev *pdev,
 static inline QDF_STATUS
 dp_vdev_set_monitor_mode_buf_rings(struct dp_pdev *pdev)
 {
+	return QDF_STATUS_SUCCESS;
 }
 
 static inline QDF_STATUS
@@ -1505,6 +1506,20 @@ static inline void dp_monitor_set_chan_num(struct dp_pdev *pdev, int chan_num)
 }
 
 /*
+ * dp_monitor_get_chan_num() - get channel number
+ * @pdev: DP pdev handle
+ *
+ * Return: channel number
+ */
+static inline int dp_monitor_get_chan_num(struct dp_pdev *pdev)
+{
+	if (qdf_unlikely(!pdev || !pdev->monitor_pdev))
+		return 0;
+
+	return pdev->monitor_pdev->mon_chan_num;
+}
+
+/*
  * dp_monitor_set_chan_freq() - set channel frequency
  * @pdev: point to dp pdev
  * @chan_freq: channel frequency
@@ -1517,6 +1532,21 @@ dp_monitor_set_chan_freq(struct dp_pdev *pdev, qdf_freq_t chan_freq)
 		return;
 
 	pdev->monitor_pdev->mon_chan_freq = chan_freq;
+}
+
+/*
+ * dp_monitor_get_chan_freq() - get channel frequency
+ * @pdev: DP pdev handle
+ *
+ * @Return: channel frequency
+ */
+static inline qdf_freq_t
+dp_monitor_get_chan_freq(struct dp_pdev *pdev)
+{
+	if (qdf_unlikely(!pdev || !pdev->monitor_pdev))
+		return 0;
+
+	return pdev->monitor_pdev->mon_chan_freq;
 }
 
 /*
@@ -3944,6 +3974,38 @@ struct cdp_mon_ops *dp_mon_cdp_ops_get(struct dp_soc *soc)
 }
 
 /**
+ * dp_monitor_soc_init() - Monitor SOC init
+ * @soc: DP soc handle
+ *
+ * Return: void
+ */
+static inline void dp_monitor_soc_init(struct dp_soc *soc)
+{
+	struct dp_mon_ops *mon_ops;
+
+	mon_ops = dp_mon_ops_get(soc);
+
+	if (mon_ops && mon_ops->mon_soc_init)
+		mon_ops->mon_soc_init(soc);
+}
+
+/**
+ * dp_monitor_soc_deinit() - Monitor SOC deinit
+ * @soc: DP soc handle
+ *
+ * Return: void
+ */
+static inline void dp_monitor_soc_deinit(struct dp_soc *soc)
+{
+	struct dp_mon_ops *mon_ops;
+
+	mon_ops = dp_mon_ops_get(soc);
+
+	if (mon_ops && mon_ops->mon_soc_deinit)
+		mon_ops->mon_soc_deinit(soc);
+}
+
+/**
  * dp_ppdu_desc_user_stats_update(): Function to update TX user stats
  * @pdev: DP pdev handle
  * @ppdu_info: per PPDU TLV descriptor
@@ -4191,6 +4253,49 @@ void dp_monitor_peer_telemetry_stats(struct dp_peer *peer,
 	stats->rx_mpdu_retried = mon_peer_stats->rx.mpdu_retry_cnt;
 	stats->rx_mpdu_total = mon_peer_stats->rx.rx_mpdus;
 	stats->snr = CDP_SNR_OUT(mon_peer_stats->rx.avg_snr);
+}
+#endif
+
+/**
+ * dp_monitor_is_tx_cap_enabled() - get tx-cature enabled/disabled
+ * @peer: DP peer handle
+ *
+ * Return: true if tx-capture is enabled
+ */
+static inline bool dp_monitor_is_tx_cap_enabled(struct dp_peer *peer)
+{
+	return peer->monitor_peer ? peer->monitor_peer->tx_cap_enabled : 0;
+}
+
+/**
+ * dp_monitor_is_rx_cap_enabled() - get rx-cature enabled/disabled
+ * @peer: DP peer handle
+ *
+ * Return: true if rx-capture is enabled
+ */
+static inline bool dp_monitor_is_rx_cap_enabled(struct dp_peer *peer)
+{
+	return peer->monitor_peer ? peer->monitor_peer->rx_cap_enabled : 0;
+}
+
+#if !(!defined(DISABLE_MON_CONFIG) && defined(QCA_MONITOR_2_0_SUPPORT))
+/**
+ * dp_mon_get_context_size_be() - get BE specific size for mon pdev/soc
+ * @arch_ops: arch ops pointer
+ *
+ * Return: size in bytes for the context_type
+ */
+static inline
+qdf_size_t dp_mon_get_context_size_be(enum dp_context_type context_type)
+{
+	switch (context_type) {
+	case DP_CONTEXT_TYPE_MON_SOC:
+		return sizeof(struct dp_mon_soc);
+	case DP_CONTEXT_TYPE_MON_PDEV:
+		return sizeof(struct dp_mon_pdev);
+	default:
+		return 0;
+	}
 }
 #endif
 #endif /* _DP_MON_H_ */

@@ -421,4 +421,50 @@ void dp_mon_rx_update_rx_protocol_tag_stats(struct dp_pdev *pdev,
 					    uint16_t protocol_index);
 #endif /* WLAN_SUPPORT_RX_PROTOCOL_TYPE_TAG */
 
+#if !defined(DISABLE_MON_CONFIG) && defined(QCA_MONITOR_2_0_SUPPORT)
+/**
+ * dp_mon_get_context_size_be() - get BE specific size for mon pdev/soc
+ * @arch_ops: arch ops pointer
+ *
+ * Return: size in bytes for the context_type
+ */
+static inline
+qdf_size_t dp_mon_get_context_size_be(enum dp_context_type context_type)
+{
+	switch (context_type) {
+	case DP_CONTEXT_TYPE_MON_SOC:
+		return sizeof(struct dp_mon_soc_be);
+	case DP_CONTEXT_TYPE_MON_PDEV:
+		return sizeof(struct dp_mon_pdev_be);
+	default:
+		return 0;
+	}
+}
+#endif
+
+#ifdef QCA_MONITOR_2_0_SUPPORT
+/**
+ * dp_get_be_mon_soc_from_dp_mon_soc() - get dp_mon_soc_be from dp_mon_soc
+ * @soc: dp_mon_soc pointer
+ *
+ * Return: dp_mon_soc_be pointer
+ */
+static inline
+struct dp_mon_soc_be *dp_get_be_mon_soc_from_dp_mon_soc(struct dp_mon_soc *soc)
+{
+	return (struct dp_mon_soc_be *)soc;
+}
+
+/**
+ * dp_get_be_mon_pdev_from_dp_mon_pdev() - get dp_mon_pdev_be from dp_mon_pdev
+ * @pdev: dp_mon_pdev pointer
+ *
+ * Return: dp_mon_pdev_be pointer
+ */
+static inline
+struct dp_mon_pdev_be *dp_get_be_mon_pdev_from_dp_mon_pdev(struct dp_mon_pdev *mon_pdev)
+{
+	return (struct dp_mon_pdev_be *)mon_pdev;
+}
+#endif
 #endif /* _DP_MON_2_0_H_ */

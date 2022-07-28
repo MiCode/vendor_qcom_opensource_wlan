@@ -4167,6 +4167,20 @@ dp_update_no_ack_stats(qdf_nbuf_t nbuf, struct dp_txrx_peer *txrx_peer)
 #endif
 
 #ifndef QCA_ENHANCED_STATS_SUPPORT
+#ifdef DP_PEER_EXTENDED_API
+static inline uint8_t
+dp_tx_get_mpdu_retry_threshold(struct dp_txrx_peer *txrx_peer)
+{
+	return txrx_peer->mpdu_retry_threshold;
+}
+#else
+static inline uint8_t
+dp_tx_get_mpdu_retry_threshold(struct dp_txrx_peer *txrx_peer)
+{
+	return 0;
+}
+#endif
+
 /**
  * dp_tx_update_peer_extd_stats()- Update Tx extended path stats for peer
  *
@@ -4180,7 +4194,7 @@ dp_tx_update_peer_extd_stats(struct hal_tx_completion_status *ts,
 			     struct dp_txrx_peer *txrx_peer)
 {
 	uint8_t mcs, pkt_type, dst_mcs_idx;
-	uint8_t retry_threshold = txrx_peer->mpdu_retry_threshold;
+	uint8_t retry_threshold = dp_tx_get_mpdu_retry_threshold(txrx_peer);
 
 	mcs = ts->mcs;
 	pkt_type = ts->pkt_type;
@@ -4943,7 +4957,7 @@ void dp_tx_update_peer_basic_stats(struct dp_txrx_peer *txrx_peer,
 				   uint32_t length, uint8_t tx_status,
 				   bool update)
 {
-	if (!peer->hw_txrx_stats_en) {
+	if (!txrx_peer->hw_txrx_stats_en) {
 		DP_PEER_STATS_FLAT_INC_PKT(txrx_peer, comp_pkt, 1, length);
 
 		if (tx_status != HAL_TX_TQM_RR_FRAME_ACKED)

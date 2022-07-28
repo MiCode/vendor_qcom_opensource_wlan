@@ -20,7 +20,9 @@
 #define __DP_LI_H
 
 #include <dp_types.h>
+#ifdef WIFI_MONITOR_SUPPORT
 #include <dp_mon.h>
+#endif
 #include <hal_li_tx.h>
 #include <hal_li_rx.h>
 
@@ -60,22 +62,6 @@ struct dp_peer_li {
 };
 
 /**
- * struct dp_mon_soc_li - Extended DP mon soc for LI targets
- * @mon_soc: dp_mon_soc structure
- */
-struct dp_mon_soc_li {
-	struct dp_mon_soc mon_soc;
-};
-
-/**
- * struct dp_mon_pdev_li - Extended DP mon pdev for LI targets
- * @mon_pdev: dp_mon_pdev structure
- */
-struct dp_mon_pdev_li {
-	struct dp_mon_pdev mon_pdev;
-};
-
-/**
  * dp_get_soc_context_size_LI() - get context size for dp_soc_li
  *
  * Return: value in bytes for LI specific soc structure
@@ -98,13 +84,4 @@ void dp_initialize_arch_ops_li(struct dp_arch_ops *arch_ops);
  */
 
 qdf_size_t dp_get_context_size_li(enum dp_context_type context_type);
-
-/**
- * dp_mon_get_context_size_li() - get LI specific size for mon pdev/soc
- * @arch_ops: arch ops pointer
- *
- * Return: size in bytes for the context_type
- */
-
-qdf_size_t dp_mon_get_context_size_li(enum dp_context_type context_type);
 #endif

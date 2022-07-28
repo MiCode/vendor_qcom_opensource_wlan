@@ -1802,10 +1802,8 @@ dp_print_peer_info(struct dp_soc *soc, struct dp_peer *peer, void *arg)
 		       txrx_peer->nawds_enabled,
 		       txrx_peer->bss_peer,
 		       txrx_peer->wds_enabled,
-		       peer->monitor_peer ?
-					peer->monitor_peer->tx_cap_enabled : 0,
-		       peer->monitor_peer ?
-					peer->monitor_peer->rx_cap_enabled : 0);
+		       dp_monitor_is_tx_cap_enabled(peer),
+		       dp_monitor_is_rx_cap_enabled(peer));
 }
 
 /**
@@ -6138,15 +6136,12 @@ static void dp_soc_deinit(void *txrx_soc)
 {
 	struct dp_soc *soc = (struct dp_soc *)txrx_soc;
 	struct htt_soc *htt_soc = soc->htt_handle;
-	struct dp_mon_ops *mon_ops;
 
 	qdf_atomic_set(&soc->cmn_init_done, 0);
 
 	soc->arch_ops.txrx_soc_deinit(soc);
 
-	mon_ops = dp_mon_ops_get(soc);
-	if (mon_ops && mon_ops->mon_soc_deinit)
-		mon_ops->mon_soc_deinit(soc);
+	dp_monitor_soc_deinit(soc);
 
 	/* free peer tables & AST tables allocated during peer_map_attach */
 	if (soc->peer_map_attach_success) {
@@ -10301,11 +10296,11 @@ static QDF_STATUS dp_get_pdev_param(struct cdp_soc_t *cdp_soc, uint8_t pdev_id,
 		break;
 	case CDP_MONITOR_CHANNEL:
 		val->cdp_pdev_param_monitor_chan =
-			((struct dp_pdev *)pdev)->monitor_pdev->mon_chan_num;
+			dp_monitor_get_chan_num((struct dp_pdev *)pdev);
 		break;
 	case CDP_MONITOR_FREQUENCY:
 		val->cdp_pdev_param_mon_freq =
-			((struct dp_pdev *)pdev)->monitor_pdev->mon_chan_freq;
+			dp_monitor_get_chan_freq((struct dp_pdev *)pdev);
 		break;
 	default:
 		return QDF_STATUS_E_FAILURE;
@@ -14940,7 +14935,6 @@ void *dp_soc_init(struct dp_soc *soc, HTC_HANDLE htc_handle,
 	bool is_monitor_mode = false;
 	uint8_t i;
 	int num_dp_msi;
-	struct dp_mon_ops *mon_ops;
 
 	wlan_minidump_log(soc, sizeof(*soc), soc->ctrl_psoc,
 			  WLAN_MD_DP_SOC, "dp_soc");
@@ -15071,9 +15065,7 @@ void *dp_soc_init(struct dp_soc *soc, HTC_HANDLE htc_handle,
 		wlan_cfg_get_defrag_timeout_check(soc->wlan_cfg_ctx);
 	qdf_spinlock_create(&soc->rx.defrag.defrag_lock);
 
-	mon_ops = dp_mon_ops_get(soc);
-	if (mon_ops && mon_ops->mon_soc_init)
-		mon_ops->mon_soc_init(soc);
+	dp_monitor_soc_init(soc);
 
 	qdf_atomic_set(&soc->cmn_init_done, 1);
 
