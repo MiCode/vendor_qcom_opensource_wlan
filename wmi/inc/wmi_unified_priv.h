@@ -3221,6 +3221,9 @@ struct wmi_soc {
 	defined(WLAN_DIAG_AND_DBR_OVER_SEPARATE_CE)
 	HTC_ENDPOINT_ID wmi_diag_endpoint_id;
 #endif
+#if defined(WLAN_DIAG_AND_DBR_OVER_SEPARATE_CE)
+	HTC_ENDPOINT_ID wmi_dbr_endpoint_id;
+#endif
 	uint32_t wmi_events[wmi_events_max];
 	/* WMI service bitmap received from target */
 	uint32_t *wmi_service_bitmap;

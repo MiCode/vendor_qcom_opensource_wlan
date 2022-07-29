@@ -2656,6 +2656,34 @@ static void wmi_control_diag_rx(void *ctx, HTC_PACKET *htc_packet)
 }
 #endif
 
+#if defined(WLAN_DIAG_AND_DBR_OVER_SEPARATE_CE)
+/**
+ * wmi_control_dbr_rx() - process dbr fw events callbacks
+ * @ctx: handle to wmi
+ * @htc_packet: pointer to htc packet
+ *
+ * Return: none
+ */
+static void wmi_control_dbr_rx(void *ctx, HTC_PACKET *htc_packet)
+{
+	struct wmi_soc *soc = (struct wmi_soc *)ctx;
+	struct wmi_unified *wmi_handle;
+	wmi_buf_t evt_buf;
+
+	evt_buf = (wmi_buf_t)htc_packet->pPktContext;
+	wmi_handle = soc->wmi_pdev[0];
+
+	if (!wmi_handle) {
+		wmi_err("unable to get wmi_handle for dbr event endpoint id:%d",
+			htc_packet->Endpoint);
+		qdf_nbuf_free(evt_buf);
+		return;
+	}
+
+	wmi_process_control_rx(wmi_handle, evt_buf);
+}
+#endif
+
 #ifdef WLAN_FEATURE_WMI_SEND_RECV_QMI
 QDF_STATUS wmi_unified_cmd_send_over_qmi(struct wmi_unified *wmi_handle,
 					 wmi_buf_t buf, uint32_t buflen,
@@ -3596,6 +3624,44 @@ QDF_STATUS wmi_diag_connect_pdev_htc_service(struct wmi_unified *wmi_handle,
 		htc_set_async_ep(htc_handle, response.Endpoint, true);
 
 	wmi_handle->soc->wmi_diag_endpoint_id = response.Endpoint;
+
+	return QDF_STATUS_SUCCESS;
+}
+#endif
+
+#if defined(WLAN_DIAG_AND_DBR_OVER_SEPARATE_CE)
+QDF_STATUS wmi_dbr_connect_pdev_htc_service(struct wmi_unified *wmi_handle,
+					    HTC_HANDLE htc_handle)
+{
+	QDF_STATUS status;
+	struct htc_service_connect_resp response = {0};
+	struct htc_service_connect_req connect = {0};
+
+	/* meta data is unused for now */
+	connect.pMetaData = NULL;
+	connect.MetaDataLength = 0;
+	connect.EpCallbacks.pContext = wmi_handle->soc;
+	connect.EpCallbacks.EpTxCompleteMultiple = NULL;
+	connect.EpCallbacks.EpRecv = wmi_control_dbr_rx /* wmi dbr rx */;
+	connect.EpCallbacks.EpRecvRefill = NULL;
+	connect.EpCallbacks.EpSendFull = NULL;
+	connect.EpCallbacks.EpTxComplete = NULL;
+	connect.EpCallbacks.ep_log_pkt = wmi_htc_log_pkt;
+
+	/* connect to wmi dbr service */
+	connect.service_id = WMI_CONTROL_DBR_SVC;
+	status = htc_connect_service(htc_handle, &connect, &response);
+
+	if (QDF_IS_STATUS_ERROR(status)) {
+		wmi_err("Failed to connect to WMI DBR service status:%d",
+			status);
+		return status;
+	}
+
+	if (wmi_handle->soc->is_async_ep)
+		htc_set_async_ep(htc_handle, response.Endpoint, true);
+
+	wmi_handle->soc->wmi_dbr_endpoint_id = response.Endpoint;
 
 	return QDF_STATUS_SUCCESS;
 }
