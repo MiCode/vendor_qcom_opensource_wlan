@@ -1018,9 +1018,6 @@ dfs_process_radar_ind_on_home_chan(struct wlan_dfs *dfs,
 			  radarfound_freq, dfs_curchan->dfs_ch_ieee,
 			  dfs_curchan->dfs_ch_freq);
 
-	utils_dfs_deliver_event(dfs->dfs_pdev_obj, radarfound_freq,
-				WLAN_EV_RADAR_DETECTED);
-
 	if (!dfs->dfs_use_nol) {
 		if (!dfs->dfs_is_offload_enabled) {
 			dfs_radar_disable(dfs);
@@ -1127,6 +1124,10 @@ dfs_process_radar_ind_on_home_chan(struct wlan_dfs *dfs,
 			  dfs->dfs_curchan->dfs_ch_flags);
 
 exit:
+	if (QDF_IS_STATUS_SUCCESS(status))
+		utils_dfs_deliver_event(dfs->dfs_pdev_obj, radarfound_freq,
+					WLAN_EV_RADAR_DETECTED);
+
 	return status;
 }
 #endif
