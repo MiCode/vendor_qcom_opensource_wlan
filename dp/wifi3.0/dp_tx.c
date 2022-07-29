@@ -1520,7 +1520,11 @@ dp_tx_check_and_flush_hp(struct dp_soc *soc,
 #ifdef FEATURE_RUNTIME_PM
 static inline int dp_get_rtpm_tput_policy_requirement(struct dp_soc *soc)
 {
-	return qdf_atomic_read(&soc->rtpm_high_tput_flag);
+	int ret;
+
+	ret = qdf_atomic_read(&soc->rtpm_high_tput_flag) &&
+	      (hif_rtpm_get_state() <= HIF_RTPM_STATE_ON);
+	return ret;
 }
 /**
  * dp_tx_ring_access_end_wrapper() - Wrapper for ring access end

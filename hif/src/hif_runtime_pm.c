@@ -1025,6 +1025,11 @@ void hif_rtpm_set_state(enum hif_rtpm_state state)
 	qdf_atomic_set(&gp_hif_rtpm_ctx->pm_state, state);
 }
 
+int hif_rtpm_get_state(void)
+{
+	return qdf_atomic_read(&gp_hif_rtpm_ctx->pm_state);
+}
+
 int hif_pre_runtime_suspend(struct hif_opaque_softc *hif_ctx)
 {
 	if (!hif_can_suspend_link(hif_ctx)) {
