@@ -745,6 +745,8 @@ struct channel_param {
  * @pdev_vdev_flag: 0 when vdev is valid, 1 when pdev is valid
  * @is_host_pdev_id: 1 for host pdev id, 0 otherwise
  * @data: the pointer to the buffer containing data
+ * @file_name_len: Length of file name
+ * @file_name: Pointer to the buffer containing file name
  */
 struct oem_data {
 	uint8_t vdev_id;
@@ -753,6 +755,8 @@ struct oem_data {
 	bool pdev_vdev_flag;
 	bool is_host_pdev_id;
 	uint8_t *data;
+	uint32_t file_name_len;
+	uint8_t *file_name;
 };
 #endif
 
