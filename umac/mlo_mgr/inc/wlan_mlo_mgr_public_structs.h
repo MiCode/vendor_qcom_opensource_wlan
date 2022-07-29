@@ -744,6 +744,10 @@ struct mlo_mlme_ext_ops {
 	void (*mlo_mlme_ext_handle_sta_csa_param)(
 				struct wlan_objmgr_vdev *vdev,
 				struct csa_offload_params *csa_param);
+	QDF_STATUS (*mlo_mlme_ext_sta_op_class)(
+			struct vdev_mlme_obj *vdev_mlme,
+			uint8_t *ml_ie);
+
 };
 
 /* maximum size of vdev bitmap array for MLO link set active command */

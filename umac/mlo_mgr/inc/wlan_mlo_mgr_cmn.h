@@ -155,6 +155,16 @@ QDF_STATUS mlo_mlme_clone_sta_security(struct wlan_objmgr_vdev *vdev,
 				       struct wlan_cm_connect_req *req);
 
 /**
+ * mlo_mlme_sta_op_class() - Update partner link op-class from ML-IE
+ * @vdev: Object manager vdev
+ * @ml_ie: buffer having the ML-IE from supplicant
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS mlo_mlme_sta_op_class(struct wlan_objmgr_vdev *vdev,
+				 uint8_t *ml_ie);
+
+/**
  * mlo_mlme_validate_conn_req() - Validate connect request
  * @vdev: Object manager vdev
  * @ext_data: Data object to be passed to callback
