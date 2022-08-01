@@ -2718,6 +2718,29 @@ dp_ipa_set_wdi_hdr_type(qdf_ipa_wdi_hdr_info_t *hdr_info)
 }
 #endif
 
+#ifdef IPA_WDI3_VLAN_SUPPORT
+/**
+ * dp_ipa_set_wdi_vlan_hdr_type() - Set wdi vlan hdr type for IPA
+ * @hdr_info: Header info
+ *
+ * Return: None
+ */
+static inline void
+dp_ipa_set_wdi_vlan_hdr_type(qdf_ipa_wdi_hdr_info_t *hdr_info)
+{
+	if (ucfg_ipa_is_wds_enabled())
+		QDF_IPA_WDI_HDR_INFO_HDR_TYPE(hdr_info) =
+			IPA_HDR_L2_802_1Q_AST;
+	else
+		QDF_IPA_WDI_HDR_INFO_HDR_TYPE(hdr_info) =
+			IPA_HDR_L2_802_1Q;
+}
+#else
+static inline void
+dp_ipa_set_wdi_vlan_hdr_type(qdf_ipa_wdi_hdr_info_t *hdr_info)
+{ }
+#endif
+
 /**
  * dp_ipa_setup_iface() - Setup IPA header and register interface
  * @ifname: Interface name
@@ -2794,12 +2817,7 @@ QDF_STATUS dp_ipa_setup_iface(char *ifname, uint8_t *mac_addr,
 				(uint8_t *)&uc_tx_vlan_hdr;
 		QDF_IPA_WDI_HDR_INFO_HDR_LEN(&hdr_info) =
 				DP_IPA_UC_WLAN_TX_VLAN_HDR_LEN;
-		if (ucfg_ipa_is_wds_enabled())
-			QDF_IPA_WDI_HDR_INFO_HDR_TYPE(&hdr_info) =
-					IPA_HDR_L2_802_1Q_AST;
-		else
-			QDF_IPA_WDI_HDR_INFO_HDR_TYPE(&hdr_info) =
-					IPA_HDR_L2_802_1Q;
+		dp_ipa_set_wdi_vlan_hdr_type(&hdr_info);
 
 		QDF_IPA_WDI_HDR_INFO_DST_MAC_ADDR_OFFSET(&hdr_info) =
 			DP_IPA_UC_WLAN_HDR_DES_MAC_OFFSET;
