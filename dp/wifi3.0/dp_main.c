@@ -7036,7 +7036,8 @@ void dp_mlo_peer_delete(struct dp_soc *soc, struct dp_peer *peer, void *arg)
 	if (IS_MLO_DP_LINK_PEER(peer))
 		dp_peer_delete_wifi3((struct cdp_soc_t *)soc,
 				     peer->vdev->vdev_id,
-				     peer->mac_addr.raw, 0);
+				     peer->mac_addr.raw, 0,
+				     CDP_LINK_PEER_TYPE);
 }
 #else
 void dp_mlo_peer_delete(struct dp_soc *soc, struct dp_peer *peer, void *arg)
