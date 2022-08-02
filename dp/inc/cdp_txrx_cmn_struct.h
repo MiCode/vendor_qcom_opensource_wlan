@@ -2458,7 +2458,6 @@ struct cdp_rx_indication_ppdu {
 	struct cdp_rx_su_evm_info evm_info;
 	uint32_t rx_antenna;
 	uint8_t num_users;
-	struct cdp_rx_stats_ppdu_user user[CDP_MU_MAX_USERS];
 	uint32_t nf;
 	uint8_t  per_chain_rssi[MAX_CHAIN];
 	uint8_t is_mcast_bcast;
@@ -2502,6 +2501,7 @@ struct cdp_rx_indication_ppdu {
 #endif
 	uint8_t usr_nss_sum;
 	uint32_t usr_ru_tones_sum;
+	struct cdp_rx_stats_ppdu_user user[];
 };
 
 /**

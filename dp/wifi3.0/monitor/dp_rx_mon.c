@@ -1067,6 +1067,8 @@ dp_rx_handle_ppdu_stats(struct dp_soc *soc, struct dp_pdev *pdev,
 	qdf_nbuf_t ppdu_nbuf;
 	struct cdp_rx_indication_ppdu *cdp_rx_ppdu;
 	struct dp_mon_pdev *mon_pdev = pdev->monitor_pdev;
+	uint64_t size = 0;
+	uint8_t num_users = 0;
 
 	/*
 	 * Do not allocate if fcs error,
@@ -1123,14 +1125,17 @@ dp_rx_handle_ppdu_stats(struct dp_soc *soc, struct dp_pdev *pdev,
 		       QDF_STATUS_SUCCESS)))
 			return;
 	}
-
+	num_users = ppdu_info->com_info.num_users;
+	qdf_assert_always(num_users <= CDP_MU_MAX_USERS);
+	size = sizeof(struct cdp_rx_indication_ppdu) +
+		num_users * sizeof(struct cdp_rx_stats_ppdu_user);
 	ppdu_nbuf = qdf_nbuf_alloc(soc->osdev,
-				   sizeof(struct cdp_rx_indication_ppdu),
+				   size,
 				   0, 0, FALSE);
 	if (qdf_likely(ppdu_nbuf)) {
 		cdp_rx_ppdu = (struct cdp_rx_indication_ppdu *)qdf_nbuf_data(ppdu_nbuf);
 
-		qdf_mem_zero(cdp_rx_ppdu, sizeof(struct cdp_rx_indication_ppdu));
+		qdf_mem_zero(cdp_rx_ppdu, size);
 		dp_rx_mon_populate_cfr_info(pdev, ppdu_info, cdp_rx_ppdu);
 		dp_rx_populate_cdp_indication_ppdu(pdev,
 						   ppdu_info, cdp_rx_ppdu);
