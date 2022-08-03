@@ -1324,6 +1324,17 @@ QDF_STATUS hif_rtpm_put(uint8_t type, uint32_t id);
 int hif_pm_runtime_prevent_suspend(struct hif_pm_runtime_lock *data);
 
 /**
+ * hif_pm_runtime_prevent_suspend_sync() - Synchronized prevent Runtime suspend
+ * @data: runtime PM lock
+ *
+ * This function will prevent runtime suspend, by incrementing
+ * device's usage count.
+ *
+ * Return: status
+ */
+int hif_pm_runtime_prevent_suspend_sync(struct hif_pm_runtime_lock *data);
+
+/**
  * hif_pm_runtime_allow_suspend() - Allow Runtime suspend
  * @data: runtime PM lock
  *
@@ -1536,6 +1547,10 @@ int hif_pm_runtime_allow_suspend(struct hif_pm_runtime_lock *data)
 
 static inline
 int hif_pm_runtime_prevent_suspend(struct hif_pm_runtime_lock *data)
+{ return 0; }
+
+static inline
+int hif_pm_runtime_prevent_suspend_sync(struct hif_pm_runtime_lock *data)
 { return 0; }
 
 static inline

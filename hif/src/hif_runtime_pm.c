@@ -760,9 +760,74 @@ int hif_pm_runtime_prevent_suspend(struct hif_pm_runtime_lock *lock)
 	return 0;
 }
 
+/**
+ * __hif_pm_runtime_prevent_suspend_sync() - synchronized prevent runtime
+ *  suspend for a protocol reason
+ * @lock: runtime_pm lock being acquired
+ *
+ * Return: 0 if successful.
+ */
+static
+int __hif_pm_runtime_prevent_suspend_sync(struct hif_pm_runtime_lock *lock)
+{
+	int ret = 0;
+
+	if (lock->active)
+		return 0;
+
+	ret = __hif_rtpm_get_sync(gp_hif_rtpm_ctx->dev);
+
+	/**
+	 * The ret can be -EINPROGRESS, if Runtime status is RPM_RESUMING or
+	 * RPM_SUSPENDING. Any other negative value is an error.
+	 * We shouldn't do runtime_put here as in later point allow
+	 * suspend gets called with the context and there the usage count
+	 * is decremented, so suspend will be prevented.
+	 */
+	if (ret < 0 && ret != -EINPROGRESS) {
+		gp_hif_rtpm_ctx->stats.runtime_get_err++;
+		hif_err("pm_state: %d ret: %d",
+			qdf_atomic_read(&gp_hif_rtpm_ctx->pm_state),
+			ret);
+	}
+
+	qdf_spin_lock_bh(&gp_hif_rtpm_ctx->prevent_list_lock);
+	list_add_tail(&lock->list, &gp_hif_rtpm_ctx->prevent_list);
+	lock->active = true;
+	gp_hif_rtpm_ctx->prevent_cnt++;
+	gp_hif_rtpm_ctx->stats.prevent_suspend++;
+	qdf_spin_unlock_bh(&gp_hif_rtpm_ctx->prevent_list_lock);
+
+	return ret;
+}
+
+int hif_pm_runtime_prevent_suspend_sync(struct hif_pm_runtime_lock *lock)
+{
+	if (!hif_rtpm_enabled())
+		return 0;
+
+	if (!lock)
+		return -EINVAL;
+
+	if (in_irq())
+		WARN_ON(1);
+
+	__hif_pm_runtime_prevent_suspend_sync(lock);
+
+	if (qdf_atomic_read(&gp_hif_rtpm_ctx->pm_state) >=
+		HIF_RTPM_STATE_SUSPENDING)
+		hif_info_high("request RTPM resume by %s",
+			      lock->name);
+
+	return 0;
+}
+
 int hif_pm_runtime_allow_suspend(struct hif_pm_runtime_lock *lock)
 {
-	if (!hif_rtpm_enabled() || !lock)
+	if (!hif_rtpm_enabled())
+		return 0;
+
+	if (!lock)
 		return -EINVAL;
 
 	if (in_irq())
