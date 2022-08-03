@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2020-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -176,9 +177,6 @@ struct cfr_wlanconfig_param {
 	uint32_t cap_count                   :16,
 		 cap_intval_mode_sel         :1,
 		 rsvd7                       :15;
-#endif
-#ifdef WLAN_FEATURE_11BE
-	uint32_t puncture_bitmap;
 #endif
 };
 

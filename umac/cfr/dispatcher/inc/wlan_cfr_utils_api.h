@@ -254,9 +254,6 @@ struct cfr_capture_params {
 	u_int8_t   bandwidth;
 	u_int32_t  period;
 	u_int8_t   method;
-#ifdef WLAN_FEATURE_11BE
-	uint32_t   puncture_bitmap;
-#endif
 };
 
 /**
@@ -650,9 +647,6 @@ struct peer_cfr {
 	u_int8_t   bandwidth;
 	u_int32_t  period;
 	u_int8_t   capture_method;
-#ifdef WLAN_FEATURE_11BE
-	uint32_t   puncture_bitmap;
-#endif
 };
 
 /**
