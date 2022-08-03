@@ -99,10 +99,10 @@
 
 #define WAIKIKI_MAX_HEADER_LENGTH_WORDS 88
 
-#define WAIKIKI_MAX_DATA_LENGTH_BYTES 65536
+#define WAIKIKI_MAX_DATA_LENGTH_BYTES 64512
 
 /* Max size :
- * sizeof(csi_cfr_header) + 352 bytes(cfr header) + 65536 bytes(cfr payload)
+ * sizeof(csi_cfr_header) + 352 bytes(cfr header) + 64512 bytes(cfr payload)
  * where cfr_header size = rtt upload header len + freeze_tlv len +
  *                         uplink user setup info + alignment/reserved bytes
  *                       = 16bytes + 32bytes + (8bytes * 37users) + 8bytes
