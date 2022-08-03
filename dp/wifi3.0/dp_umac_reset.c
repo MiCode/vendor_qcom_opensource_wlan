@@ -91,11 +91,16 @@ QDF_STATUS dp_soc_umac_reset_init(struct dp_soc *soc)
 		return QDF_STATUS_E_NULL_VALUE;
 	}
 
+	if (!soc->features.umac_hw_reset_support) {
+		dp_umac_reset_info("Target doesn't support the UMAC HW reset feature");
+		return QDF_STATUS_E_NOSUPPORT;
+	}
+
 	umac_reset_ctx = &soc->umac_reset_ctx;
 	qdf_mem_zero(umac_reset_ctx, sizeof(*umac_reset_ctx));
 
-	umac_reset_ctx->supported = true;
 	umac_reset_ctx->current_state = UMAC_RESET_STATE_WAIT_FOR_DO_PRE_RESET;
+	umac_reset_ctx->shmem_exp_magic_num = DP_UMAC_RESET_SHMEM_MAGIC_NUM;
 
 	status = dp_get_umac_reset_intr_ctx(soc, &umac_reset_ctx->intr_offset);
 	if (QDF_IS_STATUS_ERROR(status)) {
@@ -120,9 +125,53 @@ QDF_STATUS dp_soc_umac_reset_init(struct dp_soc *soc)
 	umac_reset_ctx->shmem_paddr_aligned = qdf_roundup(
 		(uint64_t)umac_reset_ctx->shmem_paddr_unaligned,
 		DP_UMAC_RESET_SHMEM_ALIGN);
+	umac_reset_ctx->shmem_size = alloc_size;
+
+	/* Write the magic number to the shared memory */
+	umac_reset_ctx->shmem_vaddr_aligned->magic_num =
+		DP_UMAC_RESET_SHMEM_MAGIC_NUM;
+
+	/* Attach the interrupts */
+	status = dp_umac_reset_interrupt_attach(soc);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		dp_umac_reset_err("Interrupt attach failed");
+		qdf_mem_free_consistent(soc->osdev, soc->osdev->dev,
+					umac_reset_ctx->shmem_size,
+					umac_reset_ctx->shmem_vaddr_unaligned,
+					umac_reset_ctx->shmem_paddr_unaligned,
+					0);
+		return status;
+	}
 
 	/* Send the setup cmd to the target */
 	return dp_umac_reset_send_setup_cmd(soc);
+}
+
+QDF_STATUS dp_soc_umac_reset_deinit(struct cdp_soc_t *txrx_soc)
+{
+	struct dp_soc *soc = (struct dp_soc *)txrx_soc;
+	struct dp_soc_umac_reset_ctx *umac_reset_ctx;
+
+	if (!soc) {
+		dp_umac_reset_err("DP SOC is null");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	if (!soc->features.umac_hw_reset_support) {
+		dp_umac_reset_info("Target doesn't support the UMAC HW reset feature");
+		return QDF_STATUS_E_NOSUPPORT;
+	}
+
+	dp_umac_reset_interrupt_detach(soc);
+
+	umac_reset_ctx = &soc->umac_reset_ctx;
+	qdf_mem_free_consistent(soc->osdev, soc->osdev->dev,
+				umac_reset_ctx->shmem_size,
+				umac_reset_ctx->shmem_vaddr_unaligned,
+				umac_reset_ctx->shmem_paddr_unaligned,
+				0);
+
+	return QDF_STATUS_SUCCESS;
 }
 
 /**
@@ -325,13 +374,12 @@ QDF_STATUS dp_umac_reset_interrupt_attach(struct dp_soc *soc)
 		return QDF_STATUS_E_NULL_VALUE;
 	}
 
-	umac_reset_ctx = &soc->umac_reset_ctx;
-
-	/* return if feature is not supported */
-	if (!umac_reset_ctx->supported) {
-		dp_umac_reset_info("UMAC reset is not supported on this SOC");
+	if (!soc->features.umac_hw_reset_support) {
+		dp_umac_reset_info("Target doesn't support the UMAC HW reset feature");
 		return QDF_STATUS_SUCCESS;
 	}
+
+	umac_reset_ctx = &soc->umac_reset_ctx;
 
 	if (pld_get_enable_intx(soc->osdev->dev)) {
 		dp_umac_reset_err("UMAC reset is not supported in legacy interrupt mode");
@@ -368,18 +416,13 @@ QDF_STATUS dp_umac_reset_interrupt_attach(struct dp_soc *soc)
 
 QDF_STATUS dp_umac_reset_interrupt_detach(struct dp_soc *soc)
 {
-	struct dp_soc_umac_reset_ctx *umac_reset_ctx;
-
 	if (!soc) {
 		dp_umac_reset_err("DP SOC is null");
 		return QDF_STATUS_E_NULL_VALUE;
 	}
 
-	umac_reset_ctx = &soc->umac_reset_ctx;
-
-	/* return if feature is not supported */
-	if (!umac_reset_ctx->supported) {
-		dp_umac_reset_info("UMAC reset is not supported on this SOC");
+	if (!soc->features.umac_hw_reset_support) {
+		dp_umac_reset_info("Target doesn't support the UMAC HW reset feature");
 		return QDF_STATUS_SUCCESS;
 	}
 
@@ -396,6 +439,11 @@ QDF_STATUS dp_umac_reset_register_rx_action_callback(
 	if (!soc) {
 		dp_umac_reset_err("DP SOC is null");
 		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	if (!soc->features.umac_hw_reset_support) {
+		dp_umac_reset_info("Target doesn't support the UMAC HW reset feature");
+		return QDF_STATUS_E_NOSUPPORT;
 	}
 
 	if (action >= UMAC_RESET_ACTION_MAX) {
@@ -540,6 +588,16 @@ QDF_STATUS dp_umac_reset_notify_action_completion(
 		enum umac_reset_action action)
 {
 	enum umac_reset_state next_state;
+
+	if (!soc) {
+		dp_umac_reset_err("DP SOC is null");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	if (!soc->features.umac_hw_reset_support) {
+		dp_umac_reset_info("Target doesn't support the UMAC HW reset feature");
+		return QDF_STATUS_E_NOSUPPORT;
+	}
 
 	switch (action) {
 	case UMAC_RESET_ACTION_DO_PRE_RESET:

@@ -6539,6 +6539,13 @@ dp_soc_attach_target_wifi3(struct cdp_soc_t *cdp_soc)
 		return status;
 	}
 
+	status = dp_soc_umac_reset_init(soc);
+	if (status != QDF_STATUS_SUCCESS &&
+	    status != QDF_STATUS_E_NOSUPPORT) {
+		dp_err("Failed to initialize UMAC reset");
+		return status;
+	}
+
 	status = dp_rx_target_fst_config(soc);
 	if (status != QDF_STATUS_SUCCESS &&
 	    status != QDF_STATUS_E_NOSUPPORT) {
@@ -12325,6 +12332,11 @@ static QDF_STATUS dp_soc_set_param(struct cdp_soc_t  *soc_hdl,
 		dp_info("Rssi dbm converstion support:%u",
 			soc->features.rssi_dbm_conv_support);
 		break;
+	case DP_SOC_PARAM_UMAC_HW_RESET_SUPPORT:
+		soc->features.umac_hw_reset_support = value;
+		dp_info("UMAC HW reset support :%u",
+			soc->features.umac_hw_reset_support);
+		break;
 	default:
 		dp_info("not handled param %d ", param);
 		break;
@@ -12873,6 +12885,7 @@ static struct cdp_cmn_ops dp_ops_cmn = {
 #if defined(WLAN_FEATURE_11BE_MLO) && defined(WLAN_MLO_MULTI_CHIP)
 	.txrx_recovery_vdev_flush_peers = dp_recovery_vdev_flush_peers,
 #endif
+	.txrx_umac_reset_deinit = dp_soc_umac_reset_deinit,
 };
 
 static struct cdp_ctrl_ops dp_ops_ctrl = {

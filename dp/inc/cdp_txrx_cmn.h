@@ -1705,6 +1705,25 @@ static inline void cdp_txrx_intr_detach(ol_txrx_soc_handle soc)
 }
 
 /**
+ * cdp_txrx_umac_reset_deinit(): De-initialize UMAC HW reset module
+ * @soc: soc handle
+ */
+static inline void cdp_txrx_umac_reset_deinit(ol_txrx_soc_handle soc)
+{
+	if (!soc || !soc->ops) {
+		dp_cdp_debug("Invalid Instance:");
+		QDF_BUG(0);
+		return;
+	}
+
+	if (!soc->ops->cmn_drv_ops ||
+	    !soc->ops->cmn_drv_ops->txrx_umac_reset_deinit)
+		return;
+
+	soc->ops->cmn_drv_ops->txrx_umac_reset_deinit(soc);
+}
+
+/**
  * cdp_display_stats(): function to map to dump stats
  * @soc: soc handle
  * @value: statistics option
