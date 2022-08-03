@@ -38,35 +38,54 @@
 #endif
 
 #define F_MASK 0xFFFF
+#define TEST_MASK 0xCBF
+
+#if defined(WLAN_SUPPORT_RX_PROTOCOL_TYPE_TAG) ||\
+	    defined(WLAN_SUPPORT_RX_FLOW_TAG)
 
 #ifdef QCA_TEST_MON_PF_TAGS_STATS
 
-/**
- * dp_mon_rx_pf_update_stats() - update protocol flow tags stats
- *
- * @pdev: pdev
- * @flow_idx: Protocol index for which the stats should be incremented
- * @cce_metadata: Cached CCE metadata value received from MSDU_END TLV
- *
- * Return: void
- */
-static void
-dp_rx_mon_pf_update_stats(struct dp_pdev *dp_pdev, uint32_t flow_idx,
-			  uint16_t cce_metadata)
+static
+void dp_rx_mon_print_tag_buf(uint8_t *buf, uint16_t test, uint16_t room)
 {
-	dp_mon_rx_update_rx_flow_tag_stats(pdev, flow_idx);
-	dp_mon_rx_update_rx_err_protocol_tag_stats(pdev, cce_metadata);
-	dp_mon_rx_update_rx_protocol_tag_stats(pdev, cce_metada,
-					       MAX_REO_DEST_RINGS);
+	if (test != TEST_MASK)
+		return;
+	print_hex_dump(KERN_ERR, "TLV BUFFER: ", DUMP_PREFIX_NONE,
+		       32, 2, buf, room, false);
+}
+
+static
+void dp_rx_mon_enable_pf_test(uint16_t **nbuf)
+{
+	uint16_t *nbuf_head = *nbuf;
+
+	*((uint16_t *)nbuf_head) = TEST_MASK;
+	nbuf_head += sizeof(uint16_t);
+
+	*nbuf = nbuf_head;
 }
 
 #else
-static void
-dp_rx_mon_pf_update_stats(struct dp_pdev *dp_pdev, uint32_t flow_idx,
-			  uint16_t cce_metadata)
+static
+void dp_rx_mon_print_tag_buf(uint8_t *buf, uint16_t test, uint16_t room)
 {
 }
+
+static
+void dp_rx_mon_enable_pf_test(uint8_t **nbuf)
+{
+	uint8_t *nbuf_head = *nbuf;
+
+	nbuf_head += sizeof(uint16_t);
+	*nbuf = nbuf_head;
+}
 #endif
+
+static
+void dp_rx_mon_set_zero(qdf_nbuf_t nbuf)
+{
+	qdf_mem_zero(qdf_nbuf_head(nbuf), DP_RX_MON_TLV_ROOM);
+}
 
 /**
  * dp_rx_mon_nbuf_add_rx_frag () -  Add frag to SKB
@@ -116,8 +135,17 @@ dp_mon_free_parent_nbuf(struct dp_mon_pdev *mon_pdev,
 }
 
 void
-dp_rx_mon_shift_pf_tag_in_headroom(qdf_nbuf_t nbuf, struct dp_soc *soc)
+dp_rx_mon_shift_pf_tag_in_headroom(qdf_nbuf_t nbuf, struct dp_soc *soc,
+				   struct hal_rx_ppdu_info *ppdu_info)
 {
+	uint32_t test = 0;
+	uint32_t room = 0;
+	uint16_t msdu_count = 0;
+	uint16_t *dp = NULL;
+	uint16_t *hp = NULL;
+	uint16_t tlv_data_len, total_tlv_len;
+	uint32_t bytes = 0;
+
 	if (qdf_unlikely(!soc)) {
 		dp_mon_err("Soc[%pK] Null. Can't update pftag to nbuf headroom",
 			   soc);
@@ -130,17 +158,48 @@ dp_rx_mon_shift_pf_tag_in_headroom(qdf_nbuf_t nbuf, struct dp_soc *soc)
 	if (qdf_unlikely(!nbuf))
 		return;
 
-	if (qdf_unlikely(qdf_nbuf_headroom(nbuf) <
-			 (DP_RX_MON_TOT_PF_TAG_LEN * 2))) {
-		dp_mon_err("Headroom[%d] < 2 *DP_RX_MON_PF_TAG_TOT_LEN[%lu]",
-			   qdf_nbuf_headroom(nbuf), DP_RX_MON_TOT_PF_TAG_LEN);
+	/* Headroom must be have enough space for tlv to be added*/
+	if (qdf_unlikely(qdf_nbuf_headroom(nbuf) < DP_RX_MON_TLV_ROOM)) {
+		dp_mon_err("Headroom[%d] < DP_RX_MON_TLV_ROOM[%d]",
+			   qdf_nbuf_headroom(nbuf), DP_RX_MON_TLV_ROOM);
 		return;
 	}
 
-	qdf_nbuf_push_head(nbuf, DP_RX_MON_TOT_PF_TAG_LEN);
-	qdf_mem_copy(qdf_nbuf_data(nbuf), qdf_nbuf_head(nbuf),
-		     DP_RX_MON_TOT_PF_TAG_LEN);
-	qdf_nbuf_pull_head(nbuf, DP_RX_MON_TOT_PF_TAG_LEN);
+	hp = (uint16_t *)qdf_nbuf_head(nbuf);
+	test = *hp & F_MASK;
+	hp += sizeof(uint16_t);
+	msdu_count = *hp;
+
+	if (qdf_unlikely(!msdu_count))
+		return;
+
+	dp_mon_debug("msdu_count: %d", msdu_count);
+
+	room = DP_RX_MON_PF_TAG_LEN_PER_FRAG * msdu_count;
+	tlv_data_len = DP_RX_MON_TLV_MSDU_CNT + (room);
+	total_tlv_len = DP_RX_MON_TLV_HDR_LEN + tlv_data_len;
+
+	//1. store space for MARKER
+	dp = (uint16_t *)qdf_nbuf_push_head(nbuf, sizeof(uint16_t));
+	if (qdf_likely(dp)) {
+		*(uint16_t *)dp = DP_RX_MON_TLV_HDR_MARKER;
+		bytes += sizeof(uint16_t);
+	}
+
+	//2. store space for total size
+	dp = (uint16_t *)qdf_nbuf_push_head(nbuf, sizeof(uint16_t));
+	if (qdf_likely(dp)) {
+		*(uint16_t *)dp = total_tlv_len;
+		bytes += sizeof(uint16_t);
+	}
+
+	//create TLV
+	bytes += dp_mon_rx_add_tlv(DP_RX_MON_TLV_PF_ID, tlv_data_len, hp, nbuf);
+
+	dp_rx_mon_print_tag_buf(qdf_nbuf_data(nbuf), test, total_tlv_len);
+
+	qdf_nbuf_pull_head(nbuf, bytes);
+
 }
 
 void
@@ -153,8 +212,9 @@ dp_rx_mon_pf_tag_to_buf_headroom_2_0(void *nbuf,
 	struct hal_rx_mon_msdu_info *msdu_info;
 	uint16_t flow_id;
 	uint16_t cce_metadata;
-	uint16_t protocol_tag;
+	uint16_t protocol_tag = 0;
 	uint32_t flow_tag;
+	uint8_t invalid_cce = 0, invalid_fse = 0;
 
 	if (qdf_unlikely(!soc)) {
 		dp_mon_err("Soc[%pK] Null. Can't update pftag to nbuf headroom",
@@ -168,11 +228,10 @@ dp_rx_mon_pf_tag_to_buf_headroom_2_0(void *nbuf,
 	if (qdf_unlikely(!nbuf))
 		return;
 
-	/* Headroom must be double of PF_TAG_SIZE as we copy it 1stly to head */
-	if (qdf_unlikely(qdf_nbuf_headroom(nbuf) <
-			 (DP_RX_MON_TOT_PF_TAG_LEN * 2))) {
-		dp_mon_err("Headroom[%d] < 2 * DP_RX_MON_PF_TAG_TOT_LEN[%lu]",
-			   qdf_nbuf_headroom(nbuf), DP_RX_MON_TOT_PF_TAG_LEN);
+	/* Headroom must be have enough space for tlv to be added*/
+	if (qdf_unlikely(qdf_nbuf_headroom(nbuf) < DP_RX_MON_TLV_ROOM)) {
+		dp_mon_err("Headroom[%d] < DP_RX_MON_TLV_ROOM[%d]",
+			   qdf_nbuf_headroom(nbuf), DP_RX_MON_TLV_ROOM);
 		return;
 	}
 
@@ -187,27 +246,75 @@ dp_rx_mon_pf_tag_to_buf_headroom_2_0(void *nbuf,
 	cce_metadata = ppdu_info->rx_msdu_info[user_id].cce_metadata -
 		       RX_PROTOCOL_TAG_START_OFFSET;
 
-	if (qdf_unlikely(cce_metadata > RX_PROTOCOL_TAG_MAX - 1)) {
-		dp_mon_debug("Invalid user_id cce_metadata: %d pdev: %pK", cce_metadata, pdev);
-		return;
-	}
-
-	protocol_tag = pdev->rx_proto_tag_map[cce_metadata].tag;
 	flow_tag = ppdu_info->rx_msdu_info[user_id].fse_metadata & F_MASK;
 
-	if (msdu_info->msdu_index >= QDF_NBUF_MAX_FRAGS) {
+	if (qdf_unlikely((cce_metadata > RX_PROTOCOL_TAG_MAX - 1) ||
+			 (cce_metadata > 0 && cce_metadata < 4))) {
+		dp_mon_debug("Invalid user_id cce_metadata: %d pdev: %pK", cce_metadata, pdev);
+		invalid_cce = 1;
+		protocol_tag = cce_metadata;
+	} else {
+		protocol_tag = pdev->rx_proto_tag_map[cce_metadata].tag;
+		dp_mon_rx_update_rx_protocol_tag_stats(pdev, cce_metadata);
+	}
+
+	if (flow_tag > 0) {
+		dp_mon_rx_update_rx_flow_tag_stats(pdev, flow_id);
+	} else {
+		dp_mon_debug("Invalid flow_tag: %d pdev: %pK ", flow_tag, pdev);
+		invalid_fse = 1;
+	}
+
+	if (invalid_cce && invalid_fse)
+		return;
+
+	if (msdu_info->msdu_index >= DP_RX_MON_MAX_MSDU) {
 		dp_mon_err("msdu_index causes overflow in headroom");
 		return;
 	}
 
-	dp_rx_mon_pf_update_stats(pdev, flow_id, cce_metadata);
+	dp_mon_debug("protocol_tag: %d, cce_metadata: %d, flow_tag: %d",
+		     protocol_tag, cce_metadata, flow_tag);
+
+	dp_mon_debug("msdu_index: %d", msdu_info->msdu_index);
+
 
 	nbuf_head = qdf_nbuf_head(nbuf);
-	nbuf_head += (msdu_info->msdu_index * DP_RX_MON_PF_TAG_SIZE);
-	*((uint16_t *)nbuf_head) = protocol_tag;
+	dp_rx_mon_enable_pf_test(&nbuf_head);
+
+	*((uint16_t *)nbuf_head) = msdu_info->msdu_index + 1;
+	nbuf_head += DP_RX_MON_TLV_MSDU_CNT;
+
+	nbuf_head += ((msdu_info->msdu_index) * DP_RX_MON_PF_TAG_SIZE);
+	if (!invalid_cce)
+		*((uint16_t *)nbuf_head) = protocol_tag;
 	nbuf_head += sizeof(uint16_t);
-	*((uint16_t *)nbuf_head) = flow_tag;
+	if (!invalid_fse)
+		*((uint16_t *)nbuf_head) = flow_tag;
 }
+
+#else
+
+static
+void dp_rx_mon_set_zero(qdf_nbuf_t nbuf)
+{
+}
+
+static
+void dp_rx_mon_shift_pf_tag_in_headroom(qdf_nbuf_t nbuf, struct dp_soc *soc,
+					struct hal_rx_ppdu_info *ppdu_info)
+{
+}
+
+static
+void dp_rx_mon_pf_tag_to_buf_headroom_2_0(void *nbuf,
+					  struct hal_rx_ppdu_info *ppdu_info,
+					  struct dp_pdev *pdev,
+					  struct dp_soc *soc)
+{
+}
+
+#endif
 
 /**
  * dp_rx_mon_free_ppdu_info () - Free PPDU info
@@ -374,7 +481,8 @@ dp_rx_mon_process_ppdu_info(struct dp_pdev *pdev,
 				}
 
 				dp_rx_mon_shift_pf_tag_in_headroom(mpdu,
-								   pdev->soc);
+								   pdev->soc,
+								   ppdu_info);
 
 				/* Deliver MPDU to osif layer */
 				status = dp_rx_mon_deliver_mpdu(mon_pdev,
@@ -913,8 +1021,10 @@ uint8_t dp_rx_mon_process_tlv_status(struct dp_pdev *pdev,
 		if (!ppdu_info->mpdu_info[user_id].mpdu_start_received) {
 
 			nbuf = qdf_nbuf_alloc(pdev->soc->osdev,
-					      DP_RX_MON_MAX_MONITOR_HEADER,
-					      DP_RX_MON_MAX_MONITOR_HEADER,
+					      DP_RX_MON_TLV_ROOM +
+					      DP_RX_MON_MAX_RADIO_TAP_HDR,
+					      DP_RX_MON_TLV_ROOM +
+					      DP_RX_MON_MAX_RADIO_TAP_HDR,
 					      4, FALSE);
 
 			/* Set *head_msdu->next as NULL as all msdus are
@@ -926,6 +1036,9 @@ uint8_t dp_rx_mon_process_tlv_status(struct dp_pdev *pdev,
 			}
 
 			mon_pdev->rx_mon_stats.parent_buf_alloc++;
+
+			dp_rx_mon_set_zero(nbuf);
+
 			qdf_nbuf_set_next(nbuf, NULL);
 
 			ppdu_info->mpdu_q[user_id][mpdu_idx] = nbuf;

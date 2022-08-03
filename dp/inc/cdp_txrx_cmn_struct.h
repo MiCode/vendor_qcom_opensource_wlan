@@ -2677,9 +2677,7 @@ struct cdp_flow_stats {
  */
 struct cdp_flow_stats {
 	uint32_t msdu_count;
-#ifdef QCA_TEST_MON_PF_TAGS_STATS
 	uint32_t mon_msdu_count;
-#endif
 };
 #endif
 

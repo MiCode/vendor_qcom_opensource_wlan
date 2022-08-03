@@ -3049,6 +3049,16 @@ void dp_rx_fst_detach(struct dp_soc *soc, struct dp_pdev *pdev);
  */
 QDF_STATUS dp_rx_flow_send_fst_fw_setup(struct dp_soc *soc,
 					struct dp_pdev *pdev);
+
+/** dp_mon_rx_update_rx_flow_tag_stats() - Update a mon flow's statistics
+ * @pdev: pdev handle
+ * @flow_id: flow index (truncated hash) in the Rx FST
+ *
+ * Return: Success when flow statistcs is updated, error on failure
+ */
+QDF_STATUS
+dp_mon_rx_update_rx_flow_tag_stats(struct dp_pdev *pdev, uint32_t flow_id);
+
 #else /* !((WLAN_SUPPORT_RX_FLOW_TAG) || defined(WLAN_SUPPORT_RX_FISA)) */
 
 /**

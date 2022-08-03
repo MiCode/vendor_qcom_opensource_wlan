@@ -1992,3 +1992,33 @@ dp_rx_process_peer_based_pktlog(struct dp_soc *soc,
 	dp_peer_unref_delete(peer,
 			     DP_MOD_ID_RX_PPDU_STATS);
 }
+
+uint32_t
+dp_mon_rx_add_tlv(uint8_t id, uint16_t len, void *value, qdf_nbuf_t mpdu_nbuf)
+{
+	uint8_t *dest = NULL;
+	uint32_t num_bytes_pushed = 0;
+
+	/* Add tlv id field */
+	dest = qdf_nbuf_push_head(mpdu_nbuf, sizeof(uint8_t));
+	if (qdf_likely(dest)) {
+		*((uint8_t *)dest) = id;
+		num_bytes_pushed += sizeof(uint8_t);
+	}
+
+	/* Add tlv len field */
+	dest = qdf_nbuf_push_head(mpdu_nbuf, sizeof(uint16_t));
+	if (qdf_likely(dest)) {
+		*((uint16_t *)dest) = len;
+		num_bytes_pushed += sizeof(uint16_t);
+	}
+
+	/* Add tlv value field */
+	dest = qdf_nbuf_push_head(mpdu_nbuf, len);
+	if (qdf_likely(dest)) {
+		qdf_mem_copy(dest, value, len);
+		num_bytes_pushed += len;
+	}
+
+	return num_bytes_pushed;
+}

@@ -2656,9 +2656,6 @@ struct rx_protocol_tag_map {
 #ifdef WLAN_SUPPORT_RX_TAG_STATISTICS
 struct rx_protocol_tag_stats {
 	uint32_t tag_ctr;
-#ifdef QCA_TEST_MON_PF_TAGS_STATS
-	uint32_t mon_tag_ctr;
-#endif
 };
 #endif /* WLAN_SUPPORT_RX_TAG_STATISTICS */
 
@@ -2978,6 +2975,8 @@ struct dp_pdev {
 	/* Track msdus received from expection ring separately */
 	struct rx_protocol_tag_stats
 		rx_err_proto_tag_stats[RX_PROTOCOL_TAG_MAX];
+	struct rx_protocol_tag_stats
+		mon_proto_tag_stats[RX_PROTOCOL_TAG_MAX];
 #endif /* WLAN_SUPPORT_RX_TAG_STATISTICS */
 #endif /* WLAN_SUPPORT_RX_PROTOCOL_TYPE_TAG */
 
