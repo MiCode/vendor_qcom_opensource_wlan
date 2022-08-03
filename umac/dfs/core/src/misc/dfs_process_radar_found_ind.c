@@ -949,6 +949,35 @@ bool dfs_is_radarsource_agile(struct wlan_dfs *dfs,
 }
 #endif
 
+#ifdef QCA_DFS_BW_PUNCTURE
+uint16_t dfs_generate_radar_bitmap(struct wlan_dfs *dfs,
+				   uint16_t *radar_freq_list,
+				   uint8_t num_radar_channels)
+{
+	uint8_t n_cur_channels;
+	uint16_t dfs_radar_bitmap = 0x0;
+	uint16_t bits = 0x1;
+	uint8_t i, j;
+	qdf_freq_t cur_freq_list[MAX_20MHZ_SUBCHANS];
+
+	n_cur_channels =
+		dfs_get_bonding_channel_without_seg_info_for_freq(dfs->dfs_curchan,
+								  cur_freq_list);
+
+	for (i = 0; i < n_cur_channels; i++) {
+		for (j = 0; j < num_radar_channels; j++) {
+			if (cur_freq_list[i] == radar_freq_list[j]) {
+				dfs_radar_bitmap |= bits;
+				break;
+			}
+		}
+		bits <<= 1;
+	}
+
+	return dfs_radar_bitmap;
+}
+#endif
+
 QDF_STATUS
 dfs_process_radar_ind(struct wlan_dfs *dfs,
 		      struct radar_found_info *radar_found)

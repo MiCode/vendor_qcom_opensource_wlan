@@ -184,6 +184,28 @@ struct freqs_offsets {
 void dfs_process_radar_found_indication(struct wlan_dfs *dfs,
 		struct radar_found_info *radar_found);
 
+#if defined(QCA_DFS_BW_PUNCTURE)
+/**
+ * dfs_generate_radar_bitmap() - Generate radar bitmap for DFS channel
+ * @dfs: Pointer to wlan_dfs structure.
+ * @radar_freq_list: Channel list affected by radar.
+ * @num_radar_channels: Number of channels affected by radar.
+ *
+ * Return: Bitmap of radar punctured channels.
+ */
+uint16_t dfs_generate_radar_bitmap(struct wlan_dfs *dfs,
+				   uint16_t *radar_freq_list,
+				   uint8_t num_radar_channels);
+#else
+static inline
+uint16_t dfs_generate_radar_bitmap(struct wlan_dfs *dfs,
+				   uint16_t *radar_freq_list,
+				   uint8_t num_radar_channels)
+{
+	return 0;
+}
+#endif /* QCA_DFS_BW_PUNCTURE */
+
 /**
  * dfs_process_radar_ind() - Process radar indication event
  * @dfs: Pointer to wlan_dfs structure.
