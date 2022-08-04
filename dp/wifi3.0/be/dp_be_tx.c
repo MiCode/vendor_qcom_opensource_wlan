@@ -1180,7 +1180,7 @@ uint32_t dp_tx_comp_nf_handler(struct dp_intr *int_ctx, struct dp_soc *soc,
 #endif
 
 #if defined(WLAN_FEATURE_11BE_MLO) && defined(WLAN_MLO_MULTI_CHIP) && \
-	defined(CONFIG_SAWF)
+	defined(WLAN_CONFIG_TX_DELAY)
 #define PPDUID_GET_HW_LINK_ID(PPDU_ID, LINK_ID_OFFSET, LINK_ID_BITS) \
 	(((PPDU_ID) >> (LINK_ID_OFFSET)) & ((1 << (LINK_ID_BITS)) - 1))
 

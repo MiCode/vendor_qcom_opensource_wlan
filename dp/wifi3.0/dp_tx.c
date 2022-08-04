@@ -4750,7 +4750,7 @@ void dp_tx_update_connectivity_stats(struct dp_soc *soc,
 }
 #endif
 
-#if defined(WLAN_FEATURE_TSF_UPLINK_DELAY) || defined(CONFIG_SAWF)
+#if defined(WLAN_FEATURE_TSF_UPLINK_DELAY) || defined(WLAN_CONFIG_TX_DELAY)
 QDF_STATUS
 dp_tx_compute_hw_delay_us(struct hal_tx_completion_status *ts,
 			  uint32_t delta_tsf,
