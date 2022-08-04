@@ -2167,7 +2167,7 @@ dp_rx_rates_stats_update(struct dp_soc *soc, qdf_nbuf_t nbuf,
 	/* here pkt_type corresponds to preamble */
 	ratekbps = dp_getrateindex(sgi,
 				   mcs,
-				   nss,
+				   nss - 1,
 				   pkt_type,
 				   bw,
 				   punc_mode,
@@ -2178,9 +2178,14 @@ dp_rx_rates_stats_update(struct dp_soc *soc, qdf_nbuf_t nbuf,
 		dp_ath_rate_lpf(txrx_peer->stats.extd_stats.rx.avg_rx_rate,
 				ratekbps);
 	DP_PEER_EXTD_STATS_UPD(txrx_peer, rx.avg_rx_rate, avg_rx_rate);
+	DP_PEER_EXTD_STATS_UPD(txrx_peer, rx.nss_info, nss);
+	DP_PEER_EXTD_STATS_UPD(txrx_peer, rx.mcs_info, mcs);
+	DP_PEER_EXTD_STATS_UPD(txrx_peer, rx.bw_info, bw);
+	DP_PEER_EXTD_STATS_UPD(txrx_peer, rx.gi_info, sgi);
+	DP_PEER_EXTD_STATS_UPD(txrx_peer, rx.preamble_info, pkt_type);
 }
 #else
-static void
+static inline void
 dp_rx_rates_stats_update(struct dp_soc *soc, qdf_nbuf_t nbuf,
 			 uint8_t *rx_tlv_hdr, struct dp_txrx_peer *txrx_peer,
 			 uint32_t sgi, uint32_t mcs,
