@@ -889,7 +889,6 @@ bool dp_rx_intrabss_mcbc_fwd(struct dp_soc *soc, struct dp_txrx_peer *ta_peer,
 	qdf_mem_set(nbuf_copy->cb, 0x0, sizeof(nbuf_copy->cb));
 	dp_classify_critical_pkts(soc, ta_peer->vdev, nbuf_copy);
 
-	dp_rx_nbuf_queue_mapping_set(nbuf_copy, qdf_get_cpu());
 	if (soc->arch_ops.dp_rx_intrabss_handle_nawds(soc, ta_peer, nbuf_copy,
 						      tid_stats))
 		return false;
@@ -954,7 +953,6 @@ bool dp_rx_intrabss_ucast_fwd(struct dp_soc *soc, struct dp_txrx_peer *ta_peer,
 	qdf_mem_set(nbuf->cb, 0x0, sizeof(nbuf->cb));
 	dp_classify_critical_pkts(soc, ta_peer->vdev, nbuf);
 
-	dp_rx_nbuf_queue_mapping_set(nbuf, qdf_get_cpu());
 	if (!dp_tx_send((struct cdp_soc_t *)soc,
 			tx_vdev_id, nbuf)) {
 		DP_PEER_PER_PKT_STATS_INC_PKT(ta_peer, rx.intra_bss.pkts, 1,

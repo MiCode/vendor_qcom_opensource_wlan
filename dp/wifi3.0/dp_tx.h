@@ -522,11 +522,8 @@ static inline enum qdf_dp_tx_rx_status dp_tx_hw_to_qdf(uint16_t status)
 static inline void dp_tx_get_queue(struct dp_vdev *vdev,
 				   qdf_nbuf_t nbuf, struct dp_tx_queue *queue)
 {
-	uint16_t queue_offset = qdf_nbuf_get_queue_mapping(nbuf) &
-				DP_TX_QUEUE_MASK;
-
-	queue->desc_pool_id = queue_offset;
-	queue->ring_id = qdf_nbuf_get_queue_mapping(nbuf);
+	queue->ring_id = qdf_get_cpu();
+	queue->desc_pool_id = queue->ring_id;
 }
 
 /*
