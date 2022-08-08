@@ -685,8 +685,14 @@ QDF_STATUS vdev_mgr_up_send(struct vdev_mlme_obj *mlme_obj)
 		if (is_6g_sap_fd_enabled) {
 			fils_param.fd_period = DEFAULT_FILS_DISCOVERY_PERIOD;
 		} else {
-			fils_param.send_prb_rsp_frame = true;
-			fils_param.fd_period = DEFAULT_PROBE_RESP_PERIOD;
+			if (wlan_vdev_mlme_feat_ext2_cap_get(vdev,
+					WLAN_VDEV_FEXT2_20TU_PRB_RESP)) {
+				fils_param.send_prb_rsp_frame = true;
+				fils_param.fd_period =
+					DEFAULT_PROBE_RESP_PERIOD;
+			} else {
+				mlme_err("SAP FD and 20TU Prb both are disabled");
+			}
 		}
 		status = tgt_vdev_mgr_fils_enable_send(mlme_obj,
 						       &fils_param);

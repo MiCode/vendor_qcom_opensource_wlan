@@ -166,6 +166,8 @@
 #define WLAN_VDEV_FEXT2_MLO_STA_LINK        0x00000002
 	/* VDEV is MLO mcast primary*/
 #define WLAN_VDEV_FEXT2_MLO_MCAST           0x00000004
+	/* 20TU BCAST PROBE RESP on 6G SAP*/
+#define WLAN_VDEV_FEXT2_20TU_PRB_RESP       0x00000008
 
 /* VDEV OP flags  */
   /* if the vap destroyed by user */
