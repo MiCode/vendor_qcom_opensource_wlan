@@ -2556,9 +2556,13 @@ mgmt_rx_reo_update_list(struct mgmt_rx_reo_list *reo_list,
 				pkt_ctr_delta = frame_desc->pkt_ctr_delta;
 				old_wait_count =
 				      wait_count->per_link_count[frame_link_id];
-				new_wait_count =
-				     qdf_min(old_wait_count - pkt_ctr_delta,
-					     (uint32_t)0);
+
+				if (old_wait_count >= pkt_ctr_delta)
+					new_wait_count = old_wait_count -
+							 pkt_ctr_delta;
+				else
+					new_wait_count = 0;
+
 				wait_count_diff = old_wait_count -
 						  new_wait_count;
 
