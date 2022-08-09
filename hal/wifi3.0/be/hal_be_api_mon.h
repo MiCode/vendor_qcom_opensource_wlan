@@ -2997,6 +2997,8 @@ hal_rx_status_get_tlv_info_generic_be(void *rx_tlv_hdr, void *ppduinfo,
 	case 0:
 		return HAL_TLV_STATUS_PPDU_DONE;
 	case WIFIRX_STATUS_BUFFER_DONE_E:
+	case WIFIPHYRX_DATA_DONE_E:
+	case WIFIPHYRX_PKT_END_PART1_E:
 		return HAL_TLV_STATUS_PPDU_NOT_DONE;
 
 	default:
