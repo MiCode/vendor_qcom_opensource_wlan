@@ -570,6 +570,19 @@ void cm_remove_cmd_from_serialization(struct cnx_mgr *cm_ctx, wlan_cm_id cm_id)
 			   CM_PREFIX_REF(wlan_vdev_get_id(cm_ctx->vdev), cm_id),
 			   cmd_info.cmd_type);
 		cmd_info.queue_type = WLAN_SERIALIZATION_ACTIVE_QUEUE;
+		/*
+		 * Active command id is reset during memory release, but a new
+		 * command will become active before memory release of
+		 * serialization command, and if it try to check the active
+		 * cm_id(using cm_get_active_req_type) it will be valid (), so
+		 * reset the cm id for active command before calling release
+		 * active command.
+		 * One example: For ML vdevs, disconnect on Assoc vdev can get
+		 * activated before release memory of link vdev command which
+		 * reset active CM id, and thus during RSO stop can lead to
+		 * assumption that link vdev disconnect is active when it is not.
+		 */
+		cm_reset_active_cm_id(cm_ctx->vdev, cm_id);
 		wlan_serialization_remove_cmd(&cmd_info);
 	} else {
 		mlme_debug(CM_PREFIX_FMT "Remove cmd type %d from pending",
