@@ -330,16 +330,17 @@ dp_rx_populate_rx_rssi_chain(struct hal_rx_ppdu_info *ppdu_info,
 {
 	uint8_t chain, bw;
 	uint8_t rssi;
+	uint8_t chain_rf;
 
 	for (chain = 0; chain < SS_COUNT; chain++) {
 		for (bw = 0; bw < MAX_BW; bw++) {
-			chain = dp_rx_mon_rf_index_conv(chain,
-							ppdu_info, pdev);
-			rssi = ppdu_info->rx_status.rssi_chain[chain][bw];
+			chain_rf = dp_rx_mon_rf_index_conv(chain,
+							   ppdu_info, pdev);
+			rssi = ppdu_info->rx_status.rssi_chain[chain_rf][bw];
 			if (rssi != DP_RSSI_INVAL)
-				cdp_rx_ppdu->rssi_chain[chain][bw] = rssi;
+				cdp_rx_ppdu->rssi_chain[chain_rf][bw] = rssi;
 			else
-				cdp_rx_ppdu->rssi_chain[chain][bw] = 0;
+				cdp_rx_ppdu->rssi_chain[chain_rf][bw] = 0;
 		}
 	}
 }
