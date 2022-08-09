@@ -1948,6 +1948,19 @@ enum wlan_ml_variant {
 	WLAN_ML_VARIANT_INVALIDSTART,
 };
 
+/**
+ *  enum wlan_ml_linfo_subelementid - IDs for subelements in Multi-Link element
+ *  Link Info field.
+ *  @WLAN_ML_LINFO_SUBELEMID_PERSTAPROFILE: Per-STA Profile
+ *  @WLAN_ML_LINFO_SUBELEMID_VENDOR: Vendor specific
+ *  @WLAN_ML_LINFO_SUBELEMID_FRAGMENT: Fragment
+ */
+enum wlan_ml_linfo_subelementid {
+	WLAN_ML_LINFO_SUBELEMID_PERSTAPROFILE  = 0,
+	WLAN_ML_LINFO_SUBELEMID_VENDOR = 221,
+	WLAN_ML_LINFO_SUBELEMID_FRAGMENT = 254,
+};
+
 /* End of definitions related to Multi-Link element Control field applicable
  * across variants.
  */
@@ -2207,19 +2220,6 @@ enum wlan_ml_bv_cinfo_emlcap_transtimeout {
  */
 
 /**
- *  enum wlan_ml_bv_linfo_subelementid - IDs for subelements in Basic variant
- *  Multi-Link element Link Info field.
- *  @WLAN_ML_BV_LINFO_SUBELEMID_PERSTAPROFILE: Per-STA Profile
- *  @WLAN_ML_BV_LINFO_SUBELEMID_VENDOR: Vendor specific
- *  @WLAN_ML_BV_LINFO_SUBELEMID_FRAGMENT: Fragment
- */
-enum wlan_ml_bv_linfo_subelementid {
-	WLAN_ML_BV_LINFO_SUBELEMID_PERSTAPROFILE  = 0,
-	WLAN_ML_BV_LINFO_SUBELEMID_VENDOR = 221,
-	WLAN_ML_BV_LINFO_SUBELEMID_FRAGMENT = 254,
-};
-
-/**
  * struct wlan_ml_bv_linfo_perstaprof - Fixed fields of Per-STA Profile
  * subelement in Basic variant Multi-Link element Link Info field
  * @subelem_id: Subelement ID
@@ -2344,16 +2344,6 @@ struct wlan_ml_bv_linfo_perstaprof_stainfo_dtiminfo {
 /* Probe Req variant Multi-Link element Link Info field contains zero or more
  * subelements.
  */
-
-/**
- *  enum wlan_ml_prv_linfo_subelementid - IDs for subelements in Probe Req
- *  Multi-Link element Link Info field.
- *  @WLAN_ML_PRV_LINFO_SUBELEMID_PERSTAPROFILE: Per-STA Profile
- */
-enum wlan_ml_prv_linfo_subelementid {
-	WLAN_ML_PRV_LINFO_SUBELEMID_PERSTAPROFILE  = 0,
-	WLAN_ML_PRV_LINFO_SUBELEMID_FRAGMENT = 254,
-};
 
 /**
  * struct wlan_ml_prv_linfo_perstaprof - Fixed fields of Per-STA Profile
