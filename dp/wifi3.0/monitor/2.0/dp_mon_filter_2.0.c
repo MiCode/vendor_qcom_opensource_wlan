@@ -1211,9 +1211,12 @@ int htt_h2t_tx_ring_cfg(struct htt_soc *htt_soc, int pdev_id,
 				 DATA,
 				 htt_tlv_filter->data_mpdu_log);
 
-	HTT_TX_MONITOR_CFG_DMA_MPDU_MGMT_SET(*msg_word, 1);
-	HTT_TX_MONITOR_CFG_DMA_MPDU_CTRL_SET(*msg_word, 1);
-	HTT_TX_MONITOR_CFG_DMA_MPDU_DATA_SET(*msg_word, 1);
+	HTT_TX_MONITOR_CFG_DMA_MPDU_MGMT_SET(*msg_word,
+					     htt_tlv_filter->mgmt_mpdu_log);
+	HTT_TX_MONITOR_CFG_DMA_MPDU_CTRL_SET(*msg_word,
+					     htt_tlv_filter->ctrl_mpdu_log);
+	HTT_TX_MONITOR_CFG_DMA_MPDU_DATA_SET(*msg_word,
+					     htt_tlv_filter->data_mpdu_log);
 
 	pkt = htt_htc_pkt_alloc(soc);
 	if (!pkt)
