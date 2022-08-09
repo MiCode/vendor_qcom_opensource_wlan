@@ -84,6 +84,11 @@
 		reg_val |= HAL_SM(HWIO_REO_R0_MISC_CTL,		\
 				  FRAGMENT_DEST_RING,		\
 				  (reo_params)->frag_dst_ring); \
+		reg_val |= ((reo_params)->reo_ref_peer_id_fix_enable) << 6; \
+		HAL_REG_WRITE(soc,				\
+			      HWIO_REO_R0_MISC_CTL_ADDR(	\
+				REO_REG_REG_BASE),		\
+			      reg_val);				\
 	} while (0)
 
 #define HAL_RX_MSDU_DESC_INFO_GET(msdu_details_ptr) \

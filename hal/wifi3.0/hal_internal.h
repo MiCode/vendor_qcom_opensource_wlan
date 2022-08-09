@@ -768,6 +768,7 @@ struct hal_reo_params {
 	uint8_t alt_dst_ind_0;
 	/** padding */
 	uint8_t padding[2];
+	uint8_t reo_ref_peer_id_fix_enable;
 };
 
 /**

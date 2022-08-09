@@ -1677,6 +1677,11 @@ static void hal_reo_setup_9224(struct hal_soc *soc, void *reoparams,
 	reg_val = HAL_REG_READ(soc, HWIO_REO_R0_GENERAL_ENABLE_ADDR(
 		REO_REG_REG_BASE));
 
+	if (soc->version >= 2) {
+		struct hal_reo_params *reo_params = reoparams;
+
+		reo_params->reo_ref_peer_id_fix_enable = 1;
+	}
 	hal_reo_config_9224(soc, reg_val, reo_params);
 	/* Other ring enable bits and REO_ENABLE will be set by FW */
 
