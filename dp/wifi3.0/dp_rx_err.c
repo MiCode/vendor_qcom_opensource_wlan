@@ -2304,6 +2304,8 @@ dp_rx_err_process(struct dp_intr *int_ctx, struct dp_soc *soc,
 	bool ret;
 	uint32_t error_code = 0;
 	bool sw_pn_check_needed;
+	int max_reap_limit = dp_rx_get_loop_pkt_limit(soc);
+	int i, rx_bufs_reaped_total;
 
 	/* Debug -- Remove later */
 	qdf_assert(soc && hal_ring_hdl);
@@ -2553,6 +2555,14 @@ process_reo_error_code:
 next_entry:
 		dp_rx_link_cookie_invalidate(ring_desc);
 		hal_srng_dst_get_next(hal_soc, hal_ring_hdl);
+
+		rx_bufs_reaped_total = 0;
+		for (i = 0; i < MAX_PDEV_CNT; i++)
+			rx_bufs_reaped_total += rx_bufs_reaped[i];
+
+		if (dp_rx_reap_loop_pkt_limit_hit(soc, rx_bufs_reaped_total,
+						  max_reap_limit))
+			break;
 	}
 
 done:
