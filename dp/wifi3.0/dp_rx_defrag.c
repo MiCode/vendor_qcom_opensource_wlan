@@ -523,10 +523,6 @@ dp_rx_defrag_ccmp_decap(struct dp_soc *soc, qdf_nbuf_t nbuf, uint16_t hdrlen)
 	if (!(ivp[IEEE80211_WEP_IVLEN] & IEEE80211_WEP_EXTIV))
 		return QDF_STATUS_E_DEFRAG_ERROR;
 
-	qdf_mem_move(nbuf->data + dp_f_ccmp.ic_header, nbuf->data,
-		     rx_desc_len + hdrlen);
-	qdf_nbuf_pull_head(nbuf, dp_f_ccmp.ic_header);
-
 	return QDF_STATUS_SUCCESS;
 }
 
