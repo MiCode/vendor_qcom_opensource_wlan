@@ -119,6 +119,7 @@ struct hif_pci_softc {
 	struct HIF_CE_state ce_sc;
 	void __iomem *mem;      /* PCI address. */
 	void __iomem *mem_ce;   /* PCI address for CE. */
+	void __iomem *mem_cmem;   /* PCI address for CMEM. */
 	size_t mem_len;
 
 	struct device *dev;	/* For efficiency, should be first in struct */

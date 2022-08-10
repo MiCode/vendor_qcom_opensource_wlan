@@ -494,6 +494,21 @@ uint32_t hif_get_soc_version(struct hif_opaque_softc *hif_handle)
 
 qdf_export_symbol(hif_get_soc_version);
 
+/**
+ * hif_get_dev_ba_cmem(): API to get device ce base address.
+ * @scn: scn
+ *
+ * Return: dev mem base address for CMEM
+ */
+void *hif_get_dev_ba_cmem(struct hif_opaque_softc *hif_handle)
+{
+	struct hif_softc *scn = (struct hif_softc *)hif_handle;
+
+	return scn->mem_cmem;
+}
+
+qdf_export_symbol(hif_get_dev_ba_cmem);
+
 #ifdef FEATURE_RUNTIME_PM
 void hif_runtime_prevent_linkdown(struct hif_softc *scn, bool is_get)
 {

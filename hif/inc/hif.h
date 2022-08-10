@@ -1946,6 +1946,13 @@ void *hif_get_dev_ba(struct hif_opaque_softc *hif_handle);
 void *hif_get_dev_ba_ce(struct hif_opaque_softc *hif_handle);
 
 /**
+ * hif_get_dev_ba_cmem() - get base address of CMEM
+ * @hif_ctx - the HIF context
+ *
+ */
+void *hif_get_dev_ba_cmem(struct hif_opaque_softc *hif_handle);
+
+/**
  * hif_get_soc_version() - get soc major version from target info
  * @hif_ctx - the HIF context
  *
