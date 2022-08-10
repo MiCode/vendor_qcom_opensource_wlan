@@ -2098,7 +2098,8 @@ void dp_peer_update_telemetry_stats(struct dp_peer *peer)
 				mon_peer->stats.airtime_consumption.consumption;
 		mon_peer->stats.airtime_consumption.consumption = 0;
 		mon_peer->stats.airtime_consumption.avg_consumption.idx++;
-		if (idx == MAX_CONSUMPTION_TIME)
+		if (mon_peer->stats.airtime_consumption.avg_consumption.idx ==
+		    MAX_CONSUMPTION_TIME)
 			mon_peer->stats.airtime_consumption.avg_consumption.idx = 0;
 	}
 }
