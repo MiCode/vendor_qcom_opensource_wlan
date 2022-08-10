@@ -2707,6 +2707,7 @@ dp_rx_wbm_err_process(struct dp_intr *int_ctx, struct dp_soc *soc,
 	bool process_sg_buf = false;
 	uint32_t wbm_err_src;
 	QDF_STATUS status;
+	struct hal_rx_mpdu_desc_info mpdu_desc_info = { 0 };
 
 	/* Debug -- Remove later */
 	qdf_assert(soc && hal_ring_hdl);
@@ -2792,6 +2793,13 @@ dp_rx_wbm_err_process(struct dp_intr *int_ctx, struct dp_soc *soc,
 
 			continue;
 		}
+
+		/* Get MPDU DESC info */
+		hal_rx_mpdu_desc_info_get(hal_soc, ring_desc, &mpdu_desc_info);
+
+		if (qdf_likely(mpdu_desc_info.mpdu_flags &
+			       HAL_MPDU_F_QOS_CONTROL_VALID))
+			qdf_nbuf_set_tid_val(rx_desc->nbuf, mpdu_desc_info.tid);
 
 		rx_desc_pool = &soc->rx_desc_buf[rx_desc->pool_id];
 		dp_ipa_rx_buf_smmu_mapping_lock(soc);

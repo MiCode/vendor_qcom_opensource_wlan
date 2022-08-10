@@ -5107,6 +5107,7 @@ void dp_pdev_print_tid_stats(struct dp_pdev *pdev)
 	struct cdp_tid_tx_stats total_tx;
 	struct cdp_tid_rx_stats total_rx;
 	uint8_t tid, tqm_status_idx, htt_status_idx;
+	struct cdp_tid_rx_stats *rx_wbm_stats = NULL;
 
 	DP_PRINT_STATS("Packets received in hardstart: %llu ",
 			pdev->stats.tid_stats.ingress_stack);
@@ -5115,6 +5116,8 @@ void dp_pdev_print_tid_stats(struct dp_pdev *pdev)
 	DP_PRINT_STATS("Per TID Video Stats:\n");
 
 	for (tid = 0; tid < CDP_MAX_DATA_TIDS; tid++) {
+		rx_wbm_stats = &pdev->stats.tid_stats.tid_rx_wbm_stats[0][tid];
+
 		dp_accumulate_tid_stats(pdev, tid, &total_tx, &total_rx,
 					TID_COUNTER_STATS);
 		DP_PRINT_STATS("----TID: %d----", tid);
@@ -5171,6 +5174,10 @@ void dp_pdev_print_tid_stats(struct dp_pdev *pdev)
 			       total_rx.mcast_msdu_cnt);
 		DP_PRINT_STATS("Rx Broadcast MSDU Count: %llu\n",
 			       total_rx.bcast_msdu_cnt);
+		DP_PRINT_STATS("Rx WBM Intra Bss Deliver Count: %llu",
+			       rx_wbm_stats->intrabss_cnt);
+		DP_PRINT_STATS("Rx WBM Intrabss Drop Count: %llu",
+			       rx_wbm_stats->fail_cnt[INTRABSS_DROP]);
 	}
 }
 

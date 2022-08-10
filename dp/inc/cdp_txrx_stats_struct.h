@@ -113,6 +113,7 @@
 
 #define CDP_MAX_RX_RINGS 8  /* max rx rings */
 #define CDP_MAX_TX_COMP_RINGS 5 /* max tx/completion rings */
+#define CDP_MAX_RX_WBM_RINGS 1 /* max rx wbm rings */
 
 #define CDP_MAX_TX_TQM_STATUS 9  /* max tx tqm completion status */
 #define CDP_MAX_TX_HTT_STATUS 7  /* max tx htt completion status */
@@ -1055,6 +1056,8 @@ struct cdp_tid_stats {
 					    [CDP_MAX_DATA_TIDS];
 	struct cdp_tid_rx_stats tid_rx_stats[CDP_MAX_RX_RINGS]
 					    [CDP_MAX_DATA_TIDS];
+	struct cdp_tid_rx_stats tid_rx_wbm_stats[CDP_MAX_RX_WBM_RINGS]
+						[CDP_MAX_DATA_TIDS];
 };
 
 /*

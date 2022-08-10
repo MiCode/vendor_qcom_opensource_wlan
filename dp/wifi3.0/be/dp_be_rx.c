@@ -1179,10 +1179,19 @@ bool dp_rx_mlo_igmp_handler(struct dp_soc *soc,
 	struct dp_vdev *mcast_primary_vdev = NULL;
 	struct dp_vdev_be *be_vdev = dp_get_be_vdev_from_dp_vdev(vdev);
 	struct dp_soc_be *be_soc = dp_get_be_soc_from_dp_soc(soc);
+	uint8_t tid = qdf_nbuf_get_tid_val(nbuf);
+	struct cdp_tid_rx_stats *tid_stats = &peer->vdev->pdev->stats.
+					tid_stats.tid_rx_wbm_stats[0][tid];
 
 	if (!(qdf_nbuf_is_ipv4_igmp_pkt(nbuf) ||
 	      qdf_nbuf_is_ipv6_igmp_pkt(nbuf)))
 		return false;
+
+	if (!peer->bss_peer) {
+		if (dp_rx_intrabss_mcbc_fwd(soc, peer, NULL, nbuf, tid_stats))
+			dp_rx_err("forwarding failed");
+	}
+
 	/*
 	 * In the case of ME6, Backhaul WDS, NAWDS
 	 * send the igmp pkt on the same link where it received,
