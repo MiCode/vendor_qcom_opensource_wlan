@@ -35,6 +35,7 @@
 /* Saved profile weightage multiplier */
 #define SAVED_PROFILE_WEIGHTAGE 10
 
+#ifdef CONFIG_BAND_6GHZ
 #ifdef FEATURE_6G_SCAN_CHAN_SORT_ALGO
 
 /**
@@ -558,3 +559,4 @@ end:
 
 	scm_sort_6ghz_channel_list(req->vdev, &req->scan_req.chan_list);
 }
+#endif
