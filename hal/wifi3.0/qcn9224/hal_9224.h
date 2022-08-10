@@ -1655,7 +1655,7 @@ static void hal_cmem_write_9224(hal_soc_handle_t hal_soc_hdl,
 {
 	struct hal_soc *hal = (struct hal_soc *)hal_soc_hdl;
 
-	pld_reg_write(hal->qdf_dev->dev, offset, value);
+	pld_reg_write(hal->qdf_dev->dev, offset, value, NULL);
 }
 
 /**

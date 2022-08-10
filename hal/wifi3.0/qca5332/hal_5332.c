@@ -98,31 +98,7 @@
 
 #include "hal_be_api_mon.h"
 
-#ifdef CONFIG_WIFI_EMULATION_WIFI_3_0
-#define CMEM_REG_BASE 0x0010e000
-
-#define CMEM_WINDOW_ADDRESS_5332 \
-		((CMEM_REG_BASE >> WINDOW_SHIFT) & WINDOW_VALUE_MASK)
-#endif
-
-#define CE_WINDOW_ADDRESS_5332 \
-		((CE_CFG_WFSS_CE_REG_BASE >> WINDOW_SHIFT) & WINDOW_VALUE_MASK)
-
-#define UMAC_WINDOW_ADDRESS_5332 \
-		((UMAC_BASE >> WINDOW_SHIFT) & WINDOW_VALUE_MASK)
-
-#ifdef CONFIG_WIFI_EMULATION_WIFI_3_0
-#define WINDOW_CONFIGURATION_VALUE_5332 \
-		((CE_WINDOW_ADDRESS_5332 << 6) |\
-		 (UMAC_WINDOW_ADDRESS_5332 << 12) | \
-		 CMEM_WINDOW_ADDRESS_5332 | \
-		 WINDOW_ENABLE_BIT)
-#else
-#define WINDOW_CONFIGURATION_VALUE_5332 \
-		((CE_WINDOW_ADDRESS_5332 << 6) |\
-		 (UMAC_WINDOW_ADDRESS_5332 << 12) | \
-		 WINDOW_ENABLE_BIT)
-#endif
+#define CMEM_REG_BASE 0x00100000
 
 /* For Berryllium sw2rxdma ring size increased to 20 bits */
 #define HAL_RXDMA_MAX_RING_SIZE_BE 0xFFFFF
@@ -1205,33 +1181,23 @@ static inline qdf_iomem_t hal_get_window_address_5332(struct hal_soc *hal_soc,
 	qdf_iomem_t new_offset;
 
 	/*
-	 * If offset lies within DP register range, use 3rd window to write
-	 * into DP region.
-	 */
-	if ((offset ^ UMAC_BASE) < WINDOW_RANGE_MASK) {
-		new_offset = (hal_soc->dev_base_addr + (3 * WINDOW_START) +
-			  (offset & WINDOW_RANGE_MASK));
-	/*
-	 * If offset lies within CE register range, use 2nd window to write
+	 * Check if offset lies within CE register range(0x740000)
+	 * or UMAC/DP register range (0x00A00000).
+	 * If offset  lies within CE register range, map it
 	 * into CE region.
 	 */
-	} else if ((offset ^ CE_CFG_WFSS_CE_REG_BASE) < WINDOW_RANGE_MASK) {
-		new_offset = (hal_soc->dev_base_addr + (2 * WINDOW_START) +
-			  (offset & WINDOW_RANGE_MASK));
-	} else {
-		QDF_TRACE(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_ERROR,
-			  "%s: ERROR: Accessing Wrong register\n", __func__);
-		qdf_assert_always(0);
-		return 0;
-	}
-	return new_offset;
-}
+	if (offset < 0xA00000) {
+		offset = offset - CE_CFG_WFSS_CE_REG_BASE;
+		new_offset = (hal_soc->dev_base_addr_ce + offset);
 
-static inline void hal_write_window_register(struct hal_soc *hal_soc)
-{
-	/* Write value into window configuration register */
-	qdf_iowrite32(hal_soc->dev_base_addr + WINDOW_REG_ADDRESS,
-		      WINDOW_CONFIGURATION_VALUE_5332);
+		return new_offset;
+	} else {
+	/*
+	 * If offset lies within DP register range,
+	 * return the address as such
+	 */
+		return addr;
+	}
 }
 
 static
@@ -1503,7 +1469,7 @@ static void hal_rx_dump_pkt_tlvs_5332(hal_soc_handle_t hal_soc_hdl,
 }
 #endif
 
-#define HAL_NUM_TCL_BANKS_5332 48
+#define HAL_NUM_TCL_BANKS_5332 24
 
 /**
  * hal_cmem_write_5332() - function for CMEM buffer writing
@@ -1519,7 +1485,12 @@ static void hal_cmem_write_5332(hal_soc_handle_t hal_soc_hdl,
 {
 	struct hal_soc *hal = (struct hal_soc *)hal_soc_hdl;
 
-	pld_reg_write(hal->qdf_dev->dev, offset, value);
+	/* cmem region is ioremapped from CMEM_REG_BASE, hence subtracting
+	 * that from offset.
+	 */
+	offset = offset - CMEM_REG_BASE;
+	pld_reg_write(hal->qdf_dev->dev, offset, value,
+		      hal->dev_base_addr_cmem);
 }
 
 /**
@@ -2363,6 +2334,15 @@ struct hal_hw_srng_config hw_srng_table_5332[] = {
 		.max_size = HAL_RXDMA_MAX_RING_SIZE_BE,
 	},
 #endif
+	/* PPE rings are not present in Miami. Added dummy entries to preserve
+	 * Array Index
+	 */
+	/* REO2PPE */
+	{},
+	/* PPE2TCL */
+	{},
+	/* PPE_RELEASE */
+	{},
 #ifdef QCA_MONITOR_2_0_SUPPORT
 	{ /* TX_MONITOR_BUF */
 		.start_ring_id = HAL_SRNG_SW2TXMON_BUF0,
@@ -2442,7 +2422,5 @@ void hal_qca5332_attach(struct hal_soc *hal_soc)
 
 	hal_hw_txrx_default_ops_attach_be(hal_soc);
 	hal_hw_txrx_ops_attach_qca5332(hal_soc);
-	if (hal_soc->static_window_map)
-		hal_write_window_register(hal_soc);
 	hal_soc->dmac_cmn_src_rxbuf_ring = true;
 }
