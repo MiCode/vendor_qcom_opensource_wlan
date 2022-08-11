@@ -18807,6 +18807,36 @@ extract_pktlog_decode_info_event_tlv(wmi_unified_t wmi_handle, void *evt_buf,
 }
 
 /**
+ * extract_health_mon_init_done_info_event_tlv() - Extract health monitor from
+ * fw
+ * @wmi_handle: wmi handle
+ * @evt_buf: pointer to event buffer
+ * @params: health monitor params
+ *
+ * Return: QDF_STATUS_SUCCESS for success or error code
+ */
+static QDF_STATUS
+extract_health_mon_init_done_info_event_tlv(wmi_unified_t wmi_handle,
+					    void *evt_buf,
+					    struct wmi_health_mon_params *param)
+{
+	WMI_HEALTH_MON_INIT_DONE_EVENTID_param_tlvs *param_buf;
+	wmi_health_mon_init_done_fixed_param *event;
+
+	param_buf =
+		(WMI_HEALTH_MON_INIT_DONE_EVENTID_param_tlvs *)evt_buf;
+
+	event = param_buf->fixed_param;
+
+	param->ring_buf_paddr_low = event->ring_buf_paddr_low;
+	param->ring_buf_paddr_high = event->ring_buf_paddr_high;
+	param->initial_upload_period_ms = event->initial_upload_period_ms;
+	param->read_index = 0;
+
+	return QDF_STATUS_SUCCESS;
+}
+
+/**
  * extract_pdev_telemetry_stats_tlv - extract pdev telemetry stats
  * @wmi_handle: wmi handle
  * @evt_buf: pointer to event buffer
@@ -19305,6 +19335,8 @@ struct wmi_ops tlv_ops =  {
 #ifdef FEATURE_SET
 	.feature_set_cmd_send = feature_set_cmd_send_tlv,
 #endif
+	.extract_health_mon_init_done_info_event =
+		extract_health_mon_init_done_info_event_tlv,
 };
 
 #ifdef WLAN_FEATURE_11BE_MLO
@@ -19795,6 +19827,8 @@ static void populate_tlv_events_id(uint32_t *event_ids)
 	event_ids[wmi_wow_coap_buf_info_eventid] =
 		WMI_WOW_COAP_BUF_INFO_EVENTID;
 #endif
+	event_ids[wmi_extract_health_mon_init_done_info_eventid] =
+		WMI_HEALTH_MON_INIT_DONE_EVENTID;
 }
 
 #ifdef WLAN_FEATURE_LINK_LAYER_STATS

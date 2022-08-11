@@ -3115,6 +3115,10 @@ QDF_STATUS
 QDF_STATUS (*extract_coap_buf_info)(wmi_unified_t wmi_handle, void *evt_buf,
 				    struct coap_buf_info *info);
 #endif
+QDF_STATUS
+(*extract_health_mon_init_done_info_event)(wmi_unified_t wmi_handle,
+					   void *evt_buf,
+					   struct wmi_health_mon_params *param);
 };
 
 /* Forward declartion for psoc*/

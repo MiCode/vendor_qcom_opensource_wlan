@@ -5105,6 +5105,7 @@ typedef enum {
 #ifdef WLAN_FEATURE_COAP
 	wmi_wow_coap_buf_info_eventid,
 #endif
+	wmi_extract_health_mon_init_done_info_eventid,
 	wmi_events_max,
 } wmi_conv_event_id;
 
@@ -5785,7 +5786,6 @@ typedef enum {
 #endif
 	wmi_service_is_my_mgmt_frame,
 	wmi_service_linkspeed_roam_trigger_support,
-
 #ifdef FEATURE_SET
 	wmi_service_feature_set_event_support,
 #endif
@@ -9036,4 +9036,19 @@ struct wmi_host_sw_cal_ver {
 	uint32_t ftm_cal_ver;
 	uint32_t status;
 };
+
+/**
+ * struct wmi_health_mon_params - Health mon params
+ * @ring_buf_paddr_low: Ring buffer physical address LOW
+ * @ring_buf_paddr_high:  Ring buffer physical address HIGH
+ * @initial_upload_period_ms: Health mon periodic time
+ * @read_index: ring element read_index
+ */
+struct wmi_health_mon_params {
+	uint32_t ring_buf_paddr_low;
+	uint32_t ring_buf_paddr_high;
+	uint32_t initial_upload_period_ms;
+	uint32_t read_index;
+};
+
 #endif /* _WMI_UNIFIED_PARAM_H_ */

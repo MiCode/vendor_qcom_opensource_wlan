@@ -4954,4 +4954,19 @@ QDF_STATUS wmi_feature_set_cmd_send(
 			wmi_unified_t wmi_handle,
 			struct target_feature_set *feature_set);
 #endif
+
+/**
+ * wmi_extract_health_mon_event - extract health monitor params
+ * @wmi_handle: wmi handle
+ * @ev: pointer to event buffer
+ * @params: health monitor params
+ *
+ * Return: QDF_STATUS_SUCCESS for success or error code
+ */
+
+QDF_STATUS wmi_extract_health_mon_event(
+		wmi_unified_t wmi_handle,
+		void *ev,
+		struct wmi_health_mon_params *param);
+
 #endif /* _WMI_UNIFIED_API_H_ */
