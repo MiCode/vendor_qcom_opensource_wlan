@@ -635,6 +635,8 @@ typedef enum {
 #define HTT_TX_HWQ_MAX_CMD_RESULT_STATS 13
 #define HTT_TX_HWQ_MAX_CMD_STALL_STATS 5
 #define HTT_TX_HWQ_MAX_FES_RESULT_STATS 10
+#define HTT_PDEV_STATS_PPDU_DUR_HIST_BINS 16
+#define HTT_PDEV_STATS_PPDU_DUR_HIST_INTERVAL_US 250
 
 typedef enum {
     HTT_STATS_TX_PDEV_NO_DATA_UNDERRUN = 0,
@@ -2237,6 +2239,14 @@ typedef struct {
     A_UINT32 su_sw_rts_flushed;
     /** CTS (RTS response) received in different BW */
     A_UINT32 su_sw_rts_rcvd_cts_diff_bw;
+    /** 11AX HE MU Combined Freq. BSRP Trigger frame sent over the air */
+    A_UINT32 combined_ax_bsr_trigger_tried[HTT_NUM_AC_WMM];
+    /** 11AX HE MU Combined Freq. BSRP Trigger completed with error(s) */
+    A_UINT32 combined_ax_bsr_trigger_err[HTT_NUM_AC_WMM];
+    /** 11AX HE MU Standalone Freq. BSRP Trigger frame sent over the air */
+    A_UINT32 standalone_ax_bsr_trigger_tried[HTT_NUM_AC_WMM];
+    /** 11AX HE MU Standalone Freq. BSRP Trigger completed with error(s) */
+    A_UINT32 standalone_ax_bsr_trigger_err[HTT_NUM_AC_WMM];
 } htt_tx_selfgen_cmn_stats_tlv;
 
 typedef struct {
@@ -2800,6 +2810,13 @@ typedef struct {
      * 11AX HE UL-MUMIMO Trigger frame for users 0 - 7 completed with error(s)
      */
     A_UINT32 ax_ul_mumimo_trigger_err[HTT_TX_PDEV_STATS_NUM_AX_MUMIMO_USER_STATS];
+
+    /** 11AX HE MU OFDMA Basic Trigger frame completed with partial user response */
+    A_UINT32 ax_basic_trigger_partial_resp;
+    /** 11AX HE MU BSRP Trigger frame completed with partial user response */
+    A_UINT32 ax_bsr_trigger_partial_resp;
+    /** 11AX HE MU BAR Trigger frame completed with partial user response */
+    A_UINT32 ax_mu_bar_trigger_partial_resp;
 } htt_tx_selfgen_ax_err_stats_tlv;
 
 typedef struct {
@@ -2843,6 +2860,13 @@ typedef struct {
      * 11BE EHT UL-MUMIMO Trigger frame for users 0 - 7 completed with error(s)
      */
     A_UINT32 be_ul_mumimo_trigger_err[HTT_TX_PDEV_STATS_NUM_BE_MUMIMO_USER_STATS];
+
+    /** 11BE EHT MU OFDMA Basic Trigger frame completed with partial user response */
+    A_UINT32 be_basic_trigger_partial_resp;
+    /** 11BE EHT MU BSRP Trigger frame completed with partial user response */
+    A_UINT32 be_bsr_trigger_partial_resp;
+    /** 11BE EHT MU BAR Trigger frame completed with partial user response */
+    A_UINT32 be_mu_bar_trigger_partial_resp;
 } htt_tx_selfgen_be_err_stats_tlv;
 
 /*
@@ -4836,6 +4860,12 @@ typedef struct {
     A_UINT32 be_ofdma_eht_sig_mcs[HTT_TX_PDEV_STATS_NUM_EHT_SIG_MCS_COUNTERS];
 } htt_tx_pdev_rate_stats_be_ofdma_tlv;
 
+typedef struct {
+    htt_tlv_hdr_t tlv_hdr;
+    /** Tx PPDU duration histogram **/
+    A_UINT32 tx_ppdu_dur_hist[HTT_PDEV_STATS_PPDU_DUR_HIST_BINS];
+} htt_tx_pdev_ppdu_dur_stats_tlv;
+
 /* STATS_TYPE : HTT_DBG_EXT_STATS_PDEV_TX_RATE
  * TLV_TAGS:
  *      - HTT_STATS_TX_PDEV_RATE_STATS_TAG
@@ -4848,6 +4878,7 @@ typedef struct {
     htt_tx_pdev_rate_stats_tlv rate_tlv;
     htt_tx_pdev_rate_stats_be_tlv rate_be_tlv;
     htt_tx_pdev_rate_stats_sawf_tlv rate_sawf_tlv;
+    htt_tx_pdev_ppdu_dur_stats_tlv tx_ppdu_dur_tlv;
 } htt_tx_pdev_rate_stats_t;
 
 /* == PDEV RX RATE CTRL STATS == */
@@ -5096,6 +5127,12 @@ typedef struct {
  */
 } htt_rx_pdev_rate_stats_tlv;
 
+typedef struct {
+    htt_tlv_hdr_t tlv_hdr;
+    /** Tx PPDU duration histogram **/
+    A_UINT32 rx_ppdu_dur_hist[HTT_PDEV_STATS_PPDU_DUR_HIST_BINS];
+} htt_rx_pdev_ppdu_dur_stats_tlv;
+
 /* STATS_TYPE : HTT_DBG_EXT_STATS_PDEV_RX_RATE
  * TLV_TAGS:
  *      - HTT_STATS_RX_PDEV_RATE_STATS_TAG
@@ -5106,6 +5143,7 @@ typedef struct {
  */
 typedef struct {
     htt_rx_pdev_rate_stats_tlv rate_tlv;
+    htt_rx_pdev_ppdu_dur_stats_tlv rx_ppdu_dur_tlv;
 } htt_rx_pdev_rate_stats_t;
 
 typedef struct {
@@ -5215,6 +5253,12 @@ typedef struct {
      */
     A_UINT32 uplink_sta_power_headroom[HTT_RX_UL_MAX_UPLINK_RSSI_TRACK];
     A_UINT32 reduced_ul_ofdma_rx_bw[HTT_RX_PDEV_STATS_NUM_REDUCED_CHAN_TYPES][HTT_RX_PDEV_STATS_NUM_BW_COUNTERS];
+
+    /*
+     * Number of HE UL OFDMA per-user responses containing only a QoS null in
+     * response to basic trigger. Typically a data response is expected.
+     */
+    A_UINT32 ul_ofdma_basic_trigger_rx_qos_null_only;
 } htt_rx_pdev_ul_trigger_stats_tlv;
 
 /* STATS_TYPE : HTT_DBG_EXT_STATS_PDEV_UL_TRIG_STATS
@@ -5280,6 +5324,12 @@ typedef struct {
      * Trig power headroom for STA AID in same idx - UNIT(dB)
      */
     A_UINT32 be_uplink_sta_power_headroom[HTT_RX_UL_MAX_UPLINK_RSSI_TRACK];
+
+    /*
+     * Number of EHT UL OFDMA per-user responses containing only a QoS null in
+     * response to basic trigger. Typically a data response is expected.
+     */
+    A_UINT32 be_ul_ofdma_basic_trigger_rx_qos_null_only;
 } htt_rx_pdev_be_ul_trigger_stats_tlv;
 
 /* STATS_TYPE : HTT_DBG_EXT_STATS_PDEV_UL_TRIG_STATS
@@ -5403,6 +5453,12 @@ typedef struct {
     /** Average pilot EVM measued for RX UL TB PPDU */
     A_INT8 rx_ulmumimo_pilot_evm_dB_mean[HTT_TX_PDEV_STATS_NUM_UL_MUMIMO_USER_STATS][HTT_RX_PDEV_STATS_ULMUMIMO_NUM_SPATIAL_STREAMS];
     A_UINT32 reduced_ul_mumimo_rx_bw[HTT_RX_PDEV_STATS_NUM_REDUCED_CHAN_TYPES][HTT_RX_PDEV_STATS_NUM_BW_COUNTERS];
+
+    /*
+     * Number of HE UL MU-MIMO per-user responses containing only a QoS null in
+     * response to basic trigger. Typically a data response is expected.
+     */
+    A_UINT32 ul_mumimo_basic_trigger_rx_qos_null_only;
 } htt_rx_pdev_ul_mumimo_trig_stats_tlv;
 
 typedef struct {
@@ -5450,6 +5506,12 @@ typedef struct {
     A_INT8 be_rx_ulmumimo_pilot_evm_dB_mean[HTT_RX_PDEV_MAX_ULMUMIMO_NUM_USER][HTT_RX_PDEV_STATS_ULMUMIMO_NUM_SPATIAL_STREAMS];
     /** Number of times UL MUMIMO TB PPDUs received in a punctured mode */
     A_UINT32 rx_ul_mumimo_punctured_mode[HTT_RX_PDEV_STATS_NUM_PUNCTURED_MODE_COUNTERS];
+
+    /*
+     * Number of EHT UL MU-MIMO per-user responses containing only a QoS null
+     * in response to basic trigger. Typically a data response is expected.
+     */
+    A_UINT32 be_ul_mumimo_basic_trigger_rx_qos_null_only;
 } htt_rx_pdev_ul_mumimo_trig_be_stats_tlv;
 
 /* STATS_TYPE : HTT_DBG_EXT_STATS_PDEV_UL_MUMIMO_TRIG_STATS
