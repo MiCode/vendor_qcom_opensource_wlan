@@ -139,6 +139,19 @@ enum {
 };
 
 /*
+ * BW types of used for RX PPDU
+ */
+enum rx_tlv_bw {
+	RX_TLV_BW_20MHZ,
+	RX_TLV_BW_40MHZ,
+	RX_TLV_BW_80MHZ,
+	RX_TLV_BW_160MHZ,
+	RX_TLV_BW_320MHZ,
+	RX_TLV_BW_240MHZ,
+	RX_TLV_BW_CNT,
+};
+
+/*
  * typedef ipa_uc_op_cb_type - Register OP handler function
  */
 typedef void (*ipa_uc_op_cb_type)(uint8_t *op_msg,
