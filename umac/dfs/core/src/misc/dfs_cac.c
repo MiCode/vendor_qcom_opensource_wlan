@@ -168,11 +168,9 @@ void dfs_process_cac_completion(void *context)
 static enum qdf_hrtimer_restart_status
 dfs_cac_timeout(qdf_hrtimer_data_t *arg)
 {
-	struct wlan_dfs *dfs = NULL;
-	void *ptr = (void *)arg;
-	qdf_hrtimer_data_t *thr = container_of(ptr, qdf_hrtimer_data_t, u);
+	struct wlan_dfs *dfs;
 
-	dfs = container_of(thr, struct wlan_dfs, dfs_cac_timer);
+	dfs = container_of(arg, struct wlan_dfs, dfs_cac_timer);
 
 	if (dfs_is_hw_mode_switch_in_progress(dfs))
 		dfs->dfs_defer_params.is_cac_completed = true;
@@ -467,6 +465,13 @@ bool dfs_is_cac_required(struct wlan_dfs *dfs,
 		return false;
 	}
 
+	/* In case of RCAC, check if CAC is completed only on the RCAC channel
+	 * and do not check the CAC info on current operating channel.
+	 */
+	if (dfs_is_agile_rcac_enabled(dfs) &&
+	    dfs_is_rcac_cac_done(dfs, cur_chan, prev_chan))
+		return false;
+
 	/* If the channel has completed PRE-CAC then CAC can be skipped here. */
 	if (dfs_is_precac_done(dfs, cur_chan)) {
 		dfs_debug(dfs, WLAN_DEBUG_DFS,
@@ -487,7 +492,8 @@ bool dfs_is_cac_required(struct wlan_dfs *dfs,
 		if (dfs_is_new_chan_subset_of_old_chan(dfs,
 						       cur_chan,
 						       cac_started_chan)) {
-			*continue_current_cac = true;
+			if (continue_current_cac)
+				*continue_current_cac = true;
 		} else {
 			/* New CAC is needed, cancel the running CAC
 			 * timer.

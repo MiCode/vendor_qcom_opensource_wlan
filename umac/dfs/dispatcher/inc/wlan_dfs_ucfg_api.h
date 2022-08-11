@@ -153,7 +153,7 @@ struct dfs_to_mlme {
 						    enum wlan_phymode des_mode);
 #endif
 #endif
-#ifdef QCA_SUPPORT_DFS_CHAN_POSTNOL
+#if defined(QCA_SUPPORT_DFS_CHAN_POSTNOL) || defined(QCA_DFS_BW_EXPAND)
 	QDF_STATUS
 	(*mlme_postnol_chan_switch)(struct wlan_objmgr_pdev *pdev,
 				    qdf_freq_t des_chan_freq,

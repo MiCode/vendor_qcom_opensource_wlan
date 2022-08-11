@@ -115,4 +115,32 @@
 	(defined  IEEE80211_MLD_MAX_NUM_LINKS))
 #define CFG80211_SINGLE_NETDEV_MULTI_LINK_SUPPORT 1
 #endif
+
+/**
+ * CFG80211_SAE_AUTH_TA_ADDR_SUPPORT
+ * Used to indicate the Linux Kernel contains support for ML SAE auth with link
+ * address as the transmitter address
+ *
+ * TODO: These changes are currently in internal review once upstreamed and
+ * backported to 5.15 need to add the respective commit-ids
+ */
+#if (defined(__ANDROID_COMMON_KERNEL__) && \
+	(LINUX_VERSION_CODE >= KERNEL_VERSION(5, 15, 0)) && \
+	(defined  CFG80211_EXTERNAL_AUTH_TA_SUPPORT))
+#define CFG80211_SAE_AUTH_TA_ADDR_SUPPORT 1
+#endif
+
+/*
+ * CFG80211_MULTI_AKM_CONNECT_SUPPORT
+ * used to indicate the Linux kernel contains support for multi AKM connect
+ * support
+ *
+ * This feature was backported to Android Common Kernel 5.15 via:
+ * https://android-review.googlesource.com/c/kernel/common/+/2115619
+ */
+#if (defined(__ANDROID_COMMON_KERNEL__) && \
+	(LINUX_VERSION_CODE >= KERNEL_VERSION(5, 15, 0)) && \
+	(LINUX_VERSION_CODE < KERNEL_VERSION(5, 16, 0)))
+#define CFG80211_MULTI_AKM_CONNECT_SUPPORT 1
+#endif
 #endif

@@ -167,7 +167,7 @@ static uint16_t wlan_mlo_alloc_aid(struct wlan_ml_vdev_aid_mgr *ml_aid_mgr,
 	return assoc_id;
 }
 
-#ifdef WLAN_FEATURE_T2LM
+#ifdef WLAN_FEATURE_11BE
 #define AID_NUM_BUCKET 3
 static uint16_t _wlan_mlo_peer_alloc_aid(
 		struct wlan_ml_vdev_aid_mgr *ml_aid_mgr,
@@ -533,7 +533,7 @@ uint16_t wlan_mlme_get_aid_count(struct wlan_objmgr_vdev *vdev)
 	return aid_count;
 }
 
-#ifdef WLAN_FEATURE_T2LM
+#ifdef WLAN_FEATURE_11BE
 static bool mlo_peer_t2lm_enabled(struct wlan_mlo_peer_context *ml_peer)
 {
 	if (ml_peer->t2lm_policy.t2lm_enable_val > WLAN_T2LM_NOT_SUPPORTED &&

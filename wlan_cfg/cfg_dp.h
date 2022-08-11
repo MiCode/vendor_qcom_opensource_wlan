@@ -1718,6 +1718,22 @@
 #define DP_MARK_NOTIFY_FRAME_SUPPORT 0
 #endif /* QCA_SUPPORT_TX_MIN_RATES_FOR_SPECIAL_FRAMES */
 
+/*
+ * <ini>
+ * Host DP AST entries database - Enable/Disable
+ *
+ * @Default: 0
+ *
+ * This ini enables/disables AST entries database on host
+ *
+ * Usage: Internal
+ *
+ * </ini>
+ */
+#define CFG_DP_HOST_AST_DB_ENABLE \
+	CFG_INI_BOOL("host_ast_db_enable", false, \
+	"Host AST entries database Enable/Disable")
+
 #define CFG_DP \
 		CFG(CFG_DP_HTT_PACKET_TYPE) \
 		CFG(CFG_DP_INT_BATCH_THRESHOLD_OTHER) \
@@ -1828,5 +1844,6 @@
 		CFG_DP_INI_SECTION_PARAMS \
 		CFG_DP_VDEV_STATS_HW_OFFLOAD \
 		CFG(CFG_DP_TX_CAPT_MAX_MEM_MB) \
-		CFG(CFG_DP_NAPI_SCALE_FACTOR)
+		CFG(CFG_DP_NAPI_SCALE_FACTOR) \
+		CFG(CFG_DP_HOST_AST_DB_ENABLE)
 #endif /* _CFG_DP_H_ */

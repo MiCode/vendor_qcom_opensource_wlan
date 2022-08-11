@@ -32,6 +32,16 @@
 #endif
 
 #define DP_MAX_STRING_LEN 500
+#define DP_HTT_TX_RX_EXPECTED_TLVS (((uint64_t)1 << HTT_STATS_TX_PDEV_CMN_TAG) |\
+	((uint64_t)1 << HTT_STATS_TX_PDEV_UNDERRUN_TAG) |\
+	((uint64_t)1 << HTT_STATS_TX_PDEV_SIFS_TAG) |\
+	((uint64_t)1 << HTT_STATS_TX_PDEV_FLUSH_TAG) |\
+	((uint64_t)1 << HTT_STATS_RX_PDEV_FW_STATS_TAG) |\
+	((uint64_t)1 << HTT_STATS_RX_SOC_FW_STATS_TAG) |\
+	((uint64_t)1 << HTT_STATS_RX_SOC_FW_REFILL_RING_EMPTY_TAG) |\
+	((uint64_t)1 << HTT_STATS_RX_SOC_FW_REFILL_RING_NUM_REFILL_TAG) |\
+	((uint64_t)1 << HTT_STATS_RX_PDEV_FW_RING_MPDU_ERR_TAG) |\
+	((uint64_t)1 << HTT_STATS_RX_PDEV_FW_MPDU_DROP_TAG))
 
 #define DP_HTT_HW_INTR_NAME_LEN  HTT_STATS_MAX_HW_INTR_NAME_LEN
 #define DP_HTT_HW_MODULE_NAME_LEN  HTT_STATS_MAX_HW_MODULE_NAME_LEN
@@ -4713,7 +4723,9 @@ void dp_htt_stats_copy_tag(struct dp_pdev *pdev, uint8_t tag_type, uint32_t *tag
 	void *dest_ptr = NULL;
 	uint32_t size = 0;
 	uint32_t size_expected = 0;
+	uint64_t val = 1;
 
+	pdev->fw_stats_tlv_bitmap_rcvd |= (val << tag_type);
 	switch (tag_type) {
 	case HTT_STATS_TX_PDEV_CMN_TAG:
 		dest_ptr = &pdev->stats.htt_tx_pdev_stats.cmn_tlv;
@@ -4786,6 +4798,11 @@ void dp_htt_stats_copy_tag(struct dp_pdev *pdev, uint8_t tag_type, uint32_t *tag
 
 	if (dest_ptr)
 		qdf_mem_copy(dest_ptr, tag_buf, size_expected);
+
+	if (((pdev->fw_stats_tlv_bitmap_rcvd) & DP_HTT_TX_RX_EXPECTED_TLVS)
+	      == DP_HTT_TX_RX_EXPECTED_TLVS) {
+		qdf_event_set(&pdev->fw_stats_event);
+	}
 }
 
 #ifdef VDEV_PEER_PROTOCOL_COUNT
@@ -7609,6 +7626,36 @@ int dp_fill_tx_interrupt_ctx_stats(struct dp_intr *intr_ctx,
 	}
 	return pos;
 }
+
+#ifdef WLAN_DP_SRNG_USAGE_WM_TRACKING
+#define DP_SRNG_HIGH_WM_STATS_STRING_LEN 512
+void dp_dump_srng_high_wm_stats(struct dp_soc *soc, uint64_t srng_mask)
+{
+	char *buf;
+	int ring, pos, buf_len;
+	char srng_high_wm_str[DP_SRNG_HIGH_WM_STATS_STRING_LEN] = {'\0'};
+
+	if (!srng_mask)
+		return;
+
+	buf = srng_high_wm_str;
+	buf_len = DP_SRNG_HIGH_WM_STATS_STRING_LEN;
+
+	dp_info("%8s %7s %12s %10s %10s %10s %10s %10s %10s",
+		"ring_id", "high_wm", "time", "<50", "50-60", "60-70",
+		"70-80", "80-90", "90-100");
+
+	if (srng_mask & (1 << REO_DST)) {
+		for (ring = 0; ring < soc->num_reo_dest_rings; ring++) {
+			pos = 0;
+			pos += hal_dump_srng_high_wm_stats(soc->hal_soc,
+					    soc->reo_dest_ring[ring].hal_srng,
+					    buf, buf_len, pos);
+			dp_info("%s", srng_high_wm_str);
+		}
+	}
+}
+#endif
 
 #define DP_INT_CTX_STATS_STRING_LEN 512
 void dp_print_soc_interrupt_stats(struct dp_soc *soc)

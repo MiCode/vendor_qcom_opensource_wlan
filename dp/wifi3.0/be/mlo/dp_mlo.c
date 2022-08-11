@@ -514,17 +514,18 @@ void dp_mlo_partner_chips_map(struct dp_soc *soc,
 			      uint16_t peer_id)
 {
 	struct dp_soc_be *be_soc = dp_get_be_soc_from_dp_soc(soc);
-	struct dp_mlo_ctxt *mlo_ctxt = be_soc->ml_ctxt;
+	struct dp_mlo_ctxt *mlo_ctxt = NULL;
 	bool is_ml_peer_id =
 		HTT_RX_PEER_META_DATA_V1_ML_PEER_VALID_GET(peer_id);
 	uint8_t chip_id;
 	struct dp_soc *temp_soc;
 
-	if (!mlo_ctxt)
-		return;
-
 	/* for non ML peer dont map on partner chips*/
 	if (!is_ml_peer_id)
+		return;
+
+	mlo_ctxt = be_soc->ml_ctxt;
+	if (!mlo_ctxt)
 		return;
 
 	qdf_spin_lock_bh(&mlo_ctxt->ml_soc_list_lock);

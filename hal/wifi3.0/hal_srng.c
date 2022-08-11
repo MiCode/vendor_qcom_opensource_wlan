@@ -58,6 +58,9 @@ void hal_qca6750_attach(struct hal_soc *hal);
 #ifdef QCA_WIFI_QCA5018
 void hal_qca5018_attach(struct hal_soc *hal);
 #endif
+#ifdef QCA_WIFI_QCA5332
+void hal_qca5332_attach(struct hal_soc *hal);
+#endif
 #ifdef QCA_WIFI_KIWI
 void hal_kiwi_attach(struct hal_soc *hal);
 #endif
@@ -504,6 +507,13 @@ static void hal_target_based_configure(struct hal_soc *hal)
 		hal->use_register_windowing = true;
 		hal->static_window_map = true;
 		hal_qcn9224_attach(hal);
+	break;
+#endif
+#ifdef QCA_WIFI_QCA5332
+	case TARGET_TYPE_QCA5332:
+		hal->use_register_windowing = true;
+		hal->static_window_map = true;
+		hal_qca5332_attach(hal);
 	break;
 #endif
 	default:
@@ -1485,6 +1495,37 @@ void hal_srng_last_desc_cleared_init(struct hal_srng *srng)
 }
 #endif /* CLEAR_SW2TCL_CONSUMED_DESC */
 
+#ifdef WLAN_DP_SRNG_USAGE_WM_TRACKING
+static inline void hal_srng_update_high_wm_thresholds(struct hal_srng *srng)
+{
+	srng->high_wm.bin_thresh[HAL_SRNG_HIGH_WM_BIN_90_to_100] =
+			((srng->num_entries * 90) / 100);
+	srng->high_wm.bin_thresh[HAL_SRNG_HIGH_WM_BIN_80_to_90] =
+			((srng->num_entries * 80) / 100);
+	srng->high_wm.bin_thresh[HAL_SRNG_HIGH_WM_BIN_70_to_80] =
+			((srng->num_entries * 70) / 100);
+	srng->high_wm.bin_thresh[HAL_SRNG_HIGH_WM_BIN_60_to_70] =
+			((srng->num_entries * 60) / 100);
+	srng->high_wm.bin_thresh[HAL_SRNG_HIGH_WM_BIN_50_to_60] =
+			((srng->num_entries * 50) / 100);
+	/* Below 50% threshold is not needed */
+	srng->high_wm.bin_thresh[HAL_SRNG_HIGH_WM_BIN_BELOW_50_PERCENT] = 0;
+
+	hal_info("ring_id: %u, wm_thresh- <50:%u, 50-60:%u, 60-70:%u, 70-80:%u, 80-90:%u, 90-100:%u",
+		 srng->ring_id,
+		 srng->high_wm.bin_thresh[HAL_SRNG_HIGH_WM_BIN_BELOW_50_PERCENT],
+		 srng->high_wm.bin_thresh[HAL_SRNG_HIGH_WM_BIN_50_to_60],
+		 srng->high_wm.bin_thresh[HAL_SRNG_HIGH_WM_BIN_60_to_70],
+		 srng->high_wm.bin_thresh[HAL_SRNG_HIGH_WM_BIN_70_to_80],
+		 srng->high_wm.bin_thresh[HAL_SRNG_HIGH_WM_BIN_80_to_90],
+		 srng->high_wm.bin_thresh[HAL_SRNG_HIGH_WM_BIN_90_to_100]);
+}
+#else
+static inline void hal_srng_update_high_wm_thresholds(struct hal_srng *srng)
+{
+}
+#endif
+
 /**
  * hal_srng_setup - Initialize HW SRNG ring.
  * @hal_soc: Opaque HAL SOC handle
@@ -1547,6 +1588,7 @@ void *hal_srng_setup(void *hal_soc, int ring_type, int ring_num,
 	srng->prefetch_timer = ring_params->prefetch_timer;
 	srng->hal_soc = hal_soc;
 	hal_srng_set_msi2_params(srng, ring_params);
+	hal_srng_update_high_wm_thresholds(srng);
 
 	for (i = 0 ; i < MAX_SRNG_REG_GROUPS; i++) {
 		srng->hwreg_base[i] = dev_base_addr + ring_config->reg_start[i]

@@ -566,12 +566,14 @@ struct vdev_scan_nac_rssi_params {
  * @mlo_assoc_link: indicate is the link used to initialize
  *                  the association of mlo connection
  * @mlo_mcast_vdev: MLO cast vdev
+ * @emlsr_support: indicate non AP MLD STA supports eMLSR mode
  */
 struct mlo_vdev_start_flags {
 	uint32_t mlo_enabled:1,
 		 mlo_assoc_link:1,
 		 mlo_mcast_vdev:1,
-		 rsvd:29;
+		 emlsr_support:1,
+		 rsvd:28;
 };
 
 /**

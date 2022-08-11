@@ -939,6 +939,22 @@ reg_get_channel_state_for_pwrmode(struct wlan_objmgr_pdev *pdev,
 enum channel_state reg_get_channel_state_from_secondary_list_for_freq(
 						struct wlan_objmgr_pdev *pdev,
 						qdf_freq_t freq);
+
+/**
+ * reg_get_channel_list_with_power() - Provides the channel list with power
+ * @pdev: Pointer to pdev
+ * @ch_list: Pointer to the channel list.
+ * @num_chan: Pointer to save number of channels
+ * @in_6g_pwr_type: 6G power type corresponding to which 6G channel list is
+ * required
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS reg_get_channel_list_with_power(
+				struct wlan_objmgr_pdev *pdev,
+				struct channel_power *ch_list,
+				uint8_t *num_chan,
+				enum supported_6g_pwr_types in_6g_pwr_type);
 #endif
 
 /**
@@ -1341,6 +1357,21 @@ bool reg_is_disable_in_secondary_list_for_freq(struct wlan_objmgr_pdev *pdev,
  */
 bool reg_is_enable_in_secondary_list_for_freq(struct wlan_objmgr_pdev *pdev,
 					      qdf_freq_t freq);
+
+/**
+ * reg_get_max_tx_power_for_pwr_mode() - Get maximum tx power
+ * @pdev: Pointer to pdev
+ * @in_6g_pwr_type: 6 GHz power type for which 6GHz frequencies needs to be
+ * considered while getting the max power
+ *
+ * Return: return the value of the maximum tx power for 2GHz/5GHz channels
+ * from current channel list and for 6GHz channels from the super channel list
+ * for the specified power mode
+ *
+ */
+uint8_t reg_get_max_tx_power_for_pwr_mode(
+				struct wlan_objmgr_pdev *pdev,
+				enum supported_6g_pwr_types in_6g_pwr_type);
 #endif
 
 /**
@@ -2519,6 +2550,16 @@ enum channel_state reg_get_chan_state(struct wlan_objmgr_pdev *pdev,
 				      bool treat_nol_chan_as_disabled);
 
 /**
+ * reg_is_chan_disabled() - Check if a chanel is disabled or not
+ *
+ * @chan_flags: Channel flags
+ * @chan_state: Channel state
+ *
+ * Return: True if channel is disabled else false.
+ */
+bool reg_is_chan_disabled(uint32_t chan_flags, enum channel_state chan_state);
+
+/**
  * reg_get_chan_state_for_320() - Get the channel state of a 320 MHz
  * bonded channel.
  * @pdev: Pointer to wlan_objmgr_pdev
@@ -2590,8 +2631,6 @@ reg_is_sup_chan_entry_afc_done(struct wlan_objmgr_pdev *pdev,
 	return false;
 }
 #endif
-#endif
-
 /**
  * reg_get_max_bw_5G_for_fo() - get max bw
  * @pdev: PDEV object
@@ -2601,13 +2640,4 @@ reg_is_sup_chan_entry_afc_done(struct wlan_objmgr_pdev *pdev,
  * Return: max bw
  */
 uint16_t reg_get_max_bw_5G_for_fo(struct wlan_objmgr_pdev *pdev);
-
-/**
- * reg_is_offload_enabled() - get offload_enabled
- * @pdev: PDEV object
- *
- * API to get offload_enabled from psoc.
- *
- * Return: true if offload enaled
- */
-bool reg_is_offload_enabled(struct wlan_objmgr_pdev *pdev);
+#endif

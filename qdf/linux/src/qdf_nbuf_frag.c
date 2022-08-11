@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -748,15 +749,17 @@ void qdf_frag_debug_update_addr(qdf_frag_t p_fragp, qdf_frag_t n_fragp,
 	}
 }
 
-qdf_frag_t qdf_frag_alloc_debug(unsigned int frag_size, const char *func_name,
+qdf_frag_t qdf_frag_alloc_debug(qdf_frag_cache_t *pf_cache,
+				unsigned int frag_size,
+				const char *func_name,
 				uint32_t line_num)
 {
 	qdf_frag_t p_frag;
 
 	if (is_initial_mem_debug_disabled)
-		return __qdf_frag_alloc(frag_size);
+		return __qdf_frag_alloc(pf_cache, frag_size);
 
-	p_frag =  __qdf_frag_alloc(frag_size);
+	p_frag =  __qdf_frag_alloc(pf_cache, frag_size);
 
 	/* Store frag in QDF Frag Tracking Table */
 	if (qdf_likely(p_frag))
@@ -827,3 +830,20 @@ void __qdf_mem_unmap_page(qdf_device_t osdev, qdf_dma_addr_t paddr,
 #endif
 
 qdf_export_symbol(__qdf_mem_unmap_page);
+
+#if defined(QDF_FRAG_CACHE_SUPPORT)
+void __qdf_frag_cache_drain(qdf_frag_cache_t *pf_cache)
+{
+	struct page *page;
+
+	page  = virt_to_page(pf_cache->va);
+	__page_frag_cache_drain(page, pf_cache->pagecnt_bias);
+	memset(pf_cache, 0, sizeof(*pf_cache));
+}
+#else
+void __qdf_frag_cache_drain(qdf_frag_cache_t *pf_cache)
+{
+}
+#endif
+
+qdf_export_symbol(__qdf_frag_cache_drain);

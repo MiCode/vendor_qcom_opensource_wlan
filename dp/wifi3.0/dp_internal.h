@@ -2186,6 +2186,12 @@ typedef void (*dp_rxtid_stats_cmd_cb)(struct dp_soc *soc, void *cb_ctxt,
 int dp_peer_rxtid_stats(struct dp_peer *peer,
 			dp_rxtid_stats_cmd_cb dp_stats_cmd_cb,
 			void *cb_ctxt);
+#ifdef IPA_OFFLOAD
+void dp_peer_update_tid_stats_from_reo(struct dp_soc *soc, void *cb_ctxt,
+				       union hal_reo_status *reo_status);
+int dp_peer_get_rxtid_stats_ipa(struct dp_peer *peer,
+				dp_rxtid_stats_cmd_cb dp_stats_cmd_cb);
+#endif
 QDF_STATUS
 dp_set_pn_check_wifi3(struct cdp_soc_t *soc, uint8_t vdev_id,
 		      uint8_t *peer_mac, enum cdp_sec_type sec_type,
@@ -2346,6 +2352,31 @@ void dp_print_soc_tx_stats(struct dp_soc *soc);
  * Return: None
  */
 void dp_print_soc_interrupt_stats(struct dp_soc *soc);
+
+#ifdef WLAN_DP_SRNG_USAGE_WM_TRACKING
+/**
+ * dp_dump_srng_high_wm_stats() - Print the ring usage high watermark stats
+ *				  for all SRNGs
+ * @soc: DP soc handle
+ * @srng_mask: SRNGs mask for dumping usage watermark stats
+ *
+ * Return: None
+ */
+void dp_dump_srng_high_wm_stats(struct dp_soc *soc, uint64_t srng_mask);
+#else
+/**
+ * dp_dump_srng_high_wm_stats() - Print the ring usage high watermark stats
+ *				  for all SRNGs
+ * @soc: DP soc handle
+ * @srng_mask: SRNGs mask for dumping usage watermark stats
+ *
+ * Return: None
+ */
+static inline
+void dp_dump_srng_high_wm_stats(struct dp_soc *soc, uint64_t srng_mask)
+{
+}
+#endif
 
 /**
  * dp_print_soc_rx_stats: Print SOC level Rx stats
@@ -3750,6 +3781,7 @@ dp_get_peer_telemetry_stats(struct cdp_soc_t *soc_hdl, uint8_t *addr,
  * dp_tx_send_pktlog() - send tx packet log
  * @soc: soc handle
  * @pdev: pdev handle
+ * @tx_desc: TX software descriptor
  * @nbuf: nbuf
  * @status: status of tx packet
  *
@@ -3760,11 +3792,13 @@ dp_get_peer_telemetry_stats(struct cdp_soc_t *soc_hdl, uint8_t *addr,
  */
 static inline
 void dp_tx_send_pktlog(struct dp_soc *soc, struct dp_pdev *pdev,
+		       struct dp_tx_desc_s *tx_desc,
 		       qdf_nbuf_t nbuf, enum qdf_dp_tx_rx_status status)
 {
 	ol_txrx_pktdump_cb packetdump_cb = pdev->dp_tx_packetdump_cb;
 
-	if (qdf_unlikely(packetdump_cb)) {
+	if (qdf_unlikely(packetdump_cb) &&
+	    dp_tx_frm_std == tx_desc->frm_type) {
 		packetdump_cb((ol_txrx_soc_handle)soc, pdev->pdev_id,
 			      QDF_NBUF_CB_TX_VDEV_CTX(nbuf),
 			      nbuf, status, QDF_TX_DATA_PKT);
@@ -3795,9 +3829,69 @@ void dp_rx_send_pktlog(struct dp_soc *soc, struct dp_pdev *pdev,
 			      nbuf, status, QDF_RX_DATA_PKT);
 	}
 }
+
+/*
+ * dp_rx_err_send_pktlog() - send rx error packet log
+ * @soc: soc handle
+ * @pdev: pdev handle
+ * @mpdu_desc_info: MPDU descriptor info
+ * @nbuf: nbuf
+ * @status: status of rx packet
+ * @set_pktlen: weither to set packet length
+ *
+ * This API should only be called when we have not removed
+ * Rx TLV from head, and head is pointing to rx_tlv
+ *
+ * This function is used to send rx packet from erro path
+ * for logging for which rx packet tlv is not removed.
+ *
+ * Return: None
+ *
+ */
+static inline
+void dp_rx_err_send_pktlog(struct dp_soc *soc, struct dp_pdev *pdev,
+			   struct hal_rx_mpdu_desc_info *mpdu_desc_info,
+			   qdf_nbuf_t nbuf, enum qdf_dp_tx_rx_status status,
+			   bool set_pktlen)
+{
+	ol_txrx_pktdump_cb packetdump_cb = pdev->dp_rx_packetdump_cb;
+	qdf_size_t skip_size;
+	uint16_t msdu_len, nbuf_len;
+	uint8_t *rx_tlv_hdr;
+	struct hal_rx_msdu_metadata msdu_metadata;
+
+	if (qdf_unlikely(packetdump_cb)) {
+		rx_tlv_hdr = qdf_nbuf_data(nbuf);
+		nbuf_len = hal_rx_msdu_start_msdu_len_get(soc->hal_soc,
+							  rx_tlv_hdr);
+		hal_rx_msdu_metadata_get(soc->hal_soc, rx_tlv_hdr,
+					 &msdu_metadata);
+
+		if (mpdu_desc_info->bar_frame ||
+		    (mpdu_desc_info->mpdu_flags & HAL_MPDU_F_FRAGMENT))
+			skip_size = soc->rx_pkt_tlv_size;
+		else
+			skip_size = soc->rx_pkt_tlv_size +
+					msdu_metadata.l3_hdr_pad;
+
+		if (set_pktlen) {
+			msdu_len = nbuf_len + skip_size;
+			qdf_nbuf_set_pktlen(nbuf, qdf_min(msdu_len,
+					    (uint16_t)RX_DATA_BUFFER_SIZE));
+		}
+
+		qdf_nbuf_pull_head(nbuf, skip_size);
+		packetdump_cb((ol_txrx_soc_handle)soc, pdev->pdev_id,
+			      QDF_NBUF_CB_RX_VDEV_ID(nbuf),
+			      nbuf, status, QDF_RX_DATA_PKT);
+		qdf_nbuf_push_head(nbuf, skip_size);
+	}
+}
+
 #else
 static inline
 void dp_tx_send_pktlog(struct dp_soc *soc, struct dp_pdev *pdev,
+		       struct dp_tx_desc_s *tx_desc,
 		       qdf_nbuf_t nbuf, enum qdf_dp_tx_rx_status status)
 {
 }
@@ -3805,6 +3899,14 @@ void dp_tx_send_pktlog(struct dp_soc *soc, struct dp_pdev *pdev,
 static inline
 void dp_rx_send_pktlog(struct dp_soc *soc, struct dp_pdev *pdev,
 		       qdf_nbuf_t nbuf, enum qdf_dp_tx_rx_status status)
+{
+}
+
+static inline
+void dp_rx_err_send_pktlog(struct dp_soc *soc, struct dp_pdev *pdev,
+			   struct hal_rx_mpdu_desc_info *mpdu_desc_info,
+			   qdf_nbuf_t nbuf, enum qdf_dp_tx_rx_status status,
+			   bool set_pktlen)
 {
 }
 #endif

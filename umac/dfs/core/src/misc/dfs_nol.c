@@ -30,6 +30,7 @@
 #include "../dfs.h"
 #include "../dfs_channel.h"
 #include "../dfs_ioctl_private.h"
+#include "../dfs_zero_cac.h"
 #include "../dfs_internal.h"
 #include <qdf_time.h>
 #include <wlan_dfs_mlme_api.h>
@@ -194,19 +195,32 @@ void dfs_process_noltimeout_completion(void *context)
 	 */
 	if (dfs_switch_to_postnol_chan_if_nol_expired(dfs))
 		return;
-	/* In case of interCAC feature, check if the user configured
-	 * desired channel is RCAC done or not.
-	 * (AP operating on an intermediate channel as desired channel
-	 * is still not CAC done). If the RCAC of the desired channel
-	 * was interrupted by radar, initiate RCAC on NOL expiry
-	 * of the channel.
-	 *
-	 * If rcac is not started by dfs_restart_rcac_on_nol_expiry() API,
-	 * initiate rcac start here.
+	/*
+	 * If BW Expand is enabled, check if the user configured channel is
+	 * available. If it is available, STOP the AGILE SM and Restart the
+	 * AGILE SM. This will clear any old preCAC/RCAC chan information.
 	 */
-	if (!dfs_restart_rcac_on_nol_expiry(dfs))
+	if (dfs_bwexpand_find_usr_cnf_chan(dfs)) {
+		utils_dfs_agile_sm_deliver_evt(dfs->dfs_pdev_obj,
+					       DFS_AGILE_SM_EV_AGILE_STOP);
 		utils_dfs_agile_sm_deliver_evt(dfs->dfs_pdev_obj,
 					       DFS_AGILE_SM_EV_AGILE_START);
+	} else {
+		/*
+		 * In case of interCAC feature, check if the user configured
+		 * desired channel is RCAC done or not.
+		 * (AP operating on an intermediate channel as desired channel
+		 * is still not CAC done). If the RCAC of the desired channel
+		 * was interrupted by radar, initiate RCAC on NOL expiry
+		 * of the channel.
+		 *
+		 * If rcac is not started by dfs_restart_rcac_on_nol_expiry()
+		 * API initiate rcac start here.
+		 */
+		if (!dfs_restart_rcac_on_nol_expiry(dfs))
+			utils_dfs_agile_sm_deliver_evt(dfs->dfs_pdev_obj,
+						       DFS_AGILE_SM_EV_AGILE_START);
+	}
 }
 
 /**
@@ -221,10 +235,8 @@ static enum qdf_hrtimer_restart_status
 dfs_remove_from_nol(qdf_hrtimer_data_t *arg)
 {
 	struct dfs_nolelem *nol_arg;
-	void *ptr = (void *)arg;
-	qdf_hrtimer_data_t *thr = container_of(ptr, qdf_hrtimer_data_t, u);
 
-	nol_arg = container_of(thr, struct dfs_nolelem, nol_timer);
+	nol_arg = container_of(arg, struct dfs_nolelem, nol_timer);
 
 	qdf_sched_work(NULL, &nol_arg->nol_timer_completion_work);
 

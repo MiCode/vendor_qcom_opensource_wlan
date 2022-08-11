@@ -28,6 +28,9 @@
 #ifdef WLAN_SUPPORT_RF_CHARACTERIZATION
 #include "wmi_unified_param.h"
 #endif
+#ifdef WLAN_FEATURE_11BE_MLO
+#include "wlan_mlo_mgr_public_structs.h"
+#endif
 
 
 /**
@@ -267,6 +270,8 @@ struct wlan_psoc_host_hw_mode_caps {
  * @eht_supp_mcs_ext_5G: 5G EHT Supported MCS Set for Rx/Tx as per 11be D1.2
  * @eht_ppet2G: 2G EHT PPET info
  * @eht_ppet5G: 5G EHT PPET info
+ * @emlcap: EML Capabilities info
+ * @mldcap: MLD Capabilities info
  */
 struct wlan_psoc_host_mac_phy_caps_ext2 {
 	uint32_t hw_mode_id;
@@ -285,6 +290,10 @@ struct wlan_psoc_host_mac_phy_caps_ext2 {
 	uint32_t eht_supp_mcs_ext_5G[PSOC_HOST_EHT_MCS_NSS_MAP_5G_SIZE];
 	struct wlan_psoc_host_ppe_threshold eht_ppet2G;
 	struct wlan_psoc_host_ppe_threshold eht_ppet5G;
+#endif
+#ifdef WLAN_FEATURE_11BE_MLO
+	struct wlan_mlo_eml_cap emlcap;
+	struct wlan_mlo_mld_cap mldcap;
 #endif
 };
 

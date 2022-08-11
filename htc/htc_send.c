@@ -1601,8 +1601,11 @@ static enum HTC_SEND_QUEUE_RESULT htc_try_send(HTC_TARGET *target,
 
 		if (pEndpoint->async_update &&
 			(!IS_TX_CREDIT_FLOW_ENABLED(pEndpoint)) &&
-			(!tx_resources))
+			(!tx_resources)) {
+			hif_schedule_ce_tasklet(target->hif_dev,
+						pEndpoint->UL_PipeID);
 			break;
+		}
 
 		if (IS_TX_CREDIT_FLOW_ENABLED(pEndpoint)) {
 #if DEBUG_CREDIT

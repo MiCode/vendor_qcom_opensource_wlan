@@ -60,16 +60,6 @@ enum hal_tx_mcast_ctrl {
 	HAL_TX_MCAST_CTRL_NO_SPECIAL,
 };
 
-/**
- * enum hal_tx_vdev_mismatch_notify
- * @HAL_TX_VDEV_MISMATCH_TQM_NOTIFY: vdev mismatch exception routed to TQM
- * @HAL_TX_VDEV_MISMATCH_FW_NOTIFY: vdev mismatch exception routed to FW
- */
-enum hal_tx_vdev_mismatch_notify {
-	HAL_TX_VDEV_MISMATCH_TQM_NOTIFY = 0,
-	HAL_TX_VDEV_MISMATCH_FW_NOTIFY,
-};
-
 /* enum hal_tx_notify_frame_type - TX notify frame type
  * @NO_TX_NOTIFY: Not a notify frame
  * @TX_HARD_NOTIFY: Hard notify TX frame
@@ -81,16 +71,6 @@ enum hal_tx_notify_frame_type {
 	TX_HARD_NOTIFY = 1,
 	TX_SOFT_NOTIFY_E = 2,
 	TX_SEMI_HARD_NOTIFY_E = 3
-};
-
-/**
- * enum hal_tx_mcast_mlo_reinject_notify
- * @HAL_TX_MCAST_MLO_REINJECT_FW_NOTIFY: MLO Mcast reinject routed to FW
- * @HAL_TX_MCAST_MLO_REINJECT_TQM_NOTIFY: MLO Mcast reinject routed to TQM
- */
-enum hal_tx_mcast_mlo_reinject_notify {
-	HAL_TX_MCAST_MLO_REINJECT_FW_NOTIFY = 0,
-	HAL_TX_MCAST_MLO_REINJECT_TQM_NOTIFY,
 };
 
 /*---------------------------------------------------------------------------
@@ -748,36 +728,10 @@ hal_tx_config_rbm_mapping_be(hal_soc_handle_t hal_soc_hdl,
 			     hal_ring_handle_t hal_ring_hdl,
 			     uint8_t rbm_id)
 {
-	struct hal_srng *srng = (struct hal_srng *)hal_ring_hdl;
 	struct hal_soc *hal_soc = (struct hal_soc *)hal_soc_hdl;
-	uint32_t reg_addr = 0;
-	uint32_t reg_val = 0;
-	uint32_t val = 0;
-	uint8_t ring_num;
-	enum hal_ring_type ring_type;
 
-	ring_type = srng->ring_type;
-	ring_num = hal_soc->hw_srng_table[ring_type].start_ring_id;
-	ring_num = srng->ring_id - ring_num;
-
-	reg_addr = HWIO_TCL_R0_RBM_MAPPING0_ADDR(MAC_TCL_REG_REG_BASE);
-
-	if (ring_type == PPE2TCL)
-		ring_num = ring_num + RBM_PPE2TCL_OFFSET;
-	else if (ring_type == TCL_CMD_CREDIT)
-		ring_num = ring_num + RBM_TCL_CMD_CREDIT_OFFSET;
-
-	/* get current value stored in register address */
-	val = HAL_REG_READ(hal_soc, reg_addr);
-
-	/* mask out other stored value */
-	val &= (~(RBM_MAPPING_BMSK << (RBM_MAPPING_SHFT * ring_num)));
-
-	reg_val = val | ((RBM_MAPPING_BMSK & rbm_id) <<
-			 (RBM_MAPPING_SHFT * ring_num));
-
-	/* write rbm mapped value to register address */
-	HAL_REG_WRITE(hal_soc, reg_addr, reg_val);
+	hal_soc->ops->hal_tx_config_rbm_mapping_be(hal_soc_hdl, hal_ring_hdl,
+						   rbm_id);
 }
 #else
 static inline void
@@ -928,21 +882,8 @@ hal_tx_vdev_mismatch_routing_set(hal_soc_handle_t hal_soc_hdl,
 				 enum hal_tx_vdev_mismatch_notify config)
 {
 	struct hal_soc *hal_soc = (struct hal_soc *)hal_soc_hdl;
-	uint32_t reg_addr, reg_val = 0;
-	uint32_t val = 0;
 
-	reg_addr = HWIO_TCL_R0_CMN_CONFIG_ADDR(MAC_TCL_REG_REG_BASE);
-
-	val = HAL_REG_READ(hal_soc, reg_addr);
-
-	/* reset the corresponding bits in register */
-	val &= (~(HWIO_TCL_R0_CMN_CONFIG_VDEVID_MISMATCH_EXCEPTION_BMSK));
-
-	/* set config value */
-	reg_val = val | (config <<
-			HWIO_TCL_R0_CMN_CONFIG_VDEVID_MISMATCH_EXCEPTION_SHFT);
-
-	HAL_REG_WRITE(hal_soc, reg_addr, reg_val);
+	hal_soc->ops->hal_tx_vdev_mismatch_routing_set(hal_soc_hdl, config);
 }
 #else
 static inline void
@@ -968,19 +909,8 @@ hal_tx_mcast_mlo_reinject_routing_set(
 				enum hal_tx_mcast_mlo_reinject_notify config)
 {
 	struct hal_soc *hal_soc = (struct hal_soc *)hal_soc_hdl;
-	uint32_t reg_addr, reg_val = 0;
-	uint32_t val = 0;
-
-	reg_addr = HWIO_TCL_R0_CMN_CONFIG_ADDR(MAC_TCL_REG_REG_BASE);
-	val = HAL_REG_READ(hal_soc, reg_addr);
-
-	/* reset the corresponding bits in register */
-	val &= (~(HWIO_TCL_R0_CMN_CONFIG_MCAST_CMN_PN_SN_MLO_REINJECT_ENABLE_BMSK));
-
-	/* set config value */
-	reg_val = val | (config << HWIO_TCL_R0_CMN_CONFIG_MCAST_CMN_PN_SN_MLO_REINJECT_ENABLE_SHFT);
-
-	HAL_REG_WRITE(hal_soc, reg_addr, reg_val);
+	hal_soc->ops->hal_tx_mcast_mlo_reinject_routing_set(hal_soc_hdl,
+							    config);
 }
 #else
 static inline void

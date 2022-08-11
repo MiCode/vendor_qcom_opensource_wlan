@@ -2461,6 +2461,24 @@ static inline void target_if_set_twt_ap_pdev_count
 					info->service_ext_param.num_phy;
 }
 #else
+#ifdef WLAN_TWT_2G_PHYB_WAR
+static inline void target_if_set_twt_ap_pdev_count
+		(struct tgt_info *info, struct target_psoc_info *tgt_hdl)
+{
+	uint32_t mode;
+	uint8_t num_radios;
+
+	if (!tgt_hdl)
+		return;
+
+	mode = target_psoc_get_preferred_hw_mode(tgt_hdl);
+	num_radios = target_psoc_get_num_radios(tgt_hdl);
+	if (mode == WMI_HOST_HW_MODE_2G_PHYB && num_radios == 1)
+		num_radios += 1;
+
+	info->wlan_res_cfg.twt_ap_pdev_count = num_radios;
+}
+#else
 static inline void target_if_set_twt_ap_pdev_count
 		(struct tgt_info *info, struct target_psoc_info *tgt_hdl)
 {
@@ -2470,6 +2488,7 @@ static inline void target_if_set_twt_ap_pdev_count
 	info->wlan_res_cfg.twt_ap_pdev_count =
 					target_psoc_get_num_radios(tgt_hdl);
 }
+#endif /* WLAN_TWT_2G_PHYB_WAR */
 #endif /* WLAN_TWT_AP_PDEV_COUNT_NUM_PHY */
 #else
 static inline void target_if_set_twt_ap_pdev_count

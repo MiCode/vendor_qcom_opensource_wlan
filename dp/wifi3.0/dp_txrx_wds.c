@@ -295,6 +295,7 @@ static void dp_ast_aging_timer_fn(void *soc_hdl)
 }
 #endif /* WLAN_FEATURE_MULTI_AST_DEL */
 
+#ifndef IPA_WDS_EASYMESH_FEATURE
 /*
  * dp_soc_wds_attach() - Setup WDS timer and AST table
  * @soc:		Datapath SOC handle
@@ -326,6 +327,15 @@ void dp_soc_wds_detach(struct dp_soc *soc)
 	qdf_timer_stop(&soc->ast_aging_timer);
 	qdf_timer_free(&soc->ast_aging_timer);
 }
+#else
+void dp_soc_wds_attach(struct dp_soc *soc)
+{
+}
+
+void dp_soc_wds_detach(struct dp_soc *soc)
+{
+}
+#endif
 
 /**
  * dp_tx_mec_handler() - Tx  MEC Notify Handler
@@ -600,7 +610,6 @@ int dp_wds_rx_policy_check(uint8_t *rx_tlv_hdr,
  * Return: void
  */
 #ifdef QCA_MULTIPASS_SUPPORT
-static
 void dp_tx_add_groupkey_metadata(struct dp_vdev *vdev,
 		struct dp_tx_msdu_info_s *msdu_info, uint16_t group_key)
 {
@@ -626,7 +635,6 @@ void dp_tx_add_groupkey_metadata(struct dp_vdev *vdev,
  *
  * Return: void
  */
-static
 void dp_tx_remove_vlan_tag(struct dp_vdev *vdev, qdf_nbuf_t nbuf)
 {
 	struct vlan_ethhdr veth_hdr;
@@ -645,6 +653,30 @@ void dp_tx_remove_vlan_tag(struct dp_vdev *vdev, qdf_nbuf_t nbuf)
 	return;
 }
 
+#if defined(WLAN_FEATURE_11BE_MLO) && defined(WLAN_MLO_MULTI_CHIP) && \
+	defined(WLAN_MCAST_MLO)
+/**
+ * dp_tx_need_mcast_reinject - If frame needs to be processed in reinject path
+ * @vdev: DP vdev handle
+ *
+ * Return: true if reinject handling is required else false
+ */
+static inline bool
+dp_tx_need_mcast_reinject(struct dp_vdev *vdev)
+{
+	if (vdev->mlo_vdev && vdev->opmode == wlan_op_mode_ap)
+		return true;
+
+	return false;
+}
+#else
+static inline bool
+dp_tx_need_mcast_reinject(struct dp_vdev *vdev)
+{
+	return false;
+}
+
+#endif
 /**
  * dp_tx_need_multipass_process - If frame needs multipass phrase processing
  * @vdev: DP vdev handle
@@ -671,6 +703,10 @@ uint8_t dp_tx_need_multipass_process(struct dp_soc *soc, struct dp_vdev *vdev,
 	*vlan_id = (ntohs(veh->h_vlan_TCI) & VLAN_VID_MASK);
 
 	if (qdf_unlikely(DP_FRAME_IS_MULTICAST((eh)->ether_dhost))) {
+		/* look for handling of multicast packets in reinject path */
+		if (dp_tx_need_mcast_reinject(vdev))
+			return DP_VLAN_UNTAGGED;
+
 		qdf_spin_lock_bh(&vdev->mpass_peer_mutex);
 		TAILQ_FOREACH(txrx_peer, &vdev->mpass_peer_list,
 			      mpass_peer_list_elem) {

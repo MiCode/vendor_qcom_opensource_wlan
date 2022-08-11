@@ -243,6 +243,8 @@ more_data:
 		goto done;
 	}
 
+	hal_srng_update_ring_usage_wm_no_lock(soc->hal_soc, hal_ring_hdl);
+
 	/*
 	 * start reaping the buffers from reo ring and queue
 	 * them in per vdev queue.
@@ -592,8 +594,6 @@ done:
 		tid_stats =
 		&rx_pdev->stats.tid_stats.tid_rx_stats[reo_ring_num][tid];
 
-		dp_rx_send_pktlog(soc, rx_pdev, nbuf, QDF_TX_RX_STATUS_OK);
-
 		/*
 		 * Check if DMA completed -- msdu_done is the last bit
 		 * to be written
@@ -683,6 +683,8 @@ done:
 			qdf_nbuf_set_pktlen(nbuf, pkt_len);
 			dp_rx_skip_tlvs(soc, nbuf, msdu_metadata.l3_hdr_pad);
 		}
+
+		dp_rx_send_pktlog(soc, rx_pdev, nbuf, QDF_TX_RX_STATUS_OK);
 
 		/*
 		 * process frame for mulitpass phrase processing
@@ -814,25 +816,10 @@ done:
 		nbuf = next;
 	}
 
-	if (qdf_likely(deliver_list_head)) {
-		if (qdf_likely(txrx_peer)) {
-			dp_rx_deliver_to_pkt_capture(soc, vdev->pdev, peer_id,
-						     pkt_capture_offload,
-						     deliver_list_head);
-			if (!pkt_capture_offload)
-				dp_rx_deliver_to_stack(soc, vdev, txrx_peer,
-						       deliver_list_head,
-						       deliver_list_tail);
-		} else {
-			nbuf = deliver_list_head;
-			while (nbuf) {
-				next = nbuf->next;
-				nbuf->next = NULL;
-				dp_rx_deliver_to_stack_no_peer(soc, nbuf);
-				nbuf = next;
-			}
-		}
-	}
+	DP_RX_DELIVER_TO_STACK(soc, vdev, txrx_peer, peer_id,
+			       pkt_capture_offload,
+			       deliver_list_head,
+			       deliver_list_tail);
 
 	if (qdf_likely(txrx_peer))
 		dp_txrx_peer_unref_delete(txrx_ref_handle, DP_MOD_ID_RX);

@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -29,6 +30,11 @@
 
 #define QDF_NBUF_FRAG_DEBUG_COUNT_ZERO    0
 #define QDF_NBUF_FRAG_DEBUG_COUNT_ONE     1
+
+/**
+ * typedef __qdf_frag_cache_t - Abstraction for void * for frag address
+ */
+typedef struct page_frag_cache __qdf_frag_cache_t;
 
 /**
  * typedef __qdf_frag_t - Abstraction for void * for frag address
@@ -127,6 +133,14 @@ QDF_STATUS __qdf_mem_map_page(qdf_device_t osdev, __qdf_frag_t buf,
 			      qdf_dma_addr_t *phy_addr);
 
 /**
+ * __qdf_frag_cache_drain() - Drain page frag cache
+ * @pf_cache: page frag cache
+ *
+ * Return: void
+ */
+void __qdf_frag_cache_drain(__qdf_frag_cache_t *pf_cache);
+
+/**
  * __qdf_frag_free() - Free allocated frag memory
  * @vaddr: Frag address to be freed
  *
@@ -142,17 +156,39 @@ static inline void __qdf_frag_free(__qdf_frag_t vaddr)
 
 /**
  * __qdf_frag_alloc() - Allocate frag Memory
+ * @pf_cache: page frag cache
  * @fragsz: Size of frag memory to be allocated
  *
  * Return: Allocated frag addr.
  */
-static inline __qdf_frag_t __qdf_frag_alloc(unsigned int fragsz)
+#if defined(QDF_FRAG_CACHE_SUPPORT)
+static inline __qdf_frag_t __qdf_frag_alloc(__qdf_frag_cache_t *pf_cache,
+					    unsigned int fragsz)
+{
+	__qdf_frag_t p_frag;
+
+	if (pf_cache) {
+		unsigned int sz = SKB_DATA_ALIGN(fragsz);
+
+		p_frag =  page_frag_alloc(pf_cache, sz, GFP_ATOMIC);
+	} else {
+		p_frag = netdev_alloc_frag(fragsz);
+	}
+	if (p_frag)
+		__qdf_frag_count_inc(QDF_NBUF_FRAG_DEBUG_COUNT_ONE);
+	return p_frag;
+}
+#else
+static inline __qdf_frag_t __qdf_frag_alloc(__qdf_frag_cache_t *pf_cache,
+					    unsigned int fragsz)
 {
 	__qdf_frag_t p_frag = netdev_alloc_frag(fragsz);
 
 	if (p_frag)
 		__qdf_frag_count_inc(QDF_NBUF_FRAG_DEBUG_COUNT_ONE);
+
 	return p_frag;
 }
+#endif
 
 #endif /* _I_QDF_NBUF_FRAG_H */

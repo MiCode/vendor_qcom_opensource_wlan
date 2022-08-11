@@ -752,6 +752,7 @@ enum extn_element_ie {
  * accordingly.
  *
  * @REASON_PROP_START: Start of prop reason code
+ * @REASON_OCI_MISMATCH: Reason OCI Mismatch happens
  * @REASON_HOST_TRIGGERED_ROAM_FAILURE: Reason host triggered roam failed
  * @REASON_FW_TRIGGERED_ROAM_FAILURE: Firmware triggered roam failed
  * @REASON_GATEWAY_REACHABILITY_FAILURE: Due to NUD failure
@@ -836,7 +837,14 @@ enum wlan_reason_code {
 	/* 72–65535 reserved */
 
 	/* Internal reason codes */
-	REASON_PROP_START = 65519,
+
+	/*
+	 * Internal reason codes: Add any internal reason code just after
+	 * REASON_PROP_START and decrease the value of REASON_PROP_START
+	 * accordingly.
+	 */
+	REASON_PROP_START = 65517,
+	REASON_OCI_MISMATCH = 65518,
 	REASON_HOST_TRIGGERED_ROAM_FAILURE  = 65519,
 	REASON_FW_TRIGGERED_ROAM_FAILURE = 65520,
 	REASON_GATEWAY_REACHABILITY_FAILURE = 65521,
@@ -2435,7 +2443,7 @@ struct wlan_ml_prv_linfo_perstaprof {
 #endif /* WLAN_FEATURE_11BE_MLO */
 #endif /* WLAN_FEATURE_11BE */
 
-#ifdef WLAN_FEATURE_T2LM
+#ifdef WLAN_FEATURE_11BE
 /**
  * struct wlan_ie_tid_to_link_mapping - TID-to-link mapping IE
  * @elem_id: T2LM IE
@@ -2488,7 +2496,7 @@ struct wlan_ie_multi_link_traffic_indication {
 	uint16_t ml_traffic_ind_control;
 	uint16_t per_link_traffic_ind_list[];
 } qdf_packed;
-#endif /* WLAN_FEATURE_T2LM */
+#endif /* WLAN_FEATURE_11BE */
 
 /**
  * struct he_oper_6g_param: 6 Ghz params for HE

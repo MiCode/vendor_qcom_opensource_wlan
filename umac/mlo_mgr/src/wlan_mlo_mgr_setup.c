@@ -457,7 +457,6 @@ static void mlo_force_teardown(void)
 		mlo_ctx->setup_info.state[link_idx] = MLO_LINK_TEARDOWN;
 }
 
-static
 QDF_STATUS mlo_check_all_pdev_state(struct wlan_objmgr_psoc *psoc,
 				    enum MLO_LINK_STATE state)
 {
@@ -506,6 +505,11 @@ QDF_STATUS mlo_link_teardown_link(struct wlan_objmgr_psoc *psoc,
 				mlo_ctx->setup_info.pdev_list,
 				mlo_ctx->setup_info.num_links,
 				reason);
+	}
+
+	if (reason == WMI_MLO_TEARDOWN_REASON_SSR) {
+		/* do not wait for teardown event completion here for SSR */
+		return QDF_STATUS_SUCCESS;
 	}
 
 	status = qdf_wait_for_event_completion(

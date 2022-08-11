@@ -33,6 +33,7 @@
 #endif
 #ifdef WIFI_POS_CONVERGED
 #include "target_if_wifi_pos.h"
+#include "target_if_wifi_pos_rx_ops.h"
 #endif /* WIFI_POS_CONVERGED */
 #include "wlan_reg_tgt_api.h"
 #ifdef CONVERGED_P2P_ENABLE
@@ -47,7 +48,7 @@
 #include <wlan_dfs_tgt_api.h>
 #include <wlan_objmgr_vdev_obj.h>
 #include <wlan_dfs_utils_api.h>
-#ifdef QCA_SUPPORT_DFS_CHAN_POSTNOL
+#if defined(QCA_SUPPORT_DFS_CHAN_POSTNOL) || defined(QCA_DFS_BW_EXPAND)
 #include <dfs_postnol_ucfg.h>
 #endif
 #endif
@@ -85,6 +86,10 @@
 #include <wlan_twt_tgt_if_rx_api.h>
 #ifdef WLAN_FEATURE_MCC_QUOTA
 #include <wlan_p2p_mcc_quota_tgt_api.h>
+#endif
+
+#ifdef WLAN_FEATURE_DBAM_CONFIG
+#include "target_if_coex.h"
 #endif
 
 #include "target_if.h"
@@ -207,7 +212,8 @@ wlan_lmac_if_atf_rx_ops_register(struct wlan_lmac_if_rx_ops *rx_ops)
 	atf_rx_ops->atf_peer_unblk_txtraffic = tgt_atf_peer_unblk_txtraffic;
 	atf_rx_ops->atf_set_token_allocated = tgt_atf_set_token_allocated;
 	atf_rx_ops->atf_set_token_utilized = tgt_atf_set_token_utilized;
-	atf_rx_ops->atf_process_ppdu_stats = tgt_atf_process_ppdu_stats;
+	atf_rx_ops->atf_process_tx_ppdu_stats = tgt_atf_process_tx_ppdu_stats;
+	atf_rx_ops->atf_process_rx_ppdu_stats = tgt_atf_process_rx_ppdu_stats;
 	atf_rx_ops->atf_is_stats_enabled = tgt_atf_is_stats_enabled;
 }
 #else
@@ -651,6 +657,26 @@ register_dfs_chan_postnol_rx_ops(struct wlan_lmac_if_dfs_rx_ops *rx_ops)
 }
 #endif
 
+#ifdef QCA_DFS_BW_EXPAND
+/* register_dfs_bw_expand_rx_ops() - Register DFS Rx-Ops for BW Expand
+ * @rx_ops: Pointer to wlan_lmac_if_dfs_rx_ops.
+ */
+static void
+register_dfs_bw_expand_rx_ops(struct wlan_lmac_if_dfs_rx_ops *rx_ops)
+{
+	if (!rx_ops)
+		return;
+
+	rx_ops->dfs_set_bw_expand = ucfg_dfs_set_bw_expand;
+	rx_ops->dfs_get_bw_expand = ucfg_dfs_get_bw_expand;
+}
+#else
+static inline void
+register_dfs_bw_expand_rx_ops(struct wlan_lmac_if_dfs_rx_ops *rx_ops)
+{
+}
+#endif
+
 #ifdef WLAN_MGMT_RX_REO_SUPPORT
 static QDF_STATUS
 wlan_lmac_if_mgmt_rx_reo_rx_ops_register(
@@ -804,6 +830,7 @@ wlan_lmac_if_umac_dfs_rx_ops_register(struct wlan_lmac_if_rx_ops *rx_ops)
 	register_rcac_dfs_rx_ops(dfs_rx_ops);
 	register_agile_dfs_rx_ops(dfs_rx_ops);
 	register_dfs_chan_postnol_rx_ops(dfs_rx_ops);
+	register_dfs_bw_expand_rx_ops(dfs_rx_ops);
 
 	return QDF_STATUS_SUCCESS;
 }
@@ -908,6 +935,19 @@ void wlan_lmac_if_twt_rx_ops_register(struct wlan_lmac_if_rx_ops *rx_ops)
 }
 #endif /* WLAN_SUPPORT_TWT && WLAN_TWT_CONV_SUPPORTED */
 
+#ifdef WLAN_FEATURE_DBAM_CONFIG
+static void
+wlan_lmac_if_dbam_rx_ops_register(struct wlan_lmac_if_rx_ops *rx_ops)
+{
+	rx_ops->dbam_rx_ops.dbam_resp_event = target_if_dbam_process_event;
+}
+#else
+static void
+wlan_lmac_if_dbam_rx_ops_register(struct wlan_lmac_if_rx_ops *rx_ops)
+{
+}
+#endif /* WLAN_FEATURE_DBAM_CONFIG */
+
 /**
  * wlan_lmac_if_umac_rx_ops_register() - UMAC rx handler register
  * @rx_ops: Pointer to rx_ops structure to be populated
@@ -974,6 +1014,8 @@ wlan_lmac_if_umac_rx_ops_register(struct wlan_lmac_if_rx_ops *rx_ops)
 	wlan_lmac_if_mlo_mgr_rx_ops_register(rx_ops);
 
 	wlan_lmac_if_twt_rx_ops_register(rx_ops);
+
+	wlan_lmac_if_dbam_rx_ops_register(rx_ops);
 
 	return QDF_STATUS_SUCCESS;
 }

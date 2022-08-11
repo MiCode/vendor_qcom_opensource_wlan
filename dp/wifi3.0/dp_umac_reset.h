@@ -17,10 +17,24 @@
 #ifndef _DP_UMAC_RESET_H_
 #define _DP_UMAC_RESET_H_
 
-#ifdef DP_UMAC_HW_RESET_SUPPORT
-
 #include <qdf_types.h>
+struct dp_soc;
 
+/**
+ * enum umac_reset_action - Actions supported by the UMAC reset
+ * @UMAC_RESET_ACTION_DO_PRE_RESET: DO_PRE_RESET
+ * @UMAC_RESET_ACTION_DO_POST_RESET_START: DO_POST_RESET_START
+ * @UMAC_RESET_ACTION_DO_POST_RESET_COMPLETE: DO_POST_RESET_COMPLETE
+ * @UMAC_RESET_ACTION_MAX: Maximum actions
+ */
+enum umac_reset_action {
+	UMAC_RESET_ACTION_DO_PRE_RESET = 0,
+	UMAC_RESET_ACTION_DO_POST_RESET_START = 1,
+	UMAC_RESET_ACTION_DO_POST_RESET_COMPLETE = 2,
+	UMAC_RESET_ACTION_MAX
+};
+
+#ifdef DP_UMAC_HW_RESET_SUPPORT
 #define dp_umac_reset_alert(params...) \
 	QDF_TRACE_FATAL(QDF_MODULE_ID_DP_UMAC_RESET, params)
 #define dp_umac_reset_err(params...) \
@@ -35,36 +49,75 @@
 	QDF_TRACE_DEBUG(QDF_MODULE_ID_DP_UMAC_RESET, params)
 
 #define DP_UMAC_RESET_SHMEM_ALIGN 8
-
-struct dp_soc;
 /**
- * enum umac_reset_state - States required for UMAC reset state machine
- * @UMAC_RESET_STATE_WAIT_FOR_PRE_RESET: Waiting for the PRE_RESET event
- * @UMAC_RESET_STATE_PRE_RESET_RECEIVED: Received the PRE_RESET event
- * @UMAC_RESET_STATE_HOST_PRE_RESET_COMPLETED: Host has completed handling the
+ * enum umac_reset_state - States required by the UMAC reset state machine
+ * @UMAC_RESET_STATE_WAIT_FOR_DO_PRE_RESET: Waiting for the DO_PRE_RESET event
+ * @UMAC_RESET_STATE_DO_PRE_RESET_RECEIVED: Received the DO_PRE_RESET event
+ * @UMAC_RESET_STATE_HOST_PRE_RESET_DONE: Host has completed handling the
  * PRE_RESET event
- * @UMAC_RESET_STATE_WAIT_FOR_POST_RESET: Waiting for the POST_RESET event
- * @UMAC_RESET_STATE_POST_RESET_RECEIVED: Received the POST_RESET event
- * @UMAC_RESET_STATE_HOST_POST_RESET_COMPLETED: Host has completed handling the
- * POST_RESET event
+ * @UMAC_RESET_STATE_WAIT_FOR_DO_POST_RESET_START: Waiting for the
+ * DO_POST_RESET_START event
+ * @UMAC_RESET_STATE_DO_POST_RESET_START_RECEIVED: Received the
+ * DO_POST_RESET_START event
+ * @UMAC_RESET_STATE_HOST_POST_RESET_START_DONE: Host has completed handling the
+ * POST_RESET_START event
+ * @UMAC_RESET_STATE_WAIT_FOR_DO_POST_RESET_COMPLETE: Waiting for the
+ * DO_POST_RESET_COMPLETE event
+ * @UMAC_RESET_STATE_DO_POST_RESET_COMPLETE_RECEIVED: Received the
+ * DO_POST_RESET_COMPLETE event
+ * @UMAC_RESET_STATE_HOST_POST_RESET_COMPLETE_DONE: Host has completed handling
+ * the DO_POST_RESET_COMPLETE event
  */
 enum umac_reset_state {
-	UMAC_RESET_STATE_WAIT_FOR_PRE_RESET = 0,
-	UMAC_RESET_STATE_PRE_RESET_RECEIVED,
-	UMAC_RESET_STATE_HOST_PRE_RESET_COMPLETED,
-	UMAC_RESET_STATE_WAIT_FOR_POST_RESET,
-	UMAC_RESET_STATE_POST_RESET_RECEIVED,
-	UMAC_RESET_STATE_HOST_POST_RESET_COMPLETED,
+	UMAC_RESET_STATE_WAIT_FOR_DO_PRE_RESET = 0,
+	UMAC_RESET_STATE_DO_PRE_RESET_RECEIVED,
+	UMAC_RESET_STATE_HOST_PRE_RESET_DONE,
+
+	UMAC_RESET_STATE_WAIT_FOR_DO_POST_RESET_START,
+	UMAC_RESET_STATE_DO_POST_RESET_START_RECEIVED,
+	UMAC_RESET_STATE_HOST_POST_RESET_START_DONE,
+
+	UMAC_RESET_STATE_WAIT_FOR_DO_POST_RESET_COMPLETE,
+	UMAC_RESET_STATE_DO_POST_RESET_COMPLETE_RECEIVED,
+	UMAC_RESET_STATE_HOST_POST_RESET_COMPLETE_DONE,
 };
 
 /**
- * struct umac_reset_shmem - Shared memory layout for UMAC reset feature
- * @t2h_indication: target to host communicaton
- * @h2t_indication: host to target communicaton
+ * enum umac_reset_rx_event - Rx events deduced by the UMAC reset
+ * @UMAC_RESET_RX_EVENT_NONE: No event
+ * @UMAC_RESET_RX_EVENT_DO_PRE_RESET: DO_PRE_RESET event
+ * @UMAC_RESET_RX_EVENT_DO_POST_RESET_START: DO_POST_RESET_START event
+ * @UMAC_RESET_RX_EVENT_DO_POST_RESET_COMPELTE: DO_POST_RESET_COMPELTE event
+ * @UMAC_RESET_RX_EVENT_ERROR: Error while processing the Rx event
  */
-struct umac_reset_shmem {
-	uint32_t t2h_indication;
-	uint32_t h2t_indication;
+enum umac_reset_rx_event {
+	UMAC_RESET_RX_EVENT_NONE = 0x0,
+	UMAC_RESET_RX_EVENT_DO_PRE_RESET = 0x1,
+	UMAC_RESET_RX_EVENT_DO_POST_RESET_START = 0x2,
+	UMAC_RESET_RX_EVENT_DO_POST_RESET_COMPELTE = 0x4,
+
+	UMAC_RESET_RX_EVENT_ERROR = 0xFFFFFFFF,
+};
+
+/**
+ * enum umac_reset_tx_cmd: UMAC reset Tx command
+ * @UMAC_RESET_TX_CMD_PRE_RESET_DONE: PRE_RESET_DONE
+ * @UMAC_RESET_TX_CMD_POST_RESET_START_DONE: POST_RESET_START_DONE
+ * @UMAC_RESET_TX_CMD_POST_RESET_COMPLETE_DONE: POST_RESET_COMPLETE_DONE
+ */
+enum umac_reset_tx_cmd {
+	UMAC_RESET_TX_CMD_PRE_RESET_DONE,
+	UMAC_RESET_TX_CMD_POST_RESET_START_DONE,
+	UMAC_RESET_TX_CMD_POST_RESET_COMPLETE_DONE,
+};
+
+/**
+ * struct umac_reset_rx_actions - callbacks for handling UMAC reset actions
+ * @cb: Array of pointers where each pointer contains callback for each UMAC
+ * reset action for that index
+ */
+struct umac_reset_rx_actions {
+	QDF_STATUS (*cb[UMAC_RESET_ACTION_MAX])(struct dp_soc *soc);
 };
 
 /**
@@ -75,14 +128,20 @@ struct umac_reset_shmem {
  * @shmem_vaddr_aligned: Virtual address of the shared memory (aligned)
  * @intr_offset: Offset of the UMAC reset interrupt w.r.t DP base interrupt
  * @current_state: current state of the UMAC reset state machine
+ * @supported: Whether UMAC reset is supported on this soc
+ * @shmem_exp_magic_num: Expected magic number in the shared memory
+ * @rx_actions: callbacks for handling UMAC reset actions
  */
 struct dp_soc_umac_reset_ctx {
 	qdf_dma_addr_t shmem_paddr_unaligned;
-	struct umac_reset_shmem *shmem_vaddr_unaligned;
+	void *shmem_vaddr_unaligned;
 	qdf_dma_addr_t shmem_paddr_aligned;
-	struct umac_reset_shmem *shmem_vaddr_aligned;
+	htt_umac_hang_recovery_msg_shmem_t *shmem_vaddr_aligned;
 	int intr_offset;
 	enum umac_reset_state current_state;
+	bool supported;
+	uint32_t shmem_exp_magic_num;
+	struct umac_reset_rx_actions rx_actions;
 };
 
 /**
@@ -92,5 +151,70 @@ struct dp_soc_umac_reset_ctx {
  * Return: QDF status of operation
  */
 QDF_STATUS dp_soc_umac_reset_init(struct dp_soc *soc);
+
+/**
+ * dp_umac_reset_interrupt_attach() - Register handlers for UMAC reset interrupt
+ * @soc: DP soc object
+ *
+ * Return: QDF status of operation
+ */
+QDF_STATUS dp_umac_reset_interrupt_attach(struct dp_soc *soc);
+
+/**
+ * dp_umac_reset_interrupt_detach() - Unregister UMAC reset interrupt handlers
+ * @soc: DP soc object
+ *
+ * Return: QDF status of operation
+ */
+QDF_STATUS dp_umac_reset_interrupt_detach(struct dp_soc *soc);
+
+/**
+ * dp_umac_reset_register_rx_action_callback() - Register a callback for a given
+ * UMAC reset action
+ * @soc: DP soc object
+ * @handler: callback handler to be registered
+ * @action: UMAC reset action for which @handler needs to be registered
+ *
+ * Return: QDF status of operation
+ */
+QDF_STATUS dp_umac_reset_register_rx_action_callback(
+			struct dp_soc *soc,
+			QDF_STATUS (*handler)(struct dp_soc *soc),
+			enum umac_reset_action action);
+
+/**
+ * dp_umac_reset_notify_action_completion() - Notify that a given action has
+ * been completed
+ * @soc: DP soc object
+ * @action: UMAC reset action that got completed
+ *
+ * Return: QDF status of operation
+ */
+QDF_STATUS dp_umac_reset_notify_action_completion(
+			struct dp_soc *soc,
+			enum umac_reset_action action);
+#else
+static inline
+QDF_STATUS dp_soc_umac_reset_init(struct dp_soc *soc)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static inline
+QDF_STATUS dp_umac_reset_register_rx_action_callback(
+			struct dp_soc *soc,
+			QDF_STATUS (*handler)(struct dp_soc *soc),
+			enum umac_reset_action action)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static inline
+QDF_STATUS dp_umac_reset_notify_action_completion(
+		struct dp_soc *soc,
+		enum umac_reset_action action)
+{
+	return QDF_STATUS_SUCCESS;
+}
 #endif /* DP_UMAC_HW_RESET_SUPPORT */
 #endif /* _DP_UMAC_RESET_H_ */

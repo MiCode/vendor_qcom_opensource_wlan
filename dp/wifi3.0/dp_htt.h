@@ -939,6 +939,31 @@ struct htt_stats_context {
 	uint32_t msg_len;
 };
 
+#ifdef DP_UMAC_HW_RESET_SUPPORT
+/**
+ * struct dp_htt_umac_reset_setup_cmd_params - Params for UMAC reset setup cmd
+ * @msi_data: MSI data to be used for raising the UMAC reset interrupt
+ * @shmem_addr_low: Lower 32-bits of shared memory
+ * @shmem_addr_high: Higher 32-bits of shared memory
+ */
+struct dp_htt_umac_reset_setup_cmd_params {
+	uint32_t msi_data;
+	uint32_t shmem_addr_low;
+	uint32_t shmem_addr_high;
+};
+
+/**
+ * dp_htt_umac_reset_send_setup_cmd(): Send the HTT UMAC reset setup command
+ * @soc: dp soc object
+ * @setup_params: parameters required by this command
+ *
+ * Return: Success when HTT message is sent, error on failure
+ */
+QDF_STATUS dp_htt_umac_reset_send_setup_cmd(
+		struct dp_soc *soc,
+		const struct dp_htt_umac_reset_setup_cmd_params *setup_params);
+#endif
+
 /**
  * dp_htt_rx_flow_fst_setup(): Send HTT Rx FST setup message to FW
  * @pdev: DP pdev handle

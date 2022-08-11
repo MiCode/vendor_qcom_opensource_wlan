@@ -101,6 +101,8 @@ uint8_t *vdev_start_add_mlo_params(uint8_t *buf_ptr,
 				  req->mlo_flags.mlo_enabled);
 	WMI_MLO_FLAGS_SET_ASSOC_LINK(mlo_params->mlo_flags.mlo_flags,
 				     req->mlo_flags.mlo_assoc_link);
+	WMI_MLO_FLAGS_SET_EMLSR_SUPPORT(mlo_params->mlo_flags.emlsr_support,
+					req->mlo_flags.emlsr_support);
 
 	vdev_start_add_mlo_mcast_params(&mlo_params->mlo_flags.mlo_flags,
 					req);
@@ -243,6 +245,9 @@ uint8_t *peer_assoc_add_mlo_params(uint8_t *buf_ptr,
 					   req->mlo_params.mlo_logical_link_index_valid);
 	WMI_MLO_FLAGS_SET_PEER_ID_VALID(mlo_params->mlo_flags.mlo_flags,
 					req->mlo_params.mlo_peer_id_valid);
+	WMI_MLO_FLAGS_SET_EMLSR_SUPPORT(mlo_params->mlo_flags.emlsr_support,
+					req->mlo_params.emlsr_support);
+
 	mlo_params->mlo_flags.mlo_force_link_inactive =
 			req->mlo_params.mlo_force_link_inactive;
 
@@ -250,6 +255,11 @@ uint8_t *peer_assoc_add_mlo_params(uint8_t *buf_ptr,
 				   &mlo_params->mld_macaddr);
 	mlo_params->logical_link_index = req->mlo_params.logical_link_index;
 	mlo_params->mld_peer_id = req->mlo_params.ml_peer_id;
+
+	mlo_params->ieee_link_id = req->mlo_params.ieee_link_id;
+	mlo_params->emlsr_trans_timeout_us = req->mlo_params.trans_timeout_us;
+	mlo_params->emlsr_trans_delay_us = req->mlo_params.emlsr_trans_delay_us;
+	mlo_params->emlsr_padding_delay_us = req->mlo_params.emlsr_pad_delay_us;
 
 	return buf_ptr + sizeof(wmi_peer_assoc_mlo_params);
 }
@@ -554,7 +564,7 @@ extract_mlo_link_set_active_resp_tlv(wmi_unified_t wmi_handle, void *evt_buf,
 	return QDF_STATUS_SUCCESS;
 }
 
-#if defined(WLAN_FEATURE_11BE) && defined(WLAN_FEATURE_T2LM)
+#ifdef WLAN_FEATURE_11BE
 size_t peer_assoc_t2lm_params_size(struct peer_assoc_params *req)
 {
 	size_t peer_assoc_t2lm_size = WMI_TLV_HDR_SIZE +
@@ -564,7 +574,7 @@ size_t peer_assoc_t2lm_params_size(struct peer_assoc_params *req)
 	return peer_assoc_t2lm_size;
 }
 
-void peer_assoc_populate_t2lm_tlv(wmi_peer_assoc_tid_to_link_map *cmd,
+static void peer_assoc_populate_t2lm_tlv(wmi_peer_assoc_tid_to_link_map *cmd,
 				  struct wlan_host_t2lm_of_tids *t2lm,
 				  uint8_t tid_num)
 {
@@ -625,7 +635,7 @@ uint8_t *peer_assoc_add_tid_to_link_map(uint8_t *buf_ptr,
 	return buf_ptr;
 }
 
-QDF_STATUS send_mlo_peer_tid_to_link_map_cmd_tlv(
+static QDF_STATUS send_mlo_peer_tid_to_link_map_cmd_tlv(
 		wmi_unified_t wmi_handle,
 		struct wmi_host_tid_to_link_map_params *params)
 {
@@ -734,7 +744,7 @@ uint8_t *peer_assoc_add_tid_to_link_map(uint8_t *buf_ptr,
 	WMITLV_SET_HDR(buf_ptr, WMITLV_TAG_ARRAY_STRUC, 0);
 	return buf_ptr + WMI_TLV_HDR_SIZE;
 }
-#endif /* defined(WLAN_FEATURE_11BE) && defined(WLAN_FEATURE_T2LM) */
+#endif /* WLAN_FEATURE_11BE */
 
 #ifdef WLAN_MLO_MULTI_CHIP
 QDF_STATUS mlo_setup_cmd_send_tlv(struct wmi_unified *wmi_handle,
@@ -941,8 +951,8 @@ void wmi_11be_attach_tlv(wmi_unified_t wmi_handle)
 		extract_mlo_link_set_active_resp_tlv;
 	ops->send_mlo_link_set_active_cmd =
 		send_mlo_link_set_active_cmd_tlv;
-#if defined(WLAN_FEATURE_11BE) && defined(WLAN_FEATURE_T2LM)
+#ifdef WLAN_FEATURE_11BE
 	ops->send_mlo_peer_tid_to_link_map =
 		send_mlo_peer_tid_to_link_map_cmd_tlv;
-#endif /* defined(WLAN_FEATURE_11BE) && defined(WLAN_FEATURE_T2LM) */
+#endif /* WLAN_FEATURE_11BE */
 }

@@ -54,7 +54,7 @@ wmi_send_mlo_link_set_active_cmd(wmi_unified_t wmi_handle,
 				 struct mlo_link_set_active_param *param);
 #endif /*WLAN_FEATURE_11BE_MLO*/
 
-#if defined(WLAN_FEATURE_11BE) && defined(WLAN_FEATURE_T2LM)
+#ifdef WLAN_FEATURE_11BE
 /**
  * wmi_send_mlo_peer_tid_to_link_map_cmd() - send TID-to-link mapping command
  * @wmi: WMI handle for this pdev
@@ -63,6 +63,6 @@ wmi_send_mlo_link_set_active_cmd(wmi_unified_t wmi_handle,
 QDF_STATUS wmi_send_mlo_peer_tid_to_link_map_cmd(
 		wmi_unified_t wmi,
 		struct wmi_host_tid_to_link_map_params *params);
-#endif /* defined(WLAN_FEATURE_11BE) && defined(WLAN_FEATURE_T2LM) */
+#endif /* WLAN_FEATURE_11BE */
 
 #endif /*_WMI_UNIFIED_11BE_API_H_*/

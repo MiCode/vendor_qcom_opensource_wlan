@@ -672,26 +672,34 @@ QDF_STATUS wlan_mlo_mgr_update_mld_addr(struct qdf_mac_addr *old_mac,
  */
 bool wlan_mlo_is_mld_ctx_exist(struct qdf_mac_addr *mldaddr);
 
-#ifdef CONFIG_AP_PLATFORM
 /**
- * wlan_mlo_vdev_cmp_same_pdev() - Compare pdev of the given vdevs
- * @vdev: Objmgr vdev of existing MLD vdev
- * @tmp_vdev: Objmgr vdev of newly added vdev
+ * wlan_mlo_get_mld_ctx_by_mldaddr() - Get mld device context using mld
+ *                                     MAC address
  *
- * API to compare pdev of the vdevs forming MLD.
+ * @mldaddr: MAC address of the MLD device
+ *
+ * API to get mld device context using the mld mac address
+ *
+ * Return: Pointer to mlo device context
+ */
+struct wlan_mlo_dev_context
+*wlan_mlo_get_mld_ctx_by_mldaddr(struct qdf_mac_addr *mldaddr);
+
+/**
+ * wlan_mlo_check_valid_config() - Check vap config is valid for mld
+ *
+ * @ml_dev: Pointer to structure of mlo device context
+ * @pdev: Reference pdev to check against MLD list
+ * @opmode: Operating mode of vdev (SAP/STA etc..)
+ *
+ * API to check if vaps config is valid
  *
  * Return: QDF_STATUS
  */
-QDF_STATUS wlan_mlo_vdev_cmp_same_pdev(struct wlan_objmgr_vdev *vdev,
-				       struct wlan_objmgr_vdev *tmp_vdev);
-#else
-static inline
-QDF_STATUS wlan_mlo_vdev_cmp_same_pdev(struct wlan_objmgr_vdev *vdev,
-				       struct wlan_objmgr_vdev *tmp_vdev)
-{
-	return QDF_STATUS_E_FAILURE;
-}
-#endif /* CONFIG_AP_PLATFORM */
+QDF_STATUS wlan_mlo_check_valid_config(struct wlan_mlo_dev_context *ml_dev,
+				       struct wlan_objmgr_pdev *pdev,
+				       enum QDF_OPMODE opmode);
+
 #else
 static inline QDF_STATUS wlan_mlo_mgr_init(void)
 {

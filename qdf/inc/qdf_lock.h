@@ -44,7 +44,11 @@
 #endif
 
 /* Max hold time in micro seconds, 0 to disable detection*/
+#ifdef VCPU_TIMESTOLEN
+#define QDF_MAX_HOLD_TIME_ALOWED_SPINLOCK_IRQ         400000
+#else
 #define QDF_MAX_HOLD_TIME_ALOWED_SPINLOCK_IRQ         10000
+#endif
 #define QDF_MAX_HOLD_TIME_ALOWED_SPINLOCK                 0
 
 #if QDF_LOCK_STATS

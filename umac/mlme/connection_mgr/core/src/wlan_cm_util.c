@@ -523,8 +523,14 @@ cm_handle_disconnect_flush(struct cnx_mgr *cm_ctx, struct cm_req *cm_req)
 	qdf_mem_zero(&resp, sizeof(resp));
 	resp.req.cm_id = cm_req->cm_id;
 	resp.req.req = cm_req->discon_req.req;
-
-	cm_notify_disconnect_complete(cm_ctx, &resp);
+	/*
+	 * Indicate to OSIF to inform kernel if not already done and this is
+	 * the latest disconnect req received. If this is not the latest, it
+	 * will be dropped in OSIF as src and cm_id will not match. A flushed
+	 * disconnect can be last of this was received when previous disconnect
+	 * was already in serialization active queue and thus wasn't flushed.
+	 */
+	mlme_cm_osif_disconnect_complete(cm_ctx->vdev, &resp);
 }
 
 void cm_remove_cmd_from_serialization(struct cnx_mgr *cm_ctx, wlan_cm_id cm_id)
@@ -1088,7 +1094,7 @@ bool cm_is_vdev_disconnected(struct wlan_objmgr_vdev *vdev)
 
 	cm_ctx = cm_get_cm_ctx(vdev);
 	if (!cm_ctx)
-		return false;
+		return true;
 
 	state = cm_get_state(cm_ctx);
 

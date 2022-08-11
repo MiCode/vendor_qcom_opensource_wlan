@@ -1121,6 +1121,8 @@ struct dfs_rcac_params {
  *                                   bandwidth expansion feature.
  * @dfs_bw_expand_des_mode:          User configured Channel Phymode for
  *                                   bandwidth expansion feature.
+ * @dfs_use_bw_expand:               User configured value for enabling or
+ *                                   disabling BW Expansion feature.
  * @dfs_agile_rcac_ucfg:             User configuration for Rolling CAC.
  * @dfs_fw_adfs_support_non_160:     Target Agile DFS support for non-160 BWs.
  * @dfs_fw_adfs_support_160:         Target Agile DFS support for 160 BW.
@@ -1295,6 +1297,7 @@ struct wlan_dfs {
 #if defined(QCA_DFS_BW_EXPAND)
 	qdf_freq_t      dfs_bw_expand_target_freq;
 	enum wlan_phymode dfs_bw_expand_des_mode;
+	bool           dfs_use_bw_expand;
 #endif
 	uint8_t        dfs_agile_precac_ucfg:1,
 #if defined(QCA_SUPPORT_ADFS_RCAC)

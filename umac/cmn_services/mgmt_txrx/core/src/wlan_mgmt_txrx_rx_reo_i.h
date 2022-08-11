@@ -101,6 +101,10 @@ struct mgmt_rx_reo_pdev_info {
 	struct mgmt_rx_reo_snapshot_info host_target_shared_snapshot_info
 				[MGMT_RX_REO_SHARED_SNAPSHOT_MAX];
 	struct mgmt_rx_reo_filter filter;
+	struct mgmt_rx_reo_shared_snapshot raw_snapshots[MAX_MLO_LINKS]
+			[MGMT_RX_REO_SHARED_SNAPSHOT_MAX]
+			[MGMT_RX_REO_SNAPSHOT_READ_RETRY_LIMIT]
+			[MGMT_RX_REO_SNAPSHOT_B2B_READ_SWAR_RETRY_LIMIT];
 };
 
 /**

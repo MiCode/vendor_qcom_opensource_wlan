@@ -226,6 +226,9 @@ struct rx_pkt_tlvs {
 	HAL_RX_MSDU_END(_rx_pkt_tlv).window_size
 #endif
 
+#define HAL_RX_TLV_L3_TYPE_GET(_rx_pkt_tlv)	\
+	HAL_RX_MSDU_END(_rx_pkt_tlv).l3_type
+
 #define HAL_RX_GET_FILTER_CATEGORY(_rx_pkt_tlv) \
 	HAL_RX_MPDU_START(_rx_pkt_tlv).rxpcu_mpdu_filter_in_category
 
@@ -1079,8 +1082,8 @@ static inline void hal_rx_print_pn_be(uint8_t *buf)
 	uint32_t pn_95_64 = HAL_RX_TLV_MPDU_PN_95_64_GET(rx_pkt_tlvs);
 	uint32_t pn_127_96 = HAL_RX_TLV_MPDU_PN_127_96_GET(rx_pkt_tlvs);
 
-	hal_debug("PN number pn_127_96 0x%x pn_95_64 0x%x pn_63_32 0x%x pn_31_0 0x%x ",
-		  pn_127_96, pn_95_64, pn_63_32, pn_31_0);
+	hal_debug_rl("PN number pn_127_96 0x%x pn_95_64 0x%x pn_63_32 0x%x pn_31_0 0x%x ",
+		     pn_127_96, pn_95_64, pn_63_32, pn_31_0);
 }
 
 static inline void hal_rx_tlv_get_pn_num_be(uint8_t *buf, uint64_t *pn_num)
@@ -1994,4 +1997,17 @@ hal_rx_msdu_end_sa_sw_peer_id_get_be(uint8_t *buf)
 	return HAL_RX_MSDU_END_SA_SW_PEER_ID_GET(msdu_end);
 }
 
+/**
+ * hal_rx_tlv_l3_type_get_be(): API to get the l3 type
+ * from rx_msdu_start TLV
+ *
+ * @buf: pointer to the start of RX PKT TLV headers
+ * Return: uint32_t(l3 type)
+ */
+static inline uint32_t hal_rx_tlv_l3_type_get_be(uint8_t *buf)
+{
+	struct rx_pkt_tlvs *rx_pkt_tlvs = (struct rx_pkt_tlvs *)buf;
+
+	return HAL_RX_TLV_L3_TYPE_GET(rx_pkt_tlvs);
+}
 #endif /* _HAL_BE_RX_TLV_H_ */

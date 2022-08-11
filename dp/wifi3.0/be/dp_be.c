@@ -791,7 +791,7 @@ dp_rxdma_ring_sel_cfg_be(struct dp_soc *soc)
 	htt_tlv_filter.mpdu_start = 1;
 	htt_tlv_filter.msdu_end = 1;
 	htt_tlv_filter.packet = 1;
-	htt_tlv_filter.packet_header = 1;
+	htt_tlv_filter.packet_header = 0;
 
 	htt_tlv_filter.ppdu_start = 0;
 	htt_tlv_filter.ppdu_end = 0;
@@ -1678,10 +1678,20 @@ dp_soc_max_peer_id_set(struct dp_soc *soc)
 
 static void dp_peer_map_detach_be(struct dp_soc *soc)
 {
+	if (soc->host_ast_db_enable)
+		dp_peer_ast_hash_detach(soc);
 }
 
 static QDF_STATUS dp_peer_map_attach_be(struct dp_soc *soc)
 {
+	QDF_STATUS status;
+
+	if (soc->host_ast_db_enable) {
+		status = dp_peer_ast_hash_attach(soc);
+		if (QDF_IS_STATUS_ERROR(status))
+			return status;
+	}
+
 	dp_soc_max_peer_id_set(soc);
 
 	return QDF_STATUS_SUCCESS;
@@ -1692,15 +1702,40 @@ static struct dp_peer *dp_find_peer_by_destmac_be(struct dp_soc *soc,
 						  uint8_t vdev_id)
 {
 	struct dp_peer *peer = NULL;
+	struct dp_peer *tgt_peer = NULL;
+	struct dp_ast_entry *ast_entry = NULL;
+	uint16_t peer_id;
 
-	peer = dp_peer_find_hash_find(soc, dest_mac, 0,
-				      vdev_id, DP_MOD_ID_SAWF);
-	if (!peer) {
-		dp_err("Invalid peer");
+	qdf_spin_lock_bh(&soc->ast_lock);
+	ast_entry = dp_peer_ast_hash_find_soc(soc, dest_mac);
+	if (!ast_entry) {
+		qdf_spin_unlock_bh(&soc->ast_lock);
+		dp_err("NULL ast entry");
 		return NULL;
 	}
 
-	return peer;
+	peer_id = ast_entry->peer_id;
+	qdf_spin_unlock_bh(&soc->ast_lock);
+
+	if (peer_id == HTT_INVALID_PEER)
+		return NULL;
+
+	peer = dp_peer_get_ref_by_id(soc, peer_id, DP_MOD_ID_SAWF);
+	if (!peer) {
+		dp_err("NULL peer for peer_id:%d", peer_id);
+		return NULL;
+	}
+
+	tgt_peer = dp_get_tgt_peer_from_peer(peer);
+
+	/*
+	 * Once tgt_peer is obtained,
+	 * release the ref taken for original peer.
+	 */
+	dp_peer_get_ref(NULL, tgt_peer, DP_MOD_ID_SAWF);
+	dp_peer_unref_delete(peer, DP_MOD_ID_SAWF);
+
+	return tgt_peer;
 }
 
 #ifdef WLAN_FEATURE_11BE_MLO
@@ -1752,6 +1787,7 @@ void dp_initialize_arch_ops_be(struct dp_arch_ops *arch_ops)
 	arch_ops->dp_rx_desc_pool_deinit = dp_rx_desc_pool_deinit_be;
 	arch_ops->dp_wbm_get_rx_desc_from_hal_desc =
 				dp_wbm_get_rx_desc_from_hal_desc_be;
+	arch_ops->dp_tx_compute_hw_delay = dp_tx_compute_tx_delay_be;
 #endif
 	arch_ops->txrx_get_context_size = dp_get_context_size_be;
 	arch_ops->txrx_get_mon_context_size = dp_mon_get_context_size_be;
@@ -1784,7 +1820,6 @@ void dp_initialize_arch_ops_be(struct dp_arch_ops *arch_ops)
 					dp_peer_rx_reorder_queue_setup_be;
 	arch_ops->txrx_print_peer_stats = dp_print_peer_txrx_stats_be;
 	arch_ops->dp_find_peer_by_destmac = dp_find_peer_by_destmac_be;
-	arch_ops->dp_tx_compute_hw_delay = dp_tx_compute_tx_delay_be;
 	dp_init_near_full_arch_ops_be(arch_ops);
 	arch_ops->get_rx_hash_key = dp_get_rx_hash_key_be;
 }

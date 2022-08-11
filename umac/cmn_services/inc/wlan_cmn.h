@@ -505,6 +505,7 @@ enum wlan_phymode {
 	((mode) == WLAN_PHYMODE_11BEA_EHT320); })
 
 #else
+#define IS_WLAN_PHYMODE_320MHZ(_mode) 0
 
 #define IS_WLAN_PHYMODE_160MHZ(_mode) ({typeof(_mode) mode = (_mode); \
 	((mode) == WLAN_PHYMODE_11AC_VHT80_80) || \

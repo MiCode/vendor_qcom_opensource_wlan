@@ -553,15 +553,15 @@ QDF_STATUS wlan_reg_get_max_5g_bw_from_regdomain(
 QDF_STATUS wlan_reg_get_max_bw_5G_for_fo(struct wlan_objmgr_pdev *pdev);
 
 /**
- * wlan_reg_is_offload_enabled() - get offload_enabled
- * @pdev: PDEV object
+ * wlan_reg_is_regdb_offloaded() - get offload_enabled
+ * @psoc: Psoc object
  *
  * API to get offload_enabled from psoc.
  *
- * Return: true if offload enaled
+ * Return: true if offload enabled
  */
 
-bool wlan_reg_is_offload_enabled(struct wlan_objmgr_pdev *pdev);
+bool wlan_reg_is_regdb_offloaded(struct wlan_objmgr_psoc *psoc);
 
 /**
  * wlan_reg_get_fcc_constraint() - Check FCC constraint on given frequency
@@ -1509,6 +1509,22 @@ wlan_reg_get_channel_state_for_pwrmode(
 enum channel_state wlan_reg_get_channel_state_from_secondary_list_for_freq(
 						struct wlan_objmgr_pdev *pdev,
 						qdf_freq_t freq);
+
+/**
+ * wlan_reg_get_channel_list_with_power() - Provide channel list with tx power
+ * @ch_list: pointer to the channel list.
+ * @num_chan: Number of channels which has been filed in ch_list
+ * @in_6g_pwr_type: 6G power type corresponding to which 6G channels needs to
+ * be provided
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+wlan_reg_get_channel_list_with_power(
+				struct wlan_objmgr_pdev *pdev,
+				struct channel_power *ch_list,
+				uint8_t *num_chan,
+				enum supported_6g_pwr_types in_6g_pwr_type);
 #endif
 
 #ifdef WLAN_FEATURE_11BE

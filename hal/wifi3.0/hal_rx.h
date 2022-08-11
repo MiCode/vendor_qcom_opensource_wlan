@@ -3006,4 +3006,11 @@ hal_get_first_wow_wakeup_packet(hal_soc_handle_t hal_soc_hdl, uint8_t *buf)
 }
 #endif
 
+static inline uint32_t
+hal_rx_tlv_l3_type_get(hal_soc_handle_t hal_soc_hdl, uint8_t *buf)
+{
+	struct hal_soc *hal_soc = (struct hal_soc *)hal_soc_hdl;
+
+	return hal_soc->ops->hal_rx_tlv_l3_type_get(buf);
+}
 #endif /* _HAL_RX_H */

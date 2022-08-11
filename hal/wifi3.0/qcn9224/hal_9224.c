@@ -746,13 +746,13 @@ void hal_rx_get_bb_info_9224(void *rx_tlv, void *ppdu_info_hdl)
 	struct hal_rx_ppdu_info *ppdu_info  = ppdu_info_hdl;
 
 	ppdu_info->cfr_info.bb_captured_channel =
-		HAL_RX_GET(rx_tlv, RXPCU_PPDU_END_INFO, BB_CAPTURED_CHANNEL);
+		HAL_RX_GET_64(rx_tlv, RXPCU_PPDU_END_INFO, BB_CAPTURED_CHANNEL);
 
 	ppdu_info->cfr_info.bb_captured_timeout =
-		HAL_RX_GET(rx_tlv, RXPCU_PPDU_END_INFO, BB_CAPTURED_TIMEOUT);
+		HAL_RX_GET_64(rx_tlv, RXPCU_PPDU_END_INFO, BB_CAPTURED_TIMEOUT);
 
 	ppdu_info->cfr_info.bb_captured_reason =
-		HAL_RX_GET(rx_tlv, RXPCU_PPDU_END_INFO, BB_CAPTURED_REASON);
+		HAL_RX_GET_64(rx_tlv, RXPCU_PPDU_END_INFO, BB_CAPTURED_REASON);
 }
 
 static inline
@@ -761,55 +761,64 @@ void hal_rx_get_rtt_info_9224(void *rx_tlv, void *ppdu_info_hdl)
 	struct hal_rx_ppdu_info *ppdu_info  = ppdu_info_hdl;
 
 	ppdu_info->cfr_info.rx_location_info_valid =
-	HAL_RX_GET(rx_tlv, PHYRX_LOCATION_RX_LOCATION_INFO_DETAILS,
-		   RX_LOCATION_INFO_VALID);
+	HAL_RX_GET_64(rx_tlv, PHYRX_LOCATION_RX_LOCATION_INFO_DETAILS,
+		      RX_LOCATION_INFO_VALID);
 
 	ppdu_info->cfr_info.rtt_che_buffer_pointer_low32 =
-	HAL_RX_GET(rx_tlv,
-		   PHYRX_LOCATION_RX_LOCATION_INFO_DETAILS,
-		   RTT_CHE_BUFFER_POINTER_LOW32);
+	HAL_RX_GET_64(rx_tlv,
+		      PHYRX_LOCATION_RX_LOCATION_INFO_DETAILS,
+		      RTT_CHE_BUFFER_POINTER_LOW32);
 
 	ppdu_info->cfr_info.rtt_che_buffer_pointer_high8 =
-	HAL_RX_GET(rx_tlv,
-		   PHYRX_LOCATION_RX_LOCATION_INFO_DETAILS,
-		   RTT_CHE_BUFFER_POINTER_HIGH8);
+	HAL_RX_GET_64(rx_tlv,
+		      PHYRX_LOCATION_RX_LOCATION_INFO_DETAILS,
+		      RTT_CHE_BUFFER_POINTER_HIGH8);
 
 	ppdu_info->cfr_info.chan_capture_status =
 	HAL_GET_RX_LOCATION_INFO_CHAN_CAPTURE_STATUS(rx_tlv);
 
 	ppdu_info->cfr_info.rx_start_ts =
-	HAL_RX_GET(rx_tlv,
-		   PHYRX_LOCATION_RX_LOCATION_INFO_DETAILS,
-		   RX_START_TS);
+	HAL_RX_GET_64(rx_tlv,
+		      PHYRX_LOCATION_RX_LOCATION_INFO_DETAILS,
+		      RX_START_TS);
 
 	ppdu_info->cfr_info.rtt_cfo_measurement = (int16_t)
-	HAL_RX_GET(rx_tlv,
-		   PHYRX_LOCATION_RX_LOCATION_INFO_DETAILS,
-		   RTT_CFO_MEASUREMENT);
+	HAL_RX_GET_64(rx_tlv,
+		      PHYRX_LOCATION_RX_LOCATION_INFO_DETAILS,
+		      RTT_CFO_MEASUREMENT);
 
 	ppdu_info->cfr_info.agc_gain_info0 =
-	HAL_RX_GET(rx_tlv,
-		   PHYRX_LOCATION_RX_LOCATION_INFO_DETAILS,
-		   GAIN_CHAIN0);
+	HAL_RX_GET_64(rx_tlv,
+		      PHYRX_LOCATION_RX_LOCATION_INFO_DETAILS,
+		      GAIN_CHAIN0);
 
 	ppdu_info->cfr_info.agc_gain_info0 |=
-	(((uint32_t)HAL_RX_GET(rx_tlv,
+	(((uint32_t)HAL_RX_GET_64(rx_tlv,
 		    PHYRX_LOCATION_RX_LOCATION_INFO_DETAILS,
 		    GAIN_CHAIN1)) << 16);
 
 	ppdu_info->cfr_info.agc_gain_info1 =
-	HAL_RX_GET(rx_tlv,
-		   PHYRX_LOCATION_RX_LOCATION_INFO_DETAILS,
-		   GAIN_CHAIN2);
+	HAL_RX_GET_64(rx_tlv,
+		      PHYRX_LOCATION_RX_LOCATION_INFO_DETAILS,
+		      GAIN_CHAIN2);
 
 	ppdu_info->cfr_info.agc_gain_info1 |=
-	(((uint32_t)HAL_RX_GET(rx_tlv,
+	(((uint32_t)HAL_RX_GET_64(rx_tlv,
 		    PHYRX_LOCATION_RX_LOCATION_INFO_DETAILS,
 		    GAIN_CHAIN3)) << 16);
 
 	ppdu_info->cfr_info.agc_gain_info2 = 0;
 
 	ppdu_info->cfr_info.agc_gain_info3 = 0;
+
+	ppdu_info->cfr_info.mcs_rate =
+	HAL_RX_GET_64(rx_tlv,
+		      PHYRX_LOCATION_RX_LOCATION_INFO_DETAILS,
+		      RTT_MCS_RATE);
+	ppdu_info->cfr_info.gi_type =
+	HAL_RX_GET_64(rx_tlv,
+		      PHYRX_LOCATION_RX_LOCATION_INFO_DETAILS,
+		      RTT_GI_TYPE);
 }
 #endif
 
@@ -1744,6 +1753,8 @@ static void hal_hw_txrx_ops_attach_qcn9224(struct hal_soc *hal_soc)
 			hal_tx_get_num_ppe_vp_tbl_entries_9224;
 	hal_soc->ops->hal_tx_enable_pri2tid_map =
 			hal_tx_enable_pri2tid_map_9224;
+	hal_soc->ops->hal_tx_config_rbm_mapping_be =
+				hal_tx_config_rbm_mapping_be_9224;
 
 	/* rx */
 	hal_soc->ops->hal_rx_msdu_start_nss_get = hal_rx_tlv_nss_get_be;
@@ -1948,14 +1959,28 @@ static void hal_hw_txrx_ops_attach_qcn9224(struct hal_soc *hal_soc)
 	hal_soc->ops->hal_get_reo_qdesc_size = hal_qcn9224_get_reo_qdesc_size;
 	/* TX MONITOR */
 #ifdef QCA_MONITOR_2_0_SUPPORT
+	hal_soc->ops->hal_txmon_is_mon_buf_addr_tlv =
+				hal_txmon_is_mon_buf_addr_tlv_generic_be;
+	hal_soc->ops->hal_txmon_populate_packet_info =
+				hal_txmon_populate_packet_info_generic_be;
 	hal_soc->ops->hal_txmon_status_parse_tlv =
 				hal_txmon_status_parse_tlv_generic_be;
 	hal_soc->ops->hal_txmon_status_get_num_users =
 				hal_txmon_status_get_num_users_generic_be;
-	hal_soc->ops->hal_txmon_status_free_buffer =
-				hal_txmon_status_free_buffer_generic_be;
 #endif /* QCA_MONITOR_2_0_SUPPORT */
 	hal_soc->ops->hal_compute_reo_remap_ix0 = NULL;
+	hal_soc->ops->hal_tx_vdev_mismatch_routing_set =
+		hal_tx_vdev_mismatch_routing_set_generic_be;
+	hal_soc->ops->hal_tx_mcast_mlo_reinject_routing_set =
+		hal_tx_mcast_mlo_reinject_routing_set_generic_be;
+	hal_soc->ops->hal_get_ba_aging_timeout =
+		hal_get_ba_aging_timeout_be_generic;
+	hal_soc->ops->hal_setup_link_idle_list =
+		hal_setup_link_idle_list_generic_be;
+	hal_soc->ops->hal_cookie_conversion_reg_cfg_be =
+		hal_cookie_conversion_reg_cfg_generic_be;
+	hal_soc->ops->hal_set_ba_aging_timeout =
+		hal_set_ba_aging_timeout_be_generic;
 };
 
 struct hal_hw_srng_config hw_srng_table_9224[] = {

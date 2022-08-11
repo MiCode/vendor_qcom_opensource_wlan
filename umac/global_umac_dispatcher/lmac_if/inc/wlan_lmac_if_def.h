@@ -98,6 +98,10 @@ struct dbr_module_config;
 #ifdef QCA_SUPPORT_CP_STATS
 #include <wlan_cp_stats_public_structs.h>
 
+#ifdef WLAN_FEATURE_DBAM_CONFIG
+#include "wlan_coex_public_structs.h"
+#endif
+
 /**
  * typedef cp_stats_event - Definition of cp stats event
  * Define stats_event from external cp stats component to cp_stats_event
@@ -308,7 +312,9 @@ struct wlan_lmac_if_mgmt_rx_reo_tx_ops {
 			(struct wlan_objmgr_pdev *pdev,
 			 struct mgmt_rx_reo_snapshot_info *snapshot_info,
 			 enum mgmt_rx_reo_shared_snapshot_id id,
-			 struct mgmt_rx_reo_snapshot_params *value);
+			 struct mgmt_rx_reo_snapshot_params *value,
+			 struct mgmt_rx_reo_shared_snapshot (*raw_snapshot)
+			 [MGMT_RX_REO_SNAPSHOT_B2B_READ_SWAR_RETRY_LIMIT]);
 	QDF_STATUS (*get_mgmt_rx_reo_snapshot_info)
 			(struct wlan_objmgr_pdev *pdev,
 			 enum mgmt_rx_reo_shared_snapshot_id id,
@@ -1263,6 +1269,28 @@ struct wlan_lmac_if_coex_tx_ops {
 };
 #endif
 
+#ifdef WLAN_FEATURE_DBAM_CONFIG
+/**
+ * struct wlan_lmac_if_dbam_tx_ops - south bound tx function pointers for dbam
+ * @set_dbam_config: function pointer to send dbam config to fw
+ */
+struct wlan_lmac_if_dbam_tx_ops {
+	QDF_STATUS (*set_dbam_config)(struct wlan_objmgr_psoc *psoc,
+				      struct coex_dbam_config_params *param);
+	QDF_STATUS (*dbam_event_attach)(struct wlan_objmgr_psoc *psoc);
+	QDF_STATUS (*dbam_event_detach)(struct wlan_objmgr_psoc *psoc);
+};
+
+/**
+ * struct wlan_lmac_if_dbam_rx_ops - defines southbound rx callback for dbam
+ * @dbam_resp_event: function pointer to rx dbam response event from FW
+ */
+struct wlan_lmac_if_dbam_rx_ops {
+	QDF_STATUS (*dbam_resp_event)(struct wlan_objmgr_psoc *psoc,
+				      enum coex_dbam_comp_status dbam_resp);
+};
+#endif
+
 #ifdef WLAN_FEATURE_GPIO_CFG
 struct gpio_config_params;
 struct gpio_output_params;
@@ -1439,6 +1467,13 @@ struct wlan_lmac_if_twt_rx_ops {
 };
 #endif
 
+#if defined WLAN_FEATURE_11AX
+struct wlan_lmac_if_spatial_reuse_tx_ops {
+	QDF_STATUS (*send_cfg)(struct wlan_objmgr_vdev *vdev, uint8_t sr_ctrl,
+			       uint8_t non_srg_max_pd_offset);
+};
+#endif
+
 /**
  * struct wlan_lmac_if_tx_ops - south bound tx function pointers
  * @mgmt_txrx_tx_ops: mgmt txrx tx ops
@@ -1448,6 +1483,7 @@ struct wlan_lmac_if_twt_rx_ops {
  * @cp_stats_tx_ops: cp stats tx_ops
  * @coex_ops: coex tx_ops
  * @gpio_ops: gpio tx_ops
+ * @dbam_tx_ops: coex dbam tx_ops
  *
  * Callback function tabled to be registered with umac.
  * umac will use the functional table to send events/frames to wmi
@@ -1527,6 +1563,10 @@ struct wlan_lmac_if_tx_ops {
 	struct wlan_lmac_if_coex_tx_ops coex_ops;
 #endif
 
+#ifdef WLAN_FEATURE_DBAM_CONFIG
+	struct wlan_lmac_if_dbam_tx_ops dbam_tx_ops;
+#endif
+
 #ifdef WLAN_FEATURE_GPIO_CFG
 	struct wlan_lmac_if_gpio_tx_ops gpio_ops;
 #endif
@@ -1541,6 +1581,10 @@ struct wlan_lmac_if_tx_ops {
 
 #if defined(WLAN_SUPPORT_TWT) && defined(WLAN_TWT_CONV_SUPPORTED)
 	struct wlan_lmac_if_twt_tx_ops twt_tx_ops;
+#endif
+
+#if defined WLAN_FEATURE_11AX
+	struct wlan_lmac_if_spatial_reuse_tx_ops spatial_reuse_tx_ops;
 #endif
 };
 
@@ -1723,7 +1767,8 @@ struct wlan_lmac_if_p2p_rx_ops {
  * @atf_peer_unblk_txtraffic:          Unblock peer tx traffic
  * @atf_set_token_allocated:           Set atf token allocated
  * @atf_set_token_utilized:            Set atf token utilized
- * @atf_process_ppdu_stats:            Process PPDU stats to get ATF stats
+ * @atf_process_tx_ppdu_stats:         Process Tx PPDU stats to get ATF stats
+ * @atf_process_rx_ppdu_stats:         Process Rx PPDU stats to get ATF stats
  * @atf_is_stats_enabled:              Check ATF stats enabled or not
  */
 struct wlan_lmac_if_atf_rx_ops {
@@ -1762,8 +1807,10 @@ struct wlan_lmac_if_atf_rx_ops {
 					uint16_t value);
 	void (*atf_set_token_utilized)(struct wlan_objmgr_peer *peer,
 				       uint16_t value);
-	void (*atf_process_ppdu_stats)(struct wlan_objmgr_pdev *pdev,
-				       qdf_nbuf_t msg);
+	void (*atf_process_tx_ppdu_stats)(struct wlan_objmgr_pdev *pdev,
+					  qdf_nbuf_t msg);
+	void (*atf_process_rx_ppdu_stats)(struct wlan_objmgr_pdev *pdev,
+					  qdf_nbuf_t msg);
 	uint8_t (*atf_is_stats_enabled)(struct wlan_objmgr_pdev *pdev);
 };
 #endif
@@ -2002,6 +2049,9 @@ struct wlan_lmac_if_wifi_pos_rx_ops {
  * @dfs_get_postnol_mode:             API to get phymode to switch to, post NOL.
  * @dfs_get_postnol_cfreq2:           API to get secondary center frequency to
  *                                    switch to, post NOL.
+ * @dfs_set_bw_expand:                API to set BW Expansion feature.
+ * @dfs_get_bw_expand:                API to get the status of BW Expansion
+ *                                    feature.
  */
 struct wlan_lmac_if_dfs_rx_ops {
 	QDF_STATUS (*dfs_get_radars)(struct wlan_objmgr_pdev *pdev);
@@ -2113,6 +2163,12 @@ struct wlan_lmac_if_dfs_rx_ops {
 			struct wlan_objmgr_pdev *pdev,
 			bool value);
 	QDF_STATUS (*dfs_get_nol_subchannel_marking)(
+			struct wlan_objmgr_pdev *pdev,
+			bool *value);
+	QDF_STATUS (*dfs_set_bw_expand)(
+			struct wlan_objmgr_pdev *pdev,
+			bool value);
+	QDF_STATUS (*dfs_get_bw_expand)(
 			struct wlan_objmgr_pdev *pdev,
 			bool *value);
 	QDF_STATUS (*dfs_set_bw_reduction)(struct wlan_objmgr_pdev *pdev,
@@ -2268,6 +2324,7 @@ struct wlan_lmac_if_green_ap_rx_ops {
  * @green_ap_rx_ops: green ap rx ops
  * @ftm_rx_ops: ftm rx ops
  * @mlo_rx_ops: mlo rx ops
+ * @dbam_rx_ops: dbam rx ops
  *
  * Callback function tabled to be registered with lmac/wmi.
  * lmac will use the functional table to send events/frames to umac
@@ -2336,6 +2393,9 @@ struct wlan_lmac_if_rx_ops {
 #endif
 #if defined(WLAN_SUPPORT_TWT) && defined(WLAN_TWT_CONV_SUPPORTED)
 	struct wlan_lmac_if_twt_rx_ops twt_rx_ops;
+#endif
+#ifdef WLAN_FEATURE_DBAM_CONFIG
+	struct wlan_lmac_if_dbam_rx_ops dbam_rx_ops;
 #endif
 };
 

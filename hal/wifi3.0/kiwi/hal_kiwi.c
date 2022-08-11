@@ -1841,6 +1841,8 @@ static void hal_hw_txrx_ops_attach_kiwi(struct hal_soc *hal_soc)
 					hal_tx_comp_get_status_generic_be;
 	hal_soc->ops->hal_tx_init_cmd_credit_ring =
 					hal_tx_init_cmd_credit_ring_kiwi;
+	hal_soc->ops->hal_tx_config_rbm_mapping_be =
+				hal_tx_config_rbm_mapping_be_kiwi;
 
 	/* rx */
 	hal_soc->ops->hal_rx_msdu_start_nss_get = hal_rx_tlv_nss_get_be;
@@ -2057,6 +2059,20 @@ static void hal_hw_txrx_ops_attach_kiwi(struct hal_soc *hal_soc)
 		hal_get_first_wow_wakeup_packet_kiwi;
 #endif
 	hal_soc->ops->hal_compute_reo_remap_ix0 = NULL;
+
+	hal_soc->ops->hal_rx_tlv_l3_type_get = hal_rx_tlv_l3_type_get_be;
+	hal_soc->ops->hal_tx_vdev_mismatch_routing_set =
+		hal_tx_vdev_mismatch_routing_set_generic_be;
+	hal_soc->ops->hal_tx_mcast_mlo_reinject_routing_set =
+		hal_tx_mcast_mlo_reinject_routing_set_generic_be;
+	hal_soc->ops->hal_get_ba_aging_timeout =
+		hal_get_ba_aging_timeout_be_generic;
+	hal_soc->ops->hal_setup_link_idle_list =
+		hal_setup_link_idle_list_generic_be;
+	hal_soc->ops->hal_cookie_conversion_reg_cfg_be =
+		hal_cookie_conversion_reg_cfg_generic_be;
+	hal_soc->ops->hal_set_ba_aging_timeout =
+		hal_set_ba_aging_timeout_be_generic;
 };
 
 struct hal_hw_srng_config hw_srng_table_kiwi[] = {

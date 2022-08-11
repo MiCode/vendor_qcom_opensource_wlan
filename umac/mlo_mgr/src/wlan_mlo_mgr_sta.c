@@ -423,6 +423,16 @@ mlo_validate_disconn_req(struct wlan_objmgr_vdev *vdev,
 				qdf_copy_macaddr(&sta_ctx->disconn_req->bssid,
 						 bssid);
 			return QDF_STATUS_E_BUSY;
+		} else if (wlan_cm_is_vdev_connected(mlo_dev->wlan_vdev_list[i]) &&
+			   !wlan_vdev_mlme_is_mlo_link_vdev(
+				mlo_dev->wlan_vdev_list[i])) {
+				/* If the vdev is moved to connected state but
+				 * MLO mgr is not yet notified, defer disconnect
+				 * as it can cause race between connect complete
+				 * and disconnect initiation
+				 */
+				if (!qdf_test_bit(i, sta_ctx->wlan_connected_links))
+					return QDF_STATUS_E_BUSY;
 		}
 	}
 	return QDF_STATUS_SUCCESS;

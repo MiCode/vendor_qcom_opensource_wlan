@@ -41,7 +41,7 @@
 #endif
 #include "dp_hist.h"
 #ifdef WLAN_DP_FEATURE_SW_LATENCY_MGR
-#include <dp_swlm.h>
+#include <wlan_dp_swlm.h>
 #endif
 #ifdef WIFI_MONITOR_SUPPORT
 #include <dp_mon.h>
@@ -4758,7 +4758,7 @@ void dp_tx_comp_process_tx_status(struct dp_soc *soc,
 	dp_tx_update_peer_delay_stats(txrx_peer, tx_desc, ts->tid, ring_id);
 	dp_tx_update_peer_sawf_stats(soc, vdev, txrx_peer, tx_desc,
 				     ts, ts->tid);
-	dp_tx_send_pktlog(soc, vdev->pdev, nbuf, dp_status);
+	dp_tx_send_pktlog(soc, vdev->pdev, tx_desc, nbuf, dp_status);
 
 #ifdef QCA_SUPPORT_RDK_STATS
 	if (soc->peerstats_enabled)

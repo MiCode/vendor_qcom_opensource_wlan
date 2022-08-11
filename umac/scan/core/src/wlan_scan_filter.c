@@ -693,19 +693,22 @@ static bool scm_check_dot11mode(struct scan_cache_entry *db_entry,
 static bool util_mlo_filter_match(struct scan_filter *filter,
 				  struct scan_cache_entry *db_entry)
 {
-	uint8_t i;
+	uint8_t i, band_bitmap, assoc_band_bitmap;
 	enum reg_wifi_band band;
 	struct partner_link_info *partner_link;
 
 	if (!db_entry->ie_list.multi_link)
 		return true;
-
 	if (!filter->band_bitmap)
 		return true;
 
+	/* Apply assoc band filter only for assoc link */
+	band_bitmap = filter->band_bitmap & 0xf;
+	assoc_band_bitmap = (filter->band_bitmap & 0xf0) >> 4;
 	band = wlan_reg_freq_to_band(db_entry->channel.chan_freq);
-	if (!(filter->band_bitmap & BIT(band))) {
-		scm_debug("bss freq %d not match band bitmap: %d",
+	if ((assoc_band_bitmap && !(band_bitmap & BIT(band) & assoc_band_bitmap)) ||
+	    (!assoc_band_bitmap && !(band_bitmap & BIT(band)))) {
+		scm_debug("bss freq %d not match band bitmap: 0x%x",
 			  db_entry->channel.chan_freq,
 			  filter->band_bitmap);
 		return false;
@@ -713,8 +716,8 @@ static bool util_mlo_filter_match(struct scan_filter *filter,
 	for (i = 0; i < db_entry->ml_info.num_links; i++) {
 		partner_link = &db_entry->ml_info.link_info[i];
 		band = wlan_reg_freq_to_band(partner_link->freq);
-		if (filter->band_bitmap & BIT(band)) {
-			scm_debug("partner freq %d  match band bitmap: %d",
+		if (band_bitmap & BIT(band)) {
+			scm_debug("partner freq %d  match band bitmap: 0x%x",
 				  partner_link->freq,
 				  filter->band_bitmap);
 			partner_link->is_valid_link = true;

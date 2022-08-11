@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2017-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -21,6 +21,8 @@
 #include <ce_main.h>
 #include "qdf_module.h"
 #include "qdf_net_if.h"
+#include <pld_common.h>
+
 /* mapping NAPI budget 0 to internal budget 0
  * NAPI budget 1 to internal budget [1,scaler -1]
  * NAPI budget 2 to internal budget [scaler, 2 * scaler - 1], etc
@@ -1129,3 +1131,116 @@ void hif_deregister_exec_group(struct hif_opaque_softc *hif_ctx,
 	}
 }
 qdf_export_symbol(hif_deregister_exec_group);
+
+#ifdef DP_UMAC_HW_RESET_SUPPORT
+/**
+ * hif_umac_reset_handler_tasklet() - Tasklet for UMAC HW reset interrupt
+ * @data: UMAC HW reset HIF context
+ *
+ * return: void
+ */
+static void hif_umac_reset_handler_tasklet(unsigned long data)
+{
+	struct hif_umac_reset_ctx *umac_reset_ctx =
+		(struct hif_umac_reset_ctx *)data;
+
+	/* call the callback handler */
+	umac_reset_ctx->cb_handler(umac_reset_ctx->cb_ctx);
+}
+
+/**
+ * hif_umac_reset_irq_handler() - Interrupt service routine of UMAC HW reset
+ * @irq: irq coming from kernel
+ * @ctx: UMAC HW reset HIF context
+ *
+ * return: IRQ_HANDLED if success, else IRQ_NONE
+ */
+static irqreturn_t hif_umac_reset_irq_handler(int irq, void *ctx)
+{
+	struct hif_umac_reset_ctx *umac_reset_ctx = ctx;
+
+	/* Schedule the tasklet and exit */
+	tasklet_hi_schedule(&umac_reset_ctx->intr_tq);
+
+	return IRQ_HANDLED;
+}
+
+QDF_STATUS hif_register_umac_reset_handler(struct hif_opaque_softc *hif_scn,
+					   int (*handler)(void *cb_ctx),
+					   void *cb_ctx, int irq)
+{
+	struct hif_softc *hif_sc = HIF_GET_SOFTC(hif_scn);
+	struct hif_umac_reset_ctx *umac_reset_ctx;
+	int ret;
+
+	if (!hif_sc) {
+		hif_err("scn is null");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	umac_reset_ctx = &hif_sc->umac_reset_ctx;
+
+	umac_reset_ctx->cb_handler = handler;
+	umac_reset_ctx->cb_ctx = cb_ctx;
+	umac_reset_ctx->os_irq = irq;
+
+	/* Init the tasklet */
+	tasklet_init(&umac_reset_ctx->intr_tq,
+		     hif_umac_reset_handler_tasklet,
+		     (unsigned long)umac_reset_ctx);
+
+	/* Register the interrupt handler */
+	ret  = pfrm_request_irq(hif_sc->qdf_dev->dev, irq,
+				hif_umac_reset_irq_handler,
+				IRQF_SHARED | IRQF_NO_SUSPEND,
+				"umac_hw_reset_irq",
+				umac_reset_ctx);
+	if (ret) {
+		hif_err("request_irq failed: %d", ret);
+		return qdf_status_from_os_return(ret);
+	}
+
+	umac_reset_ctx->irq_configured = true;
+
+	return QDF_STATUS_SUCCESS;
+}
+
+qdf_export_symbol(hif_register_umac_reset_handler);
+
+QDF_STATUS hif_unregister_umac_reset_handler(struct hif_opaque_softc *hif_scn)
+{
+	struct hif_softc *hif_sc = HIF_GET_SOFTC(hif_scn);
+	struct hif_umac_reset_ctx *umac_reset_ctx;
+	int ret;
+
+	if (!hif_sc) {
+		hif_err("scn is null");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	umac_reset_ctx = &hif_sc->umac_reset_ctx;
+	if (!umac_reset_ctx->irq_configured) {
+		hif_err("unregister called without a prior IRQ configuration");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	ret  = pfrm_free_irq(hif_sc->qdf_dev->dev,
+			     umac_reset_ctx->os_irq,
+			     umac_reset_ctx);
+	if (ret) {
+		hif_err("free_irq failed: %d", ret);
+		return qdf_status_from_os_return(ret);
+	}
+	umac_reset_ctx->irq_configured = false;
+
+	tasklet_disable(&umac_reset_ctx->intr_tq);
+	tasklet_kill(&umac_reset_ctx->intr_tq);
+
+	umac_reset_ctx->cb_handler = NULL;
+	umac_reset_ctx->cb_ctx = NULL;
+
+	return QDF_STATUS_SUCCESS;
+}
+
+qdf_export_symbol(hif_unregister_umac_reset_handler);
+#endif

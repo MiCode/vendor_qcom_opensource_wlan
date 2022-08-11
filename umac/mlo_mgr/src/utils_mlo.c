@@ -727,6 +727,11 @@ uint8_t *util_get_successorfrag(uint8_t *currie, uint8_t *frame, qdf_size_t len)
 
 	nextie = currie + currie[TAG_LEN_POS] + MIN_IE_LEN;
 
+	/* Check whether there is sufficient space in the frame for the next IE
+	 */
+	if ((nextie + MIN_IE_LEN + nextie[TAG_LEN_POS]) > (frame + len))
+		return NULL;
+
 	if (nextie[ID_POS] != WLAN_ELEMID_FRAGMENT)
 		return NULL;
 
@@ -1356,6 +1361,13 @@ QDF_STATUS util_validate_reportingsta_ie(const uint8_t *reportingsta_ie,
 	    (reportingsta_ie_size < (IDEXT_POS + 1))) {
 		mlo_err_rl("Total length %zu of element for reporting STA is smaller than minimum required to access element ID extension %u",
 			   reportingsta_ie_size, IDEXT_POS + 1);
+		return QDF_STATUS_E_PROTO;
+	}
+
+	if ((reportingsta_ie[ID_POS] == WLAN_ELEMID_VENDOR) &&
+	    (reportingsta_ie_size < (PAYLOAD_START_POS + OUI_LEN))) {
+		mlo_err_rl("Total length %zu of element for reporting STA is smaller than minimum required to access vendor EID %u",
+			   reportingsta_ie_size, PAYLOAD_START_POS + OUI_LEN);
 		return QDF_STATUS_E_PROTO;
 	}
 

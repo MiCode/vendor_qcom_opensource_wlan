@@ -42,33 +42,6 @@ enum mgmt_rx_reo_shared_snapshot_id {
 };
 
 /*
- * struct mgmt_rx_reo_snapshot_params - Represents the simplified version of
- * Management Rx Frame snapshot for Host use. Note that this is different from
- * the structure shared between the Host and FW/HW
- * @valid: Whether this snapshot is valid
- * @mgmt_pkt_ctr: MGMT packet counter. This will be local to a particular
- * HW link
- * @global_timestamp: Global timestamp.This is taken from a clock which is
- * common across all the HW links
- */
-struct mgmt_rx_reo_snapshot_params {
-	bool valid;
-	uint16_t mgmt_pkt_ctr;
-	uint32_t global_timestamp;
-};
-
-/*
- * struct mgmt_rx_reo_snapshot_info - Information related to management Rx
- * reorder snapshot
- * @address: Snapshot address
- * @version: Snapshot version
- */
-struct mgmt_rx_reo_snapshot_info {
-	struct mgmt_rx_reo_shared_snapshot *address;
-	uint8_t version;
-};
-
-/*
  * struct mgmt_rx_reo_shared_snapshot - Represents the management rx-reorder
  * shared snapshots
  * @mgmt_rx_reo_snapshot_low: Lower 32 bits of the reo snapshot
@@ -91,6 +64,38 @@ struct mgmt_rx_reo_shared_snapshot {
 		uint32_t mgmt_pkt_ctr_redundant_ver_b:15,
 			 global_timestamp_high_ver_b:17;
 	};
+};
+
+#define MGMT_RX_REO_SNAPSHOT_B2B_READ_SWAR_RETRY_LIMIT     (11)
+#define MGMT_RX_REO_SNAPSHOT_READ_RETRY_LIMIT              (25)
+
+/*
+ * struct mgmt_rx_reo_snapshot_params - Represents the simplified version of
+ * Management Rx Frame snapshot for Host use. Note that this is different from
+ * the structure shared between the Host and FW/HW
+ * @valid: Whether this snapshot is valid
+ * @retry_count: snapshot read retry count
+ * @mgmt_pkt_ctr: MGMT packet counter. This will be local to a particular
+ * HW link
+ * @global_timestamp: Global timestamp.This is taken from a clock which is
+ * common across all the HW links
+ */
+struct mgmt_rx_reo_snapshot_params {
+	bool valid;
+	uint8_t retry_count;
+	uint16_t mgmt_pkt_ctr;
+	uint32_t global_timestamp;
+};
+
+/*
+ * struct mgmt_rx_reo_snapshot_info - Information related to management Rx
+ * reorder snapshot
+ * @address: Snapshot address
+ * @version: Snapshot version
+ */
+struct mgmt_rx_reo_snapshot_info {
+	struct mgmt_rx_reo_shared_snapshot *address;
+	uint8_t version;
 };
 
 /*

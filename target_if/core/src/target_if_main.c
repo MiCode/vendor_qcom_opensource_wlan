@@ -63,6 +63,9 @@
 #if defined(QCA_SUPPORT_SON) || defined(WLAN_FEATURE_SON)
 #include <target_if_son.h>
 #endif
+#if defined WLAN_FEATURE_11AX
+#include <target_if_spatial_reuse.h>
+#endif
 #ifdef WLAN_OFFCHAN_TXRX_ENABLE
 #include <target_if_offchan_txrx_api.h>
 #endif
@@ -295,6 +298,21 @@ static void target_if_son_tx_ops_register(
 }
 #endif
 
+#if defined WLAN_FEATURE_11AX
+static void target_if_spatial_reuse_tx_ops_register(
+			struct wlan_lmac_if_tx_ops *tx_ops)
+{
+	target_if_spatial_reuse_register_tx_ops(tx_ops);
+}
+
+#else
+static void target_if_spatial_reuse_tx_ops_register(
+			struct wlan_lmac_if_tx_ops *tx_ops)
+{
+}
+
+#endif
+
 #ifdef FEATURE_WLAN_TDLS
 static void target_if_tdls_tx_ops_register(struct wlan_lmac_if_tx_ops *tx_ops)
 {
@@ -393,6 +411,20 @@ target_if_coex_tx_ops_register(struct wlan_lmac_if_tx_ops *tx_ops)
 #else
 static inline QDF_STATUS
 target_if_coex_tx_ops_register(struct wlan_lmac_if_tx_ops *tx_ops)
+{
+	return QDF_STATUS_SUCCESS;
+}
+#endif
+
+#ifdef WLAN_FEATURE_DBAM_CONFIG
+static QDF_STATUS
+target_if_dbam_tx_ops_register(struct wlan_lmac_if_tx_ops *tx_ops)
+{
+	return target_if_dbam_register_tx_ops(tx_ops);
+}
+#else
+static inline QDF_STATUS
+target_if_dbam_tx_ops_register(struct wlan_lmac_if_tx_ops *tx_ops)
 {
 	return QDF_STATUS_SUCCESS;
 }
@@ -567,6 +599,8 @@ QDF_STATUS target_if_register_umac_tx_ops(struct wlan_lmac_if_tx_ops *tx_ops)
 
 	target_if_son_tx_ops_register(tx_ops);
 
+	target_if_spatial_reuse_tx_ops_register(tx_ops);
+
 	target_if_tdls_tx_ops_register(tx_ops);
 
 	target_if_fd_tx_ops_register(tx_ops);
@@ -598,6 +632,8 @@ QDF_STATUS target_if_register_umac_tx_ops(struct wlan_lmac_if_tx_ops *tx_ops)
 	target_if_ipa_tx_ops_register(tx_ops);
 
 	target_if_twt_tx_ops_register(tx_ops);
+
+	target_if_dbam_tx_ops_register(tx_ops);
 
 	/* Converged UMAC components to register their TX-ops here */
 	return QDF_STATUS_SUCCESS;

@@ -27,6 +27,13 @@
 #if !defined(__I_QDF_TRACE_H)
 #define __I_QDF_TRACE_H
 
+/* older kernels have a bug in kallsyms, so ensure module.h is included */
+#include <linux/module.h>
+#include <linux/kallsyms.h>
+#ifdef CONFIG_QCA_MINIDUMP
+#include <linux/minidump_tlv.h>
+#endif
+
 /*
  * The CONFIG_QCOM_MINIDUMP feature can only be used
  * beginning with kernel version msm-4.19 since that is
@@ -34,15 +41,12 @@
  */
 #if IS_ENABLED(CONFIG_QCOM_MINIDUMP) && \
 	(LINUX_VERSION_CODE >= KERNEL_VERSION(4, 19, 0))
+#if IS_ENABLED(CONFIG_QCOM_VA_MINIDUMP)
+#define WLAN_QCOM_VA_MINIDUMP
+#else
 #define WLAN_QCOM_MINIDUMP
 #endif
-/* older kernels have a bug in kallsyms, so ensure module.h is included */
-#include <linux/module.h>
-#include <linux/kallsyms.h>
-#ifdef CONFIG_QCA_MINIDUMP
-#include <linux/minidump_tlv.h>
-#endif
-#ifdef WLAN_QCOM_MINIDUMP
+
 #include <soc/qcom/minidump.h>
 #endif
 
@@ -470,6 +474,16 @@ static inline void __qdf_bug(void)
 
 #ifdef CONFIG_QCA_MINIDUMP
 static inline void
+__qdf_minidump_init(void)
+{
+}
+
+static inline void
+__qdf_minidump_deinit(void)
+{
+}
+
+static inline void
 __qdf_minidump_log(void *start_addr, size_t size, const char *name)
 {
 	if (minidump_fill_segments((const uintptr_t)start_addr, size,
@@ -485,6 +499,7 @@ __qdf_minidump_remove(void *addr, size_t size, const char *name)
 {
 	minidump_remove_segments((const uintptr_t)addr);
 }
+
 #elif defined(WLAN_QCOM_MINIDUMP)
 #define MAX_WLAN_MINIDUMP_ENTRIES 4
 
@@ -566,12 +581,44 @@ __qdf_minidump_remove(void *start_addr, const size_t size,
 	msm_minidump_remove_region(&md_entry);
 	minidump_table[index] = NULL;
 }
+
+static inline void
+__qdf_minidump_init(void)
+{
+}
+
+static inline void
+__qdf_minidump_deinit(void)
+{
+}
+
+#elif defined(WLAN_QCOM_VA_MINIDUMP)
+void __qdf_minidump_init(void);
+
+void __qdf_minidump_deinit(void);
+
+void __qdf_minidump_log(void *start_addr, size_t size, const char *name);
+
+void __qdf_minidump_remove(void *addr, size_t size, const char *name);
 #else
-static inline void
-__qdf_minidump_log(void *start_addr,
-		   const size_t size, const char *name) {}
-static inline void
-__qdf_minidump_remove(void *start_addr,
-		      const size_t size, const char *name) {}
+static inline
+void __qdf_minidump_init(void)
+{
+}
+
+static inline
+void __qdf_minidump_deinit(void)
+{
+}
+
+static inline
+void __qdf_minidump_log(void *start_addr, size_t size, const char *name)
+{
+}
+
+static inline
+void __qdf_minidump_remove(void *addr, size_t size, const char *name)
+{
+}
 #endif
 #endif /* __I_QDF_TRACE_H */

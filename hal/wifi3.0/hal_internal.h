@@ -97,6 +97,26 @@ extern bool is_hal_verbose_debug_enabled;
  */
 #define HAL_GET_NUM_DWORDS(num)	((num) >> 2)
 
+struct hal_hw_cc_config {
+	uint32_t lut_base_addr_31_0;
+	uint32_t cc_global_en:1,
+		 page_4k_align:1,
+		 cookie_offset_msb:5,
+		 cookie_page_msb:5,
+		 lut_base_addr_39_32:8,
+		 wbm2sw6_cc_en:1,
+		 wbm2sw5_cc_en:1,
+		 wbm2sw4_cc_en:1,
+		 wbm2sw3_cc_en:1,
+		 wbm2sw2_cc_en:1,
+		 wbm2sw1_cc_en:1,
+		 wbm2sw0_cc_en:1,
+		 wbm2fw_cc_en:1,
+		 error_path_cookie_conv_en:1,
+		 release_path_cookie_conv_en:1,
+		 reserved:2;
+};
+
 /*
  * dp_hal_soc - opaque handle for DP HAL soc
  */
@@ -260,6 +280,9 @@ enum hal_srng_ring_id {
 #ifdef IPA_OFFLOAD
 	HAL_SRNG_WMAC1_SW2RXDMA0_BUF1,
 	HAL_SRNG_WMAC1_SW2RXDMA0_BUF2,
+#ifdef IPA_WDI3_VLAN_SUPPORT
+	HAL_SRNG_WMAC1_SW2RXDMA0_BUF3,
+#endif
 	HAL_SRNG_WMAC1_SW2RXDMA1_BUF,
 #else
 	HAL_SRNG_WMAC1_SW2RXDMA1_BUF,
@@ -502,6 +525,41 @@ struct hal_offload_info {
 	uint32_t flow_id;
 };
 
+#ifdef WLAN_DP_SRNG_USAGE_WM_TRACKING
+/**
+ * enum hal_srng_high_wm_bin - BIN for SRNG high watermark
+ * @HAL_SRNG_HIGH_WM_BIN_BELOW_50_PERCENT: <50% SRNG entries used
+ * @HAL_SRNG_HIGH_WM_BIN_50_to_60: 50-60% SRNG entries used
+ * @HAL_SRNG_HIGH_WM_BIN_60_to_70: 60-70% SRNG entries used
+ * @HAL_SRNG_HIGH_WM_BIN_70_to_80: 70-80% SRNG entries used
+ * @HAL_SRNG_HIGH_WM_BIN_80_to_90: 80-90% SRNG entries used
+ * @HAL_SRNG_HIGH_WM_BIN_90_to_100: 90-100% SRNG entries used
+ */
+enum hal_srng_high_wm_bin {
+	HAL_SRNG_HIGH_WM_BIN_BELOW_50_PERCENT,
+	HAL_SRNG_HIGH_WM_BIN_50_to_60,
+	HAL_SRNG_HIGH_WM_BIN_60_to_70,
+	HAL_SRNG_HIGH_WM_BIN_70_to_80,
+	HAL_SRNG_HIGH_WM_BIN_80_to_90,
+	HAL_SRNG_HIGH_WM_BIN_90_to_100,
+	HAL_SRNG_HIGH_WM_BIN_MAX,
+};
+
+/**
+ * struct hal_srng_high_wm_info - SRNG usage high watermark info
+ * @val: highest number of entries used in SRNG
+ * @timestamp: Timestamp when the max num entries were in used for a SRNG
+ * @bin_thresh: threshold for each bins
+ * @bins: Bins for srng usage
+ */
+struct hal_srng_high_wm_info {
+	uint32_t val;
+	uint64_t timestamp;
+	uint32_t bin_thresh[HAL_SRNG_HIGH_WM_BIN_MAX];
+	uint32_t bins[HAL_SRNG_HIGH_WM_BIN_MAX];
+};
+#endif
+
 /* Common SRNG ring structure for source and destination rings */
 struct hal_srng {
 	/* Unique SRNG ring ID */
@@ -650,6 +708,9 @@ struct hal_srng {
 	/* srng specific delayed write stats */
 	struct hal_reg_write_srng_stats wstats;
 #endif
+#ifdef WLAN_DP_SRNG_USAGE_WM_TRACKING
+	struct hal_srng_high_wm_info high_wm;
+#endif
 };
 
 /* HW SRNG configuration table */
@@ -722,6 +783,26 @@ enum hal_reo_cmd_type {
 	CMD_UNBLOCK_CACHE	= 3,
 	CMD_FLUSH_TIMEOUT_LIST	= 4,
 	CMD_UPDATE_RX_REO_QUEUE = 5
+};
+
+/**
+ * enum hal_tx_mcast_mlo_reinject_notify
+ * @HAL_TX_MCAST_MLO_REINJECT_FW_NOTIFY: MLO Mcast reinject routed to FW
+ * @HAL_TX_MCAST_MLO_REINJECT_TQM_NOTIFY: MLO Mcast reinject routed to TQM
+ */
+enum hal_tx_mcast_mlo_reinject_notify {
+	HAL_TX_MCAST_MLO_REINJECT_FW_NOTIFY = 0,
+	HAL_TX_MCAST_MLO_REINJECT_TQM_NOTIFY,
+};
+
+/**
+ * enum hal_tx_vdev_mismatch_notify
+ * @HAL_TX_VDEV_MISMATCH_TQM_NOTIFY: vdev mismatch exception routed to TQM
+ * @HAL_TX_VDEV_MISMATCH_FW_NOTIFY: vdev mismatch exception routed to FW
+ */
+enum hal_tx_vdev_mismatch_notify {
+	HAL_TX_VDEV_MISMATCH_TQM_NOTIFY = 0,
+	HAL_TX_VDEV_MISMATCH_FW_NOTIFY,
 };
 
 struct hal_rx_pkt_capture_flags {
@@ -802,6 +883,9 @@ struct hal_hw_txrx_ops {
 	void (*hal_tx_dump_ppe_vp_entry)(hal_soc_handle_t hal_soc_hdl);
 	void (*hal_tx_enable_pri2tid_map)(hal_soc_handle_t hal_soc_hdl,
 					  bool value, uint8_t ppe_vp_idx);
+	void (*hal_tx_config_rbm_mapping_be)(hal_soc_handle_t hal_soc_hdl,
+					     hal_ring_handle_t hal_ring_hdl,
+					     uint8_t rbm_id);
 
 	/* rx */
 	uint32_t (*hal_rx_msdu_start_nss_get)(uint8_t *);
@@ -1055,6 +1139,9 @@ struct hal_hw_txrx_ops {
 	uint8_t (*hal_get_tlv_hdr_size)(void);
 	uint8_t (*hal_get_idle_link_bm_id)(uint8_t chip_id);
 
+	bool (*hal_txmon_is_mon_buf_addr_tlv)(void *tx_tlv_hdr);
+	void (*hal_txmon_populate_packet_info)(void *tx_tlv_hdr,
+					       void *pkt_info);
 	/* TX MONITOR */
 #ifdef QCA_MONITOR_2_0_SUPPORT
 	uint32_t (*hal_txmon_status_parse_tlv)(void *data_ppdu_info,
@@ -1065,8 +1152,6 @@ struct hal_hw_txrx_ops {
 					       qdf_frag_t status_frag);
 	uint32_t (*hal_txmon_status_get_num_users)(void *tx_tlv_hdr,
 						   uint8_t *num_users);
-	QDF_STATUS (*hal_txmon_status_free_buffer)(qdf_frag_t status_frag,
-						   uint32_t end_offset);
 #endif /* QCA_MONITOR_2_0_SUPPORT */
 	void (*hal_reo_shared_qaddr_setup)(hal_soc_handle_t hal_soc_hdl);
 	void (*hal_reo_shared_qaddr_init)(hal_soc_handle_t hal_soc_hdl);
@@ -1079,6 +1164,15 @@ struct hal_hw_txrx_ops {
 	uint8_t (*hal_get_first_wow_wakeup_packet)(uint8_t *buf);
 #endif
 	void (*hal_reo_shared_qaddr_cache_clear)(hal_soc_handle_t hal_soc_hdl);
+	uint32_t (*hal_rx_tlv_l3_type_get)(uint8_t *buf);
+	void (*hal_tx_vdev_mismatch_routing_set)(hal_soc_handle_t hal_soc_hdl,
+			enum hal_tx_vdev_mismatch_notify config);
+	void (*hal_tx_mcast_mlo_reinject_routing_set)(
+			hal_soc_handle_t hal_soc_hdl,
+			enum hal_tx_mcast_mlo_reinject_notify config);
+	void (*hal_cookie_conversion_reg_cfg_be)(hal_soc_handle_t hal_soc_hdl,
+						 struct hal_hw_cc_config
+						 *cc_cfg);
 };
 
 /**

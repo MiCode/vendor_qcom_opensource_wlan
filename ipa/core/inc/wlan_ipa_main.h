@@ -160,6 +160,13 @@ bool ipa_config_is_enabled(void);
 bool ipa_config_is_uc_enabled(void);
 
 /**
+ * ipa_config_is_vlan_enabled() - Is IPA vlan config enabled?
+ *
+ * Return: true if IPA clan support is enabled in IPA config
+ */
+bool ipa_config_is_vlan_enabled(void);
+
+/**
  * ipa_obj_setup() - IPA obj initialization and setup
  * @ipa_ctx: IPA obj context
  *
@@ -567,6 +574,13 @@ void ipa_init_deinit_lock(void);
  * Return: None
  */
 void ipa_init_deinit_unlock(void);
+
+/**
+ * ipa_is_wds_enabled() - IPA wds status
+ *
+ * Return: true if WDS is enabled otherwise false
+ */
+bool ipa_is_wds_enabled(void);
 
 #else /* Not IPA_OFFLOAD */
 typedef QDF_STATUS (*wlan_ipa_softap_xmit)(qdf_nbuf_t nbuf, qdf_netdev_t dev);

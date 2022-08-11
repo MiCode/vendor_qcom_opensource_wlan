@@ -247,6 +247,9 @@
 /* vendor handoff control feature support */
 #define WLAN_SOC_VENDOR_HANDOFF_CONTROL           0x00000020
 
+/* Delete all vdev peer support */
+#define WLAN_VDEV_DELETE_ALL_PEER_SUPPORT         0x00000040
+
 /* PSOC op flags */
 
 	/* Invalid VHT cap */

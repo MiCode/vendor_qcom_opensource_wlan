@@ -386,6 +386,44 @@ dp_rx_wds_srcport_learn(struct dp_soc *soc,
 				    msdu_end_info.sa_idx, msdu_end_info.sa_sw_peer_id);
 }
 
+#ifdef IPA_WDS_EASYMESH_FEATURE
+/**
+ * dp_rx_ipa_wds_srcport_learn() - Add or update the STA PEER which
+ *				is behind the WDS repeater.
+ *
+ * @soc: core txrx main context
+ * @ta_peer: WDS repeater peer
+ * @nbuf: rx pkt
+ * @msdu_end_info: msdu end info
+ * @ad4_valid: address4 valid bit
+ * @chfrag_start: Msdu start bit
+ *
+ * Return: void
+ */
+static inline void
+dp_rx_ipa_wds_srcport_learn(struct dp_soc *soc,
+			    struct dp_peer *ta_peer, qdf_nbuf_t nbuf,
+			    struct hal_rx_msdu_metadata msdu_end_info,
+			    bool ad4_valid, bool chfrag_start)
+{
+	uint8_t sa_is_valid = qdf_nbuf_is_sa_valid(nbuf);
+	uint8_t is_chfrag_start = (uint8_t)chfrag_start;
+	uint8_t is_ad4_valid = (uint8_t)ad4_valid;
+	struct dp_txrx_peer *peer = (struct dp_txrx_peer *)ta_peer;
+
+	if (qdf_unlikely(!ta_peer))
+		return;
+
+	/*
+	 * Get the AST entry from HW SA index and mark it as active
+	 */
+	dp_rx_wds_add_or_update_ast(soc, peer, nbuf, is_ad4_valid,
+				    sa_is_valid, is_chfrag_start,
+				    msdu_end_info.sa_idx,
+				    msdu_end_info.sa_sw_peer_id);
+}
+#endif
+
 /*
  * dp_rx_ast_set_active() - set the active flag of the astentry
  *				    corresponding to a hw index.

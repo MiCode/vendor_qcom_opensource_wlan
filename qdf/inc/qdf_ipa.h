@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2017-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -255,6 +256,13 @@ typedef __qdf_ipa_ioc_rx_intf_prop_t qdf_ipa_ioc_rx_intf_prop_t;
 typedef __qdf_ipa_wlan_hdr_attrib_val_t qdf_ipa_wlan_hdr_attrib_val_t;
 typedef int (*qdf_ipa_msg_pull_fn)(void *buff, u32 len, u32 type);
 typedef void (*qdf_ipa_ready_cb)(void *user_data);
+
+#ifdef IPA_WDS_EASYMESH_FEATURE
+/**
+ * __qdf_ipa_ast_info_type_t - AST entry create/update information
+ */
+typedef __qdf_ipa_ast_info_type_t qdf_ipa_ast_info_type_t;
+#endif
 
 #define QDF_IPA_SET_META_MSG_TYPE(meta, msg_type) \
 	__QDF_IPA_SET_META_MSG_TYPE(meta, msg_type)

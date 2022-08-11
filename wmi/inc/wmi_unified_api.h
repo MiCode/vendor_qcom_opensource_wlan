@@ -123,6 +123,10 @@
 #include "wmi_unified_11be_setup_api.h"
 #endif
 
+#ifdef WLAN_FEATURE_DBAM_CONFIG
+#include "wlan_coex_public_structs.h"
+#endif
+
 typedef qdf_nbuf_t wmi_buf_t;
 #define wmi_buf_data(_buf) qdf_nbuf_data(_buf)
 
@@ -1993,6 +1997,32 @@ wmi_unified_send_coex_ver_cfg_cmd(wmi_unified_t wmi_handle,
 QDF_STATUS
 wmi_unified_send_coex_config_cmd(wmi_unified_t wmi_handle,
 				 struct coex_config_params *param);
+#ifdef WLAN_FEATURE_DBAM_CONFIG
+/**
+ * wmi_unified_send_dbam_config_cmd() - send dbam config command
+ * @wmi_handle: wmi handle
+ * @mode: dbam config mode param
+ *
+ * Send WMI_COEX_DBAM_CMD param to fw.
+ *
+ * Return: QDF_STATUS_SUCCESS on success, QDF_STATUS_E_** on error
+ */
+QDF_STATUS
+wmi_unified_send_dbam_config_cmd(wmi_unified_t wmi_handle,
+				 struct coex_dbam_config_params *param);
+
+/**
+ * wmi_extract_dbam_config_response() - extract dbam config resp sent by FW
+ * @wmi_handle: wmi handle
+ * @evt_buf: pointer to event buffer
+ * @resp: struct containing dbam config response sent by FW
+ *
+ * Return: QDF_STATUS_SUCCESS on success, QDF_STATUS_E_** on error
+ */
+QDF_STATUS
+wmi_extract_dbam_config_response(wmi_unified_t wmi_handle, void *evt_buf,
+				 struct coex_dbam_config_resp *resp);
+#endif
 
 /**
  *  wmi_unified_pdev_fips_cmd_send() - WMI pdev fips cmd function
@@ -4604,6 +4634,19 @@ QDF_STATUS wmi_unified_send_cp_stats_cmd(wmi_unified_t wmi_handle,
 
 
 /**
+ * wmi_unified_send_halphy_stats_cmd() - Send halphy stats command
+ * @wmi_handle: wmi handle
+ * @buf_ptr: buf_ptr received from wifistats
+ * @buf_len: length of buffer received from wifistats
+ *
+ * This function sends halphy stats cmd to get halphy stats.
+ *
+ * Return QDF_STATUS_SUCCESS on success and QDF_STATUS_E_FAILURE for failure
+ */
+QDF_STATUS wmi_unified_send_halphy_stats_cmd(wmi_unified_t wmi_handle,
+					     void *buf_ptr, uint32_t buf_len);
+
+/**
  * wmi_unified_extract_cp_stats_more_pending() - extract more flag
  * @wmi_handle: wmi handle
  * @evt_buf: event buffer
@@ -4616,6 +4659,36 @@ QDF_STATUS wmi_unified_send_cp_stats_cmd(wmi_unified_t wmi_handle,
 QDF_STATUS
 wmi_unified_extract_cp_stats_more_pending(wmi_unified_t wmi_handle,
 					  void *evt_buf, uint32_t *more_flag);
+
+/**
+ * wmi_unified_extract_halphy_stats_end_of_event() - extract end_of_event flag
+ * @wmi_handle: wmi handle
+ * @evt_buf: event buffer
+ * @end_of_event_flag: end_of_event flag
+ *
+ * This function extracts the end_of_event_flag from fixed param
+ *
+ * Return: QDF_STATUS_SUCCESS on success and QDF_STATUS_E_FAILURE for failure
+ */
+QDF_STATUS
+wmi_unified_extract_halphy_stats_end_of_event(wmi_unified_t wmi_handle,
+					      void *evt_buf,
+					      uint32_t *end_of_event_flag);
+
+/**
+ * wmi_unified_extract_halphy_stats_event_count() - extract event_count flag
+ * @wmi_handle: wmi handle
+ * @evt_buf: event buffer
+ * @event_count_flag: event count flag
+ *
+ * This function extracts the event_count_flag from fixed param
+ *
+ * Return: QDF_STATUS_SUCCESS on success and QDF_STATUS_E_FAILURE for failure
+ */
+QDF_STATUS
+wmi_unified_extract_halphy_stats_event_count(wmi_unified_t wmi_handle,
+					     void *evt_buf,
+					     uint32_t *event_count_flag);
 
 /**
  * wmi_unified_send_vdev_tsf_tstamp_action_cmd() - send vdev tsf action command

@@ -182,15 +182,36 @@ struct hif_latency_detect {
  * for defined here
  */
 #if defined(HIF_CONFIG_SLUB_DEBUG_ON) || defined(HIF_CE_DEBUG_DATA_BUF)
+
+#define HIF_CE_MAX_LATEST_HIST 2
+
+struct latest_evt_history {
+	uint64_t irq_entry_ts;
+	uint64_t bh_entry_ts;
+	uint64_t bh_resched_ts;
+	uint64_t bh_exit_ts;
+	uint64_t bh_work_ts;
+	int cpu_id;
+	uint32_t ring_hp;
+	uint32_t ring_tp;
+};
+
 struct ce_desc_hist {
 	qdf_atomic_t history_index[CE_COUNT_MAX];
+	uint8_t ce_id_hist_map[CE_COUNT_MAX];
 	bool enable[CE_COUNT_MAX];
 	bool data_enable[CE_COUNT_MAX];
 	qdf_mutex_t ce_dbg_datamem_lock[CE_COUNT_MAX];
 	uint32_t hist_index;
 	uint32_t hist_id;
 	void *hist_ev[CE_COUNT_MAX];
+	struct latest_evt_history latest_evt[HIF_CE_MAX_LATEST_HIST];
 };
+
+void hif_record_latest_evt(struct ce_desc_hist *ce_hist,
+			   uint8_t type,
+			   int ce_id, uint64_t time,
+			   uint32_t hp, uint32_t tp);
 #endif /*defined(HIF_CONFIG_SLUB_DEBUG_ON) || defined(HIF_CE_DEBUG_DATA_BUF)*/
 
 /**
@@ -202,6 +223,24 @@ struct hif_cfg {
 	uint16_t ce_status_ring_timer_threshold;
 	uint8_t ce_status_ring_batch_count_threshold;
 };
+
+#ifdef DP_UMAC_HW_RESET_SUPPORT
+/**
+ * struct hif_umac_reset_ctx - UMAC HW reset context at HIF layer
+ * @intr_tq: Tasklet structure
+ * @cb_handler: Callback handler
+ * @cb_ctx: Argument to be passed to @cb_handler
+ * @os_irq: Interrupt number for this IRQ
+ * @irq_configured: Whether the IRQ has been configured
+ */
+struct hif_umac_reset_ctx {
+	struct tasklet_struct intr_tq;
+	int (*cb_handler)(void *cb_ctx);
+	void *cb_ctx;
+	uint32_t os_irq;
+	bool irq_configured;
+};
+#endif
 
 struct hif_softc {
 	struct hif_opaque_softc osc;
@@ -322,6 +361,9 @@ struct hif_softc {
 	uint64_t cmem_start;
 	/* CMEM size target reserved */
 	uint64_t cmem_size;
+#ifdef DP_UMAC_HW_RESET_SUPPORT
+	struct hif_umac_reset_ctx umac_reset_ctx;
+#endif
 };
 
 static inline

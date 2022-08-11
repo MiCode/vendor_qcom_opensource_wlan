@@ -394,6 +394,7 @@ QDF_STATUS mlo_peer_allocate_primary_umac(
 		if (!primary_umac_set)
 			ml_peer->primary_umac_psoc_id = first_link_id;
 
+		mlo_peer_assign_primary_umac(ml_peer, peer_entry);
 		mlo_info("MLD ID %d ML Peer " QDF_MAC_ADDR_FMT " primary umac soc %d ",
 			 ml_dev->mld_id,
 			 QDF_MAC_ADDR_REF(ml_peer->peer_mld_addr.bytes),

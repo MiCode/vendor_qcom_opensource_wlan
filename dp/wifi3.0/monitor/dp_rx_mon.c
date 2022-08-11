@@ -83,10 +83,11 @@ dp_rx_mon_populate_cfr_ppdu_info(struct dp_pdev *pdev,
 				 struct cdp_rx_indication_ppdu *cdp_rx_ppdu)
 {
 	struct dp_peer *peer;
-	struct dp_ast_entry *ast_entry;
 	struct dp_soc *soc = pdev->soc;
-	uint32_t ast_index;
 	int chain;
+	uint16_t sw_peer_id;
+	struct mon_rx_user_status *rx_user_status;
+	uint32_t num_users = ppdu_info->com_info.num_users;
 
 	cdp_rx_ppdu->ppdu_id = ppdu_info->com_info.ppdu_id;
 	cdp_rx_ppdu->timestamp = ppdu_info->rx_status.tsft;
@@ -116,23 +117,11 @@ dp_rx_mon_populate_cfr_ppdu_info(struct dp_pdev *pdev,
 				      QDF_MON_STATUS_DCM_SHIFT) & 0x1;
 	}
 
+	qdf_assert_always(num_users <= CDP_MU_MAX_USERS);
 	dp_rx_mon_handle_cfr_mu_info(pdev, ppdu_info, cdp_rx_ppdu);
-	ast_index = ppdu_info->rx_status.ast_index;
-	if (ast_index >= wlan_cfg_get_max_ast_idx(soc->wlan_cfg_ctx)) {
-		cdp_rx_ppdu->peer_id = HTT_INVALID_PEER;
-		cdp_rx_ppdu->num_users = 0;
-		return;
-	}
-
-	ast_entry = soc->ast_table[ast_index];
-	if (!ast_entry || ast_entry->peer_id == HTT_INVALID_PEER) {
-		cdp_rx_ppdu->peer_id = HTT_INVALID_PEER;
-		cdp_rx_ppdu->num_users = 0;
-		return;
-	}
-
-	peer = dp_peer_get_ref_by_id(soc, ast_entry->peer_id,
-				     DP_MOD_ID_RX_PPDU_STATS);
+	rx_user_status = &ppdu_info->rx_user_status[num_users - 1];
+	sw_peer_id = rx_user_status->sw_peer_id;
+	peer = dp_peer_get_ref_by_id(soc, sw_peer_id, DP_MOD_ID_RX_PPDU_STATS);
 	if (!peer) {
 		cdp_rx_ppdu->peer_id = HTT_INVALID_PEER;
 		cdp_rx_ppdu->num_users = 0;
@@ -141,7 +130,7 @@ dp_rx_mon_populate_cfr_ppdu_info(struct dp_pdev *pdev,
 
 	cdp_rx_ppdu->peer_id = peer->peer_id;
 	cdp_rx_ppdu->vdev_id = peer->vdev->vdev_id;
-	cdp_rx_ppdu->num_users = ppdu_info->com_info.num_users;
+	cdp_rx_ppdu->num_users = num_users;
 }
 
 bool
@@ -832,13 +821,8 @@ dp_ppdu_desc_user_rx_time_update(struct dp_pdev *pdev,
 {
 	uint32_t nss_ru_width_sum = 0;
 	struct dp_mon_peer *mon_peer = NULL;
-	uint16_t rx_time_us;
 
 	if (!pdev || !ppdu_desc || !user || !peer)
-		return;
-
-	mon_peer = peer->monitor_peer;
-	if (qdf_unlikely(!mon_peer))
 		return;
 
 	nss_ru_width_sum = ppdu_desc->usr_nss_sum * ppdu_desc->usr_ru_tones_sum;
@@ -847,14 +831,19 @@ dp_ppdu_desc_user_rx_time_update(struct dp_pdev *pdev,
 
 	if (ppdu_desc->u.ppdu_type == HAL_RX_TYPE_MU_OFDMA ||
 	    ppdu_desc->u.ppdu_type == HAL_RX_TYPE_MU_MIMO) {
-		rx_time_us = (ppdu_desc->duration *
-				user->nss * user->ofdma_ru_width) / nss_ru_width_sum;
+		user->rx_time_us = (ppdu_desc->duration *
+				    user->nss * user->ofdma_ru_width) /
+				    nss_ru_width_sum;
 	} else {
-		rx_time_us = ppdu_desc->duration;
+		user->rx_time_us = ppdu_desc->duration;
 	}
 
+	mon_peer = peer->monitor_peer;
+	if (qdf_unlikely(!mon_peer))
+		return;
+
 	DP_STATS_INC(mon_peer, airtime_consumption.consumption,
-		     rx_time_us);
+		     user->rx_time_us);
 }
 #else
 static inline void

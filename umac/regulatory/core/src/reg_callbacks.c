@@ -53,6 +53,7 @@ static void reg_call_chan_change_cbks(struct wlan_objmgr_psoc *psoc,
 	uint32_t ctr;
 	struct avoid_freq_ind_data *avoid_freq_ind = NULL;
 	reg_chan_change_callback callback;
+	QDF_STATUS status;
 
 	psoc_priv_obj = reg_get_psoc_obj(psoc);
 	if (!IS_VALID_PSOC_REG_OBJ(psoc_priv_obj)) {
@@ -70,11 +71,12 @@ static void reg_call_chan_change_cbks(struct wlan_objmgr_psoc *psoc,
 	if (!cur_chan_list)
 		return;
 
-	qdf_mem_copy(cur_chan_list,
-		     pdev_priv_obj->cur_chan_list,
-		     NUM_CHANNELS *
-		     sizeof(struct regulatory_channel));
-
+	status = reg_get_pwrmode_chan_list(pdev, cur_chan_list,
+					   REG_CURRENT_PWR_MODE);
+	if (!QDF_IS_STATUS_SUCCESS(status)) {
+		qdf_mem_free(cur_chan_list);
+		return;
+	}
 	if (ch_avoid_ind)
 		avoid_freq_ind = avoid_info;
 

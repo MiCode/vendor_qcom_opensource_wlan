@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2014-2019, 2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -81,6 +82,98 @@ enum auth_timeout_type {
 	AUTH_FAILURE_TIMEOUT,
 	AUTH_RESPONSE_TIMEOUT,
 };
+
+#ifdef CONNECTIVITY_DIAG_EVENT
+/**
+ * enum diag_roam_reason - Represents the reason codes for roaming.
+ * @DIAG_ROAM_REASON_UNKNOWN: Any reason that do not classify under the below
+ * reasons.
+ * @DIAG_ROAM_REASON_PER: Roam triggered when packet error rates(PER) breached
+ * the configured threshold.
+ * @DIAG_ROAM_REASON_BEACON_MISS: Roam triggered due to the continuous
+ * configured beacon misses from the then connected AP.
+ * @DIAG_ROAM_REASON_POOR_RSSI: Roam triggered due to the poor RSSI reported
+ * by the connected AP.
+ * @DIAG_ROAM_REASON_BETTER_RSSI: Roam triggered for finding a BSSID with a
+ * better RSSI than the connected BSSID. Here the RSSI of the current BSSID is
+ * not poor.
+ * @DIAG_ROAM_REASON_CONGESTION: Roam triggered considering the connected
+ * channel or environment being very noisy / congested.
+ * @DIAG_ROAM_REASON_EXPLICIT_REQUEST: Roam triggered due to an explicit request
+ * from the user (user space).
+ * @DIAG_ROAM_REASON_BTM: Roam triggered due to BTM request frame received from
+ * connected AP.
+ * @DIAG_ROAM_REASON_BSS_LOAD: Roam triggered due to the channel utilization
+ * breaching out the configured threshold.
+ * @DIAG_ROAM_REASON_WTC: Roam triggered due to Wireless to Cellular BSS
+ * transition request.
+ * @DIAG_ROAM_REASON_IDLE: Roam triggered when device is suspended,
+ * there is no data activity with the AP and the current rssi falls below a
+ * certain threshold.
+ * @DIAG_ROAM_REASON_DISCONNECTION: Roam triggered due to
+ * deauthentication or disassociation frames received from the connected AP.
+ * @DIAG_ROAM_REASON_PERIODIC_TIMER: Roam triggered as part of the periodic
+ * scan that happens when there is no candiate AP found during the poor
+ * RSSI scan trigger.
+ * @DIAG_ROAM_REASON_BACKGROUND_SCAN: Roam triggered based on the scan
+ * results obtained from an external scan (not aimed at roaming).
+ * @DIAG_ROAM_REASON_BT_ACTIVITY: Roam triggered due to bluetooth
+ * connection is established when the station is connected in 2.4 Ghz band.
+ */
+enum diag_roam_reason {
+	DIAG_ROAM_REASON_UNKNOWN,
+	DIAG_ROAM_REASON_PER,
+	DIAG_ROAM_REASON_BEACON_MISS,
+	DIAG_ROAM_REASON_POOR_RSSI,
+	DIAG_ROAM_REASON_BETTER_RSSI,
+	DIAG_ROAM_REASON_CONGESTION,
+	DIAG_ROAM_REASON_USER_TRIGGER,
+	DIAG_ROAM_REASON_BTM,
+	DIAG_ROAM_REASON_BSS_LOAD,
+	DIAG_ROAM_REASON_WTC,
+	DIAG_ROAM_REASON_IDLE,
+	DIAG_ROAM_REASON_DISCONNECTION,
+	DIAG_ROAM_REASON_PERIODIC_TIMER,
+	DIAG_ROAM_REASON_BACKGROUND_SCAN,
+	DIAG_ROAM_REASON_BT_ACTIVITY
+};
+
+/**
+ * enum diag_roam_sub_reason - Used by attribute
+ * @DIAG_ROAM_SUB_REASON_PERIODIC_TIMER: Roam scan triggered due to periodic
+ * timer expiry
+ * @DIAG_ROAM_SUB_REASON_INACTIVITY_TIMER_LOW_RSSI: Roam scan trigger due
+ * to no candidate found during LOW RSSI trigger.
+ * @DIAG_ROAM_SUB_REASON_BTM_DI_TIMER: Roam scan triggered due to BTM Disassoc
+ * Imminent timeout
+ * @DIAG_ROAM_SUB_REASON_FULL_SCAN: Roam scan triggered due to partial scan
+ * failure
+ * @DIAG_ROAM_SUB_REASON_LOW_RSSI_PERIODIC: Roam trigger due to
+ * emergency like deauth/disassoc.
+ * @DIAG_ROAM_SUB_REASON_CU_PERIODIC: Roam trigger due to
+ * BSS transition management request.
+ * @DIAG_ROAM_SUB_REASON_PERIODIC_TIMER_AFTER_INACTIVITY_LOW_RSSI:
+ * Roam scan triggered due to Low RSSI periodic timer
+ * @DIAG_ROAM_SUB_REASON_PERIODIC_TIMER_AFTER_INACTIVITY_CU:
+ * Roam trigger due to periodic timer after no candidate found during CU
+ * inactivity timer scan.
+ * @DIAG_ROAM_SUB_REASON_INACTIVITY_TIMER_CU: Roam trigger due to no candidate
+ * found in high CU roam trigger.
+ */
+
+enum diag_roam_sub_reason {
+	DIAG_ROAM_SUB_REASON_UNKNOWN = 0,
+	DIAG_ROAM_SUB_REASON_PERIODIC_TIMER = 1,
+	DIAG_ROAM_SUB_REASON_INACTIVITY_TIMER_LOW_RSSI = 2,
+	DIAG_ROAM_SUB_REASON_BTM_DI_TIMER = 3,
+	DIAG_ROAM_SUB_REASON_FULL_SCAN = 4,
+	DIAG_ROAM_SUB_REASON_LOW_RSSI_PERIODIC = 5,
+	DIAG_ROAM_SUB_REASON_CU_PERIODIC = 6,
+	DIAG_ROAM_SUB_REASON_PERIODIC_TIMER_AFTER_INACTIVITY_LOW_RSSI = 7,
+	DIAG_ROAM_SUB_REASON_PERIODIC_TIMER_AFTER_INACTIVITY_CU = 8,
+	DIAG_ROAM_SUB_REASON_INACTIVITY_TIMER_CU = 9,
+};
+#endif
 
 /*-------------------------------------------------------------------------
    Function declarations and documenation

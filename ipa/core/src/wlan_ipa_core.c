@@ -38,6 +38,9 @@
 
 #define IPA_SPS_DESC_SIZE 8
 #define IPA_DEFAULT_HDL 0
+#ifdef IPA_WDS_EASYMESH_FEATURE
+#define IPA_TA_PEER_ID_ATTRI 2
+#endif
 
 static struct wlan_ipa_priv *gp_ipa;
 static void wlan_ipa_set_pending_tx_timer(struct wlan_ipa_priv *ipa_ctx);
@@ -78,6 +81,9 @@ static void wlan_ipa_i2w_cb(void *priv, qdf_ipa_dp_evt_type_t evt,
 			    unsigned long data);
 static void wlan_ipa_w2i_cb(void *priv, qdf_ipa_dp_evt_type_t evt,
 			    unsigned long data);
+static void wlan_ipa_update_wds_params(struct wlan_ipa_priv *ipa_ctx,
+				       qdf_ipa_wdi_init_in_params_t *in);
+static void wlan_ipa_msg_wds_update(bool ipa_wds, qdf_ipa_wlan_msg_t *msg);
 
 /**
  * wlan_ipa_uc_sta_is_enabled() - Is STA mode IPA uC offload enabled?
@@ -518,6 +524,42 @@ static inline bool wlan_ipa_wdi_is_smmu_enabled(struct wlan_ipa_priv *ipa_ctx,
 	return ipa_ctx->is_smmu_enabled && qdf_mem_smmu_s1_enabled(osdev);
 }
 
+#ifdef IPA_WDS_EASYMESH_FEATURE
+/**
+ * wlan_ipa_ast_notify_cb() - IPA AST create/update CB
+ * @priv: IPA context
+ * @data: Structure used for updating the AST table
+ *
+ * Will be called by IPA context.
+ *
+ * Return: None
+ */
+static void wlan_ipa_ast_notify_cb(void *priv, void *data)
+{
+	qdf_ipa_ast_info_type_t *ast_info;
+	struct wlan_ipa_priv *ipa_ctx;
+
+	if (!data) {
+		dp_err("Invalid IPA AST data context");
+		return;
+	}
+
+	if (!priv) {
+		dp_err("Invalid IPA context");
+		return;
+	}
+
+	ast_info = (qdf_ipa_ast_info_type_t *)data;
+	ipa_ctx = (struct wlan_ipa_priv *)priv;
+
+	cdp_ipa_ast_create(ipa_ctx->dp_soc, ast_info);
+}
+#else
+static inline void wlan_ipa_ast_notify_cb(void *priv, void *data)
+{
+}
+#endif
+
 static inline QDF_STATUS
 wlan_ipa_wdi_setup(struct wlan_ipa_priv *ipa_ctx,
 		   qdf_device_t osdev)
@@ -544,9 +586,9 @@ wlan_ipa_wdi_setup(struct wlan_ipa_priv *ipa_ctx,
 				   &ipa_ctx->tx_pipe_handle,
 				   &ipa_ctx->rx_pipe_handle,
 				   wlan_ipa_wdi_is_smmu_enabled(ipa_ctx, osdev),
-				   sys_in, ipa_ctx->over_gsi,
-				   ipa_ctx->hdl,
-				   (qdf_ipa_wdi_hdl_t)ipa_ctx->instance_id);
+				   sys_in, ipa_ctx->over_gsi, ipa_ctx->hdl,
+				   (qdf_ipa_wdi_hdl_t)ipa_ctx->instance_id,
+				   wlan_ipa_ast_notify_cb);
 
 	qdf_mem_free(sys_in);
 
@@ -574,6 +616,48 @@ static inline void wlan_ipa_wdi_init_metering(struct wlan_ipa_priv *ipa_ctxt,
 }
 #endif
 
+#ifdef IPA_WDS_EASYMESH_FEATURE
+/**
+ * wlan_ipa_update_wds_params();
+ * @ipa_ctx: IPA context
+ * @in: IPA wdi init in params
+ *
+ * This function is to update wds status to IPA in wdi init params
+ *
+ * Return: None
+ */
+static void wlan_ipa_update_wds_params(struct wlan_ipa_priv *ipa_ctx,
+				       qdf_ipa_wdi_init_in_params_t *in)
+{
+	QDF_IPA_WDI_INIT_IN_PARAMS_WDS_UPDATE(in) = ipa_ctx->config->ipa_wds;
+}
+
+/**
+ * wlan_ipa_msg_wds_update();
+ * @ipa_wds: IPA WDS status
+ * @msg: Meta data message for IPA
+ *
+ * This function is to update wds status to IPA in meta message
+ *
+ * Return: None
+ */
+static void wlan_ipa_msg_wds_update(bool ipa_wds,
+				    qdf_ipa_wlan_msg_t *msg)
+{
+	QDF_IPA_WLAN_MSG_WDS_UPDATE(msg) = ipa_wds;
+}
+#else
+static void wlan_ipa_update_wds_params(struct wlan_ipa_priv *ipa_ctx,
+				       qdf_ipa_wdi_init_in_params_t *in)
+{
+}
+
+static void wlan_ipa_msg_wds_update(bool ipa_wds,
+				    qdf_ipa_wlan_msg_t *msg)
+{
+}
+#endif
+
 /**
  * wlan_ipa_wdi_init() - IPA WDI init
  * @ipa_ctx: IPA context
@@ -595,8 +679,8 @@ static inline QDF_STATUS wlan_ipa_wdi_init(struct wlan_ipa_priv *ipa_ctx)
 	QDF_IPA_WDI_INIT_IN_PARAMS_NOTIFY(&in) = wlan_ipa_uc_loaded_uc_cb;
 	QDF_IPA_WDI_INIT_IN_PARAMS_PRIV(&in) = ipa_ctx;
 	QDF_IPA_WDI_INIT_IN_PARAMS_INSTANCE_ID(&in) = ipa_ctx->instance_id;
+	wlan_ipa_update_wds_params(ipa_ctx, &in);
 	wlan_ipa_wdi_init_metering(ipa_ctx, &in);
-
 	ret = qdf_ipa_wdi_init(&in, &out);
 	if (ret) {
 		ipa_err("ipa_wdi_init failed with ret=%d", ret);
@@ -1123,6 +1207,43 @@ wlan_ipa_get_sap_client_auth(struct wlan_ipa_priv *ipa_ctx, uint8_t *peer_mac)
 	return false;
 }
 
+#ifdef IPA_WDS_EASYMESH_FEATURE
+static inline uint8_t
+wlan_ipa_get_peer_auth_state(ol_txrx_soc_handle dp_soc, uint8_t *peer_mac,
+			     struct wlan_ipa_iface_context *iface)
+{
+	uint8_t is_authenticated = false;
+	struct cdp_ast_entry_info ast_info = {0};
+
+	if (ipa_is_wds_enabled()) {
+		cdp_peer_get_ast_info_by_soc(dp_soc, peer_mac,
+					     &ast_info);
+		peer_mac = &ast_info.peer_mac_addr[0];
+		is_authenticated = wlan_ipa_get_peer_state(dp_soc,
+							   iface->session_id,
+							   peer_mac);
+	} else {
+		is_authenticated = wlan_ipa_get_peer_state(dp_soc,
+							   iface->session_id,
+							   peer_mac);
+	}
+
+	return is_authenticated;
+}
+#else
+static inline uint8_t
+wlan_ipa_get_peer_auth_state(ol_txrx_soc_handle dp_soc, uint8_t *peer_mac,
+			     struct wlan_ipa_iface_context *iface)
+{
+	uint8_t is_authenticated = false;
+
+	is_authenticated = wlan_ipa_get_peer_state(dp_soc, iface->session_id,
+						   peer_mac);
+
+	return is_authenticated;
+}
+#endif
+
 static inline bool
 wlan_ipa_is_peer_authenticated(ol_txrx_soc_handle dp_soc,
 			       struct wlan_ipa_iface_context *iface,
@@ -1135,9 +1256,11 @@ wlan_ipa_is_peer_authenticated(ol_txrx_soc_handle dp_soc,
 								peer_mac);
 		if (is_authenticated)
 			return is_authenticated;
-		is_authenticated = wlan_ipa_get_peer_state(dp_soc,
-							   iface->session_id,
-							   peer_mac);
+
+		is_authenticated = wlan_ipa_get_peer_auth_state(dp_soc,
+								peer_mac,
+								iface);
+
 		if (is_authenticated)
 			wlan_ipa_set_sap_client_auth(iface->ipa_ctx,
 						     peer_mac,
@@ -2461,6 +2584,118 @@ wlan_ipa_save_bssid_iface_ctx(struct wlan_ipa_priv *ipa_ctx, uint8_t iface_id,
 		     mac_addr, QDF_MAC_ADDR_SIZE);
 }
 
+#ifdef IPA_WDS_EASYMESH_FEATURE
+/** wlan_ipa_set_peer_id() - Set ta_peer_id in IPA
+ * @ipa_ctx: ipa context
+ * @meta: Meta data for IPA
+ * @net_dev: Interface net device
+ * @type: WLAN IPA event
+ * @mac_addr: mac_addr of peer
+ *
+ * Return: QDF STATUS
+ */
+static QDF_STATUS
+wlan_ipa_set_peer_id(struct wlan_ipa_priv *ipa_ctx,
+		     qdf_ipa_msg_meta_t *meta,
+		     qdf_netdev_t net_dev,
+		     qdf_ipa_wlan_event type,
+		     uint8_t *mac_addr)
+{
+	uint8_t ta_peer_id;
+	struct cdp_ast_entry_info peer_ast_info = {0};
+	struct cdp_soc_t *cdp_soc;
+	qdf_ipa_wlan_msg_ex_t *msg_ex;
+	bool status;
+
+	QDF_IPA_MSG_META_MSG_LEN(meta) =
+		(sizeof(qdf_ipa_wlan_msg_ex_t) +
+		 sizeof(qdf_ipa_wlan_hdr_attrib_val_t) *
+		 IPA_TA_PEER_ID_ATTRI);
+
+	msg_ex = qdf_mem_malloc(QDF_IPA_MSG_META_MSG_LEN(meta));
+	if (!msg_ex)
+		return QDF_STATUS_E_NOMEM;
+
+	strlcpy(msg_ex->name, net_dev->name, IPA_RESOURCE_NAME_MAX);
+	msg_ex->num_of_attribs = IPA_TA_PEER_ID_ATTRI;
+	ipa_info("Num of attribute set to: %d", IPA_TA_PEER_ID_ATTRI);
+
+	msg_ex->attribs[0].attrib_type = WLAN_HDR_ATTRIB_MAC_ADDR;
+	if (wlan_ipa_uc_is_enabled(ipa_ctx->config)) {
+		msg_ex->attribs[0].offset =
+			WLAN_IPA_UC_WLAN_HDR_DES_MAC_OFFSET;
+	} else {
+		msg_ex->attribs[0].offset =
+			WLAN_IPA_WLAN_HDR_DES_MAC_OFFSET;
+	}
+	memcpy(msg_ex->attribs[0].u.mac_addr, mac_addr, IPA_MAC_ADDR_SIZE);
+
+	msg_ex->attribs[1].attrib_type = WLAN_HDR_ATTRIB_TA_PEER_ID;
+	cdp_soc = (struct cdp_soc_t *)ipa_ctx->dp_soc;
+	status = cdp_peer_get_ast_info_by_soc(cdp_soc, mac_addr,
+					      &peer_ast_info);
+
+	if (!status) {
+		qdf_mem_free(msg_ex);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	ta_peer_id = peer_ast_info.peer_id;
+	ipa_info("ta_peer_id set to: %d", ta_peer_id);
+	msg_ex->attribs[1].u.ta_peer_id = ta_peer_id;
+
+	if (qdf_ipa_send_msg(meta, msg_ex, wlan_ipa_msg_free_fn)) {
+		ipa_info("%s: Evt: %d send ipa msg fail",
+			 net_dev->name, type);
+		qdf_mem_free(msg_ex);
+		return QDF_STATUS_E_FAILURE;
+	}
+	ipa_ctx->stats.num_send_msg++;
+
+	return QDF_STATUS_SUCCESS;
+}
+#else
+static QDF_STATUS
+wlan_ipa_set_peer_id(struct wlan_ipa_priv *ipa_ctx,
+		     qdf_ipa_msg_meta_t *meta,
+		     qdf_netdev_t net_dev,
+		     qdf_ipa_wlan_event type,
+		     uint8_t *mac_addr)
+{
+	qdf_ipa_wlan_msg_ex_t *msg_ex;
+
+	QDF_IPA_MSG_META_MSG_LEN(meta) =
+		(sizeof(qdf_ipa_wlan_msg_ex_t) +
+		 sizeof(qdf_ipa_wlan_hdr_attrib_val_t));
+
+	msg_ex = qdf_mem_malloc(QDF_IPA_MSG_META_MSG_LEN(meta));
+	if (!msg_ex)
+		return QDF_STATUS_E_NOMEM;
+
+	strlcpy(msg_ex->name, net_dev->name, IPA_RESOURCE_NAME_MAX);
+	msg_ex->num_of_attribs = 1;
+	msg_ex->attribs[0].attrib_type = WLAN_HDR_ATTRIB_MAC_ADDR;
+
+	if (wlan_ipa_uc_is_enabled(ipa_ctx->config)) {
+		msg_ex->attribs[0].offset =
+			WLAN_IPA_UC_WLAN_HDR_DES_MAC_OFFSET;
+	} else {
+		msg_ex->attribs[0].offset = WLAN_IPA_WLAN_HDR_DES_MAC_OFFSET;
+	}
+	memcpy(msg_ex->attribs[0].u.mac_addr, mac_addr, IPA_MAC_ADDR_SIZE);
+
+	if (qdf_ipa_send_msg(meta, msg_ex, wlan_ipa_msg_free_fn)) {
+		ipa_info("%s: Evt: %d send ipa msg fail",
+			 net_dev->name, type);
+		qdf_mem_free(msg_ex);
+		return QDF_STATUS_E_FAILURE;
+	}
+	ipa_ctx->stats.num_send_msg++;
+
+	return QDF_STATUS_SUCCESS;
+}
+#endif
+
 /**
  * __wlan_ipa_wlan_evt() - IPA event handler
  * @net_dev: Interface net device
@@ -2492,6 +2727,7 @@ static QDF_STATUS __wlan_ipa_wlan_evt(qdf_netdev_t net_dev, uint8_t device_mode,
 	struct wlan_objmgr_pdev *pdev;
 	struct wlan_objmgr_psoc *psoc;
 	struct wlan_objmgr_vdev *vdev;
+	bool ipa_wds = false;
 
 	ipa_debug("%s: EVT: %d, MAC: "QDF_MAC_ADDR_FMT", session_id: %u",
 		  net_dev->name, type, QDF_MAC_ADDR_REF(mac_addr), session_id);
@@ -2764,6 +3000,7 @@ static QDF_STATUS __wlan_ipa_wlan_evt(qdf_netdev_t net_dev, uint8_t device_mode,
 		ipa_debug("vdev_to_iface[%u]=%u",
 			 session_id,
 			 ipa_ctx->vdev_to_iface[session_id]);
+		ipa_wds = ipa_ctx->config->ipa_wds;
 		qdf_mutex_release(&ipa_ctx->event_lock);
 		break;
 
@@ -2971,37 +3208,14 @@ static QDF_STATUS __wlan_ipa_wlan_evt(qdf_netdev_t net_dev, uint8_t device_mode,
 		qdf_mutex_release(&ipa_ctx->event_lock);
 
 		QDF_IPA_SET_META_MSG_TYPE(&meta, type);
-		QDF_IPA_MSG_META_MSG_LEN(&meta) =
-			(sizeof(qdf_ipa_wlan_msg_ex_t) +
-				sizeof(qdf_ipa_wlan_hdr_attrib_val_t));
-		msg_ex = qdf_mem_malloc(QDF_IPA_MSG_META_MSG_LEN(&meta));
-		if (!msg_ex)
-			return QDF_STATUS_E_NOMEM;
 
-		strlcpy(msg_ex->name, net_dev->name,
-			IPA_RESOURCE_NAME_MAX);
-		msg_ex->num_of_attribs = 1;
-		msg_ex->attribs[0].attrib_type = WLAN_HDR_ATTRIB_MAC_ADDR;
-		if (wlan_ipa_uc_is_enabled(ipa_ctx->config)) {
-			msg_ex->attribs[0].offset =
-				WLAN_IPA_UC_WLAN_HDR_DES_MAC_OFFSET;
-		} else {
-			msg_ex->attribs[0].offset =
-				WLAN_IPA_WLAN_HDR_DES_MAC_OFFSET;
-		}
-		memcpy(msg_ex->attribs[0].u.mac_addr, mac_addr,
-		       IPA_MAC_ADDR_SIZE);
-
-		if (qdf_ipa_send_msg(&meta, msg_ex, wlan_ipa_msg_free_fn)) {
-			ipa_info("%s: Evt: %d send ipa msg fail",
-				 net_dev->name, type);
-			qdf_mem_free(msg_ex);
+		status = wlan_ipa_set_peer_id(ipa_ctx, &meta, net_dev,
+					      type, (uint8_t *)mac_addr);
+		if (QDF_IS_STATUS_ERROR(status))
 			return QDF_STATUS_E_FAILURE;
-		}
-		ipa_ctx->stats.num_send_msg++;
 
 		ipa_debug("sap_num_connected_sta=%d",
-			  ipa_ctx->sap_num_connected_sta);
+			   ipa_ctx->sap_num_connected_sta);
 
 		return QDF_STATUS_SUCCESS;
 
@@ -3102,6 +3316,8 @@ static QDF_STATUS __wlan_ipa_wlan_evt(qdf_netdev_t net_dev, uint8_t device_mode,
 		IPA_RESOURCE_NAME_MAX);
 	qdf_mem_copy(QDF_IPA_WLAN_MSG_MAC_ADDR(msg), mac_addr, QDF_NET_ETH_LEN);
 	QDF_IPA_WLAN_MSG_NETDEV_IF_ID(msg) = net_dev->ifindex;
+
+	wlan_ipa_msg_wds_update(ipa_wds, msg);
 
 	ipa_debug("%s: Evt: %d", QDF_IPA_WLAN_MSG_NAME(msg),
 		  QDF_IPA_MSG_META_MSG_TYPE(&meta));

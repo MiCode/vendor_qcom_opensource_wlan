@@ -28,6 +28,7 @@
 #include "qdf_status.h"
 #include <wlan_objmgr_cmn.h>
 #include "wifi_pos_public_struct.h"
+#include "wlan_cfg80211.h"
 
 /* forward declaration */
 struct wifi_pos_ch_info;
@@ -35,6 +36,12 @@ struct wlan_objmgr_psoc;
 struct wifi_pos_driver_caps;
 
 #ifdef WIFI_POS_CONVERGED
+#define FEATURE_WIFI_POS_11AZ_AUTH_EVENTS                              \
+[QCA_NL80211_VENDOR_SUBCMD_PASN_AUTH_STATUS_INDEX] = {                 \
+	.vendor_id = QCA_NL80211_VENDOR_ID,                            \
+	.subcmd = QCA_NL80211_VENDOR_SUBCMD_PASN,                      \
+},
+
 /**
  * os_if_wifi_pos_register_nl() - abstration API to register callback with GENL
  * socket.
@@ -80,6 +87,8 @@ void os_if_wifi_pos_send_peer_status(struct qdf_mac_addr *peer_mac,
 int os_if_wifi_pos_populate_caps(struct wlan_objmgr_psoc *psoc,
 				struct wifi_pos_driver_caps *caps);
 #else
+#define FEATURE_WIFI_POS_11AZ_AUTH_EVENTS
+
 static inline int os_if_wifi_pos_register_nl(void)
 {
 	return 0;

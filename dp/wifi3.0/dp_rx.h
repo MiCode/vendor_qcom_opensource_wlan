@@ -279,6 +279,64 @@ bool dp_rx_deliver_special_frame(struct dp_soc *soc, struct dp_txrx_peer *peer,
 }
 #endif
 
+#ifdef FEATURE_RX_LINKSPEED_ROAM_TRIGGER
+/**
+ * dp_rx_data_is_specific() - Used to exclude specific frames
+ *                            not practical for getting rx
+ *                            stats like rate, mcs, nss, etc.
+ *
+ * @hal-soc_hdl: soc handler
+ * @rx_tlv_hdr: rx tlv header
+ * @nbuf: RX skb pointer
+ *
+ * Return: true - a specific frame  not suitable
+ *                for getting rx stats from it.
+ *         false - a common frame suitable for
+ *                 getting rx stats from it.
+ */
+static inline
+bool dp_rx_data_is_specific(hal_soc_handle_t hal_soc_hdl,
+			    uint8_t *rx_tlv_hdr,
+			    qdf_nbuf_t nbuf)
+{
+	if (qdf_unlikely(qdf_nbuf_is_da_mcbc(nbuf)))
+		return true;
+
+	if (!hal_rx_tlv_first_mpdu_get(hal_soc_hdl, rx_tlv_hdr))
+		return true;
+
+	if (!hal_rx_msdu_end_first_msdu_get(hal_soc_hdl, rx_tlv_hdr))
+		return true;
+
+	/* ARP, EAPOL is neither IPV6 ETH nor IPV4 ETH from L3 level */
+	if (qdf_likely(hal_rx_tlv_l3_type_get(hal_soc_hdl, rx_tlv_hdr) ==
+	    QDF_NBUF_TRAC_IPV4_ETH_TYPE)) {
+		if (qdf_nbuf_is_ipv4_dhcp_pkt(nbuf))
+			return true;
+	} else if (qdf_likely(hal_rx_tlv_l3_type_get(hal_soc_hdl, rx_tlv_hdr) ==
+		   QDF_NBUF_TRAC_IPV6_ETH_TYPE)) {
+		if (qdf_nbuf_is_ipv6_dhcp_pkt(nbuf))
+			return true;
+	} else {
+		return true;
+	}
+	return false;
+}
+#else
+static inline
+bool dp_rx_data_is_specific(hal_soc_handle_t hal_soc_hdl,
+			    uint8_t *rx_tlv_hdr,
+			    qdf_nbuf_t nbuf)
+
+{
+	/*
+	 * default return is true to make sure that rx stats
+	 * will not be handled when this feature is disabled
+	 */
+	return true;
+}
+#endif /* FEATURE_RX_LINKSPEED_ROAM_TRIGGER */
+
 #ifndef QCA_HOST_MODE_WIFI_DISABLED
 #ifdef DP_RX_DISABLE_NDI_MDNS_FORWARDING
 static inline
@@ -487,7 +545,7 @@ struct dp_rx_desc *dp_get_rx_desc_from_cookie(struct dp_soc *soc,
 	struct rx_desc_pool *rx_desc_pool;
 	union dp_rx_desc_list_elem_t *rx_desc_elem;
 
-	if (qdf_unlikely(pool_id >= MAX_RXDESC_POOLS))
+	if (qdf_unlikely(pool_id >= MAX_PDEV_CNT))
 		return NULL;
 
 	rx_desc_pool = &pool[pool_id];
@@ -1284,6 +1342,14 @@ dp_rx_wds_srcport_learn(struct dp_soc *soc,
 			struct dp_txrx_peer *txrx_peer,
 			qdf_nbuf_t nbuf,
 			struct hal_rx_msdu_metadata msdu_metadata)
+{
+}
+
+static inline void
+dp_rx_ipa_wds_srcport_learn(struct dp_soc *soc,
+			    struct dp_peer *ta_peer, qdf_nbuf_t nbuf,
+			    struct hal_rx_msdu_metadata msdu_end_info,
+			    bool ad4_valid, bool chfrag_start)
 {
 }
 #endif
@@ -2552,4 +2618,98 @@ dp_peer_rx_reorder_queue_setup(struct dp_soc *soc, struct dp_peer *peer,
 							    peer, tid,
 							    ba_window_size);
 }
+
+static inline
+void dp_rx_nbuf_list_deliver(struct dp_soc *soc,
+			     struct dp_vdev *vdev,
+			     struct dp_txrx_peer *txrx_peer,
+			     uint16_t peer_id,
+			     uint8_t pkt_capture_offload,
+			     qdf_nbuf_t deliver_list_head,
+			     qdf_nbuf_t deliver_list_tail)
+{
+	qdf_nbuf_t nbuf, next;
+
+	if (qdf_likely(deliver_list_head)) {
+		if (qdf_likely(txrx_peer)) {
+			dp_rx_deliver_to_pkt_capture(soc, vdev->pdev, peer_id,
+						     pkt_capture_offload,
+						     deliver_list_head);
+			if (!pkt_capture_offload)
+				dp_rx_deliver_to_stack(soc, vdev, txrx_peer,
+						       deliver_list_head,
+						       deliver_list_tail);
+		} else {
+			nbuf = deliver_list_head;
+			while (nbuf) {
+				next = nbuf->next;
+				nbuf->next = NULL;
+				dp_rx_deliver_to_stack_no_peer(soc, nbuf);
+				nbuf = next;
+			}
+		}
+	}
+}
+
+#ifdef DP_TX_RX_TPUT_SIMULATE
+/*
+ * Change this macro value to simulate different RX T-put,
+ * if OTA is 100 Mbps, to simulate 200 Mbps, then multiplication factor
+ * is 2, set macro value as 1 (multiplication factor - 1).
+ */
+#define DP_RX_PKTS_DUPLICATE_CNT 0
+static inline
+void dp_rx_nbuf_list_dup_deliver(struct dp_soc *soc,
+				 struct dp_vdev *vdev,
+				 struct dp_txrx_peer *txrx_peer,
+				 uint16_t peer_id,
+				 uint8_t pkt_capture_offload,
+				 qdf_nbuf_t ori_list_head,
+				 qdf_nbuf_t ori_list_tail)
+{
+	qdf_nbuf_t new_skb = NULL;
+	qdf_nbuf_t new_list_head = NULL;
+	qdf_nbuf_t new_list_tail = NULL;
+	qdf_nbuf_t nbuf = NULL;
+	int i;
+
+	for (i = 0; i < DP_RX_PKTS_DUPLICATE_CNT; i++) {
+		nbuf = ori_list_head;
+		new_list_head = NULL;
+		new_list_tail = NULL;
+
+		while (nbuf) {
+			new_skb = qdf_nbuf_copy(nbuf);
+			if (qdf_likely(new_skb))
+				DP_RX_LIST_APPEND(new_list_head,
+						  new_list_tail,
+						  new_skb);
+			else
+				dp_err("copy skb failed");
+
+			nbuf = qdf_nbuf_next(nbuf);
+		}
+
+		/* deliver the copied nbuf list */
+		dp_rx_nbuf_list_deliver(soc, vdev, txrx_peer, peer_id,
+					pkt_capture_offload,
+					new_list_head,
+					new_list_tail);
+	}
+
+	/* deliver the original skb_list */
+	dp_rx_nbuf_list_deliver(soc, vdev, txrx_peer, peer_id,
+				pkt_capture_offload,
+				ori_list_head,
+				ori_list_tail);
+}
+
+#define DP_RX_DELIVER_TO_STACK dp_rx_nbuf_list_dup_deliver
+
+#else /* !DP_TX_RX_TPUT_SIMULATE */
+
+#define DP_RX_DELIVER_TO_STACK dp_rx_nbuf_list_deliver
+
+#endif /* DP_TX_RX_TPUT_SIMULATE */
+
 #endif /* _DP_RX_H */

@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2014-2019,2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -31,8 +32,9 @@
 #include <qdf_types.h>
 #include <i_qdf_trace.h>
 
+struct __qdf_hrtimer_data_internal_t;
 /* hrtimer data type */
-typedef struct {
+typedef struct __qdf_hrtimer_data_internal_t {
 	union {
 		struct hrtimer hrtimer;
 #if (LINUX_VERSION_CODE < KERNEL_VERSION(5, 2, 0))
@@ -40,6 +42,9 @@ typedef struct {
 #endif
 	} u;
 	enum qdf_context_mode ctx;
+	struct __qdf_hrtimer_data_internal_t *cb_ctx;
+	enum qdf_hrtimer_restart_status (*callback)
+				(struct __qdf_hrtimer_data_internal_t *);
 } __qdf_hrtimer_data_t;
 
 /**
@@ -120,6 +125,14 @@ int __qdf_hrtimer_cancel(__qdf_hrtimer_data_t *timer)
 }
 #endif
 
+static enum hrtimer_restart __qdf_hrtimer_cb(struct hrtimer *arg)
+{
+	__qdf_hrtimer_data_t *timer = container_of(arg, __qdf_hrtimer_data_t,
+						   u.hrtimer);
+
+	return (enum hrtimer_restart)timer->callback(timer->cb_ctx);
+}
+
 /**
  * __qdf_hrtimer_init() - init hrtimer in a given context
  * @timer: pointer to the hrtimer object
@@ -142,10 +155,12 @@ static inline void  __qdf_hrtimer_init(__qdf_hrtimer_data_t *timer,
 	enum hrtimer_mode hrt_mode = __qdf_hrtimer_get_mode(mode);
 
 	timer->ctx = ctx;
+	timer->callback = cback;
+	timer->cb_ctx = timer;
 
 	if (timer->ctx == QDF_CONTEXT_HARDWARE) {
 		hrtimer_init(hrtimer, clock, hrt_mode);
-		hrtimer->function = cback;
+		hrtimer->function = __qdf_hrtimer_cb;
 	} else if (timer->ctx == QDF_CONTEXT_TASKLET) {
 		QDF_BUG(0);
 	}
@@ -162,10 +177,12 @@ static inline void  __qdf_hrtimer_init(__qdf_hrtimer_data_t *timer,
 	enum hrtimer_mode hrt_mode = __qdf_hrtimer_get_mode(mode);
 
 	timer->ctx = ctx;
+	timer->callback = cback;
+	timer->cb_ctx = timer;
 
 	if (timer->ctx == QDF_CONTEXT_HARDWARE) {
 		hrtimer_init(hrtimer, clock, hrt_mode);
-		hrtimer->function = cback;
+		hrtimer->function = __qdf_hrtimer_cb;
 	} else if (timer->ctx == QDF_CONTEXT_TASKLET) {
 		tasklet_hrtimer_init(tasklet_hrtimer, cback, clock, hrt_mode);
 	}

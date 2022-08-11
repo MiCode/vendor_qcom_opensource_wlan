@@ -3411,10 +3411,6 @@ target_if_find_sscan_pdev_phya1(struct wlan_objmgr_psoc *psoc,
 		       cur_mac_phy_caps->supported_bands,
 		       cur_mac_phy_caps->phy_id);
 
-	/* No need to do anything if the current pdev is not a 5GHz pdev */
-	if (!(cur_mac_phy_caps->supported_bands & WMI_HOST_WLAN_5G_CAPABILITY))
-		return;
-
 	/* No need to do anything if the current pdev is same as sscan_pdev */
 	if (sscan_pdev_phy_info->phy_id == cur_mac_phy_caps->phy_id)
 		return;
@@ -3455,7 +3451,7 @@ target_if_spectral_detector_list_init(struct target_if_spectral *spectral)
 
 	/**
 	 * Special handling is required for SBS mode where the detector
-	 * list should be following for the 5GHz pdevs.
+	 * list should be the following.
 	 * For the pdev that use PHYA0:
 	 *    detector 0 for normal mode
 	 *    detector 2 for agile mode
@@ -3479,6 +3475,7 @@ target_if_spectral_detector_list_init(struct target_if_spectral *spectral)
 
 	if (is_hw_mode_sbs) {
 		struct wlan_psoc_host_mac_phy_caps *mac_phy_caps;
+		struct target_if_sscan_pdev_phy_info pdev_phy_info;
 
 		mac_phy_caps =
 			target_if_get_pdev_mac_phy_caps(spectral->pdev_obj);
@@ -3492,22 +3489,16 @@ target_if_spectral_detector_list_init(struct target_if_spectral *spectral)
 			       mac_phy_caps->supported_bands,
 			       mac_phy_caps->phy_id);
 
-		 /* We only care about 5GHz pdevs */
-		if (mac_phy_caps->supported_bands &
-		    WMI_HOST_WLAN_5G_CAPABILITY) {
-			struct target_if_sscan_pdev_phy_info pdev_phy_info;
+		pdev_phy_info.phy_id = mac_phy_caps->phy_id;
+		pdev_phy_info.is_using_phya1 = &is_using_phya1;
 
-			pdev_phy_info.phy_id = mac_phy_caps->phy_id;
-			pdev_phy_info.is_using_phya1 = &is_using_phya1;
-
-			/* Iterate over all pdevs on this psoc */
-			wlan_objmgr_iterate_obj_list
-				(wlan_pdev_get_psoc(spectral->pdev_obj),
-				 WLAN_PDEV_OP,
-				 target_if_find_sscan_pdev_phya1,
-				 &pdev_phy_info, 0,
-				 WLAN_SPECTRAL_ID);
-		}
+		/* Iterate over all pdevs on this psoc */
+		wlan_objmgr_iterate_obj_list
+			(wlan_pdev_get_psoc(spectral->pdev_obj),
+			 WLAN_PDEV_OP,
+			 target_if_find_sscan_pdev_phya1,
+			 &pdev_phy_info, 0,
+			 WLAN_SPECTRAL_ID);
 	}
 
 	/**
@@ -7499,13 +7490,15 @@ target_if_wmi_extract_spectral_fft_size_caps(
  * information in spectral scan session
  * @spectral: Spectral LMAC object
  * @det_info: Pointer to spectral session detector information
+ * @smode: Spectral scan mode
  *
  * Return: QDF_STATUS of operation
  */
 static QDF_STATUS
 target_if_update_det_info_in_spectral_session(
 	struct target_if_spectral *spectral,
-	const struct spectral_session_det_info *det_info)
+	const struct spectral_session_det_info *det_info,
+	enum spectral_scan_mode smode)
 {
 	struct per_session_det_map *det_map;
 	struct per_session_dest_det_info *dest_det_info;
@@ -7526,6 +7519,9 @@ target_if_update_det_info_in_spectral_session(
 	dest_det_info->end_freq = det_info->end_freq;
 
 	qdf_spin_unlock_bh(&spectral->session_det_map_lock);
+
+	/* This detector will be used for this smode throughout this session */
+	spectral->rparams.detid_mode_table[det_info->det_id] = smode;
 
 	return QDF_STATUS_SUCCESS;
 }
@@ -7731,7 +7727,8 @@ target_if_spectral_fw_param_event_handler(ol_scn_t scn, uint8_t *data_buf,
 			}
 
 			status = target_if_update_det_info_in_spectral_session(
-					spectral, &det_info);
+					spectral, &det_info,
+					event_params.smode);
 			if (QDF_IS_STATUS_ERROR(status)) {
 				spectral_err("Unable to update detector info");
 				goto release_pdev_ref;
@@ -7743,6 +7740,101 @@ target_if_spectral_fw_param_event_handler(ol_scn_t scn, uint8_t *data_buf,
 
 release_pdev_ref:
 	wlan_objmgr_pdev_release_ref(pdev, WLAN_SPECTRAL_ID);
+	return qdf_status_to_os_return(status);
+}
+
+/**
+ * target_if_spectral_capabilities_event_handler() - Handler for the Spectral
+ * Capabilities event
+ * @scn: Pointer to scn object
+ * @data_buf: Pointer to event buffer
+ * @data_len: Length of event buffer
+ *
+ * Return: 0 for success, else failure
+ */
+static int
+target_if_spectral_capabilities_event_handler(ol_scn_t scn, uint8_t *data_buf,
+					      uint32_t data_len)
+{
+	QDF_STATUS status;
+	struct wlan_objmgr_psoc *psoc;
+	struct wmi_unified *wmi_handle;
+	struct spectral_capabilities_event_params event_params = {0};
+	struct spectral_scan_bw_capabilities *bw_caps;
+	struct spectral_fft_size_capabilities *fft_size_caps;
+
+	if (!scn) {
+		spectral_err("scn handle is null");
+		return qdf_status_to_os_return(QDF_STATUS_E_INVAL);
+	}
+
+	if (!data_buf) {
+		spectral_err("WMI event buffer null");
+		return qdf_status_to_os_return(QDF_STATUS_E_INVAL);
+	}
+
+	psoc = target_if_spectral_get_psoc_from_scn_handle(scn);
+	if (!psoc) {
+		spectral_err("psoc is null");
+		return qdf_status_to_os_return(QDF_STATUS_E_FAILURE);
+	}
+
+	wmi_handle = GET_WMI_HDL_FROM_PSOC(psoc);
+	if (!wmi_handle) {
+		spectral_err("WMI handle is null");
+		return qdf_status_to_os_return(QDF_STATUS_E_FAILURE);
+	}
+
+	status = target_if_wmi_extract_spectral_caps_fixed_param(
+				psoc, data_buf, &event_params);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		spectral_err("Failed to extract fixed parameters");
+		return qdf_status_to_os_return(QDF_STATUS_E_FAILURE);
+	}
+
+	/* There should be atleast one capability */
+	qdf_assert(event_params.num_sscan_bw_caps > 0);
+	qdf_assert(event_params.num_fft_size_caps > 0);
+
+	bw_caps = qdf_mem_malloc(
+			sizeof(*bw_caps) * event_params.num_sscan_bw_caps);
+	if (!bw_caps) {
+		spectral_err("memory allocation failed");
+		return qdf_status_to_os_return(QDF_STATUS_E_NOMEM);
+	}
+
+	status = target_if_wmi_extract_spectral_scan_bw_caps(psoc, data_buf,
+							     bw_caps);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		spectral_err("Failed to extract BW caps");
+		status = QDF_STATUS_E_FAILURE;
+		goto free_bw_caps;
+	}
+
+	fft_size_caps = qdf_mem_malloc(
+		sizeof(*fft_size_caps) * event_params.num_fft_size_caps);
+	if (!fft_size_caps) {
+		spectral_err("memory allocation failed");
+		status = QDF_STATUS_E_NOMEM;
+		goto free_bw_caps;
+	}
+
+	status = target_if_wmi_extract_spectral_fft_size_caps(psoc, data_buf,
+							      fft_size_caps);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		spectral_err("Failed to extract fft size caps");
+		status = QDF_STATUS_E_FAILURE;
+		goto free_fft_size_caps;
+	}
+
+	status = QDF_STATUS_SUCCESS;
+
+free_fft_size_caps:
+	qdf_mem_free(fft_size_caps);
+
+free_bw_caps:
+	qdf_mem_free(bw_caps);
+
 	return qdf_status_to_os_return(status);
 }
 
@@ -7765,6 +7857,16 @@ target_if_spectral_register_events(struct wlan_objmgr_psoc *psoc)
 	if (ret)
 		spectral_debug("event handler not supported, ret=%d", ret);
 
+	ret = target_if_spectral_wmi_unified_register_event_handler(
+			psoc,
+			wmi_spectral_capabilities_eventid,
+			target_if_spectral_capabilities_event_handler,
+			WMI_RX_UMAC_CTX);
+	if (ret) {
+		spectral_debug("event handler not supported, ret=%d", ret);
+		return QDF_STATUS_E_FAILURE;
+	}
+
 	return QDF_STATUS_SUCCESS;
 }
 
@@ -7777,6 +7879,9 @@ target_if_spectral_unregister_events(struct wlan_objmgr_psoc *psoc)
 		spectral_err("psoc is null");
 		return QDF_STATUS_E_INVAL;
 	}
+
+	target_if_spectral_wmi_unified_unregister_event_handler(
+			psoc, wmi_spectral_capabilities_eventid);
 
 	ret = target_if_spectral_wmi_unified_unregister_event_handler(
 			psoc, wmi_pdev_sscan_fw_param_eventid);
