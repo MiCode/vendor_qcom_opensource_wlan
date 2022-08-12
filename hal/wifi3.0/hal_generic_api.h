@@ -21,6 +21,9 @@
 
 #include <hal_rx.h>
 
+#define SRNG_ENABLE_BIT 0x40
+#define SRNG_IDLE_STATE_BIT 0x80
+
 /**
  * hal_get_radiotap_he_gi_ltf() - Convert HE ltf and GI value
  * from stats enum to radiotap enum
@@ -177,18 +180,79 @@ static void hal_wbm_idle_lsb_write_confirm(struct hal_srng *srng)
 }
 #endif
 
+#ifdef DP_UMAC_HW_RESET_SUPPORT
 /**
- * hal_srng_src_hw_init - Private function to initialize SRNG
+ * hal_srng_src_hw_write_cons_prefetch_timer() - Write cons prefetch timer reg
+ * @srng: srng handle
+ * @value: value to set
+ *
+ * Return: None
+ */
+static inline
+void hal_srng_src_hw_write_cons_prefetch_timer(struct hal_srng *srng,
+					       uint32_t value)
+{
+	SRNG_SRC_REG_WRITE(srng, CONSUMER_PREFETCH_TIMER, value);
+}
+
+/**
+ * hal_srng_hw_disable_generic - Private function to disable SRNG
  * source ring HW
  * @hal_soc: HAL SOC handle
  * @srng: SRNG ring pointer
  */
 static inline
+void hal_srng_hw_disable_generic(struct hal_soc *hal, struct hal_srng *srng)
+{
+	uint32_t reg_val = 0;
+
+	if (srng->ring_dir == HAL_SRNG_DST_RING) {
+		reg_val = SRNG_DST_REG_READ(srng, MISC) & ~(SRNG_ENABLE_BIT);
+		SRNG_DST_REG_WRITE(srng, MISC, reg_val);
+	} else {
+		reg_val = SRNG_SRC_REG_READ(srng, MISC) & ~(SRNG_ENABLE_BIT);
+		SRNG_SRC_REG_WRITE(srng, MISC, reg_val);
+		srng->prefetch_timer =
+			SRNG_SRC_REG_READ(srng, CONSUMER_PREFETCH_TIMER);
+		hal_srng_src_hw_write_cons_prefetch_timer(srng, 0);
+	}
+}
+#else
+static inline
+void hal_srng_hw_disable_generic(struct hal_soc *hal, struct hal_srng *srng)
+{
+}
+
+static inline
+void hal_srng_src_hw_write_cons_prefetch_timer(struct hal_srng *srng,
+					       uint32_t value)
+{
+}
+#endif
+/**
+ * hal_srng_src_hw_init - Private function to initialize SRNG
+ * source ring HW
+ * @hal_soc: HAL SOC handle
+ * @srng: SRNG ring pointer
+ * @idle_check: Check if ring is idle
+ */
+static inline
 void hal_srng_src_hw_init_generic(struct hal_soc *hal,
-				  struct hal_srng *srng)
+				  struct hal_srng *srng, bool idle_check)
 {
 	uint32_t reg_val = 0;
 	uint64_t tp_addr = 0;
+
+	if (idle_check) {
+		reg_val = SRNG_SRC_REG_READ(srng, MISC);
+		if (!(reg_val & SRNG_IDLE_STATE_BIT)) {
+			hal_err("ring_id %d not in idle state", srng->ring_id);
+			qdf_assert_always(0);
+		}
+
+		hal_srng_src_hw_write_cons_prefetch_timer(srng,
+							  srng->prefetch_timer);
+	}
 
 	hal_debug("hw_init srng %d", srng->ring_id);
 
@@ -288,7 +352,7 @@ void hal_srng_src_hw_init_generic(struct hal_soc *hal,
 	 * (when SRNG_ENABLE field for the MISC register is available in fw_api)
 	 * (WCSS_UMAC_CE_0_SRC_WFSS_CE_CHANNEL_SRC_R0_SRC_RING_MISC)
 	 */
-	reg_val |= 0x40;
+	reg_val |= SRNG_ENABLE_BIT;
 
 	SRNG_SRC_REG_WRITE(srng, MISC, reg_val);
 }
@@ -357,13 +421,22 @@ static inline void hal_srng_dst_near_full_int_setup(struct hal_srng *srng)
  * destination ring HW
  * @hal_soc: HAL SOC handle
  * @srng: SRNG ring pointer
+ * @idle_check: Check if ring is idle
  */
 static inline
 void hal_srng_dst_hw_init_generic(struct hal_soc *hal,
-				  struct hal_srng *srng)
+				  struct hal_srng *srng, bool idle_check)
 {
 	uint32_t reg_val = 0;
 	uint64_t hp_addr = 0;
+
+	if (idle_check) {
+		reg_val = SRNG_DST_REG_READ(srng, MISC);
+		if (!(reg_val & SRNG_IDLE_STATE_BIT)) {
+			hal_err("ring_id %d not in idle state", srng->ring_id);
+			qdf_assert_always(0);
+		}
+	}
 
 	hal_debug("hw_init srng %d", srng->ring_id);
 
@@ -492,6 +565,10 @@ static inline void hal_srng_hw_reg_offset_init_generic(struct hal_soc *hal_soc)
 					REG_OFFSET(SRC, CONSUMER_INT_SETUP_IX0);
 	hw_reg_offset[SRC_CONSUMER_INT_SETUP_IX1] =
 					REG_OFFSET(SRC, CONSUMER_INT_SETUP_IX1);
+#ifdef DP_UMAC_HW_RESET_SUPPORT
+	hw_reg_offset[SRC_CONSUMER_PREFETCH_TIMER] =
+				REG_OFFSET(SRC, CONSUMER_PREFETCH_TIMER);
+#endif
 }
 
 #endif /* HAL_GENERIC_API_H_ */

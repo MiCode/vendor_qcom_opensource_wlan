@@ -23,6 +23,7 @@
 #include "hal_be_reo.h"
 #include "hal_tx.h"	//HAL_SET_FLD
 #include "hal_be_rx.h"	//HAL_RX_BUF_RBM_GET
+#include "rx_reo_queue_1k.h"
 
 /*
  * The 4 bits REO destination ring value is defined as: 0: TCL
@@ -68,7 +69,8 @@ hal_tx_init_data_ring_be(hal_soc_handle_t hal_soc_hdl,
 {
 }
 
-void hal_reo_setup_generic_be(struct hal_soc *soc, void *reoparams)
+void hal_reo_setup_generic_be(struct hal_soc *soc, void *reoparams,
+			      int qref_reset)
 {
 	uint32_t reg_val;
 	struct hal_reo_params *reo_params = (struct hal_reo_params *)reoparams;
@@ -780,7 +782,7 @@ hal_rx_wbm_rel_buf_paddr_get_be(hal_ring_desc_t rx_desc,
  * hal_unregister_reo_send_cmd_be() - Unregister Reo send command callback.
  * @hal_soc_hdl: HAL soc handle
  *
- * Return: status
+ * Return: None
  */
 static
 void hal_unregister_reo_send_cmd_be(struct hal_soc *hal_soc)
@@ -792,12 +794,108 @@ void hal_unregister_reo_send_cmd_be(struct hal_soc *hal_soc)
  * hal_register_reo_send_cmd_be() - Register Reo send command callback.
  * @hal_soc_hdl: HAL soc handle
  *
- * Return: status
+ * Return: None
  */
 static
 void hal_register_reo_send_cmd_be(struct hal_soc *hal_soc)
 {
 	hal_soc->ops->hal_reo_send_cmd = hal_reo_send_cmd_be;
+}
+
+/**
+ * hal_reset_rx_reo_tid_q_be() - reset the reo tid queue.
+ * @hal_soc_hdl: HAL soc handle
+ * @hw_qdesc_vaddr:start address of the tid queue
+ * @size:size of address pointed by hw_qdesc_vaddr
+ *
+ * Return: None
+ */
+static void
+hal_reset_rx_reo_tid_q_be(struct hal_soc *hal_soc, void *hw_qdesc_vaddr,
+			  uint32_t size)
+{
+	struct rx_reo_queue *hw_qdesc = (struct rx_reo_queue *)hw_qdesc_vaddr;
+	int i;
+
+	if (!hw_qdesc)
+		return;
+
+	hw_qdesc->svld = 0;
+	hw_qdesc->ssn = 0;
+	hw_qdesc->current_index = 0;
+	hw_qdesc->pn_valid = 0;
+	hw_qdesc->pn_31_0 = 0;
+	hw_qdesc->pn_63_32 = 0;
+	hw_qdesc->pn_95_64 = 0;
+	hw_qdesc->pn_127_96 = 0;
+	hw_qdesc->last_rx_enqueue_timestamp = 0;
+	hw_qdesc->last_rx_dequeue_timestamp = 0;
+	hw_qdesc->ptr_to_next_aging_queue_39_32 = 0;
+	hw_qdesc->ptr_to_next_aging_queue_31_0 = 0;
+	hw_qdesc->ptr_to_previous_aging_queue_31_0 = 0;
+	hw_qdesc->ptr_to_previous_aging_queue_39_32 = 0;
+	hw_qdesc->rx_bitmap_31_0 = 0;
+	hw_qdesc->rx_bitmap_63_32 = 0;
+	hw_qdesc->rx_bitmap_95_64 = 0;
+	hw_qdesc->rx_bitmap_127_96 = 0;
+	hw_qdesc->rx_bitmap_159_128 = 0;
+	hw_qdesc->rx_bitmap_191_160 = 0;
+	hw_qdesc->rx_bitmap_223_192 = 0;
+	hw_qdesc->rx_bitmap_255_224 = 0;
+	hw_qdesc->rx_bitmap_287_256 = 0;
+	hw_qdesc->current_msdu_count = 0;
+	hw_qdesc->current_mpdu_count = 0;
+	hw_qdesc->last_sn_reg_index = 0;
+
+	if (size > sizeof(struct rx_reo_queue)) {
+		struct rx_reo_queue_ext *ext_desc;
+		struct rx_reo_queue_1k *kdesc;
+
+		i = ((size - sizeof(struct rx_reo_queue)) /
+				sizeof(struct rx_reo_queue_ext));
+
+		if (i > 10) {
+			i = 10;
+			kdesc = (struct rx_reo_queue_1k *)
+				(hw_qdesc_vaddr + sizeof(struct rx_reo_queue) +
+				 (10 * sizeof(struct rx_reo_queue_ext)));
+
+			kdesc->rx_bitmap_319_288 = 0;
+			kdesc->rx_bitmap_351_320 = 0;
+			kdesc->rx_bitmap_383_352 = 0;
+			kdesc->rx_bitmap_415_384 = 0;
+			kdesc->rx_bitmap_447_416 = 0;
+			kdesc->rx_bitmap_479_448 = 0;
+			kdesc->rx_bitmap_511_480 = 0;
+			kdesc->rx_bitmap_543_512 = 0;
+			kdesc->rx_bitmap_575_544 = 0;
+			kdesc->rx_bitmap_607_576 = 0;
+			kdesc->rx_bitmap_639_608 = 0;
+			kdesc->rx_bitmap_671_640 = 0;
+			kdesc->rx_bitmap_703_672 = 0;
+			kdesc->rx_bitmap_735_704 = 0;
+			kdesc->rx_bitmap_767_736 = 0;
+			kdesc->rx_bitmap_799_768 = 0;
+			kdesc->rx_bitmap_831_800 = 0;
+			kdesc->rx_bitmap_863_832 = 0;
+			kdesc->rx_bitmap_895_864 = 0;
+			kdesc->rx_bitmap_927_896 = 0;
+			kdesc->rx_bitmap_959_928 = 0;
+			kdesc->rx_bitmap_991_960 = 0;
+			kdesc->rx_bitmap_1023_992 = 0;
+		}
+
+		ext_desc = (struct rx_reo_queue_ext *)
+			(hw_qdesc_vaddr + (sizeof(struct rx_reo_queue)));
+
+		while (i > 0) {
+			qdf_mem_zero(&ext_desc->mpdu_link_pointer_0,
+				     (15 * sizeof(struct rx_mpdu_link_ptr)));
+
+			ext_desc++;
+			i--;
+		}
+	}
 }
 #endif
 
@@ -858,5 +956,6 @@ void hal_hw_txrx_default_ops_attach_be(struct hal_soc *hal_soc)
 	hal_soc->ops->hal_unregister_reo_send_cmd =
 					hal_unregister_reo_send_cmd_be;
 	hal_soc->ops->hal_register_reo_send_cmd = hal_register_reo_send_cmd_be;
+	hal_soc->ops->hal_reset_rx_reo_tid_q = hal_reset_rx_reo_tid_q_be;
 #endif
 }

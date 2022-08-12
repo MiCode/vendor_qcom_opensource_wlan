@@ -33,9 +33,10 @@ RX_MSDU_DETAILS_RX_MSDU_EXT_DESC_INFO_DETAILS_RESERVED_0A_OFFSET))
  *
  * @hal_soc: Opaque HAL SOC handle
  * @reo_params: parameters needed by HAL for REO config
+ * @qref_reset: reset qref
  */
 void hal_reo_setup_generic_be(struct hal_soc *soc,
-			      void *reoparams);
+			      void *reoparams, int qref_reset);
 
 /**
  * hal_rx_msdu_ext_desc_info_get_ptr_be() - Get the msdu extension

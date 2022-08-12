@@ -1082,6 +1082,7 @@ bool hal_srng_is_near_full_irq_supported(hal_soc_handle_t hal_soc,
  *		same type (staring from 0)
  * @mac_id: valid MAC Id should be passed if ring type is one of lmac rings
  * @ring_params: SRNG ring params in hal_srng_params structure.
+ * @idle_check: Check if ring is idle
 
  * Callers are expected to allocate contiguous ring memory of size
  * 'num_entries * entry_size' bytes and pass the physical and virtual base
@@ -1093,7 +1094,7 @@ bool hal_srng_is_near_full_irq_supported(hal_soc_handle_t hal_soc,
  *		 NULL on failure (if given ring is not available)
  */
 extern void *hal_srng_setup(void *hal_soc, int ring_type, int ring_num,
-	int mac_id, struct hal_srng_params *ring_params);
+	int mac_id, struct hal_srng_params *ring_params, bool idle_check);
 
 /* Remapping ids of REO rings */
 #define REO_REMAP_TCL 0
@@ -2664,11 +2665,12 @@ uint32_t hal_get_target_type(hal_soc_handle_t hal_soc_hdl);
  * destination ring HW
  * @hal_soc: HAL SOC handle
  * @srng: SRNG ring pointer
+ * @idle_check: Check if ring is idle
  */
 static inline void hal_srng_dst_hw_init(struct hal_soc *hal,
-	struct hal_srng *srng)
+					struct hal_srng *srng, bool idle_check)
 {
-	hal->ops->hal_srng_dst_hw_init(hal, srng);
+	hal->ops->hal_srng_dst_hw_init(hal, srng, idle_check);
 }
 
 /**
@@ -2676,11 +2678,25 @@ static inline void hal_srng_dst_hw_init(struct hal_soc *hal,
  * source ring HW
  * @hal_soc: HAL SOC handle
  * @srng: SRNG ring pointer
+ * @idle_check: Check if ring is idle
  */
 static inline void hal_srng_src_hw_init(struct hal_soc *hal,
-	struct hal_srng *srng)
+					struct hal_srng *srng, bool idle_check)
 {
-	hal->ops->hal_srng_src_hw_init(hal, srng);
+	hal->ops->hal_srng_src_hw_init(hal, srng, idle_check);
+}
+
+/**
+ * hal_srng_hw_disable - Private function to disable SRNG
+ * source ring HW
+ * @hal_soc: HAL SOC handle
+ * @srng: SRNG ring pointer
+ */
+static inline
+void hal_srng_hw_disable(struct hal_soc *hal_soc, struct hal_srng *srng)
+{
+	if (hal_soc->ops->hal_srng_hw_disable)
+		hal_soc->ops->hal_srng_hw_disable(hal_soc, srng);
 }
 
 /**
@@ -2710,13 +2726,14 @@ void hal_get_hw_hptp(hal_soc_handle_t hal_soc_hdl,
  *
  * @hal_soc: Opaque HAL SOC handle
  * @reo_params: parameters needed by HAL for REO config
+ * @qref_reset: reset qref
  */
 static inline void hal_reo_setup(hal_soc_handle_t hal_soc_hdl,
-				 void *reoparams)
+				 void *reoparams, int qref_reset)
 {
 	struct hal_soc *hal_soc = (struct hal_soc *)hal_soc_hdl;
 
-	hal_soc->ops->hal_reo_setup(hal_soc, reoparams);
+	hal_soc->ops->hal_reo_setup(hal_soc, reoparams, qref_reset);
 }
 
 static inline

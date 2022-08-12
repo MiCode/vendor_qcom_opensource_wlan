@@ -2639,17 +2639,21 @@ static void hal_reo_shared_qaddr_setup_be(hal_soc_handle_t hal_soc_hdl)
  * write start addr of MLO and Non MLO table in HW
  *
  * @hal_soc: HAL Soc handle
+ * @qref_reset: reset qref LUT
  *
  * Return: None
  */
-static void hal_reo_shared_qaddr_init_be(hal_soc_handle_t hal_soc_hdl)
+static void hal_reo_shared_qaddr_init_be(hal_soc_handle_t hal_soc_hdl,
+					 int qref_reset)
 {
 	struct hal_soc *hal = (struct hal_soc *)hal_soc_hdl;
 
-	qdf_mem_zero(hal->reo_qref.mlo_reo_qref_table_vaddr,
-		     REO_QUEUE_REF_ML_TABLE_SIZE);
-	qdf_mem_zero(hal->reo_qref.non_mlo_reo_qref_table_vaddr,
-		     REO_QUEUE_REF_NON_ML_TABLE_SIZE);
+	if (qref_reset) {
+		qdf_mem_zero(hal->reo_qref.mlo_reo_qref_table_vaddr,
+			     REO_QUEUE_REF_ML_TABLE_SIZE);
+		qdf_mem_zero(hal->reo_qref.non_mlo_reo_qref_table_vaddr,
+			     REO_QUEUE_REF_NON_ML_TABLE_SIZE);
+	}
 	/* LUT_BASE0 and BASE1 registers expect upper 32bits of LUT base address
 	 * and lower 8 bits to be 0. Shift the physical address by 8 to plug
 	 * upper 32bits only

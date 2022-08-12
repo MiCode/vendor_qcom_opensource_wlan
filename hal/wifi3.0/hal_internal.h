@@ -385,6 +385,9 @@ enum SRNG_REGISTERS {
 	SRC_BASE_MSB,
 	SRC_CONSUMER_INT_SETUP_IX0,
 	SRC_CONSUMER_INT_SETUP_IX1,
+#ifdef DP_UMAC_HW_RESET_SUPPORT
+	SRC_CONSUMER_PREFETCH_TIMER,
+#endif
 	SRNG_REGISTER_MAX,
 };
 
@@ -818,14 +821,18 @@ struct hal_rx_pkt_capture_flags {
 struct hal_hw_txrx_ops {
 	/* init and setup */
 	void (*hal_srng_dst_hw_init)(struct hal_soc *hal,
-				     struct hal_srng *srng);
+				     struct hal_srng *srng, bool idle_check);
 	void (*hal_srng_src_hw_init)(struct hal_soc *hal,
-				     struct hal_srng *srng);
+				     struct hal_srng *srng, bool idle_check);
+
+	void (*hal_srng_hw_disable)(struct hal_soc *hal,
+				    struct hal_srng *srng);
 	void (*hal_get_hw_hptp)(struct hal_soc *hal,
 				hal_ring_handle_t hal_ring_hdl,
 				uint32_t *headp, uint32_t *tailp,
 				uint8_t ring_type);
-	void (*hal_reo_setup)(struct hal_soc *hal_soc, void *reoparams);
+	void (*hal_reo_setup)(struct hal_soc *hal_soc, void *reoparams,
+			      int qref_reset);
 	void (*hal_setup_link_idle_list)(
 				struct hal_soc *hal_soc,
 				qdf_dma_addr_t scatter_bufs_base_paddr[],
@@ -1077,6 +1084,8 @@ struct hal_hw_txrx_ops {
 #ifdef DP_UMAC_HW_RESET_SUPPORT
 	void (*hal_unregister_reo_send_cmd)(struct hal_soc *hal_soc);
 	void (*hal_register_reo_send_cmd)(struct hal_soc *hal_soc);
+	void (*hal_reset_rx_reo_tid_q)(struct hal_soc *hal_soc,
+				       void *hw_qdesc_vaddr, uint32_t size);
 #endif
 	uint32_t (*hal_rx_tlv_sgi_get)(uint8_t *buf);
 	uint32_t (*hal_rx_tlv_get_freq)(uint8_t *buf);
@@ -1159,7 +1168,8 @@ struct hal_hw_txrx_ops {
 						   uint8_t *num_users);
 #endif /* QCA_MONITOR_2_0_SUPPORT */
 	void (*hal_reo_shared_qaddr_setup)(hal_soc_handle_t hal_soc_hdl);
-	void (*hal_reo_shared_qaddr_init)(hal_soc_handle_t hal_soc_hdl);
+	void (*hal_reo_shared_qaddr_init)(hal_soc_handle_t hal_soc_hdl,
+					  int qref_reset);
 	void (*hal_reo_shared_qaddr_detach)(hal_soc_handle_t hal_soc_hdl);
 	void (*hal_reo_shared_qaddr_write)(hal_soc_handle_t hal_soc_hdl,
 					   uint16_t peer_id,

@@ -635,6 +635,18 @@ hal_unregister_reo_send_cmd(hal_soc_handle_t hal_soc_hdl)
 	if (hal_soc->ops->hal_unregister_reo_send_cmd)
 		return hal_soc->ops->hal_unregister_reo_send_cmd(hal_soc);
 }
+
+static inline void
+hal_reset_rx_reo_tid_queue(hal_soc_handle_t hal_soc_hdl, void *hw_qdesc_vaddr,
+			   uint32_t size)
+{
+	struct hal_soc *hal_soc = (struct hal_soc *)hal_soc_hdl;
+
+	if (hal_soc->ops->hal_reset_rx_reo_tid_q)
+		hal_soc->ops->hal_reset_rx_reo_tid_q(hal_soc, hw_qdesc_vaddr,
+						     size);
+}
+
 #endif
 
 static inline QDF_STATUS

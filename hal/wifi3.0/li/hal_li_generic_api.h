@@ -2195,9 +2195,11 @@ static inline void hal_setup_reo_swap(struct hal_soc *soc)
  *
  * @hal_soc: Opaque HAL SOC handle
  * @reo_params: parameters needed by HAL for REO config
+ * @qref_reset: reset qref
  */
 static
-void hal_reo_setup_generic_li(struct hal_soc *soc, void *reoparams)
+void hal_reo_setup_generic_li(struct hal_soc *soc, void *reoparams,
+			      int qref_reset)
 {
 	uint32_t reg_val;
 	struct hal_reo_params *reo_params = (struct hal_reo_params *)reoparams;

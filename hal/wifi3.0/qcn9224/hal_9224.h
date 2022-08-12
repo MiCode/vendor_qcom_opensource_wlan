@@ -1649,7 +1649,8 @@ static uint8_t hal_tx_get_num_tcl_banks_9224(void)
 	return HAL_NUM_TCL_BANKS_9224;
 }
 
-static void hal_reo_setup_9224(struct hal_soc *soc, void *reoparams)
+static void hal_reo_setup_9224(struct hal_soc *soc, void *reoparams,
+			       int qref_reset)
 {
 	uint32_t reg_val;
 	struct hal_reo_params *reo_params = (struct hal_reo_params *)reoparams;
@@ -1734,7 +1735,7 @@ static void hal_reo_setup_9224(struct hal_soc *soc, void *reoparams)
 	 * GLOBAL_LINK_DESC_COUNT_CTRL
 	 */
 
-	hal_reo_shared_qaddr_init((hal_soc_handle_t)soc);
+	hal_reo_shared_qaddr_init((hal_soc_handle_t)soc, qref_reset);
 }
 
 static uint16_t hal_get_rx_max_ba_window_qcn9224(int tid)
@@ -1812,6 +1813,7 @@ static void hal_hw_txrx_ops_attach_qcn9224(struct hal_soc *hal_soc)
 	/* init and setup */
 	hal_soc->ops->hal_srng_dst_hw_init = hal_srng_dst_hw_init_generic;
 	hal_soc->ops->hal_srng_src_hw_init = hal_srng_src_hw_init_generic;
+	hal_soc->ops->hal_srng_hw_disable = hal_srng_hw_disable_generic;
 	hal_soc->ops->hal_get_hw_hptp = hal_get_hw_hptp_generic;
 	hal_soc->ops->hal_get_window_address = hal_get_window_address_9224;
 	hal_soc->ops->hal_cmem_write = hal_cmem_write_9224;
