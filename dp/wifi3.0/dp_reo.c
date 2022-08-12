@@ -87,6 +87,21 @@ void dp_resume_reo_send_cmd(struct dp_soc *soc)
 {
 	hal_register_reo_send_cmd(soc->hal_soc);
 }
+
+/**
+ * dp_reset_rx_reo_tid_queue() - Reset the reo tid queues
+ * @soc: dp soc
+ * @hw_qdesc_vaddr: starting address of the tid queues
+ * @size: size of the memory pointed to by hw_qdesc_vaddr
+ *
+ * Return: status
+ */
+void
+dp_reset_rx_reo_tid_queue(struct dp_soc *soc, void *hw_qdesc_vaddr,
+			  uint32_t size)
+{
+	hal_reset_rx_reo_tid_queue(soc->hal_soc, hw_qdesc_vaddr, size);
+}
 #endif
 
 QDF_STATUS dp_reo_send_cmd(struct dp_soc *soc, enum hal_reo_cmd_type type,
@@ -204,3 +219,16 @@ void dp_reo_cmdlist_destroy(struct dp_soc *soc)
 	}
 	qdf_spin_unlock_bh(&soc->rx.reo_cmd_lock);
 }
+
+#ifdef DP_UMAC_HW_RESET_SUPPORT
+/**
+ * dp_cleanup_reo_cmd_module - Clean up the reo cmd module
+ * @soc: DP SoC hanle
+ *
+ */
+void dp_cleanup_reo_cmd_module(struct dp_soc *soc)
+{
+	dp_reo_cmdlist_destroy(soc);
+	dp_reo_desc_freelist_destroy(soc);
+}
+#endif

@@ -583,7 +583,7 @@ void dp_rx_mon_dest_process(struct dp_soc *soc, struct dp_intr *int_ctx,
 								  mac_for_pdev),
 					dp_rx_get_mon_desc_pool(soc, mac_id,
 								pdev_id),
-					rx_bufs_used, &head, &tail);
+					rx_bufs_used, &head, &tail, false);
 	}
 }
 
@@ -628,7 +628,7 @@ dp_rx_pdev_mon_buf_buffers_alloc(struct dp_pdev *pdev, uint32_t mac_id,
 						 rx_desc_pool,
 						 num_entries,
 						 &desc_list,
-						 &tail);
+						 &tail, false);
 	}
 
 	return status;
@@ -893,7 +893,7 @@ next_entry:
 		dp_rx_buffers_replenish(soc, mac_id,
 					dp_rxdma_get_mon_buf_ring(pdev, mac_id),
 					rx_desc_pool,
-					rx_bufs_used, &head, &tail);
+					rx_bufs_used, &head, &tail, false);
 	}
 
 	return reap_cnt;

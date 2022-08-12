@@ -564,6 +564,131 @@ QDF_STATUS __dp_pdev_rx_buffers_no_map_attach(struct dp_soc *soc,
 }
 #endif
 
+#ifdef DP_UMAC_HW_RESET_SUPPORT
+#if defined(QCA_DP_RX_NBUF_NO_MAP_UNMAP) && !defined(BUILD_X86)
+static inline
+qdf_dma_addr_t dp_rx_rep_retrieve_paddr(struct dp_soc *dp_soc, qdf_nbuf_t nbuf,
+					uint32_t buf_size)
+{
+	return dp_rx_nbuf_sync_no_dsb(soc, nbuf, rx_desc_pool->buf_size);
+}
+#else
+static inline
+qdf_dma_addr_t dp_rx_rep_retrieve_paddr(struct dp_soc *dp_soc, qdf_nbuf_t nbuf,
+					uint32_t buf_size)
+{
+	return qdf_nbuf_get_frag_paddr(nbuf, 0);
+}
+#endif
+
+/*
+ * dp_rx_desc_replenish() - Replenish the rx descriptors one at a time
+ *
+ * @soc: core txrx main context
+ * @dp_rxdma_srng: rxdma ring
+ * @rx_desc_pool: rx descriptor pool
+ * @rx_desc:rx descriptor
+ *
+ * Return: void
+ */
+static inline
+void dp_rx_desc_replenish(struct dp_soc *soc, struct dp_srng *dp_rxdma_srng,
+			  struct rx_desc_pool *rx_desc_pool,
+			  struct dp_rx_desc *rx_desc)
+{
+	void *rxdma_srng;
+	void *rxdma_ring_entry;
+	qdf_dma_addr_t paddr;
+
+	rxdma_srng = dp_rxdma_srng->hal_srng;
+
+	/* No one else should be accessing the srng at this point */
+	hal_srng_access_start_unlocked(soc->hal_soc, rxdma_srng);
+
+	rxdma_ring_entry = hal_srng_src_get_next(soc->hal_soc, rxdma_srng);
+
+	qdf_assert_always(rxdma_ring_entry);
+	rx_desc->in_err_state = 0;
+
+	paddr = dp_rx_rep_retrieve_paddr(soc, rx_desc->nbuf,
+					 rx_desc_pool->buf_size);
+	hal_rxdma_buff_addr_info_set(soc->hal_soc, rxdma_ring_entry, paddr,
+				     rx_desc->cookie, rx_desc_pool->owner);
+
+	hal_srng_access_end_unlocked(soc->hal_soc, rxdma_srng);
+}
+
+/*
+ * dp_rx_desc_reuse() - Reuse the rx descriptors to fill the rx buf ring
+ *
+ * @soc: core txrx main context
+ * @nbuf_list: nbuf list for delayed free
+ *
+ * Return: void
+ */
+void dp_rx_desc_reuse(struct dp_soc *soc, qdf_nbuf_t *nbuf_list)
+{
+	int mac_id, i, j;
+	union dp_rx_desc_list_elem_t *head = NULL;
+	union dp_rx_desc_list_elem_t *tail = NULL;
+
+	for (mac_id = 0; mac_id < MAX_PDEV_CNT; mac_id++) {
+		struct dp_srng *dp_rxdma_srng =
+					&soc->rx_refill_buf_ring[mac_id];
+		struct rx_desc_pool *rx_desc_pool = &soc->rx_desc_buf[mac_id];
+		uint32_t rx_sw_desc_num = rx_desc_pool->pool_size;
+		/* Only fill up 1/3 of the ring size */
+		uint32_t num_req_decs;
+
+		if (!dp_rxdma_srng || !dp_rxdma_srng->hal_srng ||
+		    !rx_desc_pool->array)
+			continue;
+
+		num_req_decs = dp_rxdma_srng->num_entries / 3;
+
+		for (i = 0, j = 0; i < rx_sw_desc_num; i++) {
+			struct dp_rx_desc *rx_desc =
+				(struct dp_rx_desc *)&rx_desc_pool->array[i];
+
+			if (rx_desc->in_use) {
+				if (j < dp_rxdma_srng->num_entries) {
+					dp_rx_desc_replenish(soc, dp_rxdma_srng,
+							     rx_desc_pool,
+							     rx_desc);
+				} else {
+					dp_rx_nbuf_unmap(soc, rx_desc, 0);
+					rx_desc->unmapped = 0;
+
+					rx_desc->nbuf->next = *nbuf_list;
+					*nbuf_list = rx_desc->nbuf;
+
+					dp_rx_add_to_free_desc_list(&head,
+								    &tail,
+								    rx_desc);
+				}
+				j++;
+			}
+		}
+
+		if (head)
+			dp_rx_add_desc_list_to_free_list(soc, &head, &tail,
+							 mac_id, rx_desc_pool);
+
+		/* If num of descs in use were less, then we need to replenish
+		 * the ring with some buffers
+		 */
+		head = NULL;
+		tail = NULL;
+
+		if (j < (num_req_decs - 1))
+			dp_rx_buffers_replenish(soc, mac_id, dp_rxdma_srng,
+						rx_desc_pool,
+						((num_req_decs - 1) - j),
+						&head, &tail, true);
+	}
+}
+#endif
+
 /*
  * dp_rx_buffers_replenish() - replenish rxdma ring with rx nbufs
  *			       called during dp rx initialization
@@ -578,6 +703,7 @@ QDF_STATUS __dp_pdev_rx_buffers_no_map_attach(struct dp_soc *soc,
  *	       or NULL during dp rx initialization or out of buffer
  *	       interrupt.
  * @tail: tail of descs list
+ * @req_only: If true don't replenish more than req buffers
  * @func_name: name of the caller function
  * Return: return success or failure
  */
@@ -587,7 +713,7 @@ QDF_STATUS __dp_rx_buffers_replenish(struct dp_soc *dp_soc, uint32_t mac_id,
 				uint32_t num_req_buffers,
 				union dp_rx_desc_list_elem_t **desc_list,
 				union dp_rx_desc_list_elem_t **tail,
-				const char *func_name)
+				bool req_only, const char *func_name)
 {
 	uint32_t num_alloc_desc;
 	uint16_t num_desc_to_free = 0;
@@ -630,7 +756,7 @@ QDF_STATUS __dp_rx_buffers_replenish(struct dp_soc *dp_soc, uint32_t mac_id,
 	dp_rx_debug("%pK: no of available entries in rxdma ring: %d",
 		    dp_soc, num_entries_avail);
 
-	if (!(*desc_list) && (num_entries_avail >
+	if (!req_only && !(*desc_list) && (num_entries_avail >
 		((dp_rxdma_srng->num_entries * 3) / 4))) {
 		num_req_buffers = num_entries_avail;
 	} else if (num_entries_avail < num_req_buffers) {

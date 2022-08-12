@@ -135,6 +135,7 @@ struct umac_reset_rx_actions {
  * @shmem_exp_magic_num: Expected magic number in the shared memory
  * @rx_actions: callbacks for handling UMAC reset actions
  * @intr_ctx_bkp: DP Interrupts ring masks backup
+ * @nbuf_list: skb list for delayed free
  */
 struct dp_soc_umac_reset_ctx {
 	qdf_dma_addr_t shmem_paddr_unaligned;
@@ -147,6 +148,7 @@ struct dp_soc_umac_reset_ctx {
 	uint32_t shmem_exp_magic_num;
 	struct umac_reset_rx_actions rx_actions;
 	struct dp_intr_bkp *intr_ctx_bkp;
+	qdf_nbuf_t nbuf_list;
 };
 
 /**

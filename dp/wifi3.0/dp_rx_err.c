@@ -2586,7 +2586,8 @@ done:
 						rx_desc_pool,
 						rx_bufs_reaped[mac_id],
 						&dp_pdev->free_list_head,
-						&dp_pdev->free_list_tail);
+						&dp_pdev->free_list_tail,
+						false);
 			rx_bufs_used += rx_bufs_reaped[mac_id];
 		}
 	}
@@ -2904,7 +2905,7 @@ done:
 
 			dp_rx_buffers_replenish(soc, mac_id, dp_rxdma_srng,
 					rx_desc_pool, rx_bufs_reaped[mac_id],
-					&head[mac_id], &tail[mac_id]);
+					&head[mac_id], &tail[mac_id], false);
 			rx_bufs_used += rx_bufs_reaped[mac_id];
 		}
 	}
@@ -3438,7 +3439,7 @@ dp_rxdma_err_process(struct dp_intr *int_ctx, struct dp_soc *soc,
 		}
 
 		dp_rx_buffers_replenish(soc, mac_id, dp_rxdma_srng,
-			rx_desc_pool, rx_bufs_used, &head, &tail);
+			rx_desc_pool, rx_bufs_used, &head, &tail, false);
 
 		work_done += rx_bufs_used;
 	}
@@ -3627,7 +3628,7 @@ dp_handle_wbm_internal_error(struct dp_soc *soc, void *hal_desc,
 		dp_rx_buffers_replenish(soc, mac_id, dp_rxdma_srng,
 					rx_desc_pool,
 					rx_bufs_reaped[mac_id],
-					&head, &tail);
+					&head, &tail, false);
 	}
 }
 

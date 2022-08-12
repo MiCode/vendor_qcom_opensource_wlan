@@ -3766,6 +3766,27 @@ error:
 	return status;
 }
 
+#ifdef DP_UMAC_HW_RESET_SUPPORT
+static
+void dp_peer_rst_tids(struct dp_soc *soc, struct dp_peer *peer, void *arg)
+{
+	int tid;
+
+	for (tid = 0; tid < (DP_MAX_TIDS - 1); tid++) {
+		struct dp_rx_tid *rx_tid = &peer->rx_tid[tid];
+		void *vaddr = rx_tid->hw_qdesc_vaddr_aligned;
+
+		if (vaddr)
+			dp_reset_rx_reo_tid_queue(soc, vaddr,
+						  rx_tid->hw_qdesc_alloc_size);
+	}
+}
+
+void dp_reset_tid_q_setup(struct dp_soc *soc)
+{
+	dp_soc_iterate_peer(soc, dp_peer_rst_tids, NULL, DP_MOD_ID_UMAC_RESET);
+}
+#endif
 #ifdef REO_DESC_DEFER_FREE
 /*
  * dp_reo_desc_clean_up() - If cmd to flush base desc fails add

@@ -246,7 +246,8 @@ QDF_STATUS dp_tx_tso_cmn_desc_pool_alloc(struct dp_soc *soc,
 QDF_STATUS dp_tx_tso_cmn_desc_pool_init(struct dp_soc *soc,
 					uint8_t num_pool,
 					uint32_t num_desc);
-void dp_tx_comp_free_buf(struct dp_soc *soc, struct dp_tx_desc_s *desc);
+qdf_nbuf_t dp_tx_comp_free_buf(struct dp_soc *soc, struct dp_tx_desc_s *desc,
+			       bool delayed_free);
 void dp_tx_desc_release(struct dp_tx_desc_s *tx_desc, uint8_t desc_pool_id);
 void dp_tx_compute_delay(struct dp_vdev *vdev, struct dp_tx_desc_s *tx_desc,
 			 uint8_t tid, uint8_t ring_id);

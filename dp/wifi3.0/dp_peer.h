@@ -77,6 +77,9 @@ struct dp_peer *dp_peer_find_hash_find(struct dp_soc *soc,
 				       enum dp_mod_id id);
 bool dp_peer_find_by_id_valid(struct dp_soc *soc, uint16_t peer_id);
 
+#ifdef DP_UMAC_HW_RESET_SUPPORT
+void dp_reset_tid_q_setup(struct dp_soc *soc);
+#endif
 /**
  * dp_peer_get_ref() - Returns peer object given the peer id
  *

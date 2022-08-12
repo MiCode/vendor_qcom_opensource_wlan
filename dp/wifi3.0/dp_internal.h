@@ -2153,6 +2153,10 @@ extern QDF_STATUS dp_rx_tid_setup_wifi3(struct dp_peer *peer, int tid,
 void dp_pause_reo_send_cmd(struct dp_soc *soc);
 
 void dp_resume_reo_send_cmd(struct dp_soc *soc);
+void dp_cleanup_reo_cmd_module(struct dp_soc *soc);
+void dp_reo_desc_freelist_destroy(struct dp_soc *soc);
+void dp_reset_rx_reo_tid_queue(struct dp_soc *soc, void *hw_qdesc_vaddr,
+			       uint32_t size);
 #endif
 
 extern QDF_STATUS dp_reo_send_cmd(struct dp_soc *soc,
