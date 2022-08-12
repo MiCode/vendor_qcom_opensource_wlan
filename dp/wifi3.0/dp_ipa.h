@@ -333,38 +333,46 @@ int dp_ipa_uc_detach(struct dp_soc *soc, struct dp_pdev *pdev);
 int dp_ipa_uc_attach(struct dp_soc *soc, struct dp_pdev *pdev);
 int dp_ipa_ring_resource_setup(struct dp_soc *soc,
 		struct dp_pdev *pdev);
-QDF_STATUS dp_ipa_handle_rx_buf_smmu_mapping(struct dp_soc *soc,
-					     qdf_nbuf_t nbuf,
-					     uint32_t size,
-					     bool create);
-
 bool dp_reo_remap_config(struct dp_soc *soc, uint32_t *remap0,
 			 uint32_t *remap1, uint32_t *remap2);
 bool dp_ipa_is_mdm_platform(void);
 
 qdf_nbuf_t dp_ipa_handle_rx_reo_reinject(struct dp_soc *soc, qdf_nbuf_t nbuf);
 
+QDF_STATUS dp_ipa_handle_rx_buf_smmu_mapping(struct dp_soc *soc,
+					     qdf_nbuf_t nbuf,
+					     uint32_t size,
+					     bool create,
+					     const char *func,
+					     uint32_t line);
+
 /**
  * dp_ipa_tx_buf_smmu_mapping() - Create SMMU mappings for IPA
  *				  allocated TX buffers
  * @soc_hdl: handle to the soc
  * @pdev_id: pdev id number, to get the handle
+ * @func: caller function
+ * @line: line number
  *
  * Return: QDF_STATUS
  */
-QDF_STATUS dp_ipa_tx_buf_smmu_mapping(
-	struct cdp_soc_t *soc_hdl, uint8_t pdev_id);
+QDF_STATUS dp_ipa_tx_buf_smmu_mapping(struct cdp_soc_t *soc_hdl,
+				      uint8_t pdev_id, const char *func,
+				      uint32_t line);
 
 /**
  * dp_ipa_tx_buf_smmu_unmapping() - Release SMMU mappings for IPA
  *				    allocated TX buffers
  * @soc_hdl: handle to the soc
  * @pdev_id: pdev id number, to get the handle
+ * @func: caller function
+ * @line: line number
  *
  * Return: QDF_STATUS
  */
-QDF_STATUS dp_ipa_tx_buf_smmu_unmapping(
-	struct cdp_soc_t *soc_hdl, uint8_t pdev_id);
+QDF_STATUS dp_ipa_tx_buf_smmu_unmapping(struct cdp_soc_t *soc_hdl,
+					uint8_t pdev_id, const char *func,
+					uint32_t line);
 
 #ifndef QCA_OL_DP_SRNG_LOCK_LESS_ACCESS
 static inline void
@@ -480,7 +488,9 @@ static inline int dp_ipa_ring_resource_setup(struct dp_soc *soc,
 static inline QDF_STATUS dp_ipa_handle_rx_buf_smmu_mapping(struct dp_soc *soc,
 							   qdf_nbuf_t nbuf,
 							   uint32_t size,
-							   bool create)
+							   bool create,
+							   const char *func,
+							   uint32_t line)
 {
 	return QDF_STATUS_SUCCESS;
 }
@@ -514,13 +524,17 @@ static inline qdf_nbuf_t dp_ipa_handle_rx_reo_reinject(struct dp_soc *soc,
 }
 
 static inline QDF_STATUS dp_ipa_tx_buf_smmu_mapping(struct cdp_soc_t *soc_hdl,
-						    uint8_t pdev_id)
+						    uint8_t pdev_id,
+						    const char *func,
+						    uint32_t line)
 {
 	return QDF_STATUS_SUCCESS;
 }
 
 static inline QDF_STATUS dp_ipa_tx_buf_smmu_unmapping(struct cdp_soc_t *soc_hdl,
-						      uint8_t pdev_id)
+						      uint8_t pdev_id,
+						      const char *func,
+						      uint32_t line)
 {
 	return QDF_STATUS_SUCCESS;
 }

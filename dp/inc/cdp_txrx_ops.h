@@ -1965,9 +1965,13 @@ struct cdp_ipa_ops {
 	bool (*ipa_rx_intrabss_fwd)(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
 				    qdf_nbuf_t nbuf, bool *fwd_success);
 	QDF_STATUS (*ipa_tx_buf_smmu_mapping)(struct cdp_soc_t *soc_hdl,
-					      uint8_t pdev_id);
+					      uint8_t pdev_id,
+					      const char *func,
+					      uint32_t line);
 	QDF_STATUS (*ipa_tx_buf_smmu_unmapping)(struct cdp_soc_t *soc_hdl,
-						uint8_t pdev_id);
+						uint8_t pdev_id,
+						const char *func,
+						uint32_t line);
 #ifdef IPA_WDS_EASYMESH_FEATURE
 	QDF_STATUS (*ipa_ast_create)(struct cdp_soc_t *soc_hdl,
 				     qdf_ipa_ast_info_type_t *data);
