@@ -171,7 +171,7 @@ uint32_t dp_rx_process_be(struct dp_intr *int_ctx,
 	bool near_full;
 	union dp_rx_desc_list_elem_t *head[WLAN_MAX_MLO_CHIPS][MAX_PDEV_CNT];
 	union dp_rx_desc_list_elem_t *tail[WLAN_MAX_MLO_CHIPS][MAX_PDEV_CNT];
-	uint32_t num_pending;
+	uint32_t num_pending = 0;
 	uint32_t rx_bufs_used = 0, rx_buf_cookie;
 	uint16_t msdu_len = 0;
 	uint16_t peer_id;
