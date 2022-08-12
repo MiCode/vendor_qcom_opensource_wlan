@@ -276,7 +276,7 @@ static QDF_STATUS target_if_wifi_pos_init_ring(uint8_t ring_idx,
 		(qdf_dma_addr_t)priv->dma_cfg[ring_idx].base_paddr_aligned;
 	ring_params.num_entries = num_entries;
 	srng = hal_srng_setup(hal_soc, WIFI_POS_SRC, 0,
-				priv->dma_cap[ring_idx].pdev_id, &ring_params);
+			      priv->dma_cap[ring_idx].pdev_id, &ring_params, 0);
 	if (!srng) {
 		target_if_err("srng setup failed");
 		return QDF_STATUS_E_FAILURE;
