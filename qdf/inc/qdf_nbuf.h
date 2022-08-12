@@ -1066,6 +1066,15 @@ typedef __qdf_nbuf_t qdf_nbuf_t;
  * @unmap_line_num: mapping function line number
  * @is_nbuf_mapped: indicate mapped/unmapped nbuf
  * @time: mapping function timestamp
+ * @smmu_map_line_num: smmu mapping line number
+ * @smmu_unmap_line_num: smmu unmapping line number
+ * @smmu_map_func_name: smmu mapping function name
+ * @smmu_unmap_func_name: smmu unmapping function name
+ * @is_nbuf_smmu_mapped: nbuf is smmu mapped
+ * @smmu_map_iova_addr: nbuf smmu map virtual address
+ * @smmu_map_pa_addr: nbuf smmu map physical address
+ * @smmu_unmap_iova_addr: nbuf smmu unmap virtual address
+ * @smmu_unmap_pa_addr: nbuf smmu unmap physical address
  */
 struct qdf_nbuf_track_t {
 	struct qdf_nbuf_track_t *p_next;
@@ -1079,6 +1088,17 @@ struct qdf_nbuf_track_t {
 	uint32_t unmap_line_num;
 	bool is_nbuf_mapped;
 	qdf_time_t time;
+#ifdef NBUF_SMMU_MAP_UNMAP_DEBUG
+	uint32_t smmu_map_line_num;
+	uint32_t smmu_unmap_line_num;
+	char smmu_map_func_name[QDF_MEM_FUNC_NAME_SIZE];
+	char smmu_unmap_func_name[QDF_MEM_FUNC_NAME_SIZE];
+	bool is_nbuf_smmu_mapped;
+	unsigned long smmu_map_iova_addr;
+	unsigned long smmu_map_pa_addr;
+	unsigned long smmu_unmap_iova_addr;
+	unsigned long smmu_unmap_pa_addr;
+#endif
 };
 
 typedef struct qdf_nbuf_track_t QDF_NBUF_TRACK;
@@ -1125,7 +1145,7 @@ qdf_nbuf_set_send_complete_flag(qdf_nbuf_t buf, bool flag)
 
 #ifdef NBUF_MAP_UNMAP_DEBUG
 /**
- * qdf_nbuf_map_check_for_leaks() - check for nbut map leaks
+ * qdf_nbuf_map_check_for_leaks() - check for nbuf map leaks
  *
  * Check for net buffers that have been mapped, but never unmapped.
  *
@@ -1955,6 +1975,8 @@ enum qdf_nbuf_event_type {
 	QDF_NBUF_MAP,
 	QDF_NBUF_UNMAP,
 	QDF_NBUF_ALLOC_COPY_EXPAND,
+	QDF_NBUF_SMMU_MAP,
+	QDF_NBUF_SMMU_UNMAP,
 };
 
 void qdf_net_buf_debug_init(void);
@@ -1985,6 +2007,87 @@ void qdf_net_buf_debug_delete_node(qdf_nbuf_t net_buf);
 void qdf_net_buf_debug_update_map_node(qdf_nbuf_t net_buf,
 				       const char *func_name,
 				       uint32_t line_num);
+
+/**
+ * qdf_nbuf_smmu_map_debug() - map smmu buffer
+ * @nbuf: network buffer
+ * @hdl: ipa handle
+ * @num_buffers: number of buffers
+ * @info: memory info
+ * @func: function name
+ * @line: line number
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS qdf_nbuf_smmu_map_debug(qdf_nbuf_t nbuf,
+				   uint8_t hdl,
+				   uint8_t num_buffers,
+				   qdf_mem_info_t *info,
+				   const char *func,
+				   uint32_t line);
+
+/**
+ * qdf_nbuf_smmu_unmap_debug() - unmap smmu buffer
+ * @nbuf: network buffer
+ * @hdl: ipa handle
+ * @num_buffers: number of buffers
+ * @info: memory info
+ * @func: function name
+ * @line: line number
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS qdf_nbuf_smmu_unmap_debug(qdf_nbuf_t nbuf,
+				     uint8_t hdl,
+				     uint8_t num_buffers,
+				     qdf_mem_info_t *info,
+				     const char *func,
+				     uint32_t line);
+
+#ifdef NBUF_SMMU_MAP_UNMAP_DEBUG
+/**
+ * qdf_nbuf_map_check_for_smmu_leaks() - check for nbuf smmu map leaks
+ *
+ * Check for net buffers that have been smmu mapped, but never smmu unmapped.
+ *
+ * Returns: None
+ */
+void qdf_nbuf_map_check_for_smmu_leaks(void);
+
+/**
+ * qdf_net_buf_debug_update_smmu_map_node() - update nbuf in debug
+ * hash table with the mapping function info
+ * @nbuf: network buffer
+ * @iova: Virtual address of buffer
+ * @pa: Physical address of buffer
+ * @func: function name that requests for mapping the nbuf
+ * @line: function line number
+ *
+ * Return: none
+ */
+void qdf_net_buf_debug_update_smmu_map_node(qdf_nbuf_t nbuf,
+					    unsigned long iova,
+					    unsigned long pa,
+					    const char *func,
+					    uint32_t line);
+
+/**
+ * qdf_net_buf_debug_update_smmu_unmap_node() - update nbuf in debug
+ * hash table with the unmapping function info
+ * @nbuf: network buffer
+ * @iova: Virtual address of buffer
+ * @pa: Physical address of buffer
+ * @func: function name that requests for unmapping the nbuf
+ * @line: function line number
+ *
+ * Return: none
+ */
+void qdf_net_buf_debug_update_smmu_unmap_node(qdf_nbuf_t nbuf,
+					      unsigned long iova,
+					      unsigned long pa,
+					      const char *func,
+					      uint32_t line);
+#endif
 
 /**
  * qdf_net_buf_debug_update_unmap_node() - update nbuf in debug

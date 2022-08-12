@@ -21,7 +21,9 @@
  * DOC: qdf_nbuf.c
  * QCA driver framework(QDF) network buffer management APIs
  */
-
+#ifdef IPA_OFFLOAD
+#include <i_qdf_ipa_wdi3.h>
+#endif
 #include <linux/hashtable.h>
 #include <linux/kernel.h>
 #include <linux/version.h>
@@ -786,7 +788,8 @@ qdf_nbuf_history_add(qdf_nbuf_t nbuf, const char *func, uint32_t line,
 	event->line = line;
 	event->type = type;
 	event->timestamp = qdf_get_log_timestamp();
-	if (type == QDF_NBUF_MAP || type == QDF_NBUF_UNMAP)
+	if (type == QDF_NBUF_MAP || type == QDF_NBUF_UNMAP ||
+	    type == QDF_NBUF_SMMU_MAP || type == QDF_NBUF_SMMU_UNMAP)
 		event->iova = QDF_NBUF_CB_PADDR(nbuf);
 	else
 		event->iova = 0;
@@ -800,6 +803,167 @@ void qdf_set_smmu_fault_state(bool smmu_fault_state)
 }
 qdf_export_symbol(qdf_set_smmu_fault_state);
 #endif /* NBUF_MEMORY_DEBUG */
+
+#ifdef NBUF_SMMU_MAP_UNMAP_DEBUG
+#define qdf_nbuf_smmu_map_tracker_bits 11 /* 2048 buckets */
+qdf_tracker_declare(qdf_nbuf_smmu_map_tracker, qdf_nbuf_smmu_map_tracker_bits,
+		    "nbuf map-no-unmap events", "nbuf map", "nbuf unmap");
+
+static void qdf_nbuf_smmu_map_tracking_init(void)
+{
+	qdf_tracker_init(&qdf_nbuf_smmu_map_tracker);
+}
+
+static void qdf_nbuf_smmu_map_tracking_deinit(void)
+{
+	qdf_tracker_deinit(&qdf_nbuf_smmu_map_tracker);
+}
+
+static QDF_STATUS
+qdf_nbuf_track_smmu_map(qdf_nbuf_t nbuf, const char *func, uint32_t line)
+{
+	if (is_initial_mem_debug_disabled)
+		return QDF_STATUS_SUCCESS;
+
+	return qdf_tracker_track(&qdf_nbuf_smmu_map_tracker, nbuf, func, line);
+}
+
+static void
+qdf_nbuf_untrack_smmu_map(qdf_nbuf_t nbuf, const char *func, uint32_t line)
+{
+	if (is_initial_mem_debug_disabled)
+		return;
+
+	qdf_nbuf_history_add(nbuf, func, line, QDF_NBUF_SMMU_UNMAP);
+	qdf_tracker_untrack(&qdf_nbuf_smmu_map_tracker, nbuf, func, line);
+}
+
+void qdf_nbuf_map_check_for_smmu_leaks(void)
+{
+	qdf_tracker_check_for_leaks(&qdf_nbuf_smmu_map_tracker);
+}
+
+QDF_STATUS qdf_nbuf_smmu_map_debug(qdf_nbuf_t nbuf,
+				   uint8_t hdl,
+				   uint8_t num_buffers,
+				   qdf_mem_info_t *info,
+				   const char *func,
+				   uint32_t line)
+{
+	QDF_STATUS status;
+
+	status = qdf_nbuf_track_smmu_map(nbuf, func, line);
+	if (QDF_IS_STATUS_ERROR(status))
+		return status;
+
+	status = __qdf_ipa_wdi_create_smmu_mapping(hdl, num_buffers, info);
+
+	if (QDF_IS_STATUS_ERROR(status)) {
+		qdf_nbuf_untrack_smmu_map(nbuf, func, line);
+	} else {
+		if (!is_initial_mem_debug_disabled)
+			qdf_nbuf_history_add(nbuf, func, line, QDF_NBUF_MAP);
+		qdf_net_buf_debug_update_smmu_map_node(nbuf, info->iova,
+						       info->pa, func, line);
+	}
+
+	return status;
+}
+
+qdf_export_symbol(qdf_nbuf_smmu_map_debug);
+
+QDF_STATUS qdf_nbuf_smmu_unmap_debug(qdf_nbuf_t nbuf,
+				     uint8_t hdl,
+				     uint8_t num_buffers,
+				     qdf_mem_info_t *info,
+				     const char *func,
+				     uint32_t line)
+{
+	QDF_STATUS status;
+
+	qdf_nbuf_untrack_smmu_map(nbuf, func, line);
+	status = __qdf_ipa_wdi_release_smmu_mapping(hdl, num_buffers, info);
+	qdf_net_buf_debug_update_smmu_unmap_node(nbuf, info->iova,
+						 info->pa, func, line);
+	return status;
+}
+
+qdf_export_symbol(qdf_nbuf_smmu_unmap_debug);
+
+static void qdf_nbuf_panic_on_free_if_smmu_mapped(qdf_nbuf_t nbuf,
+						  const char *func,
+						  uint32_t line)
+{
+	char map_func[QDF_TRACKER_FUNC_SIZE];
+	uint32_t map_line;
+
+	if (!qdf_tracker_lookup(&qdf_nbuf_smmu_map_tracker, nbuf,
+				&map_func, &map_line))
+		return;
+
+	QDF_MEMDEBUG_PANIC("Nbuf freed @ %s:%u while mapped from %s:%u",
+			   func, line, map_func, map_line);
+}
+
+static inline void qdf_net_buf_update_smmu_params(QDF_NBUF_TRACK *p_node)
+{
+	p_node->smmu_unmap_line_num = 0;
+	p_node->is_nbuf_smmu_mapped = false;
+	p_node->smmu_map_line_num = 0;
+	p_node->smmu_map_func_name[0] = '\0';
+	p_node->smmu_unmap_func_name[0] = '\0';
+	p_node->smmu_unmap_iova_addr = 0;
+	p_node->smmu_unmap_pa_addr = 0;
+	p_node->smmu_map_iova_addr = 0;
+	p_node->smmu_map_pa_addr = 0;
+}
+#else
+#ifdef NBUF_MEMORY_DEBUG
+static void qdf_nbuf_smmu_map_tracking_init(void)
+{
+}
+
+static void qdf_nbuf_smmu_map_tracking_deinit(void)
+{
+}
+
+static void qdf_nbuf_panic_on_free_if_smmu_mapped(qdf_nbuf_t nbuf,
+						  const char *func,
+						  uint32_t line)
+{
+}
+
+static inline void qdf_net_buf_update_smmu_params(QDF_NBUF_TRACK *p_node)
+{
+}
+#endif
+
+#ifdef IPA_OFFLOAD
+QDF_STATUS qdf_nbuf_smmu_map_debug(qdf_nbuf_t nbuf,
+				   uint8_t hdl,
+				   uint8_t num_buffers,
+				   qdf_mem_info_t *info,
+				   const char *func,
+				   uint32_t line)
+{
+	return  __qdf_ipa_wdi_create_smmu_mapping(hdl, num_buffers, info);
+}
+
+qdf_export_symbol(qdf_nbuf_smmu_map_debug);
+
+QDF_STATUS qdf_nbuf_smmu_unmap_debug(qdf_nbuf_t nbuf,
+				     uint8_t hdl,
+				     uint8_t num_buffers,
+				     qdf_mem_info_t *info,
+				     const char *func,
+				     uint32_t line)
+{
+	return __qdf_ipa_wdi_release_smmu_mapping(hdl, num_buffers, info);
+}
+
+qdf_export_symbol(qdf_nbuf_smmu_unmap_debug);
+#endif
+#endif
 
 #ifdef NBUF_MAP_UNMAP_DEBUG
 #define qdf_nbuf_map_tracker_bits 11 /* 2048 buckets */
@@ -2886,6 +3050,7 @@ void qdf_net_buf_debug_init(void)
 	qdf_atomic_set(&qdf_nbuf_history_index, -1);
 
 	qdf_nbuf_map_tracking_init();
+	qdf_nbuf_smmu_map_tracking_init();
 	qdf_nbuf_track_memory_manager_create();
 
 	for (i = 0; i < QDF_NET_BUF_TRACK_MAX_SIZE; i++) {
@@ -2938,6 +3103,7 @@ void qdf_net_buf_debug_exit(void)
 
 	qdf_nbuf_track_memory_manager_destroy();
 	qdf_nbuf_map_tracking_deinit();
+	qdf_nbuf_smmu_map_tracking_deinit();
 
 #ifdef CONFIG_HALT_KMEMLEAK
 	if (count) {
@@ -3029,6 +3195,7 @@ void qdf_net_buf_debug_add_node(qdf_nbuf_t net_buf, size_t size,
 			p_node->unmap_func_name[0] = '\0';
 			p_node->size = size;
 			p_node->time = qdf_get_log_timestamp();
+			qdf_net_buf_update_smmu_params(p_node);
 			qdf_mem_skb_inc(size);
 			p_node->p_next = gp_qdf_net_buf_track_tbl[i];
 			gp_qdf_net_buf_track_tbl[i] = p_node;
@@ -3094,6 +3261,66 @@ void qdf_net_buf_debug_update_map_node(qdf_nbuf_t net_buf,
 	}
 	spin_unlock_irqrestore(&g_qdf_net_buf_track_lock[i], irq_flag);
 }
+
+#ifdef NBUF_SMMU_MAP_UNMAP_DEBUG
+void qdf_net_buf_debug_update_smmu_map_node(qdf_nbuf_t nbuf,
+					    unsigned long iova,
+					    unsigned long pa,
+					    const char *func,
+					    uint32_t line)
+{
+	uint32_t i;
+	unsigned long irq_flag;
+	QDF_NBUF_TRACK *p_node;
+
+	if (is_initial_mem_debug_disabled)
+		return;
+
+	i = qdf_net_buf_debug_hash(nbuf);
+	spin_lock_irqsave(&g_qdf_net_buf_track_lock[i], irq_flag);
+
+	p_node = qdf_net_buf_debug_look_up(nbuf);
+
+	if (p_node) {
+		qdf_str_lcopy(p_node->smmu_map_func_name, func,
+			      QDF_MEM_FUNC_NAME_SIZE);
+		p_node->smmu_map_line_num = line;
+		p_node->is_nbuf_smmu_mapped = true;
+		p_node->smmu_map_iova_addr = iova;
+		p_node->smmu_map_pa_addr = pa;
+	}
+	spin_unlock_irqrestore(&g_qdf_net_buf_track_lock[i], irq_flag);
+}
+
+void qdf_net_buf_debug_update_smmu_unmap_node(qdf_nbuf_t nbuf,
+					      unsigned long iova,
+					      unsigned long pa,
+					      const char *func,
+					      uint32_t line)
+{
+	uint32_t i;
+	unsigned long irq_flag;
+	QDF_NBUF_TRACK *p_node;
+
+	if (is_initial_mem_debug_disabled)
+		return;
+
+	i = qdf_net_buf_debug_hash(nbuf);
+	spin_lock_irqsave(&g_qdf_net_buf_track_lock[i], irq_flag);
+
+	p_node = qdf_net_buf_debug_look_up(nbuf);
+
+	if (p_node) {
+		qdf_str_lcopy(p_node->smmu_unmap_func_name, func,
+			      QDF_MEM_FUNC_NAME_SIZE);
+		p_node->smmu_unmap_line_num = line;
+		p_node->is_nbuf_smmu_mapped = false;
+		p_node->smmu_unmap_iova_addr = iova;
+		p_node->smmu_unmap_pa_addr = pa;
+	}
+	spin_unlock_irqrestore(&g_qdf_net_buf_track_lock[i], irq_flag);
+}
+#endif
 
 void qdf_net_buf_debug_update_unmap_node(qdf_nbuf_t net_buf,
 					 const char *func_name,
@@ -3311,6 +3538,7 @@ void qdf_nbuf_free_debug(qdf_nbuf_t nbuf, const char *func, uint32_t line)
 		goto free_buf;
 
 	/* Remove SKB from internal QDF tracking table */
+	qdf_nbuf_panic_on_free_if_smmu_mapped(nbuf, func, line);
 	qdf_nbuf_panic_on_free_if_mapped(nbuf, func, line);
 	qdf_net_buf_debug_delete_node(nbuf);
 	qdf_nbuf_history_add(nbuf, func, line, QDF_NBUF_FREE);
@@ -3334,6 +3562,8 @@ void qdf_nbuf_free_debug(qdf_nbuf_t nbuf, const char *func, uint32_t line)
 	ext_list = qdf_nbuf_get_ext_list(nbuf);
 	while (ext_list) {
 		if (qdf_nbuf_get_users(ext_list) == 1) {
+			qdf_nbuf_panic_on_free_if_smmu_mapped(ext_list, func,
+							      line);
 			qdf_nbuf_panic_on_free_if_mapped(ext_list, func, line);
 			idx = 0;
 			num_nr_frags = qdf_nbuf_get_nr_frags(ext_list);
