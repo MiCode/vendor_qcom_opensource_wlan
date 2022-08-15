@@ -1947,6 +1947,11 @@ struct dp_arch_ops {
 				  struct hal_tx_completion_status *ts,
 				  uint32_t *delay_us);
 	void (*print_mlo_ast_stats)(struct dp_soc *soc);
+	void (*dp_partner_chips_map)(struct dp_soc *soc,
+				     struct dp_peer *peer,
+				     uint16_t peer_id);
+	void (*dp_partner_chips_unmap)(struct dp_soc *soc,
+				       uint16_t peer_id);
 };
 
 /**

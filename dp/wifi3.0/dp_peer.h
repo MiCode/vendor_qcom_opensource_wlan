@@ -1907,39 +1907,6 @@ static inline void dp_print_mlo_ast_stats_be(struct dp_soc *soc)
 }
 #endif /* WLAN_FEATURE_11BE_MLO */
 
-#if defined(WLAN_FEATURE_11BE_MLO) && defined(WLAN_MLO_MULTI_CHIP)
-/**
- * dp_mlo_partner_chips_map() - Map MLO peers to partner SOCs
- * @soc: Soc handle
- * @peer: DP peer handle for ML peer
- * @peer_id: peer_id
- * Return: None
- */
-void dp_mlo_partner_chips_map(struct dp_soc *soc,
-			      struct dp_peer *peer,
-			      uint16_t peer_id);
-
-/**
- * dp_mlo_partner_chips_unmap() - Unmap MLO peers to partner SOCs
- * @soc: Soc handle
- * @peer_id: peer_id
- * Return: None
- */
-void dp_mlo_partner_chips_unmap(struct dp_soc *soc,
-				uint16_t peer_id);
-#else
-static inline void dp_mlo_partner_chips_map(struct dp_soc *soc,
-					    struct dp_peer *peer,
-					    uint16_t peer_id)
-{
-}
-
-static inline void dp_mlo_partner_chips_unmap(struct dp_soc *soc,
-					      uint16_t peer_id)
-{
-}
-#endif
-
 static inline
 QDF_STATUS dp_peer_rx_tids_create(struct dp_peer *peer)
 {

@@ -1832,10 +1832,25 @@ dp_initialize_arch_ops_be_mcast_mlo(struct dp_arch_ops *arch_ops)
 }
 #endif /* WLAN_MCAST_MLO */
 
+#ifdef WLAN_MLO_MULTI_CHIP
+static inline void
+dp_initialize_arch_ops_be_mlo_ptnr_chip(struct dp_arch_ops *arch_ops)
+{
+	arch_ops->dp_partner_chips_map = dp_mlo_partner_chips_map;
+	arch_ops->dp_partner_chips_unmap = dp_mlo_partner_chips_unmap;
+}
+#else
+static inline void
+dp_initialize_arch_ops_be_mlo_ptnr_chip(struct dp_arch_ops *arch_ops)
+{
+}
+#endif
+
 static inline void
 dp_initialize_arch_ops_be_mlo(struct dp_arch_ops *arch_ops)
 {
 	dp_initialize_arch_ops_be_mcast_mlo(arch_ops);
+	dp_initialize_arch_ops_be_mlo_ptnr_chip(arch_ops);
 	arch_ops->mlo_peer_find_hash_detach =
 	dp_mlo_peer_find_hash_detach_wrapper;
 	arch_ops->mlo_peer_find_hash_attach =

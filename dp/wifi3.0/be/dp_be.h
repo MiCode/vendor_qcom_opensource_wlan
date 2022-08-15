@@ -406,7 +406,28 @@ dp_mlo_get_peer_hash_obj(struct dp_soc *soc)
 
 void  dp_clr_mlo_ptnr_list(struct dp_soc *soc, struct dp_vdev *vdev);
 
-#if defined(WLAN_FEATURE_11BE_MLO) && defined(WLAN_MCAST_MLO)
+#if defined(WLAN_FEATURE_11BE_MLO)
+/**
+ * dp_mlo_partner_chips_map() - Map MLO peers to partner SOCs
+ * @soc: Soc handle
+ * @peer: DP peer handle for ML peer
+ * @peer_id: peer_id
+ * Return: None
+ */
+void dp_mlo_partner_chips_map(struct dp_soc *soc,
+			      struct dp_peer *peer,
+			      uint16_t peer_id);
+
+/**
+ * dp_mlo_partner_chips_unmap() - Unmap MLO peers to partner SOCs
+ * @soc: Soc handle
+ * @peer_id: peer_id
+ * Return: None
+ */
+void dp_mlo_partner_chips_unmap(struct dp_soc *soc,
+				uint16_t peer_id);
+
+#ifdef WLAN_MCAST_MLO
 typedef void dp_ptnr_vdev_iter_func(struct dp_vdev_be *be_vdev,
 				    struct dp_vdev *ptnr_vdev,
 				    void *arg);
@@ -449,6 +470,7 @@ void dp_mcast_mlo_iter_ptnr_soc(struct dp_soc_be *be_soc,
 struct dp_vdev *dp_mlo_get_mcast_primary_vdev(struct dp_soc_be *be_soc,
 					      struct dp_vdev_be *be_vdev,
 					      enum dp_mod_id mod_id);
+#endif
 #endif
 
 #else

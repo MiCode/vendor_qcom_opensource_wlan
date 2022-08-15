@@ -2874,7 +2874,8 @@ static inline struct dp_peer *dp_peer_find_add_id(struct dp_soc *soc,
 			return NULL;
 		}
 		dp_peer_find_id_to_obj_add(soc, peer, peer_id);
-		dp_mlo_partner_chips_map(soc, peer, peer_id);
+		if (soc->arch_ops.dp_partner_chips_map)
+			soc->arch_ops.dp_partner_chips_map(soc, peer, peer_id);
 
 		dp_peer_update_state(soc, peer, DP_PEER_STATE_ACTIVE);
 		return peer;
@@ -3239,7 +3240,10 @@ dp_rx_peer_unmap_handler(struct dp_soc *soc, uint16_t peer_id,
 	dp_peer_rx_reo_shared_qaddr_delete(soc, peer);
 
 	dp_peer_find_id_to_obj_remove(soc, peer_id);
-	dp_mlo_partner_chips_unmap(soc, peer_id);
+
+	if (soc->arch_ops.dp_partner_chips_unmap)
+		soc->arch_ops.dp_partner_chips_unmap(soc, peer_id);
+
 	peer->peer_id = HTT_INVALID_PEER;
 
 	/*
