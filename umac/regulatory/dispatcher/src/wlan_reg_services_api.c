@@ -1897,4 +1897,10 @@ bool wlan_is_sup_chan_entry_afc_done(struct wlan_objmgr_pdev *pdev,
 }
 
 qdf_export_symbol(wlan_is_sup_chan_entry_afc_done);
+
+QDF_STATUS
+wlan_reg_display_super_chan_list(struct wlan_objmgr_pdev *pdev)
+{
+	return reg_display_super_chan_list(pdev);
+}
 #endif

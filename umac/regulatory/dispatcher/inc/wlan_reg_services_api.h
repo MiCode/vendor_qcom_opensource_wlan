@@ -2553,6 +2553,15 @@ bool
 wlan_is_sup_chan_entry_afc_done(struct wlan_objmgr_pdev *pdev,
 				enum channel_enum chan_idx,
 				enum supported_6g_pwr_types in_6g_pwr_mode);
+
+/**
+ * wlan_reg_display_super_chan_list() - Display super channel list for all modes
+ * @pdev: Pointer to pdev
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+wlan_reg_display_super_chan_list(struct wlan_objmgr_pdev *pdev);
 #else
 static inline bool
 wlan_is_sup_chan_entry_afc_done(struct wlan_objmgr_pdev *pdev,
@@ -2560,6 +2569,12 @@ wlan_is_sup_chan_entry_afc_done(struct wlan_objmgr_pdev *pdev,
 				enum supported_6g_pwr_types in_6g_pwr_mode)
 {
 	return false;
+}
+
+static inline QDF_STATUS
+wlan_reg_display_super_chan_list(struct wlan_objmgr_pdev *pdev)
+{
+	return QDF_STATUS_E_NOSUPPORT;
 }
 #endif
 #endif

@@ -1666,6 +1666,10 @@ struct wlan_lmac_if_mgmt_txrx_rx_ops {
 #endif
 };
 
+/**
+ * struct wlan_lmac_if_reg_rx_ops - structure of rx function pointers
+ * @reg_display_super_chan_list: function pointer to print super channel list
+ */
 struct wlan_lmac_if_reg_rx_ops {
 	QDF_STATUS (*master_list_handler)(struct cur_regulatory_info
 					  *reg_info);
@@ -1726,6 +1730,8 @@ struct wlan_lmac_if_reg_rx_ops {
 	QDF_STATUS
 	(*reg_set_disable_upper_6g_edge_ch_supp)(struct wlan_objmgr_psoc *psoc,
 						 bool val);
+	QDF_STATUS
+	(*reg_display_super_chan_list)(struct wlan_objmgr_pdev *pdev);
 #endif
 
 #ifdef CONFIG_AFC_SUPPORT

@@ -2631,6 +2631,18 @@ reg_is_sup_chan_entry_afc_done(struct wlan_objmgr_pdev *pdev,
 	return false;
 }
 #endif
+
+#ifdef CONFIG_BAND_6GHZ
+/**
+ * reg_display_super_chan_list() - Display super channel list for all modes
+ * @pdev: pdev pointer
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+reg_display_super_chan_list(struct wlan_objmgr_pdev *pdev);
+#endif
+
 /**
  * reg_get_max_bw_5G_for_fo() - get max bw
  * @pdev: PDEV object

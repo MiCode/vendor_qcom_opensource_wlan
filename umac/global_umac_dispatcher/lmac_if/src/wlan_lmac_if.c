@@ -351,6 +351,13 @@ static void wlan_lmac_if_register_master_list_ext_handler(
 		tgt_reg_process_master_chan_list_ext;
 }
 
+static void wlan_lmac_if_register_super_chan_display(
+					struct wlan_lmac_if_rx_ops *rx_ops)
+{
+	rx_ops->reg_rx_ops.reg_display_super_chan_list =
+		wlan_reg_display_super_chan_list;
+}
+
 #ifdef CONFIG_AFC_SUPPORT
 static void wlan_lmac_if_register_afc_handlers(
 					struct wlan_lmac_if_rx_ops *rx_ops)
@@ -373,6 +380,11 @@ static inline void wlan_lmac_if_register_master_list_ext_handler(
 }
 
 static inline void wlan_lmac_if_register_afc_handlers(
+					struct wlan_lmac_if_rx_ops *rx_ops)
+{
+}
+
+static inline void wlan_lmac_if_register_super_chan_display(
 					struct wlan_lmac_if_rx_ops *rx_ops)
 {
 }
@@ -489,6 +501,8 @@ static void wlan_lmac_if_umac_reg_rx_ops_register(
 	wlan_lmac_if_register_6g_edge_chan_supp(rx_ops);
 
 	wlan_lmac_if_register_afc_handlers(rx_ops);
+
+	wlan_lmac_if_register_super_chan_display(rx_ops);
 }
 
 #ifdef CONVERGED_P2P_ENABLE

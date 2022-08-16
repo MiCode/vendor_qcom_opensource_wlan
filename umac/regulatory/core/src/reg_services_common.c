@@ -9492,3 +9492,52 @@ reg_is_sup_chan_entry_afc_done(struct wlan_objmgr_pdev *pdev,
 		 REGULATORY_CHAN_AFC_NOT_DONE);
 }
 #endif
+
+#ifdef CONFIG_BAND_6GHZ
+QDF_STATUS
+reg_display_super_chan_list(struct wlan_objmgr_pdev *pdev)
+{
+	struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj;
+	struct super_chan_info *super_chan_list;
+	uint8_t i;
+
+	pdev_priv_obj = reg_get_pdev_obj(pdev);
+	if (!IS_VALID_PDEV_REG_OBJ(pdev_priv_obj)) {
+		reg_err_rl("pdev reg component is NULL");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	super_chan_list = pdev_priv_obj->super_chan_list;
+	for (i = 0; i < NUM_6GHZ_CHANNELS; i++) {
+		struct super_chan_info *chan_info = &super_chan_list[i];
+		struct regulatory_channel  cur_chan_list =
+			pdev_priv_obj->cur_chan_list[MIN_6GHZ_CHANNEL + i];
+		uint8_t j;
+
+		qdf_print("Freq = %d\tPower types = 0x%x\t"
+			  "Best power mode = 0x%x\n",
+			  cur_chan_list.center_freq, chan_info->power_types,
+			  chan_info->best_power_mode);
+		for (j = REG_AP_LPI; j <= REG_CLI_SUB_VLP; j++) {
+			bool afc_not_done_bit;
+
+			afc_not_done_bit = chan_info->chan_flags_arr[j] &
+						REGULATORY_CHAN_AFC_NOT_DONE;
+			qdf_print("Power mode = %d\tPSD flag = %d\t"
+				  "PSD power = %d\tEIRP power = %d\t"
+				  "Chan flags = 0x%x\tChannel state = %d\t"
+				  "Min bw = %d\tMax bw = %d\t"
+				  "AFC_NOT_DONE = %d\n",
+				  j, chan_info->reg_chan_pwr[j].psd_flag,
+				  chan_info->reg_chan_pwr[j].psd_eirp,
+				  chan_info->reg_chan_pwr[j].tx_power,
+				  chan_info->chan_flags_arr[j],
+				  chan_info->state_arr[j],
+				  chan_info->min_bw[j], chan_info->max_bw[j],
+				  afc_not_done_bit);
+		}
+	}
+
+	return QDF_STATUS_SUCCESS;
+}
+#endif
