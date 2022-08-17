@@ -2236,7 +2236,7 @@ static inline uint32_t __qdf_nbuf_tcp_seq(struct sk_buff *skb)
  *
  * Return: data pointer to typecast into your priv structure
  */
-static inline uint8_t *
+static inline char *
 __qdf_nbuf_get_priv_ptr(struct sk_buff *skb)
 {
 	return &skb->cb[8];

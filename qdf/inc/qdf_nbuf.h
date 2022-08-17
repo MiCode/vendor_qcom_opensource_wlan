@@ -1584,7 +1584,7 @@ qdf_nbuf_mapped_paddr_set(qdf_nbuf_t buf, qdf_dma_addr_t paddr)
 
 static inline void
 qdf_nbuf_frag_push_head(qdf_nbuf_t buf,
-			int frag_len, char *frag_vaddr,
+			int frag_len, unsigned char *frag_vaddr,
 			qdf_dma_addr_t frag_paddr)
 {
 	__qdf_nbuf_frag_push_head(buf, frag_len, frag_vaddr, frag_paddr);
@@ -4379,7 +4379,7 @@ qdf_nbuf_set_queue_mapping(qdf_nbuf_t buf, uint16_t val)
 	__qdf_nbuf_set_queue_mapping(buf, val);
 }
 
-static inline uint8_t *
+static inline char *
 qdf_nbuf_get_priv_ptr(qdf_nbuf_t buf)
 {
 	return __qdf_nbuf_get_priv_ptr(buf);
