@@ -1564,6 +1564,7 @@ struct tx_send_params {
  * @tx_flags: additional configuration flags for mgmt frames
  *  use 6 Mbps rather than 1 Mbps min rate(for 5GHz band or P2P)
  * @peer_rssi: peer RSSI value
+ * @mlo_link_agnostic: if true, can send on any active link
  */
 struct wmi_mgmt_params {
 	void *tx_frame;
@@ -1580,6 +1581,7 @@ struct wmi_mgmt_params {
 	uint8_t use_6mbps;
 	uint32_t tx_flags;
 	int8_t peer_rssi;
+	uint8_t mlo_link_agnostic;
 };
 
 /**

@@ -4409,6 +4409,7 @@ static QDF_STATUS send_mgmt_cmd_tlv(wmi_unified_t wmi_handle,
 	void *qdf_ctx = param->qdf_ctx;
 	uint8_t *bufp;
 	QDF_STATUS status = QDF_STATUS_SUCCESS;
+	wmi_mlo_tx_send_params *mlo_params;
 	int32_t bufp_len = (param->frm_len < mgmt_tx_dl_frm_len) ? param->frm_len :
 		mgmt_tx_dl_frm_len;
 
@@ -4416,7 +4417,8 @@ static QDF_STATUS send_mgmt_cmd_tlv(wmi_unified_t wmi_handle,
 		  WMI_TLV_HDR_SIZE +
 		  roundup(bufp_len, sizeof(uint32_t));
 
-	buf = wmi_buf_alloc(wmi_handle, sizeof(wmi_tx_send_params) + cmd_len);
+	buf = wmi_buf_alloc(wmi_handle, sizeof(wmi_tx_send_params) + cmd_len +
+			    WMI_TLV_HDR_SIZE + sizeof(wmi_mlo_tx_send_params));
 	if (!buf)
 		return QDF_STATUS_E_NOMEM;
 
@@ -4471,7 +4473,28 @@ static QDF_STATUS send_mgmt_cmd_tlv(wmi_unified_t wmi_handle,
 			wmi_err("Populate TX send params failed");
 			goto unmap_tx_frame;
 		}
-		cmd_len += sizeof(wmi_tx_send_params);
+	} else {
+		WMITLV_SET_HDR(&((wmi_tx_send_params *)bufp)->tlv_header,
+			       WMITLV_TAG_STRUC_wmi_tx_send_params,
+			       WMITLV_GET_STRUCT_TLVLEN(wmi_tx_send_params));
+	}
+
+	/* Even tx_params_valid is false, still need reserve space to pass wmi
+	 * tag check */
+	cmd_len += sizeof(wmi_tx_send_params);
+	bufp += sizeof(wmi_tx_send_params);
+	/* wmi_mlo_tx_send_params */
+	if (param->mlo_link_agnostic) {
+		wmi_debug("Set mlo mgmt tid");
+		WMITLV_SET_HDR(bufp, WMITLV_TAG_ARRAY_STRUC,
+			       sizeof(wmi_mlo_tx_send_params));
+		bufp += WMI_TLV_HDR_SIZE;
+		mlo_params = (wmi_mlo_tx_send_params *)bufp;
+		WMITLV_SET_HDR(&mlo_params->tlv_header,
+			       WMITLV_TAG_STRUC_wmi_mlo_tx_send_params,
+			       WMITLV_GET_STRUCT_TLVLEN(wmi_mlo_tx_send_params));
+		mlo_params->hw_link_id = WMI_MLO_MGMT_TID;
+		cmd_len += WMI_TLV_HDR_SIZE + sizeof(wmi_mlo_tx_send_params);
 	}
 
 	wmi_mtrace(WMI_MGMT_TX_SEND_CMDID, cmd->vdev_id, 0);
