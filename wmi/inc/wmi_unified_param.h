@@ -5800,6 +5800,7 @@ typedef enum {
 	wmi_service_ext_tpc_reg_support,
 	wmi_service_ndi_txbf_support,
 	wmi_service_reg_cc_ext_event_support,
+	wmi_service_bang_radar_320_support,
 #if defined(CONFIG_BAND_6GHZ)
 	wmi_service_lower_6g_edge_ch_supp,
 	wmi_service_disable_upper_6g_edge_ch_supp,
@@ -6216,6 +6217,7 @@ struct target_feature_set {
  * @nan_separate_iface_support: Separate iface creation for NAN
  * @time_sync_ftm: enable ftm based time sync
  * @is_reg_cc_ext_event_supported: Flag to indicate if reg_cc_ext is supported
+ * @is_host_dfs_320mhz_bangradar_supported Flag to indicate if dfs 320 supported
  * @max_rnr_neighbours: Max supported RNR neighbors in multisoc APs
  * @ema_max_vap_cnt: Number of maximum EMA tx-vaps at any instance of time
  * @ema_max_profile_period: Maximum EMA profile periodicity on any pdev
@@ -6343,6 +6345,7 @@ typedef struct {
 	bool nan_separate_iface_support;
 	bool time_sync_ftm;
 	bool is_reg_cc_ext_event_supported;
+	bool is_host_dfs_320mhz_bangradar_supported;
 	uint32_t max_rnr_neighbours;
 	uint32_t ema_max_vap_cnt;
 	uint32_t ema_max_profile_period;

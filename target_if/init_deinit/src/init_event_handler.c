@@ -466,6 +466,12 @@ static int init_deinit_service_ext2_ready_event_handler(ol_scn_t scn_handle,
 					     WLAN_SOC_EXT_EVENT_SUPPORTED);
 	}
 
+	if (wmi_service_enabled(wmi_handle,
+				wmi_service_bang_radar_320_support)) {
+		info->wlan_res_cfg.is_host_dfs_320mhz_bangradar_supported =
+									   true;
+	}
+
 	/* dbr_ring_caps could have already come as part of EXT event */
 	if (info->service_ext2_param.num_dbr_ring_caps) {
 		err_code = init_deinit_populate_dbr_ring_cap_ext2(psoc,

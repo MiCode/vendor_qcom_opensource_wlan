@@ -8957,6 +8957,10 @@ void wmi_copy_resource_config(wmi_resource_config *resource_cfg,
 		resource_cfg->host_service_flags,
 		tgt_res_cfg->is_reg_cc_ext_event_supported);
 
+	WMI_RSRC_CFG_HOST_SERVICE_FLAG_BANG_RADAR_320M_SUPPORT_SET(
+		resource_cfg->host_service_flags,
+		tgt_res_cfg->is_host_dfs_320mhz_bangradar_supported);
+
 	WMI_RSRC_CFG_HOST_SERVICE_FLAG_LPI_SP_MODE_SUPPORT_SET(
 		resource_cfg->host_service_flags,
 		tgt_res_cfg->is_6ghz_sp_pwrmode_supp_enabled);
@@ -20673,6 +20677,8 @@ static void populate_tlv_service(uint32_t *wmi_service)
 			WMI_SERVICE_NDI_TXBF_SUPPORT;
 	wmi_service[wmi_service_reg_cc_ext_event_support] =
 			WMI_SERVICE_REG_CC_EXT_EVENT_SUPPORT;
+	wmi_service[wmi_service_bang_radar_320_support] =
+			WMI_SERVICE_BANG_RADAR_320_SUPPORT;
 #if defined(CONFIG_BAND_6GHZ)
 	wmi_service[wmi_service_lower_6g_edge_ch_supp] =
 			WMI_SERVICE_ENABLE_LOWER_6G_EDGE_CH_SUPP;
