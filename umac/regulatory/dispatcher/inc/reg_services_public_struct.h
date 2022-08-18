@@ -92,6 +92,10 @@
 
 #define MAX_NUM_PWR_LEVEL 16
 
+#ifdef CONFIG_REG_CLIENT
+#define MAX_NUM_FCC_RULES 2
+#endif
+
 /**
  * enum dfs_reg - DFS region
  * @DFS_UNINIT_REGION: un-initialized region
@@ -1165,6 +1169,18 @@ struct cur_reg_rule {
 	uint16_t psd_eirp;
 };
 
+#ifdef CONFIG_REG_CLIENT
+/**
+ * struct cur_fcc_rule
+ * @center_freq: center frequency
+ * @tx_power: transmission power
+ */
+struct cur_fcc_rule {
+	uint16_t center_freq;
+	uint8_t tx_power;
+};
+#endif
+
 /**
  * struct cur_regulatory_info
  * @psoc: psoc ptr
@@ -1201,6 +1217,8 @@ struct cur_reg_rule {
  * @num_6g_reg_rules_client: list of number of 6G reg rules for client
  * @reg_rules_6g_ap_ptr: ptr to 6G AP reg rules
  * @reg_rules_6g_client_ptr: list of ptr to 6G client reg rules
+ * @fcc_rules_ptr: ptr to fcc rules
+ * @num_fcc_rules: Number of fcc rules sent by firmware
  */
 struct cur_regulatory_info {
 	struct wlan_objmgr_psoc *psoc;
@@ -1236,6 +1254,10 @@ struct cur_regulatory_info {
 	uint32_t num_6g_reg_rules_client[REG_CURRENT_MAX_AP_TYPE][REG_MAX_CLIENT_TYPE];
 	struct cur_reg_rule *reg_rules_6g_ap_ptr[REG_CURRENT_MAX_AP_TYPE];
 	struct cur_reg_rule *reg_rules_6g_client_ptr[REG_CURRENT_MAX_AP_TYPE][REG_MAX_CLIENT_TYPE];
+#ifdef CONFIG_REG_CLIENT
+	struct cur_fcc_rule *fcc_rules_ptr;
+	uint32_t num_fcc_rules;
+#endif
 };
 
 #if defined(CONFIG_AFC_SUPPORT) && defined(CONFIG_BAND_6GHZ)

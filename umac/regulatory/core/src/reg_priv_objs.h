@@ -121,6 +121,8 @@ struct chan_change_cbk_entry {
  * unsafe channels list
  * @reg_afc_dev_type: AFC device deployment type from BDF
  * @sta_sap_scc_on_indoor_channel: Value of sap+sta scc on indoor support
+ * @fcc_rules_ptr : Value of fcc channel frequency and tx_power list received
+ * from firmware
  */
 struct wlan_regulatory_psoc_priv_obj {
 	struct mas_chan_params mas_chan_params[PSOC_MAX_PHY_REG_CAP];
@@ -192,6 +194,9 @@ struct wlan_regulatory_psoc_priv_obj {
 	enum reg_afc_dev_deploy_type reg_afc_dev_type;
 #endif
 	bool sta_sap_scc_on_indoor_channel;
+#ifdef CONFIG_REG_CLIENT
+	struct cur_fcc_rule fcc_rules_ptr[MAX_NUM_FCC_RULES];
+#endif
 };
 
 /**
@@ -240,6 +245,8 @@ struct wlan_regulatory_psoc_priv_obj {
  * priority during channel selection by upper layer
  * @reg_afc_dev_deployment_type: AFC device deployment type from BDF
  * @sta_sap_scc_on_indoor_channel: Value of sap+sta scc on indoor support
+ * @fcc_rules_ptr : Value of fcc channel frequency and tx_power list received
+ * from firmware
  */
 struct wlan_regulatory_pdev_priv_obj {
 	struct regulatory_channel cur_chan_list[NUM_CHANNELS];
@@ -316,6 +323,9 @@ struct wlan_regulatory_pdev_priv_obj {
 	enum reg_afc_dev_deploy_type reg_afc_dev_deployment_type;
 #endif
 	bool sta_sap_scc_on_indoor_channel;
+#ifdef CONFIG_REG_CLIENT
+	struct cur_fcc_rule fcc_rules_ptr[MAX_NUM_FCC_RULES];
+#endif
 };
 
 /**

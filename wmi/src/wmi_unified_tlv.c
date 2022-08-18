@@ -15001,6 +15001,42 @@ static uint16_t wmi_set_htc_tx_tag_tlv(wmi_unified_t wmi_handle,
 }
 
 #ifdef CONFIG_BAND_6GHZ
+#ifdef CONFIG_REG_CLIENT
+/**
+ * extract_ext_fcc_rules_from_wmi - extract fcc rules from WMI TLV
+ * @num_fcc_rules: Number of FCC rules
+ * @wmi_fcc_rule:  WMI FCC rules TLV
+ *
+ * Return fcc_rule_ptr
+ */
+static struct cur_fcc_rule
+*extract_ext_fcc_rules_from_wmi(uint32_t num_fcc_rules,
+		wmi_regulatory_fcc_rule_struct *wmi_fcc_rule)
+{
+	struct cur_fcc_rule *fcc_rule_ptr;
+	uint32_t count;
+
+	if (!wmi_fcc_rule)
+		return NULL;
+
+	fcc_rule_ptr = qdf_mem_malloc(num_fcc_rules *
+				      sizeof(*fcc_rule_ptr));
+	if (!fcc_rule_ptr)
+		return NULL;
+
+	for (count = 0; count < num_fcc_rules; count++) {
+		fcc_rule_ptr[count].center_freq =
+			WMI_REG_FCC_RULE_CHAN_FREQ_GET(
+					wmi_fcc_rule[count].freq_info);
+		fcc_rule_ptr[count].tx_power =
+			WMI_REG_FCC_RULE_FCC_TX_POWER_GET(
+					wmi_fcc_rule[count].freq_info);
+	}
+
+	return fcc_rule_ptr;
+}
+#endif
+
 static struct cur_reg_rule
 *create_ext_reg_rules_from_wmi(uint32_t num_reg_rules,
 		wmi_regulatory_rule_ext_struct *wmi_reg_rule)
@@ -15109,6 +15145,90 @@ static enum cc_setting_code wmi_reg_status_to_reg_status(
 }
 
 #ifdef CONFIG_BAND_6GHZ
+
+#ifdef CONFIG_REG_CLIENT
+#define MAX_NUM_FCC_RULES 2
+
+/**
+ * extract_reg_fcc_rules_tlv - Extract reg fcc rules TLV
+ * @param_buf - Pointer to WMI params TLV
+ * @ext_chan_list_event_hdr - Pointer to REG CHAN LIST CC EXT EVENT Fixed
+ *			      Params TLV
+ * @ext_wmi_reg_rule - Pointer to REG CHAN LIST CC EXT EVENT Reg Rules TLV
+ * @ext_wmi_chan_priority - Pointer to REG CHAN LIST CC EXT EVENT Chan
+ *			    Priority TLV
+ * @evt_buf - Pointer to REG CHAN LIST CC EXT EVENT event buffer
+ * @reg_info - Pointer to Regulatory Info
+ * @len - Length of REG CHAN LIST CC EXT EVENT buffer
+ *
+ * Return - QDF_STATUS
+ */
+static QDF_STATUS extract_reg_fcc_rules_tlv(
+	WMI_REG_CHAN_LIST_CC_EXT_EVENTID_param_tlvs *param_buf,
+	wmi_reg_chan_list_cc_event_ext_fixed_param *ext_chan_list_event_hdr,
+	wmi_regulatory_rule_ext_struct *ext_wmi_reg_rule,
+	wmi_regulatory_chan_priority_struct *ext_wmi_chan_priority,
+	uint8_t *evt_buf,
+	struct cur_regulatory_info *reg_info,
+	uint32_t len)
+{
+	int i;
+	wmi_regulatory_fcc_rule_struct *ext_wmi_fcc_rule;
+
+	if (!param_buf) {
+		wmi_err("invalid channel list event buf");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	reg_info->num_fcc_rules = 0;
+	if (param_buf->reg_fcc_rule) {
+		if (param_buf->num_reg_fcc_rule > MAX_NUM_FCC_RULES) {
+			wmi_err("Number of fcc rules is greater than MAX_NUM_FCC_RULES");
+			return QDF_STATUS_E_INVAL;
+		}
+
+		ext_wmi_fcc_rule =
+			(wmi_regulatory_fcc_rule_struct *)
+			((uint8_t *)ext_chan_list_event_hdr +
+			sizeof(wmi_reg_chan_list_cc_event_ext_fixed_param) +
+			WMI_TLV_HDR_SIZE +
+			sizeof(wmi_regulatory_rule_ext_struct) *
+			param_buf->num_reg_rule_array +
+			WMI_TLV_HDR_SIZE +
+			sizeof(wmi_regulatory_chan_priority_struct) *
+			param_buf->num_reg_chan_priority +
+			WMI_TLV_HDR_SIZE);
+
+		reg_info->fcc_rules_ptr = extract_ext_fcc_rules_from_wmi(
+						param_buf->num_reg_fcc_rule,
+						ext_wmi_fcc_rule);
+
+		reg_info->num_fcc_rules = param_buf->num_reg_fcc_rule;
+	}
+
+	if (reg_info->fcc_rules_ptr) {
+		for (i = 0; i < reg_info->num_fcc_rules; i++) {
+			wmi_debug("FCC rule %d center_freq %d tx_power %d",
+				  i, reg_info->fcc_rules_ptr[i].center_freq,
+				  reg_info->fcc_rules_ptr[i].tx_power);
+		}
+	}
+	return QDF_STATUS_SUCCESS;
+}
+#else
+static QDF_STATUS extract_reg_fcc_rules_tlv(
+	WMI_REG_CHAN_LIST_CC_EXT_EVENTID_param_tlvs *param_buf,
+	wmi_reg_chan_list_cc_event_ext_fixed_param *ext_chan_list_event_hdr,
+	wmi_regulatory_rule_ext_struct *ext_wmi_reg_rule,
+	wmi_regulatory_chan_priority_struct *ext_wmi_chan_priority,
+	uint8_t *evt_buf,
+	struct cur_regulatory_info *reg_info,
+	uint32_t len)
+{
+	return QDF_STATUS_SUCCESS;
+}
+#endif
+
 static QDF_STATUS extract_reg_chan_list_ext_update_event_tlv(
 	wmi_unified_t wmi_handle, uint8_t *evt_buf,
 	struct cur_regulatory_info *reg_info, uint32_t len)
@@ -15122,6 +15242,7 @@ static QDF_STATUS extract_reg_chan_list_ext_update_event_tlv(
 	uint32_t num_6g_reg_rules_ap[REG_CURRENT_MAX_AP_TYPE];
 	uint32_t *num_6g_reg_rules_client[REG_CURRENT_MAX_AP_TYPE];
 	uint32_t total_reg_rules = 0;
+	QDF_STATUS status;
 
 	param_buf = (WMI_REG_CHAN_LIST_CC_EXT_EVENTID_param_tlvs *)evt_buf;
 	if (!param_buf) {
@@ -15430,6 +15551,12 @@ static QDF_STATUS extract_reg_chan_list_ext_update_event_tlv(
 
 	reg_info->domain_code_6g_super_id =
 		ext_chan_list_event_hdr->domain_code_6g_super_id;
+
+	status = extract_reg_fcc_rules_tlv(param_buf, ext_chan_list_event_hdr,
+				  ext_wmi_reg_rule, ext_wmi_chan_priority,
+				  evt_buf, reg_info, len);
+	if (status != QDF_STATUS_SUCCESS)
+		return status;
 
 	wmi_debug("processed regulatory extended channel list");
 
