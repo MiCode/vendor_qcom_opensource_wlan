@@ -6018,7 +6018,6 @@ target_if_start_spectral_scan(struct wlan_objmgr_pdev *pdev,
 		bool is_overlapping;
 		enum phy_ch_width ch_width[SPECTRAL_SCAN_MODE_MAX];
 		enum spectral_scan_mode m;
-		enum phy_ch_width op_ch_width;
 		enum phy_ch_width agile_ch_width;
 
 		m = SPECTRAL_SCAN_MODE_NORMAL;
@@ -6032,7 +6031,6 @@ target_if_start_spectral_scan(struct wlan_objmgr_pdev *pdev,
 			spectral_err("Failed to populate channel width");
 			return QDF_STATUS_E_FAILURE;
 		}
-		op_ch_width = ch_width[SPECTRAL_SCAN_MODE_NORMAL];
 		agile_ch_width = ch_width[SPECTRAL_SCAN_MODE_AGILE];
 
 		if (!spectral->params[smode].ss_frequency.cfreq1) {
