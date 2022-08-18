@@ -695,7 +695,7 @@ dp_rx_mon_handle_full_mon(struct dp_pdev *pdev,
 	/* Adjust page frag offset to point to 802.11 header */
 	qdf_nbuf_trim_add_frag_size(head_msdu, 0, -(hdr_frag_size - mpdu_buf_len), 0);
 
-	msdu_meta = (struct hal_rx_mon_msdu_info *)(qdf_nbuf_get_frag_addr(mpdu, 1) - DP_RX_MON_PACKET_OFFSET + DP_RX_MON_NONRAW_L2_HDR_PAD_BYTE);
+	msdu_meta = (struct hal_rx_mon_msdu_info *)(((void *)qdf_nbuf_get_frag_addr(mpdu, 1)) - (DP_RX_MON_PACKET_OFFSET + DP_RX_MON_NONRAW_L2_HDR_PAD_BYTE));
 
 	msdu_len = msdu_meta->msdu_len;
 
