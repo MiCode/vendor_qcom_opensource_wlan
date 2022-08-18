@@ -510,7 +510,7 @@ qdf_export_symbol(prealloc_disabled);
 
 int qdf_mem_malloc_flags(void)
 {
-	if (in_interrupt() || irqs_disabled() || in_atomic())
+	if (in_interrupt() || !preemptible() || rcu_preempt_depth())
 		return GFP_ATOMIC;
 
 	return GFP_KERNEL;
