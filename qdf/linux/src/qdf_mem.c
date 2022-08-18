@@ -782,7 +782,6 @@ qdf_print_major_nbuf_allocs(uint32_t threshold,
 	uint32_t nbuf_iter;
 	unsigned long irq_flag = 0;
 	QDF_NBUF_TRACK *p_node;
-	QDF_NBUF_TRACK *p_prev;
 	struct __qdf_mem_info table[QDF_MEM_STAT_TABLE_SIZE];
 	struct qdf_mem_header meta;
 	bool is_full;
@@ -815,7 +814,6 @@ qdf_print_major_nbuf_allocs(uint32_t threshold,
 				qdf_mem_zero(table, sizeof(table));
 			}
 
-			p_prev = p_node;
 			p_node = p_node->p_next;
 		}
 		qdf_nbuf_release_track_lock(nbuf_iter, irq_flag);
