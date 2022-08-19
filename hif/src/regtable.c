@@ -136,6 +136,12 @@ void hif_target_register_tbl_attach(struct hif_softc *scn, u32 target_type)
 
 #if defined(QCN9224_HEADERS_DEF)
 	case TARGET_TYPE_QCN9224:
+		if (scn->target_info.soc_version == 1) {
+			scn->targetdef = QCN9224v1_TARGETDEF;
+			scn->target_ce_def = QCN9224v1_CE_TARGETDEF;
+			hif_info("TARGET_TYPE_QCN9224v1");
+			break;
+		}
 		scn->targetdef = QCN9224_TARGETDEF;
 		scn->target_ce_def = QCN9224_CE_TARGETDEF;
 		hif_info("TARGET_TYPE_QCN9224");
@@ -283,6 +289,10 @@ void hif_register_tbl_attach(struct hif_softc *scn, u32 hif_type)
 #endif
 #if defined(QCN9224_HEADERS_DEF)
 	case HIF_TYPE_QCN9224:
+		if (scn->target_info.soc_version == 1) {
+			scn->hostdef = QCN9224v1_HOSTDEF;
+			break;
+		}
 		scn->hostdef = QCN9224_HOSTDEF;
 		break;
 #endif

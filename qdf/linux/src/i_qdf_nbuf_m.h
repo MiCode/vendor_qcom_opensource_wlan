@@ -89,6 +89,10 @@
 	(((struct qdf_nbuf_cb *)((skb)->cb))->u.rx.dev.priv_cb_m. \
 	reo_dest_ind_or_sw_excpt)
 
+#define  QDF_NBUF_CB_RX_PACKET_LMAC_ID(skb) \
+	(((struct qdf_nbuf_cb *)((skb)->cb))->u.rx.dev.priv_cb_m. \
+	lmac_id)
+
 #define __qdf_nbuf_ipa_owned_get(skb) \
 	QDF_NBUF_CB_TX_IPA_OWNED(skb)
 

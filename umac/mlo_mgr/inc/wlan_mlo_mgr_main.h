@@ -461,6 +461,62 @@ void copied_conn_req_lock_release(struct wlan_mlo_sta *sta_ctx)
 {
 	qdf_spin_unlock_bh(&sta_ctx->copied_conn_req_lock);
 }
+
+/**
+ * tsf_recalculation_lock_create - Create TSF recalculation mutex/spinlock
+ * @mldev:  ML device context
+ *
+ * Creates mutex/spinlock
+ *
+ * Return: void
+ */
+static inline void
+tsf_recalculation_lock_create(struct wlan_mlo_dev_context *mldev)
+{
+	qdf_spinlock_create(&mldev->tsf_recalculation_lock);
+}
+
+/**
+ * tsf_recalculation_lock_destroy - Destroy TSF recalculation mutex/spinlock
+ * @mldev:  ML device context
+ *
+ * Destroy mutex/spinlock
+ *
+ * Return: void
+ */
+static inline void
+tsf_recalculation_lock_destroy(struct wlan_mlo_dev_context *mldev)
+{
+	qdf_spinlock_destroy(&mldev->tsf_recalculation_lock);
+}
+
+/**
+ * tsf_recalculation_lock_acquire - Acquire TSF recalculation mutex/spinlock
+ * @mldev:  ML device context
+ *
+ * Acquire mutex/spinlock
+ *
+ * return: void
+ */
+static inline
+void tsf_recalculation_lock_acquire(struct wlan_mlo_dev_context *mldev)
+{
+	qdf_spin_lock_bh(&mldev->tsf_recalculation_lock);
+}
+
+/**
+ * tsf_recalculation_lock_release - Release TSF recalculation mutex/spinlock
+ * @mldev:  ML device context
+ *
+ * release mutex/spinlock
+ *
+ * return: void
+ */
+static inline
+void tsf_recalculation_lock_release(struct wlan_mlo_dev_context *mldev)
+{
+	qdf_spin_unlock_bh(&mldev->tsf_recalculation_lock);
+}
 #else /* WLAN_MLO_USE_SPINLOCK */
 static inline
 void ml_link_lock_create(struct mlo_mgr_context *mlo_ctx)
@@ -626,6 +682,62 @@ static inline
 void copied_conn_req_lock_release(struct wlan_mlo_sta *sta_ctx)
 {
 	qdf_mutex_release(&sta_ctx->copied_conn_req_lock);
+}
+
+/**
+ * tsf_recalculation_lock_create - Create TSF recalculation mutex/spinlock
+ * @mldev:  ML device context
+ *
+ * Creates mutex/spinlock
+ *
+ * Return: void
+ */
+static inline void
+tsf_recalculation_lock_create(struct wlan_mlo_dev_context *mldev)
+{
+	qdf_mutex_create(&mldev->tsf_recalculation_lock);
+}
+
+/**
+ * tsf_recalculation_lock_destroy - Destroy TSF recalculation mutex/spinlock
+ * @mldev:  ML device context
+ *
+ * Destroy mutex/spinlock
+ *
+ * Return: void
+ */
+static inline void
+tsf_recalculation_lock_destroy(struct wlan_mlo_dev_context *mldev)
+{
+	qdf_mutex_destroy(&mldev->tsf_recalculation_lock);
+}
+
+/**
+ * tsf_recalculation_lock_acquire - Acquire TSF recalculation mutex/spinlock
+ * @mldev:  ML device context
+ *
+ * Acquire mutex/spinlock
+ *
+ * return: void
+ */
+static inline
+void tsf_recalculation_lock_acquire(struct wlan_mlo_dev_context *mldev)
+{
+	qdf_mutex_acquire(&mldev->tsf_recalculation_lock);
+}
+
+/**
+ * tsf_recalculation_lock_release - Release TSF recalculation mutex/spinlock
+ * @mldev:  ML device context
+ *
+ * release mutex/spinlock
+ *
+ * return: void
+ */
+static inline
+void tsf_recalculation_lock_release(struct wlan_mlo_dev_context *mldev)
+{
+	qdf_mutex_release(&mldev->tsf_recalculation_lock);
 }
 #endif /* WLAN_MLO_USE_SPINLOCK */
 

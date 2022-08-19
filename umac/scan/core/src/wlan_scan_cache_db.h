@@ -298,4 +298,7 @@ scm_filter_rnr_flag_pno(struct wlan_objmgr_vdev *vdev,
  */
 QDF_STATUS scm_scan_update_mlme_by_bssinfo(struct wlan_objmgr_pdev *pdev,
 		struct bss_info *bss_info, struct mlme_info *mlme);
+
+uint32_t scm_get_last_scan_time_per_channel(struct wlan_objmgr_vdev *vdev,
+					    uint32_t freq);
 #endif

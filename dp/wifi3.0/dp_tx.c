@@ -1520,7 +1520,11 @@ dp_tx_check_and_flush_hp(struct dp_soc *soc,
 #ifdef FEATURE_RUNTIME_PM
 static inline int dp_get_rtpm_tput_policy_requirement(struct dp_soc *soc)
 {
-	return qdf_atomic_read(&soc->rtpm_high_tput_flag);
+	int ret;
+
+	ret = qdf_atomic_read(&soc->rtpm_high_tput_flag) &&
+	      (hif_rtpm_get_state() <= HIF_RTPM_STATE_ON);
+	return ret;
 }
 /**
  * dp_tx_ring_access_end_wrapper() - Wrapper for ring access end
@@ -3722,6 +3726,8 @@ void dp_tx_reinject_handler(struct dp_soc *soc,
 		qdf_spin_unlock_bh(&vdev->peer_list_lock);
 	}
 
+	qdf_nbuf_unmap_nbytes_single(vdev->osdev, nbuf, QDF_DMA_TO_DEVICE,
+				     nbuf->len);
 	qdf_nbuf_free(nbuf);
 
 	dp_tx_desc_release(tx_desc, tx_desc->pool_id);
@@ -5926,4 +5932,26 @@ QDF_STATUS dp_tso_soc_detach(struct cdp_soc_t *txrx_soc)
 
 	return QDF_STATUS_SUCCESS;
 }
+
+#ifdef CONFIG_DP_PKT_ADD_TIMESTAMP
+void dp_pkt_add_timestamp(struct dp_vdev *vdev,
+			  enum qdf_pkt_timestamp_index index, uint64_t time,
+			  qdf_nbuf_t nbuf)
+{
+	if (qdf_unlikely(qdf_is_dp_pkt_timestamp_enabled())) {
+		uint64_t tsf_time;
+
+		if (vdev->get_tsf_time) {
+			vdev->get_tsf_time(vdev->osif_vdev, time, &tsf_time);
+			qdf_add_dp_pkt_timestamp(nbuf, index, tsf_time);
+		}
+	}
+}
+
+void dp_pkt_get_timestamp(uint64_t *time)
+{
+	if (qdf_unlikely(qdf_is_dp_pkt_timestamp_enabled()))
+		*time = qdf_get_log_timestamp();
+}
+#endif
 

@@ -35,6 +35,7 @@
 #ifdef CONFIG_SAWF
 #include "dp_sawf.h"
 #endif
+#include <qdf_pkt_add_timestamp.h>
 
 #define DP_INVALID_VDEV_ID 0xFF
 
@@ -521,11 +522,8 @@ static inline enum qdf_dp_tx_rx_status dp_tx_hw_to_qdf(uint16_t status)
 static inline void dp_tx_get_queue(struct dp_vdev *vdev,
 				   qdf_nbuf_t nbuf, struct dp_tx_queue *queue)
 {
-	uint16_t queue_offset = qdf_nbuf_get_queue_mapping(nbuf) &
-				DP_TX_QUEUE_MASK;
-
-	queue->desc_pool_id = queue_offset;
-	queue->ring_id = qdf_nbuf_get_queue_mapping(nbuf);
+	queue->ring_id = qdf_get_cpu();
+	queue->desc_pool_id = queue->ring_id;
 }
 
 /*
@@ -1058,6 +1056,37 @@ bool dp_tx_desc_set_ktimestamp(struct dp_vdev *vdev,
 		return true;
 	}
 	return false;
+}
+#endif
+
+#ifdef CONFIG_DP_PKT_ADD_TIMESTAMP
+/**
+ * dp_pkt_add_timestamp() - add timestamp in data payload
+ *
+ * @vdev: dp vdev
+ * @index: index to decide offset in payload
+ * @time: timestamp to add in data payload
+ * @nbuf: network buffer
+ *
+ * Return: none
+ */
+void dp_pkt_add_timestamp(struct dp_vdev *vdev,
+			  enum qdf_pkt_timestamp_index index, uint64_t time,
+			  qdf_nbuf_t nbuf);
+/**
+ * dp_pkt_get_timestamp() - get current system time
+ *
+ * @time: return current system time
+ *
+ * Return: none
+ */
+void dp_pkt_get_timestamp(uint64_t *time);
+#else
+#define dp_pkt_add_timestamp(vdev, index, time, nbuf)
+
+static inline
+void dp_pkt_get_timestamp(uint64_t *time)
+{
 }
 #endif
 #endif

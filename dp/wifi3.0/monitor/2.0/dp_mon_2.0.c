@@ -223,7 +223,8 @@ dp_mon_buffers_replenish(struct dp_soc *dp_soc,
 			 struct dp_mon_desc_pool *mon_desc_pool,
 			 uint32_t num_req_buffers,
 			 union dp_mon_desc_list_elem_t **desc_list,
-			 union dp_mon_desc_list_elem_t **tail)
+			 union dp_mon_desc_list_elem_t **tail,
+			 uint32_t *replenish_cnt_ref)
 {
 	uint32_t num_alloc_desc;
 	uint16_t num_desc_to_free = 0;
@@ -321,6 +322,8 @@ dp_mon_buffers_replenish(struct dp_soc *dp_soc,
 	}
 
 	hal_srng_access_end(dp_soc->hal_soc, mon_srng);
+	if (replenish_cnt_ref)
+		*replenish_cnt_ref += count;
 
 free_desc:
 	/*
@@ -812,7 +815,8 @@ QDF_STATUS dp_tx_mon_refill_buf_ring_2_0(struct dp_intr *int_ctx)
 	if (num_entries_avail)
 		dp_mon_buffers_replenish(soc, tx_mon_buf_ring,
 					 &mon_soc_be->tx_desc_mon,
-					 num_entries_avail, &desc_list, &tail);
+					 num_entries_avail, &desc_list, &tail,
+					 NULL);
 
 	return QDF_STATUS_SUCCESS;
 }
@@ -844,7 +848,8 @@ QDF_STATUS dp_rx_mon_refill_buf_ring_2_0(struct dp_intr *int_ctx)
 	if (num_entries_avail)
 		dp_mon_buffers_replenish(soc, rx_mon_buf_ring,
 					 &mon_soc_be->rx_desc_mon,
-					 num_entries_avail, &desc_list, &tail);
+					 num_entries_avail, &desc_list, &tail,
+					 NULL);
 
 	return QDF_STATUS_SUCCESS;
 }
@@ -1273,11 +1278,9 @@ dp_mon_register_feature_ops_2_0(struct dp_soc *soc)
 	mon_ops->mon_htt_ppdu_stats_detach = dp_htt_ppdu_stats_detach;
 	mon_ops->mon_print_pdev_rx_mon_stats = dp_print_pdev_rx_mon_stats;
 	mon_ops->mon_set_bsscolor = dp_mon_set_bsscolor;
-	mon_ops->mon_pdev_get_filter_ucast_data =
-				dp_pdev_get_filter_ucast_data;
-	mon_ops->mon_pdev_get_filter_mcast_data =
-				dp_pdev_get_filter_mcast_data;
-	mon_ops->mon_pdev_get_filter_non_data = dp_pdev_get_filter_non_data;
+	mon_ops->mon_pdev_get_filter_ucast_data = NULL;
+	mon_ops->mon_pdev_get_filter_mcast_data = NULL;
+	mon_ops->mon_pdev_get_filter_non_data = NULL;
 	mon_ops->mon_neighbour_peer_add_ast = NULL;
 #ifndef DISABLE_MON_CONFIG
 	mon_ops->mon_tx_process = dp_tx_mon_process_2_0;
@@ -1306,19 +1309,17 @@ dp_mon_register_feature_ops_2_0(struct dp_soc *soc)
 	mon_ops->mon_set_bpr_enable = dp_set_bpr_enable_2_0;
 #endif
 #ifdef ATH_SUPPORT_NAC
-	mon_ops->mon_set_filter_neigh_peers = dp_set_filter_neigh_peers;
+	mon_ops->mon_set_filter_neigh_peers = NULL;
 #endif
 #ifdef WLAN_ATF_ENABLE
 	mon_ops->mon_set_atf_stats_enable = dp_set_atf_stats_enable;
 #endif
 #ifdef FEATURE_NAC_RSSI
-	mon_ops->mon_filter_neighbour_peer = dp_filter_neighbour_peer;
+	mon_ops->mon_filter_neighbour_peer = NULL;
 #endif
 #ifdef QCA_MCOPY_SUPPORT
-	mon_ops->mon_filter_setup_mcopy_mode =
-				dp_mon_filter_setup_mcopy_mode_2_0;
-	mon_ops->mon_filter_reset_mcopy_mode =
-				dp_mon_filter_reset_mcopy_mode_2_0;
+	mon_ops->mon_filter_setup_mcopy_mode = NULL;
+	mon_ops->mon_filter_reset_mcopy_mode = NULL;
 	mon_ops->mon_mcopy_check_deliver = NULL;
 #endif
 #ifdef QCA_ENHANCED_STATS_SUPPORT
@@ -1339,8 +1340,7 @@ dp_mon_register_feature_ops_2_0(struct dp_soc *soc)
 #endif
 #endif
 #ifdef WLAN_RX_PKT_CAPTURE_ENH
-	mon_ops->mon_filter_setup_rx_enh_capture =
-				dp_mon_filter_setup_rx_enh_capture_2_0;
+	mon_ops->mon_filter_setup_rx_enh_capture = NULL;
 #endif
 #ifdef WDI_EVENT_ENABLE
 	mon_ops->mon_set_pktlog_wifi3 = dp_set_pktlog_wifi3;
@@ -1369,7 +1369,7 @@ dp_mon_register_feature_ops_2_0(struct dp_soc *soc)
 	mon_ops->rx_mon_enable = dp_rx_mon_enable_set;
 	mon_ops->rx_wmask_subscribe = dp_rx_mon_word_mask_subscribe;
 	mon_ops->rx_enable_mpdu_logging = dp_rx_mon_enable_mpdu_logging;
-	mon_ops->mon_neighbour_peers_detach = dp_neighbour_peers_detach;
+	mon_ops->mon_neighbour_peers_detach = NULL;
 	mon_ops->mon_vdev_set_monitor_mode_buf_rings =
 				dp_vdev_set_monitor_mode_buf_rings_2_0;
 	mon_ops->mon_vdev_set_monitor_mode_rings =
@@ -1388,6 +1388,7 @@ dp_mon_register_feature_ops_2_0(struct dp_soc *soc)
 	mon_ops->mon_filter_reset_undecoded_metadata_capture =
 		dp_mon_filter_reset_undecoded_metadata_capture_2_0;
 #endif
+	mon_ops->rx_enable_fpmo = dp_rx_mon_enable_fpmo;
 }
 
 struct dp_mon_ops monitor_ops_2_0 = {
@@ -1481,7 +1482,7 @@ struct dp_mon_ops monitor_ops_2_0 = {
 struct cdp_mon_ops dp_ops_mon_2_0 = {
 	.txrx_reset_monitor_mode = dp_reset_monitor_mode,
 	/* Added support for HK advance filter */
-	.txrx_set_advance_monitor_filter = dp_pdev_set_advance_monitor_filter,
+	.txrx_set_advance_monitor_filter = NULL,
 	.txrx_deliver_tx_mgmt = dp_deliver_tx_mgmt,
 	.config_full_mon_mode = NULL,
 	.soc_config_full_mon_mode = NULL,
@@ -1546,4 +1547,28 @@ void dp_mon_cdp_ops_register_2_0(struct cdp_ops *ops)
 {
 	ops->mon_ops = &dp_ops_mon_2_0;
 }
+#endif
+
+#if defined(WLAN_SUPPORT_RX_PROTOCOL_TYPE_TAG) ||\
+	defined(WLAN_SUPPORT_RX_FLOW_TAG)
+#if QCA_TEST_MON_PF_TAGS_STATS
+/** dp_mon_rx_update_rx_protocol_tag_stats() - Update mon protocols's
+ *					      statistics
+ * @pdev: pdev handle
+ * @protocol_index: Protocol index for which the stats should be incremented
+ * @ring_index: REO ring number from which this tag was received.
+ *
+ * Return: void
+ */
+void dp_mon_rx_update_rx_protocol_tag_stats(struct dp_pdev *pdev,
+					    uint16_t protocol_index)
+{
+	pdev->mon_proto_tag_stats[protocol_index].tag_ctr++;
+}
+#else
+void dp_mon_rx_update_rx_protocol_tag_stats(struct dp_pdev *pdev,
+					    uint16_t protocol_index)
+{
+}
+#endif
 #endif

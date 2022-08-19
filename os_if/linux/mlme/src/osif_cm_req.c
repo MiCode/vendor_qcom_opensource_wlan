@@ -596,6 +596,7 @@ QDF_STATUS osif_update_mlo_partner_info(
 		mlo_clear_connect_req_links_bmap(vdev);
 		mlo_update_connect_req_links(vdev, 1);
 		osif_update_partner_vdev_info(vdev, partner_info);
+		mlo_mlme_sta_op_class(vdev, ml_ie);
 	}
 
 	return QDF_STATUS_SUCCESS;

@@ -21,6 +21,7 @@
 #include "hal_hw_headers.h"
 #include "dp_types.h"
 #include "dp_rx.h"
+#include "dp_tx.h"
 #include "dp_li_rx.h"
 #include "dp_peer.h"
 #include "hal_rx.h"

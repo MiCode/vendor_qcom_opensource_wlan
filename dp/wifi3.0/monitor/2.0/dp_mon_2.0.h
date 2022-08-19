@@ -264,6 +264,7 @@ void dp_mon_pool_frag_unmap_and_free(struct dp_soc *dp_soc,
  *	       or NULL during dp rx initialization or out of buffer
  *	       interrupt.
  * @tail: tail of descs list
+ * @relenish_cnt_ref: pointer to update replenish_cnt
  *
  * Return: return success or failure
  */
@@ -272,7 +273,8 @@ QDF_STATUS dp_mon_buffers_replenish(struct dp_soc *dp_soc,
 				struct dp_mon_desc_pool *mon_desc_pool,
 				uint32_t num_req_buffers,
 				union dp_mon_desc_list_elem_t **desc_list,
-				union dp_mon_desc_list_elem_t **tail);
+				union dp_mon_desc_list_elem_t **tail,
+				uint32_t *replenish_cnt_ref);
 
 /**
  * dp_mon_filter_show_tx_filter_be() - Show the set filters
@@ -404,4 +406,19 @@ dp_rx_mon_add_frag_to_skb(struct hal_rx_ppdu_info *ppdu_info,
 		qdf_assert_always(0);
 	}
 }
+
+#if defined(WLAN_SUPPORT_RX_PROTOCOL_TYPE_TAG) ||\
+	defined(WLAN_SUPPORT_RX_FLOW_TAG)
+/** dp_mon_rx_update_rx_err_protocol_tag_stats() - Update mon protocols's
+ *					      statistics from given protocol
+ *					      type
+ * @pdev: pdev handle
+ * @protocol_index: Protocol index for which the stats should be incremented
+ *
+ * Return: void
+ */
+void dp_mon_rx_update_rx_protocol_tag_stats(struct dp_pdev *pdev,
+					    uint16_t protocol_index);
+#endif /* WLAN_SUPPORT_RX_PROTOCOL_TYPE_TAG */
+
 #endif /* _DP_MON_2_0_H_ */

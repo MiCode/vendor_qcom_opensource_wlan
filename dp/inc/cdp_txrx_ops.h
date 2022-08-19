@@ -266,7 +266,8 @@ struct cdp_cmn_ops {
 
 	QDF_STATUS
 	(*txrx_peer_delete)(struct cdp_soc_t *soc, uint8_t vdev_id,
-			    uint8_t *peer_mac, uint32_t bitmap);
+			    uint8_t *peer_mac, uint32_t bitmap,
+			    enum cdp_peer_type peer_type);
 
 	QDF_STATUS (*txrx_set_monitor_mode)(struct cdp_soc_t *soc,
 					    uint8_t vdev_id,
@@ -672,8 +673,10 @@ struct cdp_cmn_ops {
 
 #if defined(WLAN_FEATURE_11BE_MLO) && defined(WLAN_MLO_MULTI_CHIP)
 	void (*txrx_recovery_vdev_flush_peers)(struct cdp_soc_t *soc,
-					       uint8_t vdev_id);
+					       uint8_t vdev_id,
+					       bool mlo_peers_only);
 #endif
+	QDF_STATUS (*txrx_umac_reset_deinit)(ol_txrx_soc_handle soc);
 };
 
 struct cdp_ctrl_ops {

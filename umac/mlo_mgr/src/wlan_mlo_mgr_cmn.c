@@ -123,6 +123,29 @@ QDF_STATUS mlo_mlme_clone_sta_security(struct wlan_objmgr_vdev *vdev,
 	return status;
 }
 
+QDF_STATUS mlo_mlme_sta_op_class(struct wlan_objmgr_vdev *vdev,
+				 uint8_t *ml_ie)
+{
+	struct mlo_mgr_context *mlo_ctx = wlan_objmgr_get_mlo_ctx();
+	struct vdev_mlme_obj *vdev_mlme;
+	QDF_STATUS status = QDF_STATUS_SUCCESS;
+
+	if (!mlo_ctx || !mlo_ctx->mlme_ops ||
+	    !mlo_ctx->mlme_ops->mlo_mlme_ext_validate_conn_req)
+		return QDF_STATUS_E_FAILURE;
+
+	vdev_mlme = wlan_vdev_mlme_get_cmpt_obj(vdev);
+	if (!vdev_mlme)
+		return QDF_STATUS_E_FAILURE;
+
+	if (mlo_ctx->mlme_ops->mlo_mlme_ext_sta_op_class)
+		status =
+			mlo_ctx->mlme_ops->mlo_mlme_ext_sta_op_class(
+				vdev_mlme, ml_ie);
+
+	return status;
+}
+
 QDF_STATUS mlo_mlme_validate_conn_req(struct wlan_objmgr_vdev *vdev,
 				      void *ext_data)
 {

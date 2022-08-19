@@ -116,6 +116,16 @@ enum verbose_debug_module {
 #define dp_cdp_nofl_debug(params...) \
 	QDF_TRACE_DEBUG_NO_FL(QDF_MODULE_ID_DP_CDP, params)
 
+#define DP_PEER_INFO_PARAMS_INIT(peer_info, _vdev_id, \
+				_peer_mac, _addr_align, _peer_type) \
+({	typeof(peer_info) _peer_info = (peer_info); \
+	do {								\
+		(_peer_info)->vdev_id = (_vdev_id);			\
+		(_peer_info)->mac_addr = (_peer_mac);			\
+		(_peer_info)->mac_addr_is_aligned = (_addr_align);	\
+		(_peer_info)->peer_type = (_peer_type);			\
+	} while (0); })
+
 /**
  * @enum vdev_host_stats_id:
  * host stats update from CDP have to set one of the following stats ID
@@ -244,7 +254,9 @@ cdp_vdev_detach(ol_txrx_soc_handle soc, uint8_t vdev_id,
 
 #if defined(WLAN_FEATURE_11BE_MLO) && defined(WLAN_MLO_MULTI_CHIP)
 static inline void
-cdp_vdev_recovery_flush_peers(ol_txrx_soc_handle soc, uint8_t vdev_id)
+cdp_vdev_recovery_flush_peers(ol_txrx_soc_handle soc,
+			      uint8_t vdev_id,
+			      bool mlo_peers_only)
 {
 	if (!soc || !soc->ops) {
 		dp_cdp_debug("Invalid Instance:");
@@ -256,7 +268,9 @@ cdp_vdev_recovery_flush_peers(ol_txrx_soc_handle soc, uint8_t vdev_id)
 	    !soc->ops->cmn_drv_ops->txrx_recovery_vdev_flush_peers)
 		return;
 
-	soc->ops->cmn_drv_ops->txrx_recovery_vdev_flush_peers(soc, vdev_id);
+	soc->ops->cmn_drv_ops->txrx_recovery_vdev_flush_peers(soc,
+							      vdev_id,
+							      mlo_peers_only);
 }
 #endif
 
@@ -705,7 +719,8 @@ cdp_peer_delete(ol_txrx_soc_handle soc, uint8_t vdev_id,
 	    !soc->ops->cmn_drv_ops->txrx_peer_delete)
 		return;
 
-	soc->ops->cmn_drv_ops->txrx_peer_delete(soc, vdev_id, peer_mac, bitmap);
+	soc->ops->cmn_drv_ops->txrx_peer_delete(soc, vdev_id, peer_mac,
+						bitmap, CDP_LINK_PEER_TYPE);
 }
 
 #ifdef DP_RX_UDP_OVER_PEER_ROAM
@@ -1687,6 +1702,25 @@ static inline void cdp_txrx_intr_detach(ol_txrx_soc_handle soc)
 		return;
 
 	soc->ops->cmn_drv_ops->txrx_intr_detach(soc);
+}
+
+/**
+ * cdp_txrx_umac_reset_deinit(): De-initialize UMAC HW reset module
+ * @soc: soc handle
+ */
+static inline void cdp_txrx_umac_reset_deinit(ol_txrx_soc_handle soc)
+{
+	if (!soc || !soc->ops) {
+		dp_cdp_debug("Invalid Instance:");
+		QDF_BUG(0);
+		return;
+	}
+
+	if (!soc->ops->cmn_drv_ops ||
+	    !soc->ops->cmn_drv_ops->txrx_umac_reset_deinit)
+		return;
+
+	soc->ops->cmn_drv_ops->txrx_umac_reset_deinit(soc);
 }
 
 /**

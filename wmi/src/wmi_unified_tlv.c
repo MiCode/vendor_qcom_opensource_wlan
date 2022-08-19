@@ -12407,6 +12407,26 @@ static QDF_STATUS extract_unit_test_tlv(wmi_unified_t wmi_handle,
 static QDF_STATUS extract_pdev_ext_stats_tlv(wmi_unified_t wmi_handle,
 	void *evt_buf, uint32_t index, wmi_host_pdev_ext_stats *pdev_ext_stats)
 {
+	WMI_UPDATE_STATS_EVENTID_param_tlvs *param_buf;
+	wmi_pdev_extd_stats *ev;
+
+	param_buf = evt_buf;
+	if (!param_buf)
+		return QDF_STATUS_E_FAILURE;
+
+	if (!param_buf->pdev_extd_stats)
+		return QDF_STATUS_E_FAILURE;
+
+	ev = param_buf->pdev_extd_stats + index;
+
+	pdev_ext_stats->pdev_id =
+		wmi_handle->ops->convert_target_pdev_id_to_host(
+						wmi_handle,
+						ev->pdev_id);
+	pdev_ext_stats->my_rx_count = ev->my_rx_count;
+	pdev_ext_stats->rx_matched_11ax_msdu_cnt = ev->rx_matched_11ax_msdu_cnt;
+	pdev_ext_stats->rx_other_11ax_msdu_cnt = ev->rx_other_11ax_msdu_cnt;
+
 	return QDF_STATUS_SUCCESS;
 }
 
@@ -19906,6 +19926,8 @@ static void populate_tlv_service(uint32_t *wmi_service)
 			WMI_SERVICE_UNAVAILABLE;
 	wmi_service[wmi_service_spectral_session_info_support] =
 			WMI_SERVICE_SPECTRAL_SESSION_INFO_SUPPORT;
+	wmi_service[wmi_service_umac_hang_recovery_support] =
+			WMI_SERVICE_UMAC_HANG_RECOVERY_SUPPORT;
 	wmi_service[wmi_service_mu_snif] = WMI_SERVICE_MU_SNIF;
 #ifdef WLAN_FEATURE_DYNAMIC_MAC_ADDR_UPDATE
 	wmi_service[wmi_service_dynamic_update_vdev_macaddr_support] =
@@ -19948,6 +19970,8 @@ static void populate_tlv_service(uint32_t *wmi_service)
 	wmi_service[wmi_service_configure_vendor_handoff_control_support] =
 				WMI_SERVICE_FW_INI_PARSE_SUPPORT;
 #endif
+	wmi_service[wmi_service_linkspeed_roam_trigger_support] =
+		WMI_SERVICE_LINKSPEED_ROAM_TRIGGER_SUPPORT;
 }
 
 /**

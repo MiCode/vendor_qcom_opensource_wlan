@@ -1905,12 +1905,14 @@ static void hal_hw_txrx_ops_attach_qca5332(struct hal_soc *hal_soc)
 	hal_soc->ops->hal_get_reo_qdesc_size = hal_qca5332_get_reo_qdesc_size;
 	/* TX MONITOR */
 #ifdef QCA_MONITOR_2_0_SUPPORT
+	hal_soc->ops->hal_txmon_is_mon_buf_addr_tlv =
+				hal_txmon_is_mon_buf_addr_tlv_generic_be;
+	hal_soc->ops->hal_txmon_populate_packet_info =
+				hal_txmon_populate_packet_info_generic_be;
 	hal_soc->ops->hal_txmon_status_parse_tlv =
 				hal_txmon_status_parse_tlv_generic_be;
 	hal_soc->ops->hal_txmon_status_get_num_users =
 				hal_txmon_status_get_num_users_generic_be;
-	hal_soc->ops->hal_txmon_status_free_buffer =
-				hal_txmon_status_free_buffer_generic_be;
 #endif /* QCA_MONITOR_2_0_SUPPORT */
 	hal_soc->ops->hal_compute_reo_remap_ix0 = NULL;
 	hal_soc->ops->hal_tx_vdev_mismatch_routing_set =
@@ -1925,6 +1927,10 @@ static void hal_hw_txrx_ops_attach_qca5332(struct hal_soc *hal_soc)
 		hal_cookie_conversion_reg_cfg_generic_be;
 	hal_soc->ops->hal_set_ba_aging_timeout =
 		hal_set_ba_aging_timeout_be_generic;
+	hal_soc->ops->hal_tx_populate_bank_register =
+		hal_tx_populate_bank_register_be;
+	hal_soc->ops->hal_tx_vdev_mcast_ctrl_set =
+		hal_tx_vdev_mcast_ctrl_set_be;
 };
 
 struct hal_hw_srng_config hw_srng_table_5332[] = {

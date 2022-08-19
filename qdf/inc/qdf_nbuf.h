@@ -135,6 +135,7 @@
 #define QDF_NBUF_PKT_ICMPv4OP_REPLY		0x00
 #define QDF_NBUF_PKT_ICMPv4_SRC_IP_OFFSET	26
 #define QDF_NBUF_PKT_ICMPv4_TGT_IP_OFFSET	30
+#define QDF_NBUF_PKT_ICMPV4_REDIRECT		0x05
 
 /* TCP Related MASK */
 #define QDF_NBUF_PKT_TCP_OPCODE_OFFSET		47
@@ -713,6 +714,7 @@ struct qdf_radiotap_ext2 {
 #define IPV6_DST_PORT_OFFSET          56
 
 /* IPV6 ICMPV6 Related Mask */
+#define ICMPV6_REDIRECT               137
 #define ICMPV6_SEQ_NUM_OFFSET         60
 #define ICMPV6_SUBTYPE_OFFSET         54
 #define ICMPV6_REQUEST                0x80
@@ -3604,6 +3606,12 @@ bool qdf_nbuf_data_is_icmpv4_rsp(qdf_nbuf_t buf)
 	return __qdf_nbuf_data_is_icmpv4_rsp(qdf_nbuf_data(buf));
 }
 
+static inline
+bool qdf_nbuf_is_icmpv4_redirect(qdf_nbuf_t buf)
+{
+	return __qdf_nbuf_data_is_icmpv4_redirect(qdf_nbuf_data(buf));
+}
+
 /**
  * qdf_nbuf_get_icmpv4_src_ip() - get icmpv4 src IP
  * @buf:  buffer
@@ -3643,6 +3651,11 @@ bool qdf_nbuf_is_ipv6_pkt(qdf_nbuf_t buf)
 	return __qdf_nbuf_data_is_ipv6_pkt(qdf_nbuf_data(buf));
 }
 
+static inline
+bool qdf_nbuf_is_icmpv6_redirect(qdf_nbuf_t buf)
+{
+	return __qdf_nbuf_data_is_icmpv6_redirect(qdf_nbuf_data(buf));
+}
 /**
  * qdf_nbuf_data_is_ipv6_pkt() - check if it is IPV6 packet.
  * @data: Pointer to IPV6 packet data buffer
@@ -4200,6 +4213,11 @@ static inline void *qdf_nbuf_get_cb(qdf_nbuf_t nbuf)
 static inline uint32_t qdf_nbuf_get_nr_frags(qdf_nbuf_t nbuf)
 {
 	return __qdf_nbuf_get_nr_frags(nbuf);
+}
+
+static inline uint32_t qdf_nbuf_get_nr_frags_in_fraglist(qdf_nbuf_t nbuf)
+{
+	return __qdf_nbuf_get_nr_frags_in_fraglist(nbuf);
 }
 
 static inline qdf_size_t qdf_nbuf_headlen(qdf_nbuf_t buf)

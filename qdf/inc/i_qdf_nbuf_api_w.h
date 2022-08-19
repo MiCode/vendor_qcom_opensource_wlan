@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2014-2017,2019-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -206,6 +206,15 @@ static inline void qdf_nbuf_tx_notify_comp_set(qdf_nbuf_t buf, uint8_t val)
 }
 
 static inline uint8_t qdf_nbuf_tx_notify_comp_get(qdf_nbuf_t buf)
+{
+	return 0;
+}
+
+static inline void qdf_nbuf_set_lmac_id(qdf_nbuf_t buf, uint8_t value)
+{
+}
+
+static inline uint8_t qdf_nbuf_get_lmac_id(qdf_nbuf_t buf)
 {
 	return 0;
 }

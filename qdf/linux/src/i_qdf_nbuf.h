@@ -136,6 +136,7 @@ typedef union {
  * @rx.dev.priv_cb_m.ipa_smmu_map: do IPA smmu map
  * @rx.dev.priv_cb_m.reo_dest_ind_or_sw_excpt: reo destination indication or
 					     sw execption bit from ring desc
+ * @rx.dev.priv_cb_m.lmac_id: lmac id for RX packet
  * @rx.dev.priv_cb_m.tcp_seq_num: TCP sequence number
  * @rx.dev.priv_cb_m.tcp_ack_num: TCP ACK number
  * @rx.dev.priv_cb_m.lro_ctx: LRO context
@@ -259,7 +260,7 @@ struct qdf_nbuf_cb {
 						 exc_frm:1,
 						 ipa_smmu_map:1,
 						 reo_dest_ind_or_sw_excpt:5,
-						 reserved:2,
+						 lmac_id:2,
 						 reserved1:16;
 					uint32_t tcp_seq_num;
 					uint32_t tcp_ack_num;
@@ -893,6 +894,8 @@ bool __qdf_nbuf_data_is_tcp_ack(uint8_t *data);
 uint16_t __qdf_nbuf_data_get_tcp_src_port(uint8_t *data);
 uint16_t __qdf_nbuf_data_get_tcp_dst_port(uint8_t *data);
 bool __qdf_nbuf_data_is_icmpv4_req(uint8_t *data);
+bool __qdf_nbuf_data_is_icmpv4_redirect(uint8_t *data);
+bool __qdf_nbuf_data_is_icmpv6_redirect(uint8_t *data);
 bool __qdf_nbuf_data_is_icmpv4_rsp(uint8_t *data);
 uint32_t __qdf_nbuf_get_icmpv4_src_ip(uint8_t *data);
 uint32_t __qdf_nbuf_get_icmpv4_tgt_ip(uint8_t *data);
@@ -1091,6 +1094,25 @@ int __qdf_nbuf_shared(struct sk_buff *skb);
 static inline size_t __qdf_nbuf_get_nr_frags(struct sk_buff *skb)
 {
 	return skb_shinfo(skb)->nr_frags;
+}
+
+/**
+ * __qdf_nbuf_get_nr_frags_in_fraglist() - return the number of fragments
+ * @skb: sk buff
+ *
+ * This API returns a total number of fragments from the fraglist
+ * Return: total number of fragments
+ */
+static inline uint32_t __qdf_nbuf_get_nr_frags_in_fraglist(struct sk_buff *skb)
+{
+	uint32_t num_frag = 0;
+	struct sk_buff *list = NULL;
+
+	num_frag = skb_shinfo(skb)->nr_frags;
+	skb_walk_frags(skb, list)
+		num_frag += skb_shinfo(list)->nr_frags;
+
+	return num_frag;
 }
 
 /*

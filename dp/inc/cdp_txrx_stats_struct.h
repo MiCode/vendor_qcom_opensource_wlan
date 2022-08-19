@@ -120,6 +120,8 @@
 #define CDP_DMA_CODE_MAX 14 /* max rxdma error */
 #define CDP_REO_CODE_MAX 15 /* max reo error */
 
+#define CDP_MAX_LMACS 2 /* max lmacs */
+
 /*
  * Max of TxRx context
  */
@@ -1518,6 +1520,7 @@ struct cdp_tx_stats {
 /* struct cdp_rx_stats - rx Level Stats
  * @to_stack: Total packets sent up the stack
  * @rcvd_reo[CDP_MAX_RX_RINGS]:  Packets received on the reo ring
+ * @rx_lmac[CDP_MAX_LMACS]: Packets received on which lmac
  * @unicast: Total unicast packets
  * @multicast: Total multicast packets
  * @bcast:  Broadcast Packet Count
@@ -1605,6 +1608,7 @@ struct cdp_tx_stats {
 struct cdp_rx_stats {
 	struct cdp_pkt_info to_stack;
 	struct cdp_pkt_info rcvd_reo[CDP_MAX_RX_RINGS];
+	struct cdp_pkt_info rx_lmac[CDP_MAX_LMACS];
 	struct cdp_pkt_info unicast;
 	struct cdp_pkt_info multicast;
 	struct cdp_pkt_info bcast;
@@ -2820,6 +2824,7 @@ struct cdp_peer_hmwds_ast_add_status {
  * @DP_SOC_PARAM_EAPOL_OVER_CONTROL_PORT: For sending EAPOL's over control port
  * @DP_SOC_PARAM_MULTI_PEER_GRP_CMD_SUPPORT: For sending bulk AST delete
  * @DP_SOC_PARAM_RSSI_DBM_CONV_SUPPORT: To set the rssi dbm support bit
+ * @DP_SOC_PARAM_UMAC_HW_RESET_SUPPORT: Whether target supports UMAC HW reset
  */
 enum cdp_soc_param_t {
 	DP_SOC_PARAM_MSDU_EXCEPTION_DESC,
@@ -2828,6 +2833,7 @@ enum cdp_soc_param_t {
 	DP_SOC_PARAM_EAPOL_OVER_CONTROL_PORT,
 	DP_SOC_PARAM_MULTI_PEER_GRP_CMD_SUPPORT,
 	DP_SOC_PARAM_RSSI_DBM_CONV_SUPPORT,
+	DP_SOC_PARAM_UMAC_HW_RESET_SUPPORT,
 	DP_SOC_PARAM_MAX,
 };
 

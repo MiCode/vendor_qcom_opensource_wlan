@@ -1072,6 +1072,8 @@ struct dp_soc_stats {
 		uint64_t tqm_drop_no_peer;
 		/* Number of tx completions reaped per WBM2SW release ring */
 		uint32_t tx_comp[MAX_TCL_DATA_RINGS];
+		/* Number of tx completions force freed */
+		uint32_t tx_comp_force_freed;
 	} tx;
 
 	/* SOC level RX stats */
@@ -1900,6 +1902,7 @@ struct dp_arch_ops {
 				  struct dp_vdev *vdev,
 				  struct hal_tx_completion_status *ts,
 				  uint32_t *delay_us);
+	void (*print_mlo_ast_stats)(struct dp_soc *soc);
 };
 
 /**
@@ -1908,11 +1911,13 @@ struct dp_arch_ops {
  * @dmac_cmn_src_rxbuf_ring_enabled: Flag to indicate DMAC mode common Rx
  *				     buffer source rings
  * @rssi_dbm_conv_support: Rssi dbm converstion support param.
+ * @umac_hw_reset_support: UMAC HW reset support
  */
 struct dp_soc_features {
 	uint8_t pn_in_reo_dest:1,
 		dmac_cmn_src_rxbuf_ring_enabled:1;
 	bool rssi_dbm_conv_support;
+	bool umac_hw_reset_support;
 };
 
 enum sysfs_printing_mode {
@@ -2653,9 +2658,6 @@ struct rx_protocol_tag_map {
 #ifdef WLAN_SUPPORT_RX_TAG_STATISTICS
 struct rx_protocol_tag_stats {
 	uint32_t tag_ctr;
-#ifdef QCA_TEST_MON_PF_TAGS_STATS
-	uint32_t mon_tag_ctr;
-#endif
 };
 #endif /* WLAN_SUPPORT_RX_TAG_STATISTICS */
 
@@ -2975,6 +2977,8 @@ struct dp_pdev {
 	/* Track msdus received from expection ring separately */
 	struct rx_protocol_tag_stats
 		rx_err_proto_tag_stats[RX_PROTOCOL_TAG_MAX];
+	struct rx_protocol_tag_stats
+		mon_proto_tag_stats[RX_PROTOCOL_TAG_MAX];
 #endif /* WLAN_SUPPORT_RX_TAG_STATISTICS */
 #endif /* WLAN_SUPPORT_RX_PROTOCOL_TYPE_TAG */
 
@@ -3732,6 +3736,7 @@ struct dp_peer_extd_tx_stats {
 /**
  * struct dp_peer_per_pkt_rx_stats - Peer Rx stats updated in per pkt Rx path
  * @rcvd_reo[CDP_MAX_RX_RINGS]: Packets received on the reo ring
+ * @rx_lmac[CDP_MAX_LMACS]: Packets received on each lmac
  * @unicast: Total unicast packets
  * @multicast: Total multicast packets
  * @bcast:  Broadcast Packet Count
@@ -3760,6 +3765,7 @@ struct dp_peer_extd_tx_stats {
  */
 struct dp_peer_per_pkt_rx_stats {
 	struct cdp_pkt_info rcvd_reo[CDP_MAX_RX_RINGS];
+	struct cdp_pkt_info rx_lmac[CDP_MAX_LMACS];
 	struct cdp_pkt_info unicast;
 	struct cdp_pkt_info multicast;
 	struct cdp_pkt_info bcast;
@@ -4082,7 +4088,6 @@ struct dp_peer {
 	enum cdp_peer_type peer_type;
 	/*---------for link peer---------*/
 	struct dp_peer *mld_peer;
-
 	/*---------for mld peer----------*/
 	struct dp_peer_link_info link_peers[DP_MAX_MLO_LINKS];
 	uint8_t num_links;

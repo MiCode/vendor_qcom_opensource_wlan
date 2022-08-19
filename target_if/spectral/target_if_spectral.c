@@ -7862,10 +7862,8 @@ target_if_spectral_register_events(struct wlan_objmgr_psoc *psoc)
 			wmi_spectral_capabilities_eventid,
 			target_if_spectral_capabilities_event_handler,
 			WMI_RX_UMAC_CTX);
-	if (ret) {
+	if (ret)
 		spectral_debug("event handler not supported, ret=%d", ret);
-		return QDF_STATUS_E_FAILURE;
-	}
 
 	return QDF_STATUS_SUCCESS;
 }

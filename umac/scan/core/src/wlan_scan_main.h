@@ -220,6 +220,7 @@ struct pdev_scan_info {
 	struct chan_list custom_chan_list;
 	uint8_t conf_bssid[QDF_MAC_ADDR_SIZE];
 	struct wlan_ssid conf_ssid;
+	struct chan_list_scan_info chan_scan_info;
 };
 
 /**

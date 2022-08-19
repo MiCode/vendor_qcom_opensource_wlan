@@ -90,6 +90,10 @@ extern "C" {
 #define TARGET_TYPE_MANGO 34
 #endif
 
+#ifndef TARGET_TYPE_QCN9224V2
+#define TARGET_TYPE_QCN9224V2      35
+#endif
+
 #ifdef __cplusplus
 }
 #endif

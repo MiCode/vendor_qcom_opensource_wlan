@@ -57,6 +57,7 @@
 #define dp_mon_debug(params...) QDF_TRACE_DEBUG(QDF_MODULE_ID_MON, params)
 #define dp_mon_warn(params...) QDF_TRACE_WARN(QDF_MODULE_ID_MON, params)
 
+#define dp_mon_warn_rl(params...) QDF_TRACE_WARN_RL(QDF_MODULE_ID_MON, params)
 #define dp_mon_debug_rl(params...) QDF_TRACE_DEBUG_RL(QDF_MODULE_ID_MON, params)
 #define dp_mon_info_rl(params...) \
 	__QDF_TRACE_RL(QDF_TRACE_LEVEL_INFO_HIGH, QDF_MODULE_ID_MON, ## params)
@@ -786,6 +787,8 @@ struct dp_mon_ops {
 				   struct htt_rx_ring_tlv_filter *tlv_filter);
 	void (*rx_enable_mpdu_logging)(uint32_t *msg_word,
 				       struct htt_rx_ring_tlv_filter *tlv_filter);
+	void (*rx_enable_fpmo)(uint32_t *msg_word,
+			       struct htt_rx_ring_tlv_filter *tlv_filter);
 #ifndef DISABLE_MON_CONFIG
 	void (*mon_register_intr_ops)(struct dp_soc *soc);
 #endif
@@ -3724,6 +3727,35 @@ dp_mon_rx_enable_mpdu_logging(struct dp_soc *soc, uint32_t *msg_word,
 	}
 
 	monitor_ops->rx_enable_mpdu_logging(msg_word, tlv_filter);
+}
+
+/*
+ * dp_mon_rx_enable_fpmo() - set fpmo filters
+ * @soc: dp soc handle
+ * @msg_word: msg word
+ * @tlv_filter: rx fing filter config
+ *
+ * Return: void
+ */
+static inline void
+dp_mon_rx_enable_fpmo(struct dp_soc *soc, uint32_t *msg_word,
+		      struct htt_rx_ring_tlv_filter *tlv_filter)
+{
+	struct dp_mon_soc *mon_soc = soc->monitor_soc;
+	struct dp_mon_ops *monitor_ops;
+
+	if (!mon_soc) {
+		dp_mon_debug("mon soc is NULL");
+		return;
+	}
+
+	monitor_ops = mon_soc->mon_ops;
+	if (!monitor_ops || !monitor_ops->rx_enable_fpmo) {
+		dp_mon_debug("callback not registered");
+		return;
+	}
+
+	monitor_ops->rx_enable_fpmo(msg_word, tlv_filter);
 }
 
 /*

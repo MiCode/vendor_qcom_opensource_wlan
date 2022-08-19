@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2014-2017,2019-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -129,6 +129,29 @@ static inline void qdf_nbuf_set_exc_frame(qdf_nbuf_t buf, uint8_t value)
 static inline uint8_t qdf_nbuf_is_exc_frame(qdf_nbuf_t buf)
 {
 	return QDF_NBUF_CB_RX_PACKET_EXC_FRAME(buf);
+}
+
+/**
+ * qdf_nbuf_set_lmac_id() - set lmac ID
+ * @buf: Network buffer
+ * @value: lmac ID value
+ *
+ * Return: none
+ */
+static inline void qdf_nbuf_set_lmac_id(qdf_nbuf_t buf, uint8_t value)
+{
+	QDF_NBUF_CB_RX_PACKET_LMAC_ID(buf) = value;
+}
+
+/**
+ * qdf_nbuf_get_lmac_id() - get lmac ID of RX packet
+ * @buf: Network buffer
+ *
+ * Return: lmac ID value
+ */
+static inline uint8_t qdf_nbuf_get_lmac_id(qdf_nbuf_t buf)
+{
+	return QDF_NBUF_CB_RX_PACKET_LMAC_ID(buf);
 }
 
 /**

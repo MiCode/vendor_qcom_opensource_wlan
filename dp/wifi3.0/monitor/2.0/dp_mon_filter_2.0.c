@@ -122,13 +122,11 @@ fail:
 void dp_rx_mon_hdr_length_set(uint32_t *msg_word,
 			      struct htt_rx_ring_tlv_filter *tlv_filter)
 {
-#ifdef FW_SUPPORT_NOT_YET
 	if (!msg_word || !tlv_filter)
 		return;
 
 	HTT_RX_RING_SELECTION_CFG_RX_HDR_LEN_SET(*msg_word,
 						 tlv_filter->rx_hdr_length);
-#endif
 }
 
 void dp_rx_mon_packet_length_set(uint32_t *msg_word,
@@ -205,6 +203,182 @@ dp_rx_mon_word_mask_subscribe(uint32_t *msg_word,
 		HTT_RX_RING_SELECTION_CFG_RX_PKT_TLV_OFFSET_SET(*msg_word,
 								tlv_filter->rx_pkt_tlv_offset);
 	}
+}
+
+void
+dp_rx_mon_enable_fpmo(uint32_t *msg_word,
+		      struct htt_rx_ring_tlv_filter *tlv_filter)
+{
+#ifdef FW_SUPPORT_NOT_YET
+	if (!msg_word || !tlv_filter)
+		return;
+
+	if (tlv_filter->enable_fpmo) {
+		/* TYPE: MGMT */
+		htt_rx_ring_pkt_enable_subtype_set(*msg_word, FLAG0,
+			FPMO, MGMT, 0000,
+			(tlv_filter->fpmo_mgmt_filter &
+			FILTER_MGMT_ASSOC_REQ) ? 1 : 0);
+		htt_rx_ring_pkt_enable_subtype_set(*msg_word, FLAG0,
+			FPMO, MGMT, 0001,
+			(tlv_filter->fpmo_mgmt_filter &
+			FILTER_MGMT_ASSOC_RES) ? 1 : 0);
+		htt_rx_ring_pkt_enable_subtype_set(*msg_word, FLAG0,
+			FPMO, MGMT, 0010,
+			(tlv_filter->fpmo_mgmt_filter &
+			FILTER_MGMT_REASSOC_REQ) ? 1 : 0);
+		htt_rx_ring_pkt_enable_subtype_set(*msg_word, FLAG0,
+			FPMO, MGMT, 0011,
+			(tlv_filter->fpmo_mgmt_filter &
+			FILTER_MGMT_REASSOC_RES) ? 1 : 0);
+		htt_rx_ring_pkt_enable_subtype_set(*msg_word, FLAG0,
+			FPMO, MGMT, 0100,
+			(tlv_filter->fpmo_mgmt_filter &
+			FILTER_MGMT_PROBE_REQ) ? 1 : 0);
+		htt_rx_ring_pkt_enable_subtype_set(*msg_word, FLAG0,
+			FPMO, MGMT, 0101,
+			(tlv_filter->fpmo_mgmt_filter &
+			FILTER_MGMT_PROBE_RES) ? 1 : 0);
+		htt_rx_ring_pkt_enable_subtype_set(*msg_word, FLAG0,
+			FPMO, MGMT, 0110,
+			(tlv_filter->fpmo_mgmt_filter &
+			FILTER_MGMT_TIM_ADVT) ? 1 : 0);
+		/* reserved */
+		htt_rx_ring_pkt_enable_subtype_set(*msg_word, FLAG0,
+			FPMO, MGMT, 0111,
+			(tlv_filter->fpmo_mgmt_filter &
+			FILTER_MGMT_RESERVED_7) ? 1 : 0);
+		htt_rx_ring_pkt_enable_subtype_set(*msg_word, FLAG0,
+			FPMO, MGMT, 1000,
+			(tlv_filter->fpmo_mgmt_filter &
+			FILTER_MGMT_BEACON) ? 1 : 0);
+		htt_rx_ring_pkt_enable_subtype_set(*msg_word, FLAG0,
+			FPMO, MGMT, 1001,
+			(tlv_filter->fpmo_mgmt_filter &
+			FILTER_MGMT_ATIM) ? 1 : 0);
+		htt_rx_ring_pkt_enable_subtype_set(*msg_word, FLAG0,
+			FPMO, MGMT, 1010,
+			(tlv_filter->fpmo_mgmt_filter &
+			FILTER_MGMT_DISASSOC) ? 1 : 0);
+		htt_rx_ring_pkt_enable_subtype_set(*msg_word, FLAG0,
+			FPMO, MGMT, 1011,
+			(tlv_filter->fpmo_mgmt_filter &
+			FILTER_MGMT_AUTH) ? 1 : 0);
+		htt_rx_ring_pkt_enable_subtype_set(*msg_word, FLAG0,
+			FPMO, MGMT, 1100,
+			(tlv_filter->fpmo_mgmt_filter &
+			FILTER_MGMT_DEAUTH) ? 1 : 0);
+		htt_rx_ring_pkt_enable_subtype_set(*msg_word, FLAG0,
+			FPMO, MGMT, 1101,
+			(tlv_filter->fpmo_mgmt_filter &
+			FILTER_MGMT_ACTION) ? 1 : 0);
+		htt_rx_ring_pkt_enable_subtype_set(*msg_word, FLAG0,
+			FPMO, MGMT, 1110,
+			(tlv_filter->fpmo_mgmt_filter &
+			FILTER_MGMT_ACT_NO_ACK) ? 1 : 0);
+		/* reserved*/
+		htt_rx_ring_pkt_enable_subtype_set(*msg_word, FLAG0,
+			FPMO, MGMT, 1111,
+			(tlv_filter->fpmo_mgmt_filter &
+			FILTER_MGMT_RESERVED_15) ? 1 : 0);
+
+		/* TYPE: CTRL */
+		/* reserved */
+		htt_rx_ring_pkt_enable_subtype_set(*msg_word, FLAG0,
+			FPMO, CTRL, 0000,
+			(tlv_filter->fpmo_ctrl_filter &
+			FILTER_CTRL_RESERVED_1) ? 1 : 0);
+		/* reserved */
+		htt_rx_ring_pkt_enable_subtype_set(*msg_word, FLAG0,
+			FPMO, CTRL, 0001,
+			(tlv_filter->fpmo_ctrl_filter &
+			FILTER_CTRL_RESERVED_2) ? 1 : 0);
+		htt_rx_ring_pkt_enable_subtype_set(*msg_word, FLAG0,
+			FPMO, CTRL, 0010,
+			(tlv_filter->fpmo_ctrl_filter &
+			FILTER_CTRL_TRIGGER) ? 1 : 0);
+		/* reserved */
+		htt_rx_ring_pkt_enable_subtype_set(*msg_word, FLAG0,
+			FPMO, CTRL, 0011,
+			(tlv_filter->fpmo_ctrl_filter &
+			FILTER_CTRL_RESERVED_4) ? 1 : 0);
+		htt_rx_ring_pkt_enable_subtype_set(*msg_word, FLAG0,
+			FPMO, CTRL, 0100,
+			(tlv_filter->fpmo_ctrl_filter &
+			FILTER_CTRL_BF_REP_POLL) ? 1 : 0);
+		htt_rx_ring_pkt_enable_subtype_set(*msg_word, FLAG0,
+			FPMO, CTRL, 0101,
+			(tlv_filter->fpmo_ctrl_filter &
+			FILTER_CTRL_VHT_NDP) ? 1 : 0);
+		htt_rx_ring_pkt_enable_subtype_set(*msg_word, FLAG0,
+			FPMO, CTRL, 0110,
+			(tlv_filter->fpmo_ctrl_filter &
+			FILTER_CTRL_FRAME_EXT) ? 1 : 0);
+		htt_rx_ring_pkt_enable_subtype_set(*msg_word, FLAG0,
+			FPMO, CTRL, 0111,
+			(tlv_filter->fpmo_ctrl_filter &
+			FILTER_CTRL_CTRLWRAP) ? 1 : 0);
+		htt_rx_ring_pkt_enable_subtype_set(*msg_word, FLAG0,
+			FPMO, CTRL, 1000,
+			(tlv_filter->fpmo_ctrl_filter &
+			FILTER_CTRL_BA_REQ) ? 1 : 0);
+		htt_rx_ring_pkt_enable_subtype_set(*msg_word, FLAG0,
+			FPMO, CTRL, 1001,
+			(tlv_filter->fpmo_ctrl_filter &
+			FILTER_CTRL_BA) ? 1 : 0);
+		htt_rx_ring_pkt_enable_subtype_set(*msg_word, FLAG0,
+			FPMO, CTRL, 1010,
+			(tlv_filter->fpmo_ctrl_filter &
+			FILTER_CTRL_PSPOLL) ? 1 : 0);
+		htt_rx_ring_pkt_enable_subtype_set(*msg_word, FLAG0,
+			FPMO, CTRL, 1011,
+			(tlv_filter->fpmo_ctrl_filter &
+			FILTER_CTRL_RTS) ? 1 : 0);
+		htt_rx_ring_pkt_enable_subtype_set(*msg_word, FLAG0,
+			FPMO, CTRL, 1100,
+			(tlv_filter->fpmo_ctrl_filter &
+			FILTER_CTRL_CTS) ? 1 : 0);
+		htt_rx_ring_pkt_enable_subtype_set(*msg_word, FLAG0,
+			FPMO, CTRL, 1101,
+			(tlv_filter->fpmo_ctrl_filter &
+			FILTER_CTRL_ACK) ? 1 : 0);
+		htt_rx_ring_pkt_enable_subtype_set(*msg_word, FLAG0,
+			FPMO, CTRL, 1110,
+			(tlv_filter->fpmo_ctrl_filter &
+			FILTER_CTRL_CFEND) ? 1 : 0);
+		htt_rx_ring_pkt_enable_subtype_set(*msg_word, FLAG0,
+			FPMO, CTRL, 1111,
+			(tlv_filter->fpmo_ctrl_filter &
+			FILTER_CTRL_CFEND_CFACK) ? 1 : 0);
+
+		/* word 18 */
+		msg_word++;
+		*msg_word = 0;
+
+		/* TYPE: DATA */
+		htt_rx_ring_pkt_enable_subtype_set(*msg_word, FLAG1,
+			FPMO, DATA, MCAST,
+			(tlv_filter->fpmo_data_filter &
+			FILTER_DATA_MCAST) ? 1 : 0);
+		htt_rx_ring_pkt_enable_subtype_set(*msg_word, FLAG1,
+			FPMO, DATA, UCAST,
+			(tlv_filter->fpmo_data_filter &
+			FILTER_DATA_UCAST) ? 1 : 0);
+		htt_rx_ring_pkt_enable_subtype_set(*msg_word, FLAG1,
+			FPMO, DATA, NULL,
+			(tlv_filter->fpmo_data_filter &
+			FILTER_DATA_NULL) ? 1 : 0);
+
+	} else {
+		/* clear word 18 if fpmo is disabled
+		 * word 17 is already cleared by caller
+		 */
+
+		/* word 18 */
+		msg_word++;
+		*msg_word = 0;
+	}
+#endif
 }
 
 static void
@@ -1144,26 +1318,6 @@ dp_mon_filter_reset_undecoded_metadata_capture_2_0(struct dp_pdev *pdev)
 }
 #endif
 
-#ifdef QCA_MCOPY_SUPPORT
-void dp_mon_filter_setup_mcopy_mode_2_0(struct dp_pdev *pdev)
-{
-}
-
-void dp_mon_filter_reset_mcopy_mode_2_0(struct dp_pdev *pdev)
-{
-}
-#endif
-
-#ifdef WLAN_RX_PKT_CAPTURE_ENH
-void dp_mon_filter_setup_rx_enh_capture_2_0(struct dp_pdev *pdev)
-{
-}
-
-void dp_mon_filter_reset_rx_enh_capture_2_0(struct dp_pdev *pdev)
-{
-}
-#endif /* WLAN_RX_PKT_CAPTURE_ENH */
-
 void dp_tx_mon_filter_set_downstream_tlvs(struct htt_tx_ring_tlv_filter *filter)
 {
 	filter->dtlvs.tx_fes_setup = 1;
@@ -1347,6 +1501,7 @@ static void dp_mon_filter_set_mon_2_0(struct dp_mon_pdev *mon_pdev,
 	filter->tlv_filter.mo_ctrl_filter = mon_pdev->mo_ctrl_filter;
 	filter->tlv_filter.mo_data_filter = mon_pdev->mo_data_filter;
 	filter->tlv_filter.enable_md = 0;
+	filter->tlv_filter.enable_fpmo = 0;
 	filter->tlv_filter.offset_valid = false;
 	filter->tlv_filter.mgmt_dma_length = DEFAULT_DMA_LENGTH;
 	filter->tlv_filter.data_dma_length = DEFAULT_DMA_LENGTH;
@@ -1474,6 +1629,7 @@ static void dp_rx_mon_filter_show_filter(struct dp_mon_filter_be *filter)
 	DP_MON_FILTER_PRINT("enable_fp: %d", rx_tlv_filter->enable_fp);
 	DP_MON_FILTER_PRINT("enable_md: %d", rx_tlv_filter->enable_md);
 	DP_MON_FILTER_PRINT("enable_mo: %d", rx_tlv_filter->enable_mo);
+	DP_MON_FILTER_PRINT("enable_fpmo: %d", rx_tlv_filter->enable_fpmo);
 	DP_MON_FILTER_PRINT("fp_mgmt_filter: 0x%x",
 			    rx_tlv_filter->fp_mgmt_filter);
 	DP_MON_FILTER_PRINT("mo_mgmt_filter: 0x%x",
@@ -1492,6 +1648,12 @@ static void dp_rx_mon_filter_show_filter(struct dp_mon_filter_be *filter)
 			    rx_tlv_filter->md_mgmt_filter);
 	DP_MON_FILTER_PRINT("md_ctrl_filter: 0x%x",
 			    rx_tlv_filter->md_ctrl_filter);
+	DP_MON_FILTER_PRINT("fpmo_data_filter: 0x%x",
+			    rx_tlv_filter->fpmo_data_filter);
+	DP_MON_FILTER_PRINT("fpmo_mgmt_filter: 0x%x",
+			    rx_tlv_filter->fpmo_mgmt_filter);
+	DP_MON_FILTER_PRINT("fpmo_ctrl_filter: 0x%x",
+			    rx_tlv_filter->fpmo_ctrl_filter);
 	DP_MON_FILTER_PRINT("mgmt_dma_length: %d",
 			    rx_tlv_filter->mgmt_dma_length);
 	DP_MON_FILTER_PRINT("ctrl_dma_length: %d",
@@ -2326,6 +2488,21 @@ dp_rx_mon_filter_h2t_setup(struct dp_soc *soc, struct dp_pdev *pdev,
 			tlv_filter->rx_pkt_tlv_offset =
 				src_tlv_filter->rx_pkt_tlv_offset;
 
+		/*
+		 * set fpmo filter settings
+		 */
+		if (src_tlv_filter->enable_fpmo &&
+		    !tlv_filter->enable_fpmo) {
+			tlv_filter->enable_fpmo =
+				src_tlv_filter->enable_fpmo;
+			tlv_filter->fpmo_data_filter =
+				src_tlv_filter->fpmo_data_filter;
+			tlv_filter->fpmo_mgmt_filter =
+				src_tlv_filter->fpmo_mgmt_filter;
+			tlv_filter->fpmo_ctrl_filter =
+				src_tlv_filter->fpmo_ctrl_filter;
+		}
+
 		dp_mon_filter_show_rx_filter_be(current_mode, mon_filter);
 	}
 }
@@ -2799,6 +2976,17 @@ dp_mon_filter_setup_rx_lite_mon(struct dp_mon_pdev_be *be_mon_pdev)
 			config->rx_config.ctrl_filter[DP_MON_FRM_FILTER_MODE_MO];
 		rx_tlv_filter->tlv_filter.mo_data_filter =
 			config->rx_config.data_filter[DP_MON_FRM_FILTER_MODE_MO];
+	}
+
+	/* configure fpmo filters if enabled */
+	if (config->rx_config.fpmo_enabled) {
+		rx_tlv_filter->tlv_filter.enable_fpmo = 1;
+		rx_tlv_filter->tlv_filter.fpmo_mgmt_filter =
+			config->rx_config.mgmt_filter[DP_MON_FRM_FILTER_MODE_FP_MO];
+		rx_tlv_filter->tlv_filter.fpmo_ctrl_filter =
+			config->rx_config.ctrl_filter[DP_MON_FRM_FILTER_MODE_FP_MO];
+		rx_tlv_filter->tlv_filter.fpmo_data_filter =
+			config->rx_config.data_filter[DP_MON_FRM_FILTER_MODE_FP_MO];
 	}
 
 	mgmt_len = config->rx_config.len[WLAN_FC0_TYPE_MGMT];

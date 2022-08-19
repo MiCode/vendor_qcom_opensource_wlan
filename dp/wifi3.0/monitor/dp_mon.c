@@ -3700,7 +3700,7 @@ static void dp_process_ppdu_stats_user_common_array_tlv(
 
 	ppdu_user_desc->success_msdus =
 		HTT_PPDU_STATS_ARRAY_ITEM_TLV_TX_SUCC_MSDUS_GET(*tag_buf);
-	ppdu_user_desc->retry_bytes =
+	ppdu_user_desc->retry_msdus =
 		HTT_PPDU_STATS_ARRAY_ITEM_TLV_TX_RETRY_MSDUS_GET(*tag_buf);
 	tag_buf++;
 	ppdu_user_desc->failed_msdus =
@@ -6028,6 +6028,7 @@ void dp_mon_feature_ops_deregister(struct dp_soc *soc)
 	mon_ops->rx_packet_length_set = NULL;
 	mon_ops->rx_wmask_subscribe = NULL;
 	mon_ops->rx_enable_mpdu_logging = NULL;
+	mon_ops->rx_enable_fpmo = NULL;
 	mon_ops->mon_neighbour_peers_detach = NULL;
 	mon_ops->mon_vdev_set_monitor_mode_buf_rings = NULL;
 	mon_ops->mon_vdev_set_monitor_mode_rings = NULL;

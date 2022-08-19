@@ -455,6 +455,15 @@ void *hif_get_dev_ba_ce(struct hif_opaque_softc *hif_handle)
 
 qdf_export_symbol(hif_get_dev_ba_ce);
 
+uint32_t hif_get_soc_version(struct hif_opaque_softc *hif_handle)
+{
+	struct hif_softc *scn = (struct hif_softc *)hif_handle;
+
+	return scn->target_info.soc_version;
+}
+
+qdf_export_symbol(hif_get_soc_version);
+
 #ifdef FEATURE_RUNTIME_PM
 void hif_runtime_prevent_linkdown(struct hif_softc *scn, bool is_get)
 {

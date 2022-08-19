@@ -175,6 +175,9 @@ dp_tx_mon_process_2_0(struct dp_soc *soc, struct dp_intr *int_ctx,
 
 #define HE_DATA_CNT	6
 
+#define INITIATOR_WINDOW 0
+#define RESPONSE_WINDOW 1
+
 #define FRAME_CONTROL_TYPE_MASK  0x0C
 #define FRAME_CONTROL_TYPE_SHIFT 2
 
@@ -358,11 +361,41 @@ struct dp_tx_ppdu_info {
  * @ppdu_drop_cnt: ppdu drop counter
  * @mpdu_drop_cnt: mpdu drop counter
  * @tlv_drop_cnt: tlv drop counter
+ * @pkt_buf_recv: tx monitor packet buffer received
+ * @pkt_buf_free: tx monitor packet buffer free
+ * @pkt_buf_processed: tx monitor packet buffer processed
+ * @pkt_buf_to_stack: tx monitor packet buffer send to stack
+ * @status_buf_recv: tx monitor status buffer received
+ * @status_buf_free: tx monitor status buffer free
+ * @totat_tx_mon_replenish_cnt: tx monitor replenish count
+ * @total_tx_mon_reap_cnt: tx monitor reap count
+ * @tx_mon_stuck: tx monitor stuck count
+ * @total_tx_mon_stuck: tx monitor stuck count
+ * @ppdu_info_drop_th: count ppdu info been dropped due threshold reached
+ * @ppdu_info_drop_flush: count ppdu info been dropped due to flush detected
+ * @ppdu_info_drop_trunc: count ppdu info been dropped due to truncated
  */
 struct dp_tx_monitor_drop_stats {
 	uint64_t ppdu_drop_cnt;
 	uint64_t mpdu_drop_cnt;
 	uint64_t tlv_drop_cnt;
+
+	uint64_t pkt_buf_recv;
+	uint64_t pkt_buf_free;
+	uint64_t pkt_buf_processed;
+	uint64_t pkt_buf_to_stack;
+
+	uint64_t status_buf_recv;
+	uint64_t status_buf_free;
+
+	uint64_t totat_tx_mon_replenish_cnt;
+	uint64_t total_tx_mon_reap_cnt;
+	uint8_t tx_mon_stuck;
+	uint32_t total_tx_mon_stuck;
+
+	uint64_t ppdu_info_drop_th;
+	uint64_t ppdu_info_drop_flush;
+	uint64_t ppdu_info_drop_trunc;
 };
 
 /**
@@ -419,12 +452,13 @@ enum dp_tx_monitor_framework_mode {
  * dp_pdev_tx_monitor_be - info to store tx capture information in pdev
  * @be_ppdu_id: current ppdu id
  * @mode: tx monitor core framework current mode
- * @tx_stats: tx monitor drop stats for that mac
+ * @stats: tx monitor drop stats for that mac
+ *
  */
 struct dp_pdev_tx_monitor_be {
 	uint32_t be_ppdu_id;
 	uint32_t mode;
-	struct dp_tx_monitor_drop_stats tx_stats;
+	struct dp_tx_monitor_drop_stats stats;
 };
 
 /**
@@ -458,13 +492,15 @@ struct dp_txmon_frag_vec {
  * @tx_ppdu_info_list: ppdu info list to hold ppdu
  * @defer_ppdu_info_list_depth: defer ppdu list depth counter
  * @defer_ppdu_info_list: defer ppdu info list to hold defer ppdu
- * @tx_stats: tx monitor drop stats for that mac
+ * @stats: tx monitor drop stats for that mac
  * @tx_prot_ppdu_info: tx monitor protection ppdu info
  * @tx_data_ppdu_info: tx monitor data ppdu info
  * @last_prot_ppdu_info: last tx monitor protection ppdu info
  * @last_data_ppdu_info: last tx monitor data ppdu info
  * @prot_status_info: protection status info
  * @data_status_info: data status info
+ * @last_tsft: last received tsft
+ * @last_ppdu_timestamp: last received ppdu_timestamp
  * @last_frag_q_idx: last index of frag buffer
  * @cur_frag_q_idx: current index of frag buffer
  * @status_frag_queue: array of status frag queue to hold 64 status buffer
@@ -487,7 +523,7 @@ struct dp_pdev_tx_monitor_be {
 
 	STAILQ_HEAD(, dp_tx_ppdu_info) defer_tx_ppdu_info_queue;
 
-	struct dp_tx_monitor_drop_stats tx_stats;
+	struct dp_tx_monitor_drop_stats stats;
 
 	struct dp_tx_ppdu_info *tx_prot_ppdu_info;
 	struct dp_tx_ppdu_info *tx_data_ppdu_info;
@@ -497,6 +533,9 @@ struct dp_pdev_tx_monitor_be {
 
 	struct hal_tx_status_info prot_status_info;
 	struct hal_tx_status_info data_status_info;
+
+	uint64_t last_tsft;
+	uint32_t last_ppdu_timestamp;
 
 	uint8_t last_frag_q_idx;
 	uint8_t cur_frag_q_idx;
@@ -530,7 +569,7 @@ void dp_tx_mon_ppdu_info_free(struct dp_tx_ppdu_info *tx_ppdu_info);
  */
 void dp_tx_mon_free_usr_mpduq(struct dp_tx_ppdu_info *tx_ppdu_info,
 			      uint8_t usr_idx,
-			      struct dp_pdev_tx_monitor_be *tx_cap_be);
+			      struct dp_pdev_tx_monitor_be *tx_mon_be);
 
 /*
  * dp_tx_mon_free_ppdu_info() - API to free dp_tx_ppdu_info
@@ -540,7 +579,7 @@ void dp_tx_mon_free_usr_mpduq(struct dp_tx_ppdu_info *tx_ppdu_info,
  * Return: void
  */
 void dp_tx_mon_free_ppdu_info(struct dp_tx_ppdu_info *tx_ppdu_info,
-			      struct dp_pdev_tx_monitor_be *tx_cap_be);
+			      struct dp_pdev_tx_monitor_be *tx_mon_be);
 
 /*
  * dp_tx_mon_get_ppdu_info() - API to allocate dp_tx_ppdu_info

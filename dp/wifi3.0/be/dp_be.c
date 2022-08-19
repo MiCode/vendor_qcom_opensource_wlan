@@ -1565,6 +1565,28 @@ dp_mlo_peer_find_hash_add_be(struct dp_soc *soc, struct dp_peer *peer)
 			  hash_list_elem);
 	qdf_spin_unlock_bh(&mld_hash_obj->mld_peer_hash_lock);
 }
+
+void dp_print_mlo_ast_stats_be(struct dp_soc *soc)
+{
+	uint32_t index;
+	struct dp_peer *peer;
+	dp_mld_peer_hash_obj_t mld_hash_obj;
+
+	mld_hash_obj = dp_mlo_get_peer_hash_obj(soc);
+
+	if (!mld_hash_obj)
+		return;
+
+	qdf_spin_lock_bh(&mld_hash_obj->mld_peer_hash_lock);
+	for (index = 0; index < mld_hash_obj->mld_peer_hash.mask; index++) {
+		TAILQ_FOREACH(peer, &mld_hash_obj->mld_peer_hash.bins[index],
+			      hash_list_elem) {
+			dp_print_peer_ast_entries(soc, peer, NULL);
+		}
+	}
+	qdf_spin_unlock_bh(&mld_hash_obj->mld_peer_hash_lock);
+}
+
 #endif
 
 #if defined(WLAN_FEATURE_11BE_MLO) && defined(WLAN_MLO_MULTI_CHIP) && \
@@ -1822,4 +1844,5 @@ void dp_initialize_arch_ops_be(struct dp_arch_ops *arch_ops)
 	arch_ops->dp_find_peer_by_destmac = dp_find_peer_by_destmac_be;
 	dp_init_near_full_arch_ops_be(arch_ops);
 	arch_ops->get_rx_hash_key = dp_get_rx_hash_key_be;
+	arch_ops->print_mlo_ast_stats = dp_print_mlo_ast_stats_be;
 }

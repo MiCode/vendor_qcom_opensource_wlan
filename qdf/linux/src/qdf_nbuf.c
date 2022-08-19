@@ -2077,6 +2077,33 @@ bool __qdf_nbuf_data_is_icmpv4_rsp(uint8_t *data)
 	return false;
 }
 
+bool __qdf_nbuf_data_is_icmpv4_redirect(uint8_t *data)
+{
+	uint8_t op_code;
+
+	op_code = (uint8_t)(*(uint8_t *)(data +
+				QDF_NBUF_PKT_ICMPv4_OPCODE_OFFSET));
+
+	if (op_code == QDF_NBUF_PKT_ICMPV4_REDIRECT)
+		return true;
+	return false;
+}
+
+qdf_export_symbol(__qdf_nbuf_data_is_icmpv4_redirect);
+
+bool __qdf_nbuf_data_is_icmpv6_redirect(uint8_t *data)
+{
+	uint8_t subtype;
+
+	subtype = (uint8_t)(*(uint8_t *)(data + ICMPV6_SUBTYPE_OFFSET));
+
+	if (subtype == ICMPV6_REDIRECT)
+		return true;
+	return false;
+}
+
+qdf_export_symbol(__qdf_nbuf_data_is_icmpv6_redirect);
+
 /**
  * __qdf_nbuf_data_get_icmpv4_src_ip() - get icmpv4 src IP
  * @data: Pointer to network data buffer
@@ -2310,6 +2337,8 @@ bool __qdf_nbuf_data_is_icmpv6_pkt(uint8_t *data)
 	} else
 		return false;
 }
+
+qdf_export_symbol(__qdf_nbuf_data_is_icmpv6_pkt);
 
 /**
  * __qdf_nbuf_data_is_ipv4_udp_pkt() - check if it is IPV4 UDP packet.

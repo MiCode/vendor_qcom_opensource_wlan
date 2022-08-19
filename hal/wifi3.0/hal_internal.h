@@ -164,6 +164,7 @@ typedef struct rx_msdu_desc_info *rx_msdu_desc_info_t;
  */
 union hal_tx_ppe_vp_config;
 union hal_tx_cmn_config_ppe;
+union hal_tx_bank_config;
 
 /* TBD: This should be movded to shared HW header file */
 enum hal_srng_ring_id {
@@ -1173,6 +1174,12 @@ struct hal_hw_txrx_ops {
 	void (*hal_cookie_conversion_reg_cfg_be)(hal_soc_handle_t hal_soc_hdl,
 						 struct hal_hw_cc_config
 						 *cc_cfg);
+	void (*hal_tx_populate_bank_register)(hal_soc_handle_t hal_soc_hdl,
+					      union hal_tx_bank_config *config,
+					      uint8_t bank_id);
+	void (*hal_tx_vdev_mcast_ctrl_set)(hal_soc_handle_t hal_soc_hdl,
+					   uint8_t vdev_id,
+					   uint8_t mcast_ctrl_val);
 };
 
 /**
@@ -1297,6 +1304,7 @@ struct hal_soc {
 	uint8_t reo_res_bitmap;
 	uint8_t index;
 	uint32_t target_type;
+	uint32_t version;
 
 	/* shadow register configuration */
 	union hal_shadow_reg_cfg shadow_config[MAX_SHADOW_REGISTERS];
@@ -1366,7 +1374,8 @@ void hal_qca6390_attach(struct hal_soc *hal_soc);
 void hal_qca6290_attach(struct hal_soc *hal_soc);
 void hal_qca8074_attach(struct hal_soc *hal_soc);
 void hal_kiwi_attach(struct hal_soc *hal_soc);
-void hal_qcn9224_attach(struct hal_soc *hal_soc);
+void hal_qcn9224v1_attach(struct hal_soc *hal_soc);
+void hal_qcn9224v2_attach(struct hal_soc *hal_soc);
 /*
  * hal_soc_to_dp_hal_roc - API to convert hal_soc to opaque
  * dp_hal_soc handle type

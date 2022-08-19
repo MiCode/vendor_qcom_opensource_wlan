@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2014-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -289,7 +290,7 @@ QDF_STATUS scheduler_post_msg_by_priority(uint32_t qid,
 	}
 
 	if (!sched_ctx->queue_ctx.scheduler_msg_process_fn[qidx]) {
-		QDF_DEBUG_PANIC("callback not registered for qid[%d]", que_id);
+		sched_err("callback not registered for qid[%d]", que_id);
 		return QDF_STATUS_E_FAILURE;
 	}
 

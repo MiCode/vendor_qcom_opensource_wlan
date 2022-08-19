@@ -684,7 +684,7 @@ QDF_STATUS qdf_rtpm_get(uint8_t type, uint32_t id);
 QDF_STATUS qdf_rtpm_put(uint8_t type, uint32_t id);
 
 /**
- * qdf_runtime_pm_allow_suspend() - Prevent Runtime suspend
+ * qdf_runtime_pm_prevent_suspend() - Prevent Runtime suspend
  * @data: runtime PM lock
  *
  * This function will prevent runtime suspend, by incrementing
@@ -693,6 +693,17 @@ QDF_STATUS qdf_rtpm_put(uint8_t type, uint32_t id);
  * Return: status
  */
 QDF_STATUS qdf_runtime_pm_prevent_suspend(qdf_runtime_lock_t *lock);
+
+/**
+ * qdf_runtime_pm_prevent_suspend_sync() - Synchronized Prevent Runtime suspend
+ * @data: runtime PM lock
+ *
+ * This function will prevent runtime suspend, by incrementing
+ * device's usage count  and waits till system is in resumed state.
+ *
+ * Return: status
+ */
+QDF_STATUS qdf_runtime_pm_prevent_suspend_sync(qdf_runtime_lock_t *lock);
 
 /**
  * qdf_runtime_pm_allow_suspend() - Allow Runtime suspend
@@ -752,6 +763,12 @@ QDF_STATUS qdf_rtpm_put(uint8_t type, uint32_t id)
 
 static inline
 QDF_STATUS qdf_runtime_pm_prevent_suspend(qdf_runtime_lock_t *lock)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static inline
+QDF_STATUS qdf_runtime_pm_prevent_suspend_sync(qdf_runtime_lock_t *lock)
 {
 	return QDF_STATUS_SUCCESS;
 }

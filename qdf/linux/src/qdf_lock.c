@@ -572,6 +572,13 @@ QDF_STATUS qdf_runtime_pm_prevent_suspend(qdf_runtime_lock_t *lock)
 
 qdf_export_symbol(qdf_runtime_pm_prevent_suspend);
 
+QDF_STATUS qdf_runtime_pm_prevent_suspend_sync(qdf_runtime_lock_t *lock)
+{
+	return hif_pm_runtime_prevent_suspend_sync(lock->lock);
+}
+
+qdf_export_symbol(qdf_runtime_pm_prevent_suspend_sync);
+
 QDF_STATUS qdf_runtime_pm_allow_suspend(qdf_runtime_lock_t *lock)
 {
 	return hif_pm_runtime_allow_suspend(lock->lock);

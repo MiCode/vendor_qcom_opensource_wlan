@@ -129,6 +129,22 @@ dp_rx_wds_learn(struct dp_soc *soc,
 }
 #endif
 
+#if defined(DP_PKT_STATS_PER_LMAC) && defined(WLAN_FEATURE_11BE_MLO)
+static inline void
+dp_rx_set_msdu_lmac_id(qdf_nbuf_t nbuf, uint32_t peer_mdata)
+{
+	uint8_t lmac_id;
+
+	lmac_id = dp_rx_peer_metadata_lmac_id_get_be(peer_mdata);
+	qdf_nbuf_set_lmac_id(nbuf, lmac_id);
+}
+#else
+static inline void
+dp_rx_set_msdu_lmac_id(qdf_nbuf_t nbuf, uint32_t peer_mdata)
+{
+}
+#endif
+
 /**
  * dp_rx_process_be() - Brain of the Rx processing functionality
  *		     Called from the bottom half (tasklet/NET_RX_SOFTIRQ)
@@ -197,6 +213,7 @@ uint32_t dp_rx_process_be(struct dp_intr *int_ctx,
 	int max_reap_limit, ring_near_full;
 	struct dp_soc *replenish_soc;
 	uint8_t chip_id;
+	uint64_t current_time = 0;
 
 	DP_HIST_INIT();
 
@@ -228,6 +245,8 @@ more_data:
 	qdf_mem_zero(&msdu_desc_info, sizeof(msdu_desc_info));
 	qdf_mem_zero(head, sizeof(head));
 	qdf_mem_zero(tail, sizeof(tail));
+
+	dp_pkt_get_timestamp(&current_time);
 
 	ring_near_full = _dp_srng_test_and_update_nf_params(soc, rx_ring,
 							    &max_reap_limit);
@@ -390,6 +409,7 @@ more_data:
 			dp_rx_peer_metadata_peer_id_get_be(soc, peer_mdata);
 		QDF_NBUF_CB_RX_VDEV_ID(rx_desc->nbuf) =
 			dp_rx_peer_metadata_vdev_id_get_be(soc, peer_mdata);
+		dp_rx_set_msdu_lmac_id(rx_desc->nbuf, peer_mdata);
 
 		/* to indicate whether this msdu is rx offload */
 		pkt_capture_offload =
@@ -800,6 +820,10 @@ done:
 							 nbuf);
 
 		dp_rx_update_stats(soc, nbuf);
+
+		dp_pkt_add_timestamp(txrx_peer->vdev, QDF_PKT_RX_DRIVER_ENTRY,
+				     current_time, nbuf);
+
 		DP_RX_LIST_APPEND(deliver_list_head,
 				  deliver_list_tail,
 				  nbuf);

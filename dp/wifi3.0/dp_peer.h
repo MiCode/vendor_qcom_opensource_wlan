@@ -1044,7 +1044,15 @@ static inline void dp_peer_delete_ast_entries(struct dp_soc *soc,
 	DP_PEER_ITERATE_ASE_LIST(peer, ast_entry, temp_ast_entry)
 		dp_peer_del_ast(soc, ast_entry);
 }
+
+void dp_print_peer_ast_entries(struct dp_soc *soc, struct dp_peer *peer,
+			       void *arg);
 #else
+static inline void dp_print_peer_ast_entries(struct dp_soc *soc,
+					     struct dp_peer *peer, void *arg)
+{
+}
+
 static inline void dp_peer_delete_ast_entries(struct dp_soc *soc,
 					      struct dp_peer *peer)
 {
@@ -1169,6 +1177,17 @@ void dp_peer_delete(struct dp_soc *soc,
 		    struct dp_peer *peer,
 		    void *arg);
 
+/**
+ * dp_mlo_peer_delete() - delete MLO DP peer
+ *
+ * @soc: Datapath soc
+ * @peer: Datapath peer
+ * @arg: argument to iter function
+ *
+ * Return: void
+ */
+void dp_mlo_peer_delete(struct dp_soc *soc, struct dp_peer *peer, void *arg);
+
 #ifdef WLAN_FEATURE_11BE_MLO
 
 /* is MLO connection mld peer */
@@ -1220,6 +1239,68 @@ dp_link_peer_hash_find_by_chip_id(struct dp_soc *soc,
 				      vdev_id, mod_id);
 }
 #endif
+
+/*
+ * dp_mld_peer_find_hash_find() - returns mld peer from mld peer_hash_table
+ *				  matching mac_address
+ * @soc: soc handle
+ * @peer_mac_addr: mld peer mac address
+ * @mac_addr_is_aligned: is mac addr alligned
+ * @vdev_id: vdev_id
+ * @mod_id: id of module requesting reference
+ *
+ * return: peer in sucsess
+ *         NULL in failure
+ */
+static inline
+struct dp_peer *dp_mld_peer_find_hash_find(struct dp_soc *soc,
+					   uint8_t *peer_mac_addr,
+					   int mac_addr_is_aligned,
+					   uint8_t vdev_id,
+					   enum dp_mod_id mod_id)
+{
+	if (soc->arch_ops.mlo_peer_find_hash_find)
+		return soc->arch_ops.mlo_peer_find_hash_find(soc,
+					      peer_mac_addr,
+					      mac_addr_is_aligned,
+					      mod_id, vdev_id);
+	return NULL;
+}
+
+/**
+ * dp_peer_hash_find_wrapper() - find link peer or mld per according to
+				 peer_type
+ * @soc: DP SOC handle
+ * @peer_info: peer information for hash find
+ * @mod_id: ID of module requesting reference
+ *
+ * Return: peer hanlde
+ */
+static inline
+struct dp_peer *dp_peer_hash_find_wrapper(struct dp_soc *soc,
+					  struct cdp_peer_info *peer_info,
+					  enum dp_mod_id mod_id)
+{
+	struct dp_peer *peer = NULL;
+
+	if (peer_info->peer_type == CDP_LINK_PEER_TYPE ||
+	    peer_info->peer_type == CDP_WILD_PEER_TYPE) {
+		peer = dp_peer_find_hash_find(soc, peer_info->mac_addr,
+					      peer_info->mac_addr_is_aligned,
+					      peer_info->vdev_id,
+					      mod_id);
+		if (peer)
+			return peer;
+	}
+	if (peer_info->peer_type == CDP_MLD_PEER_TYPE ||
+	    peer_info->peer_type == CDP_WILD_PEER_TYPE)
+		peer = dp_mld_peer_find_hash_find(
+					soc, peer_info->mac_addr,
+					peer_info->mac_addr_is_aligned,
+					peer_info->vdev_id,
+					mod_id);
+	return peer;
+}
 
 /**
  * dp_link_peer_add_mld_peer() - add mld peer pointer to link peer,
@@ -1471,8 +1552,7 @@ uint16_t dp_get_link_peer_id_by_lmac_id(struct dp_soc *soc, uint16_t peer_id,
 }
 
 /**
- * dp_peer_get_tgt_peer_hash_find() - get MLD dp_peer handle
-				   for processing
+ * dp_peer_get_tgt_peer_hash_find() - get dp_peer handle
  * @soc: soc handle
  * @peer_mac_addr: peer mac address
  * @mac_addr_is_aligned: is mac addr alligned
@@ -1513,6 +1593,9 @@ struct dp_peer *dp_peer_get_tgt_peer_hash_find(struct dp_soc *soc,
 		/* mlo MLD peer or non-mlo link peer */
 			ta_peer = peer;
 		}
+	} else {
+		dp_peer_err("fail to find peer:" QDF_MAC_ADDR_FMT,
+			    QDF_MAC_ADDR_REF(peer_mac));
 	}
 
 	return ta_peer;
@@ -1725,6 +1808,15 @@ dp_tgt_txrx_peer_get_ref_by_id(struct dp_soc *soc,
 	return NULL;
 }
 
+/**
+ * dp_print_mlo_ast_stats_be() - Print AST stats for MLO peers
+ *
+ * @soc	: core DP soc context
+ *
+ * Return: void
+ */
+void dp_print_mlo_ast_stats_be(struct dp_soc *soc);
+
 #else
 
 #define IS_MLO_DP_MLD_TXRX_PEER(_peer) false
@@ -1735,6 +1827,17 @@ dp_tgt_txrx_peer_get_ref_by_id(struct dp_soc *soc,
 #define IS_MLO_DP_LINK_PEER(_peer) false
 #define IS_MLO_DP_MLD_PEER(_peer) false
 #define DP_GET_MLD_PEER_FROM_PEER(link_peer) NULL
+
+static inline
+struct dp_peer *dp_peer_hash_find_wrapper(struct dp_soc *soc,
+					  struct cdp_peer_info *peer_info,
+					  enum dp_mod_id mod_id)
+{
+	return dp_peer_find_hash_find(soc, peer_info->mac_addr,
+				      peer_info->mac_addr_is_aligned,
+				      peer_info->vdev_id,
+				      mod_id);
+}
 
 static inline
 struct dp_peer *dp_peer_get_tgt_peer_hash_find(struct dp_soc *soc,
@@ -1861,6 +1964,10 @@ uint16_t dp_get_link_peer_id_by_lmac_id(struct dp_soc *soc, uint16_t peer_id,
 					uint8_t lmac_id)
 {
 	return peer_id;
+}
+
+static inline void dp_print_mlo_ast_stats_be(struct dp_soc *soc)
+{
 }
 #endif /* WLAN_FEATURE_11BE_MLO */
 

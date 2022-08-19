@@ -482,6 +482,27 @@ wmi_diag_connect_pdev_htc_service(struct wmi_unified *wmi_handle,
 }
 #endif
 
+#if defined(WLAN_DIAG_AND_DBR_OVER_SEPARATE_CE)
+/**
+ * wmi_dbr_connect_pdev_htc_service()
+ * WMI DBR API to get connect to HTC service
+ * @wmi_handle: handle to WMI.
+ * @htc_handle: handle to HTC.
+ *
+ * Return: QDF_STATUS_SUCCESS on success and QDF_STATUS_E_FAULT for failure
+ */
+QDF_STATUS
+wmi_dbr_connect_pdev_htc_service(struct wmi_unified *wmi_handle,
+				 HTC_HANDLE htc_handle);
+#else
+static inline QDF_STATUS
+wmi_dbr_connect_pdev_htc_service(struct wmi_unified *wmi_handle,
+				 HTC_HANDLE htc_handle)
+{
+	return QDF_STATUS_SUCCESS;
+}
+#endif
+
 /*
  * WMI API to verify the host has enough credits to suspend
  *  @param wmi_handle      : handle to WMI.

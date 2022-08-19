@@ -316,6 +316,8 @@ enum hal_tx_encap_type {
  * @HAL_TX_TQM_RR_LINK_DESC_UNAVAILABLE: Dropped due to link desc not available
  * @HAL_TX_TQM_RR_DROP_OR_INVALID_MSDU: Dropped due drop bit set or null flow
  * @HAL_TX_TQM_RR_MULTICAST_DROP: Dropped due mcast drop set for VDEV
+ * @HAL_TX_TQM_RR_VDEV_MISMATCH_DROP: Dropped due to being set with
+ *				'TCL_drop_reason'
  *
  */
 enum hal_tx_tqm_release_reason {
@@ -333,6 +335,7 @@ enum hal_tx_tqm_release_reason {
 	HAL_TX_TQM_RR_LINK_DESC_UNAVAILABLE,
 	HAL_TX_TQM_RR_DROP_OR_INVALID_MSDU,
 	HAL_TX_TQM_RR_MULTICAST_DROP,
+	HAL_TX_TQM_RR_VDEV_MISMATCH_DROP,
 };
 
 /* enum - Table IDs for 2 DSCP-TID mapping Tables that TCL H/W supports
