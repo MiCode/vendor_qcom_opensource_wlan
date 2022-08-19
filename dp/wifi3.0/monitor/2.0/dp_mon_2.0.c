@@ -35,6 +35,65 @@
 
 #if !defined(DISABLE_MON_CONFIG)
 
+QDF_STATUS dp_rx_mon_ppdu_info_cache_create(struct dp_pdev *pdev)
+{
+	struct dp_mon_pdev *mon_pdev = pdev->monitor_pdev;
+	struct dp_mon_pdev_be *mon_pdev_be =
+			dp_get_be_mon_pdev_from_dp_mon_pdev(mon_pdev);
+	uint16_t obj;
+	struct hal_rx_ppdu_info *ppdu_info = NULL;
+
+	mon_pdev_be->ppdu_info_cache =
+		qdf_kmem_cache_create("rx_mon_ppdu_info_cache",
+				      sizeof(struct hal_rx_ppdu_info));
+
+	if (!mon_pdev_be->ppdu_info_cache) {
+		dp_mon_err("cache creation failed pdev :%px", pdev);
+		return QDF_STATUS_E_NOMEM;
+	}
+
+	TAILQ_INIT(&mon_pdev_be->rx_mon_free_queue);
+	for (obj = 0; obj < DP_RX_MON_WQ_THRESHOLD; obj++) {
+		ppdu_info =  (struct hal_rx_ppdu_info *)qdf_kmem_cache_alloc(mon_pdev_be->ppdu_info_cache);
+
+		if (ppdu_info) {
+			TAILQ_INSERT_TAIL(&mon_pdev_be->rx_mon_free_queue,
+					  ppdu_info,
+					  ppdu_free_list_elem);
+			mon_pdev_be->total_free_elem++;
+		}
+	}
+	qdf_spinlock_create(&mon_pdev_be->ppdu_info_lock);
+
+	return QDF_STATUS_SUCCESS;
+}
+
+void dp_rx_mon_ppdu_info_cache_destroy(struct dp_pdev *pdev)
+{
+	struct dp_mon_pdev *mon_pdev = pdev->monitor_pdev;
+	struct dp_mon_pdev_be *mon_pdev_be =
+			dp_get_be_mon_pdev_from_dp_mon_pdev(mon_pdev);
+	struct hal_rx_ppdu_info *ppdu_info = NULL, *temp_ppdu_info = NULL;
+
+	qdf_err(" total free element: %d", mon_pdev_be->total_free_elem);
+	qdf_spin_lock(&mon_pdev_be->ppdu_info_lock);
+	TAILQ_FOREACH_SAFE(ppdu_info,
+			   &mon_pdev_be->rx_mon_free_queue,
+			   ppdu_free_list_elem,
+			   temp_ppdu_info) {
+		TAILQ_REMOVE(&mon_pdev_be->rx_mon_free_queue,
+			     ppdu_info, ppdu_free_list_elem);
+		if (ppdu_info) {
+			mon_pdev_be->total_free_elem--;
+			qdf_err(" total free element: %d", mon_pdev_be->total_free_elem);
+			qdf_kmem_cache_free(mon_pdev_be->ppdu_info_cache,
+					    ppdu_info);
+		}
+	}
+	qdf_spin_unlock(&mon_pdev_be->ppdu_info_lock);
+	qdf_kmem_cache_destroy(mon_pdev_be->ppdu_info_cache);
+}
+
 /**
  * dp_mon_pdev_ext_init_2_0() - Init pdev ext param
  *
@@ -61,6 +120,7 @@ QDF_STATUS dp_mon_pdev_ext_init_2_0(struct dp_pdev *pdev)
 	TAILQ_INIT(&mon_pdev_be->rx_mon_queue);
 
 	qdf_spinlock_create(&mon_pdev_be->rx_mon_wq_lock);
+	qdf_err(" total free element: %d", mon_pdev_be->total_free_elem);
 
 	return QDF_STATUS_SUCCESS;
 
@@ -84,11 +144,12 @@ QDF_STATUS dp_mon_pdev_ext_deinit_2_0(struct dp_pdev *pdev)
 	if (!mon_pdev_be->rx_mon_workqueue)
 		return QDF_STATUS_E_FAILURE;
 
-	dp_rx_mon_drain_wq(pdev);
+	qdf_err(" total free element: %d", mon_pdev_be->total_free_elem);
 	qdf_flush_workqueue(0, mon_pdev_be->rx_mon_workqueue);
 	qdf_destroy_workqueue(0, mon_pdev_be->rx_mon_workqueue);
 	qdf_flush_work(&mon_pdev_be->rx_mon_work);
 	qdf_disable_work(&mon_pdev_be->rx_mon_work);
+	dp_rx_mon_drain_wq(pdev);
 	mon_pdev_be->rx_mon_workqueue = NULL;
 	qdf_spinlock_destroy(&mon_pdev_be->rx_mon_wq_lock);
 
@@ -1389,6 +1450,8 @@ dp_mon_register_feature_ops_2_0(struct dp_soc *soc)
 		dp_mon_filter_reset_undecoded_metadata_capture_2_0;
 #endif
 	mon_ops->rx_enable_fpmo = dp_rx_mon_enable_fpmo;
+	mon_ops->mon_rx_print_advanced_stats =
+		dp_mon_rx_print_advanced_stats_2_0;
 }
 
 struct dp_mon_ops monitor_ops_2_0 = {
@@ -1477,6 +1540,8 @@ struct dp_mon_ops monitor_ops_2_0 = {
 	.mon_lite_mon_dealloc = dp_lite_mon_dealloc,
 	.mon_lite_mon_vdev_delete = dp_lite_mon_vdev_delete,
 	.mon_lite_mon_disable_rx = dp_lite_mon_disable_rx,
+	.mon_rx_ppdu_info_cache_create = dp_rx_mon_ppdu_info_cache_create,
+	.mon_rx_ppdu_info_cache_destroy = dp_rx_mon_ppdu_info_cache_destroy,
 };
 
 struct cdp_mon_ops dp_ops_mon_2_0 = {

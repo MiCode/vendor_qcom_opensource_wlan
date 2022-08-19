@@ -390,6 +390,10 @@ enum cdp_mon_phyrx_abort_reason_code {
  * @mpdus_to_stack: Number of MPDUs delivered to stack
  * @status_buf_count: Number of status buffer received
  * @empty_desc_ppdu: Number of empty desc received
+ * @total_ppdu_info_enq: Number of PPDUs enqueued to wq
+ * @total_ppdu_info_drop: Number of PPDUs dropped
+ * @total_ppdu_info_alloc: Number of PPDU info allocated
+ * @total_ppdu_info_free: Number of PPDU info freeed
  */
 struct cdp_pdev_mon_stats {
 #ifndef REMOVE_MON_DBG_STATS
@@ -434,6 +438,10 @@ struct cdp_pdev_mon_stats {
 	uint32_t mpdus_buf_to_stack;
 	uint32_t status_buf_count;
 	uint32_t empty_desc_ppdu;
+	uint32_t total_ppdu_info_enq;
+	uint32_t total_ppdu_info_drop;
+	uint32_t total_ppdu_info_alloc;
+	uint32_t total_ppdu_info_free;
 };
 
 #ifdef QCA_SUPPORT_LITE_MONITOR

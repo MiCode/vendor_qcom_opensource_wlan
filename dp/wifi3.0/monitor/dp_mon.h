@@ -820,6 +820,11 @@ struct dp_mon_ops {
 	void (*mon_lite_mon_vdev_delete)(struct dp_pdev *pdev,
 					 struct dp_vdev *vdev);
 	void (*mon_lite_mon_disable_rx)(struct dp_pdev *pdev);
+	/* Print advanced monitor stats */
+	void (*mon_rx_print_advanced_stats)
+		(struct dp_soc *soc, struct dp_pdev *pdev);
+	QDF_STATUS (*mon_rx_ppdu_info_cache_create)(struct dp_pdev *pdev);
+	void (*mon_rx_ppdu_info_cache_destroy)(struct dp_pdev *pdev);
 };
 
 /**
@@ -4257,6 +4262,7 @@ void dp_monitor_peer_telemetry_stats(struct dp_peer *peer,
 #endif
 
 /**
+<<<<<<< HEAD
  * dp_monitor_is_tx_cap_enabled() - get tx-cature enabled/disabled
  * @peer: DP peer handle
  *
@@ -4298,4 +4304,33 @@ qdf_size_t dp_mon_get_context_size_be(enum dp_context_type context_type)
 	}
 }
 #endif
+
+/*
+ * dp_mon_rx_print_advanced_stats () - print advanced monitor stats
+ *
+ * @soc: DP soc handle
+ * @pdev: DP pdev handle
+ *
+ * Return: void
+ */
+static inline void
+dp_mon_rx_print_advanced_stats(struct dp_soc *soc,
+			       struct dp_pdev *pdev)
+{
+	struct dp_mon_soc *mon_soc = soc->monitor_soc;
+	struct dp_mon_ops *monitor_ops;
+
+	if (!mon_soc) {
+		dp_mon_debug("mon soc is NULL");
+		return;
+	}
+
+	monitor_ops = mon_soc->mon_ops;
+	if (!monitor_ops ||
+	    !monitor_ops->mon_rx_print_advanced_stats) {
+		dp_mon_debug("callback not registered");
+		return;
+	}
+	return monitor_ops->mon_rx_print_advanced_stats(soc, pdev);
+}
 #endif /* _DP_MON_H_ */

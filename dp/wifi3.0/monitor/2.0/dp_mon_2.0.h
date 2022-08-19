@@ -142,9 +142,17 @@ struct dp_mon_desc_pool {
  * @rx_mon_workqueue: Rx mon workqueue
  * @rx_mon_work: Rx mon work
  * @rx_mon_queue: RxMON queue
+ * @rx_mon_free_queue: RxMON ppdu info free element queue
+ * @ppdu_info_lock: RxPPDU ppdu info queue lock
  * @rx_mon_queue_depth: RxMON queue depth
  * @desc_count: reaped status desc count
  * @status: reaped status buffer per ppdu
+ * @lite_mon_rx_config: rx litemon config
+ * @lite_mon_tx_config: tx litemon config
+ * @prev_rxmon_desc: prev destination desc
+ * @prev_rxmon_cookie: prev rxmon cookie
+ * @ppdu_info_cache: PPDU info cache
+ * @total_free_elem: total free element in queue
  */
 struct dp_mon_pdev_be {
 	struct dp_mon_pdev mon_pdev;
@@ -158,6 +166,8 @@ struct dp_mon_pdev_be {
 	qdf_work_t rx_mon_work;
 
 	TAILQ_HEAD(, hal_rx_ppdu_info) rx_mon_queue;
+	TAILQ_HEAD(, hal_rx_ppdu_info) rx_mon_free_queue;
+	qdf_spinlock_t ppdu_info_lock;
 	uint16_t rx_mon_queue_depth;
 	uint16_t desc_count;
 	struct dp_mon_desc *status[DP_MON_MAX_STATUS_BUF];
@@ -167,6 +177,8 @@ struct dp_mon_pdev_be {
 #endif
 	void *prev_rxmon_desc;
 	uint32_t prev_rxmon_cookie;
+	qdf_kmem_cache_t ppdu_info_cache;
+	uint32_t total_free_elem;
 };
 
 /**

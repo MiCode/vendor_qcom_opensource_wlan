@@ -661,9 +661,6 @@ hal_rx_status_get_tlv_info_generic_li(void *rx_tlv_hdr, void *ppduinfo,
 
 	rx_tlv = (uint8_t *)rx_tlv_hdr + HAL_RX_TLV32_HDR_SIZE;
 
-	qdf_trace_hex_dump(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_DEBUG,
-			   rx_tlv, tlv_len);
-
 	switch (tlv_tag) {
 	case WIFIRX_PPDU_START_E:
 	{
@@ -1749,9 +1746,6 @@ hal_rx_status_get_tlv_info_generic_li(void *rx_tlv_hdr, void *ppduinfo,
 			  "%s TLV type: %d, TLV len:%d %s",
 			  __func__, tlv_tag, tlv_len,
 			  unhandled == true ? "unhandled" : "");
-
-	qdf_trace_hex_dump(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_DEBUG,
-				rx_tlv, tlv_len);
 
 	return HAL_TLV_STATUS_PPDU_NOT_DONE;
 }
