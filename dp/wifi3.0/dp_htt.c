@@ -2194,7 +2194,10 @@ struct htt_soc *htt_soc_attach(struct dp_soc *soc, HTC_HANDLE htc_handle)
 {
 	int i;
 	int j;
-	int alloc_size = HTT_SW_UMAC_RING_IDX_MAX * sizeof(unsigned long);
+	int umac_alloc_size = HTT_SW_UMAC_RING_IDX_MAX *
+			      sizeof(struct bp_handler);
+	int lmac_alloc_size = HTT_SW_LMAC_RING_IDX_MAX *
+			      sizeof(struct bp_handler);
 	struct htt_soc *htt_soc = NULL;
 
 	htt_soc = qdf_mem_malloc(sizeof(*htt_soc));
@@ -2204,21 +2207,26 @@ struct htt_soc *htt_soc_attach(struct dp_soc *soc, HTC_HANDLE htc_handle)
 	}
 
 	for (i = 0; i < MAX_PDEV_CNT; i++) {
-		htt_soc->pdevid_tt[i].umac_ttt = qdf_mem_malloc(alloc_size);
-		if (!htt_soc->pdevid_tt[i].umac_ttt)
+		htt_soc->pdevid_tt[i].umac_path =
+			qdf_mem_malloc(umac_alloc_size);
+		if (!htt_soc->pdevid_tt[i].umac_path)
 			break;
-		qdf_mem_set(htt_soc->pdevid_tt[i].umac_ttt, alloc_size, -1);
-		htt_soc->pdevid_tt[i].lmac_ttt = qdf_mem_malloc(alloc_size);
-		if (!htt_soc->pdevid_tt[i].lmac_ttt) {
-			qdf_mem_free(htt_soc->pdevid_tt[i].umac_ttt);
+		for (j = 0; j < HTT_SW_UMAC_RING_IDX_MAX; j++)
+			htt_soc->pdevid_tt[i].umac_path[j].bp_start_tt = -1;
+		htt_soc->pdevid_tt[i].lmac_path =
+			qdf_mem_malloc(lmac_alloc_size);
+		if (!htt_soc->pdevid_tt[i].lmac_path) {
+			qdf_mem_free(htt_soc->pdevid_tt[i].umac_path);
 			break;
 		}
-		qdf_mem_set(htt_soc->pdevid_tt[i].lmac_ttt, alloc_size, -1);
+		for (j = 0; j < HTT_SW_LMAC_RING_IDX_MAX ; j++)
+			htt_soc->pdevid_tt[i].lmac_path[j].bp_start_tt = -1;
 	}
+
 	if (i != MAX_PDEV_CNT) {
 		for (j = 0; j < i; j++) {
-			qdf_mem_free(htt_soc->pdevid_tt[j].umac_ttt);
-			qdf_mem_free(htt_soc->pdevid_tt[j].lmac_ttt);
+			qdf_mem_free(htt_soc->pdevid_tt[j].umac_path);
+			qdf_mem_free(htt_soc->pdevid_tt[j].lmac_path);
 		}
 		qdf_mem_free(htt_soc);
 		return NULL;
@@ -2506,23 +2514,31 @@ static void dp_sawf_mpdu_stats_handler(struct htt_soc *soc,
  * Return: 1 for successfully saving timestamp in array
  *	and 0 for timestamp falling within 2 seconds after last one
  */
-static bool time_allow_print(unsigned long *htt_ring_tt, u_int8_t ring_id)
+static bool time_allow_print(struct bp_handler *htt_bp_handler,
+			     u_int8_t ring_id, u_int32_t th_time)
 {
 	unsigned long tstamp;
-	unsigned long delta;
+	struct bp_handler *path = &htt_bp_handler[ring_id];
 
 	tstamp = qdf_get_system_timestamp();
 
-	if (!htt_ring_tt)
+	if (!path)
 		return 0; //unable to print backpressure messages
 
-	if (htt_ring_tt[ring_id] == -1) {
-		htt_ring_tt[ring_id] = tstamp;
+	if (path->bp_start_tt == -1) {
+		path->bp_start_tt = tstamp;
+		path->bp_duration = 0;
+		path->bp_last_tt = tstamp;
+		path->bp_counter = 1;
 		return 1;
 	}
-	delta = tstamp - htt_ring_tt[ring_id];
-	if (delta >= 2000) {
-		htt_ring_tt[ring_id] = tstamp;
+
+	path->bp_duration = tstamp - path->bp_start_tt;
+	path->bp_last_tt = tstamp;
+	path->bp_counter++;
+
+	if (path->bp_duration >= th_time) {
+		path->bp_start_tt = -1;
 		return 1;
 	}
 
@@ -2532,12 +2548,18 @@ static bool time_allow_print(unsigned long *htt_ring_tt, u_int8_t ring_id)
 static void dp_htt_alert_print(enum htt_t2h_msg_type msg_type,
 			       struct dp_pdev *pdev, u_int8_t ring_id,
 			       u_int16_t hp_idx, u_int16_t tp_idx,
-			       u_int32_t bkp_time, char *ring_stype)
+			       u_int32_t bkp_time,
+			       struct bp_handler *htt_bp_handler,
+			       char *ring_stype)
 {
 	dp_alert("seq_num %u msg_type: %d pdev_id: %d ring_type: %s ",
 		 pdev->bkp_stats.seq_num, msg_type, pdev->pdev_id, ring_stype);
 	dp_alert("ring_id: %d hp_idx: %d tp_idx: %d bkpressure_time_ms: %d ",
 		 ring_id, hp_idx, tp_idx, bkp_time);
+	dp_alert("last_bp_event: %ld, total_bp_duration: %ld, bp_counter: %ld",
+		 htt_bp_handler[ring_id].bp_last_tt,
+		 htt_bp_handler[ring_id].bp_duration,
+		 htt_bp_handler[ring_id].bp_counter);
 }
 
 /**
@@ -2881,15 +2903,19 @@ static void dp_htt_bkp_event_alert(u_int32_t *msg_word, struct htt_soc *soc)
 	u_int16_t hp_idx;
 	u_int16_t tp_idx;
 	u_int32_t bkp_time;
+	u_int32_t th_time;
 	enum htt_t2h_msg_type msg_type;
 	struct dp_soc *dpsoc;
 	struct dp_pdev *pdev;
 	struct dp_htt_timestamp *radio_tt;
+	struct wlan_cfg_dp_soc_ctxt *soc_cfg_ctx;
+
 
 	if (!soc)
 		return;
 
 	dpsoc = (struct dp_soc *)soc->dp_soc;
+	soc_cfg_ctx = dpsoc->wlan_cfg_ctx;
 	msg_type = HTT_T2H_MSG_TYPE_GET(*msg_word);
 	ring_type = HTT_T2H_RX_BKPRESSURE_RING_TYPE_GET(*msg_word);
 	target_pdev_id = HTT_T2H_RX_BKPRESSURE_PDEV_ID_GET(*msg_word);
@@ -2900,6 +2926,7 @@ static void dp_htt_bkp_event_alert(u_int32_t *msg_word, struct htt_soc *soc)
 		return;
 	}
 
+	th_time = wlan_cfg_time_control_bp(soc_cfg_ctx);
 	pdev = (struct dp_pdev *)dpsoc->pdev_list[pdev_id];
 	ring_id = HTT_T2H_RX_BKPRESSURE_RINGID_GET(*msg_word);
 	hp_idx = HTT_T2H_RX_BKPRESSURE_HEAD_IDX_GET(*(msg_word + 1));
@@ -2909,20 +2936,21 @@ static void dp_htt_bkp_event_alert(u_int32_t *msg_word, struct htt_soc *soc)
 
 	switch (ring_type) {
 	case HTT_SW_RING_TYPE_UMAC:
-		if (!time_allow_print(radio_tt->umac_ttt, ring_id))
+		if (!time_allow_print(radio_tt->umac_path, ring_id, th_time))
 			return;
 		dp_htt_alert_print(msg_type, pdev, ring_id, hp_idx, tp_idx,
-				   bkp_time, "HTT_SW_RING_TYPE_UMAC");
+				   bkp_time, radio_tt->umac_path,
+				   "HTT_SW_RING_TYPE_UMAC");
 	break;
 	case HTT_SW_RING_TYPE_LMAC:
-		if (!time_allow_print(radio_tt->lmac_ttt, ring_id))
+		if (!time_allow_print(radio_tt->lmac_path, ring_id, th_time))
 			return;
 		dp_htt_alert_print(msg_type, pdev, ring_id, hp_idx, tp_idx,
-				   bkp_time, "HTT_SW_RING_TYPE_LMAC");
+				   bkp_time, radio_tt->lmac_path,
+				   "HTT_SW_RING_TYPE_LMAC");
 	break;
 	default:
-		dp_htt_alert_print(msg_type, pdev, ring_id, hp_idx, tp_idx,
-				   bkp_time, "UNKNOWN");
+		dp_alert("Invalid ring type: %d", ring_type);
 	break;
 	}
 
@@ -3849,8 +3877,8 @@ void htt_soc_detach(struct htt_soc *htt_hdl)
 	struct htt_soc *htt_handle = (struct htt_soc *)htt_hdl;
 
 	for (i = 0; i < MAX_PDEV_CNT; i++) {
-		qdf_mem_free(htt_handle->pdevid_tt[i].umac_ttt);
-		qdf_mem_free(htt_handle->pdevid_tt[i].lmac_ttt);
+		qdf_mem_free(htt_handle->pdevid_tt[i].umac_path);
+		qdf_mem_free(htt_handle->pdevid_tt[i].lmac_path);
 	}
 
 	HTT_TX_MUTEX_DESTROY(&htt_handle->htt_tx_mutex);
