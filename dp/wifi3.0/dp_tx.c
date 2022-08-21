@@ -5236,8 +5236,9 @@ more_data:
 		num_avail_for_reap = quota;
 
 	dp_srng_dst_inv_cached_descs(soc, hal_ring_hdl, num_avail_for_reap);
-	last_prefetched_hw_desc = dp_srng_dst_prefetch(hal_soc, hal_ring_hdl,
-						       num_avail_for_reap);
+	last_prefetched_hw_desc = dp_srng_dst_prefetch_32_byte_desc(hal_soc,
+							    hal_ring_hdl,
+							    num_avail_for_reap);
 
 	/* Find head descriptor from completion ring */
 	while (qdf_likely(num_avail_for_reap--)) {

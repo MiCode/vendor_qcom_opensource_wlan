@@ -431,13 +431,19 @@ void dp_tx_prefetch_hw_sw_nbuf_desc(struct dp_soc *soc,
 	}
 
 	if (num_avail_for_reap && *last_prefetched_hw_desc) {
-		dp_tx_comp_get_prefetched_params_from_hal_desc(
-						soc,
-						*last_prefetched_hw_desc,
-						last_prefetched_sw_desc);
-		*last_prefetched_hw_desc =
-			hal_srng_dst_prefetch_next_cached_desc(
+		soc->arch_ops.tx_comp_get_params_from_hal_desc(soc,
+						       *last_prefetched_hw_desc,
+						       last_prefetched_sw_desc);
+
+		if ((uintptr_t)*last_prefetched_hw_desc & 0x3f)
+			*last_prefetched_hw_desc =
+				hal_srng_dst_prefetch_next_cached_desc(
 					hal_soc,
+					hal_ring_hdl,
+					(uint8_t *)*last_prefetched_hw_desc);
+		else
+			*last_prefetched_hw_desc =
+				hal_srng_dst_get_next_32_byte_desc(hal_soc,
 					hal_ring_hdl,
 					(uint8_t *)*last_prefetched_hw_desc);
 	}
