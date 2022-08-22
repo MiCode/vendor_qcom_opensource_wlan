@@ -1068,6 +1068,66 @@ static struct CE_pipe_config target_ce_config_wlan_qcn6122[] = {
 #define PKTLOG_DST_ENTRIES 512
 #endif
 
+#define QCA_5332_CE_COUNT 12
+static struct CE_attr host_ce_config_wlan_qca5332[] = {
+	/* host->target HTC control and raw streams */
+	{/*CE0*/ (CE_ATTR_FLAGS), 0, 16, 2048, 0, NULL,},
+	/* target->host HTT + HTC control */
+	{/*CE1*/ (CE_ATTR_FLAGS), 0, 0,  2048, 512, NULL,},
+	/* target->host WMI */
+	{/*CE2*/ (CE_ATTR_FLAGS), 0, 0,  2048, 128, NULL,},
+	/* host->target WMI */
+	{/*CE3*/ (CE_ATTR_FLAGS), 0, 32, 2048, 0, NULL,},
+	/* host->target HTT */
+	{/*CE4*/ (CE_ATTR_FLAGS | CE_ATTR_DISABLE_INTR), 0,
+			CE_HTT_H2T_MSG_SRC_NENTRIES, 256, 0, NULL,},
+	/* target -> host PKTLOG */
+	#ifdef REMOVE_PKT_LOG
+	{ /* CE5 */ 0, 0, 0, 0, 0, NULL,},
+	#else
+	{/*CE5*/ (CE_ATTR_FLAGS), 0, 0, 2048, PKTLOG_DST_ENTRIES, NULL,},
+	#endif
+	/* Target autonomous HIF_memcpy */
+	{/*CE6*/ (CE_ATTR_FLAGS | CE_ATTR_DISABLE_INTR), 0, 0, 0, 0, NULL,},
+	/* CV Prefetch */
+	{/*CE7*/ (CE_ATTR_FLAGS | CE_ATTR_DISABLE_INTR), 0, 0, 0, 0, NULL,},
+	/* Target HIF memcpy (Generic HIF memcypy) */
+	{/*CE8*/ (CE_ATTR_FLAGS | CE_ATTR_DISABLE_INTR), 0, 0, 0, 0, NULL,},
+	/* WMI logging/CFR/Spectral/Radar/ */
+	{/*CE9*/ (CE_ATTR_FLAGS), 0, 0, 2048, 128, NULL,},
+	/* Customer reserve */
+	{/*CE10*/ (CE_ATTR_FLAGS | CE_ATTR_DISABLE_INTR), 0, 0, 0, 0, NULL,},
+	/* Un-assigned */
+	{/*CE11*/ (CE_ATTR_FLAGS | CE_ATTR_DISABLE_INTR), 0, 0, 0, 0, NULL,},
+};
+
+static struct CE_pipe_config target_ce_config_wlan_qca5332[] = {
+	/* host->target HTC control and raw streams */
+	{ /* CE0 */ 0, PIPEDIR_OUT, 32, 2048, CE_ATTR_FLAGS, 0,},
+	/* target->host HTT */
+	{ /* CE1 */ 1, PIPEDIR_IN,  32, 2048, CE_ATTR_FLAGS, 0,},
+	/* target->host WMI  + HTC control */
+	{ /* CE2 */ 2, PIPEDIR_IN,  32, 2048, CE_ATTR_FLAGS, 0,},
+	/* host->target WMI */
+	{ /* CE3 */ 3, PIPEDIR_OUT, 32, 2048, CE_ATTR_FLAGS, 0,},
+	/* host->target HTT */
+	{ /* CE4 */ 4, PIPEDIR_OUT, 256, 256,
+		(CE_ATTR_FLAGS | CE_ATTR_DISABLE_INTR), 0,},
+	/* Target -> host PKTLOG */
+	{ /* CE5 */ 5, PIPEDIR_IN,  32, 2048, CE_ATTR_FLAGS, 0,},
+	/* Reserved for target autonomous HIF_memcpy */
+	{ /* CE6 */ 6, PIPEDIR_INOUT, 32, 16384, CE_ATTR_FLAGS, 0,},
+	/* CE7 Reserved for CV Prefetch */
+	{ /* CE7 */ 7, PIPEDIR_OUT, 32, 2048, CE_ATTR_FLAGS, 0,},
+	/* CE8 Reserved for target generic HIF memcpy */
+	{ /* CE8 */ 8, PIPEDIR_INOUT, 32, 16384, CE_ATTR_FLAGS, 0,},
+	/* WMI logging/CFR/Spectral/Radar/ */
+	{ /* CE9 */ 9, PIPEDIR_IN, 32, 2048, CE_ATTR_FLAGS, 0,},
+	/* CE 10,11 to be defined */
+	{/* CE11 unused */10, PIPEDIR_NONE, 0, 0, 0, 0,},
+	{/* CE11 unused */11, PIPEDIR_NONE, 0, 0, 0, 0,},
+};
+
 #define QCA_5018_CE_COUNT 6
 static struct CE_attr host_ce_config_wlan_qca5018[] = {
 	/* host->target HTC control and raw streams */
