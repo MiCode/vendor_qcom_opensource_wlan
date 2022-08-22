@@ -691,6 +691,26 @@ register_dfs_bw_expand_rx_ops(struct wlan_lmac_if_dfs_rx_ops *rx_ops)
 }
 #endif
 
+#ifdef QCA_DFS_BW_PUNCTURE
+/* register_dfs_puncture_rx_ops() - Register DFS Rx-Ops for DFS puncture.
+ * @rx_ops: Pointer to wlan_lmac_if_dfs_rx_ops.
+ */
+static void
+register_dfs_puncture_rx_ops(struct wlan_lmac_if_dfs_rx_ops *rx_ops)
+{
+	if (!rx_ops)
+		return;
+
+	rx_ops->dfs_set_dfs_puncture = ucfg_dfs_set_dfs_puncture;
+	rx_ops->dfs_get_dfs_puncture = ucfg_dfs_get_dfs_puncture;
+}
+#else
+static inline void
+register_dfs_puncture_rx_ops(struct wlan_lmac_if_dfs_rx_ops *rx_ops)
+{
+}
+#endif
+
 #ifdef WLAN_MGMT_RX_REO_SUPPORT
 static QDF_STATUS
 wlan_lmac_if_mgmt_rx_reo_rx_ops_register(
@@ -845,6 +865,7 @@ wlan_lmac_if_umac_dfs_rx_ops_register(struct wlan_lmac_if_rx_ops *rx_ops)
 	register_agile_dfs_rx_ops(dfs_rx_ops);
 	register_dfs_chan_postnol_rx_ops(dfs_rx_ops);
 	register_dfs_bw_expand_rx_ops(dfs_rx_ops);
+	register_dfs_puncture_rx_ops(dfs_rx_ops);
 
 	return QDF_STATUS_SUCCESS;
 }

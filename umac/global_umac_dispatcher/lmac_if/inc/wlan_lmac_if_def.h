@@ -2097,6 +2097,9 @@ struct wlan_lmac_if_wifi_pos_rx_ops {
  * @dfs_set_bw_expand:                API to set BW Expansion feature.
  * @dfs_get_bw_expand:                API to get the status of BW Expansion
  *                                    feature.
+ * @dfs_set_dfs_puncture:             API to set DFS puncturing feature.
+ * @dfs_get_dfs_puncture:             API to get the status of DFS puncturing
+ *                                    feature.
  */
 struct wlan_lmac_if_dfs_rx_ops {
 	QDF_STATUS (*dfs_get_radars)(struct wlan_objmgr_pdev *pdev);
@@ -2216,6 +2219,14 @@ struct wlan_lmac_if_dfs_rx_ops {
 	QDF_STATUS (*dfs_get_bw_expand)(
 			struct wlan_objmgr_pdev *pdev,
 			bool *value);
+#ifdef QCA_DFS_BW_PUNCTURE
+	QDF_STATUS (*dfs_set_dfs_puncture)(
+			struct wlan_objmgr_pdev *pdev,
+			bool value);
+	QDF_STATUS (*dfs_get_dfs_puncture)(
+			struct wlan_objmgr_pdev *pdev,
+			bool *value);
+#endif
 	QDF_STATUS (*dfs_set_bw_reduction)(struct wlan_objmgr_pdev *pdev,
 			bool value);
 	QDF_STATUS (*dfs_is_bw_reduction_needed)(struct wlan_objmgr_pdev *pdev,

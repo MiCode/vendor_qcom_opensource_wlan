@@ -1124,6 +1124,8 @@ struct dfs_rcac_params {
  *                                   bandwidth expansion feature.
  * @dfs_use_bw_expand:               User configured value for enabling or
  *                                   disabling BW Expansion feature.
+ * @dfs_use_puncture:                User configured value for enabling or
+ *                                   disabling DFS puncturing feature.
  * @dfs_agile_rcac_ucfg:             User configuration for Rolling CAC.
  * @dfs_fw_adfs_support_non_160:     Target Agile DFS support for non-160 BWs.
  * @dfs_fw_adfs_support_160:         Target Agile DFS support for 160 BW.
@@ -1301,6 +1303,7 @@ struct wlan_dfs {
 	enum wlan_phymode dfs_bw_expand_des_mode;
 	bool           dfs_use_bw_expand;
 #endif
+	bool           dfs_use_puncture;
 	uint8_t        dfs_agile_precac_ucfg:1,
 #if defined(QCA_SUPPORT_ADFS_RCAC)
 		       dfs_agile_rcac_ucfg:1,
