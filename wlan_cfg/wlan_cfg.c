@@ -2546,25 +2546,8 @@ wlan_multi_soc_mlo_cfg_attach(struct cdp_ctrl_objmgr_psoc *psoc,
 	uint8_t rx_ring_map;
 
 	rx_ring_map =
-		cfg_get(psoc, CFG_DP_MLO_CHIP0_RX_RING_MAP);
-	wlan_cfg_ctx->mlo_chip_rx_ring_map[0] = rx_ring_map;
-	wlan_cfg_ctx->mlo_chip_default_rx_ring_id[0] =
-			wlan_cfg_get_lsb_set_pos(rx_ring_map);
-	wlan_cfg_ctx->lmac_peer_id_msb[0] = 1;
-
-	rx_ring_map =
-		cfg_get(psoc, CFG_DP_MLO_CHIP1_RX_RING_MAP);
-	wlan_cfg_ctx->mlo_chip_rx_ring_map[1] = rx_ring_map;
-	wlan_cfg_ctx->mlo_chip_default_rx_ring_id[1] =
-			wlan_cfg_get_lsb_set_pos(rx_ring_map);
-	wlan_cfg_ctx->lmac_peer_id_msb[1] = 2;
-
-	rx_ring_map =
-		cfg_get(psoc, CFG_DP_MLO_CHIP2_RX_RING_MAP);
-	wlan_cfg_ctx->mlo_chip_rx_ring_map[2] = rx_ring_map;
-	wlan_cfg_ctx->mlo_chip_default_rx_ring_id[2] =
-			wlan_cfg_get_lsb_set_pos(rx_ring_map);
-	wlan_cfg_ctx->lmac_peer_id_msb[2] = 3;
+		cfg_get(psoc, CFG_DP_MLO_RX_RING_MAP);
+	wlan_cfg_ctx->mlo_chip_rx_ring_map = rx_ring_map;
 }
 #else
 static inline void
@@ -2636,6 +2619,14 @@ static void wlan_soc_tx_capt_cfg_attach(struct cdp_ctrl_objmgr_psoc *psoc,
 {
 }
 #endif
+
+void
+wlan_cfg_soc_update_tgt_params(struct wlan_cfg_dp_soc_ctxt *wlan_cfg_ctx,
+			       struct cdp_ctrl_objmgr_psoc *psoc)
+{
+	wlan_cfg_ctx->reo_rings_mapping = cfg_get(psoc,
+						  CFG_DP_REO_RINGS_MAP);
+}
 
 /**
  * wlan_cfg_soc_attach() - Allocate and prepare SoC configuration
@@ -3983,24 +3974,9 @@ wlan_cfg_set_rx_rel_ring_id(struct wlan_cfg_dp_soc_ctxt *cfg,
 
 #if defined(WLAN_FEATURE_11BE_MLO) && defined(WLAN_MLO_MULTI_CHIP)
 uint8_t
-wlan_cfg_mlo_rx_ring_map_get_by_chip_id(struct wlan_cfg_dp_soc_ctxt *cfg,
-					uint8_t chip_id)
+wlan_cfg_mlo_rx_ring_map_get(struct wlan_cfg_dp_soc_ctxt *cfg)
 {
-	return cfg->mlo_chip_rx_ring_map[chip_id];
-}
-
-uint8_t
-wlan_cfg_mlo_default_rx_ring_get_by_chip_id(struct wlan_cfg_dp_soc_ctxt *cfg,
-					    uint8_t chip_id)
-{
-	return cfg->mlo_chip_default_rx_ring_id[chip_id];
-}
-
-uint8_t
-wlan_cfg_mlo_lmac_peer_id_msb_get_by_chip_id(struct wlan_cfg_dp_soc_ctxt *cfg,
-					     uint8_t chip_id)
-{
-	return cfg->lmac_peer_id_msb[chip_id];
+	return cfg->mlo_chip_rx_ring_map;
 }
 #endif
 

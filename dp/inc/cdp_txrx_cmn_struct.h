@@ -418,12 +418,14 @@ enum cdp_peer_type {
  * @is_first_link: set true for first MLO link peer
  * @is_primary_link: set true for MLO primary link peer
  * @primary_umac_id: primary umac_id
+ * @num_links: number of links in MLO
  */
 struct cdp_peer_setup_info {
 	uint8_t *mld_peer_mac;
 	uint8_t is_first_link:1,
 		is_primary_link:1;
 	uint8_t primary_umac_id;
+	uint8_t num_links;
 };
 
 /**

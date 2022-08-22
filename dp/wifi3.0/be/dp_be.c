@@ -1866,6 +1866,89 @@ dp_initialize_arch_ops_be_mlo(struct dp_arch_ops *arch_ops)
 }
 #endif /* WLAN_FEATURE_11BE_MLO */
 
+#if defined(WLAN_FEATURE_11BE_MLO) && defined(WLAN_MLO_MULTI_CHIP)
+#define DP_LMAC_PEER_ID_MSB_LEGACY 2
+#define DP_LMAC_PEER_ID_MSB_MLO 3
+
+static void dp_peer_get_reo_hash_be(struct dp_vdev *vdev,
+				    struct cdp_peer_setup_info *setup_info,
+				    enum cdp_host_reo_dest_ring *reo_dest,
+				    bool *hash_based,
+				    uint8_t *lmac_peer_id_msb)
+{
+	struct dp_soc *soc = vdev->pdev->soc;
+	struct dp_soc_be *be_soc = dp_get_be_soc_from_dp_soc(soc);
+
+	if (!be_soc->mlo_enabled)
+		return dp_vdev_get_default_reo_hash(vdev, reo_dest,
+						    hash_based);
+
+	*hash_based = wlan_cfg_is_rx_hash_enabled(soc->wlan_cfg_ctx);
+	*reo_dest = vdev->pdev->reo_dest;
+
+	/* Not a ML link peer use non-mlo */
+	if (!setup_info) {
+		*lmac_peer_id_msb = DP_LMAC_PEER_ID_MSB_LEGACY;
+		return;
+	}
+
+	/* For STA ML VAP we do not have num links info at this point
+	 * use MLO case always
+	 */
+	if (vdev->opmode == wlan_op_mode_sta) {
+		*lmac_peer_id_msb = DP_LMAC_PEER_ID_MSB_MLO;
+		return;
+	}
+
+	/* For AP ML VAP consider the peer as ML only it associates with
+	 * multiple links
+	 */
+	if (setup_info->num_links == 1) {
+		*lmac_peer_id_msb = DP_LMAC_PEER_ID_MSB_LEGACY;
+		return;
+	}
+
+	*lmac_peer_id_msb = DP_LMAC_PEER_ID_MSB_MLO;
+}
+
+static bool dp_reo_remap_config_be(struct dp_soc *soc,
+				   uint32_t *remap0,
+				   uint32_t *remap1,
+				   uint32_t *remap2)
+{
+	struct dp_soc_be *be_soc = dp_get_be_soc_from_dp_soc(soc);
+	uint32_t reo_config = wlan_cfg_get_reo_rings_mapping(soc->wlan_cfg_ctx);
+	uint32_t reo_mlo_config =
+		wlan_cfg_mlo_rx_ring_map_get(soc->wlan_cfg_ctx);
+
+	if (!be_soc->mlo_enabled)
+		return dp_reo_remap_config(soc, remap0, remap1, remap2);
+
+	*remap0 = hal_reo_ix_remap_value_get_be(soc->hal_soc, reo_mlo_config);
+	*remap1 = hal_reo_ix_remap_value_get_be(soc->hal_soc, reo_config);
+	*remap2 = hal_reo_ix_remap_value_get_be(soc->hal_soc, reo_mlo_config);
+
+	return true;
+}
+#else
+static void dp_peer_get_reo_hash_be(struct dp_vdev *vdev,
+				    struct cdp_peer_setup_info *setup_info,
+				    enum cdp_host_reo_dest_ring *reo_dest,
+				    bool *hash_based,
+				    uint8_t *lmac_peer_id_msb)
+{
+	dp_vdev_get_default_reo_hash(vdev, reo_dest, hash_based);
+}
+
+static bool dp_reo_remap_config_be(struct dp_soc *soc,
+				   uint32_t *remap0,
+				   uint32_t *remap1,
+				   uint32_t *remap2)
+{
+	return dp_reo_remap_config(soc, remap0, remap1, remap2);
+}
+#endif
+
 void dp_initialize_arch_ops_be(struct dp_arch_ops *arch_ops)
 {
 #ifndef QCA_HOST_MODE_WIFI_DISABLED
@@ -1924,4 +2007,6 @@ void dp_initialize_arch_ops_be(struct dp_arch_ops *arch_ops)
 	dp_init_near_full_arch_ops_be(arch_ops);
 	arch_ops->get_rx_hash_key = dp_get_rx_hash_key_be;
 	arch_ops->print_mlo_ast_stats = dp_print_mlo_ast_stats_be;
+	arch_ops->peer_get_reo_hash = dp_peer_get_reo_hash_be;
+	arch_ops->reo_remap_config = dp_reo_remap_config_be;
 }

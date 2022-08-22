@@ -450,7 +450,7 @@
 #define WLAN_CFG_PPE_RELEASE_RING_SIZE_MAX 1024
 
 #if defined(WLAN_FEATURE_11BE_MLO) && defined(WLAN_MLO_MULTI_CHIP)
-#define WLAN_CFG_MLO_RX_RING_MAP 0xF
+#define WLAN_CFG_MLO_RX_RING_MAP 0x7
 #define WLAN_CFG_MLO_RX_RING_MAP_MIN 0x0
 #define WLAN_CFG_MLO_RX_RING_MAP_MAX 0xFF
 #endif
@@ -1614,57 +1614,16 @@
  *
  * </ini>
  */
-#define CFG_DP_MLO_CHIP0_RX_RING_MAP \
-		CFG_INI_UINT("dp_chip0_rx_ring_map", \
+#define CFG_DP_MLO_RX_RING_MAP \
+		CFG_INI_UINT("dp_mlo_reo_rings_map", \
 		WLAN_CFG_MLO_RX_RING_MAP_MIN, \
 		WLAN_CFG_MLO_RX_RING_MAP_MAX, \
 		WLAN_CFG_MLO_RX_RING_MAP, \
-		CFG_VALUE_OR_DEFAULT, "DP Rx ring map chip0")
+		CFG_VALUE_OR_DEFAULT, "DP MLO Rx ring map")
 
-/*
- * <ini>
- * dp_chip1_rx_ring_map - Set Rx ring map for CHIP 1
- * @Min: 0x0
- * @Max: 0xFF
- * @Default: 0xF
- *
- * This ini sets Rx ring map for CHIP 1
- *
- * Usage: Internal
- *
- * </ini>
- */
-#define CFG_DP_MLO_CHIP1_RX_RING_MAP \
-		CFG_INI_UINT("dp_chip1_rx_ring_map", \
-		WLAN_CFG_MLO_RX_RING_MAP_MIN, \
-		WLAN_CFG_MLO_RX_RING_MAP_MAX, \
-		WLAN_CFG_MLO_RX_RING_MAP, \
-		CFG_VALUE_OR_DEFAULT, "DP Rx ring map chip1")
-
-/*
- * <ini>
- * dp_chip2_rx_ring_map - Set Rx ring map for CHIP 2
- * @Min: 0x0
- * @Max: 0xFF
- * @Default: 0xF
- *
- * This ini sets Rx ring map for CHIP 2
- *
- * Usage: Internal
- *
- * </ini>
- */
-#define CFG_DP_MLO_CHIP2_RX_RING_MAP \
-		CFG_INI_UINT("dp_chip2_rx_ring_map", \
-		WLAN_CFG_MLO_RX_RING_MAP_MIN, \
-		WLAN_CFG_MLO_RX_RING_MAP_MAX, \
-		WLAN_CFG_MLO_RX_RING_MAP, \
-		CFG_VALUE_OR_DEFAULT, "DP Rx ring map chip2")
 
 #define CFG_DP_MLO_CONFIG \
-	CFG(CFG_DP_MLO_CHIP0_RX_RING_MAP) \
-	CFG(CFG_DP_MLO_CHIP1_RX_RING_MAP) \
-	CFG(CFG_DP_MLO_CHIP2_RX_RING_MAP)
+	CFG(CFG_DP_MLO_RX_RING_MAP)
 #else
 #define CFG_DP_MLO_CONFIG
 #endif
