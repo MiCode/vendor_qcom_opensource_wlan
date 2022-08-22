@@ -13026,6 +13026,7 @@ static void dp_pause_tx_hardstart(struct dp_soc *soc)
 	int i;
 
 	ctxt.tx = &dp_tx_drop;
+	ctxt.tx_fast = &dp_tx_drop;
 	ctxt.tx_exception = &dp_tx_exc_drop;
 
 	for (i = 0; i < MAX_PDEV_CNT; i++) {
