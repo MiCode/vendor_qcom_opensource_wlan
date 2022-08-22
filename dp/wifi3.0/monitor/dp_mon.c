@@ -3831,7 +3831,7 @@ dp_process_ppdu_stats_sch_cmd_status_tlv(struct dp_pdev *pdev,
 			 * This check is to make sure peer is not deleted
 			 * after processing the TLVs.
 			 */
-			if (!peer)
+			if (!peer || !peer->monitor_peer)
 				continue;
 
 			mon_peer = peer->monitor_peer;
@@ -3888,7 +3888,7 @@ dp_process_ppdu_stats_sch_cmd_status_tlv(struct dp_pdev *pdev,
 			 * This check is to make sure peer is not deleted
 			 * after processing the TLVs.
 			 */
-			if (!peer)
+			if (!peer || !peer->monitor_peer)
 				continue;
 
 			mon_peer = peer->monitor_peer;
