@@ -14719,7 +14719,8 @@ void dp_soc_set_txrx_ring_map(struct dp_soc *soc)
 qdf_export_symbol(dp_soc_set_txrx_ring_map);
 
 #if defined(QCA_WIFI_QCA8074) || defined(QCA_WIFI_QCA6018) || \
-	defined(QCA_WIFI_QCA5018) || defined(QCA_WIFI_QCA9574)
+	defined(QCA_WIFI_QCA5018) || defined(QCA_WIFI_QCA9574) || \
+	defined(QCA_WIFI_QCA5332)
 /**
  * dp_soc_attach_wifi3() - Attach txrx SOC
  * @ctrl_psoc: Opaque SOC handle from control plane
@@ -16380,6 +16381,21 @@ static void dp_soc_cfg_init(struct dp_soc *soc)
 		soc->host_ast_db_enable = cfg_get(soc->ctrl_psoc,
 						  CFG_DP_HOST_AST_DB_ENABLE);
 		break;
+	case TARGET_TYPE_QCA5332:
+		soc->ast_override_support = 1;
+		soc->da_war_enabled = false;
+		wlan_cfg_set_raw_mode_war(soc->wlan_cfg_ctx, false);
+		soc->per_tid_basize_max_tid = 8;
+		soc->wbm_release_desc_rx_sg_support = 1;
+		soc->rxdma2sw_rings_not_supported = 1;
+		soc->wbm_sg_last_msdu_war = 1;
+		soc->ast_offload_support = AST_OFFLOAD_ENABLE_STATUS;
+		soc->mec_fw_offload = FW_MEC_FW_OFFLOAD_ENABLED;
+		soc->num_hw_dscp_tid_map = HAL_MAX_HW_DSCP_TID_V2_MAPS_5332;
+		wlan_cfg_set_txmon_hw_support(soc->wlan_cfg_ctx, true);
+		soc->host_ast_db_enable = cfg_get(soc->ctrl_psoc,
+						  CFG_DP_HOST_AST_DB_ENABLE);
+		break;
 	default:
 		qdf_print("%s: Unknown tgt type %d\n", __func__, target_type);
 		qdf_assert_always(0);
@@ -16431,6 +16447,7 @@ static void dp_soc_cfg_attach(struct dp_soc *soc)
 		wlan_cfg_set_rxdma1_enable(soc->wlan_cfg_ctx);
 		break;
 	case TARGET_TYPE_QCN9224:
+	case TARGET_TYPE_QCA5332:
 		wlan_cfg_set_tso_desc_attach_defer(soc->wlan_cfg_ctx, 1);
 		wlan_cfg_set_rxdma1_enable(soc->wlan_cfg_ctx);
 		break;
