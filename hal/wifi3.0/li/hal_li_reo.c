@@ -151,7 +151,7 @@ void hal_reo_qdesc_setup_li(hal_soc_handle_t hal_soc_hdl, int tid,
 
 	/* TODO: HW queue descriptors are currently allocated for max BA
 	 * window size for all QOS TIDs so that same descriptor can be used
-	 * later when ADDBA request is recevied. This should be changed to
+	 * later when ADDBA request is received. This should be changed to
 	 * allocate HW queue descriptors based on BA window size being
 	 * negotiated (0 for non BA cases), and reallocate when BA window
 	 * size changes and also send WMI message to FW to change the REO

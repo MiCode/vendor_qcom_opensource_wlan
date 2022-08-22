@@ -2075,7 +2075,7 @@ struct cdp_tx_indication_info {
 /**
  * struct cdp_tx_mgmt_comp_info - Tx mgmt comp info
  * @ppdu_id: ppdu_id
- * @is_sgen_pkt: payload recevied from wmi or htt path
+ * @is_sgen_pkt: payload received from wmi or htt path
  * @retries_count: retries count
  * @tx_tsf: 64 bit timestamp
  */

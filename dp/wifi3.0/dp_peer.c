@@ -3642,7 +3642,7 @@ QDF_STATUS dp_rx_tid_setup_wifi3(struct dp_peer *peer, int tid,
 
 	/* TODO: Allocating HW queue descriptors based on max BA window size
 	 * for all QOS TIDs so that same descriptor can be used later when
-	 * ADDBA request is recevied. This should be changed to allocate HW
+	 * ADDBA request is received. This should be changed to allocate HW
 	 * queue descriptors based on BA window size being negotiated (0 for
 	 * non BA cases), and reallocate when BA window size changes and also
 	 * send WMI message to FW to change the REO queue descriptor in Rx

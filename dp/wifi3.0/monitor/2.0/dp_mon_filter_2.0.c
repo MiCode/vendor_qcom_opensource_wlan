@@ -584,25 +584,25 @@ htt_tx_tlv_filter_mask_set_in1(uint32_t *msg_word,
 							 COEX_TX_STATUS,
 							 tlv->coex_tx_status);
 
-	if (tlv->recevied_response_info)
+	if (tlv->received_response_info)
 		htt_tx_monitor_tlv_filter_in1_enable_set(*msg_word,
 							 RECEIVED_RESPONSE_INFO,
-							 tlv->recevied_response_info);
+							 tlv->received_response_info);
 
-	if (tlv->recevied_response_info_p2)
+	if (tlv->received_response_info_p2)
 		htt_tx_monitor_tlv_filter_in1_enable_set(*msg_word,
 							 RECEIVED_RESPONSE_INFO_PART2,
-							 tlv->recevied_response_info_p2);
+							 tlv->received_response_info_p2);
 
 	if (tlv->ofdma_trigger_details)
 		htt_tx_monitor_tlv_filter_in1_enable_set(*msg_word,
 							 OFDMA_TRIGGER_DETAILS,
 							 tlv->ofdma_trigger_details);
 
-	if (tlv->recevied_trigger_info)
+	if (tlv->received_trigger_info)
 		htt_tx_monitor_tlv_filter_in1_enable_set(*msg_word,
 							 RECEIVED_TRIGGER_INFO,
-							 tlv->recevied_trigger_info);
+							 tlv->received_trigger_info);
 
 	if (tlv->pdg_tx_request)
 		htt_tx_monitor_tlv_filter_in1_enable_set(*msg_word,
@@ -1784,14 +1784,14 @@ static void dp_tx_mon_filter_show_filter(struct dp_mon_filter_be *filter)
 			    tlv_filter->utlvs.rx_frame_1k_bitmap_ack);
 	DP_MON_FILTER_PRINT("coex_tx_status: %d",
 			    tlv_filter->utlvs.coex_tx_status);
-	DP_MON_FILTER_PRINT("recevied_response_info: %d",
-			    tlv_filter->utlvs.recevied_response_info);
-	DP_MON_FILTER_PRINT("recevied_response_info_p2: %d",
-			    tlv_filter->utlvs.recevied_response_info_p2);
+	DP_MON_FILTER_PRINT("received_response_info: %d",
+			    tlv_filter->utlvs.received_response_info);
+	DP_MON_FILTER_PRINT("received_response_info_p2: %d",
+			    tlv_filter->utlvs.received_response_info_p2);
 	DP_MON_FILTER_PRINT("ofdma_trigger_details: %d",
 			    tlv_filter->utlvs.ofdma_trigger_details);
-	DP_MON_FILTER_PRINT("recevied_trigger_info: %d",
-			    tlv_filter->utlvs.recevied_trigger_info);
+	DP_MON_FILTER_PRINT("received_trigger_info: %d",
+			    tlv_filter->utlvs.received_trigger_info);
 	DP_MON_FILTER_PRINT("pdg_tx_request: %d",
 			    tlv_filter->utlvs.pdg_tx_request);
 	DP_MON_FILTER_PRINT("pdg_response: %d",
@@ -2239,8 +2239,8 @@ void dp_mon_filter_setup_pktlog_hybrid_2_0(struct dp_pdev *pdev)
 	tlv_filter->utlvs.tx_fes_status_user_response = 1;
 	tlv_filter->utlvs.tx_fes_status_end = 1;
 	tlv_filter->utlvs.response_start_status = 1;
-	tlv_filter->utlvs.recevied_response_info = 1;
-	tlv_filter->utlvs.recevied_response_info_p2 = 1;
+	tlv_filter->utlvs.received_response_info = 1;
+	tlv_filter->utlvs.received_response_info_p2 = 1;
 	tlv_filter->utlvs.response_end_status = 1;
 
 	dp_mon_filter_show_tx_filter_be(mode, &filter);
@@ -2594,14 +2594,14 @@ void dp_tx_mon_upstream_tlv_set(struct htt_tx_ring_tlv_filter *dst_filter,
 		src_filter->utlvs.rx_frame_1k_bitmap_ack;
 	dst_filter->utlvs.coex_tx_status |=
 		src_filter->utlvs.coex_tx_status;
-	dst_filter->utlvs.recevied_response_info |=
-		src_filter->utlvs.recevied_response_info;
-	dst_filter->utlvs.recevied_response_info_p2 |=
-		src_filter->utlvs.recevied_response_info_p2;
+	dst_filter->utlvs.received_response_info |=
+		src_filter->utlvs.received_response_info;
+	dst_filter->utlvs.received_response_info_p2 |=
+		src_filter->utlvs.received_response_info_p2;
 	dst_filter->utlvs.ofdma_trigger_details |=
 		src_filter->utlvs.ofdma_trigger_details;
-	dst_filter->utlvs.recevied_trigger_info |=
-		src_filter->utlvs.recevied_trigger_info;
+	dst_filter->utlvs.received_trigger_info |=
+		src_filter->utlvs.received_trigger_info;
 	dst_filter->utlvs.pdg_tx_request |=
 		src_filter->utlvs.pdg_tx_request;
 	dst_filter->utlvs.pdg_response |=
