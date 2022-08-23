@@ -2033,7 +2033,8 @@ QDF_STATUS util_gen_link_reqrsp_cmn(uint8_t *frame, qdf_size_t frame_len,
 			mlo_debug("Reassoc req: Added Current AP address field (%u octets) to link specific frame",
 				  QDF_MAC_ADDR_SIZE);
 		}
-	} else if (subtype == WLAN_FC0_STYPE_ASSOC_RESP) {
+	} else if (subtype == WLAN_FC0_STYPE_ASSOC_RESP ||
+		   subtype == WLAN_FC0_STYPE_REASSOC_RESP) {
 		/* This is a (re)association response */
 		mlo_debug("Populating fixed fields for (re)assoc resp in link specific frame");
 
