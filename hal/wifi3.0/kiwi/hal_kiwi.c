@@ -773,7 +773,28 @@ static inline
 void hal_register_rx_pkt_hdr_tlv_api_kiwi(struct hal_soc *hal_soc)
 {
 }
+
+static uint8_t *hal_rx_desc_get_80211_hdr_be(void *hw_desc_addr)
+{
+	uint8_t *rx_pkt_hdr;
+	struct rx_mon_pkt_tlvs *rx_desc =
+					(struct rx_mon_pkt_tlvs *)hw_desc_addr;
+
+	rx_pkt_hdr = &rx_desc->pkt_hdr_tlv.rx_pkt_hdr[0];
+
+	return rx_pkt_hdr;
+}
 #else
+static uint8_t *hal_rx_desc_get_80211_hdr_be(void *hw_desc_addr)
+{
+	struct rx_pkt_tlvs *rx_desc = (struct rx_pkt_tlvs *)hw_desc_addr;
+	uint8_t *rx_pkt_hdr;
+
+	rx_pkt_hdr = &rx_desc->pkt_hdr_tlv.rx_pkt_hdr[0];
+
+	return rx_pkt_hdr;
+}
+
 /**
  * hal_rx_dump_pkt_hdr_tlv: dump RX pkt header TLV in hex format
  * @pkt_hdr_tlv: pointer the pkt_hdr_tlv in pkt.
@@ -1882,6 +1903,7 @@ static void hal_hw_txrx_ops_attach_kiwi(struct hal_soc *hal_soc)
 	hal_soc->ops->hal_rx_dump_mpdu_start_tlv =
 					hal_rx_dump_mpdu_start_tlv_kiwi;
 	hal_soc->ops->hal_rx_dump_pkt_tlvs = hal_rx_dump_pkt_tlvs_kiwi;
+	hal_soc->ops->hal_rx_desc_get_80211_hdr = hal_rx_desc_get_80211_hdr_be;
 
 	hal_soc->ops->hal_get_link_desc_size = hal_get_link_desc_size_kiwi;
 	hal_soc->ops->hal_rx_mpdu_start_tid_get = hal_rx_tlv_tid_get_be;

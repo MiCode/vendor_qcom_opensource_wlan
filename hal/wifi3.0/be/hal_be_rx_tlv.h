@@ -64,6 +64,7 @@ struct rx_pkt_tlvs {
 	struct rx_pkt_hdr_tlv	pkt_hdr_tlv;		/* 128 bytes */
 #endif
 };
+
 #else
 struct rx_mpdu_start_tlv {
 	hal_rx_mpdu_start_t rx_mpdu_start;
@@ -83,9 +84,26 @@ struct rx_pkt_tlvs {
 };
 #endif
 
+/**
+ * struct rx_mon_pkt_tlvs - RX packet data structure for DEST ring in the
+ *			    monitor mode.
+ * @msdu_end_tlv: MSDU end TLV
+ * @rx_padding0: Padding bytes
+ * @mpdu_start_tlv: MPDU start TLV
+ * @pkt_hdr_tlv: 802.11 packet header TLV
+ */
+struct rx_mon_pkt_tlvs {
+	struct rx_msdu_end_tlv msdu_end_tlv;		/* 128B + sizeof(tag) */
+	uint8_t rx_padding0[RX_BE_PADDING0_BYTES];	/* 8B */
+	struct rx_mpdu_start_tlv mpdu_start_tlv;	/* 120B + sizeof(tag) */
+	struct rx_pkt_hdr_tlv pkt_hdr_tlv;		/* 120B + sizeof(tag) */
+};
+
 #define SIZE_OF_DATA_RX_TLV sizeof(struct rx_pkt_tlvs)
+#define SIZE_OF_MON_DATA_RX_TLV sizeof(struct rx_mon_pkt_tlvs)
 
 #define RX_PKT_TLVS_LEN		SIZE_OF_DATA_RX_TLV
+#define MON_RX_PKT_TLVS_LEN	SIZE_OF_MON_DATA_RX_TLV
 
 #define RX_PKT_TLV_OFFSET(field) qdf_offsetof(struct rx_pkt_tlvs, field)
 

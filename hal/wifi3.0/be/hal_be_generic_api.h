@@ -215,7 +215,7 @@ static void hal_rx_get_tlv_size_generic_be(uint16_t *rx_pkt_tlv_size,
 {
 	*rx_pkt_tlv_size = RX_PKT_TLVS_LEN;
 	/* For now mon pkt tlv is same as rx pkt tlv */
-	*rx_mon_pkt_tlv_size = RX_PKT_TLVS_LEN;
+	*rx_mon_pkt_tlv_size = MON_RX_PKT_TLVS_LEN;
 }
 
 /**
