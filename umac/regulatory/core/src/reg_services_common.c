@@ -286,14 +286,14 @@ static const uint16_t chan_320mhz_puncture_bitmap[] = {
 	0xf0,
 	0xf00,
 	0xf000,
-	/* 80+40Mhz puncturing pattern: Right 80MHz punctured */
+	/* 80+40Mhz puncturing pattern: Left 80MHz punctured */
 	0x3f,
 	0xcf,
 	0x30f,
 	0xc0f,
 	0x300f,
 	0xc00f,
-	/* 80+40Mhz puncturing pattern: Left 80MHz punctured */
+	/* 80+40Mhz puncturing pattern: Right 80MHz punctured */
 	0xf003,
 	0xf00c,
 	0xf030,
@@ -4389,6 +4389,49 @@ bool reg_is_punc_bitmap_valid(enum phy_ch_width bw, uint16_t puncture_bitmap)
 
 	return is_punc_bitmap_valid;
 }
+
+#ifdef QCA_DFS_BW_PUNCTURE
+uint16_t reg_find_nearest_puncture_pattern(enum phy_ch_width bw,
+					   uint16_t proposed_bitmap)
+{
+	int i, num_bws;
+	const uint16_t *bonded_puncture_bitmap = NULL;
+	uint16_t array_size;
+	uint16_t final_bitmap;
+
+	/* An input pattern = 0 will match any pattern
+	 * Therefore, ignore '0' pattern and return '0', as '0' matches '0'.
+	 */
+	if (!proposed_bitmap)
+		return 0;
+
+	array_size = 0;
+	final_bitmap = 0;
+
+	num_bws = QDF_ARRAY_SIZE(bw_puncture_bitmap_pair_map);
+	for (i = 0; i < num_bws; i++) {
+		if (bw == bw_puncture_bitmap_pair_map[i].chwidth) {
+			bonded_puncture_bitmap =
+			    bw_puncture_bitmap_pair_map[i].puncture_bitmap_arr;
+			array_size = bw_puncture_bitmap_pair_map[i].array_size;
+			break;
+		}
+	}
+
+	if (array_size && bonded_puncture_bitmap) {
+		for (i = 0; i < array_size; i++) {
+			uint16_t valid_bitmap = bonded_puncture_bitmap[i];
+
+			if ((proposed_bitmap | valid_bitmap) == valid_bitmap) {
+				final_bitmap = valid_bitmap;
+				break;
+			}
+		}
+	}
+
+	return final_bitmap;
+}
+#endif /* QCA_DFS_BW_PUNCTURE */
 
 /**
  * reg_update_5g_bonded_channel_state_punc_for_freq() - update channel state

@@ -1559,6 +1559,25 @@ void wlan_reg_fill_channel_list(struct wlan_objmgr_pdev *pdev,
 bool wlan_reg_is_punc_bitmap_valid(enum phy_ch_width bw,
 				   uint16_t puncture_bitmap);
 
+#ifdef QCA_DFS_BW_PUNCTURE
+/**
+ * wlan_reg_find_nearest_puncture_pattern() - is proposed bitmap valid or not
+ * @bw: Input channel width.
+ * @proposed_bitmap: Input puncture bitmap.
+ *
+ * Return: Radar bitmap if it is valid.
+ */
+uint16_t wlan_reg_find_nearest_puncture_pattern(enum phy_ch_width bw,
+						uint16_t proposed_bitmap);
+#else
+static inline
+uint16_t wlan_reg_find_nearest_puncture_pattern(enum phy_ch_width bw,
+						uint16_t proposed_bitmap)
+{
+	return 0;
+}
+#endif /* QCA_DFS_BW_PUNCTURE */
+
 /**
  * wlan_reg_extract_puncture_by_bw() - generate new puncture bitmap from
  *                                     original puncture bitmap and bandwidth

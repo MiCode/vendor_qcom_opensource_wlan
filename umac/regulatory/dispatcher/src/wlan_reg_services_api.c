@@ -1313,6 +1313,14 @@ bool wlan_reg_is_punc_bitmap_valid(enum phy_ch_width bw,
 	return reg_is_punc_bitmap_valid(bw, puncture_bitmap);
 }
 
+#ifdef QCA_DFS_BW_PUNCTURE
+uint16_t wlan_reg_find_nearest_puncture_pattern(enum phy_ch_width bw,
+						uint16_t proposed_bitmap)
+{
+	return reg_find_nearest_puncture_pattern(bw, proposed_bitmap);
+}
+#endif /* QCA_DFS_BW_PUNCTURE */
+
 QDF_STATUS wlan_reg_extract_puncture_by_bw(enum phy_ch_width ori_bw,
 					   uint16_t ori_puncture_bitmap,
 					   qdf_freq_t freq,

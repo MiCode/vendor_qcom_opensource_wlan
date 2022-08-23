@@ -1010,6 +1010,51 @@ dfs_process_radar_ind(struct wlan_dfs *dfs,
 	return status;
 }
 
+#ifdef QCA_DFS_BW_PUNCTURE
+/**
+ * dfs_is_ignore_radar_for_punctured_chans: Store the radar bitmap and check
+ * if radar is found in already punctured channel and ignore the radar.
+ *
+ * dfs: Wlan_dfs structure
+ * dfs_radar_bitmap: Variable to store radar bitmap.
+ * freq_list: output array of sub-channel frequencies.
+ * num_channels: Number of sub-channels in target DFS channel.
+ *
+ * Return: If radar is found on punctured channel then return true.
+ * Else return false.
+ */
+static
+bool dfs_is_ignore_radar_for_punctured_chans(struct wlan_dfs *dfs,
+					     uint16_t *dfs_radar_bitmap,
+					     uint16_t *freq_list,
+					     uint8_t num_channels)
+{
+	uint16_t dfs_punc_pattern = dfs->dfs_curchan->dfs_ch_punc_pattern;
+
+	*dfs_radar_bitmap = dfs_generate_radar_bitmap(dfs,
+						      freq_list,
+						      num_channels);
+	*dfs_radar_bitmap |= dfs_punc_pattern;
+
+	if (*dfs_radar_bitmap == dfs_punc_pattern) {
+		dfs_err(dfs, WLAN_DEBUG_DFS,
+			"radar event received on invalid channel");
+		return true;
+	}
+
+	return false;
+}
+#else
+static
+bool dfs_is_ignore_radar_for_punctured_chans(struct wlan_dfs *dfs,
+					     uint16_t *dfs_radar_bitmap,
+					     uint16_t *freq_list,
+					     uint8_t num_channels)
+{
+	return false;
+}
+#endif /* QCA_DFS_BW_PUNCTURE */
+
 QDF_STATUS
 dfs_process_radar_ind_on_home_chan(struct wlan_dfs *dfs,
 				   struct radar_found_info *radar_found)
@@ -1022,6 +1067,7 @@ dfs_process_radar_ind_on_home_chan(struct wlan_dfs *dfs,
 	uint32_t freq_center;
 	uint32_t radarfound_freq;
 	struct dfs_channel *dfs_curchan;
+	uint16_t dfs_radar_bitmap = 0;
 
 	dfs_curchan = dfs->dfs_curchan;
 
@@ -1047,6 +1093,18 @@ dfs_process_radar_ind_on_home_chan(struct wlan_dfs *dfs,
 			  radarfound_freq, dfs_curchan->dfs_ch_ieee,
 			  dfs_curchan->dfs_ch_freq);
 
+	num_channels = dfs_find_radar_affected_channels(dfs,
+							radar_found,
+							freq_list,
+							freq_center);
+
+	if (dfs->dfs_use_puncture &&
+	    dfs_is_ignore_radar_for_punctured_chans(dfs,
+						    &dfs_radar_bitmap,
+						    freq_list,
+						    num_channels))
+		goto exit;
+
 	if (!dfs->dfs_use_nol) {
 		if (!dfs->dfs_is_offload_enabled) {
 			dfs_radar_disable(dfs);
@@ -1058,10 +1116,6 @@ dfs_process_radar_ind_on_home_chan(struct wlan_dfs *dfs,
 		status = QDF_STATUS_SUCCESS;
 		goto exit;
 	}
-	num_channels = dfs_find_radar_affected_channels(dfs,
-							radar_found,
-							freq_list,
-							freq_center);
 
 	dfs_reset_bangradar(dfs);
 
@@ -1150,7 +1204,8 @@ dfs_process_radar_ind_on_home_chan(struct wlan_dfs *dfs,
 			  dfs->dfs_curchan->dfs_ch_ieee,
 			  dfs->dfs_curchan->dfs_ch_freq,
 			  dfs->dfs_curchan->dfs_ch_mhz_freq_seg2,
-			  dfs->dfs_curchan->dfs_ch_flags);
+			  dfs->dfs_curchan->dfs_ch_flags,
+			  dfs_radar_bitmap);
 
 exit:
 	if (QDF_IS_STATUS_SUCCESS(status))
