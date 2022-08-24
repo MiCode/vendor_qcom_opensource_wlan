@@ -480,6 +480,8 @@ dp_rx_mon_process_ppdu_info(struct dp_pdev *pdev,
 	if (!ppdu_info)
 		return;
 
+	mon_pdev->ppdu_info.rx_status.chan_noise_floor = pdev->chan_noise_floor;
+
 	for (user = 0; user < ppdu_info->com_info.num_users; user++) {
 		uint16_t mpdu_count  = ppdu_info->mpdu_count[user];
 		uint16_t mpdu_idx;
