@@ -397,6 +397,8 @@ void mlo_link_teardown_complete(struct wlan_objmgr_pdev *pdev)
 {
 	struct mlo_mgr_context *mlo_ctx = wlan_objmgr_get_mlo_ctx();
 	uint8_t link_idx;
+	struct wlan_objmgr_psoc *soc;
+	uint8_t chip_idx;
 
 	if (!mlo_ctx)
 		return;
@@ -415,10 +417,20 @@ void mlo_link_teardown_complete(struct wlan_objmgr_pdev *pdev)
 	mlo_ctx->setup_info.pdev_list[link_idx] = NULL;
 	mlo_ctx->setup_info.state[link_idx] = MLO_LINK_TEARDOWN;
 
-	if (!mlo_ctx->setup_info.num_links) {
-		qdf_info("Teardown complete");
-		qdf_event_set(&mlo_ctx->setup_info.event);
+	/* Waiting for teardown on other links */
+	if (mlo_ctx->setup_info.num_links)
+		return;
+
+	qdf_info("Teardown complete");
+
+	for (chip_idx = 0; chip_idx < MAX_MLO_CHIPS; chip_idx++) {
+		soc = mlo_ctx->setup_info.soc_list[chip_idx];
+		if (soc)
+			cdp_soc_mlo_soc_teardown(wlan_psoc_get_dp_handle(soc),
+						 mlo_ctx->dp_handle);
 	}
+
+	qdf_event_set(&mlo_ctx->setup_info.event);
 }
 
 qdf_export_symbol(mlo_link_teardown_complete);
@@ -448,13 +460,22 @@ static void mlo_check_state(struct wlan_objmgr_psoc *psoc,
 static void mlo_force_teardown(void)
 {
 	struct mlo_mgr_context *mlo_ctx = wlan_objmgr_get_mlo_ctx();
+	struct wlan_objmgr_psoc *soc;
 	uint8_t link_idx = 0;
+	uint8_t chip_idx;
 
 	if (!mlo_ctx)
 		return;
 
 	for (link_idx = 0; link_idx < mlo_ctx->setup_info.tot_links; link_idx++)
 		mlo_ctx->setup_info.state[link_idx] = MLO_LINK_TEARDOWN;
+
+	for (chip_idx = 0; chip_idx < MAX_MLO_CHIPS; chip_idx++) {
+		soc = mlo_ctx->setup_info.soc_list[chip_idx];
+		if (soc)
+			cdp_soc_mlo_soc_teardown(wlan_psoc_get_dp_handle(soc),
+						 mlo_ctx->dp_handle);
+	}
 }
 
 QDF_STATUS mlo_check_all_pdev_state(struct wlan_objmgr_psoc *psoc,
