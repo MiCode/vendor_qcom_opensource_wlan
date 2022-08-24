@@ -877,6 +877,9 @@ struct hal_hw_txrx_ops {
 	uint32_t (*hal_tx_comp_get_buffer_source)(void *hal_desc);
 	uint32_t (*hal_tx_get_num_ppe_vp_tbl_entries)(
 					hal_soc_handle_t hal_soc_hdl);
+
+	void (*hal_reo_config_reo2ppe_dest_info)(hal_soc_handle_t hal_soc_hdl);
+
 	void (*hal_tx_set_ppe_cmn_cfg)(hal_soc_handle_t hal_soc_hdl,
 				       union hal_tx_cmn_config_ppe *cmn_cfg);
 	void (*hal_tx_set_ppe_vp_entry)(hal_soc_handle_t hal_soc_hdl,
@@ -1442,6 +1445,7 @@ struct hal_srng *hal_ring_handle_to_hal_srng(hal_ring_handle_t hal_ring)
  * REO2PPE destination indication
  */
 #define REO2PPE_DST_IND 11
+#define REO2PPE_RULE_FAIL_FB 0x2000
 
 /**
  * enum hal_pkt_type - Type of packet type reported by HW

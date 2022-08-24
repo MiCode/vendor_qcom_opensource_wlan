@@ -1413,6 +1413,25 @@ void hal_compute_reo_remap_ix2_ix3_9224(uint32_t *ring, uint32_t num_rings,
 	}
 }
 
+static
+void hal_compute_reo_remap_ix0_9224(struct hal_soc *soc)
+{
+	uint32_t remap0;
+
+	remap0 = HAL_REG_READ(soc, HWIO_REO_R0_DESTINATION_RING_CTRL_IX_0_ADDR
+			      (REO_REG_REG_BASE));
+
+	remap0 &= ~(HAL_REO_REMAP_IX0(0xF, 6));
+	remap0 |= HAL_REO_REMAP_IX0(REO2PPE_DST_IND, 6);
+
+	HAL_REG_WRITE(soc, HWIO_REO_R0_DESTINATION_RING_CTRL_IX_0_ADDR
+		      (REO_REG_REG_BASE), remap0);
+
+	hal_debug("HWIO_REO_R0_DESTINATION_RING_CTRL_IX_0_ADDR 0x%x",
+		  HAL_REG_READ(soc, HWIO_REO_R0_DESTINATION_RING_CTRL_IX_0_ADDR
+		  (REO_REG_REG_BASE)));
+}
+
 /**
  * hal_rx_flow_setup_fse_9224() - Setup a flow search entry in HW FST
  * @fst: Pointer to the Rx Flow Search Table
@@ -1700,6 +1719,8 @@ static void hal_reo_setup_9224(struct hal_soc *soc, void *reoparams,
 	 * 7: NOT_USED.
 	 */
 	if (reo_params->rx_hash_enabled) {
+		hal_compute_reo_remap_ix0_9224(soc);
+
 		HAL_REG_WRITE(soc,
 			      HWIO_REO_R0_DESTINATION_RING_CTRL_IX_1_ADDR
 			      (REO_REG_REG_BASE), reo_params->remap0);
@@ -2032,6 +2053,7 @@ static void hal_hw_txrx_ops_attach_qcn9224(struct hal_soc *hal_soc)
 			hal_rx_priv_info_get_from_tlv_be;
 	hal_soc->ops->hal_rx_pkt_hdr_get = hal_rx_pkt_hdr_get_be;
 	hal_soc->ops->hal_reo_setup = hal_reo_setup_9224;
+	hal_soc->ops->hal_reo_config_reo2ppe_dest_info = NULL;
 #ifdef REO_SHARED_QREF_TABLE_EN
 	hal_soc->ops->hal_reo_shared_qaddr_setup = hal_reo_shared_qaddr_setup_be;
 	hal_soc->ops->hal_reo_shared_qaddr_init = hal_reo_shared_qaddr_init_be;

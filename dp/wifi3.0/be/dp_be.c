@@ -1189,6 +1189,7 @@ static QDF_STATUS dp_soc_ppe_srng_init(struct dp_soc *soc)
 {
 	struct dp_soc_be *be_soc = dp_get_be_soc_from_dp_soc(soc);
 	struct wlan_cfg_dp_soc_ctxt *soc_cfg_ctx;
+	hal_soc_handle_t hal_soc = soc->hal_soc;
 
 	soc_cfg_ctx = soc->wlan_cfg_ctx;
 
@@ -1205,6 +1206,8 @@ static QDF_STATUS dp_soc_ppe_srng_init(struct dp_soc *soc)
 			  soc->ctrl_psoc,
 			  WLAN_MD_DP_SRNG_REO2PPE,
 			  "reo2ppe_ring");
+
+	hal_reo_config_reo2ppe_dest_info(hal_soc);
 
 	if (dp_srng_init(soc, &be_soc->ppe2tcl_ring, PPE2TCL, 0, 0)) {
 		dp_err("%pK: dp_srng_init failed for ppe2tcl_ring", soc);

@@ -804,6 +804,21 @@ hal_tx_mcast_mlo_reinject_routing_set(
 #endif
 
 /*
+ * hal_reo_config_reo2ppe_dest_info() - Configure reo2ppe dest info
+ * @hal_soc_hdl: HAL SoC Context
+ *
+ * Return: None.
+ */
+static inline
+void hal_reo_config_reo2ppe_dest_info(hal_soc_handle_t hal_soc_hdl)
+{
+	struct hal_soc *hal_soc = (struct hal_soc *)hal_soc_hdl;
+
+	if (hal_soc->ops->hal_reo_config_reo2ppe_dest_info)
+		hal_soc->ops->hal_reo_config_reo2ppe_dest_info(hal_soc_hdl);
+}
+
+/*
  * hal_tx_get_num_ppe_vp_tbl_entries() - Get the total number of VP table
  * @hal_soc: HAL SoC Context
  *
