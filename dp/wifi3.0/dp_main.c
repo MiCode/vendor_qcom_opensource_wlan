@@ -4585,11 +4585,9 @@ bool dp_reo_remap_config(struct dp_soc *soc,
 {
 	uint8_t offload_radio = wlan_cfg_get_dp_soc_nss_cfg(soc->wlan_cfg_ctx);
 	uint32_t reo_config = wlan_cfg_get_reo_rings_mapping(soc->wlan_cfg_ctx);
-	uint8_t target_type, num;
+	uint8_t num;
 	uint32_t ring[WLAN_CFG_NUM_REO_DEST_RING_MAX];
 	uint32_t value;
-
-	target_type = hal_get_target_type(soc->hal_soc);
 
 	switch (offload_radio) {
 	case dp_nss_cfg_default:
@@ -13105,10 +13103,9 @@ static void dp_set_umac_regs(struct dp_soc *soc)
 	qdf_mem_zero(&reo_params, sizeof(reo_params));
 
 	if (wlan_cfg_is_rx_hash_enabled(soc->wlan_cfg_ctx)) {
-		if (dp_reo_remap_config(soc, &reo_params.remap0,
-					&reo_params.remap1,
-					&reo_params.remap2))
-
+		if (soc->arch_ops.reo_remap_config(soc, &reo_params.remap0,
+						   &reo_params.remap1,
+						   &reo_params.remap2))
 			reo_params.rx_hash_enabled = true;
 		else
 			reo_params.rx_hash_enabled = false;
