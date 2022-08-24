@@ -447,8 +447,13 @@ osif_fill_peer_mld_mac_connect_resp(struct wlan_objmgr_vdev *vdev,
 				    struct cfg80211_connect_resp_params *conn_rsp_params)
 {
 	struct wlan_objmgr_peer *peer_obj;
+	struct wlan_objmgr_psoc *psoc;
 
-	peer_obj = wlan_objmgr_get_peer_by_mac(wlan_vdev_get_psoc(vdev),
+	psoc = wlan_vdev_get_psoc(vdev);
+	if (!psoc)
+		return QDF_STATUS_E_INVAL;
+
+	peer_obj = wlan_objmgr_get_peer_by_mac(psoc,
 					       rsp->bssid.bytes, WLAN_OSIF_ID);
 	if (!peer_obj)
 		return QDF_STATUS_E_INVAL;
