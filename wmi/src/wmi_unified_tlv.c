@@ -5401,7 +5401,7 @@ static QDF_STATUS send_setup_install_key_cmd_tlv(wmi_unified_t wmi_handle,
 	WMI_HOST_IF_MSG_COPY_CHAR_ARRAY((void *)key_data,
 					(const void *)key_params->key_data,
 					key_params->key_len);
-	qdf_mem_copy(&cmd->key_rsc_counter, &key_params->key_rsc_ctr,
+	qdf_mem_copy(&cmd->key_rsc_counter, &key_params->key_rsc_counter,
 		     sizeof(wmi_key_seq_counter));
 	cmd->key_len = key_params->key_len;
 
