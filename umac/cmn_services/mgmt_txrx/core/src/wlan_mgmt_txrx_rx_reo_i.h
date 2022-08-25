@@ -93,6 +93,8 @@
  * @host_target_shared_snapshot_info: Array of meta information related to
  * snapshots(for snapshots shared between host and target)
  * @filter: MGMT Rx REO filter
+ * @init_complete: Flag to indicate initialization completion of the
+ * mgmt_rx_reo_pdev_info object
  */
 struct mgmt_rx_reo_pdev_info {
 	struct mgmt_rx_reo_snapshot_params host_snapshot;
@@ -105,6 +107,7 @@ struct mgmt_rx_reo_pdev_info {
 			[MGMT_RX_REO_SHARED_SNAPSHOT_MAX]
 			[MGMT_RX_REO_SNAPSHOT_READ_RETRY_LIMIT]
 			[MGMT_RX_REO_SNAPSHOT_B2B_READ_SWAR_RETRY_LIMIT];
+	bool init_complete;
 };
 
 /**

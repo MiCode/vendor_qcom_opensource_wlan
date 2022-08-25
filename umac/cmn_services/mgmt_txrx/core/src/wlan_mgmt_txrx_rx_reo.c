@@ -1022,12 +1022,27 @@ wlan_mgmt_rx_reo_algo_calculate_wait_count(
 		pdev = wlan_get_pdev_from_mlo_link_id(link,
 						      WLAN_MGMT_RX_REO_ID);
 
+		/* No need to wait for any frames if the pdev is not found */
+		if (!pdev) {
+			mgmt_rx_reo_debug("pdev is null for link %d", link);
+			frames_pending = 0;
+			goto update_pending_frames;
+		}
+
 		rx_reo_pdev_ctx = wlan_mgmt_rx_reo_get_priv_object(pdev);
 		if (!rx_reo_pdev_ctx) {
 			mgmt_rx_reo_err("Mgmt reo context empty for pdev %pK",
 					pdev);
 			wlan_objmgr_pdev_release_ref(pdev, WLAN_MGMT_RX_REO_ID);
 			return QDF_STATUS_E_FAILURE;
+		}
+
+		if (!rx_reo_pdev_ctx->init_complete) {
+			mgmt_rx_reo_debug("REO init in progress for link %d",
+					  link);
+			wlan_objmgr_pdev_release_ref(pdev, WLAN_MGMT_RX_REO_ID);
+			frames_pending = 0;
+			goto update_pending_frames;
 		}
 
 		host_ss = &rx_reo_pdev_ctx->host_snapshot;
@@ -5131,6 +5146,52 @@ mgmt_rx_reo_initialize_snapshot_value(struct wlan_objmgr_pdev *pdev)
 }
 
 /**
+ * mgmt_rx_reo_set_initialization_complete() - Set initialization completion
+ * for management Rx REO pdev component private object
+ * @pdev: pointer to pdev object
+ *
+ * Return: QDF_STATUS
+ */
+static QDF_STATUS
+mgmt_rx_reo_set_initialization_complete(struct wlan_objmgr_pdev *pdev)
+{
+	struct mgmt_rx_reo_pdev_info *mgmt_rx_reo_pdev_ctx;
+
+	mgmt_rx_reo_pdev_ctx = wlan_mgmt_rx_reo_get_priv_object(pdev);
+	if (!mgmt_rx_reo_pdev_ctx) {
+		mgmt_rx_reo_err("Mgmt Rx REO priv object is null");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	mgmt_rx_reo_pdev_ctx->init_complete = true;
+
+	return QDF_STATUS_SUCCESS;
+}
+
+/**
+ * mgmt_rx_reo_clear_initialization_complete() - Clear initialization completion
+ * for management Rx REO pdev component private object
+ * @pdev: pointer to pdev object
+ *
+ * Return: QDF_STATUS
+ */
+static QDF_STATUS
+mgmt_rx_reo_clear_initialization_complete(struct wlan_objmgr_pdev *pdev)
+{
+	struct mgmt_rx_reo_pdev_info *mgmt_rx_reo_pdev_ctx;
+
+	mgmt_rx_reo_pdev_ctx = wlan_mgmt_rx_reo_get_priv_object(pdev);
+	if (!mgmt_rx_reo_pdev_ctx) {
+		mgmt_rx_reo_err("Mgmt Rx REO priv object is null");
+		return QDF_STATUS_E_NULL_VALUE;
+	}
+
+	mgmt_rx_reo_pdev_ctx->init_complete = false;
+
+	return QDF_STATUS_SUCCESS;
+}
+
+/**
  * mgmt_rx_reo_initialize_snapshots() - Initialize management Rx reorder
  * snapshot related data structures for a given pdev
  * @pdev: pointer to pdev object
@@ -5192,6 +5253,12 @@ mgmt_rx_reo_attach(struct wlan_objmgr_pdev *pdev)
 		return status;
 	}
 
+	status = mgmt_rx_reo_set_initialization_complete(pdev);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		mgmt_rx_reo_err("Failed to set initialization complete");
+		return status;
+	}
+
 	return QDF_STATUS_SUCCESS;
 }
 
@@ -5202,6 +5269,12 @@ mgmt_rx_reo_detach(struct wlan_objmgr_pdev *pdev)
 
 	if (!wlan_mgmt_rx_reo_is_feature_enabled_at_pdev(pdev))
 		return QDF_STATUS_SUCCESS;
+
+	status = mgmt_rx_reo_clear_initialization_complete(pdev);
+	if (QDF_IS_STATUS_ERROR(status)) {
+		mgmt_rx_reo_err("Failed to clear initialization complete");
+		return status;
+	}
 
 	status = mgmt_rx_reo_clear_snapshots(pdev);
 	if (QDF_IS_STATUS_ERROR(status)) {
