@@ -176,6 +176,7 @@ static uint16_t _wlan_mlo_peer_alloc_aid(
 {
 	uint16_t assoc_id = (uint16_t)-1;
 	uint16_t start_aid, aid_end1, aid_end2, tot_aid;
+	uint16_t pool_1_max_aid;
 
 	start_aid = ml_aid_mgr->start_aid;
 	if (start_aid > ml_aid_mgr->max_aid) {
@@ -185,11 +186,13 @@ static uint16_t _wlan_mlo_peer_alloc_aid(
 	}
 
 	tot_aid = ml_aid_mgr->max_aid - start_aid;
-	aid_end1 = tot_aid / AID_NUM_BUCKET;
-	aid_end2 = aid_end1 + aid_end1;
+	pool_1_max_aid = tot_aid / AID_NUM_BUCKET;
+	aid_end1 = pool_1_max_aid + start_aid;
+	aid_end2 = pool_1_max_aid + pool_1_max_aid + start_aid;
 
-	mlo_debug("Start = %d E1 = %d E2 = %d max = %d", start_aid, aid_end1,
-		  aid_end2, ml_aid_mgr->max_aid);
+	mlo_debug("max_aid = %d start_aid = %d tot_aid = %d pool_1_max_aid = %d aid_end1 = %d aid_end2 = %d",
+		  ml_aid_mgr->max_aid, start_aid, tot_aid, pool_1_max_aid,
+		  aid_end1, aid_end2);
 	if ((start_aid > aid_end1) || (aid_end1 > aid_end2)) {
 		assoc_id = wlan_mlo_alloc_aid(ml_aid_mgr, start_aid,
 					      ml_aid_mgr->max_aid, link_ix,
