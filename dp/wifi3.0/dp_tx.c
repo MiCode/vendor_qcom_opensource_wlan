@@ -3875,11 +3875,11 @@ void dp_tx_reinject_handler(struct dp_soc *soc,
 			}
 		}
 		qdf_spin_unlock_bh(&vdev->peer_list_lock);
-	}
 
-	qdf_nbuf_unmap_nbytes_single(vdev->osdev, nbuf, QDF_DMA_TO_DEVICE,
-				     nbuf->len);
-	qdf_nbuf_free(nbuf);
+		qdf_nbuf_unmap_nbytes_single(vdev->osdev, nbuf,
+					     QDF_DMA_TO_DEVICE, nbuf->len);
+		qdf_nbuf_free(nbuf);
+	}
 
 	dp_tx_desc_release(tx_desc, tx_desc->pool_id);
 }
