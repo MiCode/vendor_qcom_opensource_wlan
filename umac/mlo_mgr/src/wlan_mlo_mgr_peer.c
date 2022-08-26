@@ -788,6 +788,7 @@ QDF_STATUS wlan_mlo_peer_create(struct wlan_objmgr_vdev *vdev,
 	QDF_STATUS status;
 	uint16_t i;
 	struct wlan_objmgr_peer *assoc_peer;
+	bool is_ml_peer_attached = false;
 
 	/* get ML VDEV from VDEV */
 	ml_dev = vdev->mlo_dev_ctx;
@@ -851,10 +852,12 @@ QDF_STATUS wlan_mlo_peer_create(struct wlan_objmgr_vdev *vdev,
 		}
 	}
 
-	if (wlan_vdev_mlme_get_opmode(vdev) == QDF_STA_MODE)
+	if (wlan_vdev_mlme_get_opmode(vdev) == QDF_STA_MODE) {
 		ml_peer = wlan_mlo_get_mlpeer(ml_dev,
 				 (struct qdf_mac_addr *)&link_peer->mldaddr[0]);
-
+		if (ml_peer)
+			is_ml_peer_attached = true;
+	}
 	if (!ml_peer) {
 		/* Allocate MLO peer */
 		ml_peer = qdf_mem_malloc(sizeof(*ml_peer));
@@ -931,7 +934,7 @@ QDF_STATUS wlan_mlo_peer_create(struct wlan_objmgr_vdev *vdev,
 
 	if ((wlan_vdev_mlme_get_opmode(vdev) == QDF_SAP_MODE) ||
 		((wlan_vdev_mlme_get_opmode(vdev) == QDF_STA_MODE) &&
-			!wlan_vdev_mlme_is_mlo_link_vdev(vdev))) {
+			!is_ml_peer_attached)) {
 		/* Attach MLO peer to ML Peer table */
 		status = mlo_dev_mlpeer_attach(ml_dev, ml_peer);
 		if (status != QDF_STATUS_SUCCESS) {
