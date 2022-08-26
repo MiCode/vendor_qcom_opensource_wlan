@@ -11543,6 +11543,7 @@ static QDF_STATUS dp_txrx_dump_stats(struct cdp_soc_t *psoc, uint16_t value,
 		dp_pdev_print_tx_delay_stats(soc);
 		/* Dump usage watermark stats for core TX/RX SRNGs */
 		dp_dump_srng_high_wm_stats(soc, (1 << REO_DST));
+		dp_print_fisa_stats(soc);
 		break;
 
 	case CDP_RX_RING_STATS:
