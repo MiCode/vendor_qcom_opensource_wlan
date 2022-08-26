@@ -3831,8 +3831,14 @@ dp_process_ppdu_stats_sch_cmd_status_tlv(struct dp_pdev *pdev,
 			 * This check is to make sure peer is not deleted
 			 * after processing the TLVs.
 			 */
-			if (!peer || !peer->monitor_peer)
+			if (!peer)
 				continue;
+
+			if (!peer->monitor_peer) {
+				dp_peer_unref_delete(peer,
+						     DP_MOD_ID_TX_PPDU_STATS);
+				continue;
+			}
 
 			mon_peer = peer->monitor_peer;
 			delay_ppdu = &mon_peer->delayed_ba_ppdu_stats;
@@ -3888,8 +3894,14 @@ dp_process_ppdu_stats_sch_cmd_status_tlv(struct dp_pdev *pdev,
 			 * This check is to make sure peer is not deleted
 			 * after processing the TLVs.
 			 */
-			if (!peer || !peer->monitor_peer)
+			if (!peer)
 				continue;
+
+			if (!peer->monitor_peer) {
+				dp_peer_unref_delete(peer,
+						     DP_MOD_ID_TX_PPDU_STATS);
+				continue;
+			}
 
 			mon_peer = peer->monitor_peer;
 			if (ppdu_desc->user[i].completion_status !=
