@@ -3299,6 +3299,19 @@ dp_soc_near_full_interrupt_attach(struct dp_soc *soc, int num_irq,
 }
 #endif
 
+#ifdef DP_CON_MON_MSI_SKIP_SET
+static inline bool dp_skip_rx_mon_ring_mask_set(struct dp_soc *soc)
+{
+	return !!(soc->cdp_soc.ol_ops->get_con_mode() !=
+			QDF_GLOBAL_MONITOR_MODE);
+}
+#else
+static inline bool dp_skip_rx_mon_ring_mask_set(struct dp_soc *soc)
+{
+	return false;
+}
+#endif
+
 /*
  * dp_soc_interrupt_detach() - Deregister any allocations done for interrupts
  * @txrx_soc: DP SOC handle
@@ -3407,6 +3420,9 @@ static QDF_STATUS dp_soc_interrupt_attach(struct cdp_soc_t *txrx_soc)
 			wlan_cfg_get_host2txmon_ring_mask(soc->wlan_cfg_ctx, i);
 		int umac_reset_intr_mask =
 			wlan_cfg_get_umac_reset_intr_mask(soc->wlan_cfg_ctx, i);
+
+		if (dp_skip_rx_mon_ring_mask_set(soc))
+			rx_mon_mask = 0;
 
 		soc->intr_ctx[i].dp_intr_id = i;
 		soc->intr_ctx[i].tx_ring_mask = tx_mask;
