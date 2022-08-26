@@ -6010,10 +6010,6 @@ update_bw:
 static void reg_copy_ch_params(struct ch_params *ch_params,
 			       struct reg_channel_list chan_list)
 {
-	/* Taking only first set of chan params*/
-	if (chan_list.chan_param[0].ch_width != CH_WIDTH_320MHZ)
-		reg_info("coud not find ch_params for 320MHz downgrading to %d",
-			 chan_list.chan_param[0].ch_width);
 	ch_params->center_freq_seg0 = chan_list.chan_param[0].center_freq_seg0;
 	ch_params->center_freq_seg1 = chan_list.chan_param[0].center_freq_seg1;
 	ch_params->mhz_freq_seg0 = chan_list.chan_param[0].mhz_freq_seg0;
