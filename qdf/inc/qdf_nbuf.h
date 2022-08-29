@@ -251,7 +251,6 @@ typedef __qdf_nbuf_queue_t qdf_nbuf_queue_t;
  * htt_rx_desc used later to update radiotap information.
  * @tsft: Time Synchronization Function timer
  * @ppdu_timestamp: Timestamp in the PPDU_START TLV
- * @preamble_type: Preamble type in radio header
  * @chan_freq: Capture channel frequency
  * @chan_num: Capture channel number
  * @chan_flags: Bitmap of Channel flags, IEEE80211_CHAN_TURBO,
@@ -264,8 +263,35 @@ typedef __qdf_nbuf_queue_t qdf_nbuf_queue_t;
  * @he_mu_other_flags: HE-MU-OTHER (11ax) flags, only present in HE frames
  * @usig_flags: USIG flags, only present in 802.11BE and subsequent protocol
  * @eht_flags: EHT (11be) flags, only present in EHT frames
- * @he_sig_A1_known: HE (11ax) sig A1 known field
- * @he_sig_A2_known: HE (11ax) sig A2 known field
+ * @nr_ant: Number of Antennas used for streaming
+ * @mcs: MCS index of Rx frame
+ * @nss: Number of spatial streams
+ * @bw: bandwidth of rx frame
+ * @is_stbc: Is STBC enabled
+ * @sgi: Rx frame short guard interval
+ * @he_re: HE range extension
+ * @ldpc: ldpc enabled
+ * @beamformed: Is frame beamformed.
+ * @dcm: dcm
+ * @preamble_type: Preamble type in radio header
+ * @tid: QoS traffic tid number
+ * @rs_fcs_err: FCS error flag
+ * @cck_flag: Flag to indicate CCK modulation
+ * @ofdm_flag: Flag to indicate OFDM modulation
+ * @ulofdma_flag: Flag to indicate UL OFDMA PPDU
+ * @monitor_direct_used: monitor direct mode
+ * @data_sequence_control_info_valid: field to indicate validity of seq control
+ * @rxpcu_filter_pass: Flag which indicates whether RX packets are received in
+ *						BSS mode(not in promisc mode)
+ * @add_rtap_ext: add radio tap extension
+ * @frame_control_info_valid: field indicates if fc value is valid
+ * @add_rtap_ext2: add radiotap extension2
+ * @reception_type: PPDU reception type
+ * @ltf_size: ltf size
+ * @tx_status: packet tx status
+ * @rx_antenna: rx antenna
+ * @vht_flag_values6: VHT flag value6
+ * @he_mu_other_flags: HE MU other flag
  * @he_sig_b_common: HE (11ax) sig B common field
  * @he_sig_b_common_known: HE (11ax) sig B common known field
  * @l_sig_a_info: L_SIG_A value coming in Rx descriptor
@@ -274,29 +300,22 @@ typedef __qdf_nbuf_queue_t qdf_nbuf_queue_t;
  * @rate: Rate in terms 500Kbps
  * @rtap_flags: Bit map of available fields in the radiotap
  * @ant_signal_db: Rx packet RSSI
- * @nr_ant: Number of Antennas used for streaming
- * @mcs: MCS index of Rx frame
  * @ht_mcs: MCS index for HT RX frames
- * @nss: Number of spatial streams
- * @bw: bandwidth of rx frame
- * @is_stbc: Is STBC enabled
- * @sgi: Rx frame short guard interval
- * @he_re: HE range extension
- * @ldpc: ldpc enabled
- * @beamformed: Is frame beamformed.
+ * @tcp_msdu_count: TCP MSDU Count
+ * @udp_msdu_count: UDP MSDU Count
+ * @other_msdu_count: Other MSDU Count
+ * @vht_flag_values1: VHT flag value 1
+ * @vht_flag_values2: VHT flag value 2
+ * @vht_flag_values3: VHT flag value 3
+ * @vht_flag_values4: VHT flag value 4
+ * @vht_flag_values5: VHT flag value 5
  * @he_sig_b_common_RU[4]: HE (11ax) common RU assignment index
  * @rssi_comb: Combined RSSI
  * @rssi[MAX_CHAIN]: 8 bits RSSI per 20Mhz per chain
  * @duration: 802.11 Duration
- * @frame_control_info_valid: field indicates if fc value is valid
  * @frame_control: frame control field
  * @ast_index: AST table hash index
- * @tid: QoS traffic tid number
- * @rs_fcs_err: FCS error flag
  * @rs_flags: Flags to indicate AMPDU or AMSDU aggregation
- * @cck_flag: Flag to indicate CCK modulation
- * @ofdm_flag: Flag to indicate OFDM modulation
- * @ulofdma_flag: Flag to indicate UL OFDMA PPDU
  * @he_per_user_1: HE per user info1
  * @he_per_user_2: HE per user info2
  * @he_per_user_position: HE per user position info
@@ -317,17 +336,11 @@ typedef __qdf_nbuf_queue_t qdf_nbuf_queue_t;
  * function.
  * @device_id: Device ID coming from sub-system (PCI, AHB etc..)
  * @chan_noise_floor: Channel Noise Floor for the pdev
- * @data_sequence_control_info_valid: field to indicate validity of seq control
  * @first_data_seq_ctrl: Sequence ctrl field of first data frame
- * @rxpcu_filter_pass: Flag which indicates whether RX packets are received in
- *						BSS mode(not in promisc mode)
  * @rssi_chain: Rssi chain per nss per bw
- * @tx_status: packet tx status
  * @tx_retry_cnt: tx retry count
- * @add_rtap_ext: add radio tap extension
  * @start_seq: starting sequence number
  * @ba_bitmap: 256 bit block ack bitmap
- * @add_rtap_ext2: add radiotap extension2
  * @mpdu_retry_cnt: Rx mpdu retry count
  * @punctured_pattern: punctured pattern (0 means the band is punctured)
  * @rx_user_status: pointer to mon_rx_user_status, when set update
@@ -353,7 +366,6 @@ typedef __qdf_nbuf_queue_t qdf_nbuf_queue_t;
  * @aggregation: Indicate A-MPDU format
  * @ht_stbc: Indicate stbc
  * @ht_crc: ht crc
- * @dcm: dcm
  * @xlna_bypass_offset: Low noise amplifier bypass offset
  * @xlna_bypass_threshold: Low noise amplifier bypass threshold
  * @rssi_temp_offset: Temperature based rssi offset
@@ -364,20 +376,43 @@ typedef __qdf_nbuf_queue_t qdf_nbuf_queue_t;
 struct mon_rx_status {
 	uint64_t tsft;
 	uint32_t ppdu_timestamp;
-	uint32_t preamble_type;
 	qdf_freq_t chan_freq;
 	uint16_t chan_num;
 	uint16_t chan_flags;
-	uint16_t ht_flags;
-	uint16_t vht_flags;
+	uint16_t ht_flags : 1,
+		 vht_flags : 1,
+		 he_flags : 1,
+		 he_mu_flags : 1,
+		 usig_flags : 1,
+		 eht_flags : 1,
+		 nr_ant : 3,
+		 mcs : 4,
+		 nss : 3,
+		 bw : 4,
+		 is_stbc : 1,
+		 sgi : 1,
+		 he_re : 1,
+		 ldpc : 1,
+		 beamformed : 1,
+		 dcm : 1,
+		 preamble_type : 4;
+	uint32_t tid : 5,
+		 rs_fcs_err : 1,
+		 cck_flag : 1,
+		 ofdm_flag : 1,
+		 ulofdma_flag : 1,
+		 monitor_direct_used : 1,
+		 data_sequence_control_info_valid : 1,
+		 rxpcu_filter_pass : 1,
+		 add_rtap_ext : 1,
+		 frame_control_info_valid : 1,
+		 add_rtap_ext2 : 1,
+		 reception_type : 4,
+		 ltf_size : 2,
+		 tx_status : 4;
+	uint32_t rx_antenna : 24;
 	uint16_t vht_flag_values6;
-	uint16_t he_flags;
-	uint16_t he_mu_flags;
 	uint16_t he_mu_other_flags;
-	uint16_t usig_flags;
-	uint16_t eht_flags;
-	uint16_t he_sig_A1_known;
-	uint16_t he_sig_A2_known;
 	uint16_t he_sig_b_common;
 	uint16_t he_sig_b_common_known;
 	uint32_t l_sig_a_info;
@@ -386,38 +421,22 @@ struct mon_rx_status {
 	uint8_t  rate;
 	uint8_t  rtap_flags;
 	uint8_t  ant_signal_db;
-	uint8_t  nr_ant;
-	uint8_t  mcs;
 	uint8_t  ht_mcs;
-	uint8_t  nss;
 	uint16_t  tcp_msdu_count;
 	uint16_t  udp_msdu_count;
 	uint16_t  other_msdu_count;
-	uint8_t  bw;
 	uint8_t  vht_flag_values1;
 	uint8_t  vht_flag_values2;
 	uint8_t  vht_flag_values3[4];
 	uint8_t  vht_flag_values4;
 	uint8_t  vht_flag_values5;
-	uint8_t  is_stbc;
-	uint8_t  sgi;
-	uint8_t  he_re;
-	uint8_t  ldpc;
-	uint8_t  beamformed;
 	uint8_t  he_sig_b_common_RU[4];
 	int8_t   rssi_comb;
-	uint64_t rssi[MAX_CHAIN];
-	uint8_t  reception_type;
+	int8_t rssi[MAX_CHAIN];
 	uint16_t duration;
-	uint8_t frame_control_info_valid;
 	uint16_t frame_control;
-	uint32_t ast_index;
-	uint32_t tid;
-	uint8_t  rs_fcs_err;
+	uint16_t ast_index;
 	uint8_t      rs_flags;
-	uint8_t cck_flag;
-	uint8_t ofdm_flag;
-	uint8_t ulofdma_flag;
 	/* New HE radiotap fields */
 	uint16_t he_per_user_1;
 	uint16_t he_per_user_2;
@@ -433,24 +452,16 @@ struct mon_rx_status {
 	uint16_t he_data5;
 	uint16_t he_data6;
 	uint32_t ppdu_len;
-	uint32_t prev_ppdu_id;
-	uint32_t ppdu_id;
-	uint32_t device_id;
+	uint16_t prev_ppdu_id;
+	uint16_t ppdu_id;
+	uint16_t device_id;
 	int16_t chan_noise_floor;
-	uint8_t monitor_direct_used;
-	uint8_t data_sequence_control_info_valid;
 	uint16_t first_data_seq_ctrl;
-	uint8_t ltf_size;
-	uint8_t rxpcu_filter_pass;
 	int8_t rssi_chain[8][8];
-	uint32_t rx_antenna;
-	uint8_t  tx_status;
 	uint8_t  tx_retry_cnt;
-	bool add_rtap_ext;
 	uint16_t start_seq;
 	uint32_t ba_bitmap[8];
-	bool add_rtap_ext2;
-	uint32_t mpdu_retry_cnt;
+	uint16_t mpdu_retry_cnt;
 #ifdef WLAN_FEATURE_11BE
 	uint16_t punctured_pattern;
 #endif
@@ -468,17 +479,16 @@ struct mon_rx_status {
 		 vht_no_txop_ps:1,
 		 he_crc:4;
 	uint32_t l_sig_length:12,
-		l_sig_a_parity:1,
-		l_sig_a_pkt_type:4,
-		l_sig_a_implicit_sounding:1;
+		 l_sig_a_parity:1,
+		 l_sig_a_pkt_type:4,
+		 l_sig_a_implicit_sounding:1;
 	uint32_t ht_length:16,
-		smoothing:1,
-		not_sounding:1,
-		aggregation:1,
-		ht_stbc:2,
-		ht_crc:8;
+		 smoothing:1,
+		 not_sounding:1,
+		 aggregation:1,
+		 ht_stbc:2,
+		 ht_crc:8;
 #endif
-	uint8_t  dcm;
 #ifdef QCA_RSSI_DB2DBM
 	int32_t xlna_bypass_offset;
 	int32_t xlna_bypass_threshold;
@@ -502,20 +512,22 @@ struct mon_rx_status {
  * @mu_ul_user_v0_word0: MU UL user info word 0
  * @mu_ul_user_v0_word1: MU UL user info word 1
  * @ast_index: AST table hash index
+ * @sw_peer_id: software peer id
  * @tid: QoS traffic tid number
+ * @preamble_type: Preamble type in radio header
+ * @ht_flags: HT flags, only present for HT frames.
+ * @vht_flags: VHT flags, only present for VHT frames.
+ * @he_flags: HE (11ax) flags, only present in HE frames
+ * @frame_control_info_valid: field indicates if fc value is valid
+ * @frame_control: frame control field
+ * @data_sequence_control_info_valid: field to indicate validity of seq control
+ * @filter_category: mpdu filter category
  * @tcp_msdu_count: tcp protocol msdu count
  * @udp_msdu_count: udp protocol msdu count
  * @other_msdu_count: other protocol msdu count
- * @frame_control: frame control field
- * @frame_control_info_valid: field indicates if fc value is valid
- * @data_sequence_control_info_valid: field to indicate validity of seq control
  * @first_data_seq_ctrl: Sequence ctrl field of first data frame
- * @preamble_type: Preamble type in radio header
  * @duration: 802.11 Duration
- * @ht_flags: HT flags, only present for HT frames.
- * @vht_flags: VHT flags, only present for VHT frames.
  * @vht_flag_values1-5: Contains corresponding data for flags field
- * @he_flags: HE (11ax) flags, only present in HE frames
  * @he_flags1: HE flags
  * @he_flags2: HE flags
  * @he_RU[4]: HE RU assignment index
@@ -536,13 +548,11 @@ struct mon_rx_status {
  * @mpdu_fcs_ok_bitmap: mpdu with fcs ok bitmap
  * @mpdu_ok_byte_count: mpdu byte count with fcs ok
  * @mpdu_err_byte_count: mpdu byte count with fcs err
- * @sw_peer_id: software peer id
  * @retry_mpdu: mpdu retry count
  * @start_seq: starting sequence number
  * @ba_control: Block ack control
  * @ba_bitmap: 256 bit block ack bitmap
- * @tid: QoS traffic tid number
- * @filter_category: mpdu filter category
+ * @aid: Association ID
  * @mpdu_q: user mpdu_queue used for monitor
  */
 struct mon_rx_user_status {
@@ -555,26 +565,28 @@ struct mon_rx_user_status {
 		 is_ampdu:1;
 	uint32_t mu_ul_user_v0_word0;
 	uint32_t mu_ul_user_v0_word1;
-	uint32_t ast_index;
-	uint32_t tid;
+	uint32_t ast_index : 16,
+		 sw_peer_id : 16;
+	uint32_t tid : 4,
+		 preamble_type : 4,
+		 ht_flags : 1,
+		 vht_flags : 1,
+		 he_flags : 1,
+		 frame_control_info_valid : 1,
+		 frame_control : 16,
+		 data_sequence_control_info_valid : 1,
+		 ba_bitmap_sz : 2,
+		 filter_category : 2;
 	uint16_t tcp_msdu_count;
 	uint16_t udp_msdu_count;
 	uint16_t other_msdu_count;
-	uint16_t frame_control;
-	uint8_t frame_control_info_valid;
-	uint8_t data_sequence_control_info_valid;
 	uint16_t first_data_seq_ctrl;
-	uint32_t preamble_type;
 	uint16_t duration;
-	uint16_t ht_flags;
-	uint16_t vht_flags;
-	uint8_t  vht_flag_values1;
 	uint8_t  vht_flag_values2;
 	uint8_t  vht_flag_values3[4];
 	uint8_t  vht_flag_values4;
 	uint8_t  vht_flag_values5;
 	uint16_t vht_flag_values6;
-	uint16_t he_flags;
 	uint16_t he_flags1;
 	uint16_t he_flags2;
 	uint8_t he_RU[4];
@@ -584,25 +596,22 @@ struct mon_rx_user_status {
 	uint16_t he_data4;
 	uint16_t he_data5;
 	uint16_t he_data6;
-	uint16_t he_per_user_1;
-	uint16_t he_per_user_2;
+	uint8_t he_per_user_1;
+	uint8_t he_per_user_2;
 	uint8_t he_per_user_position;
 	uint8_t he_per_user_known;
 	uint8_t rtap_flags;
 	uint8_t rs_flags;
-	uint32_t mpdu_cnt_fcs_ok;
-	uint32_t mpdu_cnt_fcs_err;
+	uint16_t mpdu_cnt_fcs_ok;
+	uint8_t mpdu_cnt_fcs_err;
 	uint32_t mpdu_fcs_ok_bitmap[QDF_MON_STATUS_MPDU_FCS_BMAP_NWORDS];
 	uint32_t mpdu_ok_byte_count;
 	uint32_t mpdu_err_byte_count;
-	uint16_t sw_peer_id;
-	uint32_t retry_mpdu;
+	uint16_t retry_mpdu;
 	uint16_t start_seq;
 	uint16_t ba_control;
-	uint32_t ba_bitmap[32];
-	uint32_t ba_bitmap_sz;
+	uint32_t ba_bitmap[8];
 	uint16_t aid;
-	uint8_t filter_category;
 	qdf_nbuf_queue_t mpdu_q;
 };
 
@@ -2692,6 +2701,17 @@ static inline void
 qdf_nbuf_queue_insert_head(qdf_nbuf_queue_t *head, qdf_nbuf_t buf)
 {
 	__qdf_nbuf_queue_insert_head(head, buf);
+}
+
+/**
+ * qdf_nbuf_queue_remove_last() - remove last nbuf from queue
+ * @head: Network buf queue head
+ *
+ * Return: none
+ */
+static inline qdf_nbuf_t qdf_nbuf_queue_remove_last(qdf_nbuf_queue_t *head)
+{
+	return __qdf_nbuf_queue_remove_last(head);
 }
 
 /**
