@@ -46,39 +46,18 @@
 #ifdef QCA_TEST_MON_PF_TAGS_STATS
 
 static
-void dp_rx_mon_print_tag_buf(uint8_t *buf, uint16_t test, uint16_t room)
+void dp_rx_mon_print_tag_buf(uint8_t *buf, uint16_t room)
 {
-	if (test != TEST_MASK)
-		return;
 	print_hex_dump(KERN_ERR, "TLV BUFFER: ", DUMP_PREFIX_NONE,
 		       32, 2, buf, room, false);
 }
 
-static
-void dp_rx_mon_enable_pf_test(uint16_t **nbuf)
-{
-	uint16_t *nbuf_head = *nbuf;
-
-	*((uint16_t *)nbuf_head) = TEST_MASK;
-	nbuf_head += sizeof(uint16_t);
-
-	*nbuf = nbuf_head;
-}
-
 #else
 static
-void dp_rx_mon_print_tag_buf(uint8_t *buf, uint16_t test, uint16_t room)
+void dp_rx_mon_print_tag_buf(uint8_t *buf, uint16_t room)
 {
 }
 
-static
-void dp_rx_mon_enable_pf_test(uint8_t **nbuf)
-{
-	uint8_t *nbuf_head = *nbuf;
-
-	nbuf_head += sizeof(uint16_t);
-	*nbuf = nbuf_head;
-}
 #endif
 
 static
@@ -186,7 +165,6 @@ void
 dp_rx_mon_shift_pf_tag_in_headroom(qdf_nbuf_t nbuf, struct dp_soc *soc,
 				   struct hal_rx_ppdu_info *ppdu_info)
 {
-	uint32_t test = 0;
 	uint32_t room = 0;
 	uint16_t msdu_count = 0;
 	uint16_t *dp = NULL;
@@ -214,8 +192,6 @@ dp_rx_mon_shift_pf_tag_in_headroom(qdf_nbuf_t nbuf, struct dp_soc *soc,
 	}
 
 	hp = (uint16_t *)qdf_nbuf_head(nbuf);
-	test = *hp & F_MASK;
-	hp += sizeof(uint16_t);
 	msdu_count = *hp;
 
 	if (qdf_unlikely(!msdu_count))
@@ -244,7 +220,7 @@ dp_rx_mon_shift_pf_tag_in_headroom(qdf_nbuf_t nbuf, struct dp_soc *soc,
 	//create TLV
 	bytes += dp_mon_rx_add_tlv(DP_RX_MON_TLV_PF_ID, tlv_data_len, hp, nbuf);
 
-	dp_rx_mon_print_tag_buf(qdf_nbuf_data(nbuf), test, total_tlv_len);
+	dp_rx_mon_print_tag_buf(qdf_nbuf_data(nbuf), total_tlv_len);
 
 	qdf_nbuf_pull_head(nbuf, bytes);
 
@@ -328,7 +304,6 @@ dp_rx_mon_pf_tag_to_buf_headroom_2_0(void *nbuf,
 
 
 	nbuf_head = qdf_nbuf_head(nbuf);
-	dp_rx_mon_enable_pf_test(&nbuf_head);
 
 	*((uint16_t *)nbuf_head) = msdu_info->msdu_index + 1;
 	nbuf_head += DP_RX_MON_TLV_MSDU_CNT;

@@ -1602,7 +1602,6 @@ void dp_mon_cdp_ops_register_2_0(struct cdp_ops *ops)
 
 #if defined(WLAN_SUPPORT_RX_PROTOCOL_TYPE_TAG) ||\
 	defined(WLAN_SUPPORT_RX_FLOW_TAG)
-#if QCA_TEST_MON_PF_TAGS_STATS
 /** dp_mon_rx_update_rx_protocol_tag_stats() - Update mon protocols's
  *					      statistics
  * @pdev: pdev handle
@@ -1621,5 +1620,4 @@ void dp_mon_rx_update_rx_protocol_tag_stats(struct dp_pdev *pdev,
 					    uint16_t protocol_index)
 {
 }
-#endif
 #endif

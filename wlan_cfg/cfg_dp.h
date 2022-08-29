@@ -1234,7 +1234,7 @@
 			"DP Rx Flow Search Table Is Per PDev")
 
 #define CFG_DP_RX_MON_PROTOCOL_FLOW_TAG_ENABLE \
-	CFG_INI_BOOL("dp_rx_monitor_protocol_flow_tag_enable", false, \
+	CFG_INI_BOOL("dp_rx_monitor_protocol_flow_tag_enable", true, \
 		     "Enable/Disable Rx Protocol & Flow tags in Monitor mode")
 
 #define CFG_DP_TX_PER_PKT_VDEV_ID_CHECK \
