@@ -4203,7 +4203,8 @@ static void wlan_ipa_uc_loaded_handler(struct wlan_ipa_priv *ipa_ctx)
 	}
 	/* Setup the Tx buffer SMMU mapings */
 	status = cdp_ipa_tx_buf_smmu_mapping(ipa_ctx->dp_soc,
-					     ipa_ctx->dp_pdev_id);
+					     ipa_ctx->dp_pdev_id,
+					     __func__, __LINE__);
 	if (status) {
 		ipa_err("Failure to map Tx buffers for IPA(status=%d)",
 			status);
@@ -4486,7 +4487,8 @@ QDF_STATUS wlan_ipa_uc_ol_init(struct wlan_ipa_priv *ipa_ctx,
 
 		/* Setup the Tx buffer SMMU mapings */
 		status = cdp_ipa_tx_buf_smmu_mapping(ipa_ctx->dp_soc,
-						     ipa_ctx->dp_pdev_id);
+						     ipa_ctx->dp_pdev_id,
+						     __func__, __LINE__);
 		if (status) {
 			ipa_err("Failure to map Tx buffers for IPA(status=%d)",
 				status);
@@ -4549,7 +4551,8 @@ QDF_STATUS wlan_ipa_uc_ol_deinit(struct wlan_ipa_priv *ipa_ctx)
 
 	if (true == ipa_ctx->uc_loaded) {
 		cdp_ipa_tx_buf_smmu_unmapping(ipa_ctx->dp_soc,
-					      ipa_ctx->dp_pdev_id);
+					      ipa_ctx->dp_pdev_id,
+					      __func__, __LINE__);
 		status = cdp_ipa_cleanup(ipa_ctx->dp_soc,
 					 ipa_ctx->dp_pdev_id,
 					 ipa_ctx->tx_pipe_handle,
