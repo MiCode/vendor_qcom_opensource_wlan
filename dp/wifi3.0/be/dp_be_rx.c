@@ -735,21 +735,6 @@ done:
 
 		dp_rx_send_pktlog(soc, rx_pdev, nbuf, QDF_TX_RX_STATUS_OK);
 
-		/*
-		 * process frame for mulitpass phrase processing
-		 */
-		if (qdf_unlikely(vdev->multipass_en)) {
-			if (dp_rx_multipass_process(txrx_peer, nbuf,
-						    tid) == false) {
-				DP_PEER_PER_PKT_STATS_INC(txrx_peer,
-							  rx.multipass_rx_pkt_drop,
-							  1);
-				dp_rx_nbuf_free(nbuf);
-				nbuf = next;
-				continue;
-			}
-		}
-
 		if (!dp_wds_rx_policy_check(rx_tlv_hdr, vdev, txrx_peer)) {
 			dp_rx_err("%pK: Policy Check Drop pkt", soc);
 			DP_PEER_PER_PKT_STATS_INC(txrx_peer,
@@ -758,18 +743,6 @@ done:
 			/* Drop & free packet */
 			dp_rx_nbuf_free(nbuf);
 			/* Statistics */
-			nbuf = next;
-			continue;
-		}
-
-		if (qdf_unlikely(txrx_peer && (txrx_peer->nawds_enabled) &&
-				 (qdf_nbuf_is_da_mcbc(nbuf)) &&
-				 (hal_rx_get_mpdu_mac_ad4_valid_be(rx_tlv_hdr)
-				  == false))) {
-			tid_stats->fail_cnt[NAWDS_MCAST_DROP]++;
-			DP_PEER_PER_PKT_STATS_INC(txrx_peer,
-						  rx.nawds_mcast_drop, 1);
-			dp_rx_nbuf_free(nbuf);
 			nbuf = next;
 			continue;
 		}
@@ -793,44 +766,81 @@ done:
 			}
 		}
 
-		if (soc->process_rx_status)
-			dp_rx_cksum_offload(vdev->pdev, nbuf, rx_tlv_hdr);
+		dp_rx_cksum_offload(vdev->pdev, nbuf, rx_tlv_hdr);
 
-		/* Update the protocol tag in SKB based on CCE metadata */
-		dp_rx_update_protocol_tag(soc, vdev, nbuf, rx_tlv_hdr,
-					  reo_ring_num, false, true);
-
-		/* Update the flow tag in SKB based on FSE metadata */
-		dp_rx_update_flow_tag(soc, vdev, nbuf, rx_tlv_hdr, true);
-
-		dp_rx_msdu_stats_update(soc, nbuf, rx_tlv_hdr, txrx_peer,
-					reo_ring_num, tid_stats);
-
-		if (qdf_unlikely(vdev->mesh_vdev)) {
-			if (dp_rx_filter_mesh_packets(vdev, nbuf, rx_tlv_hdr)
-					== QDF_STATUS_SUCCESS) {
-				dp_rx_info("%pK: mesh pkt filtered", soc);
-				tid_stats->fail_cnt[MESH_FILTER_DROP]++;
-				DP_STATS_INC(vdev->pdev, dropped.mesh_filter,
-					     1);
-
+		if (qdf_unlikely(!rx_pdev->rx_fast_flag)) {
+			/*
+			 * process frame for mulitpass phrase processing
+			 */
+			if (qdf_unlikely(vdev->multipass_en)) {
+				if (dp_rx_multipass_process(txrx_peer, nbuf,
+							    tid) == false) {
+					DP_PEER_PER_PKT_STATS_INC
+						(txrx_peer,
+						 rx.multipass_rx_pkt_drop, 1);
+					dp_rx_nbuf_free(nbuf);
+					nbuf = next;
+					continue;
+				}
+			}
+			if (qdf_unlikely(txrx_peer &&
+					 (txrx_peer->nawds_enabled) &&
+					 (qdf_nbuf_is_da_mcbc(nbuf)) &&
+					 (hal_rx_get_mpdu_mac_ad4_valid_be
+						(rx_tlv_hdr) == false))) {
+				tid_stats->fail_cnt[NAWDS_MCAST_DROP]++;
+				DP_PEER_PER_PKT_STATS_INC(txrx_peer,
+							  rx.nawds_mcast_drop,
+							  1);
 				dp_rx_nbuf_free(nbuf);
 				nbuf = next;
 				continue;
 			}
-			dp_rx_fill_mesh_stats(vdev, nbuf, rx_tlv_hdr,
-					      txrx_peer);
+
+			/* Update the protocol tag in SKB based on CCE metadata
+			 */
+			dp_rx_update_protocol_tag(soc, vdev, nbuf, rx_tlv_hdr,
+						  reo_ring_num, false, true);
+
+			/* Update the flow tag in SKB based on FSE metadata */
+			dp_rx_update_flow_tag(soc, vdev, nbuf, rx_tlv_hdr,
+					      true);
+
+			if (qdf_likely(vdev->rx_decap_type ==
+				       htt_cmn_pkt_type_ethernet) &&
+			    qdf_likely(!vdev->mesh_vdev)) {
+				dp_rx_wds_learn(soc, vdev,
+						rx_tlv_hdr,
+						txrx_peer,
+						nbuf,
+						msdu_metadata);
+			}
+
+			if (qdf_unlikely(vdev->mesh_vdev)) {
+				if (dp_rx_filter_mesh_packets(vdev, nbuf,
+							      rx_tlv_hdr)
+						== QDF_STATUS_SUCCESS) {
+					dp_rx_info("%pK: mesh pkt filtered",
+						   soc);
+					tid_stats->fail_cnt[MESH_FILTER_DROP]++;
+					DP_STATS_INC(vdev->pdev,
+						     dropped.mesh_filter, 1);
+
+					dp_rx_nbuf_free(nbuf);
+					nbuf = next;
+					continue;
+				}
+				dp_rx_fill_mesh_stats(vdev, nbuf, rx_tlv_hdr,
+						      txrx_peer);
+			}
 		}
+
+		dp_rx_msdu_stats_update(soc, nbuf, rx_tlv_hdr, txrx_peer,
+					reo_ring_num, tid_stats);
 
 		if (qdf_likely(vdev->rx_decap_type ==
 			       htt_cmn_pkt_type_ethernet) &&
 		    qdf_likely(!vdev->mesh_vdev)) {
-			dp_rx_wds_learn(soc, vdev,
-					rx_tlv_hdr,
-					txrx_peer,
-					nbuf,
-					msdu_metadata);
-
 			/* Intrabss-fwd */
 			if (dp_rx_check_ap_bridge(vdev))
 				if (dp_rx_intrabss_fwd_be(soc, txrx_peer,

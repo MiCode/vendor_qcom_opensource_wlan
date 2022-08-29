@@ -4195,4 +4195,13 @@ void dp_rx_err_send_pktlog(struct dp_soc *soc, struct dp_pdev *pdev,
 {
 }
 #endif
+
+/*
+ * dp_pdev_update_fast_rx_flag() - Update Fast rx flag for a PDEV
+ * @soc  : Data path soc handle
+ * @pdev : PDEV handle
+ *
+ * return: None
+ */
+void dp_pdev_update_fast_rx_flag(struct dp_soc *soc, struct dp_pdev *pdev);
 #endif /* #ifndef _DP_INTERNAL_H_ */

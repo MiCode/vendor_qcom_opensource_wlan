@@ -2876,18 +2876,18 @@ struct dp_pdev {
 	 */
 
 	/* PDEV Id */
-	int pdev_id;
+	uint8_t pdev_id;
 
 	/* LMAC Id */
-	int lmac_id;
+	uint8_t lmac_id;
 
 	/* Target pdev  Id */
-	int target_pdev_id;
+	uint8_t target_pdev_id;
+
+	bool pdev_deinit;
 
 	/* TXRX SOC handle */
 	struct dp_soc *soc;
-
-	bool pdev_deinit;
 
 	/* pdev status down or up required to handle dynamic hw
 	 * mode switch between DBS and DBS_SBS.
@@ -2898,6 +2898,9 @@ struct dp_pdev {
 
 	/* Enhanced Stats is enabled */
 	bool enhanced_stats_en;
+
+	/* Flag to indicate fast RX */
+	bool rx_fast_flag;
 
 	/* Second ring used to replenish rx buffers */
 	struct dp_srng rx_refill_buf_ring2;

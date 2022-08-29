@@ -2142,6 +2142,67 @@ static inline void dp_srng_mem_free_consistent(struct dp_soc *soc,
 
 #endif /* DP_MEM_PRE_ALLOC */
 
+#ifdef QCA_SUPPORT_WDS_EXTENDED
+static bool dp_vdev_is_wds_ext_enabled(struct dp_vdev *vdev)
+{
+	return vdev->wds_ext_enabled;
+}
+#else
+static bool dp_vdev_is_wds_ext_enabled(struct dp_vdev *vdev)
+{
+	return false;
+}
+#endif
+
+void dp_pdev_update_fast_rx_flag(struct dp_soc *soc, struct dp_pdev *pdev)
+{
+	struct dp_vdev *vdev = NULL;
+	uint8_t rx_fast_flag = true;
+
+	if (wlan_cfg_is_rx_flow_tag_enabled(soc->wlan_cfg_ctx)) {
+		rx_fast_flag = false;
+		goto update_flag;
+	}
+
+	/* Check if protocol tagging enable */
+	if (pdev->is_rx_protocol_tagging_enabled) {
+		rx_fast_flag = false;
+		goto update_flag;
+	}
+
+	qdf_spin_lock_bh(&pdev->vdev_list_lock);
+	TAILQ_FOREACH(vdev, &pdev->vdev_list, vdev_list_elem) {
+		/* Check if any VDEV has NAWDS enabled */
+		if (vdev->nawds_enabled) {
+			rx_fast_flag = false;
+			break;
+		}
+
+		/* Check if any VDEV has multipass enabled */
+		if (vdev->multipass_en) {
+			rx_fast_flag = false;
+			break;
+		}
+
+		/* Check if any VDEV has mesh enabled */
+		if (vdev->mesh_vdev) {
+			rx_fast_flag = false;
+			break;
+		}
+
+		/* Check if any VDEV has WDS ext enabled */
+		if (dp_vdev_is_wds_ext_enabled(vdev)) {
+			rx_fast_flag = false;
+			break;
+		}
+	}
+	qdf_spin_unlock_bh(&pdev->vdev_list_lock);
+
+update_flag:
+	dp_init_info("Updated Rx fast flag to %u", rx_fast_flag);
+	pdev->rx_fast_flag = rx_fast_flag;
+}
+
 /*
  * dp_srng_free() - Free SRNG memory
  * @soc  : Data path soc handle
@@ -7066,6 +7127,9 @@ static QDF_STATUS dp_vdev_attach_wifi3(struct cdp_soc_t *cdp_soc,
 	if (wlan_op_mode_sta == vdev->opmode)
 		dp_peer_create_wifi3((struct cdp_soc_t *)soc, vdev_id,
 				     vdev->mac_addr.raw, CDP_LINK_PEER_TYPE);
+
+	dp_pdev_update_fast_rx_flag(soc, pdev);
+
 	return QDF_STATUS_SUCCESS;
 
 fail0:
@@ -10788,6 +10852,9 @@ dp_set_vdev_param(struct cdp_soc_t *cdp_soc, uint8_t vdev_id,
 
 	dp_tx_vdev_update_search_flags((struct dp_vdev *)vdev);
 	dsoc->arch_ops.txrx_set_vdev_param(dsoc, vdev, param, val);
+
+	/* Update PDEV flags as VDEV flags are updated */
+	dp_pdev_update_fast_rx_flag(dsoc, vdev->pdev);
 	dp_vdev_unref_delete(dsoc, vdev, DP_MOD_ID_CDP);
 
 	return QDF_STATUS_SUCCESS;
@@ -16694,6 +16761,7 @@ static QDF_STATUS dp_pdev_init(struct cdp_soc_t *txrx_soc,
 
 	dp_init_tso_stats(pdev);
 
+	pdev->rx_fast_flag = false;
 	dp_info("Mem stats: DMA = %u HEAP = %u SKB = %u",
 		qdf_dma_mem_stats_read(),
 		qdf_heap_mem_stats_read(),
