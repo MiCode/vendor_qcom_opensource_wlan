@@ -3344,23 +3344,32 @@ static qdf_nbuf_t dp_ipa_intrabss_send(struct dp_pdev *pdev,
 static inline bool dp_ipa_peer_check(struct dp_soc *soc,
 				     uint8_t *peer_mac_addr, uint8_t vdev_id)
 {
-	struct cdp_ast_entry_info ast_info = {0};
-	ol_txrx_soc_handle cdp_soc;
+	struct dp_ast_entry *ast_entry = NULL;
 	struct dp_peer *peer = NULL;
 
-	cdp_soc = dp_soc_to_cdp_soc_t(soc);
-	cdp_peer_get_ast_info_by_soc(cdp_soc, peer_mac_addr, &ast_info);
+	qdf_spin_lock_bh(&soc->ast_lock);
+	ast_entry = dp_peer_ast_hash_find_soc(soc, peer_mac_addr);
 
-	peer = dp_peer_get_ref_by_id(soc, ast_info.peer_id, DP_MOD_ID_IPA);
+	if ((!ast_entry) ||
+	    (ast_entry->delete_in_progress && !ast_entry->callback)) {
+		qdf_spin_unlock_bh(&soc->ast_lock);
+		return false;
+	}
+
+	peer = dp_peer_get_ref_by_id(soc, ast_entry->peer_id,
+				     DP_MOD_ID_AST);
 
 	if (!peer) {
+		qdf_spin_unlock_bh(&soc->ast_lock);
 		return false;
 	} else {
-		if ((peer->vdev->vdev_id == vdev_id)) {
+		if (peer->vdev->vdev_id == vdev_id) {
 			dp_peer_unref_delete(peer, DP_MOD_ID_IPA);
+			qdf_spin_unlock_bh(&soc->ast_lock);
 			return true;
 		}
 		dp_peer_unref_delete(peer, DP_MOD_ID_IPA);
+		qdf_spin_unlock_bh(&soc->ast_lock);
 		return false;
 	}
 }
