@@ -2985,11 +2985,13 @@ struct set_qdepth_thresh_params {
  * @mac_addr: MAC address of peer
  * @chan_width: Max supported channel width of peer
  *              (enum ieee80211_cwm_width)
+ * @puncture_bitmap: Puncture bitmap of peer
  */
 
 struct peer_chan_width_switch_info {
 	uint8_t mac_addr[QDF_MAC_ADDR_SIZE];
 	uint32_t chan_width;
+	uint16_t puncture_bitmap;
 };
 
 /**
