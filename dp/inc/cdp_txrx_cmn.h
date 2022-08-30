@@ -139,7 +139,7 @@ enum {
 };
 
 /*
- * BW types of used for RX PPDU
+ * BW types used for RX PPDU
  */
 enum rx_tlv_bw {
 	RX_TLV_BW_20MHZ,
