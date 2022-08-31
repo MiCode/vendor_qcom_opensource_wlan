@@ -1877,7 +1877,6 @@ static void dp_print_tx_sounding_stats_tlv(uint32_t *tag_buf)
 		(htt_tx_sounding_stats_tlv *)tag_buf;
 	uint16_t i;
 	uint16_t max_bw = HTT_TX_PDEV_STATS_NUM_BW_COUNTERS;
-	bool cv_stats = false;
 
 	switch (dp_stats_buf->tx_sounding_mode) {
 	case HTT_TX_AC_SOUNDING_MODE:
@@ -1985,13 +1984,8 @@ static void dp_print_tx_sounding_stats_tlv(uint32_t *tag_buf)
 				dp_stats_buf->sounding[(i * max_bw) + 3],
 				dp_stats_buf->sounding_320[i]);
 		}
-		cv_stats = true;
 		break;
-	default:
-		break;
-	}
-
-	if (cv_stats) {
+	case HTT_TX_CMN_SOUNDING_MODE:
 		DP_PRINT_STATS("\n CV UPLOAD HANDLER STATS:");
 		DP_PRINT_STATS("cv_nc_mismatch_err         : %u",
 			       dp_stats_buf->cv_nc_mismatch_err);
@@ -2053,6 +2047,10 @@ static void dp_print_tx_sounding_stats_tlv(uint32_t *tag_buf)
 			       dp_stats_buf->cv_found_upload_in_progress);
 		DP_PRINT_STATS("cv_expired_during_query    : %u\n",
 			       dp_stats_buf->cv_expired_during_query);
+		break;
+	default:
+		break;
+
 	}
 }
 
