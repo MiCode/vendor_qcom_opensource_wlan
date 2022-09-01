@@ -5114,7 +5114,9 @@ typedef enum {
 #ifdef WLAN_FEATURE_COAP
 	wmi_wow_coap_buf_info_eventid,
 #endif
+#ifdef HEALTH_MON_SUPPORT
 	wmi_extract_health_mon_init_done_info_eventid,
+#endif /* HEALTH_MON_SUPPORT */
 	wmi_events_max,
 } wmi_conv_event_id;
 
@@ -9144,6 +9146,7 @@ struct wmi_host_sw_cal_ver {
 	uint32_t status;
 };
 
+#ifdef HEALTH_MON_SUPPORT
 /**
  * struct wmi_health_mon_params - Health mon params
  * @ring_buf_paddr_low: Ring buffer physical address LOW
@@ -9157,5 +9160,6 @@ struct wmi_health_mon_params {
 	uint32_t initial_upload_period_ms;
 	uint32_t read_index;
 };
+#endif /* HEALTH_MON_SUPPORT */
 
 #endif /* _WMI_UNIFIED_PARAM_H_ */

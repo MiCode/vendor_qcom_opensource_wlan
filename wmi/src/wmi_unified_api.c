@@ -1461,6 +1461,7 @@ QDF_STATUS wmi_unified_thermal_mitigation_param_cmd_send(
 	return QDF_STATUS_E_FAILURE;
 }
 
+#ifdef HEALTH_MON_SUPPORT
 QDF_STATUS wmi_extract_health_mon_event(
 		wmi_unified_t wmi_handle,
 		void *ev,
@@ -1472,6 +1473,8 @@ QDF_STATUS wmi_extract_health_mon_event(
 
 	return QDF_STATUS_E_FAILURE;
 }
+#endif /* HEALTH_MON_SUPPORT */
+
 QDF_STATUS
 wmi_unified_vdev_set_fwtest_param_cmd_send(wmi_unified_t wmi_handle,
 					   struct set_fwtest_params *param)

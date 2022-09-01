@@ -225,7 +225,9 @@ struct tgt_info {
 	struct wlan_psoc_host_scan_radio_caps *scan_radio_caps;
 	uint32_t device_mode;
 	uint32_t sbs_lower_band_end_freq;
+#ifdef HEALTH_MON_SUPPORT
 	struct wmi_health_mon_params health_mon_param;
+#endif /* HEALTH_MON_SUPPORT */
 };
 
 /**
