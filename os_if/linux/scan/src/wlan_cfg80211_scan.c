@@ -421,6 +421,7 @@ int wlan_cfg80211_sched_scan_start(struct wlan_objmgr_vdev *vdev,
 	int i, j, ret = 0;
 	QDF_STATUS status;
 	uint8_t num_chan = 0;
+	uint8_t updated_num_chan = 0;
 	uint16_t chan_freq;
 	struct wlan_objmgr_pdev *pdev = wlan_vdev_get_pdev(vdev);
 	struct wlan_objmgr_psoc *psoc;
@@ -558,9 +559,9 @@ int wlan_cfg80211_sched_scan_start(struct wlan_objmgr_vdev *vdev,
 			uint32_t short_ssid =
 				wlan_construct_shortssid(tgt_req->ssid.ssid,
 							 tgt_req->ssid.length);
-
+			updated_num_chan = num_chan;
 			ucfg_scan_add_flags_to_pno_chan_list(vdev, req,
-							     &num_chan,
+							     &updated_num_chan,
 							     short_ssid, i);
 		}
 
