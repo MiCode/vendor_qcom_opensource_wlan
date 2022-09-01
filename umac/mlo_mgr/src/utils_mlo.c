@@ -2102,19 +2102,9 @@ QDF_STATUS util_gen_link_reqrsp_cmn(uint8_t *frame, qdf_size_t frame_len,
 		/* This is a probe response */
 		mlo_debug("Populating fixed fields for probe response in link specific frame");
 
-		if (sta_prof_remlen < WLAN_TIMESTAMP_LEN) {
-			mlo_err_rl("Remaining length of STA profile %zu octets is less than length of Timestamp Length %u",
-				   sta_prof_remlen,
-				   WLAN_TIMESTAMP_LEN);
-
-			qdf_mem_free(mlieseqpayload_copy);
-			return QDF_STATUS_E_PROTO;
-		}
-
-		/* Timestamp field information is specific to the link.
-		 * Copy this from the STA profile.
-		 */
-
+		 /* Copy Timestamp from the starting of the probe response
+		  * frame.
+		  */
 		if ((link_frame_maxsize - link_frame_currlen) <
 				WLAN_TIMESTAMP_LEN) {
 			mlo_err("Insufficent space in link specific frame for Timestamp Info field. Required: %u octets, available: %zu octets",
@@ -2125,15 +2115,12 @@ QDF_STATUS util_gen_link_reqrsp_cmn(uint8_t *frame, qdf_size_t frame_len,
 			return QDF_STATUS_E_NOMEM;
 		}
 
-		qdf_mem_copy(link_frame_currpos, sta_prof_currpos,
+		qdf_mem_copy(link_frame_currpos, frame,
 			     WLAN_TIMESTAMP_LEN);
 		link_frame_currpos += WLAN_TIMESTAMP_LEN;
 		link_frame_currlen += WLAN_TIMESTAMP_LEN;
 		mlo_debug("Added Timestamp Info field (%u octets) to link specific frame",
 			  WLAN_TIMESTAMP_LEN);
-
-		sta_prof_currpos += WLAN_TIMESTAMP_LEN;
-		sta_prof_remlen -= WLAN_TIMESTAMP_LEN;
 
 		if (!is_beaconinterval_valid) {
 			mlo_err_rl("Beacon interval information not present in STA info field of per-STA profile");
