@@ -9036,10 +9036,17 @@ dp_get_pdev_telemetry_stats(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
 {
 	struct dp_soc *soc = (struct dp_soc *)soc_hdl;
 	struct dp_pdev *pdev = dp_get_pdev_from_soc_pdev_id_wifi3(soc, pdev_id);
+	uint8_t ac = 0;
 
 	if (!pdev)
 		return QDF_STATUS_E_FAILURE;
 
+	/* consumption is in micro seconds, convert it to seconds and
+	 * then calculate %age per sec
+	 */
+	for (ac = 0; ac < WME_AC_MAX; ac++)
+		stats->link_airtime[ac] =
+			((pdev->stats.telemetry_stats.link_airtime[ac] * 100) / 1000000);
 	stats->tx_mpdu_failed = pdev->stats.telemetry_stats.tx_mpdu_failed;
 	stats->tx_mpdu_total = pdev->stats.telemetry_stats.tx_mpdu_total;
 
