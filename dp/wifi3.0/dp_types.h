@@ -1392,6 +1392,9 @@ struct rx_refill_buff_pool {
 
 #ifdef DP_TX_HW_DESC_HISTORY
 #define DP_TX_HW_DESC_HIST_MAX 6144
+#define DP_TX_HW_DESC_HIST_PER_SLOT_MAX 2048
+#define DP_TX_HW_DESC_HIST_MAX_SLOTS 3
+#define DP_TX_HW_DESC_HIST_SLOT_SHIFT 11
 
 struct dp_tx_hw_desc_evt {
 	uint8_t tcl_desc[HAL_TX_DESC_LEN_BYTES];
@@ -1405,8 +1408,10 @@ struct dp_tx_hw_desc_evt {
  * @entry: history entries
  */
 struct dp_tx_hw_desc_history {
-	uint64_t index;
-	struct dp_tx_hw_desc_evt entry[DP_TX_HW_DESC_HIST_MAX];
+	qdf_atomic_t index;
+	uint16_t num_entries_per_slot;
+	uint16_t allocated;
+	struct dp_tx_hw_desc_evt *entry[DP_TX_HW_DESC_HIST_MAX_SLOTS];
 };
 #endif
 
@@ -1556,7 +1561,15 @@ enum dp_tx_event_type {
 #ifdef WLAN_FEATURE_DP_TX_DESC_HISTORY
 /* Size must be in 2 power, for bitwise index rotation */
 #define DP_TX_TCL_HISTORY_SIZE 0x4000
+#define DP_TX_TCL_HIST_PER_SLOT_MAX 2048
+#define DP_TX_TCL_HIST_MAX_SLOTS 8
+#define DP_TX_TCL_HIST_SLOT_SHIFT 11
+
+/* Size must be in 2 power, for bitwise index rotation */
 #define DP_TX_COMP_HISTORY_SIZE 0x4000
+#define DP_TX_COMP_HIST_PER_SLOT_MAX 2048
+#define DP_TX_COMP_HIST_MAX_SLOTS 8
+#define DP_TX_COMP_HIST_SLOT_SHIFT 11
 
 struct dp_tx_desc_event {
 	qdf_nbuf_t skb;
@@ -1568,12 +1581,16 @@ struct dp_tx_desc_event {
 
 struct dp_tx_tcl_history {
 	qdf_atomic_t index;
-	struct dp_tx_desc_event entry[DP_TX_TCL_HISTORY_SIZE];
+	uint16_t num_entries_per_slot;
+	uint16_t allocated;
+	struct dp_tx_desc_event *entry[DP_TX_TCL_HIST_MAX_SLOTS];
 };
 
 struct dp_tx_comp_history {
 	qdf_atomic_t index;
-	struct dp_tx_desc_event entry[DP_TX_COMP_HISTORY_SIZE];
+	uint16_t num_entries_per_slot;
+	uint16_t allocated;
+	struct dp_tx_desc_event *entry[DP_TX_COMP_HIST_MAX_SLOTS];
 };
 #endif /* WLAN_FEATURE_DP_TX_DESC_HISTORY */
 
@@ -2289,7 +2306,7 @@ struct dp_soc {
 	} ast_hash;
 
 #ifdef DP_TX_HW_DESC_HISTORY
-	struct dp_tx_hw_desc_history *tx_hw_desc_history;
+	struct dp_tx_hw_desc_history tx_hw_desc_history;
 #endif
 
 #ifdef WLAN_FEATURE_DP_RX_RING_HISTORY
@@ -2304,8 +2321,8 @@ struct dp_soc {
 #endif
 
 #ifdef WLAN_FEATURE_DP_TX_DESC_HISTORY
-	struct dp_tx_tcl_history *tx_tcl_history;
-	struct dp_tx_comp_history *tx_comp_history;
+	struct dp_tx_tcl_history tx_tcl_history;
+	struct dp_tx_comp_history tx_comp_history;
 #endif
 
 	qdf_spinlock_t ast_lock;

@@ -5374,17 +5374,18 @@ static void dp_free_ipa_rx_alt_refill_buf_ring(struct dp_soc *soc,
  */
 static void dp_soc_tx_hw_desc_history_attach(struct dp_soc *soc)
 {
-	soc->tx_hw_desc_history = dp_context_alloc_mem(
-			soc, DP_TX_HW_DESC_HIST_TYPE,
-			sizeof(*soc->tx_hw_desc_history));
-	if (soc->tx_hw_desc_history)
-		soc->tx_hw_desc_history->index = 0;
+	dp_soc_frag_history_attach(soc, &soc->tx_hw_desc_history,
+				   DP_TX_HW_DESC_HIST_MAX_SLOTS,
+				   DP_TX_HW_DESC_HIST_PER_SLOT_MAX,
+				   sizeof(struct dp_tx_hw_desc_evt),
+				   true, DP_TX_HW_DESC_HIST_TYPE);
 }
 
 static void dp_soc_tx_hw_desc_history_detach(struct dp_soc *soc)
 {
-	dp_context_free_mem(soc, DP_TX_HW_DESC_HIST_TYPE,
-			    soc->tx_hw_desc_history);
+	dp_soc_frag_history_detach(soc, &soc->tx_hw_desc_history,
+				   DP_TX_HW_DESC_HIST_MAX_SLOTS,
+				   true, DP_TX_HW_DESC_HIST_TYPE);
 }
 
 #else /* DP_TX_HW_DESC_HISTORY */
@@ -5561,20 +5562,16 @@ static void dp_soc_mon_status_ring_history_detach(struct dp_soc *soc)
  */
 static void dp_soc_tx_history_attach(struct dp_soc *soc)
 {
-	uint32_t tx_tcl_hist_size;
-	uint32_t tx_comp_hist_size;
-
-	tx_tcl_hist_size = sizeof(*soc->tx_tcl_history);
-	soc->tx_tcl_history = dp_context_alloc_mem(soc, DP_TX_TCL_HIST_TYPE,
-						   tx_tcl_hist_size);
-	if (soc->tx_tcl_history)
-		qdf_atomic_init(&soc->tx_tcl_history->index);
-
-	tx_comp_hist_size = sizeof(*soc->tx_comp_history);
-	soc->tx_comp_history = dp_context_alloc_mem(soc, DP_TX_COMP_HIST_TYPE,
-						    tx_comp_hist_size);
-	if (soc->tx_comp_history)
-		qdf_atomic_init(&soc->tx_comp_history->index);
+	dp_soc_frag_history_attach(soc, &soc->tx_tcl_history,
+				   DP_TX_TCL_HIST_MAX_SLOTS,
+				   DP_TX_TCL_HIST_PER_SLOT_MAX,
+				   sizeof(struct dp_tx_desc_event),
+				   true, DP_TX_TCL_HIST_TYPE);
+	dp_soc_frag_history_attach(soc, &soc->tx_comp_history,
+				   DP_TX_COMP_HIST_MAX_SLOTS,
+				   DP_TX_COMP_HIST_PER_SLOT_MAX,
+				   sizeof(struct dp_tx_desc_event),
+				   true, DP_TX_COMP_HIST_TYPE);
 }
 
 /**
@@ -5588,8 +5585,12 @@ static void dp_soc_tx_history_attach(struct dp_soc *soc)
  */
 static void dp_soc_tx_history_detach(struct dp_soc *soc)
 {
-	dp_context_free_mem(soc, DP_TX_TCL_HIST_TYPE, soc->tx_tcl_history);
-	dp_context_free_mem(soc, DP_TX_COMP_HIST_TYPE, soc->tx_comp_history);
+	dp_soc_frag_history_detach(soc, &soc->tx_tcl_history,
+				   DP_TX_TCL_HIST_MAX_SLOTS,
+				   true, DP_TX_TCL_HIST_TYPE);
+	dp_soc_frag_history_detach(soc, &soc->tx_comp_history,
+				   DP_TX_COMP_HIST_MAX_SLOTS,
+				   true, DP_TX_COMP_HIST_TYPE);
 }
 
 #else

@@ -142,27 +142,39 @@ dp_tx_desc_history_add(struct dp_soc *soc, dma_addr_t paddr,
 		       qdf_nbuf_t skb, uint32_t sw_cookie,
 		       enum dp_tx_event_type type)
 {
+	struct dp_tx_tcl_history *tx_tcl_history = &soc->tx_tcl_history;
+	struct dp_tx_comp_history *tx_comp_history = &soc->tx_comp_history;
 	struct dp_tx_desc_event *entry;
 	uint32_t idx;
-
-	if (qdf_unlikely(!soc->tx_tcl_history || !soc->tx_comp_history))
-		return;
+	uint16_t slot;
 
 	switch (type) {
 	case DP_TX_COMP_UNMAP:
 	case DP_TX_COMP_UNMAP_ERR:
 	case DP_TX_COMP_MSDU_EXT:
-		idx = dp_history_get_next_index(&soc->tx_comp_history->index,
-						DP_TX_COMP_HISTORY_SIZE);
-		entry = &soc->tx_comp_history->entry[idx];
+		if (qdf_unlikely(!tx_comp_history->allocated))
+			return;
+
+		dp_get_frag_hist_next_atomic_idx(&tx_comp_history->index, &idx,
+						 &slot,
+						 DP_TX_COMP_HIST_SLOT_SHIFT,
+						 DP_TX_COMP_HIST_PER_SLOT_MAX,
+						 DP_TX_COMP_HISTORY_SIZE);
+		entry = &tx_comp_history->entry[slot][idx];
 		break;
 	case DP_TX_DESC_MAP:
 	case DP_TX_DESC_UNMAP:
 	case DP_TX_DESC_COOKIE:
 	case DP_TX_DESC_FLUSH:
-		idx = dp_history_get_next_index(&soc->tx_tcl_history->index,
-						DP_TX_TCL_HISTORY_SIZE);
-		entry = &soc->tx_tcl_history->entry[idx];
+		if (qdf_unlikely(!tx_tcl_history->allocated))
+			return;
+
+		dp_get_frag_hist_next_atomic_idx(&tx_tcl_history->index, &idx,
+						 &slot,
+						 DP_TX_TCL_HIST_SLOT_SHIFT,
+						 DP_TX_TCL_HIST_PER_SLOT_MAX,
+						 DP_TX_TCL_HISTORY_SIZE);
+		entry = &tx_tcl_history->entry[slot][idx];
 		break;
 	default:
 		dp_info_rl("Invalid dp_tx_event_type: %d", type);

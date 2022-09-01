@@ -3657,6 +3657,109 @@ void dp_desc_multi_pages_mem_free(struct dp_soc *soc,
 }
 #endif
 
+/**
+ * struct dp_frag_history_opaque_atomic - Opaque struct for adding a fragmented
+ *					  history.
+ * @index: atomic index
+ * @num_entries_per_slot: Number of entries per slot
+ * @allocated: is allocated or not
+ * @entry: pointers to array of records
+ */
+struct dp_frag_history_opaque_atomic {
+	qdf_atomic_t index;
+	uint16_t num_entries_per_slot;
+	uint16_t allocated;
+	void *entry[0];
+};
+
+static inline QDF_STATUS
+dp_soc_frag_history_attach(struct dp_soc *soc, void *history_hdl,
+			   uint32_t max_slots, uint32_t max_entries_per_slot,
+			   uint32_t entry_size,
+			   bool attempt_prealloc, enum dp_ctxt_type ctxt_type)
+{
+	struct dp_frag_history_opaque_atomic *history =
+			(struct dp_frag_history_opaque_atomic *)history_hdl;
+	size_t alloc_size = max_entries_per_slot * entry_size;
+	int i;
+
+	for (i = 0; i < max_slots; i++) {
+		if (attempt_prealloc)
+			history->entry[i] = dp_context_alloc_mem(soc, ctxt_type,
+								 alloc_size);
+		else
+			history->entry[i] = qdf_mem_malloc(alloc_size);
+
+		if (!history->entry[i])
+			goto exit;
+	}
+
+	qdf_atomic_init(&history->index);
+	history->allocated = 1;
+	history->num_entries_per_slot = max_entries_per_slot;
+
+	return QDF_STATUS_SUCCESS;
+exit:
+	for (i = i - 1; i >= 0; i--) {
+		if (attempt_prealloc)
+			dp_context_free_mem(soc, ctxt_type, history->entry[i]);
+		else
+			qdf_mem_free(history->entry[i]);
+	}
+
+	return QDF_STATUS_E_NOMEM;
+}
+
+static inline
+void dp_soc_frag_history_detach(struct dp_soc *soc,
+				void *history_hdl, uint32_t max_slots,
+				bool attempt_prealloc,
+				enum dp_ctxt_type ctxt_type)
+{
+	struct dp_frag_history_opaque_atomic *history =
+			(struct dp_frag_history_opaque_atomic *)history_hdl;
+	int i;
+
+	for (i = 0; i < max_slots; i++) {
+		if (attempt_prealloc)
+			dp_context_free_mem(soc, ctxt_type, history->entry[i]);
+		else
+			qdf_mem_free(history->entry[i]);
+	}
+
+	history->allocated = 0;
+}
+
+/**
+ * dp_get_frag_hist_next_atomic_idx() - get the next entry index to record an
+ *					entry in a fragmented history with
+ *					index being atomic.
+ * @curr_idx: address of the current index where the last entry was written
+ * @next_idx: pointer to update the next index
+ * @slot: pointer to update the history slot to be selected
+ * @slot_shift: BITwise shift mask for slot (in index)
+ * @max_entries_per_slot: Max number of entries in a slot of history
+ * @max_entries: Total number of entries in the history (sum of all slots)
+ *
+ * This function assumes that the "max_entries_per_slot" and "max_entries"
+ * are a power-of-2.
+ *
+ * Return: None
+ */
+static inline void
+dp_get_frag_hist_next_atomic_idx(qdf_atomic_t *curr_idx, uint32_t *next_idx,
+				 uint16_t *slot, uint32_t slot_shift,
+				 uint32_t max_entries_per_slot,
+				 uint32_t max_entries)
+{
+	uint32_t idx;
+
+	idx = qdf_do_div_rem(qdf_atomic_inc_return(curr_idx), max_entries);
+
+	*slot = idx >> slot_shift;
+	*next_idx = idx & (max_entries_per_slot - 1);
+}
+
 #ifdef FEATURE_RUNTIME_PM
 /**
  * dp_runtime_get() - Get dp runtime refcount
