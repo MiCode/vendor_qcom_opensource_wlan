@@ -3988,7 +3988,7 @@ struct dp_peer_extd_rx_stats {
 	uint32_t rx_ratecode;
 
 	uint32_t avg_snr;
-	uint32_t rx_snr_measured_time;
+	unsigned long rx_snr_measured_time;
 	uint8_t snr;
 	uint8_t last_snr;
 
