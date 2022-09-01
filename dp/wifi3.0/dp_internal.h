@@ -1135,25 +1135,25 @@ void DP_PRINT_STATS(const char *fmt, ...);
 	defined(QCA_ENHANCED_STATS_SUPPORT)
 #define DP_PEER_TO_STACK_INCC_PKT(_handle, _count, _bytes, _cond) \
 { \
-	if (!(_handle->hw_txrx_stats_en) || _cond) \
+	if (_cond || !(_handle->hw_txrx_stats_en)) \
 		DP_PEER_STATS_FLAT_INC_PKT(_handle, to_stack, _count, _bytes); \
 }
 
 #define DP_PEER_TO_STACK_DECC(_handle, _count, _cond) \
 { \
-	if (!(_handle->hw_txrx_stats_en) || _cond) \
+	if (_cond || !(_handle->hw_txrx_stats_en)) \
 		DP_PEER_STATS_FLAT_DEC(_handle, to_stack.num, _count); \
 }
 
 #define DP_PEER_MC_INCC_PKT(_handle, _count, _bytes, _cond) \
 { \
-	if (!(_handle->hw_txrx_stats_en) || _cond) \
+	if (_cond || !(_handle->hw_txrx_stats_en)) \
 		DP_PEER_PER_PKT_STATS_INC_PKT(_handle, rx.multicast, _count, _bytes); \
 }
 
 #define DP_PEER_BC_INCC_PKT(_handle, _count, _bytes, _cond) \
 { \
-	if (!(_handle->hw_txrx_stats_en) || _cond) \
+	if (_cond || !(_handle->hw_txrx_stats_en)) \
 		DP_PEER_PER_PKT_STATS_INC_PKT(_handle, rx.bcast, _count, _bytes); \
 }
 #elif defined(QCA_VDEV_STATS_HW_OFFLOAD_SUPPORT)
