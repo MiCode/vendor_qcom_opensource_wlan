@@ -2679,7 +2679,7 @@ struct cdp_peer_telemetry_stats {
 	uint32_t tx_mpdu_total;
 	uint32_t rx_mpdu_retried;
 	uint32_t rx_mpdu_total;
-	uint8_t airtime_consumption;
+	uint8_t airtime_consumption[WME_AC_MAX];
 	uint8_t snr;
 };
 #endif

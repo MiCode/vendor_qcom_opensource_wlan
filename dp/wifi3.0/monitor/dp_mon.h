@@ -903,7 +903,7 @@ struct dp_mon_peer_stats {
 	dp_mon_peer_tx_stats tx;
 	dp_mon_peer_rx_stats rx;
 #ifdef WLAN_TELEMETRY_STATS_SUPPORT
-	struct dp_mon_peer_airtime_consumption airtime_consumption;
+	struct dp_mon_peer_airtime_consumption airtime_consumption[WME_AC_MAX];
 #endif
 #endif
 };
@@ -4239,20 +4239,24 @@ void dp_monitor_peer_telemetry_stats(struct dp_peer *peer,
 				     struct cdp_peer_telemetry_stats *stats)
 {
 	struct dp_mon_peer_stats *mon_peer_stats = NULL;
-	uint8_t idx = 0;
+	uint8_t idx = 0, ac;
 	uint32_t consumption = 0;
 
 	if (qdf_unlikely(!peer->monitor_peer))
 		return;
 
 	mon_peer_stats = &peer->monitor_peer->stats;
-	for (idx = 0; idx < MAX_CONSUMPTION_TIME; idx++)
-		consumption +=
-			mon_peer_stats->airtime_consumption.avg_consumption.avg_consumption_per_sec[idx];
-	/* consumption is in micro seconds, convert it to seconds and
-	 * then calculate %age per 5 sec
-	 */
-	stats->airtime_consumption = ((consumption * 100) / (MAX_CONSUMPTION_TIME * 1000000));
+	for (ac = 0; ac < WME_AC_MAX; ac++) {
+		consumption = 0;
+		for (idx = 0; idx < MAX_CONSUMPTION_TIME; idx++)
+			consumption +=
+				mon_peer_stats->airtime_consumption[ac].avg_consumption.avg_consumption_per_sec[idx];
+		/* consumption is in micro seconds, convert it to seconds and
+		 * then calculate %age per 5 sec
+		 */
+		stats->airtime_consumption[ac] =
+			((consumption * 100) / (MAX_CONSUMPTION_TIME * 1000000));
+	}
 	stats->tx_mpdu_retried = mon_peer_stats->tx.retries;
 	stats->tx_mpdu_total = mon_peer_stats->tx.tx_mpdus_tried;
 	stats->rx_mpdu_retried = mon_peer_stats->rx.mpdu_retry_cnt;

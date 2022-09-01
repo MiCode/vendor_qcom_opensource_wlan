@@ -2060,7 +2060,7 @@ void dp_peer_update_telemetry_stats(struct dp_peer *peer)
 	struct dp_pdev *pdev;
 	struct dp_vdev *vdev;
 	struct dp_mon_peer *mon_peer = NULL;
-	uint8_t idx;
+	uint8_t idx, ac;
 
 	vdev = peer->vdev;
 	if (!vdev)
@@ -2076,14 +2076,16 @@ void dp_peer_update_telemetry_stats(struct dp_peer *peer)
 			     mon_peer->stats.tx.retries);
 		DP_STATS_INC(pdev, telemetry_stats.tx_mpdu_total,
 			     mon_peer->stats.tx.tx_mpdus_tried);
-		idx = mon_peer->stats.airtime_consumption.avg_consumption.idx;
-		mon_peer->stats.airtime_consumption.avg_consumption.avg_consumption_per_sec[idx] =
-				mon_peer->stats.airtime_consumption.consumption;
-		mon_peer->stats.airtime_consumption.consumption = 0;
-		mon_peer->stats.airtime_consumption.avg_consumption.idx++;
-		if (mon_peer->stats.airtime_consumption.avg_consumption.idx ==
-		    MAX_CONSUMPTION_TIME)
-			mon_peer->stats.airtime_consumption.avg_consumption.idx = 0;
+		for (ac = 0; ac < WME_AC_MAX; ac++) {
+			idx = mon_peer->stats.airtime_consumption[ac].avg_consumption.idx;
+			mon_peer->stats.airtime_consumption[ac].avg_consumption.avg_consumption_per_sec[idx] =
+					mon_peer->stats.airtime_consumption[ac].consumption;
+			mon_peer->stats.airtime_consumption[ac].consumption = 0;
+			mon_peer->stats.airtime_consumption[ac].avg_consumption.idx++;
+			if (mon_peer->stats.airtime_consumption[ac].avg_consumption.idx ==
+			    MAX_CONSUMPTION_TIME)
+				mon_peer->stats.airtime_consumption[ac].avg_consumption.idx = 0;
+		}
 	}
 }
 #else
@@ -4070,12 +4072,14 @@ void dp_ppdu_desc_user_airtime_consumption_update(
 			struct cdp_tx_completion_ppdu_user *user)
 {
 	struct dp_mon_peer *mon_peer = NULL;
+	uint8_t ac = 0;
 
 	mon_peer = peer->monitor_peer;
 	if (qdf_unlikely(!mon_peer))
 		return;
 
-	DP_STATS_INC(mon_peer, airtime_consumption.consumption,
+	ac = TID_TO_WME_AC(user->tid);
+	DP_STATS_INC(mon_peer, airtime_consumption[ac].consumption,
 		     user->phy_tx_time_us);
 }
 #else
