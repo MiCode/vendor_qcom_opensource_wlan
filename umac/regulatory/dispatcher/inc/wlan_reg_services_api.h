@@ -1648,6 +1648,13 @@ static inline void wlan_reg_set_create_punc_bitmap(struct ch_params *ch_params,
 						   bool is_create_punc_bitmap)
 {
 }
+
+static inline
+uint16_t wlan_reg_find_nearest_puncture_pattern(enum phy_ch_width bw,
+						uint16_t proposed_bitmap)
+{
+	return 0;
+}
 #endif
 
 /**

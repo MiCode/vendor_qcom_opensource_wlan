@@ -1012,8 +1012,9 @@ dfs_process_radar_ind(struct wlan_dfs *dfs,
 
 #ifdef QCA_DFS_BW_PUNCTURE
 /**
- * dfs_is_ignore_radar_for_punctured_chans: Store the radar bitmap and check
- * if radar is found in already punctured channel and ignore the radar.
+ * dfs_is_ignore_radar_for_punctured_chans: Store the radar bitmap and check if
+ *                                          radar is found in already punctured
+ *                                          channel and ignore the radar.
  *
  * dfs: Wlan_dfs structure
  * dfs_radar_bitmap: Variable to store radar bitmap.
