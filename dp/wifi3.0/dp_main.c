@@ -10618,6 +10618,9 @@ static QDF_STATUS dp_get_vdev_param(struct cdp_soc_t *cdp_soc, uint8_t vdev_id,
 				vdev->mesh_tid_latency_config.latency_tid;
 		break;
 #endif
+	case CDP_DROP_3ADDR_MCAST:
+		val->cdp_drop_3addr_mcast = vdev->drop_3addr_mcast;
+		break;
 	default:
 		dp_cdp_err("%pK: param value %d is wrong",
 			   soc, param);
