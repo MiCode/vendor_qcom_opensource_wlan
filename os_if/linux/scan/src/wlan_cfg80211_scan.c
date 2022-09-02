@@ -2083,6 +2083,33 @@ static inline void wlan_cfg80211_put_bss(struct wiphy *wiphy,
 }
 #endif
 
+#ifdef WLAN_FEATURE_MBSSID
+/**
+ * wlan_cfg80211_is_nontx_scan_entry() - check if the scan_entry correspond
+ *                                       nontx profile
+ * @scan_params: scan entry
+ *
+ * Return: true - if nontx profile, false - if tx profile
+ */
+static inline bool
+wlan_cfg80211_is_nontx_scan_entry(struct scan_cache_entry *scan_params)
+{
+	if (scan_params->mbssid_info.profile_count &&
+	    qdf_mem_cmp(scan_params->bssid.bytes,
+			scan_params->mbssid_info.trans_bssid,
+			QDF_MAC_ADDR_SIZE) != 0)
+		return true;
+
+	return false;
+}
+#else
+static inline bool
+wlan_cfg80211_is_nontx_scan_entry(struct scan_cache_entry *scan_params)
+{
+	return false;
+}
+#endif
+
 void wlan_cfg80211_inform_bss_frame(struct wlan_objmgr_pdev *pdev,
 		struct scan_cache_entry *scan_params)
 {
@@ -2097,6 +2124,14 @@ void wlan_cfg80211_inform_bss_frame(struct wlan_objmgr_pdev *pdev,
 	}
 
 	wiphy = pdev_ospriv->wiphy;
+
+	if (!wiphy) {
+		osif_err("wiphy is NULL");
+		return;
+	}
+
+	if (wlan_cfg80211_is_nontx_scan_entry(scan_params))
+		return;
 
 	bss_data.frame_len = wlan_get_frame_len(scan_params);
 	bss_data.mgmt = qdf_mem_malloc_atomic(bss_data.frame_len);
