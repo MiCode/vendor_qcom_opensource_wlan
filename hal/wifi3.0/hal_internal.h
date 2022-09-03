@@ -728,6 +728,7 @@ struct hal_hw_srng_config {
 	enum hal_srng_dir ring_dir;
 	uint32_t max_size;
 	bool nf_irq_support;
+	bool dmac_cmn_ring;
 };
 
 #define MAX_SHADOW_REGISTERS 40

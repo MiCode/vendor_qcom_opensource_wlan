@@ -2406,6 +2406,7 @@ struct hal_hw_srng_config hw_srng_table_5332[] = {
 		.reg_start = {},
 		.reg_size = {},
 		.max_size = HAL_RXDMA_MAX_RING_SIZE_BE,
+		.dmac_cmn_ring = TRUE,
 	},
 };
 

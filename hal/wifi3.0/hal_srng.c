@@ -132,13 +132,11 @@ static int hal_get_srng_ring_id(struct hal_soc *hal, int ring_type,
 		return -EINVAL;
 	}
 
-	/*
-	 * For BE, dmac_cmn_src_rxbuf_ring is set. If this is set
-	 * and ring is dst and also lmac ring then provide ring id per lmac
+	/**
+	 * Some DMAC rings share a common source ring, hence don't provide them
+	 * with separate ring IDs per LMAC.
 	 */
-	if (ring_config->lmac_ring &&
-	    (!hal->dmac_cmn_src_rxbuf_ring ||
-	     ring_config->ring_dir == HAL_SRNG_DST_RING)) {
+	if (ring_config->lmac_ring && !ring_config->dmac_cmn_ring) {
 		ring_id = (ring_config->start_ring_id + ring_num +
 			   (mac_id * HAL_MAX_RINGS_PER_LMAC));
 	} else {
