@@ -1010,7 +1010,7 @@ dfs_process_radar_ind(struct wlan_dfs *dfs,
 	return status;
 }
 
-#ifdef QCA_DFS_BW_PUNCTURE
+#if defined(QCA_DFS_BW_PUNCTURE) && defined(WLAN_FEATURE_11BE)
 /**
  * dfs_is_ignore_radar_for_punctured_chans: Store the radar bitmap and check if
  *                                          radar is found in already punctured
