@@ -307,10 +307,12 @@ void dp_mon_filter_show_rx_filter_be(enum dp_mon_filter_mode mode,
 /**
  * dp_vdev_set_monitor_mode_buf_rings_tx_2_0() - Add buffers to tx ring
  * @pdev: Pointer to dp_pdev object
+ * @num_of_buffers: Number of buffers to allocate
  *
  * Return: QDF_STATUS
  */
-QDF_STATUS dp_vdev_set_monitor_mode_buf_rings_tx_2_0(struct dp_pdev *pdev);
+QDF_STATUS dp_vdev_set_monitor_mode_buf_rings_tx_2_0(struct dp_pdev *pdev,
+						     uint16_t num_of_buffers);
 
 /**
  * dp_vdev_set_monitor_mode_buf_rings_rx_2_0() - Add buffers to rx ring

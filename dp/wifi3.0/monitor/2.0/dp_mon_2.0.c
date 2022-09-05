@@ -500,7 +500,8 @@ QDF_STATUS dp_vdev_set_monitor_mode_buf_rings_rx_2_0(struct dp_pdev *pdev)
 	return QDF_STATUS_SUCCESS;
 }
 
-QDF_STATUS dp_vdev_set_monitor_mode_buf_rings_tx_2_0(struct dp_pdev *pdev)
+QDF_STATUS dp_vdev_set_monitor_mode_buf_rings_tx_2_0(struct dp_pdev *pdev,
+						     uint16_t num_of_buffers)
 {
 	int tx_mon_max_entries;
 	struct wlan_cfg_dp_soc_ctxt *soc_cfg_ctx;
@@ -530,17 +531,17 @@ QDF_STATUS dp_vdev_set_monitor_mode_buf_rings_tx_2_0(struct dp_pdev *pdev)
 		return status;
 	}
 
-	if (mon_soc_be->tx_mon_ring_fill_level < tx_mon_max_entries) {
-		status = dp_tx_mon_buffers_alloc(soc,
-						 (tx_mon_max_entries -
-						 mon_soc_be->tx_mon_ring_fill_level));
-		if (status != QDF_STATUS_SUCCESS) {
-			dp_mon_err("%pK: Tx mon buffers allocation failed", soc);
-			return status;
+	if (mon_soc_be->tx_mon_ring_fill_level < num_of_buffers) {
+		if (dp_tx_mon_buffers_alloc(soc,
+					    (num_of_buffers -
+					     mon_soc_be->tx_mon_ring_fill_level))) {
+			dp_mon_err("%pK: Tx mon buffers allocation failed",
+				   soc);
+			return QDF_STATUS_E_FAILURE;
 		}
 		mon_soc_be->tx_mon_ring_fill_level +=
-				(tx_mon_max_entries -
-				mon_soc_be->tx_mon_ring_fill_level);
+					(num_of_buffers -
+					mon_soc_be->tx_mon_ring_fill_level);
 	}
 
 	return QDF_STATUS_SUCCESS;
@@ -555,13 +556,6 @@ QDF_STATUS dp_vdev_set_monitor_mode_buf_rings_2_0(struct dp_pdev *pdev)
 	status = dp_vdev_set_monitor_mode_buf_rings_rx_2_0(pdev);
 	if (status != QDF_STATUS_SUCCESS) {
 		dp_mon_err("%pK: Rx monitor extra buffer allocation failed",
-			   soc);
-		return status;
-	}
-
-	status = dp_vdev_set_monitor_mode_buf_rings_tx_2_0(pdev);
-	if (status != QDF_STATUS_SUCCESS) {
-		dp_mon_err("%pK: Tx monitor extra buffer allocation failed",
 			   soc);
 		return status;
 	}
@@ -998,12 +992,6 @@ QDF_STATUS dp_tx_mon_soc_init_2_0(struct dp_soc *soc)
 		goto fail;
 	}
 
-	/* monitor buffers for src */
-	if (dp_tx_mon_buffers_alloc(soc, DP_MON_RING_FILL_LEVEL_DEFAULT)) {
-		dp_mon_err("%pK: Tx mon buffers allocation failed", soc);
-		goto fail;
-	}
-
 	return QDF_STATUS_SUCCESS;
 fail:
 	return QDF_STATUS_E_FAILURE;
@@ -1031,7 +1019,7 @@ QDF_STATUS dp_mon_soc_init_2_0(struct dp_soc *soc)
 		goto fail;
 	}
 
-	mon_soc_be->tx_mon_ring_fill_level = DP_MON_RING_FILL_LEVEL_DEFAULT;
+	mon_soc_be->tx_mon_ring_fill_level = 0;
 	mon_soc_be->rx_mon_ring_fill_level = DP_MON_RING_FILL_LEVEL_DEFAULT;
 
 	mon_soc_be->is_dp_mon_soc_initialized = true;
