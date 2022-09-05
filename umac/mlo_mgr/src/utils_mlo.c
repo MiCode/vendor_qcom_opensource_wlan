@@ -363,6 +363,8 @@ util_parse_bvmlie_perstaprofile_stactrl(uint8_t *subelempayload,
 					uint8_t *linkid,
 					uint16_t *beaconinterval,
 					bool *is_beaconinterval_valid,
+					uint64_t *tsfoffset,
+					bool *is_tsfoffset_valid,
 					bool *is_complete_profile,
 					bool *is_macaddr_valid,
 					struct qdf_mac_addr *macaddr,
@@ -514,6 +516,16 @@ util_parse_bvmlie_perstaprofile_stactrl(uint8_t *subelempayload,
 				   WLAN_ML_TSF_OFFSET_SIZE,
 				   parsed_payload_len);
 			return QDF_STATUS_E_PROTO;
+		}
+
+		if (tsfoffset) {
+			qdf_mem_copy(tsfoffset,
+				     subelempayload + parsed_payload_len,
+				     WLAN_TIMESTAMP_LEN);
+			*tsfoffset = qdf_le64_to_cpu(*tsfoffset);
+
+			if (is_tsfoffset_valid)
+				*is_tsfoffset_valid = true;
 		}
 
 		parsed_payload_len += WLAN_ML_TSF_OFFSET_SIZE;
@@ -862,6 +874,8 @@ QDF_STATUS util_parse_partner_info_from_linkinfo(uint8_t *linkinfo,
 								      sizeof(struct subelem_header),
 								      subelemseqpayloadlen,
 								      &linkid,
+								      NULL,
+								      NULL,
 								      NULL,
 								      NULL,
 								      NULL,
@@ -1611,6 +1625,12 @@ QDF_STATUS util_gen_link_reqrsp_cmn(uint8_t *frame, qdf_size_t frame_len,
 	uint16_t beaconinterval;
 	/* Whether Beacon interval value valid */
 	bool is_beaconinterval_valid;
+	/* TSF timer of the reporting AP */
+	uint64_t tsf;
+	/* TSF offset of the reproted AP */
+	uint64_t tsfoffset;
+	/* TSF offset value valid */
+	bool is_tsfoffset_valid;
 	/* If Complete Profile or not*/
 	bool is_completeprofile;
 	qdf_size_t tmplen;
@@ -1658,6 +1678,8 @@ QDF_STATUS util_gen_link_reqrsp_cmn(uint8_t *frame, qdf_size_t frame_len,
 		frame_iesection_offset = WLAN_REASSOC_REQ_IES_OFFSET;
 	} else if (subtype == WLAN_FC0_STYPE_PROBE_RESP) {
 		frame_iesection_offset = WLAN_PROBE_RESP_IES_OFFSET;
+		qdf_mem_copy(&tsf, frame, WLAN_TIMESTAMP_LEN);
+		tsf = qdf_le64_to_cpu(tsf);
 	} else {
 		/* This is a (re)association response */
 		frame_iesection_offset = WLAN_ASSOC_RSP_IES_OFFSET;
@@ -1890,6 +1912,7 @@ QDF_STATUS util_gen_link_reqrsp_cmn(uint8_t *frame, qdf_size_t frame_len,
 	is_reportedmacaddr_valid = false;
 	is_beaconinterval_valid = false;
 	is_completeprofile = false;
+	is_tsfoffset_valid = false;
 
 	/* Parse per-STA profile */
 	ret = util_parse_bvmlie_perstaprofile_stactrl(persta_prof +
@@ -1898,6 +1921,8 @@ QDF_STATUS util_gen_link_reqrsp_cmn(uint8_t *frame, qdf_size_t frame_len,
 						      NULL,
 						      &beaconinterval,
 						      &is_beaconinterval_valid,
+						      &tsfoffset,
+						      &is_tsfoffset_valid,
 						      &is_completeprofile,
 						      &is_reportedmacaddr_valid,
 						      &reportedmacaddr,
@@ -2102,9 +2127,6 @@ QDF_STATUS util_gen_link_reqrsp_cmn(uint8_t *frame, qdf_size_t frame_len,
 		/* This is a probe response */
 		mlo_debug("Populating fixed fields for probe response in link specific frame");
 
-		 /* Copy Timestamp from the starting of the probe response
-		  * frame.
-		  */
 		if ((link_frame_maxsize - link_frame_currlen) <
 				WLAN_TIMESTAMP_LEN) {
 			mlo_err("Insufficent space in link specific frame for Timestamp Info field. Required: %u octets, available: %zu octets",
@@ -2115,8 +2137,17 @@ QDF_STATUS util_gen_link_reqrsp_cmn(uint8_t *frame, qdf_size_t frame_len,
 			return QDF_STATUS_E_NOMEM;
 		}
 
-		qdf_mem_copy(link_frame_currpos, frame,
-			     WLAN_TIMESTAMP_LEN);
+		/* Per spec 11be_D2.1.1, the TSF Offset subfield of the STA Info
+		 * field indicates the offset (Toffset)between the TSF timer of
+		 * the reported AP (TA) and the TSF timer of the reporting
+		 * AP (TB) and is encoded as a 2s complement signed integer
+		 * with units of 2 µs. Toffset is calculated as
+		 * Toffset= Floor((TA – TB)/2).
+		 */
+		if (is_tsfoffset_valid)
+			tsf += tsfoffset * 2;
+
+		qdf_mem_copy(link_frame_currpos, &tsf, WLAN_TIMESTAMP_LEN);
 		link_frame_currpos += WLAN_TIMESTAMP_LEN;
 		link_frame_currlen += WLAN_TIMESTAMP_LEN;
 		mlo_debug("Added Timestamp Info field (%u octets) to link specific frame",
