@@ -2473,6 +2473,19 @@ reg_assign_afc_chan_entry_to_mas_chan(
 {
 	*mas_chan = &pdev_priv_obj->afc_chan_list[chn_idx];
 }
+
+/**
+ * reg_is_deployment_outdoor() - Check if device deployment type is outdoor
+ * @pdev_priv_obj: Pointer to pdev_priv_obj
+ *
+ * Return: True if deployment is outdoor, else false
+ */
+static bool
+reg_is_deployment_outdoor(struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj)
+{
+	return pdev_priv_obj->reg_afc_dev_deployment_type ==
+		AFC_DEPLOYMENT_OUTDOOR;
+}
 #else
 static inline void
 reg_assign_afc_chan_entry_to_mas_chan(
@@ -2480,6 +2493,12 @@ reg_assign_afc_chan_entry_to_mas_chan(
 		struct regulatory_channel **mas_chan,
 		uint8_t chn_idx)
 {
+}
+
+static inline bool
+reg_is_deployment_outdoor(struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj)
+{
+	return false;
 }
 #endif
 
@@ -2518,6 +2537,12 @@ static void reg_update_sup_ch_entry_for_mode(
 			reg_assign_afc_chan_entry_to_mas_chan(pdev_priv_obj,
 							      &mas_chan,
 							      chn_idx);
+		/* In INDOOR mode, before AFC response is received, the SP
+		 * channels should be totally disabled. Therefore, return from
+		 * here so that super channel entry remain disabled
+		 */
+		else if (!reg_is_deployment_outdoor(pdev_priv_obj))
+			return;
 	}
 
 	if (!mas_chan)
