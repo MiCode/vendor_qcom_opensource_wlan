@@ -9793,6 +9793,23 @@ void dp_get_peer_extd_stats(struct dp_peer *peer,
 #endif
 
 /**
+ * dp_get_peer_tx_per()- Get peer packet error ratio
+ * @peer_stats: buffer for peer stats
+ *
+ * Return: none
+ */
+static inline
+void dp_get_peer_tx_per(struct cdp_peer_stats *peer_stats)
+{
+	if (peer_stats->tx.tx_success.num + peer_stats->tx.retries > 0)
+		peer_stats->tx.per = (peer_stats->tx.retries * 100) /
+				  (peer_stats->tx.tx_success.num +
+				   peer_stats->tx.retries);
+	else
+		peer_stats->tx.per = 0;
+}
+
+/**
  * dp_get_peer_stats()- Get peer stats
  * @peer: Datapath peer
  * @peer_stats: buffer for peer stats
@@ -9809,6 +9826,8 @@ void dp_get_peer_stats(struct dp_peer *peer, struct cdp_peer_stats *peer_stats)
 	dp_get_peer_per_pkt_stats(peer, peer_stats);
 
 	dp_get_peer_extd_stats(peer, peer_stats);
+
+	dp_get_peer_tx_per(peer_stats);
 }
 
 /*

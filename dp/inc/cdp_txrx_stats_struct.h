@@ -1400,6 +1400,7 @@ struct protocol_trace_count {
  * @punc_bw[MAX_PUNCTURED_MODE]: MSDU count for punctured BW
  * @release_src_not_tqm: Counter to keep track of release source is not TQM
  *			 in TX completion status processing
+ * @per: Packet error ratio
  */
 struct cdp_tx_stats {
 	struct cdp_pkt_info comp_pkt;
@@ -1518,6 +1519,7 @@ struct cdp_tx_stats {
 	uint32_t punc_bw[MAX_PUNCTURED_MODE];
 #endif
 	uint32_t release_src_not_tqm;
+	uint32_t per;
 };
 
 /* struct cdp_rx_stats - rx Level Stats
