@@ -147,6 +147,48 @@ bool mlo_vdevs_check_single_soc(struct wlan_objmgr_vdev **wlan_vdev_list,
 
 qdf_export_symbol(mlo_vdevs_check_single_soc);
 
+static void mlo_check_state(struct wlan_objmgr_psoc *psoc,
+			    void *obj, void *args)
+{
+	struct wlan_objmgr_pdev *pdev;
+	uint8_t link_idx;
+	struct mlo_mgr_context *mlo_ctx = wlan_objmgr_get_mlo_ctx();
+	struct mlo_state_params *params = (struct mlo_state_params *)args;
+
+	pdev = (struct wlan_objmgr_pdev *)obj;
+
+	if (!mlo_ctx)
+		return;
+
+	if (mlo_find_pdev_idx(pdev, &link_idx) != QDF_STATUS_SUCCESS) {
+		qdf_info("Failed to find pdev");
+		return;
+	}
+
+	if (mlo_ctx->setup_info.state[link_idx] != params->check_state)
+		params->link_state_fail = 1;
+}
+
+QDF_STATUS mlo_check_all_pdev_state(struct wlan_objmgr_psoc *psoc,
+				    enum MLO_LINK_STATE state)
+{
+	QDF_STATUS status = QDF_STATUS_E_INVAL;
+	struct mlo_state_params params = {0};
+
+	params.check_state = state;
+
+	wlan_objmgr_iterate_obj_list(psoc, WLAN_PDEV_OP,
+				     mlo_check_state, &params,
+				     0, WLAN_MLME_NB_ID);
+
+	if (params.link_state_fail)
+		status = QDF_STATUS_E_INVAL;
+	else
+		status = QDF_STATUS_SUCCESS;
+
+	return status;
+}
+
 void mlo_setup_init(void)
 {
 	struct mlo_mgr_context *mlo_ctx = wlan_objmgr_get_mlo_ctx();
@@ -414,12 +456,12 @@ void mlo_link_teardown_complete(struct wlan_objmgr_pdev *pdev)
 	}
 
 	qdf_debug("Teardown link idx = %d", link_idx);
-	mlo_ctx->setup_info.pdev_list[link_idx] = NULL;
 	mlo_ctx->setup_info.state[link_idx] = MLO_LINK_TEARDOWN;
 
 	/* Waiting for teardown on other links */
-	if (mlo_ctx->setup_info.num_links)
-		return;
+	for (link_idx = 0; link_idx < mlo_ctx->setup_info.tot_links; link_idx++)
+		if (mlo_ctx->setup_info.state[link_idx] != MLO_LINK_TEARDOWN)
+			return;
 
 	qdf_info("Teardown complete");
 
@@ -434,28 +476,6 @@ void mlo_link_teardown_complete(struct wlan_objmgr_pdev *pdev)
 }
 
 qdf_export_symbol(mlo_link_teardown_complete);
-
-static void mlo_check_state(struct wlan_objmgr_psoc *psoc,
-			    void *obj, void *args)
-{
-	struct wlan_objmgr_pdev *pdev;
-	uint8_t link_idx;
-	struct mlo_mgr_context *mlo_ctx = wlan_objmgr_get_mlo_ctx();
-	struct mlo_state_params *params = (struct mlo_state_params *)args;
-
-	pdev = (struct wlan_objmgr_pdev *)obj;
-
-	if (!mlo_ctx)
-		return;
-
-	if (mlo_find_pdev_idx(pdev, &link_idx) != QDF_STATUS_SUCCESS) {
-		qdf_info("Failed to find pdev");
-		return;
-	}
-
-	if (mlo_ctx->setup_info.state[link_idx] != params->check_state)
-		params->link_state_fail = 1;
-}
 
 static void mlo_force_teardown(void)
 {
@@ -476,26 +496,6 @@ static void mlo_force_teardown(void)
 			cdp_soc_mlo_soc_teardown(wlan_psoc_get_dp_handle(soc),
 						 mlo_ctx->dp_handle);
 	}
-}
-
-QDF_STATUS mlo_check_all_pdev_state(struct wlan_objmgr_psoc *psoc,
-				    enum MLO_LINK_STATE state)
-{
-	QDF_STATUS status = QDF_STATUS_E_INVAL;
-	struct mlo_state_params params = {0};
-
-	params.check_state = state;
-
-	wlan_objmgr_iterate_obj_list(psoc, WLAN_PDEV_OP,
-				     mlo_check_state, &params,
-				     0, WLAN_MLME_NB_ID);
-
-	if (params.link_state_fail)
-		status = QDF_STATUS_E_INVAL;
-	else
-		status = QDF_STATUS_SUCCESS;
-
-	return status;
 }
 
 #define MLO_MGR_TEARDOWN_TIMEOUT 3000
