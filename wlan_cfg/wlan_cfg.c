@@ -3929,6 +3929,8 @@ wlan_cfg_get_prealloc_cfg(struct cdp_ctrl_objmgr_psoc *ctrl_psoc,
 	if (!ctrl_psoc || !cfg)
 		return;
 
+	cfg->num_reo_dst_ring_entries = cfg_get(ctrl_psoc,
+						CFG_DP_RX_DESTINATION_RING);
 	cfg->num_tx_ring_entries = cfg_get(ctrl_psoc, CFG_DP_TX_RING_SIZE);
 	cfg->num_tx_comp_ring_entries = cfg_get(ctrl_psoc,
 						CFG_DP_TX_COMPL_RING_SIZE);
@@ -3940,6 +3942,8 @@ wlan_cfg_get_prealloc_cfg(struct cdp_ctrl_objmgr_psoc *ctrl_psoc,
 						     CFG_DP_REO_EXCEPTION_RING);
 	cfg->num_tx_desc = cfg_get(ctrl_psoc, CFG_DP_TX_DESC);
 	cfg->num_tx_ext_desc = cfg_get(ctrl_psoc, CFG_DP_TX_EXT_DESC);
+	cfg->num_rxdma_buf_ring_entries = cfg_get(ctrl_psoc,
+						  CFG_DP_RXDMA_BUF_RING);
 }
 
 #ifdef WLAN_FEATURE_PKT_CAPTURE_V2
