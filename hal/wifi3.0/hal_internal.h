@@ -1285,6 +1285,23 @@ union hal_shadow_reg_cfg {
 #endif
 };
 
+#ifdef HAL_RECORD_SUSPEND_WRITE
+#define HAL_SUSPEND_WRITE_HISTORY_MAX 256
+
+struct hal_suspend_write_record {
+	uint64_t ts;
+	uint8_t ring_id;
+	uit32_t value;
+	uint32_t direct_wcount;
+};
+
+struct hal_suspend_write_history {
+	qdf_atomic_t index;
+	struct hal_suspend_write_record record[HAL_SUSPEND_WRITE_HISTORY_MAX];
+
+};
+#endif
+
 /**
  * struct hal_soc - HAL context to be used to access SRNG APIs
  *		    (currently used by data path and
