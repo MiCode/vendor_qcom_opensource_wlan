@@ -379,8 +379,18 @@ more_data:
 		/* Get MSDU DESC info */
 		hal_rx_msdu_desc_info_get_be(ring_desc, &msdu_desc_info);
 
+		/* Set the end bit to identify the last buffer in MPDU */
+		if (msdu_desc_info.msdu_flags & HAL_MSDU_F_LAST_MSDU_IN_MPDU)
+			qdf_nbuf_set_rx_chfrag_end(rx_desc->nbuf, 1);
+
 		if (qdf_unlikely(msdu_desc_info.msdu_flags &
 				 HAL_MSDU_F_MSDU_CONTINUATION)) {
+			/* In dp_rx_sg_create() until the last buffer,
+			 * end bit should not be set. As continuation bit set,
+			 * this is not a last buffer.
+			 */
+			qdf_nbuf_set_rx_chfrag_end(rx_desc->nbuf, 0);
+
 			/* previous msdu has end bit set, so current one is
 			 * the new MPDU
 			 */
@@ -426,7 +436,7 @@ more_data:
 			qdf_nbuf_set_raw_frame(rx_desc->nbuf, 1);
 
 		if (!is_prev_msdu_last &&
-		    msdu_desc_info.msdu_flags & HAL_MSDU_F_LAST_MSDU_IN_MPDU)
+		    !(msdu_desc_info.msdu_flags & HAL_MSDU_F_MSDU_CONTINUATION))
 			is_prev_msdu_last = true;
 
 		rx_bufs_reaped[rx_desc->chip_id][rx_desc->pool_id]++;
@@ -455,9 +465,6 @@ more_data:
 
 		if (msdu_desc_info.msdu_flags & HAL_MSDU_F_MSDU_CONTINUATION)
 			qdf_nbuf_set_rx_chfrag_cont(rx_desc->nbuf, 1);
-
-		if (msdu_desc_info.msdu_flags & HAL_MSDU_F_LAST_MSDU_IN_MPDU)
-			qdf_nbuf_set_rx_chfrag_end(rx_desc->nbuf, 1);
 
 		if (msdu_desc_info.msdu_flags & HAL_MSDU_F_DA_IS_MCBC)
 			qdf_nbuf_set_da_mcbc(rx_desc->nbuf, 1);
