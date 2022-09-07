@@ -1322,6 +1322,11 @@ __qdf_nbuf_data_get_dhcp_subtype(uint8_t *data)
 	return subtype;
 }
 
+#define EAPOL_MASK				0x8002
+#define EAPOL_M1_BIT_MASK			0x8000
+#define EAPOL_M2_BIT_MASK			0x0000
+#define EAPOL_M3_BIT_MASK			0x8002
+#define EAPOL_M4_BIT_MASK			0x0002
 /**
  * __qdf_nbuf_data_get_eapol_subtype() - get the subtype
  *            of EAPOL packet.
@@ -1342,6 +1347,7 @@ __qdf_nbuf_data_get_eapol_subtype(uint8_t *data)
 			(data + EAPOL_KEY_INFO_OFFSET));
 
 	mask = eapol_key_info & EAPOL_MASK;
+
 	switch (mask) {
 	case EAPOL_M1_BIT_MASK:
 		subtype = QDF_PROTO_EAPOL_M1;
@@ -1354,8 +1360,6 @@ __qdf_nbuf_data_get_eapol_subtype(uint8_t *data)
 		break;
 	case EAPOL_M4_BIT_MASK:
 		subtype = QDF_PROTO_EAPOL_M4;
-		break;
-	default:
 		break;
 	}
 
