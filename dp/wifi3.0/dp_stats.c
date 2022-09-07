@@ -284,6 +284,7 @@ const char *mu_reception_mode[TXRX_TYPE_MU_MAX] = {
 };
 
 #ifdef QCA_ENH_V3_STATS_SUPPORT
+#ifndef WLAN_CONFIG_TX_DELAY
 const char *fw_to_hw_delay_bucket[CDP_DELAY_BUCKET_MAX + 1] = {
 	"0 to 9 ms", "10 to 19 ms",
 	"20 to 29 ms", "30 to 39 ms",
@@ -292,6 +293,16 @@ const char *fw_to_hw_delay_bucket[CDP_DELAY_BUCKET_MAX + 1] = {
 	"80 to 89 ms", "90 to 99 ms",
 	"101 to 249 ms", "250 to 499 ms", "500+ ms"
 };
+#else
+const char *fw_to_hw_delay_bucket[CDP_DELAY_BUCKET_MAX + 1] = {
+	"0 to 250 us", "250 to 500 us",
+	"500 to 750 us", "750 to 1000 us",
+	"1000 to 1500 us", "1500 to 2000 us",
+	"2000 to 2500 us", "2500 to 5000 us",
+	"5000 to 6000 us", "6000 to 7000 ms",
+	"7000 to 8000 us", "8000 to 9000 us", "9000+ us"
+};
+#endif
 #elif defined(HW_TX_DELAY_STATS_ENABLE)
 const char *fw_to_hw_delay_bucket[CDP_DELAY_BUCKET_MAX + 1] = {
 	"0 to 2 ms", "2 to 4 ms",
@@ -304,6 +315,7 @@ const char *fw_to_hw_delay_bucket[CDP_DELAY_BUCKET_MAX + 1] = {
 #endif
 
 #ifdef QCA_ENH_V3_STATS_SUPPORT
+#ifndef WLAN_CONFIG_TX_DELAY
 const char *sw_enq_delay_bucket[CDP_DELAY_BUCKET_MAX + 1] = {
 	"0 to 1 ms", "1 to 2 ms",
 	"2 to 3 ms", "3 to 4 ms",
@@ -312,6 +324,16 @@ const char *sw_enq_delay_bucket[CDP_DELAY_BUCKET_MAX + 1] = {
 	"8 to 9 ms", "9 to 10 ms",
 	"10 to 11 ms", "11 to 12 ms", "12+ ms"
 };
+#else
+const char *sw_enq_delay_bucket[CDP_DELAY_BUCKET_MAX + 1] = {
+	"0 to 250 us", "250 to 500 us",
+	"500 to 750 us", "750 to 1000 us",
+	"1000 to 1500 us", "1500 to 2000 us",
+	"2000 to 2500 us", "2500 to 5000 us",
+	"5000 to 6000 us", "6000 to 7000 ms",
+	"7000 to 8000 us", "8000 to 9000 us", "9000+ us"
+};
+#endif
 
 const char *intfrm_delay_bucket[CDP_DELAY_BUCKET_MAX + 1] = {
 	"0 to 4 ms", "5 to 9 ms",

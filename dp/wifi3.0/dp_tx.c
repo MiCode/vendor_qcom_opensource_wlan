@@ -3971,10 +3971,39 @@ static void dp_tx_update_peer_sawf_stats(struct dp_soc *soc,
 #endif
 
 #ifdef QCA_PEER_EXT_STATS
+#ifdef WLAN_CONFIG_TX_DELAY
+static void dp_tx_compute_tid_delay(struct cdp_delay_tid_stats *stats,
+				    struct dp_tx_desc_s *tx_desc,
+				    struct hal_tx_completion_status *ts,
+				    struct dp_vdev *vdev)
+{
+	struct dp_soc *soc = vdev->pdev->soc;
+	struct cdp_delay_tx_stats  *tx_delay = &stats->tx_delay;
+	int64_t timestamp_ingress, timestamp_hw_enqueue;
+	uint32_t sw_enqueue_delay, fwhw_transmit_delay = 0;
+
+	if (!ts->valid)
+		return;
+
+	timestamp_ingress = qdf_nbuf_get_timestamp_us(tx_desc->nbuf);
+	timestamp_hw_enqueue = qdf_ktime_to_us(tx_desc->timestamp);
+
+	sw_enqueue_delay = (uint32_t)(timestamp_hw_enqueue - timestamp_ingress);
+	dp_hist_update_stats(&tx_delay->tx_swq_delay, sw_enqueue_delay);
+
+	if (soc->arch_ops.dp_tx_compute_hw_delay)
+		if (!soc->arch_ops.dp_tx_compute_hw_delay(soc, vdev, ts,
+							  &fwhw_transmit_delay))
+			dp_hist_update_stats(&tx_delay->hwtx_delay,
+					     fwhw_transmit_delay);
+}
+#else
 /*
  * dp_tx_compute_tid_delay() - Compute per TID delay
  * @stats: Per TID delay stats
  * @tx_desc: Software Tx descriptor
+ * @ts: Tx completion status
+ * @vdev: vdev
  *
  * Compute the software enqueue and hw enqueue delays and
  * update the respective histograms
@@ -3982,7 +4011,9 @@ static void dp_tx_update_peer_sawf_stats(struct dp_soc *soc,
  * Return: void
  */
 static void dp_tx_compute_tid_delay(struct cdp_delay_tid_stats *stats,
-				    struct dp_tx_desc_s *tx_desc)
+				    struct dp_tx_desc_s *tx_desc,
+				    struct hal_tx_completion_status *ts,
+				    struct dp_vdev *vdev)
 {
 	struct cdp_delay_tx_stats  *tx_delay = &stats->tx_delay;
 	int64_t current_timestamp, timestamp_ingress, timestamp_hw_enqueue;
@@ -4001,6 +4032,7 @@ static void dp_tx_compute_tid_delay(struct cdp_delay_tid_stats *stats,
 	dp_hist_update_stats(&tx_delay->tx_swq_delay, sw_enqueue_delay);
 	dp_hist_update_stats(&tx_delay->hwtx_delay, fwhw_transmit_delay);
 }
+#endif
 
 /*
  * dp_tx_update_peer_delay_stats() - Update the peer delay stats
@@ -4016,16 +4048,19 @@ static void dp_tx_compute_tid_delay(struct cdp_delay_tid_stats *stats,
  */
 static void dp_tx_update_peer_delay_stats(struct dp_txrx_peer *txrx_peer,
 					  struct dp_tx_desc_s *tx_desc,
-					  uint8_t tid, uint8_t ring_id)
+					  struct hal_tx_completion_status *ts,
+					  uint8_t ring_id)
 {
 	struct dp_pdev *pdev = txrx_peer->vdev->pdev;
 	struct dp_soc *soc = NULL;
 	struct dp_peer_delay_stats *delay_stats = NULL;
+	uint8_t tid;
 
 	soc = pdev->soc;
 	if (qdf_likely(!wlan_cfg_is_peer_ext_stats_enabled(soc->wlan_cfg_ctx)))
 		return;
 
+	tid = ts->tid;
 	delay_stats = txrx_peer->delay_stats;
 
 	qdf_assert(delay_stats);
@@ -4038,12 +4073,14 @@ static void dp_tx_update_peer_delay_stats(struct dp_txrx_peer *txrx_peer,
 		tid = CDP_MAX_DATA_TIDS - 1;
 
 	dp_tx_compute_tid_delay(&delay_stats->delay_tid_stats[tid][ring_id],
-				tx_desc);
+				tx_desc, ts, txrx_peer->vdev);
 }
 #else
-static inline void dp_tx_update_peer_delay_stats(struct dp_txrx_peer *txrx_peer,
-						 struct dp_tx_desc_s *tx_desc,
-						 uint8_t tid, uint8_t ring_id)
+static inline
+void dp_tx_update_peer_delay_stats(struct dp_txrx_peer *txrx_peer,
+				   struct dp_tx_desc_s *tx_desc,
+				   struct hal_tx_completion_status *ts,
+				   uint8_t ring_id)
 {
 }
 #endif
@@ -4926,7 +4963,7 @@ void dp_tx_comp_process_tx_status(struct dp_soc *soc,
 	}
 
 	dp_tx_update_peer_stats(tx_desc, ts, txrx_peer, ring_id);
-	dp_tx_update_peer_delay_stats(txrx_peer, tx_desc, ts->tid, ring_id);
+	dp_tx_update_peer_delay_stats(txrx_peer, tx_desc, ts, ring_id);
 	dp_tx_update_peer_sawf_stats(soc, vdev, txrx_peer, tx_desc,
 				     ts, ts->tid);
 	dp_tx_send_pktlog(soc, vdev->pdev, tx_desc, nbuf, dp_status);
