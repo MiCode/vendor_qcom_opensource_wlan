@@ -13554,6 +13554,30 @@ dp_recovery_vdev_flush_peers(struct cdp_soc_t *cdp_soc,
 	dp_vdev_unref_delete(soc, vdev, DP_MOD_ID_CDP);
 }
 #endif
+#ifdef QCA_GET_TSF_VIA_REG
+/**
+ * dp_get_tsf_time() - get tsf time
+ * @soc: Datapath soc handle
+ * @mac_id: mac_id
+ * @tsf: pointer to update tsf value
+ * @tsf_sync_soc_time: pointer to update tsf sync time
+ *
+ * Return: None.
+ */
+static inline void
+dp_get_tsf_time(struct cdp_soc_t *soc_hdl, uint32_t tsf_id, uint32_t mac_id,
+		uint64_t *tsf, uint64_t *tsf_sync_soc_time)
+{
+	hal_get_tsf_time(((struct dp_soc *)soc_hdl)->hal_soc, tsf_id, mac_id,
+			 tsf, tsf_sync_soc_time);
+}
+#else
+static inline void
+dp_get_tsf_time(struct cdp_soc_t *soc_hdl, uint32_t tsf_id, uint32_t mac_id,
+		uint64_t *tsf, uint64_t *tsf_sync_soc_time)
+{
+}
+#endif
 
 static struct cdp_cmn_ops dp_ops_cmn = {
 	.txrx_soc_attach_target = dp_soc_attach_target_wifi3,
@@ -13675,6 +13699,7 @@ static struct cdp_cmn_ops dp_ops_cmn = {
 	.txrx_recovery_vdev_flush_peers = dp_recovery_vdev_flush_peers,
 #endif
 	.txrx_umac_reset_deinit = dp_soc_umac_reset_deinit,
+	.txrx_get_tsf_time = dp_get_tsf_time,
 };
 
 static struct cdp_ctrl_ops dp_ops_ctrl = {

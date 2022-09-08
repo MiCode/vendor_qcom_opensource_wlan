@@ -126,6 +126,36 @@
 
 #define LINK_DESC_SIZE (NUM_OF_DWORDS_RX_MSDU_LINK << 2)
 
+#ifdef QCA_GET_TSF_VIA_REG
+#define PCIE_PCIE_MHI_TIME_LOW 0xA28
+#define PCIE_PCIE_MHI_TIME_HIGH 0xA2C
+
+#define PMM_REG_BASE 0xB500FC
+
+#define FW_QTIME_CYCLES_PER_10_USEC 192
+
+/* enum to indicate which scratch registers hold which value*/
+/* Obtain from pcie_reg_scratch.h? */
+enum hal_scratch_reg_enum {
+	PMM_QTIMER_GLOBAL_OFFSET_LO_US,
+	PMM_QTIMER_GLOBAL_OFFSET_HI_US,
+	PMM_MAC0_TSF1_OFFSET_LO_US,
+	PMM_MAC0_TSF1_OFFSET_HI_US,
+	PMM_MAC0_TSF2_OFFSET_LO_US,
+	PMM_MAC0_TSF2_OFFSET_HI_US,
+	PMM_MAC1_TSF1_OFFSET_LO_US,
+	PMM_MAC1_TSF1_OFFSET_HI_US,
+	PMM_MAC1_TSF2_OFFSET_LO_US,
+	PMM_MAC1_TSF2_OFFSET_HI_US,
+	PMM_MLO_OFFSET_LO_US,
+	PMM_MLO_OFFSET_HI_US,
+	PMM_TQM_CLOCK_OFFSET_LO_US,
+	PMM_TQM_CLOCK_OFFSET_HI_US,
+	PMM_Q6_CRASH_REASON,
+	PMM_PMM_REG_MAX
+};
+#endif
+
 static uint32_t hal_get_link_desc_size_kiwi(void)
 {
 	return LINK_DESC_SIZE;
@@ -1865,6 +1895,121 @@ static uint32_t hal_get_reo_qdesc_size_kiwi(uint32_t ba_window_size, int tid)
 		sizeof(struct rx_reo_queue_1k);
 }
 
+#ifdef QCA_GET_TSF_VIA_REG
+static inline void
+hal_get_tsf_enum(uint32_t tsf_id, uint32_t mac_id,
+		 enum hal_scratch_reg_enum *tsf_enum_low,
+		 enum hal_scratch_reg_enum *tsf_enum_hi)
+{
+	if (mac_id == 0) {
+		if (tsf_id == 0) {
+			*tsf_enum_low = PMM_MAC0_TSF1_OFFSET_LO_US;
+			*tsf_enum_hi = PMM_MAC0_TSF1_OFFSET_HI_US;
+		} else if (tsf_id == 1) {
+			*tsf_enum_low = PMM_MAC0_TSF2_OFFSET_LO_US;
+			*tsf_enum_hi = PMM_MAC0_TSF2_OFFSET_HI_US;
+		}
+	} else	if (mac_id == 1) {
+		if (tsf_id == 0) {
+			*tsf_enum_low = PMM_MAC1_TSF1_OFFSET_LO_US;
+			*tsf_enum_hi = PMM_MAC1_TSF1_OFFSET_HI_US;
+		} else if (tsf_id == 1) {
+			*tsf_enum_low = PMM_MAC1_TSF2_OFFSET_LO_US;
+			*tsf_enum_hi = PMM_MAC1_TSF2_OFFSET_HI_US;
+		}
+	}
+}
+
+static inline uint32_t
+hal_tsf_read_scratch_reg(struct hal_soc *soc,
+			 enum hal_scratch_reg_enum reg_enum)
+{
+	return hal_read32_mb(soc, PMM_REG_BASE + (reg_enum * 4));
+}
+
+static inline
+uint64_t hal_tsf_get_fw_time(struct hal_soc *soc)
+{
+	uint64_t fw_time_low;
+	uint64_t fw_time_high;
+
+	fw_time_low = hal_read32_mb(soc, PCIE_PCIE_MHI_TIME_LOW);
+	fw_time_high = hal_read32_mb(soc, PCIE_PCIE_MHI_TIME_HIGH);
+	return (fw_time_high << 32 | fw_time_low);
+}
+
+static inline
+uint64_t hal_fw_qtime_to_usecs(uint64_t time)
+{
+	/*
+	 * Try to preserve precision by multiplying by 10 first.
+	 * If that would cause a wrap around, divide first instead.
+	 */
+	if (time * 10 < time) {
+		time = qdf_do_div(time, FW_QTIME_CYCLES_PER_10_USEC);
+		return time * 10;
+	}
+
+	time = time * 10;
+	time = qdf_do_div(time, FW_QTIME_CYCLES_PER_10_USEC);
+
+	return time;
+}
+
+/**
+ * hal_get_tsf_time_kiwi() - Get tsf time from scatch register
+ * @hal_soc_hdl: HAL soc handle
+ * @mac_id: mac_id
+ * @tsf: pointer to update tsf value
+ * @tsf_sync_soc_time: pointer to update tsf sync time
+ *
+ * Return: None.
+ */
+static void
+hal_get_tsf_time_kiwi(hal_soc_handle_t hal_soc_hdl, uint32_t tsf_id,
+		      uint32_t mac_id, uint64_t *tsf,
+		      uint64_t *tsf_sync_soc_time)
+{
+	struct hal_soc *soc = (struct hal_soc *)hal_soc_hdl;
+	uint64_t global_time_low_offset, global_time_high_offset;
+	uint64_t tsf_offset_low, tsf_offset_hi;
+	uint64_t fw_time, global_time, sync_time;
+	enum hal_scratch_reg_enum tsf_enum_low, tsf_enum_high;
+
+	if (hif_force_wake_request(soc->hif_handle))
+		return;
+
+	hal_get_tsf_enum(tsf_id, mac_id, &tsf_enum_low, &tsf_enum_high);
+	sync_time = qdf_get_log_timestamp();
+	fw_time = hal_tsf_get_fw_time(soc);
+
+	global_time_low_offset =
+		hal_tsf_read_scratch_reg(soc, PMM_QTIMER_GLOBAL_OFFSET_LO_US);
+	global_time_high_offset =
+		hal_tsf_read_scratch_reg(soc, PMM_QTIMER_GLOBAL_OFFSET_HI_US);
+
+	tsf_offset_low = hal_tsf_read_scratch_reg(soc, tsf_enum_low);
+	tsf_offset_hi = hal_tsf_read_scratch_reg(soc, tsf_enum_high);
+
+	fw_time = hal_fw_qtime_to_usecs(fw_time);
+	global_time = fw_time +
+		      (global_time_low_offset |
+		      (global_time_high_offset << 32));
+
+	*tsf = global_time + (tsf_offset_low | (tsf_offset_hi << 32));
+	*tsf_sync_soc_time = qdf_log_timestamp_to_usecs(sync_time);
+
+	hif_force_wake_release(soc->hif_handle);
+}
+#else
+static inline void
+hal_get_tsf_time_kiwi(hal_soc_handle_t hal_soc_hdl, uint32_t tsf_id,
+		      uint32_t mac_id, uint64_t *tsf,
+		      uint64_t *tsf_sync_soc_time)
+{
+}
+#endif
+
 static void hal_hw_txrx_ops_attach_kiwi(struct hal_soc *hal_soc)
 {
 	/* init and setup */
@@ -2123,6 +2268,7 @@ static void hal_hw_txrx_ops_attach_kiwi(struct hal_soc *hal_soc)
 		hal_tx_populate_bank_register_be;
 	hal_soc->ops->hal_tx_vdev_mcast_ctrl_set =
 		hal_tx_vdev_mcast_ctrl_set_be;
+	hal_soc->ops->hal_get_tsf_time = hal_get_tsf_time_kiwi;
 };
 
 struct hal_hw_srng_config hw_srng_table_kiwi[] = {
