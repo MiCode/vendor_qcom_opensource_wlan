@@ -1517,7 +1517,7 @@ static QDF_STATUS target_if_dbr_init_ring(struct wlan_objmgr_pdev *pdev,
 	ring_params.num_entries = num_entries;
 	srng = hal_srng_setup(dbr_psoc_obj->hal_soc, DIR_BUF_RX_DMA_SRC,
 			      mod_param->mod_id,
-			      mod_param->pdev_id, &ring_params);
+			      mod_param->pdev_id, &ring_params, 0);
 
 	if (!srng) {
 		direct_buf_rx_err("srng setup failed");

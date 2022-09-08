@@ -29,6 +29,7 @@
 #include <osif_cm_util.h>
 #include <wlan_cfg80211.h>
 #include <wlan_cfg80211_scan.h>
+#include "wlan_mlo_mgr_sta.h"
 #ifdef CONN_MGR_ADV_FEATURE
 #include "wlan_mlme_ucfg_api.h"
 #endif
@@ -395,6 +396,7 @@ void osif_indicate_reassoc_results(struct wlan_objmgr_vdev *vdev,
 				   struct wlan_cm_connect_resp *rsp)
 {
 	struct net_device *dev = osif_priv->wdev->netdev;
+	struct wlan_objmgr_vdev *assoc_vdev;
 	size_t req_len = 0;
 	const uint8_t *req_ie = NULL;
 	size_t rsp_len = 0;
@@ -410,6 +412,22 @@ void osif_indicate_reassoc_results(struct wlan_objmgr_vdev *vdev,
 	if (!psoc)
 		return;
 
+	if (wlan_vdev_mlme_is_mlo_vdev(vdev)) {
+		assoc_vdev = ucfg_mlo_get_assoc_link_vdev(vdev);
+		if (!assoc_vdev) {
+			osif_err("Assoc vdev is NULL");
+			return;
+		}
+
+		osif_priv = wlan_vdev_get_ospriv(assoc_vdev);
+		if (!osif_priv) {
+			osif_err("osif_priv is null");
+			return;
+		}
+
+		dev = osif_priv->wdev->netdev;
+	}
+
 	chan = ieee80211_get_channel(osif_priv->wdev->wiphy,
 				     rsp->freq);
 	bss = wlan_cfg80211_get_bss(osif_priv->wdev->wiphy, chan,
@@ -417,7 +435,7 @@ void osif_indicate_reassoc_results(struct wlan_objmgr_vdev *vdev,
 				    rsp->ssid.length);
 	if (!bss)
 		osif_warn("not able to find bss");
-	if (rsp->is_ft)
+	if (rsp->is_assoc)
 		osif_cm_get_assoc_req_ie_data(&rsp->connect_ies.assoc_req,
 					      &req_len, &req_ie);
 	else

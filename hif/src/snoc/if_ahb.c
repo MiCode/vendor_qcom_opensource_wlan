@@ -406,7 +406,8 @@ void hif_ahb_disable_bus(struct hif_softc *scn)
 		if (memres)
 			mem_pa_size = memres->end - memres->start + 1;
 
-		if (tgt_info->target_type == TARGET_TYPE_QCA5018) {
+		if (tgt_info->target_type == TARGET_TYPE_QCA5018 ||
+		    tgt_info->target_type == TARGET_TYPE_QCA5332) {
 			iounmap(sc->mem_ce);
 			sc->mem_ce = NULL;
 			scn->mem_ce = NULL;
@@ -533,7 +534,8 @@ QDF_STATUS hif_ahb_enable_bus(struct hif_softc *ol_sc,
 	 * In QCA5018 CE region moved to SOC outside WCSS block.
 	 * Allocate separate I/O remap to access CE registers.
 	 */
-	if (tgt_info->target_type == TARGET_TYPE_QCA5018) {
+	if (tgt_info->target_type == TARGET_TYPE_QCA5018 ||
+	    tgt_info->target_type == TARGET_TYPE_QCA5332) {
 		struct hif_softc *scn = HIF_GET_SOFTC(sc);
 
 		sc->mem_ce = ioremap_nocache(HOST_CE_ADDRESS, HOST_CE_SIZE);
@@ -638,6 +640,7 @@ void hif_ahb_irq_enable(struct hif_softc *scn, int ce_id)
 			if (tgt_info->target_type == TARGET_TYPE_QCA8074 ||
 			    tgt_info->target_type == TARGET_TYPE_QCA8074V2 ||
 			    tgt_info->target_type == TARGET_TYPE_QCA9574 ||
+			    tgt_info->target_type == TARGET_TYPE_QCA5332 ||
 			    tgt_info->target_type == TARGET_TYPE_QCA5018 ||
 			    tgt_info->target_type == TARGET_TYPE_QCA6018) {
 				/* Enable destination ring interrupts for
@@ -691,6 +694,7 @@ void hif_ahb_irq_disable(struct hif_softc *scn, int ce_id)
 			if (tgt_info->target_type == TARGET_TYPE_QCA8074 ||
 			    tgt_info->target_type == TARGET_TYPE_QCA8074V2 ||
 			    tgt_info->target_type == TARGET_TYPE_QCA9574 ||
+			    tgt_info->target_type == TARGET_TYPE_QCA5332 ||
 			    tgt_info->target_type == TARGET_TYPE_QCA5018 ||
 			    tgt_info->target_type == TARGET_TYPE_QCA6018) {
 				/* Disable destination ring interrupts for
@@ -773,6 +777,7 @@ void hif_display_ahb_irq_regs(struct hif_softc *scn)
 		if (tgt_info->target_type == TARGET_TYPE_QCA8074 ||
 		    tgt_info->target_type == TARGET_TYPE_QCA8074V2 ||
 		    tgt_info->target_type == TARGET_TYPE_QCA9574 ||
+		    tgt_info->target_type == TARGET_TYPE_QCA5332 ||
 		    tgt_info->target_type == TARGET_TYPE_QCA5018 ||
 		    tgt_info->target_type == TARGET_TYPE_QCA6018) {
 			regval = hif_read32_mb(scn, mem +

@@ -64,12 +64,14 @@ enum cdp_hist_bucket_index {
  * @CDP_HIST_TYPE_REAP_STACK: Rx HW reap to stack deliver delay
  * @CDP_HIST_TYPE_HW_TX_COMP_DELAY: Tx completion delay based on the timestamp
  *                                  provided by HW
+ * @CDP_HIST_TYPE_DELAY_PERCENTILE: Tx completion delay based on the perctile
  */
 enum cdp_hist_types {
 	CDP_HIST_TYPE_SW_ENQEUE_DELAY,
 	CDP_HIST_TYPE_HW_COMP_DELAY,
 	CDP_HIST_TYPE_REAP_STACK,
 	CDP_HIST_TYPE_HW_TX_COMP_DELAY,
+	CDP_HIST_TYPE_DELAY_PERCENTILE,
 	CDP_HIST_TYPE_MAX,
 };
 

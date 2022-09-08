@@ -471,8 +471,10 @@ static uint32_t wifi_pos_get_valid_channels(qdf_freq_t *chan_freqs,
 	uint32_t i, num_valid_channels = 0;
 
 	for (i = 0; i < num_ch; i++) {
-		if (wlan_reg_get_chan_enum_for_freq(chan_freqs[i]) ==
-		    INVALID_CHANNEL)
+		enum channel_enum ch_enum;
+
+		ch_enum = wlan_reg_get_chan_enum_for_freq(chan_freqs[i]);
+		if (reg_is_chan_enum_invalid(ch_enum))
 			continue;
 		valid_channel_list[num_valid_channels++] = chan_freqs[i];
 	}

@@ -71,6 +71,7 @@ typedef struct sk_buff_head __qdf_nbuf_queue_head_t;
 #define QDF_NBUF_CB_PACKET_TYPE_ICMP   5
 #define QDF_NBUF_CB_PACKET_TYPE_ICMPv6 6
 #define QDF_NBUF_CB_PACKET_TYPE_DHCPV6 7
+#define QDF_NBUF_CB_PACKET_TYPE_END_INDICATION 8
 
 #define RADIOTAP_BASE_HEADER_LEN sizeof(struct ieee80211_radiotap_header)
 
@@ -357,13 +358,13 @@ struct qdf_nbuf_cb {
 					is_packet_priv:1;
 				uint8_t packet_track:3,
 					to_fw:1,
-					proto_type:4;
+					/* used only for hl */
+					htt2_frm:1,
+					proto_type:3;
 				uint8_t dp_trace:1,
 					is_bcast:1,
 					is_mcast:1,
-					packet_type:3,
-					/* used only for hl*/
-					htt2_frm:1,
+					packet_type:4,
 					print:1;
 			} trace;
 			unsigned char *vaddr;
@@ -906,6 +907,11 @@ enum qdf_proto_subtype  __qdf_nbuf_data_get_icmp_subtype(uint8_t *data);
 enum qdf_proto_subtype  __qdf_nbuf_data_get_icmpv6_subtype(uint8_t *data);
 uint8_t __qdf_nbuf_data_get_ipv4_proto(uint8_t *data);
 uint8_t __qdf_nbuf_data_get_ipv6_proto(uint8_t *data);
+uint8_t __qdf_nbuf_data_get_ipv4_tos(uint8_t *data);
+uint8_t __qdf_nbuf_data_get_ipv6_tc(uint8_t *data);
+void __qdf_nbuf_data_set_ipv4_tos(uint8_t *data, uint8_t tos);
+void __qdf_nbuf_data_set_ipv6_tc(uint8_t *data, uint8_t tc);
+bool __qdf_nbuf_is_ipv4_last_fragment(struct sk_buff *skb);
 
 #ifdef QDF_NBUF_GLOBAL_COUNT
 int __qdf_nbuf_count_get(void);
@@ -2230,7 +2236,7 @@ static inline uint32_t __qdf_nbuf_tcp_seq(struct sk_buff *skb)
  *
  * Return: data pointer to typecast into your priv structure
  */
-static inline uint8_t *
+static inline char *
 __qdf_nbuf_get_priv_ptr(struct sk_buff *skb)
 {
 	return &skb->cb[8];

@@ -436,7 +436,7 @@ dp_rx_mon_status_process_tlv(struct dp_soc *soc, struct dp_intr *int_ctx,
 	struct dp_mon_soc *mon_soc = soc->monitor_soc;
 	struct dp_mon_pdev *mon_pdev;
 
-	if (!pdev) {
+	if (qdf_unlikely(!pdev)) {
 		dp_rx_mon_status_debug("%pK: pdev is null for mac_id = %d", soc,
 				       mac_id);
 		return;
@@ -446,7 +446,7 @@ dp_rx_mon_status_process_tlv(struct dp_soc *soc, struct dp_intr *int_ctx,
 	ppdu_info = &mon_pdev->ppdu_info;
 	rx_mon_stats = &mon_pdev->rx_mon_stats;
 
-	if (mon_pdev->mon_ppdu_status != DP_PPDU_STATUS_START)
+	if (qdf_unlikely(mon_pdev->mon_ppdu_status != DP_PPDU_STATUS_START))
 		return;
 
 	rx_enh_capture_mode = mon_pdev->rx_enh_capture_mode;
@@ -458,7 +458,7 @@ dp_rx_mon_status_process_tlv(struct dp_soc *soc, struct dp_intr *int_ctx,
 						   DP_MON_STATUS_BUF_DEQUEUE,
 						   NULL, NULL, status_nbuf);
 
-		if (!status_nbuf)
+		if (qdf_unlikely(!status_nbuf))
 			return;
 
 		rx_tlv = qdf_nbuf_data(status_nbuf);
@@ -488,7 +488,7 @@ dp_rx_mon_status_process_tlv(struct dp_soc *soc, struct dp_intr *int_ctx,
 				rx_tlv = hal_rx_status_get_next_tlv(rx_tlv,
 						mon_pdev->is_tlv_hdr_64_bit);
 
-				if ((rx_tlv - rx_tlv_start) >=
+				if (qdf_unlikely((rx_tlv - rx_tlv_start)) >=
 					RX_MON_STATUS_BUF_SIZE)
 					break;
 
@@ -498,17 +498,17 @@ dp_rx_mon_status_process_tlv(struct dp_soc *soc, struct dp_intr *int_ctx,
 				 (tlv_status == HAL_TLV_STATUS_MPDU_START) ||
 				 (tlv_status == HAL_TLV_STATUS_MSDU_END));
 		}
-		if (mon_pdev->dp_peer_based_pktlog) {
+		if (qdf_unlikely(mon_pdev->dp_peer_based_pktlog)) {
 			dp_rx_process_peer_based_pktlog(soc, ppdu_info,
 							status_nbuf,
 							pdev->pdev_id);
 		} else {
-			if (mon_pdev->rx_pktlog_mode == DP_RX_PKTLOG_FULL)
+			if (qdf_unlikely(mon_pdev->rx_pktlog_mode == DP_RX_PKTLOG_FULL))
 				pktlog_mode = WDI_EVENT_RX_DESC;
-			else if (mon_pdev->rx_pktlog_mode == DP_RX_PKTLOG_LITE)
+			else if (qdf_unlikely(mon_pdev->rx_pktlog_mode == DP_RX_PKTLOG_LITE))
 				pktlog_mode = WDI_EVENT_LITE_RX;
 
-			if (pktlog_mode != WDI_NO_VAL)
+			if (qdf_unlikely(pktlog_mode != WDI_NO_VAL))
 				dp_wdi_event_handler(pktlog_mode, soc,
 						     status_nbuf,
 						     HTT_INVALID_PEER,
@@ -516,9 +516,9 @@ dp_rx_mon_status_process_tlv(struct dp_soc *soc, struct dp_intr *int_ctx,
 		}
 
 		/* smart monitor vap and m_copy cannot co-exist */
-		if (ppdu_info->rx_status.monitor_direct_used &&
-		    mon_pdev->neighbour_peers_added &&
-		    mon_pdev->mvdev) {
+		if (qdf_unlikely(ppdu_info->rx_status.monitor_direct_used &&
+				 mon_pdev->neighbour_peers_added &&
+				 mon_pdev->mvdev)) {
 			smart_mesh_status = dp_rx_handle_smart_mesh_mode(soc,
 						pdev, ppdu_info, status_nbuf);
 			if (smart_mesh_status)
@@ -527,7 +527,7 @@ dp_rx_mon_status_process_tlv(struct dp_soc *soc, struct dp_intr *int_ctx,
 			dp_rx_process_mcopy_mode(soc, pdev,
 						 ppdu_info, tlv_status,
 						 status_nbuf);
-		} else if (rx_enh_capture_mode != CDP_RX_ENH_CAPTURE_DISABLED) {
+		} else if (qdf_unlikely(rx_enh_capture_mode != CDP_RX_ENH_CAPTURE_DISABLED)) {
 			if (!nbuf_used)
 				qdf_nbuf_free(status_nbuf);
 
@@ -539,21 +539,21 @@ dp_rx_mon_status_process_tlv(struct dp_soc *soc, struct dp_intr *int_ctx,
 			qdf_nbuf_free(status_nbuf);
 		}
 
-		if (tlv_status == HAL_TLV_STATUS_PPDU_NON_STD_DONE) {
+		if (qdf_unlikely(tlv_status == HAL_TLV_STATUS_PPDU_NON_STD_DONE)) {
 			dp_rx_mon_deliver_non_std(soc, mac_id);
-		} else if ((tlv_status == HAL_TLV_STATUS_PPDU_DONE) &&
-				(!dp_rx_mon_check_phyrx_abort(pdev, ppdu_info))) {
+		} else if ((qdf_likely(tlv_status == HAL_TLV_STATUS_PPDU_DONE)) &&
+				(qdf_likely(!dp_rx_mon_check_phyrx_abort(pdev, ppdu_info)))) {
 			rx_mon_stats->status_ppdu_done++;
 			dp_rx_mon_handle_mu_ul_info(ppdu_info);
 
-			if (mon_pdev->tx_capture_enabled
-			    != CDP_TX_ENH_CAPTURE_DISABLED)
+			if (qdf_unlikely(mon_pdev->tx_capture_enabled
+			    != CDP_TX_ENH_CAPTURE_DISABLED))
 				dp_send_ack_frame_to_stack(soc, pdev,
 							   ppdu_info);
 
-			if (mon_pdev->enhanced_stats_en ||
-			    mon_pdev->mcopy_mode ||
-			    mon_pdev->neighbour_peers_added)
+			if (qdf_likely(mon_pdev->enhanced_stats_en ||
+				       mon_pdev->mcopy_mode ||
+				       mon_pdev->neighbour_peers_added))
 				dp_rx_handle_ppdu_stats(soc, pdev, ppdu_info);
 			else if (dp_cfr_rcc_mode_status(pdev))
 				dp_rx_handle_cfr(soc, pdev, ppdu_info);
@@ -561,7 +561,7 @@ dp_rx_mon_status_process_tlv(struct dp_soc *soc, struct dp_intr *int_ctx,
 			mon_pdev->mon_ppdu_status = DP_PPDU_STATUS_DONE;
 
 			/* Collect spcl vap stats if configured */
-			if (mon_pdev->scan_spcl_vap_configured)
+			if (qdf_unlikely(mon_pdev->scan_spcl_vap_configured))
 				dp_rx_mon_update_scan_spcl_vap_stats(pdev,
 								     ppdu_info);
 
@@ -620,7 +620,7 @@ dp_rx_mon_status_srng_process(struct dp_soc *soc, struct dp_intr *int_ctx,
 	uint32_t work_done = 0;
 	struct dp_mon_pdev *mon_pdev;
 
-	if (!pdev) {
+	if (qdf_unlikely(!pdev)) {
 		dp_rx_mon_status_debug("%pK: pdev is null for mac_id = %d",
 				       soc, mac_id);
 		return work_done;
@@ -631,7 +631,8 @@ dp_rx_mon_status_srng_process(struct dp_soc *soc, struct dp_intr *int_ctx,
 	mon_status_srng = soc->rxdma_mon_status_ring[mac_id].hal_srng;
 
 	qdf_assert(mon_status_srng);
-	if (!mon_status_srng || !hal_srng_initialized(mon_status_srng)) {
+	if (qdf_unlikely(!mon_status_srng ||
+			 !hal_srng_initialized(mon_status_srng))) {
 
 		QDF_TRACE(QDF_MODULE_ID_TXRX, QDF_TRACE_LEVEL_ERROR,
 			"%s %d : HAL Monitor Status Ring Init Failed -- %pK",
@@ -696,7 +697,7 @@ dp_rx_mon_status_srng_process(struct dp_soc *soc, struct dp_intr *int_ctx,
 
 			status = hal_get_rx_status_done(status_buf);
 
-			if (status != QDF_STATUS_SUCCESS) {
+			if (qdf_unlikely(status != QDF_STATUS_SUCCESS)) {
 				uint32_t hp, tp;
 				hal_get_sw_hptp(hal_soc, mon_status_srng,
 						&tp, &hp);
@@ -720,9 +721,9 @@ dp_rx_mon_status_srng_process(struct dp_soc *soc, struct dp_intr *int_ctx,
 				 */
 				reap_status = dp_rx_mon_handle_status_buf_done(pdev,
 									mon_status_srng);
-				if (reap_status == DP_MON_STATUS_NO_DMA)
+				if (qdf_unlikely(reap_status == DP_MON_STATUS_NO_DMA))
 					continue;
-				else if (reap_status == DP_MON_STATUS_REPLENISH) {
+				else if (qdf_unlikely(reap_status == DP_MON_STATUS_REPLENISH)) {
 					if (!rx_desc->unmapped) {
 						qdf_nbuf_unmap_nbytes_single(
 							soc->osdev, status_nbuf,
@@ -737,7 +738,7 @@ dp_rx_mon_status_srng_process(struct dp_soc *soc, struct dp_intr *int_ctx,
 			qdf_nbuf_set_pktlen(status_nbuf,
 					    RX_MON_STATUS_BUF_SIZE);
 
-			if (!rx_desc->unmapped) {
+			if (qdf_likely(!rx_desc->unmapped)) {
 				qdf_nbuf_unmap_nbytes_single(soc->osdev, status_nbuf,
 							     QDF_DMA_FROM_DEVICE,
 							     rx_desc_pool->buf_size);

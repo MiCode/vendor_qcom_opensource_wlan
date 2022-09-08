@@ -1989,30 +1989,29 @@ static void util_get_partner_link_info(struct scan_cache_entry *scan_entry)
 			ielist_len = 0;
 		}
 
-		scan_entry->ml_info.link_info[0].link_id = sta_ctrl & 0xF;
-		if (sta_ctrl & LINK_INFO_MAC_ADDR_PRESENT_BIT) {
-			qdf_mem_copy(
-				&scan_entry->ml_info.link_info[0].link_addr,
-				ml_ie + offset, 6);
-			scm_debug("Found partner info in ML IE");
-		}
+		link_info = NULL;
+		for (link_idx = 0; link_idx < scan_entry->ml_info.num_links;
+		     link_idx++) {
+			if (scan_entry->ml_info.link_info[link_idx].link_id ==
+							(sta_ctrl & 0xF)) {
+				link_info = &scan_entry->ml_info.link_info[link_idx];
+			}
+                }
 
 		/* Get the pointers to CSA, ECSA, Max Channel Switch Time IE. */
-		link_info = &scan_entry->ml_info.link_info[0];
+		if (link_info) {
+			link_info->csa_ie = wlan_get_ie_ptr_from_eid
+				(WLAN_ELEMID_CHANSWITCHANN, ielist_offset,
+				 ielist_len);
 
-		link_info->csa_ie = wlan_get_ie_ptr_from_eid
-			(WLAN_ELEMID_CHANSWITCHANN, ielist_offset,
-			 ielist_len);
+			link_info->ecsa_ie = wlan_get_ie_ptr_from_eid
+				(WLAN_ELEMID_EXTCHANSWITCHANN, ielist_offset,
+				 ielist_len);
 
-		link_info->ecsa_ie = wlan_get_ie_ptr_from_eid
-			(WLAN_ELEMID_EXTCHANSWITCHANN, ielist_offset,
-			 ielist_len);
-
-		eid = WLAN_EXTN_ELEMID_MAX_CHAN_SWITCH_TIME;
-		link_info->max_cst_ie = wlan_get_ext_ie_ptr_from_ext_id
-			(&eid, 1, ielist_offset, ielist_len);
-
-		scan_entry->ml_info.num_links++;
+			eid = WLAN_EXTN_ELEMID_MAX_CHAN_SWITCH_TIME;
+			link_info->max_cst_ie = wlan_get_ext_ie_ptr_from_ext_id
+					(&eid, 1, ielist_offset, ielist_len);
+		}
 	}
 }
 

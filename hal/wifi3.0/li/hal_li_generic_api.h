@@ -69,7 +69,7 @@ void hal_rx_wbm_err_info_get_generic_li(void *wbm_desc,
 	wbm_er_info->rxdma_err_code = HAL_RX_WBM_RXDMA_ERROR_CODE_GET(wbm_desc);
 }
 
-#if defined(WLAN_FEATURE_TSF_UPLINK_DELAY) || defined(CONFIG_SAWF)
+#if defined(WLAN_FEATURE_TSF_UPLINK_DELAY) || defined(WLAN_CONFIG_TX_DELAY)
 static inline void
 hal_tx_comp_get_buffer_timestamp_li(void *desc,
 				    struct hal_tx_completion_status *ts)
@@ -77,13 +77,13 @@ hal_tx_comp_get_buffer_timestamp_li(void *desc,
 	ts->buffer_timestamp = HAL_TX_DESC_GET(desc, WBM_RELEASE_RING_4,
 					       BUFFER_TIMESTAMP);
 }
-#else /* !WLAN_FEATURE_TSF_UPLINK_DELAY || CONFIG_SAWF */
+#else /* !WLAN_FEATURE_TSF_UPLINK_DELAY || WLAN_CONFIG_TX_DELAY */
 static inline void
 hal_tx_comp_get_buffer_timestamp_li(void *desc,
 				    struct hal_tx_completion_status *ts)
 {
 }
-#endif /* WLAN_FEATURE_TSF_UPLINK_DELAY || CONFIG_SAWF */
+#endif /* WLAN_FEATURE_TSF_UPLINK_DELAY || WLAN_CONFIG_TX_DELAY */
 
 #ifdef QCA_UNDECODED_METADATA_SUPPORT
 static inline void
@@ -2195,9 +2195,11 @@ static inline void hal_setup_reo_swap(struct hal_soc *soc)
  *
  * @hal_soc: Opaque HAL SOC handle
  * @reo_params: parameters needed by HAL for REO config
+ * @qref_reset: reset qref
  */
 static
-void hal_reo_setup_generic_li(struct hal_soc *soc, void *reoparams)
+void hal_reo_setup_generic_li(struct hal_soc *soc, void *reoparams,
+			      int qref_reset)
 {
 	uint32_t reg_val;
 	struct hal_reo_params *reo_params = (struct hal_reo_params *)reoparams;

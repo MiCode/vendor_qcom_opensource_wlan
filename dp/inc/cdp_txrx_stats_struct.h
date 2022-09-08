@@ -113,6 +113,7 @@
 
 #define CDP_MAX_RX_RINGS 8  /* max rx rings */
 #define CDP_MAX_TX_COMP_RINGS 5 /* max tx/completion rings */
+#define CDP_MAX_RX_WBM_RINGS 1 /* max rx wbm rings */
 
 #define CDP_MAX_TX_TQM_STATUS 9  /* max tx tqm completion status */
 #define CDP_MAX_TX_HTT_STATUS 7  /* max tx htt completion status */
@@ -1055,6 +1056,8 @@ struct cdp_tid_stats {
 					    [CDP_MAX_DATA_TIDS];
 	struct cdp_tid_rx_stats tid_rx_stats[CDP_MAX_RX_RINGS]
 					    [CDP_MAX_DATA_TIDS];
+	struct cdp_tid_rx_stats tid_rx_wbm_stats[CDP_MAX_RX_WBM_RINGS]
+						[CDP_MAX_DATA_TIDS];
 };
 
 /*
@@ -1731,6 +1734,7 @@ struct cdp_rx_stats {
  * @dma_error: dma fail
  * @res_full: Resource Full: Congestion Control
  * @fail_per_pkt_vdev_id_check: Per pkt vdev id check
+ * @drop_ingress: Packets dropped during Umac reset
  * @exception_fw: packets sent to fw
  * @completion_fw: packets completions received from fw
  * @cce_classified:Number of packets classified by CCE
@@ -1739,6 +1743,8 @@ struct cdp_rx_stats {
  */
 struct cdp_tx_ingress_stats {
 	struct cdp_pkt_info rcvd;
+	uint64_t rcvd_in_fast_xmit_flow;
+	uint32_t rcvd_per_core[CDP_MAX_TX_DATA_RINGS];
 	struct cdp_pkt_info processed;
 	struct cdp_pkt_info reinject_pkts;
 	struct cdp_pkt_info inspect_pkts;
@@ -1792,6 +1798,7 @@ struct cdp_tx_ingress_stats {
 		/* headroom insufficient */
 		uint32_t headroom_insufficient;
 		uint32_t fail_per_pkt_vdev_id_check;
+		uint32_t drop_ingress;
 	} dropped;
 
 	/* Mesh packets info */
@@ -2689,6 +2696,7 @@ struct cdp_peer_telemetry_stats {
  * @map_err: Mapping failure
  * @x86_fail: x86 failures
  * @low_thresh_intrs: low threshold interrupts
+ * @free_list: RX descriptors moving back to free list
  * @rx_raw_pkts: Rx Raw Packets
  * @mesh_mem_alloc: Mesh Rx Stats Alloc fail
  * @tso_desc_cnt: TSO descriptors
@@ -2738,6 +2746,7 @@ struct cdp_pdev_stats {
 		uint32_t map_err;
 		uint32_t x86_fail;
 		uint32_t low_thresh_intrs;
+		int32_t free_list;
 	} replenish;
 
 	uint32_t rx_raw_pkts;

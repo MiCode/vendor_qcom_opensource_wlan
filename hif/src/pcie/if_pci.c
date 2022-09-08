@@ -1730,6 +1730,7 @@ int hif_pci_bus_configure(struct hif_softc *hif_sc)
 	if (((hif_sc->target_info.target_type == TARGET_TYPE_QCA8074) ||
 	     (hif_sc->target_info.target_type == TARGET_TYPE_QCA8074V2) ||
 	     (hif_sc->target_info.target_type == TARGET_TYPE_QCA9574) ||
+	     (hif_sc->target_info.target_type == TARGET_TYPE_QCA5332) ||
 	     (hif_sc->target_info.target_type == TARGET_TYPE_QCA5018) ||
 	     (hif_sc->target_info.target_type == TARGET_TYPE_QCN6122) ||
 	     (hif_sc->target_info.target_type == TARGET_TYPE_QCA6018)) &&
@@ -1753,6 +1754,7 @@ int hif_pci_bus_configure(struct hif_softc *hif_sc)
 	if (((hif_sc->target_info.target_type == TARGET_TYPE_QCA8074) ||
 	     (hif_sc->target_info.target_type == TARGET_TYPE_QCA8074V2) ||
 	     (hif_sc->target_info.target_type == TARGET_TYPE_QCA9574) ||
+	     (hif_sc->target_info.target_type == TARGET_TYPE_QCA5332) ||
 	     (hif_sc->target_info.target_type == TARGET_TYPE_QCA5018) ||
 	     (hif_sc->target_info.target_type == TARGET_TYPE_QCN6122) ||
 	     (hif_sc->target_info.target_type == TARGET_TYPE_QCA6018)) &&
@@ -3522,6 +3524,7 @@ int hif_configure_irq(struct hif_softc *scn)
 	case TARGET_TYPE_QCA8074V2:
 	case TARGET_TYPE_QCA6018:
 	case TARGET_TYPE_QCA5018:
+	case TARGET_TYPE_QCA5332:
 	case TARGET_TYPE_QCA9574:
 		ret = hif_ahb_configure_irq(sc);
 		break;

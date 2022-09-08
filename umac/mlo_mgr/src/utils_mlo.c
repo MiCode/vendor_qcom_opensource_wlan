@@ -799,7 +799,7 @@ QDF_STATUS util_parse_partner_info_from_linkinfo(uint8_t *linkinfo,
 		subelemseqtotallen = 0;
 		subelemseqpayloadlen = 0;
 
-		ret = wlan_get_subelem_fragseq_info(WLAN_ML_BV_LINFO_SUBELEMID_FRAGMENT,
+		ret = wlan_get_subelem_fragseq_info(WLAN_ML_LINFO_SUBELEMID_FRAGMENT,
 						    linkinfo_currpos,
 						    linkinfo_remlen,
 						    &is_subelemfragseq,
@@ -818,7 +818,7 @@ QDF_STATUS util_parse_partner_info_from_linkinfo(uint8_t *linkinfo,
 				  subelemseqpayloadlen);
 
 			ret = wlan_defrag_subelem_fragseq(true,
-							  WLAN_ML_BV_LINFO_SUBELEMID_FRAGMENT,
+							  WLAN_ML_LINFO_SUBELEMID_FRAGMENT,
 							  linkinfo_currpos,
 							  linkinfo_remlen,
 							  NULL,
@@ -855,7 +855,7 @@ QDF_STATUS util_parse_partner_info_from_linkinfo(uint8_t *linkinfo,
 			subelemseqpayloadlen = linkinfo_currpos[TAG_LEN_POS];
 		}
 
-		if (subelemid == WLAN_ML_BV_LINFO_SUBELEMID_PERSTAPROFILE) {
+		if (subelemid == WLAN_ML_LINFO_SUBELEMID_PERSTAPROFILE) {
 			is_macaddr_valid = false;
 
 			ret = util_parse_bvmlie_perstaprofile_stactrl(linkinfo_currpos +
@@ -966,7 +966,7 @@ util_parse_probereq_info_from_linkinfo(uint8_t *linkinfo,
 		subelemseqtotallen = 0;
 		subelemseqpayloadlen = 0;
 
-		ret = wlan_get_subelem_fragseq_info(WLAN_ML_PRV_LINFO_SUBELEMID_FRAGMENT,
+		ret = wlan_get_subelem_fragseq_info(WLAN_ML_LINFO_SUBELEMID_FRAGMENT,
 						    linkinfo_currpos,
 						    linkinfo_remlen,
 						    &is_subelemfragseq,
@@ -985,7 +985,7 @@ util_parse_probereq_info_from_linkinfo(uint8_t *linkinfo,
 				  subelemseqpayloadlen);
 
 			ret = wlan_defrag_subelem_fragseq(true,
-							  WLAN_ML_PRV_LINFO_SUBELEMID_FRAGMENT,
+							  WLAN_ML_LINFO_SUBELEMID_FRAGMENT,
 							  linkinfo_currpos,
 							  linkinfo_remlen,
 							  NULL,
@@ -1022,7 +1022,7 @@ util_parse_probereq_info_from_linkinfo(uint8_t *linkinfo,
 			subelemseqpayloadlen = linkinfo_currpos[TAG_LEN_POS];
 		}
 
-		if (subelemid == WLAN_ML_PRV_LINFO_SUBELEMID_PERSTAPROFILE) {
+		if (subelemid == WLAN_ML_LINFO_SUBELEMID_PERSTAPROFILE) {
 			ret = util_parse_prvmlie_perstaprofile_stactrl(linkinfo_currpos +
 								      sizeof(struct subelem_header),
 								      subelemseqpayloadlen,
@@ -1831,7 +1831,7 @@ QDF_STATUS util_gen_link_reqrsp_cmn(uint8_t *frame, qdf_size_t frame_len,
 	subelemseqtotallen = 0;
 	subelemseqpayloadlen = 0;
 
-	ret = wlan_get_subelem_fragseq_info(WLAN_ML_BV_LINFO_SUBELEMID_FRAGMENT,
+	ret = wlan_get_subelem_fragseq_info(WLAN_ML_LINFO_SUBELEMID_FRAGMENT,
 					    persta_prof,
 					    persta_prof_bufflen,
 					    &is_subelemfragseq,
@@ -1853,7 +1853,7 @@ QDF_STATUS util_gen_link_reqrsp_cmn(uint8_t *frame, qdf_size_t frame_len,
 			  subelemseqpayloadlen);
 
 		ret = wlan_defrag_subelem_fragseq(true,
-						  WLAN_ML_BV_LINFO_SUBELEMID_FRAGMENT,
+						  WLAN_ML_LINFO_SUBELEMID_FRAGMENT,
 						  persta_prof,
 						  persta_prof_bufflen,
 						  NULL,
@@ -2033,7 +2033,8 @@ QDF_STATUS util_gen_link_reqrsp_cmn(uint8_t *frame, qdf_size_t frame_len,
 			mlo_debug("Reassoc req: Added Current AP address field (%u octets) to link specific frame",
 				  QDF_MAC_ADDR_SIZE);
 		}
-	} else if (subtype == WLAN_FC0_STYPE_ASSOC_RESP) {
+	} else if (subtype == WLAN_FC0_STYPE_ASSOC_RESP ||
+		   subtype == WLAN_FC0_STYPE_REASSOC_RESP) {
 		/* This is a (re)association response */
 		mlo_debug("Populating fixed fields for (re)assoc resp in link specific frame");
 

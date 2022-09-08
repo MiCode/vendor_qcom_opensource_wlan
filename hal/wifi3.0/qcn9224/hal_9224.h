@@ -1413,6 +1413,25 @@ void hal_compute_reo_remap_ix2_ix3_9224(uint32_t *ring, uint32_t num_rings,
 	}
 }
 
+static
+void hal_compute_reo_remap_ix0_9224(struct hal_soc *soc)
+{
+	uint32_t remap0;
+
+	remap0 = HAL_REG_READ(soc, HWIO_REO_R0_DESTINATION_RING_CTRL_IX_0_ADDR
+			      (REO_REG_REG_BASE));
+
+	remap0 &= ~(HAL_REO_REMAP_IX0(0xF, 6));
+	remap0 |= HAL_REO_REMAP_IX0(REO2PPE_DST_IND, 6);
+
+	HAL_REG_WRITE(soc, HWIO_REO_R0_DESTINATION_RING_CTRL_IX_0_ADDR
+		      (REO_REG_REG_BASE), remap0);
+
+	hal_debug("HWIO_REO_R0_DESTINATION_RING_CTRL_IX_0_ADDR 0x%x",
+		  HAL_REG_READ(soc, HWIO_REO_R0_DESTINATION_RING_CTRL_IX_0_ADDR
+		  (REO_REG_REG_BASE)));
+}
+
 /**
  * hal_rx_flow_setup_fse_9224() - Setup a flow search entry in HW FST
  * @fst: Pointer to the Rx Flow Search Table
@@ -1649,7 +1668,8 @@ static uint8_t hal_tx_get_num_tcl_banks_9224(void)
 	return HAL_NUM_TCL_BANKS_9224;
 }
 
-static void hal_reo_setup_9224(struct hal_soc *soc, void *reoparams)
+static void hal_reo_setup_9224(struct hal_soc *soc, void *reoparams,
+			       int qref_reset)
 {
 	uint32_t reg_val;
 	struct hal_reo_params *reo_params = (struct hal_reo_params *)reoparams;
@@ -1699,6 +1719,8 @@ static void hal_reo_setup_9224(struct hal_soc *soc, void *reoparams)
 	 * 7: NOT_USED.
 	 */
 	if (reo_params->rx_hash_enabled) {
+		hal_compute_reo_remap_ix0_9224(soc);
+
 		HAL_REG_WRITE(soc,
 			      HWIO_REO_R0_DESTINATION_RING_CTRL_IX_1_ADDR
 			      (REO_REG_REG_BASE), reo_params->remap0);
@@ -1734,7 +1756,7 @@ static void hal_reo_setup_9224(struct hal_soc *soc, void *reoparams)
 	 * GLOBAL_LINK_DESC_COUNT_CTRL
 	 */
 
-	hal_reo_shared_qaddr_init((hal_soc_handle_t)soc);
+	hal_reo_shared_qaddr_init((hal_soc_handle_t)soc, qref_reset);
 }
 
 static uint16_t hal_get_rx_max_ba_window_qcn9224(int tid)
@@ -1812,6 +1834,7 @@ static void hal_hw_txrx_ops_attach_qcn9224(struct hal_soc *hal_soc)
 	/* init and setup */
 	hal_soc->ops->hal_srng_dst_hw_init = hal_srng_dst_hw_init_generic;
 	hal_soc->ops->hal_srng_src_hw_init = hal_srng_src_hw_init_generic;
+	hal_soc->ops->hal_srng_hw_disable = hal_srng_hw_disable_generic;
 	hal_soc->ops->hal_get_hw_hptp = hal_get_hw_hptp_generic;
 	hal_soc->ops->hal_get_window_address = hal_get_window_address_9224;
 	hal_soc->ops->hal_cmem_write = hal_cmem_write_9224;
@@ -1900,8 +1923,8 @@ static void hal_hw_txrx_ops_attach_qcn9224(struct hal_soc *hal_soc)
 					hal_rx_get_mpdu_mac_ad4_valid_be;
 	hal_soc->ops->hal_rx_mpdu_start_sw_peer_id_get =
 		hal_rx_mpdu_start_sw_peer_id_get_be;
-	hal_soc->ops->hal_rx_mpdu_peer_meta_data_get =
-		hal_rx_mpdu_peer_meta_data_get_be;
+	hal_soc->ops->hal_rx_tlv_peer_meta_data_get =
+		hal_rx_msdu_peer_meta_data_get_be;
 	hal_soc->ops->hal_rx_mpdu_get_to_ds = hal_rx_mpdu_get_to_ds_be;
 	hal_soc->ops->hal_rx_mpdu_get_fr_ds = hal_rx_mpdu_get_fr_ds_be;
 	hal_soc->ops->hal_rx_get_mpdu_frame_control_valid =
@@ -2030,6 +2053,7 @@ static void hal_hw_txrx_ops_attach_qcn9224(struct hal_soc *hal_soc)
 			hal_rx_priv_info_get_from_tlv_be;
 	hal_soc->ops->hal_rx_pkt_hdr_get = hal_rx_pkt_hdr_get_be;
 	hal_soc->ops->hal_reo_setup = hal_reo_setup_9224;
+	hal_soc->ops->hal_reo_config_reo2ppe_dest_info = NULL;
 #ifdef REO_SHARED_QREF_TABLE_EN
 	hal_soc->ops->hal_reo_shared_qaddr_setup = hal_reo_shared_qaddr_setup_be;
 	hal_soc->ops->hal_reo_shared_qaddr_init = hal_reo_shared_qaddr_init_be;

@@ -330,7 +330,6 @@ wlan_mlo_peer_deauth_init(struct wlan_mlo_peer_context *ml_peer)
 		return;
 	}
 
-	ml_peer->mlpeer_state = ML_PEER_DISCONN_INITIATED;
 	ml_dev = ml_peer->ml_dev;
 
 	for (i = 0; i < MAX_MLO_LINK_PEERS; i++) {
@@ -354,6 +353,9 @@ wlan_mlo_peer_deauth_init(struct wlan_mlo_peer_context *ml_peer)
 
 		link_peers[i] = link_peer;
 	}
+
+	ml_peer->mlpeer_state = ML_PEER_DISCONN_INITIATED;
+
 	mlo_peer_lock_release(ml_peer);
 
 	for (i = 0; i < MAX_MLO_LINK_PEERS; i++) {

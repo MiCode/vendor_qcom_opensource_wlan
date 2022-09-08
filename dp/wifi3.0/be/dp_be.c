@@ -716,6 +716,7 @@ static QDF_STATUS dp_vdev_attach_be(struct dp_soc *soc, struct dp_vdev *vdev)
 	be_vdev->vdev_id_check_en = DP_TX_VDEV_ID_CHECK_ENABLE;
 
 	be_vdev->bank_id = dp_tx_get_bank_profile(be_soc, be_vdev);
+	vdev->bank_id = be_vdev->bank_id;
 
 	if (be_vdev->bank_id == DP_BE_INVALID_BANK_ID) {
 		QDF_BUG(0);
@@ -1188,6 +1189,7 @@ static QDF_STATUS dp_soc_ppe_srng_init(struct dp_soc *soc)
 {
 	struct dp_soc_be *be_soc = dp_get_be_soc_from_dp_soc(soc);
 	struct wlan_cfg_dp_soc_ctxt *soc_cfg_ctx;
+	hal_soc_handle_t hal_soc = soc->hal_soc;
 
 	soc_cfg_ctx = soc->wlan_cfg_ctx;
 
@@ -1204,6 +1206,8 @@ static QDF_STATUS dp_soc_ppe_srng_init(struct dp_soc *soc)
 			  soc->ctrl_psoc,
 			  WLAN_MD_DP_SRNG_REO2PPE,
 			  "reo2ppe_ring");
+
+	hal_reo_config_reo2ppe_dest_info(hal_soc);
 
 	if (dp_srng_init(soc, &be_soc->ppe2tcl_ring, PPE2TCL, 0, 0)) {
 		dp_err("%pK: dp_srng_init failed for ppe2tcl_ring", soc);
@@ -1589,6 +1593,62 @@ void dp_print_mlo_ast_stats_be(struct dp_soc *soc)
 
 #endif
 
+#if defined(DP_UMAC_HW_HARD_RESET) && defined(DP_UMAC_HW_RESET_SUPPORT)
+static void dp_reconfig_tx_vdev_mcast_ctrl_be(struct dp_soc *soc,
+					      struct dp_vdev *vdev)
+{
+	struct dp_soc_be *be_soc = dp_get_be_soc_from_dp_soc(soc);
+	struct dp_vdev_be *be_vdev = dp_get_be_vdev_from_dp_vdev(vdev);
+	hal_soc_handle_t hal_soc = soc->hal_soc;
+	uint8_t vdev_id = vdev->vdev_id;
+
+	if (vdev->opmode == wlan_op_mode_sta) {
+		if (vdev->pdev->isolation)
+			hal_tx_vdev_mcast_ctrl_set(hal_soc, vdev_id,
+						HAL_TX_MCAST_CTRL_FW_EXCEPTION);
+		else
+			hal_tx_vdev_mcast_ctrl_set(hal_soc, vdev_id,
+						HAL_TX_MCAST_CTRL_MEC_NOTIFY);
+	} else if (vdev->opmode == wlan_op_mode_ap) {
+		if (vdev->mlo_vdev) {
+			if (be_vdev->mcast_primary) {
+				hal_tx_vdev_mcast_ctrl_set(hal_soc, vdev_id,
+					   HAL_TX_MCAST_CTRL_NO_SPECIAL);
+				hal_tx_vdev_mcast_ctrl_set(hal_soc,
+						vdev_id + 128,
+						HAL_TX_MCAST_CTRL_FW_EXCEPTION);
+				dp_mcast_mlo_iter_ptnr_soc(be_soc,
+					dp_tx_mcast_mlo_reinject_routing_set,
+					(void *)&be_vdev->mcast_primary);
+			} else {
+				hal_tx_vdev_mcast_ctrl_set(hal_soc, vdev_id,
+							HAL_TX_MCAST_CTRL_DROP);
+			}
+		} else {
+			hal_tx_vdev_mcast_ctrl_set(vdev->pdev->soc->hal_soc,
+						   vdev_id,
+						   HAL_TX_MCAST_CTRL_FW_EXCEPTION);
+		}
+	}
+}
+
+static void dp_bank_reconfig_be(struct dp_soc *soc, struct dp_vdev *vdev)
+{
+	struct dp_soc_be *be_soc = dp_get_be_soc_from_dp_soc(soc);
+	struct dp_vdev_be *be_vdev = dp_get_be_vdev_from_dp_vdev(vdev);
+	union hal_tx_bank_config *bank_config;
+
+	if (!be_vdev || be_vdev->bank_id == DP_BE_INVALID_BANK_ID)
+		return;
+
+	bank_config = &be_soc->bank_profiles[be_vdev->bank_id].bank_config;
+
+	hal_tx_populate_bank_register(be_soc->soc.hal_soc, bank_config,
+				      be_vdev->bank_id);
+}
+
+#endif
+
 #if defined(WLAN_FEATURE_11BE_MLO) && defined(WLAN_MLO_MULTI_CHIP) && \
 	defined(WLAN_MCAST_MLO)
 static void dp_txrx_set_mlo_mcast_primary_vdev_param_be(
@@ -1775,10 +1835,25 @@ dp_initialize_arch_ops_be_mcast_mlo(struct dp_arch_ops *arch_ops)
 }
 #endif /* WLAN_MCAST_MLO */
 
+#ifdef WLAN_MLO_MULTI_CHIP
+static inline void
+dp_initialize_arch_ops_be_mlo_ptnr_chip(struct dp_arch_ops *arch_ops)
+{
+	arch_ops->dp_partner_chips_map = dp_mlo_partner_chips_map;
+	arch_ops->dp_partner_chips_unmap = dp_mlo_partner_chips_unmap;
+}
+#else
+static inline void
+dp_initialize_arch_ops_be_mlo_ptnr_chip(struct dp_arch_ops *arch_ops)
+{
+}
+#endif
+
 static inline void
 dp_initialize_arch_ops_be_mlo(struct dp_arch_ops *arch_ops)
 {
 	dp_initialize_arch_ops_be_mcast_mlo(arch_ops);
+	dp_initialize_arch_ops_be_mlo_ptnr_chip(arch_ops);
 	arch_ops->mlo_peer_find_hash_detach =
 	dp_mlo_peer_find_hash_detach_wrapper;
 	arch_ops->mlo_peer_find_hash_attach =
@@ -1794,11 +1869,95 @@ dp_initialize_arch_ops_be_mlo(struct dp_arch_ops *arch_ops)
 }
 #endif /* WLAN_FEATURE_11BE_MLO */
 
+#if defined(WLAN_FEATURE_11BE_MLO) && defined(WLAN_MLO_MULTI_CHIP)
+#define DP_LMAC_PEER_ID_MSB_LEGACY 2
+#define DP_LMAC_PEER_ID_MSB_MLO 3
+
+static void dp_peer_get_reo_hash_be(struct dp_vdev *vdev,
+				    struct cdp_peer_setup_info *setup_info,
+				    enum cdp_host_reo_dest_ring *reo_dest,
+				    bool *hash_based,
+				    uint8_t *lmac_peer_id_msb)
+{
+	struct dp_soc *soc = vdev->pdev->soc;
+	struct dp_soc_be *be_soc = dp_get_be_soc_from_dp_soc(soc);
+
+	if (!be_soc->mlo_enabled)
+		return dp_vdev_get_default_reo_hash(vdev, reo_dest,
+						    hash_based);
+
+	*hash_based = wlan_cfg_is_rx_hash_enabled(soc->wlan_cfg_ctx);
+	*reo_dest = vdev->pdev->reo_dest;
+
+	/* Not a ML link peer use non-mlo */
+	if (!setup_info) {
+		*lmac_peer_id_msb = DP_LMAC_PEER_ID_MSB_LEGACY;
+		return;
+	}
+
+	/* For STA ML VAP we do not have num links info at this point
+	 * use MLO case always
+	 */
+	if (vdev->opmode == wlan_op_mode_sta) {
+		*lmac_peer_id_msb = DP_LMAC_PEER_ID_MSB_MLO;
+		return;
+	}
+
+	/* For AP ML VAP consider the peer as ML only it associates with
+	 * multiple links
+	 */
+	if (setup_info->num_links == 1) {
+		*lmac_peer_id_msb = DP_LMAC_PEER_ID_MSB_LEGACY;
+		return;
+	}
+
+	*lmac_peer_id_msb = DP_LMAC_PEER_ID_MSB_MLO;
+}
+
+static bool dp_reo_remap_config_be(struct dp_soc *soc,
+				   uint32_t *remap0,
+				   uint32_t *remap1,
+				   uint32_t *remap2)
+{
+	struct dp_soc_be *be_soc = dp_get_be_soc_from_dp_soc(soc);
+	uint32_t reo_config = wlan_cfg_get_reo_rings_mapping(soc->wlan_cfg_ctx);
+	uint32_t reo_mlo_config =
+		wlan_cfg_mlo_rx_ring_map_get(soc->wlan_cfg_ctx);
+
+	if (!be_soc->mlo_enabled)
+		return dp_reo_remap_config(soc, remap0, remap1, remap2);
+
+	*remap0 = hal_reo_ix_remap_value_get_be(soc->hal_soc, reo_mlo_config);
+	*remap1 = hal_reo_ix_remap_value_get_be(soc->hal_soc, reo_config);
+	*remap2 = hal_reo_ix_remap_value_get_be(soc->hal_soc, reo_mlo_config);
+
+	return true;
+}
+#else
+static void dp_peer_get_reo_hash_be(struct dp_vdev *vdev,
+				    struct cdp_peer_setup_info *setup_info,
+				    enum cdp_host_reo_dest_ring *reo_dest,
+				    bool *hash_based,
+				    uint8_t *lmac_peer_id_msb)
+{
+	dp_vdev_get_default_reo_hash(vdev, reo_dest, hash_based);
+}
+
+static bool dp_reo_remap_config_be(struct dp_soc *soc,
+				   uint32_t *remap0,
+				   uint32_t *remap1,
+				   uint32_t *remap2)
+{
+	return dp_reo_remap_config(soc, remap0, remap1, remap2);
+}
+#endif
+
 void dp_initialize_arch_ops_be(struct dp_arch_ops *arch_ops)
 {
 #ifndef QCA_HOST_MODE_WIFI_DISABLED
 	arch_ops->tx_hw_enqueue = dp_tx_hw_enqueue_be;
 	arch_ops->dp_rx_process = dp_rx_process_be;
+	arch_ops->dp_tx_send_fast = dp_tx_fast_send_be;
 	arch_ops->tx_comp_get_params_from_hal_desc =
 		dp_tx_comp_get_params_from_hal_desc_be;
 	arch_ops->dp_tx_process_htt_completion =
@@ -1842,7 +2001,15 @@ void dp_initialize_arch_ops_be(struct dp_arch_ops *arch_ops)
 					dp_peer_rx_reorder_queue_setup_be;
 	arch_ops->txrx_print_peer_stats = dp_print_peer_txrx_stats_be;
 	arch_ops->dp_find_peer_by_destmac = dp_find_peer_by_destmac_be;
+#if defined(DP_UMAC_HW_HARD_RESET) && defined(DP_UMAC_HW_RESET_SUPPORT)
+	arch_ops->dp_bank_reconfig = dp_bank_reconfig_be;
+	arch_ops->dp_reconfig_tx_vdev_mcast_ctrl =
+					dp_reconfig_tx_vdev_mcast_ctrl_be;
+	arch_ops->dp_cc_reg_cfg_init = dp_cc_reg_cfg_init;
+#endif
 	dp_init_near_full_arch_ops_be(arch_ops);
 	arch_ops->get_rx_hash_key = dp_get_rx_hash_key_be;
 	arch_ops->print_mlo_ast_stats = dp_print_mlo_ast_stats_be;
+	arch_ops->peer_get_reo_hash = dp_peer_get_reo_hash_be;
+	arch_ops->reo_remap_config = dp_reo_remap_config_be;
 }

@@ -451,6 +451,12 @@ struct wlan_psoc_host_service_ext_param {
  * @max_users_ul_mumimo: Max number of users per-PPDU for Uplink MU-MIMO
  * @twt_ack_support_cap: TWT ack capability support
  * @target_cap_flags: Rx peer metadata version number used by target
+ * @ul_mumimo_tx_2g: UL MUMIMO Tx support for 2GHz
+ * @ul_mumimo_tx_5g: UL MUMIMO Tx support for 5GHz
+ * @ul_mumimo_tx_5g: UL MUMIMO Tx support for 6GHz
+ * @ul_mumimo_rx_2g: UL MUMIMO Rx support for 2GHz
+ * @ul_mumimo_rx_5g: UL MUMIMO Rx support for 5GHz
+ * @ul_mumimo_rx_6g: UL MUMIMO Rx support for 6GHz
  * @afc_dev_type: AFC deployment type
  */
 struct wlan_psoc_host_service_ext2_param {
@@ -469,6 +475,12 @@ struct wlan_psoc_host_service_ext2_param {
 	uint16_t max_users_ul_mumimo;
 	uint32_t twt_ack_support_cap:1;
 	uint32_t target_cap_flags;
+	uint8_t ul_mumimo_tx_2g:1,
+		ul_mumimo_tx_5g:1,
+		ul_mumimo_tx_6g:1,
+		ul_mumimo_rx_2g:1,
+		ul_mumimo_rx_5g:1,
+		ul_mumimo_rx_6g:1;
 #if defined(CONFIG_AFC_SUPPORT)
 	enum reg_afc_dev_deploy_type afc_dev_type;
 #endif

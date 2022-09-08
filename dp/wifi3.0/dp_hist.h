@@ -42,4 +42,5 @@ void dp_accumulate_hist_stats(struct cdp_hist_stats *src_hist_stats,
 void dp_copy_hist_stats(struct cdp_hist_stats *src_hist_stats,
 			struct cdp_hist_stats *dst_hist_stats);
 const char *dp_hist_tx_hw_delay_str(uint8_t index);
+const char *dp_hist_delay_percentile_str(uint8_t index);
 #endif /* __DP_HIST_H_ */

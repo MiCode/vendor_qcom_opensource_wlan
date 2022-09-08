@@ -892,6 +892,28 @@ QDF_STATUS
 wmi_unified_vdev_set_param_send(wmi_unified_t wmi_handle,
 				struct vdev_set_params *param);
 
+/**
+ * wmi_unified_multiple_vdev_param_send() - sends multiple vdev set params
+ * @wmi_handle: handle to WMI.
+ * @params: pointer to hold set_multiple_pdev_vdev_param info.
+ *
+ * Return: QDF_STATUS_SUCCESS on success and QDF_STATUS_E_FAILURE for failure
+ */
+QDF_STATUS
+wmi_unified_multiple_vdev_param_send(wmi_unified_t wmi_handle,
+				     struct set_multiple_pdev_vdev_param *params);
+
+/**
+ * wmi_unified_multiple_pdev_param_send() - sends multiple pdev set params
+ * @wmi_handle: handle to WMI.
+ * @params: pointer to hold set_multiple_pdev_vdev_param info
+ *
+ * Return: QDF_STATUS_SUCCESS on success and QDF_STATUS_E_FAILURE for failure
+ */
+QDF_STATUS
+wmi_unified_multiple_pdev_param_send(wmi_unified_t wmi_handle,
+				     struct set_multiple_pdev_vdev_param *params);
+
 #ifdef WLAN_FEATURE_ROAM_OFFLOAD
 /**
  * wmi_unified_roam_set_param_send() - WMI roam set parameter function
@@ -4941,4 +4963,32 @@ QDF_STATUS wmi_unified_pn_mgmt_rxfilter_send_cmd(
 QDF_STATUS wmi_extract_pdev_telemetry_stats(
 		wmi_unified_t wmi_handle, void *evt_buf,
 		struct wmi_host_pdev_telemetry_stats *pdev_stats);
+
+#ifdef FEATURE_SET
+/**
+ * wmi_feature_set_cmd_send - Send feature set command to fw
+ * @wmi_handle: wmi handle
+ * @feature_set: pointer feature set info which needs to be send to fw
+ *
+ * Return: QDF_STATUS_SUCCESS for success or error code
+ */
+QDF_STATUS wmi_feature_set_cmd_send(
+			wmi_unified_t wmi_handle,
+			struct target_feature_set *feature_set);
+#endif
+
+/**
+ * wmi_extract_health_mon_event - extract health monitor params
+ * @wmi_handle: wmi handle
+ * @ev: pointer to event buffer
+ * @params: health monitor params
+ *
+ * Return: QDF_STATUS_SUCCESS for success or error code
+ */
+
+QDF_STATUS wmi_extract_health_mon_event(
+		wmi_unified_t wmi_handle,
+		void *ev,
+		struct wmi_health_mon_params *param);
+
 #endif /* _WMI_UNIFIED_API_H_ */

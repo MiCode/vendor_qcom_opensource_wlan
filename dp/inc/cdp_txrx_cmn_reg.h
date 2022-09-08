@@ -78,7 +78,8 @@ ol_txrx_soc_attach(void *scn_handle, struct ol_if_ops *dp_ol_if_ops);
  * Return: DP SOC handle on success, NULL on failure
  */
 #if defined(QCA_WIFI_QCA8074) || defined(QCA_WIFI_QCA6018) || \
-	defined(QCA_WIFI_QCA5018) || defined(QCA_WIFI_QCA9574)
+	defined(QCA_WIFI_QCA5018) || defined(QCA_WIFI_QCA9574) || \
+	defined(QCA_WIFI_QCA5332)
 struct cdp_soc_t *
 dp_soc_attach_wifi3(struct cdp_ctrl_objmgr_psoc *ctrl_psoc,
 		    struct cdp_soc_attach_params *params);
@@ -131,6 +132,7 @@ static inline int cdp_get_arch_type_from_devid(uint16_t devid)
 	case BERYLLIUM_DP:
 	case KIWI_DEVICE_ID:
 	case QCN9224_DEVICE_ID:
+	case QCA5332_DEVICE_ID:
 	case MANGO_DEVICE_ID:
 		return CDP_ARCH_TYPE_BE;
 	default:
@@ -176,6 +178,7 @@ ol_txrx_soc_handle cdp_soc_attach(u_int16_t devid,
 	case KIWI_DEVICE_ID:
 	case QCN9224_DEVICE_ID:
 	case MANGO_DEVICE_ID:
+	case QCA5332_DEVICE_ID:
 		return dp_soc_attach_wifi3(psoc, &params);
 	break;
 	default:

@@ -29,52 +29,201 @@
 #include <qdf_util.h>
 #include <linux/netdevice.h>
 
-#define QDF_NET_DEV_STATS_INC_RX_PKTS(stats) \
-	(((struct net_device_stats *)stats)->rx_packets++)
+/**
+ * __qdf_net_stats_add_rx_pkts() - Add RX pkts in n/w stats
+ * @stats: Network stats instance
+ * @value: Value to be added
+ *
+ * Return: None.
+ */
+static inline
+void __qdf_net_stats_add_rx_pkts(struct net_device_stats *stats, uint32_t value)
+{
+	stats->rx_packets += value;
+}
 
-#define QDF_NET_DEV_STATS_INC_TX_PKTS(stats) \
-	(((struct net_device_stats *)stats)->tx_packets++)
+/**
+ * __qdf_net_stats_get_rx_pkts() - Get RX pkts in net stats
+ * @stats: Network stats instance
+ *
+ * Return: Rx packets received on N/W interface
+ */
+static inline
+unsigned long __qdf_net_stats_get_rx_pkts(struct net_device_stats *stats)
+{
+	return stats->rx_packets;
+}
 
-#define QDF_NET_DEV_STATS_INC_RX_BYTES(stats) \
-	(((struct net_device_stats *)stats)->rx_bytes++)
+/**
+ * __qdf_net_stats_add_rx_bytes() - Add RX bytes in n/w stats
+ * @stats: Network stats instance
+ * @value: Value to be added
+ *
+ * Return: None.
+ */
+static inline
+void __qdf_net_stats_add_rx_bytes(struct net_device_stats *stats,
+				  uint32_t value)
+{
+	stats->rx_bytes += value;
+}
 
-#define QDF_NET_DEV_STATS_INC_TX_BYTES(stats) \
-	(((struct net_device_stats *)stats)->tx_bytes++)
+/**
+ * __qdf_net_stats_get_rx_bytes() - Get RX bytes in net stats
+ * @stats: Network stats instance
+ *
+ * Return: Rx bytes received on N/W interface
+ */
+static inline
+unsigned long __qdf_net_stats_get_rx_bytes(struct net_device_stats *stats)
+{
+	return stats->rx_bytes;
+}
 
-#define QDF_NET_DEV_STATS_INC_RX_ERRORS(stats) \
-	(((struct net_device_stats *)stats)->rx_errors++)
+/**
+ * __qdf_net_stats_inc_rx_errors() - inc RX errors n/w stats
+ * @stats: Network stats instance
+ *
+ * Return: None.
+ */
+static inline
+void __qdf_net_stats_inc_rx_errors(struct net_device_stats *stats)
+{
+	stats->rx_errors++;
+}
 
-#define QDF_NET_DEV_STATS_INC_TX_ERRORS(stats) \
-	(((struct net_device_stats *)stats)->tx_errors++)
+/**
+ * __qdf_net_stats_get_rx_errors() - Get RX errors in net stats
+ * @stats: Network stats instance
+ *
+ * Return: Rx packet errors on N/W interface
+ */
+static inline
+unsigned long __qdf_net_stats_get_rx_errors(struct net_device_stats *stats)
+{
+	return stats->rx_errors;
+}
 
-#define QDF_NET_DEV_STATS_INC_RX_DROPPED(stats) \
-	(((struct net_device_stats *)stats)->rx_dropped++)
+/**
+ * __qdf_net_stats_inc_rx_dropped() - inc RX dropped n/w stats
+ * @stats: Network stats instance
+ *
+ * Return: None.
+ */
+static inline
+void __qdf_net_stats_inc_rx_dropped(struct net_device_stats *stats)
+{
+	stats->rx_dropped++;
+}
 
-#define QDF_NET_DEV_STATS_INC_TX_DROPEED(stats) \
-	(((struct net_device_stats *)stats)->tx_dropped++)
+/**
+ * __qdf_net_stats_get_rx_dropped() - Get RX dropped in net stats
+ * @stats: Network stats instance
+ *
+ * Return: Rx packet dropped on N/W interface
+ */
+static inline
+unsigned long __qdf_net_stats_get_rx_dropped(struct net_device_stats *stats)
+{
+	return stats->rx_dropped;
+}
 
-#define QDF_NET_DEV_STATS_RX_PKTS(stats) \
-	(((struct net_device_stats *)stats)->rx_packets)
+/**
+ * __qdf_net_stats_add_tx_pkts() - Add Tx packets n/w stats
+ * @stats: Network stats instance
+ * @value: Value to be added
+ *
+ * Return: None.
+ */
+static inline
+void __qdf_net_stats_add_tx_pkts(struct net_device_stats *stats, uint32_t value)
+{
+	stats->tx_packets += value;
+}
 
-#define QDF_NET_DEV_STATS_TX_PKTS(stats) \
-	(((struct net_device_stats *)stats)->tx_packets)
+/**
+ * __qdf_net_stats_get_tx_pkts() - Get Tx packets in net stats
+ * @stats: Network stats instance
+ *
+ * Return: Tx packets transmitted on N/W interface
+ */
+static inline
+unsigned long __qdf_net_stats_get_tx_pkts(struct net_device_stats *stats)
+{
+	return stats->tx_packets;
+}
 
-#define QDF_NET_DEV_STATS_RX_BYTES(stats) \
-	(((struct net_device_stats *)stats)->rx_bytes)
+/**
+ * __qdf_net_stats_add_tx_bytes() - Add Tx bytes n/w stats
+ * @stats: Network stats instance
+ * @value: Value to be added
+ *
+ * Return: None.
+ */
+static inline
+void __qdf_net_stats_add_tx_bytes(struct net_device_stats *stats,
+				  uint32_t value)
+{
+	stats->tx_bytes += value;
+}
 
-#define QDF_NET_DEV_STATS_TX_BYTES(stats) \
-	(((struct net_device_stats *)stats)->tx_bytes)
+/**
+ * __qdf_net_stats_get_tx_bytes() - Get Tx bytes in net stats
+ * @stats: Network stats instance
+ *
+ * Return: Tx bytes transmitted on N/W interface
+ */
+static inline
+unsigned long __qdf_net_stats_get_tx_bytes(struct net_device_stats *stats)
+{
+	return stats->tx_bytes;
+}
 
-#define QDF_NET_DEV_STATS_RX_ERRORS(stats) \
-	(((struct net_device_stats *)stats)->rx_errors)
+/**
+ * __qdf_net_stats_inc_tx_errors() - inc Tx errors n/w stats
+ * @stats: Network stats instance
+ *
+ * Return: None.
+ */
+static inline
+void __qdf_net_stats_inc_tx_errors(struct net_device_stats *stats)
+{
+	stats->tx_errors++;
+}
 
-#define QDF_NET_DEV_STATS_TX_ERRORS(stats) \
-	(((struct net_device_stats *)stats)->tx_errors)
+/**
+ * __qdf_net_stats_get_tx_errors() - Get Tx errors in net stats
+ * @stats: Network stats instance
+ *
+ * Return: Tx errors on N/W interface
+ */
+static inline
+unsigned long __qdf_net_stats_get_tx_errors(struct net_device_stats *stats)
+{
+	return stats->tx_errors;
+}
 
-#define QDF_NET_DEV_STATS_RX_DROPPED(stats) \
-	(((struct net_device_stats *)stats)->rx_dropped)
+/**
+ * __qdf_net_stats_inc_tx_dropped() - inc Tx dropped n/w stats
+ * @stats: Network stats instance
+ *
+ * Return: None.
+ */
+static inline
+void __qdf_net_stats_inc_tx_dropped(struct net_device_stats *stats)
+{
+	stats->tx_dropped++;
+}
 
-#define QDF_NET_DEV_STATS_TX_DROPEED(stats) \
-	(((struct net_device_stats *)stats)->tx_dropped)
-
+/**
+ * __qdf_net_stats_get_tx_dropped() - Get Tx dropped in net stats
+ * @stats: Network stats instance
+ *
+ * Return: Tx dropped on N/W interface
+ */
+static inline
+unsigned long __qdf_net_stats_get_tx_dropped(struct net_device_stats *stats)
+{
+	return stats->tx_dropped;
+}
 #endif /*__I_QDF_NET_STATS_H*/

@@ -546,6 +546,25 @@ struct hal_hw_srng_config hw_srng_table_9224v2[] = {
 	},
 };
 
+/*
+ * hal_reo_config_reo2ppe_dest_info() - Configure reo2ppe dest info
+ * @hal_soc_hdl: HAL SoC Context
+ *
+ * Return: None.
+ */
+static inline
+void hal_reo_config_reo2ppe_dest_info_9224(hal_soc_handle_t hal_soc_hdl)
+{
+	HAL_REG_WRITE((struct hal_soc *)hal_soc_hdl,
+		      HWIO_REO_R0_REO2PPE_DEST_INFO_ADDR(REO_REG_REG_BASE),
+		      REO2PPE_RULE_FAIL_FB);
+}
+
+static void hal_hw_txrx_ops_override_qcn9224_v2(struct hal_soc *hal_soc)
+{
+	hal_soc->ops->hal_reo_config_reo2ppe_dest_info =
+					hal_reo_config_reo2ppe_dest_info_9224;
+}
 /**
  * hal_qcn9224_attach()- Attach 9224 target specific hal_soc ops,
  *			  offset and srng table
@@ -563,4 +582,6 @@ void hal_qcn9224v2_attach(struct hal_soc *hal_soc)
 	if (hal_soc->static_window_map)
 		hal_write_window_register(hal_soc);
 	hal_soc->dmac_cmn_src_rxbuf_ring = true;
+
+	hal_hw_txrx_ops_override_qcn9224_v2(hal_soc);
 }

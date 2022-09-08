@@ -792,7 +792,7 @@ static void ce_srng_src_ring_setup(struct hif_softc *scn, uint32_t ce_id,
 	}
 
 	src_ring->srng_ctx = hal_srng_setup(scn->hal_soc, CE_SRC, ce_id, 0,
-			&ring_params);
+					    &ring_params, 0);
 }
 
 #ifdef WLAN_WAR_CE_DISABLE_SRNG_TIMER_IRQ
@@ -888,7 +888,7 @@ static void ce_srng_dest_ring_setup(struct hif_softc *scn,
 
 	/*Dest ring is also source ring*/
 	dest_ring->srng_ctx = hal_srng_setup(scn->hal_soc, CE_DST, ce_id, 0,
-			&ring_params);
+					     &ring_params, 0);
 }
 
 #ifdef WLAN_CE_INTERRUPT_THRESHOLD_CONFIG
@@ -937,7 +937,7 @@ static void ce_srng_status_ring_setup(struct hif_softc *scn, uint32_t ce_id,
 	}
 
 	status_ring->srng_ctx = hal_srng_setup(scn->hal_soc, CE_DST_STATUS,
-			ce_id, 0, &ring_params);
+					       ce_id, 0, &ring_params, 0);
 }
 
 static int ce_ring_setup_srng(struct hif_softc *scn, uint8_t ring_type,

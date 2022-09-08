@@ -51,7 +51,7 @@ static void hal_tx_set_dscp_tid_map_5332(struct hal_soc *hal_soc, uint8_t *map,
 
 	struct hal_soc *soc = (struct hal_soc *)hal_soc;
 
-	if (id >= HAL_MAX_HW_DSCP_TID_V2_MAPS)
+	if (id >= HAL_MAX_HW_DSCP_TID_V2_MAPS_5332)
 		return;
 
 	cmn_reg_addr = HWIO_TCL_R0_CONS_RING_CMN_CTRL_REG_ADDR(

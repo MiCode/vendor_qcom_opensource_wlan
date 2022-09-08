@@ -302,8 +302,7 @@ enum scan_mode_6ghz {
 
 /*
  * <ini>
- * gPassiveMaxChannelTime/RoamScan_PassiveCH_DwellTime - Set max channel time
- * for passive scan
+ * gPassiveMaxChannelTime - Set max channel time for passive scan
  * @Min: 0
  * @Max: 10000
  * @Default: 110
@@ -318,7 +317,7 @@ enum scan_mode_6ghz {
  * </ini>
  */
 #define CFG_PASSIVE_MAX_CHANNEL_TIME CFG_INI_UINT(\
-		"gPassiveMaxChannelTime RoamScan_PassiveCH_DwellTime",\
+		"gPassiveMaxChannelTime",\
 		0, 10000, PLATFORM_VALUE(110, 300),\
 		CFG_VALUE_OR_DEFAULT, "passive dwell time")
 

@@ -745,6 +745,8 @@ struct channel_param {
  * @pdev_vdev_flag: 0 when vdev is valid, 1 when pdev is valid
  * @is_host_pdev_id: 1 for host pdev id, 0 otherwise
  * @data: the pointer to the buffer containing data
+ * @file_name_len: Length of file name
+ * @file_name: Pointer to the buffer containing file name
  */
 struct oem_data {
 	uint8_t vdev_id;
@@ -753,6 +755,8 @@ struct oem_data {
 	bool pdev_vdev_flag;
 	bool is_host_pdev_id;
 	uint8_t *data;
+	uint32_t file_name_len;
+	uint8_t *file_name;
 };
 #endif
 
@@ -1560,6 +1564,7 @@ struct tx_send_params {
  * @tx_flags: additional configuration flags for mgmt frames
  *  use 6 Mbps rather than 1 Mbps min rate(for 5GHz band or P2P)
  * @peer_rssi: peer RSSI value
+ * @mlo_link_agnostic: if true, can send on any active link
  */
 struct wmi_mgmt_params {
 	void *tx_frame;
@@ -1576,6 +1581,7 @@ struct wmi_mgmt_params {
 	uint8_t use_6mbps;
 	uint32_t tx_flags;
 	int8_t peer_rssi;
+	uint8_t mlo_link_agnostic;
 };
 
 /**
@@ -5098,6 +5104,10 @@ typedef enum {
 	wmi_coex_dbam_complete_event_id,
 #endif
 	wmi_spectral_capabilities_eventid,
+#ifdef WLAN_FEATURE_COAP
+	wmi_wow_coap_buf_info_eventid,
+#endif
+	wmi_extract_health_mon_init_done_info_eventid,
 	wmi_events_max,
 } wmi_conv_event_id;
 
@@ -5280,6 +5290,43 @@ typedef enum {
 	wmi_pdev_param_rate_retry_mcs_drop,
 	wmi_pdev_param_mcs_probe_intvl,
 	wmi_pdev_param_nss_probe_intvl,
+	wmi_pdev_param_dtim_synth,
+	wmi_pdev_param_1ch_dtim_optimized_chain_selection,
+	wmi_pdev_param_tx_sch_delay,
+	wmi_pdev_param_en_update_scram_seed,
+	wmi_pdev_param_secondary_retry_enable,
+	wmi_pdev_param_set_sap_xlna_bypass,
+	wmi_pdev_param_set_dfs_chan_ageout_time,
+	wmi_pdev_param_pdev_stats_tx_xretry_ext,
+	wmi_pdev_param_smart_chainmask_scheme,
+	wmi_pdev_param_alternative_chainmask_scheme,
+	wmi_pdev_param_enable_rts_sifs_bursting,
+	wmi_pdev_param_max_mpdus_in_ampdu,
+	wmi_pdev_param_set_iot_pattern,
+	wmi_pdev_param_mwscoex_scc_chavd_delay,
+	wmi_pdev_param_mwscoex_pcc_chavd_delay,
+	wmi_pdev_param_mwscoex_set_5gnr_pwr_limit,
+	wmi_pdev_param_mwscoex_4g_allow_quick_ftdm,
+	wmi_pdev_param_fast_pwr_transition,
+	wmi_pdev_auto_detect_power_failure,
+	wmi_pdev_param_gcmp_support_enable,
+	wmi_pdev_param_abg_mode_tx_chain_num,
+	wmi_pdev_param_peer_stats_info_enable,
+	wmi_pdev_param_enable_cck_txfir_override,
+	wmi_pdev_param_twt_ac_config,
+	wmi_pdev_param_pcie_hw_ilp,
+	wmi_pdev_param_disable_hw_assist,
+	wmi_pdev_param_ant_div_usrcfg,
+	wmi_pdev_param_ctrl_retry_limit,
+	wmi_pdev_param_propagation_delay,
+	wmi_pdev_param_ena_ant_div,
+	wmi_pdev_param_force_chain_ant,
+	wmi_pdev_param_ant_div_selftest,
+	wmi_pdev_param_ant_div_selftest_intvl,
+	wmi_pdev_param_data_stall_detect_enable,
+	wmi_pdev_param_cts2self_for_p2p_go_config,
+	wmi_pdev_param_txpower_reason_sar,
+	wmi_pdev_param_stats_observation_period,
 	wmi_pdev_param_max,
 } wmi_conv_pdev_params_id;
 
@@ -5446,6 +5493,58 @@ typedef enum {
 	wmi_vdev_param_set_multi_client_ll_feature_config,
 #endif
 	wmi_vdev_param_set_traffic_config,
+	wmi_vdev_param_he_range_ext,
+	wmi_vdev_param_non_data_he_range_ext,
+	wmi_vdev_param_ndp_inactivity_timeout,
+	wmi_vdev_param_ndp_keepalive_timeout,
+	wmi_vdev_param_final_bmiss_time_sec,
+	wmi_vdev_param_final_bmiss_time_wow_sec,
+	wmi_vdev_param_ap_keepalive_max_idle_inactive_secs,
+	wmi_vdev_param_per_band_mgmt_tx_rate,
+	wmi_vdev_param_max_li_of_moddtim,
+	wmi_vdev_param_moddtim_cnt,
+	wmi_vdev_param_max_li_of_moddtim_ms,
+	wmi_vdev_param_dyndtim_cnt,
+	wmi_vdev_param_wmm_txop_enable,
+	wmi_vdev_param_enable_bcast_probe_response,
+	wmi_vdev_param_fils_max_channel_guard_time,
+	wmi_vdev_param_probe_delay,
+	wmi_vdev_param_repeat_probe_time,
+	wmi_vdev_param_enable_disable_oce_features,
+	wmi_vdev_param_enable_disable_nan_config_features,
+	wmi_vdev_param_rsn_capability,
+	wmi_vdev_param_smps_intolerant,
+	wmi_vdev_param_abg_mode_tx_chain_num,
+	wmi_vdev_param_nth_beacon_to_host,
+	wmi_vdev_param_prohibit_data_mgmt,
+	wmi_vdev_param_skip_roam_eapol_4way_handshake,
+	wmi_vdev_param_skip_sae_roam_4way_handshake,
+	wmi_vdev_param_roam_11kv_ctrl,
+	wmi_vdev_param_disable_noa_p2p_go,
+	wmi_vdev_param_packet_capture_mode,
+	wmi_vdev_param_smart_monitor_config,
+	wmi_vdev_param_force_dtim_cnt,
+	wmi_vdev_param_sho_config,
+	wmi_vdev_param_gtx_enable,
+	wmi_vdev_param_mu_edca_fw_update_en,
+	wmi_vdev_param_enable_disable_rtt_initiator_random_mac,
+	wmi_vdev_param_allow_nan_initial_discovery_of_mp0_cluster,
+	wmi_vdev_param_txpower_scale_decr_db,
+	wmi_vdev_param_txpower_scale,
+	wmi_vdev_param_agg_sw_retry_th,
+	wmi_vdev_param_obsspd,
+	wmi_vdev_param_multi_client_ll_feature_configuration,
+	wmi_vdev_param_normal_latency_flags_configuration,
+	wmi_vdev_param_xr_latency_flags_configuration,
+	wmi_vdev_param_low_latency_flags_configuration,
+	wmi_vdev_param_ultra_low_latency_flags_configuration,
+	wmi_vdev_param_normal_latency_ul_dl_configuration,
+	wmi_vdev_param_xr_latency_ul_dl_configuration,
+	wmi_vdev_param_low_latency_ul_dl_configuration,
+	wmi_vdev_param_ultra_low_latency_ul_dl_configuration,
+	wmi_vdev_param_default_latency_level_configuration,
+	wmi_vdev_param_amsdu_aggregation_size_optimization,
+	wmi_vdev_param_non_agg_sw_retry_th,
 } wmi_conv_vdev_param_id;
 
 /**
@@ -5778,7 +5877,12 @@ typedef enum {
 #endif
 	wmi_service_is_my_mgmt_frame,
 	wmi_service_linkspeed_roam_trigger_support,
-
+#ifdef FEATURE_SET
+	wmi_service_feature_set_event_support,
+#endif
+#ifdef WLAN_PDEV_VDEV_SEND_MULTI_PARAM
+	wmi_service_combined_set_param_support,
+#endif
 	wmi_services_max,
 } wmi_conv_service_ids;
 #define WMI_SERVICE_UNAVAILABLE 0xFFFF
@@ -5826,6 +5930,192 @@ struct wmi_host_fw_abi_ver {
 	uint32_t    sw_version;
 	uint32_t    abi_version;
 };
+
+#ifdef FEATURE_SET
+/**
+ * enum WMI_HOST_WIFI_STANDARD - Supported wifi standard
+ * @WMI_HOST_WIFI_STANDARD_4: Wifi standard 4
+ * @WMI_HOST_WIFI_STANDARD_5:Wifi standard 5
+ * @WMI_HOST_WIFI_STANDARD_6: Wifi standard 6
+ * @WMI_HOST_WIFI_STANDARD_6E: Wifi standard 6E
+ * WMI_HOST_WIFI_STANDARD_7: Wifi standard 7
+ */
+typedef enum {
+	WMI_HOST_WIFI_STANDARD_4 = 0,
+	WMI_HOST_WIFI_STANDARD_5 = 1,
+	WMI_HOST_WIFI_STANDARD_6 = 2,
+	WMI_HOST_WIFI_STANDARD_6E = 3,
+	WMI_HOST_WIFI_STANDARD_7 = 4,
+} WMI_HOST_WIFI_STANDARD;
+
+/**
+ * enum WMI_HOST_BAND_CONCURRENCY - Enum to represent supported concurrency
+ * @WMI_HOST_BAND_CONCURRENCY_NONE: No concurrency is supported
+ * @WMI_HOST_BAND_CONCURRENCY_DBS:DBS is supported
+ * @WMI_HOST_BAND_CONCURRENCY_DBS_SBS: DBS and SBS are supported
+ */
+typedef enum {
+	WMI_HOST_BAND_CONCURRENCY_NONE = 0,
+	WMI_HOST_BAND_CONCURRENCY_DBS = 1,
+	WMI_HOST_BAND_CONCURRENCY_DBS_SBS = 2,
+} WMI_HOST_BAND_CONCURRENCY;
+
+/**
+ * enum WMI_HOST_VENDOR1_REQ1_VERSION - Vendor 1 requirement 1 version
+ * @WMI_HOST_VENDOR1_REQ2_VERSION_3_00: Major version 3, mnor version 00
+ * @WMI_HOST_VENDOR1_REQ2_VERSION_3_01: Major version 3, mnor version 01
+ * @WMI_HOST_VENDOR1_REQ2_VERSION_3_20: Major version 3, mnor version 20
+ */
+typedef enum {
+	WMI_HOST_VENDOR1_REQ1_VERSION_3_00 = 0,
+	WMI_HOST_VENDOR1_REQ1_VERSION_3_01 = 1,
+	WMI_HOST_VENDOR1_REQ1_VERSION_3_20 = 2,
+} WMI_HOST_VENDOR1_REQ1_VERSION;
+
+/**
+ * enum WMI_HOST_VENDOR1_REQ2_VERSION - Vendor 1 requirement 2 version
+ * @WMI_HOST_VENDOR1_REQ2_VERSION_3_00: Major version 3, mnor version 00
+ * @WMI_HOST_VENDOR1_REQ2_VERSION_3_01: Major version 3, mnor version 01
+ * @WMI_HOST_VENDOR1_REQ2_VERSION_3_20: Major version 3, mnor version 20
+ */
+typedef enum {
+	WMI_HOST_VENDOR1_REQ2_VERSION_3_00 = 0,
+	WMI_HOST_VENDOR1_REQ2_VERSION_3_01 = 1,
+	WMI_HOST_VENDOR1_REQ2_VERSION_3_20 = 2,
+} WMI_HOST_VENDOR1_REQ2_VERSION;
+
+/**
+ * enum WMI_HOST_NUM_ANTENNAS - Number of antennas
+ * @WMI_HOST_SISO: When 1x1 is supported
+ * @WMI_HOST_MIMO_2X2: When 2x2 MIMO is supported
+ */
+
+typedef enum {
+	WMI_HOST_SISO = 1,
+	WMI_HOST_MIMO_2X2 = 2,
+} WMI_HOST_NUM_ANTENNAS;
+
+/**
+ * struct target_feature_set - Feature set structure
+ * @wifi_standard: Wifi standard
+ * @concurrency_support: Indicates supported concurrencies
+ * @pno_in_unassoc_state: Indicates PNO support in un assoc state
+ * @pno_in_assoc_state: Indicates PNO support in assoc state
+ * @enable_twt: Enable TWT
+ * enable_twt_requester Enable TWT requester
+ * @enable_twt_broadcast: Enable TWT broadcast
+ * @enable_twt_flexible: Enable flexible TWT
+ * @enable_wifi_optimizer: indicates wifi optimizer is enabled or disabled
+ * @enable_rfc835: indicates rfc835 is enabled or disabled
+ * @sap_5g_supported: Indicates SAP 5g is supported or not
+ * @sap_6g_supported: Indicates SAP 6g is supported or not
+ * @sap_max_num_clients: Max clients supported by SAP
+ * @set_country_code_hal_supported: Indicates country code hal supported or not
+ * @get_valid_channel_supported: Indicates get vaid channel supported or not
+ * @supported_dot11mode: Indicates supported dot11 mode
+ * @sap_wpa3_support: Indicates wpa3 support for SAP
+ * @vendor_req_1_version: Indicates vendor1 req1 version
+ * @roaming_high_cu_roam_trigger: Roaming high CPU trigger enabled or disabled
+ * @roaming_emergency_trigger: Roaming emergency trigger enabled or disabled
+ * @roaming_btm_trihgger: Roaming btm trigger enabled or disabled
+ * @roaming_idle_trigger: Roaming idle trigger enabled or disabled
+ * @roaming_wtc_trigger: Roaming wtc trigger enabled or disabled
+ * @roaming_btcoex_trigger: Roaming btcoex trigger enabled or disabled
+ * @roaming_btw_wpa_wpa2: Roaming btw wpa wpa2 enabled or disabled
+ * @roaming_manage_chan_list_api: Roaming manage chan list api enabled or
+ * disabled
+ * @roaming_adaptive_11r: Roaming adaptive 11r enabled or disabled
+ * @roaming_ctrl_api_get_set: Roaming ctrl api get set enabled or disabled
+ * @roaming_ctrl_api_reassoc: Roaming ctrl api reassoc enabled or disabled
+ * @roaming_ctrl_get_cu: Roaming ctrl get cu enabled or disabled
+ * @vendor_req_2_version: Vendor requirement version 2
+ * @assurance_disconnect_reason_api: Assurance disconnect API supported or not
+ * @frame_pcap_log_mgmt: Frame pcap logging mgmt supported or not
+ * @rame_pcap_log_ctrl: Frame pcap logging ctrl supported or not
+ * @frame_pcap_log_data: Frame pcap logging data supported or not
+ * @security_wpa3_sae_h2e: Security wpa3 sae h2e supported or not
+ * @security_wpa3_sae_ft: Security wpa3 sae ft supported or not
+ * @security_wpa3_enterp_suitb: Security wpa3 enterprise suitb supported or not
+ * @security_wpa3_enterp_suitb_192bit: Security wpa3 enterprise suitb 192bit
+ * @supported or not
+ * @security_fills_sha_256: Security fills sha 256 supported or not
+ * @security_fills_sha_384: Security fills sha 384 supported or not
+ * @security_fills_sha_256_FT: Security fills sha 256 FT supported or not
+ * @security_fills_sha_384_FT: Security fills sha 384 FT supported or not
+ * @security_enhanced_open: Security enhanced open supported or not
+ * @enable_nan: enable NAN
+ * @enable_tdls: Enable tdls
+ * @enable_p2p_6e: Enable p2p 6e
+ * @enable_tdls_offchannel: Enable tdls offchannel
+ * @enable_tdls_capability_enhance: Enable tdls capability enhance
+ * @max_tdls_peers: Max tdls peers
+ * @sta_dual_p2p_support: Indicates sta+p2p+p2p support
+ * @peer_bigdata_getbssinfo_support: Indicates bigdata getbssinfo support
+ * @peer_bigdata_assocreject_info_support: Indicates bigdata assoc reject
+  *@info support
+ * @peer_getstainfo_support: Indicates getstainfo support
+ * @feature_set_version: Indicates feature set version info
+ * @num_antennas: Indicates number of antennas supported
+ */
+struct target_feature_set {
+	WMI_HOST_WIFI_STANDARD wifi_standard;
+	WMI_HOST_BAND_CONCURRENCY concurrency_support;
+	bool pno_in_unassoc_state;
+	bool pno_in_assoc_state;
+	bool enable_twt;
+	bool enable_twt_requester;
+	bool enable_twt_broadcast;
+	bool enable_twt_flexible;
+	bool enable_wifi_optimizer;
+	bool enable_rfc835;
+	bool sap_5g_supported;
+	bool sap_6g_supported;
+	uint8_t sap_max_num_clients;
+	bool set_country_code_hal_supported;
+	bool get_valid_channel_supported;
+	uint8_t supported_dot11mode;
+	bool sap_wpa3_support;
+	WMI_HOST_VENDOR1_REQ1_VERSION vendor_req_1_version;
+	bool roaming_high_cu_roam_trigger;
+	bool roaming_emergency_trigger;
+	bool roaming_btm_trihgger;
+	bool roaming_idle_trigger;
+	bool roaming_wtc_trigger;
+	bool roaming_btcoex_trigger;
+	bool roaming_btw_wpa_wpa2;
+	bool roaming_manage_chan_list_api;
+	bool roaming_adaptive_11r;
+	bool roaming_ctrl_api_get_set;
+	bool roaming_ctrl_api_reassoc;
+	bool roaming_ctrl_get_cu;
+	WMI_HOST_VENDOR1_REQ2_VERSION vendor_req_2_version;
+	bool assurance_disconnect_reason_api;
+	bool frame_pcap_log_mgmt;
+	bool frame_pcap_log_ctrl;
+	bool frame_pcap_log_data;
+	bool security_wpa3_sae_h2e;
+	bool security_wpa3_sae_ft;
+	bool security_wpa3_enterp_suitb;
+	bool security_wpa3_enterp_suitb_192bit;
+	bool security_fills_sha_256;
+	bool security_fills_sha_384;
+	bool security_fills_sha_256_FT;
+	bool security_fills_sha_384_FT;
+	bool security_enhanced_open;
+	bool enable_nan;
+	bool enable_tdls;
+	bool enable_p2p_6e;
+	bool enable_tdls_offchannel;
+	bool enable_tdls_capability_enhance;
+	uint8_t max_tdls_peers;
+	bool sta_dual_p2p_support;
+	bool peer_bigdata_getbssinfo_support;
+	bool peer_bigdata_assocreject_info_support;
+	bool peer_getstainfo_support;
+	uint16_t feature_set_version;
+	WMI_HOST_NUM_ANTENNAS num_antennas;
+};
+#endif
 
 /**
  * struct target_resource_config - Resource config sent from host to target
@@ -8840,4 +9130,19 @@ struct wmi_host_sw_cal_ver {
 	uint32_t ftm_cal_ver;
 	uint32_t status;
 };
+
+/**
+ * struct wmi_health_mon_params - Health mon params
+ * @ring_buf_paddr_low: Ring buffer physical address LOW
+ * @ring_buf_paddr_high:  Ring buffer physical address HIGH
+ * @initial_upload_period_ms: Health mon periodic time
+ * @read_index: ring element read_index
+ */
+struct wmi_health_mon_params {
+	uint32_t ring_buf_paddr_low;
+	uint32_t ring_buf_paddr_high;
+	uint32_t initial_upload_period_ms;
+	uint32_t read_index;
+};
+
 #endif /* _WMI_UNIFIED_PARAM_H_ */

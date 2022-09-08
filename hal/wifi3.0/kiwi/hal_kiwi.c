@@ -763,10 +763,42 @@ static void hal_rx_dump_msdu_end_tlv_kiwi(void *msduend,
 }
 #endif
 
+#ifdef NO_RX_PKT_HDR_TLV
+static inline void hal_rx_dump_pkt_hdr_tlv_kiwi(struct rx_pkt_tlvs *pkt_tlvs,
+						uint8_t dbg_level)
+{
+}
+
+static inline
+void hal_register_rx_pkt_hdr_tlv_api_kiwi(struct hal_soc *hal_soc)
+{
+}
+
+static uint8_t *hal_rx_desc_get_80211_hdr_be(void *hw_desc_addr)
+{
+	uint8_t *rx_pkt_hdr;
+	struct rx_mon_pkt_tlvs *rx_desc =
+					(struct rx_mon_pkt_tlvs *)hw_desc_addr;
+
+	rx_pkt_hdr = &rx_desc->pkt_hdr_tlv.rx_pkt_hdr[0];
+
+	return rx_pkt_hdr;
+}
+#else
+static uint8_t *hal_rx_desc_get_80211_hdr_be(void *hw_desc_addr)
+{
+	struct rx_pkt_tlvs *rx_desc = (struct rx_pkt_tlvs *)hw_desc_addr;
+	uint8_t *rx_pkt_hdr;
+
+	rx_pkt_hdr = &rx_desc->pkt_hdr_tlv.rx_pkt_hdr[0];
+
+	return rx_pkt_hdr;
+}
+
 /**
  * hal_rx_dump_pkt_hdr_tlv: dump RX pkt header TLV in hex format
- * @ pkt_hdr_tlv: pointer the pkt_hdr_tlv in pkt.
- * @ dbg_level: log level.
+ * @pkt_hdr_tlv: pointer the pkt_hdr_tlv in pkt.
+ * @dbg_level: log level.
  *
  * Return: void
  */
@@ -784,6 +816,20 @@ static inline void hal_rx_dump_pkt_hdr_tlv_kiwi(struct rx_pkt_tlvs *pkt_tlvs,
 	hal_verbose_hex_dump(pkt_hdr_tlv->rx_pkt_hdr,
 			     sizeof(pkt_hdr_tlv->rx_pkt_hdr));
 }
+
+/**
+ * hal_register_rx_pkt_hdr_tlv_api_kiwi: register all rx_pkt_hdr_tlv related api
+ * @hal_soc: HAL soc handler
+ *
+ * Return: none
+ */
+static inline
+void hal_register_rx_pkt_hdr_tlv_api_kiwi(struct hal_soc *hal_soc)
+{
+	hal_soc->ops->hal_rx_pkt_tlv_offset_get =
+				hal_rx_pkt_tlv_offset_get_generic;
+}
+#endif
 
 /**
  * hal_rx_dump_mpdu_start_tlv_generic_be: dump RX mpdu_start TLV in structured
@@ -1857,6 +1903,7 @@ static void hal_hw_txrx_ops_attach_kiwi(struct hal_soc *hal_soc)
 	hal_soc->ops->hal_rx_dump_mpdu_start_tlv =
 					hal_rx_dump_mpdu_start_tlv_kiwi;
 	hal_soc->ops->hal_rx_dump_pkt_tlvs = hal_rx_dump_pkt_tlvs_kiwi;
+	hal_soc->ops->hal_rx_desc_get_80211_hdr = hal_rx_desc_get_80211_hdr_be;
 
 	hal_soc->ops->hal_get_link_desc_size = hal_get_link_desc_size_kiwi;
 	hal_soc->ops->hal_rx_mpdu_start_tid_get = hal_rx_tlv_tid_get_be;
@@ -1909,7 +1956,7 @@ static void hal_hw_txrx_ops_attach_kiwi(struct hal_soc *hal_soc)
 					hal_rx_get_mpdu_mac_ad4_valid_be;
 	hal_soc->ops->hal_rx_mpdu_start_sw_peer_id_get =
 		hal_rx_mpdu_start_sw_peer_id_get_be;
-	hal_soc->ops->hal_rx_mpdu_peer_meta_data_get =
+	hal_soc->ops->hal_rx_tlv_peer_meta_data_get =
 		hal_rx_mpdu_peer_meta_data_get_be;
 	hal_soc->ops->hal_rx_mpdu_get_to_ds = hal_rx_mpdu_get_to_ds_be;
 	hal_soc->ops->hal_rx_mpdu_get_fr_ds = hal_rx_mpdu_get_fr_ds_be;
@@ -1981,12 +2028,11 @@ static void hal_hw_txrx_ops_attach_kiwi(struct hal_soc *hal_soc)
 	hal_soc->ops->hal_rx_reo_prev_pn_get = hal_rx_reo_prev_pn_get_kiwi;
 
 	/* rx - TLV struct offsets */
+	hal_register_rx_pkt_hdr_tlv_api_kiwi(hal_soc);
 	hal_soc->ops->hal_rx_msdu_end_offset_get =
 					hal_rx_msdu_end_offset_get_generic;
 	hal_soc->ops->hal_rx_mpdu_start_offset_get =
 					hal_rx_mpdu_start_offset_get_generic;
-	hal_soc->ops->hal_rx_pkt_tlv_offset_get =
-					hal_rx_pkt_tlv_offset_get_generic;
 	hal_soc->ops->hal_rx_flow_setup_fse = hal_rx_flow_setup_fse_kiwi;
 	hal_soc->ops->hal_rx_flow_get_tuple_info =
 					hal_rx_flow_get_tuple_info_be;

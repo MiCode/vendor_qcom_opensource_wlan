@@ -194,9 +194,10 @@ struct dp_rx_desc {
 	__dp_rx_add_to_free_desc_list(head, tail, new, __func__)
 
 #define dp_rx_buffers_replenish(soc, mac_id, rxdma_srng, rx_desc_pool, \
-				num_buffers, desc_list, tail) \
+				num_buffers, desc_list, tail, req_only) \
 	__dp_rx_buffers_replenish(soc, mac_id, rxdma_srng, rx_desc_pool, \
-				  num_buffers, desc_list, tail, __func__)
+				  num_buffers, desc_list, tail, req_only, \
+				  __func__)
 
 #ifdef WLAN_SUPPORT_RX_FISA
 /**
@@ -556,6 +557,28 @@ struct dp_rx_desc *dp_get_rx_desc_from_cookie(struct dp_soc *soc,
 	return &rx_desc_elem->rx_desc;
 }
 
+static inline
+struct dp_rx_desc *dp_get_rx_mon_status_desc_from_cookie(struct dp_soc *soc,
+							 struct rx_desc_pool *pool,
+							 uint32_t cookie)
+{
+	uint8_t pool_id = DP_RX_DESC_MULTI_PAGE_COOKIE_GET_POOL_ID(cookie);
+	uint16_t page_id = DP_RX_DESC_MULTI_PAGE_COOKIE_GET_PAGE_ID(cookie);
+	uint8_t offset = DP_RX_DESC_MULTI_PAGE_COOKIE_GET_OFFSET(cookie);
+	struct rx_desc_pool *rx_desc_pool;
+	union dp_rx_desc_list_elem_t *rx_desc_elem;
+
+	if (qdf_unlikely(pool_id >= NUM_RXDMA_RINGS_PER_PDEV))
+		return NULL;
+
+	rx_desc_pool = &pool[pool_id];
+	rx_desc_elem = (union dp_rx_desc_list_elem_t *)
+		(rx_desc_pool->desc_pages.cacheable_pages[page_id] +
+		rx_desc_pool->elem_size * offset);
+
+	return &rx_desc_elem->rx_desc;
+}
+
 /**
  * dp_rx_cookie_2_va_rxdma_buf() - Converts cookie to a virtual address of
  *			 the Rx descriptor on Rx DMA source ring buffer
@@ -598,7 +621,9 @@ static inline
 struct dp_rx_desc *dp_rx_cookie_2_va_mon_status(struct dp_soc *soc,
 						uint32_t cookie)
 {
-	return dp_get_rx_desc_from_cookie(soc, &soc->rx_desc_status[0], cookie);
+	return dp_get_rx_mon_status_desc_from_cookie(soc,
+						     &soc->rx_desc_status[0],
+						     cookie);
 }
 #else
 
@@ -1482,6 +1507,7 @@ dp_rx_update_flow_tag(struct dp_soc *soc, struct dp_vdev *vdev,
 }
 #endif /* WLAN_SUPPORT_RX_FLOW_TAG */
 
+#define CRITICAL_BUFFER_THRESHOLD	64
 /*
  * dp_rx_buffers_replenish() - replenish rxdma ring with rx nbufs
  *			       called during dp rx initialization
@@ -1496,6 +1522,7 @@ dp_rx_update_flow_tag(struct dp_soc *soc, struct dp_vdev *vdev,
  *	       or NULL during dp rx initialization or out of buffer
  *	       interrupt.
  * @tail: tail of descs list
+ * @req_only: If true don't replenish more than req buffers
  * @func_name: name of the caller function
  * Return: return success or failure
  */
@@ -1505,6 +1532,7 @@ QDF_STATUS __dp_rx_buffers_replenish(struct dp_soc *dp_soc, uint32_t mac_id,
 				 uint32_t num_req_buffers,
 				 union dp_rx_desc_list_elem_t **desc_list,
 				 union dp_rx_desc_list_elem_t **tail,
+				 bool req_only,
 				 const char *func_name);
 /*
  * __dp_rx_buffers_no_map_replenish() - replenish rxdma ring with rx nbufs
@@ -2395,7 +2423,7 @@ void dp_rx_nbuf_unmap(struct dp_soc *soc,
 	rx_desc_pool = &soc->rx_desc_buf[rx_desc->pool_id];
 	nbuf = rx_desc->nbuf;
 
-	qdf_nbuf_dma_inv_range((void *)nbuf->data,
+	qdf_nbuf_dma_inv_range_no_dsb((void *)nbuf->data,
 			       (void *)(nbuf->data + rx_desc_pool->buf_size));
 }
 
@@ -2466,7 +2494,7 @@ void dp_rx_buffers_replenish_simple(struct dp_soc *soc, uint32_t mac_id,
 				    union dp_rx_desc_list_elem_t **tail)
 {
 	dp_rx_buffers_replenish(soc, mac_id, rxdma_srng, rx_desc_pool,
-				num_req_buffers, desc_list, tail);
+				num_req_buffers, desc_list, tail, false);
 }
 
 static inline
@@ -2478,7 +2506,7 @@ void dp_rx_buffers_lt_replenish_simple(struct dp_soc *soc, uint32_t mac_id,
 				       union dp_rx_desc_list_elem_t **tail)
 {
 	dp_rx_buffers_replenish(soc, mac_id, rxdma_srng, rx_desc_pool,
-				num_req_buffers, desc_list, tail);
+				num_req_buffers, desc_list, tail, false);
 }
 
 static inline
@@ -2551,6 +2579,27 @@ void dp_rx_nbuf_free(qdf_nbuf_t nbuf)
 {
 	qdf_nbuf_free(nbuf);
 }
+#endif
+
+#ifdef DP_UMAC_HW_RESET_SUPPORT
+/*
+ * dp_rx_desc_reuse() - Reuse the rx descriptors to fill the rx buf ring
+ *
+ * @soc: core txrx main context
+ * @nbuf_list: nbuf list for delayed free
+ *
+ * Return: void
+ */
+void dp_rx_desc_reuse(struct dp_soc *soc, qdf_nbuf_t *nbuf_list);
+
+/*
+ * dp_rx_desc_delayed_free() - Delayed free of the rx descs
+ *
+ * @soc: core txrx main context
+ *
+ * Return: void
+ */
+void dp_rx_desc_delayed_free(struct dp_soc *soc);
 #endif
 
 /**

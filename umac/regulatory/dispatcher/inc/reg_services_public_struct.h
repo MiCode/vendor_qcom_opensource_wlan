@@ -470,7 +470,7 @@ enum channel_enum {
 	MAX_24GHZ_CHANNEL = CHAN_ENUM_2484,
 	NUM_24GHZ_CHANNELS = (MAX_24GHZ_CHANNEL - MIN_24GHZ_CHANNEL + 1),
 
-	INVALID_CHANNEL = 0xBAD,
+	INVALID_CHANNEL = NUM_CHANNELS,
 
 #ifdef CONFIG_49GHZ_CHAN
 	MIN_49GHZ_CHANNEL = CHAN_ENUM_4912,
@@ -2241,4 +2241,15 @@ typedef void
 			    struct reg_fw_afc_power_event *power_info,
 			    void *arg);
 #endif
+
+/**
+ * reg_is_chan_enum_invalid() - Checks if the channel enum is invalid or not.
+ * @chan_enum: Input channel enum.
+ *
+ * Return: true if channel enum is invalid else false.
+ */
+static inline bool reg_is_chan_enum_invalid(enum channel_enum chan_enum)
+{
+	return chan_enum >= INVALID_CHANNEL;
+}
 #endif

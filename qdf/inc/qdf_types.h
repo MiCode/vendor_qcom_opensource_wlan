@@ -281,6 +281,10 @@ enum qdf_driver_type {
 	QDF_DRIVER_TYPE_INVALID = 0x7FFFFFFF
 };
 
+#ifdef DP_UMAC_HW_RESET_SUPPORT
+typedef void (*qdf_mem_release_cb) (void *ctxt, void *elem, void *elem_list);
+#endif
+
 /* work queue(kernel thread)/DPC function callback */
 typedef void (*qdf_defer_fn_t)(void *);
 
@@ -436,6 +440,7 @@ typedef bool (*qdf_irqlocked_func_t)(void *);
  * @QDF_MODULE_ID_T2LM: T2LM module ID
  * @QDF_MODULE_ID_DP_SAWF: DP SAWF module ID
  * @QDF_MODULE_ID_SCS: SCS module ID
+ * @QDF_MODULE_ID_COAP: Constrained Application Protocol module ID
  * @QDF_MODULE_ID_ANY: anything
  * @QDF_MODULE_ID_MAX: Max place holder module ID
  *
@@ -599,6 +604,7 @@ typedef enum {
 	QDF_MODULE_ID_T2LM,
 	QDF_MODULE_ID_DP_SAWF,
 	QDF_MODULE_ID_SCS,
+	QDF_MODULE_ID_COAP,
 	QDF_MODULE_ID_ANY,
 	QDF_MODULE_ID_MAX,
 } QDF_MODULE_ID;

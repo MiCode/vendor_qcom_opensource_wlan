@@ -135,6 +135,10 @@ QDF_STATUS dp_tx_tso_num_seg_pool_init(struct dp_soc *soc, uint8_t pool_id,
 void dp_tx_tso_num_seg_pool_free(struct dp_soc *soc, uint8_t pool_id);
 void dp_tx_tso_num_seg_pool_deinit(struct dp_soc *soc, uint8_t pool_id);
 
+#ifdef DP_UMAC_HW_RESET_SUPPORT
+void dp_tx_desc_pool_cleanup(struct dp_soc *soc, qdf_nbuf_t *nbuf_list);
+#endif
+
 #ifdef QCA_LL_TX_FLOW_CONTROL_V2
 void dp_tx_flow_control_init(struct dp_soc *);
 void dp_tx_flow_control_deinit(struct dp_soc *);

@@ -190,6 +190,7 @@ struct target_version_info {
  * @scan_radio_caps: scan radio capabilities
  * @device_mode: Global Device mode
  * @sbs_lower_band_end_freq: sbs lower band end frequency
+ * @health_mon_params: health monitor params
  */
 struct tgt_info {
 	struct host_fw_ver version;
@@ -224,6 +225,7 @@ struct tgt_info {
 	struct wlan_psoc_host_scan_radio_caps *scan_radio_caps;
 	uint32_t device_mode;
 	uint32_t sbs_lower_band_end_freq;
+	struct wmi_health_mon_params health_mon_param;
 };
 
 /**

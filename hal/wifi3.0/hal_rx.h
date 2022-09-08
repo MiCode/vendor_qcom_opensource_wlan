@@ -959,19 +959,19 @@ hal_rx_mpdu_start_sw_peer_id_get(hal_soc_handle_t hal_soc_hdl,
 }
 
 /**
- * hal_rx_mpdu_peer_meta_data_get() - Retrieve PEER_META_DATA
+ * hal_rx_tlv_peer_meta_data_get() - Retrieve PEER_META_DATA
  * @hal_soc_hdl: hal soc handle
  * @buf: pointer to rx pkt TLV.
  *
  * Return: peer meta data
  */
 static inline uint32_t
-hal_rx_mpdu_peer_meta_data_get(hal_soc_handle_t hal_soc_hdl,
-			       uint8_t *buf)
+hal_rx_tlv_peer_meta_data_get(hal_soc_handle_t hal_soc_hdl,
+			      uint8_t *buf)
 {
 	struct hal_soc *hal_soc = (struct hal_soc *)hal_soc_hdl;
 
-	return hal_soc->ops->hal_rx_mpdu_peer_meta_data_get(buf);
+	return hal_soc->ops->hal_rx_tlv_peer_meta_data_get(buf);
 }
 
 /*
@@ -2941,18 +2941,20 @@ hal_reo_shared_qaddr_write(hal_soc_handle_t hal_soc_hdl,
 /**
  * hal_reo_shared_qaddr_init(): Initialize reo qref LUT
  * @hal_soc: Hal soc pointer
+ * @qref_reset: reset qref LUT
  *
  * Write MLO and Non MLO table start addr to HW reg
  *
  * Return: void
  */
 static inline void
-hal_reo_shared_qaddr_init(hal_soc_handle_t hal_soc_hdl)
+hal_reo_shared_qaddr_init(hal_soc_handle_t hal_soc_hdl, int qref_reset)
 {
 	struct hal_soc *hal_soc = (struct hal_soc *)hal_soc_hdl;
 
 	if (hal_soc->ops->hal_reo_shared_qaddr_init)
-		return hal_soc->ops->hal_reo_shared_qaddr_init(hal_soc_hdl);
+		return hal_soc->ops->hal_reo_shared_qaddr_init(hal_soc_hdl,
+							       qref_reset);
 }
 
 /**
@@ -2982,7 +2984,7 @@ hal_reo_shared_qaddr_write(hal_soc_handle_t hal_soc_hdl,
 			   int tid,
 			   qdf_dma_addr_t hw_qdesc_paddr) {}
 static inline void
-hal_reo_shared_qaddr_init(hal_soc_handle_t hal_soc_hdl) {}
+hal_reo_shared_qaddr_init(hal_soc_handle_t hal_soc_hdl, int qref_reset) {}
 
 static inline void
 hal_reo_shared_qaddr_cache_clear(hal_soc_handle_t hal_soc_hdl) {}

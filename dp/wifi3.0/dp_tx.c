@@ -120,150 +120,6 @@ uint8_t sec_type_map[MAX_CDP_SEC_TYPE] = {HAL_TX_ENCRYPT_TYPE_NO_CIPHER,
 					  HAL_TX_ENCRYPT_TYPE_WAPI_GCM_SM4};
 qdf_export_symbol(sec_type_map);
 
-#ifdef CONFIG_WLAN_SYSFS_MEM_STATS
-/**
- * dp_update_tx_desc_stats - Update the increase or decrease in
- * outstanding tx desc count
- * values on pdev and soc
- * @vdev: DP pdev handle
- *
- * Return: void
- */
-static inline void
-dp_update_tx_desc_stats(struct dp_pdev *pdev)
-{
-	int32_t tx_descs_cnt =
-		qdf_atomic_read(&pdev->num_tx_outstanding);
-	if (pdev->tx_descs_max < tx_descs_cnt)
-		pdev->tx_descs_max = tx_descs_cnt;
-	qdf_mem_tx_desc_cnt_update(pdev->num_tx_outstanding,
-				   pdev->tx_descs_max);
-}
-
-#else /* CONFIG_WLAN_SYSFS_MEM_STATS */
-
-static inline void
-dp_update_tx_desc_stats(struct dp_pdev *pdev)
-{
-}
-#endif /* CONFIG_WLAN_SYSFS_MEM_STATS */
-
-#ifdef QCA_TX_LIMIT_CHECK
-/**
- * dp_tx_limit_check - Check if allocated tx descriptors reached
- * soc max limit and pdev max limit
- * @vdev: DP vdev handle
- *
- * Return: true if allocated tx descriptors reached max configured value, else
- * false
- */
-static inline bool
-dp_tx_limit_check(struct dp_vdev *vdev)
-{
-	struct dp_pdev *pdev = vdev->pdev;
-	struct dp_soc *soc = pdev->soc;
-
-	if (qdf_atomic_read(&soc->num_tx_outstanding) >=
-			soc->num_tx_allowed) {
-		dp_tx_info("queued packets are more than max tx, drop the frame");
-		DP_STATS_INC(vdev, tx_i.dropped.desc_na.num, 1);
-		return true;
-	}
-
-	if (qdf_atomic_read(&pdev->num_tx_outstanding) >=
-			pdev->num_tx_allowed) {
-		dp_tx_info("queued packets are more than max tx, drop the frame");
-		DP_STATS_INC(vdev, tx_i.dropped.desc_na.num, 1);
-		DP_STATS_INC(vdev, tx_i.dropped.desc_na_exc_outstand.num, 1);
-		return true;
-	}
-	return false;
-}
-
-/**
- * dp_tx_exception_limit_check - Check if allocated tx exception descriptors
- * reached soc max limit
- * @vdev: DP vdev handle
- *
- * Return: true if allocated tx descriptors reached max configured value, else
- * false
- */
-static inline bool
-dp_tx_exception_limit_check(struct dp_vdev *vdev)
-{
-	struct dp_pdev *pdev = vdev->pdev;
-	struct dp_soc *soc = pdev->soc;
-
-	if (qdf_atomic_read(&soc->num_tx_exception) >=
-			soc->num_msdu_exception_desc) {
-		dp_info("exc packets are more than max drop the exc pkt");
-		DP_STATS_INC(vdev, tx_i.dropped.exc_desc_na.num, 1);
-		return true;
-	}
-
-	return false;
-}
-
-/**
- * dp_tx_outstanding_inc - Increment outstanding tx desc values on pdev and soc
- * @vdev: DP pdev handle
- *
- * Return: void
- */
-static inline void
-dp_tx_outstanding_inc(struct dp_pdev *pdev)
-{
-	struct dp_soc *soc = pdev->soc;
-
-	qdf_atomic_inc(&pdev->num_tx_outstanding);
-	qdf_atomic_inc(&soc->num_tx_outstanding);
-	dp_update_tx_desc_stats(pdev);
-}
-
-/**
- * dp_tx_outstanding__dec - Decrement outstanding tx desc values on pdev and soc
- * @vdev: DP pdev handle
- *
- * Return: void
- */
-static inline void
-dp_tx_outstanding_dec(struct dp_pdev *pdev)
-{
-	struct dp_soc *soc = pdev->soc;
-
-	qdf_atomic_dec(&pdev->num_tx_outstanding);
-	qdf_atomic_dec(&soc->num_tx_outstanding);
-	dp_update_tx_desc_stats(pdev);
-}
-
-#else //QCA_TX_LIMIT_CHECK
-static inline bool
-dp_tx_limit_check(struct dp_vdev *vdev)
-{
-	return false;
-}
-
-static inline bool
-dp_tx_exception_limit_check(struct dp_vdev *vdev)
-{
-	return false;
-}
-
-static inline void
-dp_tx_outstanding_inc(struct dp_pdev *pdev)
-{
-	qdf_atomic_inc(&pdev->num_tx_outstanding);
-	dp_update_tx_desc_stats(pdev);
-}
-
-static inline void
-dp_tx_outstanding_dec(struct dp_pdev *pdev)
-{
-	qdf_atomic_dec(&pdev->num_tx_outstanding);
-	dp_update_tx_desc_stats(pdev);
-}
-#endif //QCA_TX_LIMIT_CHECK
-
 #ifdef WLAN_FEATURE_DP_TX_DESC_HISTORY
 static inline enum dp_tx_event_type dp_tx_get_event_type(uint32_t flags)
 {
@@ -575,7 +431,8 @@ static uint8_t dp_tx_prepare_htt_metadata(struct dp_vdev *vdev, qdf_nbuf_t nbuf,
 
 	if (vdev->mesh_vdev || msdu_info->is_tx_sniffer ||
 	    HTT_TX_MSDU_EXT2_DESC_FLAG_VALID_KEY_FLAGS_GET(msdu_info->
-							   meta_data[0])) {
+							   meta_data[0]) ||
+	    msdu_info->exception_fw) {
 		if (qdf_unlikely(qdf_nbuf_headroom(nbuf) <
 				 htt_desc_size_aligned)) {
 			nbuf = qdf_nbuf_realloc_headroom(nbuf,
@@ -1032,6 +889,211 @@ static inline int dp_tx_is_nbuf_marked_exception(struct dp_soc *soc,
 }
 #endif
 
+#ifdef DP_TRAFFIC_END_INDICATION
+/**
+ * dp_tx_get_traffic_end_indication_pkt() - Allocate and prepare packet to send
+ *                                          as indication to fw to inform that
+ *                                          data stream has ended
+ * @vdev: DP vdev handle
+ * @nbuf: original buffer from network stack
+ *
+ * Return: NULL on failure,
+ *         nbuf on success
+ */
+static inline qdf_nbuf_t
+dp_tx_get_traffic_end_indication_pkt(struct dp_vdev *vdev,
+				     qdf_nbuf_t nbuf)
+{
+	/* Packet length should be enough to copy upto L3 header */
+	uint8_t end_nbuf_len = 64;
+	uint8_t htt_desc_size_aligned;
+	uint8_t htt_desc_size;
+	qdf_nbuf_t end_nbuf;
+
+	if (qdf_unlikely(QDF_NBUF_CB_GET_PACKET_TYPE(nbuf) ==
+			 QDF_NBUF_CB_PACKET_TYPE_END_INDICATION)) {
+		htt_desc_size = sizeof(struct htt_tx_msdu_desc_ext2_t);
+		htt_desc_size_aligned = (htt_desc_size + 7) & ~0x7;
+
+		end_nbuf = qdf_nbuf_queue_remove(&vdev->end_ind_pkt_q);
+		if (!end_nbuf) {
+			end_nbuf = qdf_nbuf_alloc(NULL,
+						  (htt_desc_size_aligned +
+						  end_nbuf_len),
+						  htt_desc_size_aligned,
+						  8, false);
+			if (!end_nbuf) {
+				dp_err("Packet allocation failed");
+				goto out;
+			}
+		} else {
+			qdf_nbuf_reset(end_nbuf, htt_desc_size_aligned, 8);
+		}
+		qdf_mem_copy(qdf_nbuf_data(end_nbuf), qdf_nbuf_data(nbuf),
+			     end_nbuf_len);
+		qdf_nbuf_set_pktlen(end_nbuf, end_nbuf_len);
+
+		return end_nbuf;
+	}
+out:
+	return NULL;
+}
+
+/**
+ * dp_tx_send_traffic_end_indication_pkt() - Send indication packet to FW
+ *                                           via exception path.
+ * @vdev: DP vdev handle
+ * @end_nbuf: skb to send as indication
+ * @msdu_info: msdu_info of original nbuf
+ * @peer_id: peer id
+ *
+ * Return: None
+ */
+static inline void
+dp_tx_send_traffic_end_indication_pkt(struct dp_vdev *vdev,
+				      qdf_nbuf_t end_nbuf,
+				      struct dp_tx_msdu_info_s *msdu_info,
+				      uint16_t peer_id)
+{
+	struct dp_tx_msdu_info_s e_msdu_info = {0};
+	qdf_nbuf_t nbuf;
+	struct htt_tx_msdu_desc_ext2_t *desc_ext =
+		(struct htt_tx_msdu_desc_ext2_t *)(e_msdu_info.meta_data);
+	e_msdu_info.tx_queue = msdu_info->tx_queue;
+	e_msdu_info.tid = msdu_info->tid;
+	e_msdu_info.exception_fw = 1;
+	desc_ext->host_tx_desc_pool = 1;
+	desc_ext->traffic_end_indication = 1;
+	nbuf = dp_tx_send_msdu_single(vdev, end_nbuf, &e_msdu_info,
+				      peer_id, NULL);
+	if (nbuf) {
+		dp_err("Traffic end indication packet tx failed");
+		qdf_nbuf_free(nbuf);
+	}
+}
+
+/**
+ * dp_tx_traffic_end_indication_set_desc_flag() - Set tx descriptor flag to
+ *                                                mark it trafic end indication
+ *                                                packet.
+ * @tx_desc: Tx descriptor pointer
+ * @msdu_info: msdu_info structure pointer
+ *
+ * Return: None
+ */
+static inline void
+dp_tx_traffic_end_indication_set_desc_flag(struct dp_tx_desc_s *tx_desc,
+					   struct dp_tx_msdu_info_s *msdu_info)
+{
+	struct htt_tx_msdu_desc_ext2_t *desc_ext =
+		(struct htt_tx_msdu_desc_ext2_t *)(msdu_info->meta_data);
+
+	if (qdf_unlikely(desc_ext->traffic_end_indication))
+		tx_desc->flags |= DP_TX_DESC_FLAG_TRAFFIC_END_IND;
+}
+
+/**
+ * dp_tx_traffic_end_indication_enq_ind_pkt() - Enqueue the packet instead of
+ *                                              freeing which are associated
+ *                                              with traffic end indication
+ *                                              flagged descriptor.
+ * @soc: dp soc handle
+ * @desc: Tx descriptor pointer
+ * @nbuf: buffer pointer
+ *
+ * Return: True if packet gets enqueued else false
+ */
+static bool
+dp_tx_traffic_end_indication_enq_ind_pkt(struct dp_soc *soc,
+					 struct dp_tx_desc_s *desc,
+					 qdf_nbuf_t nbuf)
+{
+	struct dp_vdev *vdev = NULL;
+
+	if (qdf_unlikely((desc->flags &
+			  DP_TX_DESC_FLAG_TRAFFIC_END_IND) != 0)) {
+		vdev = dp_vdev_get_ref_by_id(soc, desc->vdev_id,
+					     DP_MOD_ID_TX_COMP);
+		if (vdev) {
+			qdf_nbuf_queue_add(&vdev->end_ind_pkt_q, nbuf);
+			dp_vdev_unref_delete(soc, vdev, DP_MOD_ID_TX_COMP);
+			return true;
+		}
+	}
+	return false;
+}
+
+/**
+ * dp_tx_traffic_end_indication_is_enabled() - get the feature
+ *                                             enable/disable status
+ * @vdev: dp vdev handle
+ *
+ * Return: True if feature is enable else false
+ */
+static inline bool
+dp_tx_traffic_end_indication_is_enabled(struct dp_vdev *vdev)
+{
+	return qdf_unlikely(vdev->traffic_end_ind_en);
+}
+
+static inline qdf_nbuf_t
+dp_tx_send_msdu_single_wrapper(struct dp_vdev *vdev, qdf_nbuf_t nbuf,
+			       struct dp_tx_msdu_info_s *msdu_info,
+			       uint16_t peer_id, qdf_nbuf_t end_nbuf)
+{
+	if (dp_tx_traffic_end_indication_is_enabled(vdev))
+		end_nbuf = dp_tx_get_traffic_end_indication_pkt(vdev, nbuf);
+
+	nbuf = dp_tx_send_msdu_single(vdev, nbuf, msdu_info, peer_id, NULL);
+
+	if (qdf_unlikely(end_nbuf))
+		dp_tx_send_traffic_end_indication_pkt(vdev, end_nbuf,
+						      msdu_info, peer_id);
+	return nbuf;
+}
+#else
+static inline qdf_nbuf_t
+dp_tx_get_traffic_end_indication_pkt(struct dp_vdev *vdev,
+				     qdf_nbuf_t nbuf)
+{
+	return NULL;
+}
+
+static inline void
+dp_tx_send_traffic_end_indication_pkt(struct dp_vdev *vdev,
+				      qdf_nbuf_t end_nbuf,
+				      struct dp_tx_msdu_info_s *msdu_info,
+				      uint16_t peer_id)
+{}
+
+static inline void
+dp_tx_traffic_end_indication_set_desc_flag(struct dp_tx_desc_s *tx_desc,
+					   struct dp_tx_msdu_info_s *msdu_info)
+{}
+
+static inline bool
+dp_tx_traffic_end_indication_enq_ind_pkt(struct dp_soc *soc,
+					 struct dp_tx_desc_s *desc,
+					 qdf_nbuf_t nbuf)
+{
+	return false;
+}
+
+static inline bool
+dp_tx_traffic_end_indication_is_enabled(struct dp_vdev *vdev)
+{
+	return false;
+}
+
+static inline qdf_nbuf_t
+dp_tx_send_msdu_single_wrapper(struct dp_vdev *vdev, qdf_nbuf_t nbuf,
+			       struct dp_tx_msdu_info_s *msdu_info,
+			       uint16_t peer_id, qdf_nbuf_t end_nbuf)
+{
+	return dp_tx_send_msdu_single(vdev, nbuf, msdu_info, peer_id, NULL);
+}
+#endif
+
 /**
  * dp_tx_desc_prepare_single - Allocate and prepare Tx descriptor
  * @vdev: DP vdev handle
@@ -1082,6 +1144,7 @@ struct dp_tx_desc_s *dp_tx_prepare_desc_single(struct dp_vdev *vdev,
 	tx_desc->msdu_ext_desc = NULL;
 	tx_desc->pkt_offset = 0;
 	tx_desc->length = qdf_nbuf_headlen(nbuf);
+	tx_desc->shinfo_addr = skb_end_pointer(nbuf);
 
 	dp_tx_trace_pkt(soc, nbuf, tx_desc->id, vdev->vdev_id);
 
@@ -1149,6 +1212,8 @@ struct dp_tx_desc_s *dp_tx_prepare_desc_single(struct dp_vdev *vdev,
 		tx_desc->length = qdf_nbuf_headlen(nbuf);
 		tx_desc->pkt_offset = align_pad + htt_hdr_size;
 		tx_desc->flags |= DP_TX_DESC_FLAG_TO_FW;
+		dp_tx_traffic_end_indication_set_desc_flag(tx_desc,
+							   msdu_info);
 		is_exception = 1;
 		tx_desc->length -= tx_desc->pkt_offset;
 	}
@@ -2003,30 +2068,41 @@ static inline void dp_tx_update_mesh_flags(struct dp_soc *soc,
  * dp_mesh_tx_comp_free_buff() - Free the mesh tx packet buffer
  * @soc: dp_soc handle
  * @tx_desc: TX descriptor
- * @vdev: datapath vdev handle
+ * @delayed_free: delay the nbuf free
  *
- * Return: None
+ * Return: nbuf to be freed late
  */
-static inline void dp_mesh_tx_comp_free_buff(struct dp_soc *soc,
-					     struct dp_tx_desc_s *tx_desc)
+static inline qdf_nbuf_t dp_mesh_tx_comp_free_buff(struct dp_soc *soc,
+						   struct dp_tx_desc_s *tx_desc,
+						   bool delayed_free)
 {
 	qdf_nbuf_t nbuf = tx_desc->nbuf;
 	struct dp_vdev *vdev = NULL;
 
+	vdev = dp_vdev_get_ref_by_id(soc, tx_desc->vdev_id, DP_MOD_ID_MESH);
 	if (tx_desc->flags & DP_TX_DESC_FLAG_TO_FW) {
-		qdf_nbuf_free(nbuf);
-		DP_STATS_INC(vdev, tx_i.mesh.completion_fw, 1);
-	} else {
-		vdev = dp_vdev_get_ref_by_id(soc, tx_desc->vdev_id,
-					     DP_MOD_ID_MESH);
-		if (vdev && vdev->osif_tx_free_ext)
-			vdev->osif_tx_free_ext((nbuf));
-		else
-			qdf_nbuf_free(nbuf);
-
 		if (vdev)
-			dp_vdev_unref_delete(soc, vdev, DP_MOD_ID_MESH);
+			DP_STATS_INC(vdev, tx_i.mesh.completion_fw, 1);
+
+		if (delayed_free)
+			return nbuf;
+
+		qdf_nbuf_free(nbuf);
+	} else {
+		if (vdev && vdev->osif_tx_free_ext) {
+			vdev->osif_tx_free_ext((nbuf));
+		} else {
+			if (delayed_free)
+				return nbuf;
+
+			qdf_nbuf_free(nbuf);
+		}
 	}
+
+	if (vdev)
+		dp_vdev_unref_delete(soc, vdev, DP_MOD_ID_MESH);
+
+	return NULL;
 }
 #else
 static inline void dp_tx_update_mesh_flags(struct dp_soc *soc,
@@ -2035,9 +2111,11 @@ static inline void dp_tx_update_mesh_flags(struct dp_soc *soc,
 {
 }
 
-static inline void dp_mesh_tx_comp_free_buff(struct dp_soc *soc,
-					     struct dp_tx_desc_s *tx_desc)
+static inline qdf_nbuf_t dp_mesh_tx_comp_free_buff(struct dp_soc *soc,
+						   struct dp_tx_desc_s *tx_desc,
+						   bool delayed_free)
 {
+	return NULL;
 }
 #endif
 
@@ -2232,21 +2310,25 @@ fail_return:
  * dp_tx_comp_free_buf() - Free nbuf associated with the Tx Descriptor
  * @soc: Soc handle
  * @desc: software Tx descriptor to be processed
+ * @delayed_free: defer freeing of nbuf
  *
- * Return: none
+ * Return: nbuf to be freed later
  */
-void dp_tx_comp_free_buf(struct dp_soc *soc, struct dp_tx_desc_s *desc)
+qdf_nbuf_t dp_tx_comp_free_buf(struct dp_soc *soc, struct dp_tx_desc_s *desc,
+			       bool delayed_free)
 {
 	qdf_nbuf_t nbuf = desc->nbuf;
 	enum dp_tx_event_type type = dp_tx_get_event_type(desc->flags);
 
 	/* nbuf already freed in vdev detach path */
 	if (!nbuf)
-		return;
+		return NULL;
 
 	/* If it is TDLS mgmt, don't unmap or free the frame */
-	if (desc->flags & DP_TX_DESC_FLAG_TDLS_FRAME)
-		return dp_non_std_htt_tx_comp_free_buff(soc, desc);
+	if (desc->flags & DP_TX_DESC_FLAG_TDLS_FRAME) {
+		dp_non_std_htt_tx_comp_free_buff(soc, desc);
+		return NULL;
+	}
 
 	/* 0 : MSDU buffer, 1 : MLE */
 	if (desc->msdu_ext_desc) {
@@ -2263,8 +2345,7 @@ void dp_tx_comp_free_buf(struct dp_soc *soc, struct dp_tx_desc_s *desc)
 						desc->msdu_ext_desc->tso_desc,
 						desc->msdu_ext_desc->
 						tso_num_desc);
-			qdf_nbuf_free(nbuf);
-			return;
+			goto nbuf_free;
 		}
 
 		if (qdf_unlikely(desc->frm_type == dp_tx_frm_sg)) {
@@ -2288,8 +2369,7 @@ void dp_tx_comp_free_buf(struct dp_soc *soc, struct dp_tx_desc_s *desc)
 						   QDF_DMA_TO_DEVICE);
 			}
 
-			qdf_nbuf_free(nbuf);
-			return;
+			goto nbuf_free;
 		}
 	}
 	/* If it's ME frame, dont unmap the cloned nbuf's */
@@ -2300,9 +2380,18 @@ void dp_tx_comp_free_buf(struct dp_soc *soc, struct dp_tx_desc_s *desc)
 	dp_tx_unmap(soc, desc);
 
 	if (desc->flags & DP_TX_DESC_FLAG_MESH_MODE)
-		return dp_mesh_tx_comp_free_buff(soc, desc);
+		return dp_mesh_tx_comp_free_buff(soc, desc, delayed_free);
+
+	if (dp_tx_traffic_end_indication_enq_ind_pkt(soc, desc, nbuf))
+		return NULL;
+
 nbuf_free:
+	if (delayed_free)
+		return nbuf;
+
 	qdf_nbuf_free(nbuf);
+
+	return NULL;
 }
 
 /**
@@ -2544,7 +2633,7 @@ qdf_nbuf_t dp_tx_send_msdu_multiple(struct dp_vdev *vdev, qdf_nbuf_t nbuf,
 				 * unmap and free current,
 				 * retransmit remaining segments
 				 */
-				dp_tx_comp_free_buf(soc, tx_desc);
+				dp_tx_comp_free_buf(soc, tx_desc, false);
 				i++;
 				dp_tx_desc_release(tx_desc, tx_q->desc_pool_id);
 				continue;
@@ -3292,7 +3381,53 @@ void dp_tx_prefetch_nbuf_data(qdf_nbuf_t nbuf)
 }
 #endif
 
-/**
+#ifdef DP_UMAC_HW_RESET_SUPPORT
+/*
+ * dp_tx_drop() - Drop the frame on a given VAP
+ * @soc: DP soc handle
+ * @vdev_id: id of DP vdev handle
+ * @nbuf: skb
+ *
+ * Drop all the incoming packets
+ *
+ * Return: nbuf
+ *
+ */
+qdf_nbuf_t dp_tx_drop(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
+		      qdf_nbuf_t nbuf)
+{
+	struct dp_soc *soc = cdp_soc_t_to_dp_soc(soc_hdl);
+	struct dp_vdev *vdev = NULL;
+
+	vdev = soc->vdev_id_map[vdev_id];
+	if (qdf_unlikely(!vdev))
+		return nbuf;
+
+	DP_STATS_INC(vdev, tx_i.dropped.drop_ingress, 1);
+	return nbuf;
+}
+
+/*
+ * dp_tx_exc_drop() - Drop the frame on a given VAP
+ * @soc: DP soc handle
+ * @vdev_id: id of DP vdev handle
+ * @nbuf: skb
+ * @tx_exc_metadata: Handle that holds exception path meta data
+ *
+ * Drop all the incoming packets
+ *
+ * Return: nbuf
+ *
+ */
+qdf_nbuf_t dp_tx_exc_drop(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
+			  qdf_nbuf_t nbuf,
+			  struct cdp_tx_exception_metadata *tx_exc_metadata)
+{
+	return dp_tx_drop(soc_hdl, vdev_id, nbuf);
+}
+#endif
+
+/*
  * dp_tx_send() - Transmit a frame on a given VAP
  * @soc: DP soc handle
  * @vdev_id: id of DP vdev handle
@@ -3316,6 +3451,7 @@ qdf_nbuf_t dp_tx_send(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
 	 */
 	struct dp_tx_msdu_info_s msdu_info = {0};
 	struct dp_vdev *vdev = NULL;
+	qdf_nbuf_t end_nbuf = NULL;
 
 	if (qdf_unlikely(vdev_id >= MAX_VDEV_CNT))
 		return nbuf;
@@ -3357,6 +3493,8 @@ qdf_nbuf_t dp_tx_send(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
 	 *  to minimize lock contention for these resources.
 	 */
 	dp_tx_get_queue(vdev, nbuf, &msdu_info.tx_queue);
+	DP_STATS_INC(vdev, tx_i.rcvd_per_core[msdu_info.tx_queue.desc_pool_id],
+		     1);
 
 	/*
 	 * TCL H/W supports 2 DSCP-TID mapping tables.
@@ -3464,8 +3602,9 @@ qdf_nbuf_t dp_tx_send(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
 	 * SRNG. There is no need to setup a MSDU extension descriptor.
 	 */
 	dp_tx_prefetch_nbuf_data(nbuf);
-	nbuf = dp_tx_send_msdu_single(vdev, nbuf, &msdu_info, peer_id, NULL);
 
+	nbuf = dp_tx_send_msdu_single_wrapper(vdev, nbuf, &msdu_info,
+					      peer_id, end_nbuf);
 	return nbuf;
 
 send_multiple:
@@ -4443,7 +4582,7 @@ dp_tx_comp_process_desc(struct dp_soc *soc,
 	}
 
 	desc->flags |= DP_TX_DESC_FLAG_COMPLETED_TX;
-	dp_tx_comp_free_buf(soc, desc);
+	dp_tx_comp_free_buf(soc, desc, false);
 }
 
 #ifdef DISABLE_DP_STATS
@@ -4490,7 +4629,7 @@ void dp_tx_update_connectivity_stats(struct dp_soc *soc,
 }
 #endif
 
-#if defined(WLAN_FEATURE_TSF_UPLINK_DELAY) || defined(CONFIG_SAWF)
+#if defined(WLAN_FEATURE_TSF_UPLINK_DELAY) || defined(WLAN_CONFIG_TX_DELAY)
 QDF_STATUS
 dp_tx_compute_hw_delay_us(struct hal_tx_completion_status *ts,
 			  uint32_t delta_tsf,
@@ -4840,11 +4979,11 @@ void dp_tx_prefetch_next_nbuf_data(struct dp_tx_desc_s *next)
 		nbuf = next->nbuf;
 	if (nbuf) {
 		/* prefetch skb->next and first few bytes of skb->cb */
+		qdf_prefetch(next->shinfo_addr);
 		qdf_prefetch(nbuf);
 		/* prefetch skb fields present in different cachelines */
 		qdf_prefetch(&nbuf->len);
 		qdf_prefetch(&nbuf->users);
-		qdf_prefetch(skb_end_pointer(nbuf));
 	}
 }
 #else
@@ -5097,8 +5236,9 @@ more_data:
 		num_avail_for_reap = quota;
 
 	dp_srng_dst_inv_cached_descs(soc, hal_ring_hdl, num_avail_for_reap);
-	last_prefetched_hw_desc = dp_srng_dst_prefetch(hal_soc, hal_ring_hdl,
-						       num_avail_for_reap);
+	last_prefetched_hw_desc = dp_srng_dst_prefetch_32_byte_desc(hal_soc,
+							    hal_ring_hdl,
+							    num_avail_for_reap);
 
 	/* Find head descriptor from completion ring */
 	while (qdf_likely(num_avail_for_reap--)) {
@@ -5210,7 +5350,7 @@ more_data:
 				dp_tx_comp_info_rl("pdev in down state %d",
 						   tx_desc->id);
 				tx_desc->flags |= DP_TX_DESC_FLAG_TX_COMP_ERR;
-				dp_tx_comp_free_buf(soc, tx_desc);
+				dp_tx_comp_free_buf(soc, tx_desc, false);
 				dp_tx_desc_release(tx_desc, tx_desc->pool_id);
 				goto next_desc;
 			}
@@ -5487,7 +5627,8 @@ void dp_tx_desc_flush(struct dp_pdev *pdev, struct dp_vdev *vdev,
 				 */
 				if (force_free) {
 					tx_desc->flags |= DP_TX_DESC_FLAG_FLUSH;
-					dp_tx_comp_free_buf(soc, tx_desc);
+					dp_tx_comp_free_buf(soc, tx_desc,
+							    false);
 					dp_tx_desc_release(tx_desc, i);
 				} else {
 					tx_desc->vdev_id = DP_INVALID_VDEV_ID;
@@ -5551,7 +5692,8 @@ void dp_tx_desc_flush(struct dp_pdev *pdev, struct dp_vdev *vdev,
 			if (dp_is_tx_desc_flush_match(pdev, vdev, tx_desc)) {
 				if (force_free) {
 					tx_desc->flags |= DP_TX_DESC_FLAG_FLUSH;
-					dp_tx_comp_free_buf(soc, tx_desc);
+					dp_tx_comp_free_buf(soc, tx_desc,
+							    false);
 					dp_tx_desc_release(tx_desc, i);
 				} else {
 					dp_tx_desc_reset_vdev(soc, tx_desc,

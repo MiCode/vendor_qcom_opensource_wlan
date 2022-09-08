@@ -107,6 +107,10 @@
 #include "wlan_coex_public_structs.h"
 #endif
 
+#ifdef WLAN_FEATURE_COAP
+#include "wlan_coap_public_structs.h"
+#endif
+
 #define WMI_UNIFIED_MAX_EVENT 0x100
 
 #ifdef WMI_EXT_DBG
@@ -551,10 +555,14 @@ QDF_STATUS
 (*send_pdev_utf_cmd)(wmi_unified_t wmi_handle,
 				struct pdev_utf_params *param,
 				uint8_t mac_id);
+
 QDF_STATUS
 (*send_pdev_param_cmd)(wmi_unified_t wmi_handle,
 			   struct pdev_params *param,
 				uint8_t mac_id);
+QDF_STATUS
+(*send_multiple_pdev_param_cmd)(wmi_unified_t wmi_handle,
+				struct set_multiple_pdev_vdev_param *params);
 
 QDF_STATUS
 (*send_pdev_set_hw_mode_cmd)(wmi_unified_t wmi_handle,
@@ -600,6 +608,10 @@ QDF_STATUS
 
 QDF_STATUS (*send_vdev_set_param_cmd)(wmi_unified_t wmi_handle,
 				struct vdev_set_params *param);
+
+QDF_STATUS
+(*send_multiple_vdev_param_cmd)(wmi_unified_t wmi_handle,
+				struct set_multiple_pdev_vdev_param *params);
 
 QDF_STATUS (*send_vdev_set_mu_snif_cmd)(wmi_unified_t wmi_handle,
 					struct vdev_set_mu_snif_param *param);
@@ -3080,6 +3092,41 @@ QDF_STATUS
 (*send_peer_txq_flush_config_cmd)(wmi_unified_t wmi_handle,
 				  struct peer_txq_flush_config_params *param);
 #endif
+
+#ifdef FEATURE_SET
+QDF_STATUS
+(*feature_set_cmd_send)(wmi_unified_t wmi_handle,
+			struct target_feature_set *feature_set);
+#endif
+
+#ifdef WLAN_FEATURE_COAP
+QDF_STATUS
+(*send_coap_add_pattern_cmd)(wmi_unified_t wmi_handle,
+			     struct coap_offload_reply_param *param);
+
+QDF_STATUS
+(*send_coap_del_pattern_cmd)(wmi_unified_t wmi_handle,
+			     uint8_t vdev_id, uint32_t pattern_id);
+
+QDF_STATUS
+(*send_coap_add_keepalive_pattern_cmd)(wmi_unified_t wmi_handle,
+		struct coap_offload_periodic_tx_param *param);
+
+QDF_STATUS
+(*send_coap_del_keepalive_pattern_cmd)(wmi_unified_t wmi_handle,
+				       uint8_t vdev_id, uint32_t pattern_id);
+
+QDF_STATUS
+(*send_coap_cache_get_cmd)(wmi_unified_t wmi_handle,
+			   uint8_t vdev_id, uint32_t pattern_id);
+
+QDF_STATUS (*extract_coap_buf_info)(wmi_unified_t wmi_handle, void *evt_buf,
+				    struct coap_buf_info *info);
+#endif
+QDF_STATUS
+(*extract_health_mon_init_done_info_event)(wmi_unified_t wmi_handle,
+					   void *evt_buf,
+					   struct wmi_health_mon_params *param);
 };
 
 /* Forward declartion for psoc*/
@@ -3666,6 +3713,14 @@ static inline void wmi_mc_cp_stats_attach_tlv(struct wmi_unified *wmi_handle)
 {
 }
 #endif /* QCA_SUPPORT_MC_CP_STATS */
+
+#ifdef WLAN_FEATURE_COAP
+void wmi_coap_attach_tlv(wmi_unified_t wmi_handle);
+#else
+static inline void wmi_coap_attach_tlv(wmi_unified_t wmi_handle)
+{
+}
+#endif
 
 /*
  * wmi_map_ch_width() - map wmi channel width to host channel width

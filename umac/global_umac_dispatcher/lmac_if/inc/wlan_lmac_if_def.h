@@ -102,6 +102,10 @@ struct dbr_module_config;
 #include "wlan_coex_public_structs.h"
 #endif
 
+#ifdef WLAN_FEATURE_COAP
+#include "wlan_coap_public_structs.h"
+#endif
+
 /**
  * typedef cp_stats_event - Definition of cp stats event
  * Define stats_event from external cp stats component to cp_stats_event
@@ -1471,6 +1475,35 @@ struct wlan_lmac_if_twt_rx_ops {
 struct wlan_lmac_if_spatial_reuse_tx_ops {
 	QDF_STATUS (*send_cfg)(struct wlan_objmgr_vdev *vdev, uint8_t sr_ctrl,
 			       uint8_t non_srg_max_pd_offset);
+	};
+#endif
+
+#ifdef WLAN_FEATURE_COAP
+/**
+ * struct wlan_lmac_if_coap_tx_ops - south bound tx function pointers for CoAP
+ * @attach: function pointer to attach CoAP component
+ * @detach: function pointer to detach CoAP component
+ * @offload_reply_enable: function pointer to enable CoAP offload reply
+ * @offload_reply_disable: function pointer to disable CoAP offload reply
+ * @offload_periodic_tx_enable: function pointer to enable CoAP offload
+ * periodic transmitting
+ * @offload_periodic_tx_disable: function pointer to disable CoAP offload
+ * periodic transmitting
+ * @offload_cache_get: function pointer to get cached CoAP messages
+ */
+struct wlan_lmac_if_coap_tx_ops {
+	QDF_STATUS (*attach)(struct wlan_objmgr_psoc *psoc);
+	QDF_STATUS (*detach)(struct wlan_objmgr_psoc *psoc);
+	QDF_STATUS (*offload_reply_enable)(struct wlan_objmgr_vdev *vdev,
+			struct coap_offload_reply_param *param);
+	QDF_STATUS (*offload_reply_disable)(struct wlan_objmgr_vdev *vdev,
+					    uint32_t req_id);
+	QDF_STATUS (*offload_periodic_tx_enable)(struct wlan_objmgr_vdev *vdev,
+			struct coap_offload_periodic_tx_param *param);
+	QDF_STATUS (*offload_periodic_tx_disable)(struct wlan_objmgr_vdev *vdev,
+						  uint32_t req_id);
+	QDF_STATUS (*offload_cache_get)(struct wlan_objmgr_vdev *vdev,
+					uint32_t req_id);
 };
 #endif
 
@@ -1585,6 +1618,10 @@ struct wlan_lmac_if_tx_ops {
 
 #if defined WLAN_FEATURE_11AX
 	struct wlan_lmac_if_spatial_reuse_tx_ops spatial_reuse_tx_ops;
+#endif
+
+#ifdef WLAN_FEATURE_COAP
+	struct wlan_lmac_if_coap_tx_ops coap_ops;
 #endif
 };
 

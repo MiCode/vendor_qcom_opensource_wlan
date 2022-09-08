@@ -418,12 +418,14 @@ enum cdp_peer_type {
  * @is_first_link: set true for first MLO link peer
  * @is_primary_link: set true for MLO primary link peer
  * @primary_umac_id: primary umac_id
+ * @num_links: number of links in MLO
  */
 struct cdp_peer_setup_info {
 	uint8_t *mld_peer_mac;
 	uint8_t is_first_link:1,
 		is_primary_link:1;
 	uint8_t primary_umac_id;
+	uint8_t num_links;
 };
 
 /**
@@ -807,6 +809,15 @@ typedef qdf_nbuf_t (*ol_txrx_tx_fp)(struct cdp_soc_t *soc, uint8_t vdev_id,
 				    qdf_nbuf_t msdu_list);
 
 /**
+ * ol_txrx_tx_fast_fp - top-level fast transmit function
+ * @soc - dp soc handle
+ * @vdev_id - handle to the virtual device object
+ * @msdu_list - list of network buffers
+ */
+typedef qdf_nbuf_t (*ol_txrx_tx_fast_fp)(struct cdp_soc_t *soc, uint8_t vdev_id,
+					 qdf_nbuf_t msdu_list);
+
+/**
  * ol_txrx_tx_exc_fp - top-level transmit function on exception path
  * @soc - dp soc handle
  * @vdev_id - handle to the virtual device object
@@ -1033,6 +1044,7 @@ struct ol_txrx_ops {
 	/* tx function pointers - specified by txrx, stored by OS shim */
 	struct {
 		ol_txrx_tx_fp         tx;
+		ol_txrx_tx_fast_fp    tx_fast;
 		ol_txrx_tx_exc_fp     tx_exception;
 		ol_txrx_tx_free_ext_fp tx_free_ext;
 		ol_txrx_completion_fp tx_comp;
@@ -1061,6 +1073,16 @@ struct ol_txrx_ops {
 
 	ol_txrx_get_key_fp  get_key;
 	ol_txrx_get_tsf_time get_tsf_time;
+};
+
+/**
+ * ol_txrx_hardtart_ctxt - handlers for dp tx path
+ *
+ */
+struct ol_txrx_hardtart_ctxt {
+	ol_txrx_tx_fp         tx;
+	ol_txrx_tx_fast_fp    tx_fast;
+	ol_txrx_tx_exc_fp     tx_exception;
 };
 
 /**
@@ -1265,6 +1287,7 @@ enum cdp_pdev_param_type {
  * @cdp_ipa_enabled : set ipa mode
  * @cdp_psoc_param_vdev_stats_hw_offload: Configure HW vdev stats offload
  * @cdp_pdev_param_undecoded_metadata_enable: Undecoded metadata capture enable
+ * @cdp_vdev_param_traffic_end_ind: Traffic end indication enable/disable
  */
 typedef union cdp_config_param_t {
 	/* peer params */
@@ -1350,6 +1373,7 @@ typedef union cdp_config_param_t {
 	bool cdp_pdev_param_undecoded_metadata_enable;
 	bool cdp_sawf_enabled;
 	bool cdp_drop_3addr_mcast;
+	bool cdp_vdev_param_traffic_end_ind;
 } cdp_config_param_type;
 
 /**
@@ -1429,6 +1453,7 @@ enum cdp_pdev_bpr_param {
  * @CDP_UPDATE_DSCP_TO_TID_MAP: Set DSCP to TID map id
  * @CDP_SET_MCAST_VDEV : Set primary mcast vdev
  * @CDP_ENABLE_WRAP: qwrap ap
+ * @CDP_ENABLE_TRAFFIC_END_INDICATION: enable/disable traffic end indication
  */
 enum cdp_vdev_param_type {
 	CDP_ENABLE_NAWDS,
@@ -1468,8 +1493,12 @@ enum cdp_vdev_param_type {
 #endif
 	CDP_UPDATE_DSCP_TO_TID_MAP,
 	CDP_SET_MCAST_VDEV,
+	CDP_SET_MCAST_VDEV_HW_UPDATE,
 	CDP_DROP_3ADDR_MCAST,
 	CDP_ENABLE_WRAP,
+#ifdef DP_TRAFFIC_END_INDICATION
+	CDP_ENABLE_TRAFFIC_END_INDICATION,
+#endif
 };
 
 /*
@@ -2046,7 +2075,7 @@ struct cdp_tx_indication_info {
 /**
  * struct cdp_tx_mgmt_comp_info - Tx mgmt comp info
  * @ppdu_id: ppdu_id
- * @is_sgen_pkt: payload recevied from wmi or htt path
+ * @is_sgen_pkt: payload received from wmi or htt path
  * @retries_count: retries count
  * @tx_tsf: 64 bit timestamp
  */
@@ -2443,7 +2472,6 @@ struct cdp_rx_indication_ppdu {
 	struct cdp_rx_su_evm_info evm_info;
 	uint32_t rx_antenna;
 	uint8_t num_users;
-	struct cdp_rx_stats_ppdu_user user[CDP_MU_MAX_USERS];
 	uint32_t nf;
 	uint8_t  per_chain_rssi[MAX_CHAIN];
 	uint8_t is_mcast_bcast;
@@ -2487,6 +2515,7 @@ struct cdp_rx_indication_ppdu {
 #endif
 	uint8_t usr_nss_sum;
 	uint32_t usr_ru_tones_sum;
+	struct cdp_rx_stats_ppdu_user user[];
 };
 
 /**

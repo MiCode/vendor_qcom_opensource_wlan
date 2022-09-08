@@ -30,6 +30,7 @@
 #ifdef WLAN_FEATURE_11BE_MLO
 #include <wlan_mlo_mgr_public_structs.h>
 #endif
+#include <wlan_mlme_dbg.h>
 
 /** slot time long */
 #define WLAN_MLME_VDEV_SLOT_TIME_LONG   0x1
@@ -37,6 +38,14 @@
 #define WLAN_MLME_VDEV_SLOT_TIME_SHORT  0x2
 
 #define WLAN_MU_SNIF_MAX_AIDS 4
+
+/**
+ * enum mlme_dev_setparam - type of set params pdev/vdev
+ */
+enum mlme_dev_setparam {
+	MLME_PDEV_SETPARAM = 0,
+	MLME_VDEV_SETPARAM,
+};
 
 /**
  * enum MLME_bcn_tx_rate_code - beacon tx rate code
@@ -665,6 +674,47 @@ struct vdev_set_params {
 	uint32_t param_id;
 	uint32_t param_value;
 };
+
+/**
+ * struct dev_set_param_info - vdev/pdev set param info
+ * @param_id: parameter id
+ * @param_value: parameter value
+ */
+struct dev_set_param {
+	uint32_t param_id;
+	uint32_t param_value;
+};
+
+/**
+ * struct set_multiple_pdev_vdev_param
+ * @param_type: enum of type mlme_dev_setparam
+ * @is_host_pdev_id: to indicate @dev_id holds host pdev id in case of pdev set
+ * param, need conversion to target pdev id before sending to fw.
+ * @dev_id: unique dev_id identifying the VDEV/PDEV
+ * @n_params: Number of parambers to set
+ * @params: pointer to dev_set_param structure
+ */
+struct set_multiple_pdev_vdev_param {
+	enum mlme_dev_setparam param_type;
+	uint8_t is_host_pdev_id;
+	uint8_t dev_id;
+	uint8_t n_params;
+	struct dev_set_param *params;
+};
+
+static inline
+QDF_STATUS mlme_check_index_setparam(struct dev_set_param *param,
+				     uint32_t paramid, uint32_t paramvalue,
+				     uint8_t index, uint8_t n_params)
+{
+	if (index >= n_params) {
+		mlme_err("Index:%d OOB to fill param", index);
+		return QDF_STATUS_E_FAILURE;
+	}
+	param[index].param_id = paramid;
+	param[index].param_value = paramvalue;
+	return QDF_STATUS_SUCCESS;
+}
 
 /**
  * struct vdev_set_mu_snif_params - vdev set mu sniffer cmd parameter

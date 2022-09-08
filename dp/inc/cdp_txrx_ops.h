@@ -589,6 +589,12 @@ struct cdp_cmn_ops {
 				    uint32_t value);
 
 	ol_txrx_tx_fp tx_send;
+
+	/* tx_fast_send will be called only in AP mode when all the
+	 * transmit path features are disabled including extended stats
+	 */
+	ol_txrx_tx_fast_fp tx_fast_send;
+
 	/**
 	 * txrx_get_os_rx_handles_from_vdev() - Return function, osif vdev
 	 *					to deliver pkt to stack.
@@ -898,7 +904,7 @@ struct cdp_ctrl_ops {
 
 #endif
 
-#if defined(WLAN_FEATURE_TSF_UPLINK_DELAY) || defined(CONFIG_SAWF)
+#if defined(WLAN_FEATURE_TSF_UPLINK_DELAY) || defined(WLAN_CONFIG_TX_DELAY)
 	void (*txrx_set_delta_tsf)(struct cdp_soc_t *soc, uint8_t vdev_id,
 				   uint32_t delta_tsf);
 #endif
@@ -1456,6 +1462,11 @@ struct ol_if_ops {
 	bool (*peer_scs_rule_match)(struct cdp_ctrl_objmgr_psoc *psoc,
 				    uint8_t vdev_id, uint32_t rule_id,
 				    uint8_t *peer_mac);
+#endif
+#ifdef DP_UMAC_HW_RESET_SUPPORT
+	void (*dp_update_tx_hardstart)(struct cdp_ctrl_objmgr_psoc *psoc,
+				       uint8_t vdev_id,
+				       struct ol_txrx_hardtart_ctxt *ctxt);
 #endif
 };
 

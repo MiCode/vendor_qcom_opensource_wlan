@@ -2304,6 +2304,8 @@ dp_rx_err_process(struct dp_intr *int_ctx, struct dp_soc *soc,
 	bool ret;
 	uint32_t error_code = 0;
 	bool sw_pn_check_needed;
+	int max_reap_limit = dp_rx_get_loop_pkt_limit(soc);
+	int i, rx_bufs_reaped_total;
 
 	/* Debug -- Remove later */
 	qdf_assert(soc && hal_ring_hdl);
@@ -2553,6 +2555,14 @@ process_reo_error_code:
 next_entry:
 		dp_rx_link_cookie_invalidate(ring_desc);
 		hal_srng_dst_get_next(hal_soc, hal_ring_hdl);
+
+		rx_bufs_reaped_total = 0;
+		for (i = 0; i < MAX_PDEV_CNT; i++)
+			rx_bufs_reaped_total += rx_bufs_reaped[i];
+
+		if (dp_rx_reap_loop_pkt_limit_hit(soc, rx_bufs_reaped_total,
+						  max_reap_limit))
+			break;
 	}
 
 done:
@@ -2576,7 +2586,8 @@ done:
 						rx_desc_pool,
 						rx_bufs_reaped[mac_id],
 						&dp_pdev->free_list_head,
-						&dp_pdev->free_list_tail);
+						&dp_pdev->free_list_tail,
+						false);
 			rx_bufs_used += rx_bufs_reaped[mac_id];
 		}
 	}
@@ -2707,6 +2718,7 @@ dp_rx_wbm_err_process(struct dp_intr *int_ctx, struct dp_soc *soc,
 	bool process_sg_buf = false;
 	uint32_t wbm_err_src;
 	QDF_STATUS status;
+	struct hal_rx_mpdu_desc_info mpdu_desc_info = { 0 };
 
 	/* Debug -- Remove later */
 	qdf_assert(soc && hal_ring_hdl);
@@ -2792,6 +2804,13 @@ dp_rx_wbm_err_process(struct dp_intr *int_ctx, struct dp_soc *soc,
 
 			continue;
 		}
+
+		/* Get MPDU DESC info */
+		hal_rx_mpdu_desc_info_get(hal_soc, ring_desc, &mpdu_desc_info);
+
+		if (qdf_likely(mpdu_desc_info.mpdu_flags &
+			       HAL_MPDU_F_QOS_CONTROL_VALID))
+			qdf_nbuf_set_tid_val(rx_desc->nbuf, mpdu_desc_info.tid);
 
 		rx_desc_pool = &soc->rx_desc_buf[rx_desc->pool_id];
 		dp_ipa_rx_buf_smmu_mapping_lock(soc);
@@ -2886,7 +2905,7 @@ done:
 
 			dp_rx_buffers_replenish(soc, mac_id, dp_rxdma_srng,
 					rx_desc_pool, rx_bufs_reaped[mac_id],
-					&head[mac_id], &tail[mac_id]);
+					&head[mac_id], &tail[mac_id], false);
 			rx_bufs_used += rx_bufs_reaped[mac_id];
 		}
 	}
@@ -2910,8 +2929,8 @@ done:
 					      (uint8_t *)&wbm_err_info,
 					      sizeof(wbm_err_info));
 
-		peer_meta_data = hal_rx_mpdu_peer_meta_data_get(soc->hal_soc,
-								rx_tlv_hdr);
+		peer_meta_data = hal_rx_tlv_peer_meta_data_get(soc->hal_soc,
+							       rx_tlv_hdr);
 		peer_id = dp_rx_peer_metadata_peer_id_get(soc, peer_meta_data);
 		txrx_peer = dp_tgt_txrx_peer_get_ref_by_id(soc, peer_id,
 							   &txrx_ref_handle,
@@ -3420,7 +3439,7 @@ dp_rxdma_err_process(struct dp_intr *int_ctx, struct dp_soc *soc,
 		}
 
 		dp_rx_buffers_replenish(soc, mac_id, dp_rxdma_srng,
-			rx_desc_pool, rx_bufs_used, &head, &tail);
+			rx_desc_pool, rx_bufs_used, &head, &tail, false);
 
 		work_done += rx_bufs_used;
 	}
@@ -3609,7 +3628,7 @@ dp_handle_wbm_internal_error(struct dp_soc *soc, void *hal_desc,
 		dp_rx_buffers_replenish(soc, mac_id, dp_rxdma_srng,
 					rx_desc_pool,
 					rx_bufs_reaped[mac_id],
-					&head, &tail);
+					&head, &tail, false);
 	}
 }
 

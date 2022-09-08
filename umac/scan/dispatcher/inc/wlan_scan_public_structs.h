@@ -1652,4 +1652,16 @@ enum trim_channel_list {
 	TRIM_CHANNEL_LIST_5G,
 	TRIM_CHANNEL_LIST_24G,
 };
+
+#ifdef FEATURE_SET
+/**
+ * wlan_scan_features - Scan feature set structure
+ * @pno_in_unassoc_state: is pno supported in unassoc state
+ * @pno_in_assoc_state: is pno supported in assoc state
+ */
+struct wlan_scan_features {
+	bool pno_in_unassoc_state;
+	bool pno_in_assoc_state;
+};
+#endif
 #endif

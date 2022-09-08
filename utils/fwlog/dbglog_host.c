@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2013-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for
  * any purpose with or without fee is hereby granted, provided that the
@@ -4282,7 +4283,7 @@ int cnss_diag_deactivate_service(void)
 /**
  *  brief cnss_diag_msg_callback() - Call back invoked by netlink service
  *
- *  This function gets invoked by netlink service when a message is recevied
+ *  This function gets invoked by netlink service when a message is received
  *  from the cnss-diag application in user-space.
  *
  *  param -

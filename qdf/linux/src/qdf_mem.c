@@ -510,7 +510,7 @@ qdf_export_symbol(prealloc_disabled);
 
 int qdf_mem_malloc_flags(void)
 {
-	if (in_interrupt() || irqs_disabled() || in_atomic())
+	if (in_interrupt() || !preemptible() || rcu_preempt_depth())
 		return GFP_ATOMIC;
 
 	return GFP_KERNEL;
@@ -782,7 +782,6 @@ qdf_print_major_nbuf_allocs(uint32_t threshold,
 	uint32_t nbuf_iter;
 	unsigned long irq_flag = 0;
 	QDF_NBUF_TRACK *p_node;
-	QDF_NBUF_TRACK *p_prev;
 	struct __qdf_mem_info table[QDF_MEM_STAT_TABLE_SIZE];
 	struct qdf_mem_header meta;
 	bool is_full;
@@ -815,7 +814,6 @@ qdf_print_major_nbuf_allocs(uint32_t threshold,
 				qdf_mem_zero(table, sizeof(table));
 			}
 
-			p_prev = p_node;
 			p_node = p_node->p_next;
 		}
 		qdf_nbuf_release_track_lock(nbuf_iter, irq_flag);
@@ -2260,6 +2258,73 @@ void *qdf_aligned_malloc_fl(uint32_t *size,
 }
 
 qdf_export_symbol(qdf_aligned_malloc_fl);
+
+#ifdef DP_UMAC_HW_RESET_SUPPORT
+/**
+ * qdf_tx_desc_pool_free_bufs() - Go through elems and call the registered  cb
+ * @ctxt: Context to be passed to the cb
+ * @pages: Multi page information storage
+ * @elem_size: Each element size
+ * @elem_count: Total number of elements should be allocated
+ * @cacheable: Coherent memory or cacheable memory
+ * @cb: Callback to free the elements
+ * @elem_list: elem list for delayed free
+ *
+ * Return: 0 on Succscc, or Error code
+ */
+int qdf_tx_desc_pool_free_bufs(void *ctxt, struct qdf_mem_multi_page_t *pages,
+			       uint32_t elem_size, uint32_t elem_count,
+			       uint8_t cacheable, qdf_mem_release_cb cb,
+			       void *elem_list)
+{
+	uint16_t i, i_int;
+	void *page_info;
+	void *elem;
+	uint32_t num_link = 0;
+
+	for (i = 0; i < pages->num_pages; i++) {
+		if (cacheable)
+			page_info = pages->cacheable_pages[i];
+		else
+			page_info = pages->dma_pages[i].page_v_addr_start;
+
+		if (!page_info)
+			return -ENOMEM;
+
+		elem = page_info;
+		for (i_int = 0; i_int < pages->num_element_per_page; i_int++) {
+			if (i_int == (pages->num_element_per_page - 1)) {
+				cb(ctxt, elem, elem_list);
+
+				if ((i + 1) == pages->num_pages)
+					break;
+				if (cacheable)
+					elem =
+					(void *)(pages->cacheable_pages[i + 1]);
+				else
+					elem = (void *)(pages->
+					dma_pages[i + 1].page_v_addr_start);
+
+				num_link++;
+
+				break;
+			}
+
+			cb(ctxt, elem, elem_list);
+			elem = ((char *)elem + elem_size);
+			num_link++;
+
+			/* Last link established exit */
+			if (num_link == (elem_count - 1))
+				break;
+		}
+	}
+
+	return 0;
+}
+
+qdf_export_symbol(qdf_tx_desc_pool_free_bufs);
+#endif
 
 /**
  * qdf_mem_multi_page_link() - Make links for multi page elements

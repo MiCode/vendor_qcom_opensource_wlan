@@ -32,7 +32,7 @@
  */
 #define SHOW_DEFINED(x) do {} while (0)
 
-#if defined(WLAN_FEATURE_TSF_UPLINK_DELAY) || defined(CONFIG_SAWF)
+#if defined(WLAN_FEATURE_TSF_UPLINK_DELAY) || defined(WLAN_CONFIG_TX_DELAY)
 static inline void
 hal_tx_comp_get_buffer_timestamp_be(void *desc,
 				    struct hal_tx_completion_status *ts)
@@ -40,7 +40,7 @@ hal_tx_comp_get_buffer_timestamp_be(void *desc,
 	ts->buffer_timestamp = HAL_TX_DESC_GET(desc, WBM2SW_COMPLETION_RING_TX,
 					       BUFFER_TIMESTAMP);
 }
-#else /* !WLAN_FEATURE_TSF_UPLINK_DELAY || CONFIG_SAWF */
+#else /* !WLAN_FEATURE_TSF_UPLINK_DELAY || WLAN_CONFIG_TX_DELAY */
 static inline void
 hal_tx_comp_get_buffer_timestamp_be(void *desc,
 				    struct hal_tx_completion_status *ts)
@@ -215,7 +215,7 @@ static void hal_rx_get_tlv_size_generic_be(uint16_t *rx_pkt_tlv_size,
 {
 	*rx_pkt_tlv_size = RX_PKT_TLVS_LEN;
 	/* For now mon pkt tlv is same as rx pkt tlv */
-	*rx_mon_pkt_tlv_size = RX_PKT_TLVS_LEN;
+	*rx_mon_pkt_tlv_size = MON_RX_PKT_TLVS_LEN;
 }
 
 /**
@@ -2639,17 +2639,21 @@ static void hal_reo_shared_qaddr_setup_be(hal_soc_handle_t hal_soc_hdl)
  * write start addr of MLO and Non MLO table in HW
  *
  * @hal_soc: HAL Soc handle
+ * @qref_reset: reset qref LUT
  *
  * Return: None
  */
-static void hal_reo_shared_qaddr_init_be(hal_soc_handle_t hal_soc_hdl)
+static void hal_reo_shared_qaddr_init_be(hal_soc_handle_t hal_soc_hdl,
+					 int qref_reset)
 {
 	struct hal_soc *hal = (struct hal_soc *)hal_soc_hdl;
 
-	qdf_mem_zero(hal->reo_qref.mlo_reo_qref_table_vaddr,
-		     REO_QUEUE_REF_ML_TABLE_SIZE);
-	qdf_mem_zero(hal->reo_qref.non_mlo_reo_qref_table_vaddr,
-		     REO_QUEUE_REF_NON_ML_TABLE_SIZE);
+	if (qref_reset) {
+		qdf_mem_zero(hal->reo_qref.mlo_reo_qref_table_vaddr,
+			     REO_QUEUE_REF_ML_TABLE_SIZE);
+		qdf_mem_zero(hal->reo_qref.non_mlo_reo_qref_table_vaddr,
+			     REO_QUEUE_REF_NON_ML_TABLE_SIZE);
+	}
 	/* LUT_BASE0 and BASE1 registers expect upper 32bits of LUT base address
 	 * and lower 8 bits to be 0. Shift the physical address by 8 to plug
 	 * upper 32bits only

@@ -55,8 +55,8 @@
 
 #if (defined(QCA_WIFI_QCA8074) || defined(QCA_WIFI_QCA6290) || \
 	defined(QCA_WIFI_QCA6018) || defined(QCA_WIFI_QCA5018) || \
-	defined(QCA_WIFI_KIWI) || defined(QCA_WIFI_QCA9574)) && \
-	!defined(QCA_WIFI_SUPPORT_SRNG)
+	defined(QCA_WIFI_KIWI) || defined(QCA_WIFI_QCA5332) || \
+	defined(QCA_WIFI_QCA9574)) && !defined(QCA_WIFI_SUPPORT_SRNG)
 #define QCA_WIFI_SUPPORT_SRNG
 #endif
 
@@ -885,6 +885,34 @@ static struct service_to_pipe target_service_to_ce_map_qcn9000[] = {
 };
 #endif
 
+#if (defined(QCA_WIFI_QCA5332))
+static struct service_to_pipe target_service_to_ce_map_qca5332[] = {
+	{ WMI_DATA_VO_SVC, PIPEDIR_OUT, 3, },
+	{ WMI_DATA_VO_SVC, PIPEDIR_IN, 2, },
+	{ WMI_DATA_BK_SVC, PIPEDIR_OUT, 3, },
+	{ WMI_DATA_BK_SVC, PIPEDIR_IN, 2, },
+	{ WMI_DATA_BE_SVC, PIPEDIR_OUT, 3, },
+	{ WMI_DATA_BE_SVC, PIPEDIR_IN, 2, },
+	{ WMI_DATA_VI_SVC, PIPEDIR_OUT, 3, },
+	{ WMI_DATA_VI_SVC, PIPEDIR_IN, 2, },
+	{ WMI_CONTROL_SVC, PIPEDIR_OUT, 3, },
+	{ WMI_CONTROL_SVC, PIPEDIR_IN, 2, },
+	{ HTC_CTRL_RSVD_SVC, PIPEDIR_OUT, 0, },
+	{ HTC_CTRL_RSVD_SVC, PIPEDIR_IN, 1, },
+	{ HTC_RAW_STREAMS_SVC, PIPEDIR_OUT, 0},
+	{ HTC_RAW_STREAMS_SVC, PIPEDIR_IN, 1 },
+	{ HTT_DATA_MSG_SVC, PIPEDIR_OUT, 4, },
+	{ HTT_DATA_MSG_SVC, PIPEDIR_IN, 1, },
+	{ PACKET_LOG_SVC, PIPEDIR_IN, 5, },
+	{ WMI_CONTROL_DIAG_SVC, PIPEDIR_IN, 9, },
+	/* (Additions here) */
+	{ 0, 0, 0, },
+};
+#else
+static struct service_to_pipe target_service_to_ce_map_qca5332[] = {
+};
+#endif
+
 #if (defined(QCA_WIFI_QCN9224))
 static struct service_to_pipe target_service_to_ce_map_qcn9224[] = {
 	{ WMI_DATA_VO_SVC, PIPEDIR_OUT, 3, },
@@ -1404,6 +1432,11 @@ static void hif_select_service_to_pipe_map(struct hif_softc *scn,
 			hif_select_ce_map_qcn9224(tgt_svc_map_to_use,
 						  sz_tgt_svc_map_to_use);
 			break;
+		case TARGET_TYPE_QCA5332:
+			*tgt_svc_map_to_use = target_service_to_ce_map_qca5332;
+			*sz_tgt_svc_map_to_use =
+				sizeof(target_service_to_ce_map_qca5332);
+			break;
 		case TARGET_TYPE_QCA5018:
 		case TARGET_TYPE_QCN6122:
 			*tgt_svc_map_to_use =
@@ -1679,6 +1712,7 @@ bool ce_srng_based(struct hif_softc *scn)
 	case TARGET_TYPE_MANGO:
 	case TARGET_TYPE_QCN9224:
 	case TARGET_TYPE_QCA9574:
+	case TARGET_TYPE_QCA5332:
 		return true;
 	default:
 		return false;
@@ -4048,6 +4082,13 @@ void hif_ce_prepare_config(struct hif_softc *scn)
 		break;
 	case TARGET_TYPE_QCN9224:
 		hif_set_ce_config_qcn9224(scn, hif_state);
+		break;
+	case TARGET_TYPE_QCA5332:
+		hif_state->host_ce_config = host_ce_config_wlan_qca5332;
+		hif_state->target_ce_config = target_ce_config_wlan_qca5332;
+		hif_state->target_ce_config_sz =
+					 sizeof(target_ce_config_wlan_qca5332);
+		scn->ce_count = QCA_5332_CE_COUNT;
 		break;
 	case TARGET_TYPE_QCN6122:
 		hif_state->host_ce_config = host_ce_config_wlan_qcn6122;

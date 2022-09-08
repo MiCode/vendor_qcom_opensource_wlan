@@ -519,9 +519,11 @@ static void hif_exec_tasklet_fn(unsigned long data)
 			(struct hif_exec_context *)data;
 	struct hif_softc *scn = HIF_GET_SOFTC(hif_ext_group->hif);
 	unsigned int work_done;
+	int cpu = smp_processor_id();
 
 	work_done =
-		hif_ext_group->handler(hif_ext_group->context, HIF_MAX_BUDGET);
+		hif_ext_group->handler(hif_ext_group->context, HIF_MAX_BUDGET,
+				       cpu);
 
 	if (hif_ext_group->work_complete(hif_ext_group, work_done)) {
 		qdf_atomic_dec(&(scn->active_grp_tasklet_cnt));
@@ -640,7 +642,7 @@ static int hif_exec_poll(struct napi_struct *napi, int budget)
 	hif_latency_profile_measure(hif_ext_group);
 
 	work_done = hif_ext_group->handler(hif_ext_group->context,
-					   normalized_budget);
+					   normalized_budget, cpu);
 
 	actual_dones = work_done;
 

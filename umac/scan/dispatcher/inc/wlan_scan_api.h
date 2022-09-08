@@ -29,6 +29,18 @@
 #include <wlan_objmgr_vdev_obj.h>
 #include "../../core/src/wlan_scan_main.h"
 
+#ifdef FEATURE_SET
+/**
+ * wlan_scan_get_feature_info() - Get scan feature set info
+ * @psoc: pointer to psoc object
+ * @scan_feature_set: feature set info which needs to be filled
+ *
+ * Return: none
+ */
+void wlan_scan_get_feature_info(struct wlan_objmgr_psoc *psoc,
+				struct wlan_scan_features *scan_feature_set);
+#endif
+
 /**
  * wlan_scan_cfg_set_active_2g_dwelltime() - API to set scan active 2g dwelltime
  * @psoc: pointer to psoc object

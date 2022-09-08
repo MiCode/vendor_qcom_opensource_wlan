@@ -260,8 +260,6 @@ struct wlan_srng_cfg {
  * @tx_rings_grp_bitmap: bitmap of group intr contexts which have
  *  non-zero tx ring mask
  * @mlo_chip_rx_ring_map: map of chip_id to rx ring map
- * @mlo_chip_default_rx_ring_id: default rx_ring of chip when hash is not found
- * @lmac_peer_id_msb: value used for hash based routing
  * @vdev_stats_hw_offload_config: HW vdev stats config
  * @vdev_stats_hw_offload_timer: HW vdev stats timer duration
  * @txmon_hw_support: TxMON HW support
@@ -424,9 +422,7 @@ struct wlan_cfg_dp_soc_ctxt {
 	uint8_t rx_rel_wbm2sw_ring_id;
 	uint32_t tx_rings_grp_bitmap;
 #if defined(WLAN_FEATURE_11BE_MLO) && defined(WLAN_MLO_MULTI_CHIP)
-	uint8_t mlo_chip_rx_ring_map[WLAN_MAX_MLO_CHIPS];
-	uint8_t mlo_chip_default_rx_ring_id[WLAN_MAX_MLO_CHIPS];
-	uint8_t lmac_peer_id_msb[WLAN_MAX_MLO_CHIPS];
+	uint8_t mlo_chip_rx_ring_map;
 #endif
 #ifdef QCA_VDEV_STATS_HW_OFFLOAD_SUPPORT
 	bool vdev_stats_hw_offload_config;
@@ -2099,38 +2095,13 @@ wlan_cfg_get_sawf_config(struct wlan_cfg_dp_soc_ctxt *cfg);
 
 #if defined(WLAN_FEATURE_11BE_MLO) && defined(WLAN_MLO_MULTI_CHIP)
 /**
- * wlan_cfg_mlo_rx_ring_map_get_by_chip_id() - get rx ring map
+ * wlan_cfg_mlo_rx_ring_map_get() - get rx ring map
  * @cfg: soc configuration context
- * @chip_id: mlo_chip_id
  *
  * Return: rx_ring_map
  */
 uint8_t
-wlan_cfg_mlo_rx_ring_map_get_by_chip_id(struct wlan_cfg_dp_soc_ctxt *cfg,
-					uint8_t chip_id);
-
-/**
- * wlan_cfg_mlo_default_rx_ring_get_by_chip_id() - get default RX ring
- * @cfg: soc configuration context
- * @chip_id: mlo_chip_id
- *
- * Return: default rx ring
- */
-uint8_t
-wlan_cfg_mlo_default_rx_ring_get_by_chip_id(struct wlan_cfg_dp_soc_ctxt *cfg,
-					    uint8_t chip_id);
-
-/**
- * wlan_cfg_mlo_lmac_peer_id_msb_get_by_chip_id() - get chip's lmac_peer_id_msb
- * @cfg: soc configuration context
- * @chip_id: mlo_chip_id
- *
- * Return: lmac_peer_id_msb
- */
-uint8_t
-wlan_cfg_mlo_lmac_peer_id_msb_get_by_chip_id(struct wlan_cfg_dp_soc_ctxt *cfg,
-					     uint8_t chip_id);
-
+wlan_cfg_mlo_rx_ring_map_get(struct wlan_cfg_dp_soc_ctxt *cfg);
 #endif
 
 /*
@@ -2194,4 +2165,14 @@ wlan_cfg_get_tx_capt_max_mem(struct wlan_cfg_dp_soc_ctxt *cfg)
  */
 uint8_t wlan_cfg_get_napi_scale_factor(struct wlan_cfg_dp_soc_ctxt *cfg);
 
+/**
+ * wlan_cfg_soc_update_tgt_params() - Update band specific params
+ * @wlan_cfg_ctx - SOC cfg context
+ * @ctrl_obj - PSOC object
+ *
+ * Return: void
+ */
+void
+wlan_cfg_soc_update_tgt_params(struct wlan_cfg_dp_soc_ctxt *wlan_cfg_ctx,
+			       struct cdp_ctrl_objmgr_psoc *ctrl_obj);
 #endif /*__WLAN_CFG_H*/

@@ -100,8 +100,8 @@ static QDF_STATUS reg_process_ch_avoid_freq(struct wlan_objmgr_psoc *psoc,
 			}
 		}
 
-		if (start_ch_idx == INVALID_CHANNEL ||
-		    end_ch_idx == INVALID_CHANNEL)
+		if (reg_is_chan_enum_invalid(start_ch_idx) ||
+		    reg_is_chan_enum_invalid(end_ch_idx))
 			continue;
 
 		for (ch_loop = start_ch_idx; ch_loop <= end_ch_idx;

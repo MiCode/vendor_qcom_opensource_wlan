@@ -64,6 +64,7 @@ struct rx_pkt_tlvs {
 	struct rx_pkt_hdr_tlv	pkt_hdr_tlv;		/* 128 bytes */
 #endif
 };
+
 #else
 struct rx_mpdu_start_tlv {
 	hal_rx_mpdu_start_t rx_mpdu_start;
@@ -83,9 +84,26 @@ struct rx_pkt_tlvs {
 };
 #endif
 
+/**
+ * struct rx_mon_pkt_tlvs - RX packet data structure for DEST ring in the
+ *			    monitor mode.
+ * @msdu_end_tlv: MSDU end TLV
+ * @rx_padding0: Padding bytes
+ * @mpdu_start_tlv: MPDU start TLV
+ * @pkt_hdr_tlv: 802.11 packet header TLV
+ */
+struct rx_mon_pkt_tlvs {
+	struct rx_msdu_end_tlv msdu_end_tlv;		/* 128B + sizeof(tag) */
+	uint8_t rx_padding0[RX_BE_PADDING0_BYTES];	/* 8B */
+	struct rx_mpdu_start_tlv mpdu_start_tlv;	/* 120B + sizeof(tag) */
+	struct rx_pkt_hdr_tlv pkt_hdr_tlv;		/* 120B + sizeof(tag) */
+};
+
 #define SIZE_OF_DATA_RX_TLV sizeof(struct rx_pkt_tlvs)
+#define SIZE_OF_MON_DATA_RX_TLV sizeof(struct rx_mon_pkt_tlvs)
 
 #define RX_PKT_TLVS_LEN		SIZE_OF_DATA_RX_TLV
+#define MON_RX_PKT_TLVS_LEN	SIZE_OF_MON_DATA_RX_TLV
 
 #define RX_PKT_TLV_OFFSET(field) qdf_offsetof(struct rx_pkt_tlvs, field)
 
@@ -228,6 +246,11 @@ struct rx_pkt_tlvs {
 
 #define HAL_RX_TLV_L3_TYPE_GET(_rx_pkt_tlv)	\
 	HAL_RX_MSDU_END(_rx_pkt_tlv).l3_type
+
+#ifdef RX_MSDU_END_PEER_META_DATA_OFFSET
+#define HAL_RX_TLV_MSDU_PEER_META_DATA_GET(_rx_pkt_tlv)	\
+	HAL_RX_MSDU_END(_rx_pkt_tlv).peer_meta_data
+#endif
 
 #define HAL_RX_GET_FILTER_CATEGORY(_rx_pkt_tlv) \
 	HAL_RX_MPDU_START(_rx_pkt_tlv).rxpcu_mpdu_filter_in_category
@@ -521,6 +544,19 @@ static inline uint32_t hal_rx_mpdu_peer_meta_data_get_be(uint8_t *buf)
 
 	return HAL_RX_TLV_PEER_META_DATA_GET(rx_pkt_tlvs);
 }
+
+#ifdef RX_MSDU_END_PEER_META_DATA_OFFSET
+/*
+ * Get peer_meta_data from RX_MSDU_END
+ */
+
+static inline uint32_t hal_rx_msdu_peer_meta_data_get_be(uint8_t *buf)
+{
+	struct rx_pkt_tlvs *rx_pkt_tlvs = (struct rx_pkt_tlvs *)buf;
+
+	return HAL_RX_TLV_MSDU_PEER_META_DATA_GET(rx_pkt_tlvs);
+}
+#endif
 
 /**
  * hal_rx_mpdu_info_ampdu_flag_get_be(): get ampdu flag bit
@@ -1836,11 +1872,30 @@ static inline uint32_t hal_rx_tlv_get_is_decrypted_be(uint8_t *buf)
 	return is_decrypt;
 }
 
-//TODO -  Currently going with NO-PKT-HDR, need to add pkt hdr tlv and check
+#ifdef NO_RX_PKT_HDR_TLV
+/**
+ * hal_rx_pkt_hdr_get_be(): API to get 80211 header
+ * @buf: start of rx_pkt_tlv
+ *
+ * If NO_RX_PKT_HDR_TLV is enabled, then this API assume caller gives a raw
+ * data, get 80211 header from packet data directly.
+ * If NO_RX_PKT_HDR_TLV is disabled, then get it from rx_pkt_hdr_tlv in
+ * rx_pkt_tlvs.
+ *
+ * Return: pointer to start of 80211 header
+ */
 static inline uint8_t *hal_rx_pkt_hdr_get_be(uint8_t *buf)
 {
 	return buf + RX_PKT_TLVS_LEN;
 }
+#else
+static inline uint8_t *hal_rx_pkt_hdr_get_be(uint8_t *buf)
+{
+	struct rx_pkt_tlvs *pkt_tlvs = (struct rx_pkt_tlvs *)buf;
+
+	return pkt_tlvs->pkt_hdr_tlv.rx_pkt_hdr;
+}
+#endif
 
 /**
  * hal_rx_priv_info_set_in_tlv_be(): Save the private info to

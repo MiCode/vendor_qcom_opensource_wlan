@@ -2149,6 +2149,16 @@ extern QDF_STATUS dp_rx_tid_setup_wifi3(struct dp_peer *peer, int tid,
 					uint32_t ba_window_size,
 					uint32_t start_seq);
 
+#ifdef DP_UMAC_HW_RESET_SUPPORT
+void dp_pause_reo_send_cmd(struct dp_soc *soc);
+
+void dp_resume_reo_send_cmd(struct dp_soc *soc);
+void dp_cleanup_reo_cmd_module(struct dp_soc *soc);
+void dp_reo_desc_freelist_destroy(struct dp_soc *soc);
+void dp_reset_rx_reo_tid_queue(struct dp_soc *soc, void *hw_qdesc_vaddr,
+			       uint32_t size);
+#endif
+
 extern QDF_STATUS dp_reo_send_cmd(struct dp_soc *soc,
 	enum hal_reo_cmd_type type, struct hal_reo_cmd_params *params,
 	void (*callback_fn), void *data);
@@ -2893,10 +2903,37 @@ static inline void *dp_srng_dst_prefetch(hal_soc_handle_t hal_soc,
 {
 	return hal_srng_dst_prefetch(hal_soc, hal_ring_hdl, num_entries);
 }
+
+/**
+ * dp_srng_dst_prefetch_32_byte_desc() - Wrapper function to prefetch
+ *					 32 byte descriptor starting at
+ *					 64 byte offset
+ * @hal_soc_hdl: HAL SOC handle
+ * @hal_ring: opaque pointer to the HAL Rx Destination ring
+ * @num_entries: Entry count
+ *
+ * Return: None
+ */
+static inline
+void *dp_srng_dst_prefetch_32_byte_desc(hal_soc_handle_t hal_soc,
+					hal_ring_handle_t hal_ring_hdl,
+					uint32_t num_entries)
+{
+	return hal_srng_dst_prefetch_32_byte_desc(hal_soc, hal_ring_hdl,
+						  num_entries);
+}
 #else
 static inline void *dp_srng_dst_prefetch(hal_soc_handle_t hal_soc,
 					 hal_ring_handle_t hal_ring_hdl,
 					 uint32_t num_entries)
+{
+	return NULL;
+}
+
+static inline
+void *dp_srng_dst_prefetch_32_byte_desc(hal_soc_handle_t hal_soc,
+					hal_ring_handle_t hal_ring_hdl,
+					uint32_t num_entries)
 {
 	return NULL;
 }
@@ -3197,6 +3234,14 @@ void dp_update_num_mac_rings_for_dbs(struct dp_soc *soc,
 #if defined(WLAN_SUPPORT_RX_FISA)
 void dp_rx_dump_fisa_table(struct dp_soc *soc);
 
+/**
+ * dp_print_fisa_stats() - Print FISA stats
+ * @soc: DP soc handle
+ *
+ * Return: None
+ */
+void dp_print_fisa_stats(struct dp_soc *soc);
+
 /*
  * dp_rx_fst_update_cmem_params() - Update CMEM FST params
  * @soc:		DP SoC context
@@ -3220,6 +3265,10 @@ dp_rx_fst_update_cmem_params(struct dp_soc *soc, uint16_t num_entries,
 
 static inline void
 dp_rx_fst_update_pm_suspend_status(struct dp_soc *soc, bool suspended)
+{
+}
+
+static inline void dp_print_fisa_stats(struct dp_soc *soc)
 {
 }
 #endif /* WLAN_SUPPORT_RX_FISA */

@@ -954,6 +954,42 @@ exit:
 	return 0;
 }
 
+static int init_deinit_health_mon_event_handler(ol_scn_t scn_handle,
+						uint8_t *event,
+						uint32_t data_len)
+{
+	struct wlan_objmgr_psoc *psoc;
+	struct target_psoc_info *tgt_hdl;
+	struct wmi_unified *wmi_handle;
+	struct tgt_info *info;
+	struct wmi_health_mon_params *param;
+
+	if (!scn_handle) {
+		target_if_err("scn handle NULL");
+		return -EINVAL;
+	}
+
+	psoc = target_if_get_psoc_from_scn_hdl(scn_handle);
+	if (!psoc) {
+		target_if_err("psoc is null");
+		return -EINVAL;
+	}
+
+	tgt_hdl = wlan_psoc_get_tgt_if_handle(psoc);
+	if (!tgt_hdl) {
+		target_if_err("target_psoc_info is null");
+		return -EINVAL;
+	}
+
+	wmi_handle = target_psoc_get_wmi_hdl(tgt_hdl);
+	info = (&tgt_hdl->info);
+
+	param = (&info->health_mon_param);
+	wmi_extract_health_mon_event(wmi_handle, event, param);
+
+	return 0;
+}
+
 #if defined(WLAN_FEATURE_11BE_MLO) && defined(WLAN_MLO_MULTI_CHIP)
 static void init_deinit_mlo_setup_done_event(struct wlan_objmgr_psoc *psoc)
 {
@@ -1116,6 +1152,12 @@ QDF_STATUS init_deinit_register_tgt_psoc_ev_handlers(
 				init_deinit_service_ext2_ready_event_handler,
 				WMI_RX_WORK_CTX);
 	retval = init_deinit_register_mlo_ev_handlers(wmi_handle);
+
+	retval = wmi_unified_register_event_handler(
+				wmi_handle,
+				wmi_extract_health_mon_init_done_info_eventid,
+				init_deinit_health_mon_event_handler,
+				WMI_RX_WORK_CTX);
 
 
 	return retval;

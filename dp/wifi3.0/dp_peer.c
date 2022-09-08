@@ -2874,7 +2874,8 @@ static inline struct dp_peer *dp_peer_find_add_id(struct dp_soc *soc,
 			return NULL;
 		}
 		dp_peer_find_id_to_obj_add(soc, peer, peer_id);
-		dp_mlo_partner_chips_map(soc, peer, peer_id);
+		if (soc->arch_ops.dp_partner_chips_map)
+			soc->arch_ops.dp_partner_chips_map(soc, peer, peer_id);
 
 		dp_peer_update_state(soc, peer, DP_PEER_STATE_ACTIVE);
 		return peer;
@@ -3239,7 +3240,10 @@ dp_rx_peer_unmap_handler(struct dp_soc *soc, uint16_t peer_id,
 	dp_peer_rx_reo_shared_qaddr_delete(soc, peer);
 
 	dp_peer_find_id_to_obj_remove(soc, peer_id);
-	dp_mlo_partner_chips_unmap(soc, peer_id);
+
+	if (soc->arch_ops.dp_partner_chips_unmap)
+		soc->arch_ops.dp_partner_chips_unmap(soc, peer_id);
+
 	peer->peer_id = HTT_INVALID_PEER;
 
 	/*
@@ -3638,7 +3642,7 @@ QDF_STATUS dp_rx_tid_setup_wifi3(struct dp_peer *peer, int tid,
 
 	/* TODO: Allocating HW queue descriptors based on max BA window size
 	 * for all QOS TIDs so that same descriptor can be used later when
-	 * ADDBA request is recevied. This should be changed to allocate HW
+	 * ADDBA request is received. This should be changed to allocate HW
 	 * queue descriptors based on BA window size being negotiated (0 for
 	 * non BA cases), and reallocate when BA window size changes and also
 	 * send WMI message to FW to change the REO queue descriptor in Rx
@@ -3766,6 +3770,27 @@ error:
 	return status;
 }
 
+#ifdef DP_UMAC_HW_RESET_SUPPORT
+static
+void dp_peer_rst_tids(struct dp_soc *soc, struct dp_peer *peer, void *arg)
+{
+	int tid;
+
+	for (tid = 0; tid < (DP_MAX_TIDS - 1); tid++) {
+		struct dp_rx_tid *rx_tid = &peer->rx_tid[tid];
+		void *vaddr = rx_tid->hw_qdesc_vaddr_aligned;
+
+		if (vaddr)
+			dp_reset_rx_reo_tid_queue(soc, vaddr,
+						  rx_tid->hw_qdesc_alloc_size);
+	}
+}
+
+void dp_reset_tid_q_setup(struct dp_soc *soc)
+{
+	dp_soc_iterate_peer(soc, dp_peer_rst_tids, NULL, DP_MOD_ID_UMAC_RESET);
+}
+#endif
 #ifdef REO_DESC_DEFER_FREE
 /*
  * dp_reo_desc_clean_up() - If cmd to flush base desc fails add

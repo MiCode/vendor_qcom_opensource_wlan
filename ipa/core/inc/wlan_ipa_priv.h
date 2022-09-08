@@ -208,7 +208,8 @@ struct wlan_ipa_tx_hdr {
  */
 #if defined(QCA_WIFI_QCA6290) || defined(QCA_WIFI_QCA6390) || \
     defined(QCA_WIFI_QCA6490) || defined(QCA_WIFI_QCA6750) || \
-    defined(QCA_WIFI_WCN7850) || defined(QCA_WIFI_QCN9000)
+    defined(QCA_WIFI_WCN7850) || defined(QCA_WIFI_QCN9000) || \
+    defined(QCA_WIFI_KIWI) || defined(QCA_WIFI_KIWI_V2)
 struct frag_header {
 	uint8_t reserved[0];
 };
@@ -235,7 +236,8 @@ struct frag_header {
 
 #if defined(QCA_WIFI_QCA6290) || defined(QCA_WIFI_QCA6390) || \
     defined(QCA_WIFI_QCA6490) || defined(QCA_WIFI_QCA6750) || \
-    defined(QCA_WIFI_WCN7850) || defined(QCA_WIFI_QCN9000)
+    defined(QCA_WIFI_WCN7850) || defined(QCA_WIFI_QCN9000) || \
+    defined(QCA_WIFI_KIWI) || defined(QCA_WIFI_KIWI_V2)
 struct ipa_header {
 	uint8_t reserved[0];
 };

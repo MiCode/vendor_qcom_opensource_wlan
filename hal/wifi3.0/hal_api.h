@@ -1082,6 +1082,7 @@ bool hal_srng_is_near_full_irq_supported(hal_soc_handle_t hal_soc,
  *		same type (staring from 0)
  * @mac_id: valid MAC Id should be passed if ring type is one of lmac rings
  * @ring_params: SRNG ring params in hal_srng_params structure.
+ * @idle_check: Check if ring is idle
 
  * Callers are expected to allocate contiguous ring memory of size
  * 'num_entries * entry_size' bytes and pass the physical and virtual base
@@ -1093,7 +1094,7 @@ bool hal_srng_is_near_full_irq_supported(hal_soc_handle_t hal_soc,
  *		 NULL on failure (if given ring is not available)
  */
 extern void *hal_srng_setup(void *hal_soc, int ring_type, int ring_num,
-	int mac_id, struct hal_srng_params *ring_params);
+	int mac_id, struct hal_srng_params *ring_params, bool idle_check);
 
 /* Remapping ids of REO rings */
 #define REO_REMAP_TCL 0
@@ -2664,11 +2665,12 @@ uint32_t hal_get_target_type(hal_soc_handle_t hal_soc_hdl);
  * destination ring HW
  * @hal_soc: HAL SOC handle
  * @srng: SRNG ring pointer
+ * @idle_check: Check if ring is idle
  */
 static inline void hal_srng_dst_hw_init(struct hal_soc *hal,
-	struct hal_srng *srng)
+					struct hal_srng *srng, bool idle_check)
 {
-	hal->ops->hal_srng_dst_hw_init(hal, srng);
+	hal->ops->hal_srng_dst_hw_init(hal, srng, idle_check);
 }
 
 /**
@@ -2676,11 +2678,25 @@ static inline void hal_srng_dst_hw_init(struct hal_soc *hal,
  * source ring HW
  * @hal_soc: HAL SOC handle
  * @srng: SRNG ring pointer
+ * @idle_check: Check if ring is idle
  */
 static inline void hal_srng_src_hw_init(struct hal_soc *hal,
-	struct hal_srng *srng)
+					struct hal_srng *srng, bool idle_check)
 {
-	hal->ops->hal_srng_src_hw_init(hal, srng);
+	hal->ops->hal_srng_src_hw_init(hal, srng, idle_check);
+}
+
+/**
+ * hal_srng_hw_disable - Private function to disable SRNG
+ * source ring HW
+ * @hal_soc: HAL SOC handle
+ * @srng: SRNG ring pointer
+ */
+static inline
+void hal_srng_hw_disable(struct hal_soc *hal_soc, struct hal_srng *srng)
+{
+	if (hal_soc->ops->hal_srng_hw_disable)
+		hal_soc->ops->hal_srng_hw_disable(hal_soc, srng);
 }
 
 /**
@@ -2710,13 +2726,14 @@ void hal_get_hw_hptp(hal_soc_handle_t hal_soc_hdl,
  *
  * @hal_soc: Opaque HAL SOC handle
  * @reo_params: parameters needed by HAL for REO config
+ * @qref_reset: reset qref
  */
 static inline void hal_reo_setup(hal_soc_handle_t hal_soc_hdl,
-				 void *reoparams)
+				 void *reoparams, int qref_reset)
 {
 	struct hal_soc *hal_soc = (struct hal_soc *)hal_soc_hdl;
 
-	hal_soc->ops->hal_reo_setup(hal_soc, reoparams);
+	hal_soc->ops->hal_reo_setup(hal_soc, reoparams, qref_reset);
 }
 
 static inline
@@ -3225,6 +3242,66 @@ void *hal_srng_dst_prefetch_next_cached_desc(hal_soc_handle_t hal_soc_hdl,
 		last_prefetched_hw_desc = (uint8_t *)&srng->ring_base_vaddr[0];
 
 	qdf_prefetch(last_prefetched_hw_desc);
+	return (void *)last_prefetched_hw_desc;
+}
+
+/**
+ * hal_srng_dst_prefetch_32_byte_desc() - function to prefetch a desc at
+ *					  64 byte offset
+ * @hal_soc_hdl: HAL SOC handle
+ * @hal_ring_hdl: Destination ring pointer
+ * @num_valid: valid entries in the ring
+ *
+ * return: last prefetched destination ring descriptor
+ */
+static inline
+void *hal_srng_dst_prefetch_32_byte_desc(hal_soc_handle_t hal_soc_hdl,
+					 hal_ring_handle_t hal_ring_hdl,
+					 uint16_t num_valid)
+{
+	struct hal_srng *srng = (struct hal_srng *)hal_ring_hdl;
+	uint8_t *desc;
+
+	if (srng->u.dst_ring.tp == srng->u.dst_ring.cached_hp)
+		return NULL;
+
+	desc = (uint8_t *)&srng->ring_base_vaddr[srng->u.dst_ring.tp];
+
+	if ((uintptr_t)desc & 0x3f)
+		desc += srng->entry_size * sizeof(uint32_t);
+	else
+		desc += (srng->entry_size * sizeof(uint32_t)) * 2;
+
+	if (desc  == ((uint8_t *)srng->ring_vaddr_end))
+		desc = (uint8_t *)&srng->ring_base_vaddr[0];
+
+	qdf_prefetch(desc);
+
+	return (void *)(desc + srng->entry_size * sizeof(uint32_t));
+}
+
+/**
+ * hal_srng_dst_prefetch_next_cached_desc() - function to prefetch next desc
+ * @hal_soc_hdl: HAL SOC handle
+ * @hal_ring_hdl: Destination ring pointer
+ * @last_prefetched_hw_desc: last prefetched HW descriptor
+ *
+ * return: next prefetched destination descriptor
+ */
+static inline
+void *hal_srng_dst_get_next_32_byte_desc(hal_soc_handle_t hal_soc_hdl,
+					 hal_ring_handle_t hal_ring_hdl,
+					 uint8_t *last_prefetched_hw_desc)
+{
+	struct hal_srng *srng = (struct hal_srng *)hal_ring_hdl;
+
+	if (srng->u.dst_ring.tp == srng->u.dst_ring.cached_hp)
+		return NULL;
+
+	last_prefetched_hw_desc += srng->entry_size * sizeof(uint32_t);
+	if (last_prefetched_hw_desc == ((uint8_t *)srng->ring_vaddr_end))
+		last_prefetched_hw_desc = (uint8_t *)&srng->ring_base_vaddr[0];
+
 	return (void *)last_prefetched_hw_desc;
 }
 #endif /* _HAL_APIH_ */

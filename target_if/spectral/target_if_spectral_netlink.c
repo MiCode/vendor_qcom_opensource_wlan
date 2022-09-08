@@ -103,7 +103,6 @@ target_if_spectral_fill_samp_msg(struct target_if_spectral *spectral,
 	for (dest_det_idx = 0; dest_det_idx < det_map->num_dest_det_info;
 	     dest_det_idx++) {
 		struct per_session_dest_det_info *map_det_info;
-		struct spectral_fft_bin_len_adj_swar *swar;
 		struct samp_freq_span_info *span_info;
 		struct samp_detector_info *detector_info;
 		uint8_t dest_detector_id;
@@ -116,7 +115,6 @@ target_if_spectral_fill_samp_msg(struct target_if_spectral *spectral,
 		uint16_t start_bin_index;
 		uint32_t bytes_copied;
 
-		swar = &spectral->len_adj_swar;
 
 		map_det_info = &det_map->dest_det_info[dest_det_idx];
 		span_id = map_det_info->freq_span_id;

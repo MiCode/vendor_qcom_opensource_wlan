@@ -24,18 +24,26 @@
 #define DP_RX_MON_PACKET_OFFSET 8
 #define DP_RX_MON_RX_HDR_OFFSET 8
 #define DP_GET_NUM_QWORDS(num)	((num) >> 3)
+
 #define DP_RX_MON_TLV_HDR_MARKER 0xFEED
 #define DP_RX_MON_TLV_HDR_MARKER_LEN 2
-#define DP_RX_MON_TLV_HDR_LEN 3
+#define DP_RX_MON_TLV_HDR_LEN 3 /* TLV ID field sz + TLV len field sz */
 #define DP_RX_MON_TLV_TOTAL_LEN 2
+
 #define DP_RX_MON_TLV_PF_ID 1
+#define DP_RX_MON_TLV_PPDU_ID 2
+
 #define DP_RX_MON_TLV_MSDU_CNT 2
 #define DP_RX_MON_MAX_MSDU 16
 #define DP_RX_MON_MAX_TLVS 1
 #define DP_RX_MON_PF_TLV_LEN (((DP_RX_MON_PF_TAG_LEN_PER_FRAG)\
 			       * (DP_RX_MON_MAX_MSDU) * 2)\
 			       + (DP_RX_MON_TLV_MSDU_CNT))
-#define DP_RX_MON_INDIV_TLV_LEN (DP_RX_MON_PF_TLV_LEN)
+
+#define DP_RX_MON_PPDU_ID_LEN 4
+
+#define DP_RX_MON_INDIV_TLV_LEN ((DP_RX_MON_PF_TLV_LEN)\
+				 + (DP_RX_MON_PPDU_ID_LEN))
 #define DP_RX_MON_TLV_ROOM ((DP_RX_MON_INDIV_TLV_LEN)\
 			    + ((DP_RX_MON_TLV_HDR_LEN) * (DP_RX_MON_MAX_TLVS))\
 			    + (DP_RX_MON_TLV_HDR_MARKER_LEN)\

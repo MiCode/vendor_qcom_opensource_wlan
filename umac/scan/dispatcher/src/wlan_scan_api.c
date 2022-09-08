@@ -653,3 +653,53 @@ bool wlan_scan_cfg_skip_6g_and_indoor_freq(struct wlan_objmgr_psoc *psoc)
 
 	return scan_obj->scan_def.skip_6g_and_indoor_freq;
 }
+
+#ifdef FEATURE_SET
+/**
+ * wlan_scan_get_pno_scan_support() - Check if pno scan support is enabled
+ * @psoc: pointer to psoc object
+ *
+ * Return: pno scan_support_enabled flag
+ */
+static bool wlan_scan_get_pno_scan_support(struct wlan_objmgr_psoc *psoc)
+{
+	struct wlan_scan_obj *scan_obj;
+
+	scan_obj = wlan_psoc_get_scan_obj(psoc);
+	if (!scan_obj) {
+		scm_err("NULL scan obj");
+		return cfg_default(CFG_PNO_SCAN_SUPPORT);
+	}
+
+	return scan_obj->pno_cfg.scan_support_enabled;
+}
+
+/**
+ * wlan_scan_is_connected_scan_enabled() - API to get scan enabled after connect
+ * @psoc: pointer to psoc object
+ *
+ * Return: value.
+ */
+static bool wlan_scan_is_connected_scan_enabled(struct wlan_objmgr_psoc *psoc)
+{
+	struct wlan_scan_obj *scan_obj;
+
+	scan_obj = wlan_psoc_get_scan_obj(psoc);
+	if (!scan_obj) {
+		scm_err("Failed to get scan object");
+		return cfg_default(CFG_ENABLE_CONNECTED_SCAN);
+	}
+
+	return scan_obj->scan_def.enable_connected_scan;
+}
+
+void wlan_scan_get_feature_info(struct wlan_objmgr_psoc *psoc,
+				struct wlan_scan_features *scan_feature_set)
+{
+	scan_feature_set->pno_in_unassoc_state =
+					wlan_scan_get_pno_scan_support(psoc);
+	if (scan_feature_set->pno_in_unassoc_state)
+		scan_feature_set->pno_in_assoc_state =
+				wlan_scan_is_connected_scan_enabled(psoc);
+}
+#endif

@@ -81,6 +81,7 @@ typedef void *hif_handle_t;
 #define HIF_TYPE_QCN9224 27
 #define HIF_TYPE_QCA9574 28
 #define HIF_TYPE_MANGO 29
+#define HIF_TYPE_QCA5332 30
 
 #define DMA_COHERENT_MASK_DEFAULT   37
 
@@ -1792,7 +1793,7 @@ enum hif_exec_type {
 	HIF_EXEC_TASKLET_TYPE,
 };
 
-typedef uint32_t (*ext_intr_handler)(void *, uint32_t);
+typedef uint32_t (*ext_intr_handler)(void *, uint32_t, int);
 
 /**
  * hif_get_int_ctx_irq_num() - retrieve an irq num for an interrupt context id

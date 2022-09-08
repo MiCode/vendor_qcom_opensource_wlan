@@ -291,6 +291,27 @@ wmi_unified_pdev_param_send(wmi_unified_t wmi_handle,
 	return QDF_STATUS_E_FAILURE;
 }
 
+QDF_STATUS
+wmi_unified_multiple_pdev_param_send(wmi_unified_t wmi_handle,
+				     struct set_multiple_pdev_vdev_param *params)
+{
+	if (wmi_handle->ops->send_multiple_pdev_param_cmd)
+		return wmi_handle->ops->send_multiple_pdev_param_cmd(wmi_handle,
+								     params);
+
+	return QDF_STATUS_E_FAILURE;
+}
+
+QDF_STATUS
+wmi_unified_multiple_vdev_param_send(wmi_unified_t wmi_handle,
+				     struct set_multiple_pdev_vdev_param *params)
+{
+	if (wmi_handle->ops->send_multiple_vdev_param_cmd)
+		return wmi_handle->ops->send_multiple_vdev_param_cmd(wmi_handle,
+								     params);
+	return QDF_STATUS_E_FAILURE;
+}
+
 QDF_STATUS wmi_unified_suspend_send(wmi_unified_t wmi_handle,
 				    struct suspend_params *param,
 				    uint8_t mac_id)
@@ -1440,6 +1461,17 @@ QDF_STATUS wmi_unified_thermal_mitigation_param_cmd_send(
 	return QDF_STATUS_E_FAILURE;
 }
 
+QDF_STATUS wmi_extract_health_mon_event(
+		wmi_unified_t wmi_handle,
+		void *ev,
+		struct wmi_health_mon_params *param)
+{
+	if (wmi_handle->ops->extract_health_mon_init_done_info_event)
+		return wmi_handle->ops->extract_health_mon_init_done_info_event(
+						wmi_handle, ev, param);
+
+	return QDF_STATUS_E_FAILURE;
+}
 QDF_STATUS
 wmi_unified_vdev_set_fwtest_param_cmd_send(wmi_unified_t wmi_handle,
 					   struct set_fwtest_params *param)
@@ -3989,3 +4021,15 @@ QDF_STATUS wmi_extract_pdev_telemetry_stats(
 
 	return QDF_STATUS_E_FAILURE;
 }
+
+#ifdef FEATURE_SET
+QDF_STATUS wmi_feature_set_cmd_send(wmi_unified_t wmi_handle,
+				    struct target_feature_set *feature_set)
+{
+	if (wmi_handle->ops->feature_set_cmd_send)
+		return wmi_handle->ops->feature_set_cmd_send(wmi_handle,
+							     feature_set);
+
+	return QDF_STATUS_E_FAILURE;
+}
+#endif

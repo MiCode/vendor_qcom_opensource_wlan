@@ -468,26 +468,32 @@ static QDF_STATUS mlo_dev_ctx_deinit(struct wlan_objmgr_vdev *vdev)
 	mld_addr = (struct qdf_mac_addr *)wlan_vdev_mlme_get_mldaddr(vdev);
 	ml_dev = wlan_mlo_get_mld_ctx_by_mldaddr(mld_addr);
 	if (!ml_dev) {
-		mlo_err("Failed to get MLD dev context");
-		return QDF_STATUS_SUCCESS;
-	} else {
-		mlo_debug("deleting vdev from MLD device ctx");
-		mlo_dev_lock_acquire(ml_dev);
-		while (id < WLAN_UMAC_MLO_MAX_VDEVS) {
-			if (ml_dev->wlan_vdev_list[id] == vdev) {
-				if (wlan_vdev_mlme_get_opmode(vdev) ==
-								QDF_SAP_MODE)
-					wlan_mlo_vdev_free_aid_mgr(ml_dev,
-								   vdev);
-				ml_dev->wlan_vdev_list[id] = NULL;
-				ml_dev->wlan_vdev_count--;
-				vdev->mlo_dev_ctx = NULL;
-				break;
-			}
-			id++;
+		mlo_err("Failed to get MLD dev context by mld addr "QDF_MAC_ADDR_FMT,
+			QDF_MAC_ADDR_REF(mld_addr->bytes));
+		if (!vdev->mlo_dev_ctx) {
+			mlo_err("Failed to get MLD dev context from vdev");
+			return QDF_STATUS_SUCCESS;
 		}
-		mlo_dev_lock_release(ml_dev);
+		ml_dev = vdev->mlo_dev_ctx;
 	}
+
+	mlo_debug("deleting vdev from MLD device ctx "QDF_MAC_ADDR_FMT,
+		  QDF_MAC_ADDR_REF(mld_addr->bytes));
+	mlo_dev_lock_acquire(ml_dev);
+	while (id < WLAN_UMAC_MLO_MAX_VDEVS) {
+		if (ml_dev->wlan_vdev_list[id] == vdev) {
+			if (wlan_vdev_mlme_get_opmode(vdev) ==
+							QDF_SAP_MODE)
+				wlan_mlo_vdev_free_aid_mgr(ml_dev,
+							   vdev);
+			ml_dev->wlan_vdev_list[id] = NULL;
+			ml_dev->wlan_vdev_count--;
+			vdev->mlo_dev_ctx = NULL;
+			break;
+		}
+		id++;
+	}
+	mlo_dev_lock_release(ml_dev);
 
 	ml_link_lock_acquire(g_mlo_ctx);
 	if (!ml_dev->wlan_vdev_count) {
