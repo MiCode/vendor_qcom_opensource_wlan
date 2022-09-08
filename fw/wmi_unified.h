@@ -8954,6 +8954,15 @@ typedef enum {
     WMI_TPC_STATS_EVENT_SEND_REG_RATE_CTL = 0x00000007, /* REG | RATE | CTL */
 } WMI_PDEV_TPC_STATS_PARAMS;
 
+typedef enum {
+    WMI_HALPHY_TPC_STATS_SUPPORT_160 = 0,
+    WMI_HALPHY_TPC_STATS_SUPPORT_320,
+    WMI_HALPHY_TPC_STATS_SUPPORT_AX,
+    WMI_HALPHY_TPC_STATS_SUPPORT_AX_EXTRA_MCS,
+    WMI_HALPHY_TPC_STATS_SUPPORT_BE,
+    WMI_HALPHY_TPC_STATS_SUPPORT_BE_PUNC,
+} WMI_HALPHY_TPC_STATS_SUPPORT_BITF; /* support bit fields */
+
 typedef struct {
     A_UINT32 tlv_header; /** TLV tag and len; tag equals WMITLV_TAG_STRUC_wmi_pdev_get_tpc_stats_cmd_fixed_param */
     /** pdev_id for identifying the MAC
@@ -8996,6 +9005,12 @@ typedef struct {
     A_UINT32 numTxChain; /* The total number of active chains */
     A_UINT32 ctl; /* See CONFORMANCE_TEST_LIMITS enumeration */
     A_UINT32 flags; /* See WMI_TPC_CONFIG_EVENT_FLAG */
+
+    /* support_bits:
+     * Tells info about BE, HE, HE_EXTRA_MCS, 160, 320, 11BE PUNC.
+     * Refer to enum WMI_HALPHY_TPC_STATS_SUPPORT_BITF.
+     */
+    A_UINT32 support_bits;
 } wmi_tpc_configs;
 
 typedef struct {
@@ -12053,6 +12068,9 @@ typedef struct {
      * particular event out of Multiple Events that are send to host
      */
     A_UINT32 event_count;
+
+    /** Pdev id requested */
+    A_UINT32 pdev_id;
 } wmi_halphy_ctrl_path_stats_event_fixed_param;
 
 typedef struct {
@@ -16555,6 +16573,13 @@ typedef struct {
 #define WMI_PEER_MIMO_PS_NONE                          0x0
 #define WMI_PEER_MIMO_PS_STATIC                        0x1
 #define WMI_PEER_MIMO_PS_DYNAMIC                       0x2
+
+/*
+ * Each bit indicates one 20 MHz subchannel is punctured or not.
+ * A bit in the bitmap is set to 1 to indicate that the corresponding 20 MHz
+ * subchannel is not punctured and is set to 0 to indicate that it is punctured.
+ */
+#define WMI_PEER_PUNCTURE_20MHZ_BITMAP                 0x26
 
 typedef struct {
     A_UINT32 tlv_header; /** TLV tag and len; tag equals WMITLV_TAG_STRUC_wmi_peer_set_param_cmd_fixed_param */
@@ -32594,6 +32619,21 @@ typedef struct {
      */
 } wmi_regulatory_chan_priority_struct;
 
+#define WMI_REG_FCC_RULE_CHAN_FREQ_GET(freq_info)           WMI_GET_BITS(freq_info, 0, 16)
+#define WMI_REG_FCC_RULE_CHAN_FREQ_SET(freq_info, value)    WMI_SET_BITS(freq_info, 0, 16, value)
+#define WMI_REG_FCC_RULE_FCC_TX_POWER_GET(freq_info)        WMI_GET_BITS(freq_info, 16, 8)
+#define WMI_REG_FCC_RULE_FCC_TX_POWER_SET(freq_info, value) WMI_SET_BITS(freq_info, 16, 8, value)
+
+typedef struct {
+    A_UINT32  tlv_header; /* TLV tag and len; tag equals WMITLV_TAG_STRUC_wmi_regulatory_fcc_rule_struct */
+    A_UINT32  freq_info;
+    /* freq_info:
+     * bits 15:0  = u16 channel frequency (in MHz units)
+     * bits 23:16 = u8 FCC_Tx_power (dBm units)
+     * bits 31:24 = u8 reserved for future
+     */
+} wmi_regulatory_fcc_rule_struct;
+
 typedef enum {
     WMI_REG_DFS_UNINIT_REGION = 0,
     WMI_REG_DFS_FCC_REGION    = 1,
@@ -32702,6 +32742,7 @@ typedef struct {
  *     then the 5G elements, then the 6G elements (AP SG, AP LPI, AP VLP,
  *     client SP x4, client LPI x4, client vlp x4).
  *   - wmi_regulatory_chan_priority_struct reg_chan_priority[]
+ *   - wmi_regulatory_fcc_rule_struct reg_fcc_rule[]
  */
 } wmi_reg_chan_list_cc_event_ext_fixed_param;
 
@@ -33964,6 +34005,7 @@ typedef struct {
     A_UINT32 dialog_id;     /* TWT dialog ID */
     A_UINT32 suspend_duration_ms;  /* this long time after TWT paused the 1st SP will start (millisecond) */
     A_UINT32 next_twt_size; /* Next TWT subfield Size, refer to IEEE 802.11ax section "9.4.1.60 TWT Information field" */
+    A_UINT32 sp_start_offset; /* Next TWT service period will be offset by this time (microsecond) */
 } wmi_twt_nudge_dialog_cmd_fixed_param;
 
 /* status code of nudging TWT dialog */
@@ -35268,19 +35310,53 @@ typedef struct {
 
 /** the definition of different ROAM parameters */
 typedef enum {
-    /*  roam param to configure below roam events
-     *  Bit : 0 disabled - do not send WMI_ROAM_NOTIF_SCAN_END in WMI_ROAM_EVENTID
-     *  Bit : 0 enabled  - send WMI_ROAM_NOTIF_SCAN_END in WMI_ROAM_EVENTID
-     *  Bit : 1 disabled - do not send 1) WMI_ROAM_STATS_EVENTID 2) WMI_ROAM_NOTIF_SCAN_START and WMI_ROAM_NOTIF_SCAN_END notifs in WMI_ROAM_EVENTID in suspend mode
-     *  Bit : 1 enabled  - send 1) WMI_ROAM_STATS_EVENTID 2) WMI_ROAM_NOTIF_SCAN_START and WMI_ROAM_NOTIF_SCAN_END notifs in WMI_ROAM_EVENTID in suspend mode
-     *  Bit : 2-31  - reserved
+    /*
+     * roam param to configure below roam events
+     * Bit : 0 disabled - do not send WMI_ROAM_NOTIF_SCAN_END in WMI_ROAM_EVENTID
+     * Bit : 0 enabled  - send WMI_ROAM_NOTIF_SCAN_END in WMI_ROAM_EVENTID
+     * Bit : 1 disabled - do not send 1) WMI_ROAM_STATS_EVENTID 2) WMI_ROAM_NOTIF_SCAN_START and WMI_ROAM_NOTIF_SCAN_END notifs in WMI_ROAM_EVENTID in suspend mode
+     * Bit : 1 enabled  - send 1) WMI_ROAM_STATS_EVENTID 2) WMI_ROAM_NOTIF_SCAN_START and WMI_ROAM_NOTIF_SCAN_END notifs in WMI_ROAM_EVENTID in suspend mode
+     * Bit : 2-31  - reserved
      */
-    WMI_ROAM_PARAM_ROAM_EVENTS_CONFIG = 0x1,
+    WMI_ROAM_PARAM_ROAM_EVENTS_CONFIG = 1,
+
     /*
      * Bit : 0 if unset, POOR_LINKSPEED
      * Bit : 0 if set, GOOD_LINKSPEED
      */
-    WMI_ROAM_PARAM_LINKSPEED_STATE = 0x2,
+    WMI_ROAM_PARAM_LINKSPEED_STATE = 2,
+
+    /*
+     * roam param to configure roam scan params for DFS jitter reduction
+     * Bit : 0 enabled   - DFS channel jitter reduction is enabled.
+     * Bit : 0 disabled  - DFS channel jitter reduction is disabled.
+     *
+     * Bit : 1-7         - To indicate the passive-to-active conversion timeout
+     *                     with range 40 to 70 in ms, default value is 50ms.
+     *                     If an invalid (out of range) value is provided, the
+     *                     default value will be used.
+     * Bit : 8-13        - To indicate the DFS RSSI threshold for current AP
+     *                     with range 0 to 58, default value is 0 dB
+     *                     (DFS rssi threshold = -70 dBm + 0 dB = -70 dBm).
+     *                     The specified value (in dB) is added to the -70 dBm
+     *                     baseline value to get the RSSI threshold in dBm.
+     *                     If an invalid (out of range) value is provided, the
+     *                     default value will be used.
+     * Bit : 14-19       - To indicate the DFS RSSI threshold for candidate AP
+     *                     with range 0 to 58, default value is 0 dB
+     *                     (DFS rssi threshold = -70 - 0 = -70 dBm).
+     *                     The specified value (in dB) is added to the -70 dBm
+     *                     baseline value to get the RSSI threshold in dBm.
+     *                     If an invalid (out of range) value is provided, the
+     *                     default value will be used.
+     * Bit : 20 disabled - To indicate DFS roam scan policy is AGILE
+     * Bit : 20 enabled  - To indicate DFS roam scan policy is Legacy
+     *
+     * Bit : 21-31 are reserved
+     */
+    WMI_ROAM_PARAM_ROAM_SCAN_DFS_CONFIG_BITMAP = 3,
+
+
     /*=== END ROAM_PARAM_PROTOTYPE SECTION ===*/
 } WMI_ROAM_PARAM;
 
@@ -37842,7 +37918,7 @@ typedef struct {
 #define WMI_CFR_GROUP_DATA_SUBTYPE_VALID_BIT_POS      8
 
 /* The bits in this mask mapped to WMI_PEER_CFR_CAPTURE_BW enum */
-#define WMI_CFR_GROUP_BW_MASK_NUM_BITS                5
+#define WMI_CFR_GROUP_BW_MASK_NUM_BITS                6
 #define WMI_CFR_GROUP_BW_BIT_POS                      0
 
 /* The bits in this mask correspond to the values as below
@@ -39062,6 +39138,7 @@ typedef struct {
 
 typedef enum wmi_mlo_tear_down_reason_code_type {
     WMI_MLO_TEARDOWN_SSR_REASON,
+    WMI_MLO_TEARDOWN_HOST_INITIATED_REASON,
 } WMI_MLO_TEARDOWN_REASON_TYPE;
 
 typedef struct {

@@ -1293,6 +1293,7 @@ typedef enum {
     WMITLV_TAG_STRUC_wmi_ipa_link_stats,
     WMITLV_TAG_STRUC_wmi_ipa_per_mac_stats,
     WMITLV_TAG_STRUC_wmi_pdev_featureset_cmd_fixed_param,
+    WMITLV_TAG_STRUC_wmi_regulatory_fcc_rule_struct,
 } WMITLV_TAG_ID;
 
 /*
@@ -1798,6 +1799,7 @@ typedef enum {
     OP(WMI_WOW_COAP_GET_BUF_INFO_CMDID) \
     OP(WMI_COEX_DBAM_CMDID) \
     OP(WMI_PDEV_FEATURESET_CMDID) \
+    OP(WMI_ROAM_MLO_CONFIG_CMDID) \
     /* add new CMD_LIST elements above this line */
 
 
@@ -2591,7 +2593,8 @@ WMITLV_CREATE_PARAM_STRUC(WMI_PEER_SET_RATE_REPORT_CONDITION_CMDID);
 /* Add Beacon filter Cmd */
 #define WMITLV_TABLE_WMI_ADD_BCN_FILTER_CMDID(id,op,buf,len) \
     WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_STRUC_wmi_add_bcn_filter_cmd_fixed_param, wmi_add_bcn_filter_cmd_fixed_param, fixed_param, WMITLV_SIZE_FIX) \
-    WMITLV_FXAR(id,op,buf,len, WMITLV_TAG_ARRAY_UINT32, A_UINT32, ie_map, WMITLV_SIZE_FIX, BCN_FLT_MAX_ELEMS_IE_LIST)
+    WMITLV_FXAR(id,op,buf,len, WMITLV_TAG_ARRAY_UINT32, A_UINT32, ie_map, WMITLV_SIZE_FIX, BCN_FLT_MAX_ELEMS_IE_LIST) \
+    WMITLV_FXAR(id,op,buf,len, WMITLV_TAG_ARRAY_UINT32, A_UINT32, ext_ie_map, WMITLV_SIZE_FIX, BCN_FLT_MAX_ELEMS_IE_LIST)
 
 WMITLV_CREATE_PARAM_STRUC(WMI_ADD_BCN_FILTER_CMDID);
 
@@ -6277,7 +6280,8 @@ WMITLV_CREATE_PARAM_STRUC(WMI_REG_CHAN_LIST_CC_EVENTID);
 #define WMITLV_TABLE_WMI_REG_CHAN_LIST_CC_EXT_EVENTID(id,op,buf,len) \
     WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_STRUC_wmi_reg_chan_list_cc_event_ext_fixed_param, wmi_reg_chan_list_cc_event_ext_fixed_param, fixed_param, WMITLV_SIZE_FIX) \
     WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_ARRAY_STRUC, wmi_regulatory_rule_ext_struct, reg_rule_array, WMITLV_SIZE_VAR) \
-    WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_ARRAY_STRUC, wmi_regulatory_chan_priority_struct, reg_chan_priority, WMITLV_SIZE_VAR)
+    WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_ARRAY_STRUC, wmi_regulatory_chan_priority_struct, reg_chan_priority, WMITLV_SIZE_VAR) \
+    WMITLV_ELEM(id,op,buf,len, WMITLV_TAG_ARRAY_STRUC, wmi_regulatory_fcc_rule_struct, reg_fcc_rule, WMITLV_SIZE_VAR)
 WMITLV_CREATE_PARAM_STRUC(WMI_REG_CHAN_LIST_CC_EXT_EVENTID);
 
 /* WMI AFC info event */
