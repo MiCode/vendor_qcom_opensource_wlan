@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2012-2015,2020-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -68,6 +68,8 @@
  * @WLAN_CM_SM_EV_PREAUTH_RESP:           Preauth response
  * @WLAN_CM_SM_EV_REASSOC_TIMER：         Reassoc timer expired
  * @WLAN_CM_SM_EV_HO_ROAM_DISCONNECT_DONE: Disconnect done for hands off/roaming
+ * @WLAN_CM_SM_EV_RSO_STOP_RSP:           Event to continue disconnect after
+ *                                        RSO stop response is received
  * @WLAN_CM_SM_EV_MAX:                    Max event
  */
 enum wlan_cm_sm_evt {
@@ -108,6 +110,7 @@ enum wlan_cm_sm_evt {
 	WLAN_CM_SM_EV_PREAUTH_RESP = 34,
 	WLAN_CM_SM_EV_REASSOC_TIMER = 35,
 	WLAN_CM_SM_EV_HO_ROAM_DISCONNECT_DONE = 36,
+	WLAN_CM_SM_EV_RSO_STOP_RSP = 37,
 	WLAN_CM_SM_EV_MAX,
 };
 

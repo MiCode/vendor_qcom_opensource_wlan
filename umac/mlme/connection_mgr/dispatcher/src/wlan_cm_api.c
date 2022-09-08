@@ -374,9 +374,7 @@ struct reduced_neighbor_report *wlan_cm_get_rnr(struct wlan_objmgr_vdev *vdev,
 
 QDF_STATUS
 wlan_cm_disc_cont_after_rso_stop(struct wlan_objmgr_vdev *vdev,
-				 bool is_ho_fail,
 				 struct wlan_cm_vdev_discon_req *req)
 {
-	return cm_disconnect_continue_after_rso_stop(vdev, is_ho_fail,
-						     req);
+	return cm_handle_rso_stop_rsp(vdev, req);
 }

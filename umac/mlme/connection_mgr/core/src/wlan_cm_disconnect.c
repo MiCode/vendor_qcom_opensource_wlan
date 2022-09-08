@@ -415,8 +415,7 @@ QDF_STATUS cm_disconnect_active(struct cnx_mgr *cm_ctx, wlan_cm_id *cm_id)
 	req->req.is_no_disassoc_disconnect =
 			cm_req->discon_req.req.is_no_disassoc_disconnect;
 
-	cm_disconnect_continue_after_rso_stop(cm_ctx->vdev, false,
-					      req);
+	cm_disconnect_continue_after_rso_stop(cm_ctx->vdev, req);
 	qdf_mem_free(req);
 
 	return status;
@@ -424,7 +423,6 @@ QDF_STATUS cm_disconnect_active(struct cnx_mgr *cm_ctx, wlan_cm_id *cm_id)
 
 QDF_STATUS
 cm_disconnect_continue_after_rso_stop(struct wlan_objmgr_vdev *vdev,
-				      bool is_ho_fail,
 				      struct wlan_cm_vdev_discon_req *req)
 {
 	struct cm_req *cm_req;
@@ -435,23 +433,9 @@ cm_disconnect_continue_after_rso_stop(struct wlan_objmgr_vdev *vdev,
 	if (!cm_ctx)
 		return QDF_STATUS_E_INVAL;
 
-	if ((CM_ID_GET_PREFIX(req->cm_id)) != DISCONNECT_REQ_PREFIX) {
-		mlme_err(CM_PREFIX_FMT "active req is not disconnect req",
-			 CM_PREFIX_REF(wlan_vdev_get_id(vdev), req->cm_id));
-		return QDF_STATUS_E_INVAL;
-	}
-
 	cm_req = cm_get_req_by_cm_id(cm_ctx, req->cm_id);
 	if (!cm_req)
 		return QDF_STATUS_E_INVAL;
-
-	if (is_ho_fail) {
-		mlme_debug(CM_PREFIX_FMT "Updating source(%d) and reason code (%d) to RSO reason and source as ho fail is received in RSO stop",
-			   CM_PREFIX_REF(req->req.vdev_id, req->cm_id),
-			   req->req.source, req->req.reason_code);
-		req->req.source = CM_MLME_DISCONNECT;
-		req->req.reason_code = REASON_FW_TRIGGERED_ROAM_FAILURE;
-	}
 
 	wlan_vdev_get_bss_peer_mac(cm_ctx->vdev, &bssid);
 	/*
@@ -468,10 +452,10 @@ cm_disconnect_continue_after_rso_stop(struct wlan_objmgr_vdev *vdev,
 					  &cm_req->discon_req);
 
 	mlme_debug(CM_PREFIX_FMT "disconnect " QDF_MAC_ADDR_FMT
-		   " source %d reason %d is_ho_fail: %u",
+		   " source %d reason %d",
 		   CM_PREFIX_REF(req->req.vdev_id, req->cm_id),
 		   QDF_MAC_ADDR_REF(req->req.bssid.bytes),
-		   req->req.source, req->req.reason_code, is_ho_fail);
+		   req->req.source, req->req.reason_code);
 
 	status = mlme_cm_disconnect_req(cm_ctx->vdev, req);
 	if (QDF_IS_STATUS_ERROR(status)) {
@@ -481,6 +465,29 @@ cm_disconnect_continue_after_rso_stop(struct wlan_objmgr_vdev *vdev,
 	}
 
 	return status;
+}
+
+QDF_STATUS
+cm_handle_rso_stop_rsp(struct wlan_objmgr_vdev *vdev,
+		       struct wlan_cm_vdev_discon_req *req)
+{
+	struct cnx_mgr *cm_ctx = cm_get_cm_ctx(vdev);
+	wlan_cm_id cm_id;
+
+	if (!cm_ctx)
+		return QDF_STATUS_E_INVAL;
+
+	cm_id = cm_ctx->active_cm_id;
+
+	if ((CM_ID_GET_PREFIX(req->cm_id)) != DISCONNECT_REQ_PREFIX ||
+	    cm_id != req->cm_id) {
+		mlme_err(CM_PREFIX_FMT "active req is not disconnect req",
+			 CM_PREFIX_REF(wlan_vdev_get_id(vdev), req->cm_id));
+		return QDF_STATUS_E_INVAL;
+	}
+
+	return cm_sm_deliver_event(vdev, WLAN_CM_SM_EV_RSO_STOP_RSP,
+				   sizeof(*req), req);
 }
 
 #ifdef CONN_MGR_ADV_FEATURE

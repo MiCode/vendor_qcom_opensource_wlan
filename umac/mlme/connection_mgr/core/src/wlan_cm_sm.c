@@ -476,6 +476,9 @@ static bool cm_state_disconnecting_event(void *ctx, uint16_t event,
 					 WLAN_CM_SM_EV_DISCONNECT_START,
 					 data_len, data);
 		break;
+	case WLAN_CM_SM_EV_RSO_STOP_RSP:
+		cm_disconnect_continue_after_rso_stop(cm_ctx->vdev, data);
+		break;
 	default:
 		event_handled = false;
 		break;
@@ -630,6 +633,9 @@ static bool cm_subst_join_pending_event(void *ctx, uint16_t event,
 					 WLAN_CM_SM_EV_DISCONNECT_START,
 					 data_len, data);
 		break;
+	case WLAN_CM_SM_EV_RSO_STOP_RSP:
+		cm_disconnect_continue_after_rso_stop(cm_ctx->vdev, data);
+		break;
 	default:
 		event_handled = false;
 		break;
@@ -729,6 +735,9 @@ static bool cm_subst_scan_event(void *ctx, uint16_t event,
 		cm_sm_deliver_event_sync(cm_ctx,
 					 WLAN_CM_SM_EV_DISCONNECT_START,
 					 data_len, data);
+		break;
+	case WLAN_CM_SM_EV_RSO_STOP_RSP:
+		cm_disconnect_continue_after_rso_stop(cm_ctx->vdev, data);
 		break;
 	default:
 		event_handled = false;
@@ -1055,6 +1064,7 @@ static const char *cm_sm_event_names[] = {
 	"EV_PREAUTH_RESP",
 	"EV_REASSOC_TIMER",
 	"EV_HO_ROAM_DISCONNECT_DONE",
+	"EV_RSO_STOP_RSP",
 };
 
 enum wlan_cm_sm_state cm_get_state(struct cnx_mgr *cm_ctx)

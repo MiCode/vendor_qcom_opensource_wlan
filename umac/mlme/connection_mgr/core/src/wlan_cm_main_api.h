@@ -469,15 +469,24 @@ void cm_send_disconnect_resp(struct cnx_mgr *cm_ctx, wlan_cm_id cm_id);
 /**
  * cm_disconnect_continue_after_rso_stop() - Continue disconnect after RSO stop
  * @vdev: Objmgr vdev
- * @is_ho_fail: True if ho_fail happened
  * @req: pointer to cm vdev disconnect req
  *
  * Return: QDF_STATUS
  */
 QDF_STATUS
 cm_disconnect_continue_after_rso_stop(struct wlan_objmgr_vdev *vdev,
-				      bool is_ho_fail,
 				      struct wlan_cm_vdev_discon_req *req);
+
+/**
+ * cm_handle_rso_stop_rsp() - Handle RSO stop response
+ * @vdev: Objmgr vdev
+ * @req: pointer to cm vdev disconnect req
+ *
+ * Return: QDF_STATUS
+ */
+QDF_STATUS
+cm_handle_rso_stop_rsp(struct wlan_objmgr_vdev *vdev,
+		       struct wlan_cm_vdev_discon_req *req);
 
 /*************** UTIL APIs ****************/
 
