@@ -334,9 +334,9 @@ QDF_STATUS cm_sm_deliver_event_sync(struct cnx_mgr *cm_ctx,
  * @data_len: data size
  * @data: event data
  *
- * API to dispatch event to VDEV MLME SM with lock. To be used while paosting
- * events from API called from publick API. i.e. indication/response/request
- * from any other moudle or NB/SB.
+ * API to dispatch event to VDEV MLME SM with lock. To be used while posting
+ * events from API called from public API. i.e. indication/response/request
+ * from any other module or NB/SB req/resp.
  *
  * Context: Can be called from any context, This should be called in case
  * SM lock is not taken, the API will take the lock before posting to SM.
