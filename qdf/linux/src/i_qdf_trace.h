@@ -95,18 +95,23 @@
  * second. This means any subsequent calls to this API from the same location
  * within 1/QDF_MAX_LOGS_PER_SEC seconds will be dropped.
  *
- * Return: None
+ * Return: return rate_limted as below:
+ *      true if the logging message is bypassed
+ *      false if the logging message is printed out
  */
 #define __QDF_TRACE_RATE_LIMITED(params...)\
-	do {\
+	({\
 		static ulong __last_ticks;\
 		ulong __ticks = jiffies;\
+		bool rate_limited = true;\
 		if (time_after(__ticks,\
 			       __last_ticks + HZ / QDF_MAX_LOGS_PER_SEC)) {\
 			QDF_TRACE(params);\
 			__last_ticks = __ticks;\
+			rate_limited = false;\
 		} \
-	} while (0)
+		rate_limited;\
+	})
 
 #define __QDF_TRACE_HEX_DUMP_RATE_LIMITED(params...)\
 	do {\
@@ -119,7 +124,7 @@
 		} \
 	} while (0)
 #else
-#define __QDF_TRACE_RATE_LIMITED(arg ...)
+#define __QDF_TRACE_RATE_LIMITED(arg ...) ({true; })
 #define __QDF_TRACE_HEX_DUMP_RATE_LIMITED(arg ...)
 #endif
 
@@ -140,6 +145,8 @@
 
 static inline void __qdf_trace_noop(QDF_MODULE_ID module,
 				    const char *format, ...) { }
+static inline bool __qdf_trace_noop_ret(QDF_MODULE_ID module,
+					const char *format, ...) {return true; }
 static inline void __qdf_trace_dummy(QDF_MODULE_ID module,
 				     QDF_TRACE_LEVEL level,
 				     const char *format, ...) { }
@@ -167,8 +174,8 @@ static inline void __qdf_trace_hexdump_dummy(QDF_MODULE_ID module,
 #else
 #define QDF_TRACE_FATAL(params...) __qdf_trace_noop(params)
 #define QDF_TRACE_FATAL_NO_FL(params...) __qdf_trace_noop(params)
-#define QDF_TRACE_FATAL_RL(params...) __qdf_trace_noop(params)
-#define QDF_TRACE_FATAL_RL_NO_FL(params...) __qdf_trace_noop(params)
+#define QDF_TRACE_FATAL_RL(params...) __qdf_trace_noop_ret(params)
+#define QDF_TRACE_FATAL_RL_NO_FL(params...) __qdf_trace_noop_ret(params)
 #define QDF_VTRACE_FATAL(params...) __qdf_trace_noop(params)
 #define QDF_TRACE_HEX_DUMP_FATAL_RL(params...) __qdf_trace_noop(params)
 #endif
@@ -189,8 +196,8 @@ static inline void __qdf_trace_hexdump_dummy(QDF_MODULE_ID module,
 #else
 #define QDF_TRACE_ERROR(params...) __qdf_trace_noop(params)
 #define QDF_TRACE_ERROR_NO_FL(params...) __qdf_trace_noop(params)
-#define QDF_TRACE_ERROR_RL(params...) __qdf_trace_noop(params)
-#define QDF_TRACE_ERROR_RL_NO_FL(params...) __qdf_trace_noop(params)
+#define QDF_TRACE_ERROR_RL(params...) __qdf_trace_noop_ret(params)
+#define QDF_TRACE_ERROR_RL_NO_FL(params...) __qdf_trace_noop_ret(params)
 #define QDF_VTRACE_ERROR(params...) __qdf_trace_noop(params)
 #define QDF_TRACE_HEX_DUMP_ERROR_RL(params...) __qdf_trace_noop(params)
 #endif
@@ -211,8 +218,8 @@ static inline void __qdf_trace_hexdump_dummy(QDF_MODULE_ID module,
 #else
 #define QDF_TRACE_WARN(params...) __qdf_trace_noop(params)
 #define QDF_TRACE_WARN_NO_FL(params...) __qdf_trace_noop(params)
-#define QDF_TRACE_WARN_RL(params...) __qdf_trace_noop(params)
-#define QDF_TRACE_WARN_RL_NO_FL(params...) __qdf_trace_noop(params)
+#define QDF_TRACE_WARN_RL(params...) __qdf_trace_noop_ret(params)
+#define QDF_TRACE_WARN_RL_NO_FL(params...) __qdf_trace_noop_ret(params)
 #define QDF_VTRACE_WARN(params...) __qdf_trace_noop(params)
 #define QDF_TRACE_HEX_DUMP_WARN_RL(params...) __qdf_trace_noop(params)
 #endif
@@ -233,8 +240,8 @@ static inline void __qdf_trace_hexdump_dummy(QDF_MODULE_ID module,
 #else
 #define QDF_TRACE_INFO(params...) __qdf_trace_noop(params)
 #define QDF_TRACE_INFO_NO_FL(params...) __qdf_trace_noop(params)
-#define QDF_TRACE_INFO_RL(params...) __qdf_trace_noop(params)
-#define QDF_TRACE_INFO_RL_NO_FL(params...) __qdf_trace_noop(params)
+#define QDF_TRACE_INFO_RL(params...) __qdf_trace_noop_ret(params)
+#define QDF_TRACE_INFO_RL_NO_FL(params...) __qdf_trace_noop_ret(params)
 #define QDF_VTRACE_INFO(params...) __qdf_trace_noop(params)
 #define QDF_TRACE_HEX_DUMP_INFO_RL(params...) __qdf_trace_noop(params)
 #endif
@@ -255,8 +262,8 @@ static inline void __qdf_trace_hexdump_dummy(QDF_MODULE_ID module,
 #else
 #define QDF_TRACE_DEBUG(params...) __qdf_trace_noop(params)
 #define QDF_TRACE_DEBUG_NO_FL(params...) __qdf_trace_noop(params)
-#define QDF_TRACE_DEBUG_RL(params...) __qdf_trace_noop(params)
-#define QDF_TRACE_DEBUG_RL_NO_FL(params...) __qdf_trace_noop(params)
+#define QDF_TRACE_DEBUG_RL(params...) __qdf_trace_noop_ret(params)
+#define QDF_TRACE_DEBUG_RL_NO_FL(params...) __qdf_trace_noop_ret(params)
 #define QDF_VTRACE_DEBUG(params...) __qdf_trace_noop(params)
 #define QDF_TRACE_HEX_DUMP_DEBUG_RL(params...) __qdf_trace_noop(params)
 #endif
