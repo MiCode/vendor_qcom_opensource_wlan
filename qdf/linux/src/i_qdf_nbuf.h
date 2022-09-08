@@ -2343,6 +2343,19 @@ __qdf_nbuf_get_timestamp(struct sk_buff *skb)
 }
 
 /**
+ * __qdf_nbuf_get_timestamp_us() - get the timestamp for frame
+ *
+ * @buf: sk buff
+ *
+ * Return: timestamp stored in skb in us
+ */
+static inline uint64_t
+__qdf_nbuf_get_timestamp_us(struct sk_buff *skb)
+{
+	return ktime_to_us(skb_get_ktime(skb));
+}
+
+/**
  * __qdf_nbuf_get_timedelta_ms() - get time difference in ms
  *
  * @buf: sk buff

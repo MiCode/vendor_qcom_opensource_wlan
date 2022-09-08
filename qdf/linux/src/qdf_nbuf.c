@@ -6154,6 +6154,13 @@ uint64_t qdf_nbuf_get_timestamp(qdf_nbuf_t buf)
 
 qdf_export_symbol(qdf_nbuf_get_timestamp);
 
+uint64_t qdf_nbuf_get_timestamp_us(qdf_nbuf_t buf)
+{
+	return __qdf_nbuf_get_timestamp_us(buf);
+}
+
+qdf_export_symbol(qdf_nbuf_get_timestamp_us);
+
 uint64_t qdf_nbuf_get_timedelta_us(qdf_nbuf_t buf)
 {
 	return __qdf_nbuf_get_timedelta_us(buf);
