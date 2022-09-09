@@ -75,7 +75,6 @@ void dp_rx_mon_ppdu_info_cache_destroy(struct dp_pdev *pdev)
 			dp_get_be_mon_pdev_from_dp_mon_pdev(mon_pdev);
 	struct hal_rx_ppdu_info *ppdu_info = NULL, *temp_ppdu_info = NULL;
 
-	qdf_err(" total free element: %d", mon_pdev_be->total_free_elem);
 	qdf_spin_lock(&mon_pdev_be->ppdu_info_lock);
 	TAILQ_FOREACH_SAFE(ppdu_info,
 			   &mon_pdev_be->rx_mon_free_queue,
@@ -85,12 +84,12 @@ void dp_rx_mon_ppdu_info_cache_destroy(struct dp_pdev *pdev)
 			     ppdu_info, ppdu_free_list_elem);
 		if (ppdu_info) {
 			mon_pdev_be->total_free_elem--;
-			qdf_err(" total free element: %d", mon_pdev_be->total_free_elem);
 			qdf_kmem_cache_free(mon_pdev_be->ppdu_info_cache,
 					    ppdu_info);
 		}
 	}
 	qdf_spin_unlock(&mon_pdev_be->ppdu_info_lock);
+	dp_mon_debug(" total free element: %d", mon_pdev_be->total_free_elem);
 	qdf_kmem_cache_destroy(mon_pdev_be->ppdu_info_cache);
 }
 
@@ -120,7 +119,6 @@ QDF_STATUS dp_mon_pdev_ext_init_2_0(struct dp_pdev *pdev)
 	TAILQ_INIT(&mon_pdev_be->rx_mon_queue);
 
 	qdf_spinlock_create(&mon_pdev_be->rx_mon_wq_lock);
-	qdf_err(" total free element: %d", mon_pdev_be->total_free_elem);
 
 	return QDF_STATUS_SUCCESS;
 
