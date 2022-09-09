@@ -317,7 +317,6 @@ __dp_rx_buffers_no_map_lt_replenish(struct dp_soc *soc, uint32_t mac_id,
 	}
 
 	DP_STATS_INC(dp_pdev, replenish.low_thresh_intrs, 1);
-
 	num_alloc_desc = dp_rx_get_free_desc_list(soc, mac_id,
 						  rx_desc_pool,
 						  num_entries_avail,
@@ -744,8 +743,8 @@ QDF_STATUS __dp_rx_buffers_replenish(struct dp_soc *dp_soc, uint32_t mac_id,
 		return QDF_STATUS_E_FAILURE;
 	}
 
-	dp_rx_debug("%pK: requested %d buffers for replenish",
-		    dp_soc, num_req_buffers);
+	dp_verbose_debug("%pK: requested %d buffers for replenish",
+			 dp_soc, num_req_buffers);
 
 	hal_srng_access_start(dp_soc->hal_soc, rxdma_srng);
 
@@ -753,12 +752,13 @@ QDF_STATUS __dp_rx_buffers_replenish(struct dp_soc *dp_soc, uint32_t mac_id,
 						   rxdma_srng,
 						   sync_hw_ptr);
 
-	dp_rx_debug("%pK: no of available entries in rxdma ring: %d",
-		    dp_soc, num_entries_avail);
+	dp_verbose_debug("%pK: no of available entries in rxdma ring: %d",
+			 dp_soc, num_entries_avail);
 
 	if (!req_only && !(*desc_list) && (num_entries_avail >
 		((dp_rxdma_srng->num_entries * 3) / 4))) {
 		num_req_buffers = num_entries_avail;
+		DP_STATS_INC(dp_pdev, replenish.low_thresh_intrs, 1);
 	} else if (num_entries_avail < num_req_buffers) {
 		num_desc_to_free = num_req_buffers - num_entries_avail;
 		num_req_buffers = num_entries_avail;
@@ -810,7 +810,8 @@ QDF_STATUS __dp_rx_buffers_replenish(struct dp_soc *dp_soc, uint32_t mac_id,
 			return QDF_STATUS_E_NOMEM;
 		}
 
-		dp_rx_debug("%pK: %d rx desc allocated", dp_soc, num_alloc_desc);
+		dp_verbose_debug("%pK: %d rx desc allocated", dp_soc,
+				 num_alloc_desc);
 		num_req_buffers = num_alloc_desc;
 	}
 

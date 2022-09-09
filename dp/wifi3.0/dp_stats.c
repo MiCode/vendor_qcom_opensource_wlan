@@ -5721,6 +5721,8 @@ void dp_print_soc_cfg_params(struct dp_soc *soc)
 		       soc_cfg_ctx->tcl_cmd_credit_ring);
 	DP_PRINT_STATS("TCL Status ring: %u ",
 		       soc_cfg_ctx->tcl_status_ring);
+	DP_PRINT_STATS("REO Destination ring: %u ",
+		       soc_cfg_ctx->reo_dst_ring_size);
 	DP_PRINT_STATS("REO Reinject ring: %u ",
 		       soc_cfg_ctx->reo_reinject_ring);
 	DP_PRINT_STATS("RX release ring: %u ",
@@ -5751,6 +5753,8 @@ void dp_print_soc_cfg_params(struct dp_soc *soc)
 		       soc_cfg_ctx->rx_flow_search_table_size);
 	DP_PRINT_STATS("RX Flow Search Table Per PDev : %u ",
 		       soc_cfg_ctx->is_rx_flow_search_table_per_pdev);
+	DP_PRINT_STATS("Rx desc pool size: %u ",
+		       soc_cfg_ctx->rx_sw_desc_num);
 }
 
 void
