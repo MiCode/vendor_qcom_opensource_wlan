@@ -4223,6 +4223,9 @@ dp_ppdu_desc_user_stats_update(struct dp_pdev *pdev,
 			continue;
 
 		ppdu_desc->user[i].is_bss_peer = peer->bss_peer;
+
+		dp_ppdu_desc_user_phy_tx_time_update(pdev, peer, ppdu_desc,
+						     &ppdu_desc->user[i]);
 		/*
 		 * different frame like DATA, BAR or CTRL has different
 		 * tlv bitmap expected. Apart from ACK_BA_STATUS TLV, we
@@ -4260,9 +4263,6 @@ dp_ppdu_desc_user_stats_update(struct dp_pdev *pdev,
 					   &ppdu_desc->user[i],
 					   ppdu_desc->ack_rssi);
 		}
-
-		dp_ppdu_desc_user_phy_tx_time_update(pdev, peer, ppdu_desc,
-						     &ppdu_desc->user[i]);
 
 		dp_peer_unref_delete(peer, DP_MOD_ID_TX_PPDU_STATS);
 		tlv_bitmap_expected = tlv_bitmap_default;
