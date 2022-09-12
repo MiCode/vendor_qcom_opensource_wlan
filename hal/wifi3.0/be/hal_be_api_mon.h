@@ -1512,11 +1512,13 @@ hal_rx_parse_cmn_usr_info(struct hal_soc *hal_soc, uint8_t *tlv,
 
 	ppdu_info->rx_status.eht_data[0] |= (cmn_usr_info->cp_setting <<
 					     QDF_MON_STATUS_EHT_GI_SHIFT);
-	ppdu_info->rx_status.sgi = cmn_usr_info->cp_setting;
+	if (!ppdu_info->rx_status.sgi)
+		ppdu_info->rx_status.sgi = cmn_usr_info->cp_setting;
 
 	ppdu_info->rx_status.eht_data[0] |= (cmn_usr_info->ltf_size <<
 					     QDF_MON_STATUS_EHT_LTF_SHIFT);
-	ppdu_info->rx_status.ltf_size = cmn_usr_info->ltf_size;
+	if (!ppdu_info->rx_status.ltf_size)
+		ppdu_info->rx_status.ltf_size = cmn_usr_info->ltf_size;
 
 	hal_rx_parse_punctured_pattern(cmn_usr_info, ppdu_info);
 
