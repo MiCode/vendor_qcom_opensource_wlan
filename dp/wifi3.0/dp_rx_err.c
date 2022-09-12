@@ -3161,7 +3161,8 @@ done:
 					err_code = wbm_err_info.rxdma_err_code;
 					tlv_hdr = rx_tlv_hdr;
 					dp_rx_process_rxdma_err(soc, nbuf,
-								tlv_hdr, NULL,
+								tlv_hdr,
+								txrx_peer,
 								err_code,
 								pool_id);
 					break;
