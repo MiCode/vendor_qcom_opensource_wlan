@@ -703,3 +703,38 @@ wifi_pos_get_osif_callbacks(struct wlan_objmgr_psoc *psoc)
 
 	return wifi_pos_obj->osif_cb;
 }
+
+#if defined(WIFI_POS_CONVERGED) && defined(WLAN_FEATURE_RTT_11AZ_SUPPORT)
+void wifi_pos_set_rsta_sec_ltf_cap(uint32_t val)
+{
+	struct wifi_pos_psoc_priv_obj *wifi_pos_psoc =
+			wifi_pos_get_psoc_priv_obj(wifi_pos_get_psoc());
+
+	if (!wifi_pos_psoc) {
+		wifi_pos_alert("unable to get wifi_pos psoc obj");
+		return;
+	}
+
+	qdf_spin_lock_bh(&wifi_pos_psoc->wifi_pos_lock);
+	wifi_pos_psoc->enable_rsta_secure_ltf_support = val;
+	qdf_spin_unlock_bh(&wifi_pos_psoc->wifi_pos_lock);
+}
+
+bool wifi_pos_get_rsta_sec_ltf_cap(void)
+{
+	bool value;
+	struct wifi_pos_psoc_priv_obj *wifi_pos_psoc =
+			wifi_pos_get_psoc_priv_obj(wifi_pos_get_psoc());
+
+	if (!wifi_pos_psoc) {
+		wifi_pos_alert("unable to get wifi_pos psoc obj");
+		return false;
+	}
+
+	qdf_spin_lock_bh(&wifi_pos_psoc->wifi_pos_lock);
+	value = wifi_pos_psoc->enable_rsta_secure_ltf_support;
+	qdf_spin_unlock_bh(&wifi_pos_psoc->wifi_pos_lock);
+
+	return value;
+}
+#endif
