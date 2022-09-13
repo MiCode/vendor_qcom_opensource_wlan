@@ -1503,7 +1503,8 @@ static uint8_t hal_tx_get_num_tcl_banks_5332(void)
 	return HAL_NUM_TCL_BANKS_5332;
 }
 
-static void hal_reo_setup_5332(struct hal_soc *soc, void *reoparams)
+static void hal_reo_setup_5332(struct hal_soc *soc, void *reoparams,
+			       int qref_reset)
 {
 	uint32_t reg_val;
 	struct hal_reo_params *reo_params = (struct hal_reo_params *)reoparams;
@@ -1588,7 +1589,7 @@ static void hal_reo_setup_5332(struct hal_soc *soc, void *reoparams)
 	 * GLOBAL_LINK_DESC_COUNT_CTRL
 	 */
 
-	hal_reo_shared_qaddr_init((hal_soc_handle_t)soc);
+	hal_reo_shared_qaddr_init((hal_soc_handle_t)soc, qref_reset);
 }
 
 static uint16_t hal_get_rx_max_ba_window_qca5332(int tid)
