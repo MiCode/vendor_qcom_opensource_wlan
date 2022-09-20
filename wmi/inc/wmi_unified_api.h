@@ -4977,6 +4977,7 @@ QDF_STATUS wmi_feature_set_cmd_send(
 			struct target_feature_set *feature_set);
 #endif
 
+#ifdef HEALTH_MON_SUPPORT
 /**
  * wmi_extract_health_mon_event - extract health monitor params
  * @wmi_handle: wmi handle
@@ -4990,5 +4991,5 @@ QDF_STATUS wmi_extract_health_mon_event(
 		wmi_unified_t wmi_handle,
 		void *ev,
 		struct wmi_health_mon_params *param);
-
+#endif /* HEALTH_MON_SUPPORT */
 #endif /* _WMI_UNIFIED_API_H_ */

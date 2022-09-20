@@ -487,6 +487,18 @@ QDF_STATUS wlan_dfs_pdev_obj_create_notification(struct wlan_objmgr_pdev *pdev,
 	dfs_info(dfs, WLAN_DEBUG_DFS_ALWAYS, "dfs_offload %d",
 		 dfs->dfs_is_offload_enabled);
 
+	if (!dfs_tx_ops->dfs_is_tgt_bangradar_320_supp) {
+		dfs_err(dfs, WLAN_DEBUG_DFS_ALWAYS,
+			"dfs_is_tgt_bangradar_320_supp is null");
+		dfs_destroy_object(dfs);
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	dfs->dfs_is_bangradar_320_supported =
+				dfs_tx_ops->dfs_is_tgt_bangradar_320_supp(psoc);
+	dfs_info(dfs, WLAN_DEBUG_DFS_ALWAYS, "dfs_bangradar_320_support %d",
+		 dfs->dfs_is_bangradar_320_supported);
+
 	if (!dfs_tx_ops->dfs_is_tgt_radar_found_chan_freq_eq_center_freq) {
 		dfs_err(dfs, WLAN_DEBUG_DFS_ALWAYS,
 			"dfs_is_radar_found_chan_freq_eq_center_freq is null");

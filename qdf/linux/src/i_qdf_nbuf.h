@@ -1774,6 +1774,28 @@ __qdf_nbuf_queue_insert_head(__qdf_nbuf_queue_t *qhead, __qdf_nbuf_t skb)
 	qhead->qlen++;
 }
 
+static inline struct sk_buff *
+__qdf_nbuf_queue_remove_last(__qdf_nbuf_queue_t *qhead)
+{
+	__qdf_nbuf_t tmp_tail, node = NULL;
+
+	if (qhead->head) {
+		tmp_tail = qhead->tail;
+		node = qhead->head;
+		if (qhead->head == qhead->tail) {
+			qhead->head = NULL;
+			qhead->tail = NULL;
+			return node;
+		} else {
+			while (tmp_tail != node->next)
+			       node = node->next;
+			qhead->tail = node;
+			return node->next;
+		}
+	}
+	return node;
+}
+
 /**
  * __qdf_nbuf_queue_remove() - remove a skb from the head of the queue
  * @qhead: Queue head
@@ -2318,6 +2340,19 @@ static inline uint64_t
 __qdf_nbuf_get_timestamp(struct sk_buff *skb)
 {
 	return ktime_to_ms(skb_get_ktime(skb));
+}
+
+/**
+ * __qdf_nbuf_get_timestamp_us() - get the timestamp for frame
+ *
+ * @buf: sk buff
+ *
+ * Return: timestamp stored in skb in us
+ */
+static inline uint64_t
+__qdf_nbuf_get_timestamp_us(struct sk_buff *skb)
+{
+	return ktime_to_us(skb_get_ktime(skb));
 }
 
 /**

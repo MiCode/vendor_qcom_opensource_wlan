@@ -360,14 +360,39 @@ static const struct qwlan_hw qwlan_hw_list[] = {
 		.name = "QCA9379_REV1_1",
 	},
 	{
-		.id = KIWI_V1,
-		.subid = 0xE,
-		.name = "KIWI_V1",
-	},
-	{
 		.id = MANGO_V1,
 		.subid = 0xF,
 		.name = "MANGO_V1",
+	},
+	{
+		.id = KIWI_V1,
+		.subid = 0,
+		.name = "KIWI_V1",
+	},
+	{
+		.id = KIWI_V2,
+		.subid = 0,
+		.name = "KIWI_V2",
+	},
+	{
+		.id = WCN6750_V1,
+		.subid = 0,
+		.name = "WCN6750_V1",
+	},
+	{
+		.id = QCA6490_v2_1,
+		.subid = 0,
+		.name = "QCA6490",
+	},
+	{
+		.id = QCA6490_v2,
+		.subid = 0,
+		.name = "QCA6490",
+	},
+	{
+		.id = WCN3990_v2_2,
+		.subid = 0,
+		.name = "WCN3990_v2_2",
 	}
 };
 
@@ -380,6 +405,10 @@ static const struct qwlan_hw qwlan_hw_list[] = {
 static const char *hif_get_hw_name(struct hif_target_info *info)
 {
 	int i;
+
+	hif_debug("target version = %d, target revision = %d",
+		  info->target_version,
+		  info->target_revision);
 
 	if (info->hw_name)
 		return info->hw_name;
@@ -464,6 +493,21 @@ uint32_t hif_get_soc_version(struct hif_opaque_softc *hif_handle)
 }
 
 qdf_export_symbol(hif_get_soc_version);
+
+/**
+ * hif_get_dev_ba_cmem(): API to get device ce base address.
+ * @scn: scn
+ *
+ * Return: dev mem base address for CMEM
+ */
+void *hif_get_dev_ba_cmem(struct hif_opaque_softc *hif_handle)
+{
+	struct hif_softc *scn = (struct hif_softc *)hif_handle;
+
+	return scn->mem_cmem;
+}
+
+qdf_export_symbol(hif_get_dev_ba_cmem);
 
 #ifdef FEATURE_RUNTIME_PM
 void hif_runtime_prevent_linkdown(struct hif_softc *scn, bool is_get)

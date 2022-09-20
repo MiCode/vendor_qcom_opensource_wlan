@@ -506,6 +506,7 @@ QDF_STATUS dp_vdev_set_monitor_mode_rings(struct dp_pdev *pdev,
 static inline QDF_STATUS
 dp_vdev_set_monitor_mode_buf_rings(struct dp_pdev *pdev)
 {
+	return QDF_STATUS_SUCCESS;
 }
 
 static inline QDF_STATUS
@@ -819,6 +820,11 @@ struct dp_mon_ops {
 	void (*mon_lite_mon_vdev_delete)(struct dp_pdev *pdev,
 					 struct dp_vdev *vdev);
 	void (*mon_lite_mon_disable_rx)(struct dp_pdev *pdev);
+	/* Print advanced monitor stats */
+	void (*mon_rx_print_advanced_stats)
+		(struct dp_soc *soc, struct dp_pdev *pdev);
+	QDF_STATUS (*mon_rx_ppdu_info_cache_create)(struct dp_pdev *pdev);
+	void (*mon_rx_ppdu_info_cache_destroy)(struct dp_pdev *pdev);
 };
 
 /**
@@ -879,13 +885,9 @@ struct dp_mon_soc {
 };
 
 #ifdef WLAN_TELEMETRY_STATS_SUPPORT
-#define MAX_CONSUMPTION_TIME 5 /* in sec */
 struct dp_mon_peer_airtime_consumption {
 	uint32_t consumption;
-	struct {
-		uint32_t avg_consumption_per_sec[MAX_CONSUMPTION_TIME];
-		uint8_t idx;
-	} avg_consumption;
+	uint32_t avg_consumption_per_sec;
 };
 #endif
 
@@ -897,7 +899,7 @@ struct dp_mon_peer_stats {
 	dp_mon_peer_tx_stats tx;
 	dp_mon_peer_rx_stats rx;
 #ifdef WLAN_TELEMETRY_STATS_SUPPORT
-	struct dp_mon_peer_airtime_consumption airtime_consumption;
+	struct dp_mon_peer_airtime_consumption airtime_consumption[WME_AC_MAX];
 #endif
 #endif
 };
@@ -1505,6 +1507,20 @@ static inline void dp_monitor_set_chan_num(struct dp_pdev *pdev, int chan_num)
 }
 
 /*
+ * dp_monitor_get_chan_num() - get channel number
+ * @pdev: DP pdev handle
+ *
+ * Return: channel number
+ */
+static inline int dp_monitor_get_chan_num(struct dp_pdev *pdev)
+{
+	if (qdf_unlikely(!pdev || !pdev->monitor_pdev))
+		return 0;
+
+	return pdev->monitor_pdev->mon_chan_num;
+}
+
+/*
  * dp_monitor_set_chan_freq() - set channel frequency
  * @pdev: point to dp pdev
  * @chan_freq: channel frequency
@@ -1517,6 +1533,21 @@ dp_monitor_set_chan_freq(struct dp_pdev *pdev, qdf_freq_t chan_freq)
 		return;
 
 	pdev->monitor_pdev->mon_chan_freq = chan_freq;
+}
+
+/*
+ * dp_monitor_get_chan_freq() - get channel frequency
+ * @pdev: DP pdev handle
+ *
+ * @Return: channel frequency
+ */
+static inline qdf_freq_t
+dp_monitor_get_chan_freq(struct dp_pdev *pdev)
+{
+	if (qdf_unlikely(!pdev || !pdev->monitor_pdev))
+		return 0;
+
+	return pdev->monitor_pdev->mon_chan_freq;
 }
 
 /*
@@ -3944,6 +3975,38 @@ struct cdp_mon_ops *dp_mon_cdp_ops_get(struct dp_soc *soc)
 }
 
 /**
+ * dp_monitor_soc_init() - Monitor SOC init
+ * @soc: DP soc handle
+ *
+ * Return: void
+ */
+static inline void dp_monitor_soc_init(struct dp_soc *soc)
+{
+	struct dp_mon_ops *mon_ops;
+
+	mon_ops = dp_mon_ops_get(soc);
+
+	if (mon_ops && mon_ops->mon_soc_init)
+		mon_ops->mon_soc_init(soc);
+}
+
+/**
+ * dp_monitor_soc_deinit() - Monitor SOC deinit
+ * @soc: DP soc handle
+ *
+ * Return: void
+ */
+static inline void dp_monitor_soc_deinit(struct dp_soc *soc)
+{
+	struct dp_mon_ops *mon_ops;
+
+	mon_ops = dp_mon_ops_get(soc);
+
+	if (mon_ops && mon_ops->mon_soc_deinit)
+		mon_ops->mon_soc_deinit(soc);
+}
+
+/**
  * dp_ppdu_desc_user_stats_update(): Function to update TX user stats
  * @pdev: DP pdev handle
  * @ppdu_info: per PPDU TLV descriptor
@@ -4172,20 +4235,20 @@ void dp_monitor_peer_telemetry_stats(struct dp_peer *peer,
 				     struct cdp_peer_telemetry_stats *stats)
 {
 	struct dp_mon_peer_stats *mon_peer_stats = NULL;
-	uint8_t idx = 0;
-	uint32_t consumption = 0;
+	uint8_t ac;
 
 	if (qdf_unlikely(!peer->monitor_peer))
 		return;
 
 	mon_peer_stats = &peer->monitor_peer->stats;
-	for (idx = 0; idx < MAX_CONSUMPTION_TIME; idx++)
-		consumption +=
-			mon_peer_stats->airtime_consumption.avg_consumption.avg_consumption_per_sec[idx];
-	/* consumption is in micro seconds, convert it to seconds and
-	 * then calculate %age per 5 sec
-	 */
-	stats->airtime_consumption = ((consumption * 100) / (MAX_CONSUMPTION_TIME * 1000000));
+	for (ac = 0; ac < WME_AC_MAX; ac++) {
+		/* consumption is in micro seconds, convert it to seconds and
+		 * then calculate %age per sec
+		 */
+		stats->airtime_consumption[ac] =
+			((mon_peer_stats->airtime_consumption[ac].avg_consumption_per_sec * 100) /
+			(1000000));
+	}
 	stats->tx_mpdu_retried = mon_peer_stats->tx.retries;
 	stats->tx_mpdu_total = mon_peer_stats->tx.tx_mpdus_tried;
 	stats->rx_mpdu_retried = mon_peer_stats->rx.mpdu_retry_cnt;
@@ -4193,4 +4256,77 @@ void dp_monitor_peer_telemetry_stats(struct dp_peer *peer,
 	stats->snr = CDP_SNR_OUT(mon_peer_stats->rx.avg_snr);
 }
 #endif
+
+/**
+<<<<<<< HEAD
+ * dp_monitor_is_tx_cap_enabled() - get tx-cature enabled/disabled
+ * @peer: DP peer handle
+ *
+ * Return: true if tx-capture is enabled
+ */
+static inline bool dp_monitor_is_tx_cap_enabled(struct dp_peer *peer)
+{
+	return peer->monitor_peer ? peer->monitor_peer->tx_cap_enabled : 0;
+}
+
+/**
+ * dp_monitor_is_rx_cap_enabled() - get rx-cature enabled/disabled
+ * @peer: DP peer handle
+ *
+ * Return: true if rx-capture is enabled
+ */
+static inline bool dp_monitor_is_rx_cap_enabled(struct dp_peer *peer)
+{
+	return peer->monitor_peer ? peer->monitor_peer->rx_cap_enabled : 0;
+}
+
+#if !(!defined(DISABLE_MON_CONFIG) && defined(QCA_MONITOR_2_0_SUPPORT))
+/**
+ * dp_mon_get_context_size_be() - get BE specific size for mon pdev/soc
+ * @arch_ops: arch ops pointer
+ *
+ * Return: size in bytes for the context_type
+ */
+static inline
+qdf_size_t dp_mon_get_context_size_be(enum dp_context_type context_type)
+{
+	switch (context_type) {
+	case DP_CONTEXT_TYPE_MON_SOC:
+		return sizeof(struct dp_mon_soc);
+	case DP_CONTEXT_TYPE_MON_PDEV:
+		return sizeof(struct dp_mon_pdev);
+	default:
+		return 0;
+	}
+}
+#endif
+
+/*
+ * dp_mon_rx_print_advanced_stats () - print advanced monitor stats
+ *
+ * @soc: DP soc handle
+ * @pdev: DP pdev handle
+ *
+ * Return: void
+ */
+static inline void
+dp_mon_rx_print_advanced_stats(struct dp_soc *soc,
+			       struct dp_pdev *pdev)
+{
+	struct dp_mon_soc *mon_soc = soc->monitor_soc;
+	struct dp_mon_ops *monitor_ops;
+
+	if (!mon_soc) {
+		dp_mon_debug("mon soc is NULL");
+		return;
+	}
+
+	monitor_ops = mon_soc->mon_ops;
+	if (!monitor_ops ||
+	    !monitor_ops->mon_rx_print_advanced_stats) {
+		dp_mon_debug("callback not registered");
+		return;
+	}
+	return monitor_ops->mon_rx_print_advanced_stats(soc, pdev);
+}
 #endif /* _DP_MON_H_ */

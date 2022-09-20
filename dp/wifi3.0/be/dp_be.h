@@ -26,7 +26,9 @@
 #else
 #include <dp_peer.h>
 #endif
+#ifdef WIFI_MONITOR_SUPPORT
 #include <dp_mon.h>
+#endif
 
 enum CMEM_MEM_CLIENTS {
 	COOKIE_CONVERSION,
@@ -234,6 +236,7 @@ struct dp_ppe_vp_profile {
  * @ppe_vp_tbl: PPE VP table
  * @ppe_vp_tbl_lock: PPE VP table lock
  * @num_ppe_vp_entries : Number of PPE VP entries
+ * @ipa_bank_id: TCL bank id used by IPA
  */
 struct dp_soc_be {
 	struct dp_soc soc;
@@ -273,6 +276,9 @@ struct dp_soc_be {
 		TAILQ_HEAD(, dp_peer) * bins;
 	} mld_peer_hash;
 #endif
+#endif
+#ifdef IPA_OFFLOAD
+	int8_t ipa_bank_id;
 #endif
 };
 
@@ -356,14 +362,6 @@ void dp_initialize_arch_ops_be(struct dp_arch_ops *arch_ops);
 qdf_size_t dp_get_context_size_be(enum dp_context_type context_type);
 
 /**
- * dp_mon_get_context_size_be() - get BE specific size for mon pdev/soc
- * @arch_ops: arch ops pointer
- *
- * Return: size in bytes for the context_type
- */
-qdf_size_t dp_mon_get_context_size_be(enum dp_context_type context_type);
-
-/**
  * dp_get_be_soc_from_dp_soc() - get dp_soc_be from dp_soc
  * @soc: dp_soc pointer
  *
@@ -372,18 +370,6 @@ qdf_size_t dp_mon_get_context_size_be(enum dp_context_type context_type);
 static inline struct dp_soc_be *dp_get_be_soc_from_dp_soc(struct dp_soc *soc)
 {
 	return (struct dp_soc_be *)soc;
-}
-
-/**
- * dp_get_be_mon_soc_from_dp_mon_soc() - get dp_mon_soc_be from dp_mon_soc
- * @soc: dp_mon_soc pointer
- *
- * Return: dp_mon_soc_be pointer
- */
-static inline
-struct dp_mon_soc_be *dp_get_be_mon_soc_from_dp_mon_soc(struct dp_mon_soc *soc)
-{
-	return (struct dp_mon_soc_be *)soc;
 }
 
 #ifdef WLAN_MLO_MULTI_CHIP
@@ -520,20 +506,6 @@ struct dp_pdev_be *dp_get_be_pdev_from_dp_pdev(struct dp_pdev *pdev)
 {
 	return (struct dp_pdev_be *)pdev;
 }
-
-#ifdef QCA_MONITOR_2_0_SUPPORT
-/**
- * dp_get_be_mon_pdev_from_dp_mon_pdev() - get dp_mon_pdev_be from dp_mon_pdev
- * @pdev: dp_mon_pdev pointer
- *
- * Return: dp_mon_pdev_be pointer
- */
-static inline
-struct dp_mon_pdev_be *dp_get_be_mon_pdev_from_dp_mon_pdev(struct dp_mon_pdev *mon_pdev)
-{
-	return (struct dp_mon_pdev_be *)mon_pdev;
-}
-#endif
 
 /**
  * dp_get_be_vdev_from_dp_vdev() - get dp_vdev_be from dp_vdev

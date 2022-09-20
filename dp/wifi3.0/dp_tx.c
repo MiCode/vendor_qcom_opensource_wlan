@@ -142,27 +142,39 @@ dp_tx_desc_history_add(struct dp_soc *soc, dma_addr_t paddr,
 		       qdf_nbuf_t skb, uint32_t sw_cookie,
 		       enum dp_tx_event_type type)
 {
+	struct dp_tx_tcl_history *tx_tcl_history = &soc->tx_tcl_history;
+	struct dp_tx_comp_history *tx_comp_history = &soc->tx_comp_history;
 	struct dp_tx_desc_event *entry;
 	uint32_t idx;
-
-	if (qdf_unlikely(!soc->tx_tcl_history || !soc->tx_comp_history))
-		return;
+	uint16_t slot;
 
 	switch (type) {
 	case DP_TX_COMP_UNMAP:
 	case DP_TX_COMP_UNMAP_ERR:
 	case DP_TX_COMP_MSDU_EXT:
-		idx = dp_history_get_next_index(&soc->tx_comp_history->index,
-						DP_TX_COMP_HISTORY_SIZE);
-		entry = &soc->tx_comp_history->entry[idx];
+		if (qdf_unlikely(!tx_comp_history->allocated))
+			return;
+
+		dp_get_frag_hist_next_atomic_idx(&tx_comp_history->index, &idx,
+						 &slot,
+						 DP_TX_COMP_HIST_SLOT_SHIFT,
+						 DP_TX_COMP_HIST_PER_SLOT_MAX,
+						 DP_TX_COMP_HISTORY_SIZE);
+		entry = &tx_comp_history->entry[slot][idx];
 		break;
 	case DP_TX_DESC_MAP:
 	case DP_TX_DESC_UNMAP:
 	case DP_TX_DESC_COOKIE:
 	case DP_TX_DESC_FLUSH:
-		idx = dp_history_get_next_index(&soc->tx_tcl_history->index,
-						DP_TX_TCL_HISTORY_SIZE);
-		entry = &soc->tx_tcl_history->entry[idx];
+		if (qdf_unlikely(!tx_tcl_history->allocated))
+			return;
+
+		dp_get_frag_hist_next_atomic_idx(&tx_tcl_history->index, &idx,
+						 &slot,
+						 DP_TX_TCL_HIST_SLOT_SHIFT,
+						 DP_TX_TCL_HIST_PER_SLOT_MAX,
+						 DP_TX_TCL_HISTORY_SIZE);
+		entry = &tx_tcl_history->entry[slot][idx];
 		break;
 	default:
 		dp_info_rl("Invalid dp_tx_event_type: %d", type);
@@ -3863,11 +3875,11 @@ void dp_tx_reinject_handler(struct dp_soc *soc,
 			}
 		}
 		qdf_spin_unlock_bh(&vdev->peer_list_lock);
-	}
 
-	qdf_nbuf_unmap_nbytes_single(vdev->osdev, nbuf, QDF_DMA_TO_DEVICE,
-				     nbuf->len);
-	qdf_nbuf_free(nbuf);
+		qdf_nbuf_unmap_nbytes_single(vdev->osdev, nbuf,
+					     QDF_DMA_TO_DEVICE, nbuf->len);
+		qdf_nbuf_free(nbuf);
+	}
 
 	dp_tx_desc_release(tx_desc, tx_desc->pool_id);
 }
@@ -3959,10 +3971,39 @@ static void dp_tx_update_peer_sawf_stats(struct dp_soc *soc,
 #endif
 
 #ifdef QCA_PEER_EXT_STATS
+#ifdef WLAN_CONFIG_TX_DELAY
+static void dp_tx_compute_tid_delay(struct cdp_delay_tid_stats *stats,
+				    struct dp_tx_desc_s *tx_desc,
+				    struct hal_tx_completion_status *ts,
+				    struct dp_vdev *vdev)
+{
+	struct dp_soc *soc = vdev->pdev->soc;
+	struct cdp_delay_tx_stats  *tx_delay = &stats->tx_delay;
+	int64_t timestamp_ingress, timestamp_hw_enqueue;
+	uint32_t sw_enqueue_delay, fwhw_transmit_delay = 0;
+
+	if (!ts->valid)
+		return;
+
+	timestamp_ingress = qdf_nbuf_get_timestamp_us(tx_desc->nbuf);
+	timestamp_hw_enqueue = qdf_ktime_to_us(tx_desc->timestamp);
+
+	sw_enqueue_delay = (uint32_t)(timestamp_hw_enqueue - timestamp_ingress);
+	dp_hist_update_stats(&tx_delay->tx_swq_delay, sw_enqueue_delay);
+
+	if (soc->arch_ops.dp_tx_compute_hw_delay)
+		if (!soc->arch_ops.dp_tx_compute_hw_delay(soc, vdev, ts,
+							  &fwhw_transmit_delay))
+			dp_hist_update_stats(&tx_delay->hwtx_delay,
+					     fwhw_transmit_delay);
+}
+#else
 /*
  * dp_tx_compute_tid_delay() - Compute per TID delay
  * @stats: Per TID delay stats
  * @tx_desc: Software Tx descriptor
+ * @ts: Tx completion status
+ * @vdev: vdev
  *
  * Compute the software enqueue and hw enqueue delays and
  * update the respective histograms
@@ -3970,7 +4011,9 @@ static void dp_tx_update_peer_sawf_stats(struct dp_soc *soc,
  * Return: void
  */
 static void dp_tx_compute_tid_delay(struct cdp_delay_tid_stats *stats,
-				    struct dp_tx_desc_s *tx_desc)
+				    struct dp_tx_desc_s *tx_desc,
+				    struct hal_tx_completion_status *ts,
+				    struct dp_vdev *vdev)
 {
 	struct cdp_delay_tx_stats  *tx_delay = &stats->tx_delay;
 	int64_t current_timestamp, timestamp_ingress, timestamp_hw_enqueue;
@@ -3989,6 +4032,7 @@ static void dp_tx_compute_tid_delay(struct cdp_delay_tid_stats *stats,
 	dp_hist_update_stats(&tx_delay->tx_swq_delay, sw_enqueue_delay);
 	dp_hist_update_stats(&tx_delay->hwtx_delay, fwhw_transmit_delay);
 }
+#endif
 
 /*
  * dp_tx_update_peer_delay_stats() - Update the peer delay stats
@@ -4004,16 +4048,19 @@ static void dp_tx_compute_tid_delay(struct cdp_delay_tid_stats *stats,
  */
 static void dp_tx_update_peer_delay_stats(struct dp_txrx_peer *txrx_peer,
 					  struct dp_tx_desc_s *tx_desc,
-					  uint8_t tid, uint8_t ring_id)
+					  struct hal_tx_completion_status *ts,
+					  uint8_t ring_id)
 {
 	struct dp_pdev *pdev = txrx_peer->vdev->pdev;
 	struct dp_soc *soc = NULL;
 	struct dp_peer_delay_stats *delay_stats = NULL;
+	uint8_t tid;
 
 	soc = pdev->soc;
 	if (qdf_likely(!wlan_cfg_is_peer_ext_stats_enabled(soc->wlan_cfg_ctx)))
 		return;
 
+	tid = ts->tid;
 	delay_stats = txrx_peer->delay_stats;
 
 	qdf_assert(delay_stats);
@@ -4026,12 +4073,14 @@ static void dp_tx_update_peer_delay_stats(struct dp_txrx_peer *txrx_peer,
 		tid = CDP_MAX_DATA_TIDS - 1;
 
 	dp_tx_compute_tid_delay(&delay_stats->delay_tid_stats[tid][ring_id],
-				tx_desc);
+				tx_desc, ts, txrx_peer->vdev);
 }
 #else
-static inline void dp_tx_update_peer_delay_stats(struct dp_txrx_peer *txrx_peer,
-						 struct dp_tx_desc_s *tx_desc,
-						 uint8_t tid, uint8_t ring_id)
+static inline
+void dp_tx_update_peer_delay_stats(struct dp_txrx_peer *txrx_peer,
+				   struct dp_tx_desc_s *tx_desc,
+				   struct hal_tx_completion_status *ts,
+				   uint8_t ring_id)
 {
 }
 #endif
@@ -4167,6 +4216,20 @@ dp_update_no_ack_stats(qdf_nbuf_t nbuf, struct dp_txrx_peer *txrx_peer)
 #endif
 
 #ifndef QCA_ENHANCED_STATS_SUPPORT
+#ifdef DP_PEER_EXTENDED_API
+static inline uint8_t
+dp_tx_get_mpdu_retry_threshold(struct dp_txrx_peer *txrx_peer)
+{
+	return txrx_peer->mpdu_retry_threshold;
+}
+#else
+static inline uint8_t
+dp_tx_get_mpdu_retry_threshold(struct dp_txrx_peer *txrx_peer)
+{
+	return 0;
+}
+#endif
+
 /**
  * dp_tx_update_peer_extd_stats()- Update Tx extended path stats for peer
  *
@@ -4180,7 +4243,7 @@ dp_tx_update_peer_extd_stats(struct hal_tx_completion_status *ts,
 			     struct dp_txrx_peer *txrx_peer)
 {
 	uint8_t mcs, pkt_type, dst_mcs_idx;
-	uint8_t retry_threshold = txrx_peer->mpdu_retry_threshold;
+	uint8_t retry_threshold = dp_tx_get_mpdu_retry_threshold(txrx_peer);
 
 	mcs = ts->mcs;
 	pkt_type = ts->pkt_type;
@@ -4900,7 +4963,7 @@ void dp_tx_comp_process_tx_status(struct dp_soc *soc,
 	}
 
 	dp_tx_update_peer_stats(tx_desc, ts, txrx_peer, ring_id);
-	dp_tx_update_peer_delay_stats(txrx_peer, tx_desc, ts->tid, ring_id);
+	dp_tx_update_peer_delay_stats(txrx_peer, tx_desc, ts, ring_id);
 	dp_tx_update_peer_sawf_stats(soc, vdev, txrx_peer, tx_desc,
 				     ts, ts->tid);
 	dp_tx_send_pktlog(soc, vdev->pdev, tx_desc, nbuf, dp_status);
@@ -4931,7 +4994,7 @@ void dp_tx_update_peer_basic_stats(struct dp_txrx_peer *txrx_peer,
 				   uint32_t length, uint8_t tx_status,
 				   bool update)
 {
-	if ((!txrx_peer->hw_txrx_stats_en) || update) {
+	if (update || (!txrx_peer->hw_txrx_stats_en)) {
 		DP_PEER_STATS_FLAT_INC_PKT(txrx_peer, comp_pkt, 1, length);
 
 		if (tx_status != HAL_TX_TQM_RR_FRAME_ACKED)
@@ -4943,7 +5006,7 @@ void dp_tx_update_peer_basic_stats(struct dp_txrx_peer *txrx_peer,
 				   uint32_t length, uint8_t tx_status,
 				   bool update)
 {
-	if (!peer->hw_txrx_stats_en) {
+	if (!txrx_peer->hw_txrx_stats_en) {
 		DP_PEER_STATS_FLAT_INC_PKT(txrx_peer, comp_pkt, 1, length);
 
 		if (tx_status != HAL_TX_TQM_RR_FRAME_ACKED)

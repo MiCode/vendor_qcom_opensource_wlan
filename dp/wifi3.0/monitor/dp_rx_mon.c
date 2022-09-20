@@ -818,6 +818,7 @@ dp_ppdu_desc_user_rx_time_update(struct dp_pdev *pdev,
 {
 	uint32_t nss_ru_width_sum = 0;
 	struct dp_mon_peer *mon_peer = NULL;
+	uint8_t ac = 0;
 
 	if (!pdev || !ppdu_desc || !user || !peer)
 		return;
@@ -839,7 +840,8 @@ dp_ppdu_desc_user_rx_time_update(struct dp_pdev *pdev,
 	if (qdf_unlikely(!mon_peer))
 		return;
 
-	DP_STATS_INC(mon_peer, airtime_consumption.consumption,
+	ac = TID_TO_WME_AC(user->tid);
+	DP_STATS_INC(mon_peer, airtime_consumption[ac].consumption,
 		     user->rx_time_us);
 }
 #else

@@ -207,11 +207,15 @@ static void hif_ahb_get_soc_info_pld(struct hif_pci_softc *sc,
 {
 	struct pld_soc_info info;
 	int ret = 0;
+	struct hif_softc *scn = HIF_GET_SOFTC(sc);
 
 	ret = pld_get_soc_info(dev, &info);
 	sc->mem = info.v_addr;
 	sc->ce_sc.ol_sc.mem    = info.v_addr;
 	sc->ce_sc.ol_sc.mem_pa = info.p_addr;
+	/* dev_mem_info[0] is for CMEM */
+	scn->cmem_start = info.dev_mem_info[0].start;
+	scn->cmem_size = info.dev_mem_info[0].size;
 }
 
 int hif_ahb_configure_irq_by_ceid(struct hif_softc *scn, int ce_id)
@@ -313,7 +317,7 @@ int hif_ahb_configure_grp_irq(struct hif_softc *scn,
 
 		ret = pfrm_request_irq(scn->qdf_dev->dev,
 				       irq, hif_ext_group_interrupt_handler,
-				       IRQF_TRIGGER_RISING,
+				       IRQF_TRIGGER_RISING | IRQF_SHARED,
 				       ic_irqname[hif_ext_group->irq[j]],
 				       hif_ext_group);
 		if (ret) {
@@ -412,6 +416,10 @@ void hif_ahb_disable_bus(struct hif_softc *scn)
 			sc->mem_ce = NULL;
 			scn->mem_ce = NULL;
 		}
+		if (sc->mem_cmem) {
+			iounmap(sc->mem_cmem);
+			sc->mem_cmem = NULL;
+		}
 		mem = (void __iomem *)sc->mem;
 		if (mem) {
 			pfrm_devm_iounmap(&pdev->dev, mem);
@@ -466,8 +474,12 @@ QDF_STATUS hif_ahb_enable_bus(struct hif_softc *ol_sc,
 		return QDF_STATUS_E_FAILURE;
 	}
 
-	if (target_type == TARGET_TYPE_QCN6122) {
+	if (target_type == TARGET_TYPE_QCN6122 ||
+	    target_type == TARGET_TYPE_QCA5332) {
 		hif_ahb_get_soc_info_pld(sc, dev);
+	}
+
+	if (target_type == TARGET_TYPE_QCN6122) {
 		hif_update_irq_ops_with_pci(ol_sc);
 	} else {
 		status = pfrm_platform_get_resource(&pdev->dev,
@@ -544,6 +556,22 @@ QDF_STATUS hif_ahb_enable_bus(struct hif_softc *ol_sc,
 			return QDF_STATUS_E_IO;
 		}
 		ol_sc->mem_ce = sc->mem_ce;
+	}
+
+	/*
+	 * In QCA5332 CMEM region is outside WCSS block.
+	 * Allocate separate I/O remap to access CMEM address.
+	 */
+	if (tgt_info->target_type == TARGET_TYPE_QCA5332) {
+		struct hif_softc *scn = HIF_GET_SOFTC(sc);
+
+		sc->mem_cmem = ioremap_nocache(HOST_CMEM_ADDRESS,
+					       HOST_CMEM_SIZE);
+		if (IS_ERR(sc->mem_cmem)) {
+			hif_err("CE: ioremap failed");
+			return QDF_STATUS_E_IO;
+		}
+		ol_sc->mem_cmem = sc->mem_cmem;
 	}
 
 	hif_info("X - hif_type = 0x%x, target_type = 0x%x",

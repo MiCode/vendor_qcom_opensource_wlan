@@ -839,6 +839,10 @@ QDF_STATUS (*send_disconnect_roam_params)(wmi_unified_t wmi_handle,
 
 QDF_STATUS (*send_idle_roam_params)(wmi_unified_t wmi_handle,
 				    struct wlan_roam_idle_params *req);
+#ifdef WLAN_FEATURE_11BE_MLO
+QDF_STATUS (*send_roam_mlo_config)(wmi_unified_t wmi_handle,
+				   struct wlan_roam_mlo_config *req);
+#endif
 
 QDF_STATUS (*send_roam_preauth_status)(wmi_unified_t wmi_handle,
 				struct wmi_roam_auth_status_params *params);
@@ -3123,10 +3127,12 @@ QDF_STATUS
 QDF_STATUS (*extract_coap_buf_info)(wmi_unified_t wmi_handle, void *evt_buf,
 				    struct coap_buf_info *info);
 #endif
+#ifdef HEALTH_MON_SUPPORT
 QDF_STATUS
 (*extract_health_mon_init_done_info_event)(wmi_unified_t wmi_handle,
 					   void *evt_buf,
 					   struct wmi_health_mon_params *param);
+#endif /* HEALTH_MON_SUPPORT */
 };
 
 /* Forward declartion for psoc*/

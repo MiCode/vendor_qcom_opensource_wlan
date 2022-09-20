@@ -123,6 +123,8 @@ static const uint32_t peer_param_tlv[] = {
 	[WMI_HOST_PEER_PARAM_MU_ENABLE] = WMI_PEER_PARAM_MU_ENABLE,
 	[WMI_HOST_PEER_PARAM_OFDMA_ENABLE] = WMI_PEER_PARAM_OFDMA_ENABLE,
 	[WMI_HOST_PEER_PARAM_ENABLE_FT] = WMI_PEER_PARAM_ENABLE_FT,
+	[WMI_HOST_PEER_CHWIDTH_PUNCTURE_20MHZ_BITMAP] =
+					WMI_PEER_CHWIDTH_PUNCTURE_20MHZ_BITMAP,
 };
 
 /**
@@ -5401,7 +5403,7 @@ static QDF_STATUS send_setup_install_key_cmd_tlv(wmi_unified_t wmi_handle,
 	WMI_HOST_IF_MSG_COPY_CHAR_ARRAY((void *)key_data,
 					(const void *)key_params->key_data,
 					key_params->key_len);
-	qdf_mem_copy(&cmd->key_rsc_counter, &key_params->key_rsc_ctr,
+	qdf_mem_copy(&cmd->key_rsc_counter, &key_params->key_rsc_counter,
 		     sizeof(wmi_key_seq_counter));
 	cmd->key_len = key_params->key_len;
 
@@ -8954,6 +8956,10 @@ void wmi_copy_resource_config(wmi_resource_config *resource_cfg,
 	WMI_RSRC_CFG_HOST_SERVICE_FLAG_REG_CC_EXT_SUPPORT_SET(
 		resource_cfg->host_service_flags,
 		tgt_res_cfg->is_reg_cc_ext_event_supported);
+
+	WMI_RSRC_CFG_HOST_SERVICE_FLAG_BANG_RADAR_320M_SUPPORT_SET(
+		resource_cfg->host_service_flags,
+		tgt_res_cfg->is_host_dfs_320mhz_bangradar_supported);
 
 	WMI_RSRC_CFG_HOST_SERVICE_FLAG_LPI_SP_MODE_SUPPORT_SET(
 		resource_cfg->host_service_flags,
@@ -14995,6 +15001,42 @@ static uint16_t wmi_set_htc_tx_tag_tlv(wmi_unified_t wmi_handle,
 }
 
 #ifdef CONFIG_BAND_6GHZ
+#ifdef CONFIG_REG_CLIENT
+/**
+ * extract_ext_fcc_rules_from_wmi - extract fcc rules from WMI TLV
+ * @num_fcc_rules: Number of FCC rules
+ * @wmi_fcc_rule:  WMI FCC rules TLV
+ *
+ * Return fcc_rule_ptr
+ */
+static struct cur_fcc_rule
+*extract_ext_fcc_rules_from_wmi(uint32_t num_fcc_rules,
+		wmi_regulatory_fcc_rule_struct *wmi_fcc_rule)
+{
+	struct cur_fcc_rule *fcc_rule_ptr;
+	uint32_t count;
+
+	if (!wmi_fcc_rule)
+		return NULL;
+
+	fcc_rule_ptr = qdf_mem_malloc(num_fcc_rules *
+				      sizeof(*fcc_rule_ptr));
+	if (!fcc_rule_ptr)
+		return NULL;
+
+	for (count = 0; count < num_fcc_rules; count++) {
+		fcc_rule_ptr[count].center_freq =
+			WMI_REG_FCC_RULE_CHAN_FREQ_GET(
+					wmi_fcc_rule[count].freq_info);
+		fcc_rule_ptr[count].tx_power =
+			WMI_REG_FCC_RULE_FCC_TX_POWER_GET(
+					wmi_fcc_rule[count].freq_info);
+	}
+
+	return fcc_rule_ptr;
+}
+#endif
+
 static struct cur_reg_rule
 *create_ext_reg_rules_from_wmi(uint32_t num_reg_rules,
 		wmi_regulatory_rule_ext_struct *wmi_reg_rule)
@@ -15103,6 +15145,90 @@ static enum cc_setting_code wmi_reg_status_to_reg_status(
 }
 
 #ifdef CONFIG_BAND_6GHZ
+
+#ifdef CONFIG_REG_CLIENT
+#define MAX_NUM_FCC_RULES 2
+
+/**
+ * extract_reg_fcc_rules_tlv - Extract reg fcc rules TLV
+ * @param_buf - Pointer to WMI params TLV
+ * @ext_chan_list_event_hdr - Pointer to REG CHAN LIST CC EXT EVENT Fixed
+ *			      Params TLV
+ * @ext_wmi_reg_rule - Pointer to REG CHAN LIST CC EXT EVENT Reg Rules TLV
+ * @ext_wmi_chan_priority - Pointer to REG CHAN LIST CC EXT EVENT Chan
+ *			    Priority TLV
+ * @evt_buf - Pointer to REG CHAN LIST CC EXT EVENT event buffer
+ * @reg_info - Pointer to Regulatory Info
+ * @len - Length of REG CHAN LIST CC EXT EVENT buffer
+ *
+ * Return - QDF_STATUS
+ */
+static QDF_STATUS extract_reg_fcc_rules_tlv(
+	WMI_REG_CHAN_LIST_CC_EXT_EVENTID_param_tlvs *param_buf,
+	wmi_reg_chan_list_cc_event_ext_fixed_param *ext_chan_list_event_hdr,
+	wmi_regulatory_rule_ext_struct *ext_wmi_reg_rule,
+	wmi_regulatory_chan_priority_struct *ext_wmi_chan_priority,
+	uint8_t *evt_buf,
+	struct cur_regulatory_info *reg_info,
+	uint32_t len)
+{
+	int i;
+	wmi_regulatory_fcc_rule_struct *ext_wmi_fcc_rule;
+
+	if (!param_buf) {
+		wmi_err("invalid channel list event buf");
+		return QDF_STATUS_E_INVAL;
+	}
+
+	reg_info->num_fcc_rules = 0;
+	if (param_buf->reg_fcc_rule) {
+		if (param_buf->num_reg_fcc_rule > MAX_NUM_FCC_RULES) {
+			wmi_err("Number of fcc rules is greater than MAX_NUM_FCC_RULES");
+			return QDF_STATUS_E_INVAL;
+		}
+
+		ext_wmi_fcc_rule =
+			(wmi_regulatory_fcc_rule_struct *)
+			((uint8_t *)ext_chan_list_event_hdr +
+			sizeof(wmi_reg_chan_list_cc_event_ext_fixed_param) +
+			WMI_TLV_HDR_SIZE +
+			sizeof(wmi_regulatory_rule_ext_struct) *
+			param_buf->num_reg_rule_array +
+			WMI_TLV_HDR_SIZE +
+			sizeof(wmi_regulatory_chan_priority_struct) *
+			param_buf->num_reg_chan_priority +
+			WMI_TLV_HDR_SIZE);
+
+		reg_info->fcc_rules_ptr = extract_ext_fcc_rules_from_wmi(
+						param_buf->num_reg_fcc_rule,
+						ext_wmi_fcc_rule);
+
+		reg_info->num_fcc_rules = param_buf->num_reg_fcc_rule;
+	}
+
+	if (reg_info->fcc_rules_ptr) {
+		for (i = 0; i < reg_info->num_fcc_rules; i++) {
+			wmi_debug("FCC rule %d center_freq %d tx_power %d",
+				  i, reg_info->fcc_rules_ptr[i].center_freq,
+				  reg_info->fcc_rules_ptr[i].tx_power);
+		}
+	}
+	return QDF_STATUS_SUCCESS;
+}
+#else
+static QDF_STATUS extract_reg_fcc_rules_tlv(
+	WMI_REG_CHAN_LIST_CC_EXT_EVENTID_param_tlvs *param_buf,
+	wmi_reg_chan_list_cc_event_ext_fixed_param *ext_chan_list_event_hdr,
+	wmi_regulatory_rule_ext_struct *ext_wmi_reg_rule,
+	wmi_regulatory_chan_priority_struct *ext_wmi_chan_priority,
+	uint8_t *evt_buf,
+	struct cur_regulatory_info *reg_info,
+	uint32_t len)
+{
+	return QDF_STATUS_SUCCESS;
+}
+#endif
+
 static QDF_STATUS extract_reg_chan_list_ext_update_event_tlv(
 	wmi_unified_t wmi_handle, uint8_t *evt_buf,
 	struct cur_regulatory_info *reg_info, uint32_t len)
@@ -15116,6 +15242,7 @@ static QDF_STATUS extract_reg_chan_list_ext_update_event_tlv(
 	uint32_t num_6g_reg_rules_ap[REG_CURRENT_MAX_AP_TYPE];
 	uint32_t *num_6g_reg_rules_client[REG_CURRENT_MAX_AP_TYPE];
 	uint32_t total_reg_rules = 0;
+	QDF_STATUS status;
 
 	param_buf = (WMI_REG_CHAN_LIST_CC_EXT_EVENTID_param_tlvs *)evt_buf;
 	if (!param_buf) {
@@ -15424,6 +15551,12 @@ static QDF_STATUS extract_reg_chan_list_ext_update_event_tlv(
 
 	reg_info->domain_code_6g_super_id =
 		ext_chan_list_event_hdr->domain_code_6g_super_id;
+
+	status = extract_reg_fcc_rules_tlv(param_buf, ext_chan_list_event_hdr,
+				  ext_wmi_reg_rule, ext_wmi_chan_priority,
+				  evt_buf, reg_info, len);
+	if (status != QDF_STATUS_SUCCESS)
+		return status;
 
 	wmi_debug("processed regulatory extended channel list");
 
@@ -19226,6 +19359,7 @@ extract_pktlog_decode_info_event_tlv(wmi_unified_t wmi_handle, void *evt_buf,
 	return QDF_STATUS_SUCCESS;
 }
 
+#ifdef HEALTH_MON_SUPPORT
 /**
  * extract_health_mon_init_done_info_event_tlv() - Extract health monitor from
  * fw
@@ -19255,6 +19389,7 @@ extract_health_mon_init_done_info_event_tlv(wmi_unified_t wmi_handle,
 
 	return QDF_STATUS_SUCCESS;
 }
+#endif /* HEALTH_MON_SUPPORT */
 
 /**
  * extract_pdev_telemetry_stats_tlv - extract pdev telemetry stats
@@ -19756,8 +19891,10 @@ struct wmi_ops tlv_ops =  {
 #ifdef FEATURE_SET
 	.feature_set_cmd_send = feature_set_cmd_send_tlv,
 #endif
+#ifdef HEALTH_MON_SUPPORT
 	.extract_health_mon_init_done_info_event =
 		extract_health_mon_init_done_info_event_tlv,
+#endif /* HEALTH_MON_SUPPORT */
 	.send_multiple_vdev_param_cmd = send_multiple_vdev_param_cmd_tlv,
 };
 
@@ -20249,8 +20386,10 @@ static void populate_tlv_events_id(uint32_t *event_ids)
 	event_ids[wmi_wow_coap_buf_info_eventid] =
 		WMI_WOW_COAP_BUF_INFO_EVENTID;
 #endif
+#ifdef HEALTH_MON_SUPPORT
 	event_ids[wmi_extract_health_mon_init_done_info_eventid] =
 		WMI_HEALTH_MON_INIT_DONE_EVENTID;
+#endif /* HEALTH_MON_SUPPORT */
 }
 
 #ifdef WLAN_FEATURE_LINK_LAYER_STATS
@@ -20671,6 +20810,8 @@ static void populate_tlv_service(uint32_t *wmi_service)
 			WMI_SERVICE_NDI_TXBF_SUPPORT;
 	wmi_service[wmi_service_reg_cc_ext_event_support] =
 			WMI_SERVICE_REG_CC_EXT_EVENT_SUPPORT;
+	wmi_service[wmi_service_bang_radar_320_support] =
+			WMI_SERVICE_BANG_RADAR_320_SUPPORT;
 #if defined(CONFIG_BAND_6GHZ)
 	wmi_service[wmi_service_lower_6g_edge_ch_supp] =
 			WMI_SERVICE_ENABLE_LOWER_6G_EDGE_CH_SUPP;

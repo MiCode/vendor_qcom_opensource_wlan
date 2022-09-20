@@ -22,6 +22,7 @@
 #include <cdp_txrx_hist_struct.h>
 #include "dp_hist.h"
 
+#ifndef WLAN_CONFIG_TX_DELAY
 /*
  * dp_hist_sw_enq_dbucket: Sofware enqueue delay bucket in ms
  * @index_0 = 0_1 ms
@@ -59,6 +60,46 @@ static uint16_t dp_hist_sw_enq_dbucket[CDP_HIST_BUCKET_MAX] = {
  */
 static uint16_t dp_hist_fw2hw_dbucket[CDP_HIST_BUCKET_MAX] = {
 	0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 250, 500};
+#else
+/*
+ * dp_hist_sw_enq_dbucket: Sofware enqueue delay bucket in us
+ * @index_0 = 0_250 us
+ * @index_1 = 250_500 us
+ * @index_2 = 500_750 us
+ * @index_3 = 750_1000 us
+ * @index_4 = 1000_1500 us
+ * @index_5 = 1500_2000 us
+ * @index_6 = 2000_2500 us
+ * @index_7 = 2500_5000 us
+ * @index_8 = 5000_6000 us
+ * @index_9 = 6000_7000 us
+ * @index_10 = 7000_8000 us
+ * @index_11 = 8000_9000 us
+ * @index_12 = 9000+ us
+ */
+static uint16_t dp_hist_sw_enq_dbucket[CDP_HIST_BUCKET_MAX] = {
+	0, 250, 500, 750, 1000, 1500, 2000, 2500, 5000, 6000, 7000, 8000, 9000};
+
+/*
+ * cdp_hist_fw2hw_dbucket: HW enqueue to Completion Delay in us
+ * @index_0 = 0_250 us
+ * @index_1 = 250_500 us
+ * @index_2 = 500_750 us
+ * @index_3 = 750_1000 us
+ * @index_4 = 1000_1500 us
+ * @index_5 = 1500_2000 us
+ * @index_6 = 2000_2500 us
+ * @index_7 = 2500_5000 us
+ * @index_8 = 5000_6000 us
+ * @index_9 = 6000_7000 us
+ * @index_10 = 7000_8000 us
+ * @index_11 = 8000_9000 us
+ * @index_12 = 9000+ us
+ */
+
+static uint16_t dp_hist_fw2hw_dbucket[CDP_HIST_BUCKET_MAX] = {
+	0, 250, 500, 750, 1000, 1500, 2000, 2500, 5000, 6000, 7000, 8000, 9000};
+#endif
 
 /*
  * dp_hist_reap2stack_bucket: Reap to stack bucket

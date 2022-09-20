@@ -648,6 +648,59 @@ static inline void qdf_mempool_free(qdf_device_t osdev, qdf_mempool_t pool,
 	__qdf_mempool_free(osdev, pool, buf);
 }
 
+/**
+ * qdf_kmem_cache_create() - OS abstraction for cache creation
+ *
+ * @cache_name: Cache name
+ * @size: Size of the object to be created
+ *
+ * Return: Cache address on successful creation, else NULL
+ */
+static inline qdf_kmem_cache_t
+qdf_kmem_cache_create(const char *cache_name,
+		      qdf_size_t size)
+{
+	return __qdf_kmem_cache_create(cache_name, size);
+}
+
+/**
+ * qdf_kmem_cache_destroy() - OS abstraction for cache destructin
+ *
+ * @cache: Cache pointer
+ *
+ * Return: void
+ */
+static inline void qdf_kmem_cache_destroy(qdf_kmem_cache_t cache)
+{
+	__qdf_kmem_cache_destroy(cache);
+}
+
+/**
+ * qdf_kmem_cache_alloc() - Function to allocation object from a cache
+ *
+ * @cache: Cache address
+ *
+ * Return: Object from cache
+ *
+ */
+static inline void *qdf_kmem_cache_alloc(qdf_kmem_cache_t cache)
+{
+	return __qdf_kmem_cache_alloc(cache);
+}
+
+/**
+ * qdf_kmem_cache_free() - Function to free cache object
+ *
+ * @cache: Cache address
+ * @object: Object to be returned to cache
+ *
+ * Return: void
+ */
+static inline void qdf_kmem_cache_free(qdf_kmem_cache_t cache, void *node)
+{
+	__qdf_kmem_cache_free(cache, node);
+}
+
 void qdf_mem_dma_sync_single_for_device(qdf_device_t osdev,
 					qdf_dma_addr_t bus_addr,
 					qdf_size_t size,

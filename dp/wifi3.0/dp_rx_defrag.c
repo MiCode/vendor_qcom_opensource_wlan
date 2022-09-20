@@ -1336,9 +1336,8 @@ static QDF_STATUS dp_rx_defrag_reo_reinject(struct dp_txrx_peer *txrx_peer,
 		return QDF_STATUS_E_FAILURE;
 	}
 
-	dp_ipa_handle_rx_buf_smmu_mapping(soc, head,
-					  rx_desc_pool->buf_size,
-					  true);
+	dp_ipa_handle_rx_buf_smmu_mapping(soc, head, rx_desc_pool->buf_size,
+					  true, __func__, __LINE__);
 
 	/*
 	 * As part of rx frag handler bufffer was unmapped and rx desc

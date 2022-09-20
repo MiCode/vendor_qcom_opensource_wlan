@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -52,4 +53,38 @@ void dp_service_mon_rings(struct  dp_soc *soc, uint32_t quota);
 uint32_t dp_mon_drop_packets_for_mac(struct dp_pdev *pdev, uint32_t mac_id,
 				     uint32_t quota);
 
+/**
+ * struct dp_mon_soc_li - Extended DP mon soc for LI targets
+ * @mon_soc: dp_mon_soc structure
+ */
+struct dp_mon_soc_li {
+	struct dp_mon_soc mon_soc;
+};
+
+/**
+ * struct dp_mon_pdev_li - Extended DP mon pdev for LI targets
+ * @mon_pdev: dp_mon_pdev structure
+ */
+struct dp_mon_pdev_li {
+	struct dp_mon_pdev mon_pdev;
+};
+
+/**
+ * dp_mon_get_context_size_li() - get LI specific size for mon pdev/soc
+ * @arch_ops: arch ops pointer
+ *
+ * Return: size in bytes for the context_type
+ */
+static inline
+qdf_size_t dp_mon_get_context_size_li(enum dp_context_type context_type)
+{
+	switch (context_type) {
+	case DP_CONTEXT_TYPE_MON_PDEV:
+		return sizeof(struct dp_mon_pdev_li);
+	case DP_CONTEXT_TYPE_MON_SOC:
+		return sizeof(struct dp_mon_soc_li);
+	default:
+		return 0;
+	}
+}
 #endif /* _DP_MON_1_0_H_ */

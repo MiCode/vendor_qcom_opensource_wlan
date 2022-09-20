@@ -915,6 +915,62 @@ ring_access_fail:
 	return status;
 }
 
+#ifdef IPA_OFFLOAD
+static void
+dp_tx_get_ipa_bank_config(struct dp_soc_be *be_soc,
+			  union hal_tx_bank_config *bank_config)
+{
+	bank_config->epd = 0;
+	bank_config->encap_type = wlan_cfg_pkt_type(be_soc->soc.wlan_cfg_ctx);
+	bank_config->encrypt_type = 0;
+
+	bank_config->src_buffer_swap = 0;
+	bank_config->link_meta_swap = 0;
+
+	bank_config->index_lookup_enable = 0;
+	bank_config->mcast_pkt_ctrl = HAL_TX_MCAST_CTRL_FW_EXCEPTION;
+	bank_config->addrx_en = 1;
+	bank_config->addry_en = 1;
+
+	bank_config->mesh_enable = 0;
+	bank_config->dscp_tid_map_id = 0;
+	bank_config->vdev_id_check_en = 0;
+	bank_config->pmac_id = 0;
+}
+
+static void dp_tx_init_ipa_bank_profile(struct dp_soc_be *be_soc)
+{
+	union hal_tx_bank_config ipa_config = {0};
+	int bid;
+
+	if (!wlan_cfg_is_ipa_enabled(be_soc->soc.wlan_cfg_ctx)) {
+		be_soc->ipa_bank_id = DP_BE_INVALID_BANK_ID;
+		return;
+	}
+
+	dp_tx_get_ipa_bank_config(be_soc, &ipa_config);
+
+	/* Let IPA use last HOST owned bank */
+	bid = be_soc->num_bank_profiles - 1;
+
+	be_soc->bank_profiles[bid].is_configured = true;
+	be_soc->bank_profiles[bid].bank_config.val = ipa_config.val;
+	hal_tx_populate_bank_register(be_soc->soc.hal_soc,
+				      &be_soc->bank_profiles[bid].bank_config,
+				      bid);
+	qdf_atomic_inc(&be_soc->bank_profiles[bid].ref_count);
+
+	dp_info("IPA bank at slot %d config:0x%x", bid,
+		be_soc->bank_profiles[bid].bank_config.val);
+
+	be_soc->ipa_bank_id = bid;
+}
+#else /* !IPA_OFFLOAD */
+static inline void dp_tx_init_ipa_bank_profile(struct dp_soc_be *be_soc)
+{
+}
+#endif /* IPA_OFFLOAD */
+
 QDF_STATUS dp_tx_init_bank_profiles(struct dp_soc_be *be_soc)
 {
 	int i, num_tcl_banks;
@@ -938,6 +994,9 @@ QDF_STATUS dp_tx_init_bank_profiles(struct dp_soc_be *be_soc)
 		qdf_atomic_init(&be_soc->bank_profiles[i].ref_count);
 	}
 	dp_info("initialized %u bank profiles", be_soc->num_bank_profiles);
+
+	dp_tx_init_ipa_bank_profile(be_soc);
+
 	return QDF_STATUS_SUCCESS;
 }
 

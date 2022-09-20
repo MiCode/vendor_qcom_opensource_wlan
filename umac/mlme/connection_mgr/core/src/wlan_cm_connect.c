@@ -926,8 +926,12 @@ static inline void cm_update_advance_filter(struct wlan_objmgr_pdev *pdev,
 		wlan_mlme_adaptive_11r_enabled(psoc);
 	if (wlan_vdev_mlme_get_opmode(cm_ctx->vdev) != QDF_STA_MODE)
 		return;
-
-	wlan_cm_dual_sta_roam_update_connect_channels(psoc, filter);
+	/* For link vdev, we don't filter any channels.
+	 * Dual STA mode, one link can be disabled in post connection
+	 * if needed.
+	 */
+	if (!cm_req->req.is_non_assoc_link)
+		wlan_cm_dual_sta_roam_update_connect_channels(psoc, filter);
 	filter->dot11mode = cm_req->req.dot11mode_filter;
 	cm_update_fils_scan_filter(filter, cm_req);
 }

@@ -466,6 +466,12 @@ static int init_deinit_service_ext2_ready_event_handler(ol_scn_t scn_handle,
 					     WLAN_SOC_EXT_EVENT_SUPPORTED);
 	}
 
+	if (wmi_service_enabled(wmi_handle,
+				wmi_service_bang_radar_320_support)) {
+		info->wlan_res_cfg.is_host_dfs_320mhz_bangradar_supported =
+									   true;
+	}
+
 	/* dbr_ring_caps could have already come as part of EXT event */
 	if (info->service_ext2_param.num_dbr_ring_caps) {
 		err_code = init_deinit_populate_dbr_ring_cap_ext2(psoc,
@@ -954,6 +960,7 @@ exit:
 	return 0;
 }
 
+#ifdef HEALTH_MON_SUPPORT
 static int init_deinit_health_mon_event_handler(ol_scn_t scn_handle,
 						uint8_t *event,
 						uint32_t data_len)
@@ -989,6 +996,7 @@ static int init_deinit_health_mon_event_handler(ol_scn_t scn_handle,
 
 	return 0;
 }
+#endif /* HEALTH_MON_SUPPORT */
 
 #if defined(WLAN_FEATURE_11BE_MLO) && defined(WLAN_MLO_MULTI_CHIP)
 static void init_deinit_mlo_setup_done_event(struct wlan_objmgr_psoc *psoc)
@@ -1153,12 +1161,13 @@ QDF_STATUS init_deinit_register_tgt_psoc_ev_handlers(
 				WMI_RX_WORK_CTX);
 	retval = init_deinit_register_mlo_ev_handlers(wmi_handle);
 
+#ifdef HEALTH_MON_SUPPORT
 	retval = wmi_unified_register_event_handler(
 				wmi_handle,
 				wmi_extract_health_mon_init_done_info_eventid,
 				init_deinit_health_mon_event_handler,
 				WMI_RX_WORK_CTX);
-
+#endif /* HEALTH_MON_SUPPORT */
 
 	return retval;
 }

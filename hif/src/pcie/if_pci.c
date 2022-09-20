@@ -3992,6 +3992,7 @@ int hif_force_wake_request(struct hif_opaque_softc *hif_handle)
 	uint32_t timeout, value;
 	struct hif_softc *scn = (struct hif_softc *)hif_handle;
 	struct hif_pci_softc *pci_scn = HIF_GET_PCI_SOFTC(scn);
+	int ret, status = 0;
 
 	/* Prevent runtime PM or trigger resume firstly */
 	if (hif_rtpm_get(HIF_RTPM_GET_SYNC, HIF_RTPM_ID_FORCE_WAKE)) {
@@ -4008,7 +4009,8 @@ int hif_force_wake_request(struct hif_opaque_softc *hif_handle)
 	if (pld_force_wake_request_sync(scn->qdf_dev->dev, timeout)) {
 		hif_err("force wake request send failed");
 		HIF_STATS_INC(pci_scn, mhi_force_wake_failure, 1);
-		return -EINVAL;
+		status = -EINVAL;
+		goto release_rtpm_ref;
 	}
 
 	/* If device's M1 state-change event races here, it can be ignored,
@@ -4040,11 +4042,22 @@ int hif_force_wake_request(struct hif_opaque_softc *hif_handle)
 		hif_err("force wake handshake failed, reg value = 0x%x",
 			value);
 		HIF_STATS_INC(pci_scn, soc_force_wake_failure, 1);
-		return -ETIMEDOUT;
+		status = -ETIMEDOUT;
+		goto release_rtpm_ref;
 	}
 
 	HIF_STATS_INC(pci_scn, soc_force_wake_success, 1);
 	return 0;
+
+release_rtpm_ref:
+	/* Release runtime PM force wake */
+	ret = hif_rtpm_put(HIF_RTPM_PUT_ASYNC, HIF_RTPM_ID_FORCE_WAKE);
+	if (ret) {
+		hif_err("runtime pm put failure: %d", ret);
+		return ret;
+	}
+
+	return status;
 }
 
 int hif_force_wake_release(struct hif_opaque_softc *hif_handle)

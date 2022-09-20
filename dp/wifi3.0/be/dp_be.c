@@ -23,8 +23,11 @@
 #include "dp_be.h"
 #include "dp_be_tx.h"
 #include "dp_be_rx.h"
+#ifdef WIFI_MONITOR_SUPPORT
 #if !defined(DISABLE_MON_CONFIG) && defined(QCA_MONITOR_2_0_SUPPORT)
 #include "dp_mon_2.0.h"
+#endif
+#include "dp_mon.h"
 #endif
 #include <hal_be_api.h>
 
@@ -88,32 +91,6 @@ qdf_size_t dp_get_context_size_be(enum dp_context_type context_type)
 		return 0;
 	}
 }
-
-#if !defined(DISABLE_MON_CONFIG) && defined(QCA_MONITOR_2_0_SUPPORT)
-qdf_size_t dp_mon_get_context_size_be(enum dp_context_type context_type)
-{
-	switch (context_type) {
-	case DP_CONTEXT_TYPE_MON_SOC:
-		return sizeof(struct dp_mon_soc_be);
-	case DP_CONTEXT_TYPE_MON_PDEV:
-		return sizeof(struct dp_mon_pdev_be);
-	default:
-		return 0;
-	}
-}
-#else
-qdf_size_t dp_mon_get_context_size_be(enum dp_context_type context_type)
-{
-	switch (context_type) {
-	case DP_CONTEXT_TYPE_MON_SOC:
-		return sizeof(struct dp_mon_soc);
-	case DP_CONTEXT_TYPE_MON_PDEV:
-		return sizeof(struct dp_mon_pdev);
-	default:
-		return 0;
-	}
-}
-#endif
 
 #ifdef DP_FEATURE_HW_COOKIE_CONVERSION
 #if defined(WLAN_MAX_PDEVS) && (WLAN_MAX_PDEVS == 1)
@@ -1952,6 +1929,24 @@ static bool dp_reo_remap_config_be(struct dp_soc *soc,
 }
 #endif
 
+#ifdef IPA_OFFLOAD
+static int8_t dp_ipa_get_bank_id_be(struct dp_soc *soc)
+{
+	struct dp_soc_be *be_soc = dp_get_be_soc_from_dp_soc(soc);
+
+	return be_soc->ipa_bank_id;
+}
+
+static inline void dp_initialize_arch_ops_be_ipa(struct dp_arch_ops *arch_ops)
+{
+	arch_ops->ipa_get_bank_id = dp_ipa_get_bank_id_be;
+}
+#else /* !IPA_OFFLOAD */
+static inline void dp_initialize_arch_ops_be_ipa(struct dp_arch_ops *arch_ops)
+{
+}
+#endif /* IPA_OFFLOAD */
+
 void dp_initialize_arch_ops_be(struct dp_arch_ops *arch_ops)
 {
 #ifndef QCA_HOST_MODE_WIFI_DISABLED
@@ -1971,7 +1966,9 @@ void dp_initialize_arch_ops_be(struct dp_arch_ops *arch_ops)
 	arch_ops->dp_tx_compute_hw_delay = dp_tx_compute_tx_delay_be;
 #endif
 	arch_ops->txrx_get_context_size = dp_get_context_size_be;
+#ifdef WIFI_MONITOR_SUPPORT
 	arch_ops->txrx_get_mon_context_size = dp_mon_get_context_size_be;
+#endif
 	arch_ops->dp_rx_desc_cookie_2_va =
 			dp_rx_desc_cookie_2_va_be;
 	arch_ops->dp_rx_intrabss_handle_nawds = dp_rx_intrabss_handle_nawds_be;
@@ -2012,4 +2009,5 @@ void dp_initialize_arch_ops_be(struct dp_arch_ops *arch_ops)
 	arch_ops->print_mlo_ast_stats = dp_print_mlo_ast_stats_be;
 	arch_ops->peer_get_reo_hash = dp_peer_get_reo_hash_be;
 	arch_ops->reo_remap_config = dp_reo_remap_config_be;
+	dp_initialize_arch_ops_be_ipa(arch_ops);
 }

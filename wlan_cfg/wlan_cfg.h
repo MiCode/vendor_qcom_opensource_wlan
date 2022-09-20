@@ -296,6 +296,7 @@ struct wlan_cfg_dp_soc_ctxt {
 	int int_timer_threshold_other;
 	int int_timer_threshold_mon;
 	int tx_ring_size;
+	int time_control_bp;
 	int tx_comp_ring_size;
 	int tx_comp_ring_size_nss;
 	uint8_t int_tx_ring_mask[WLAN_CFG_INT_NUM_CONTEXTS];
@@ -474,6 +475,8 @@ struct wlan_cfg_dp_pdev_ctxt {
  * @num_reo_exception_ring_entries: num of rx exception ring entries
  * @num_tx_desc: num of tx descriptors
  * @num_tx_ext_desc: num of tx ext descriptors
+ * @num_reo_dst_ring_entries: Number of entries in REO destination ring
+ * @num_rxdma_buf_ring_entries: Number of entries in rxdma buf ring
  */
 struct wlan_dp_prealloc_cfg {
 	int num_tx_ring_entries;
@@ -483,6 +486,8 @@ struct wlan_dp_prealloc_cfg {
 	int num_reo_exception_ring_entries;
 	int num_tx_desc;
 	int num_tx_ext_desc;
+	int num_reo_dst_ring_entries;
+	int num_rxdma_buf_ring_entries;
 };
 
 /**
@@ -1357,6 +1362,14 @@ int wlan_cfg_get_p2p_checksum_offload(struct wlan_cfg_dp_soc_ctxt *cfg);
  * Return: Tx Ring Size
  */
 int wlan_cfg_tx_ring_size(struct wlan_cfg_dp_soc_ctxt *cfg);
+
+/*
+ * wlan_cfg_time_control_bp - Get time for interval in bp prints
+ * @wlan_cfg_soc_ctx
+ *
+ * Return: interval time
+ */
+int wlan_cfg_time_control_bp(struct wlan_cfg_dp_soc_ctxt *cfg);
 
 /*
  * wlan_cfg_tx_comp_ring_size - Get Tx completion ring size (WBM Ring)

@@ -208,7 +208,7 @@ QDF_STATUS target_if_crypto_set_key(struct wlan_objmgr_vdev *vdev,
 		pairwise = true;
 		params.key_flags |= PAIRWISE_USAGE;
 	}
-	qdf_mem_copy(&params.key_rsc_ctr,
+	qdf_mem_copy(&params.key_rsc_counter,
 		     &req->keyrsc[0], sizeof(uint64_t));
 
 	target_if_debug("key_type %d, mac: %02x:%02x:%02x:%02x:%02x:%02x",
@@ -265,7 +265,7 @@ QDF_STATUS target_if_crypto_set_key(struct wlan_objmgr_vdev *vdev,
 	params.key_len = req->keylen;
 
 	/* Set PN check & security type in data path */
-	qdf_mem_copy(&pn[0], &params.key_rsc_ctr, sizeof(uint64_t));
+	qdf_mem_copy(&pn[0], &params.key_rsc_counter, sizeof(uint64_t));
 
 	if (peer_type == WLAN_PEER_RTT_PASN)
 		goto send_install_key;
@@ -285,7 +285,7 @@ send_install_key:
 	target_if_debug("peer mac "QDF_MAC_ADDR_FMT,
 			QDF_MAC_ADDR_REF(params.peer_mac));
 	QDF_TRACE_HEX_DUMP(QDF_MODULE_ID_CRYPTO, QDF_TRACE_LEVEL_DEBUG,
-			   &params.key_rsc_ctr, sizeof(uint64_t));
+			   &params.key_rsc_counter, sizeof(uint64_t));
 	status = wmi_unified_setup_install_key_cmd(pdev_wmi_handle, &params);
 
 	/* Zero-out local key variables */

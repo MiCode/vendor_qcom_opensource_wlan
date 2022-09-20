@@ -605,6 +605,13 @@ void scheduler_mc_timer_callback(qdf_mc_timer_t *timer)
 	if (!timer)
 		return;
 
+	/*
+	 * Save the jiffies value in a per-timer context in qdf_mc_timer_t.
+	 * It will help the debugger to know the exact time at which the host
+	 * stops/expiry of the QDF timer.
+	 */
+	timer->timer_end_jiffies = jiffies;
+
 	qdf_spin_lock_irqsave(&timer->platform_info.spinlock);
 
 	switch (timer->state) {

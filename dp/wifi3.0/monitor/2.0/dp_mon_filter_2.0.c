@@ -2891,7 +2891,7 @@ QDF_STATUS dp_tx_mon_filter_update_2_0(struct dp_pdev *pdev)
 
 QDF_STATUS dp_rx_mon_filter_update_2_0(struct dp_pdev *pdev)
 {
-	struct dp_soc *soc = pdev->soc;
+	struct dp_soc *soc;
 	struct dp_mon_filter_be filter = {0};
 	struct htt_rx_ring_tlv_filter *rx_tlv_filter;
 	enum dp_mon_filter_srng_type srng_type =
@@ -2901,6 +2901,7 @@ QDF_STATUS dp_rx_mon_filter_update_2_0(struct dp_pdev *pdev)
 		dp_mon_filter_err("pdev Context is null");
 		return QDF_STATUS_E_FAILURE;
 	}
+	soc = pdev->soc;
 
 	rx_tlv_filter = &filter.rx_tlv_filter.tlv_filter;
 	dp_rx_mon_filter_h2t_setup(soc, pdev, srng_type, &filter.rx_tlv_filter);

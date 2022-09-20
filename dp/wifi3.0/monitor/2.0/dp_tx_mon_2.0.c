@@ -580,12 +580,17 @@ void dp_print_pdev_tx_monitor_stats_2_0(struct dp_pdev *pdev)
 QDF_STATUS
 dp_config_enh_tx_monitor_2_0(struct dp_pdev *pdev, uint8_t val)
 {
+	struct wlan_cfg_dp_soc_ctxt *soc_cfg_ctx;
 	struct dp_mon_pdev *mon_pdev = pdev->monitor_pdev;
 	struct dp_mon_pdev_be *mon_pdev_be =
 			dp_get_be_mon_pdev_from_dp_mon_pdev(mon_pdev);
 	struct dp_pdev_tx_monitor_be *tx_mon_be =
 			&mon_pdev_be->tx_monitor_be;
+	struct dp_soc *soc = pdev->soc;
+	uint16_t num_of_buffers;
+	QDF_STATUS status;
 
+	soc_cfg_ctx = soc->wlan_cfg_ctx;
 	switch (val) {
 	case TX_MON_BE_DISABLE:
 	{
@@ -596,6 +601,13 @@ dp_config_enh_tx_monitor_2_0(struct dp_pdev *pdev, uint8_t val)
 	}
 	case TX_MON_BE_FULL_CAPTURE:
 	{
+		num_of_buffers = wlan_cfg_get_dp_soc_tx_mon_buf_ring_size(soc_cfg_ctx);
+		status = dp_vdev_set_monitor_mode_buf_rings_tx_2_0(pdev,
+								   num_of_buffers);
+		if (status != QDF_STATUS_SUCCESS) {
+			dp_mon_err("Tx monitor buffer allocation failed");
+			return status;
+		}
 		qdf_mem_zero(&tx_mon_be->stats,
 			     sizeof(struct dp_tx_monitor_drop_stats));
 		tx_mon_be->last_tsft = 0;
@@ -607,6 +619,12 @@ dp_config_enh_tx_monitor_2_0(struct dp_pdev *pdev, uint8_t val)
 	}
 	case TX_MON_BE_PEER_FILTER:
 	{
+		status = dp_vdev_set_monitor_mode_buf_rings_tx_2_0(pdev,
+								   DP_MON_RING_FILL_LEVEL_DEFAULT);
+		if (status != QDF_STATUS_SUCCESS) {
+			dp_mon_err("Tx monitor buffer allocation failed");
+			return status;
+		}
 		tx_mon_be->mode = TX_MON_BE_PEER_FILTER;
 		mon_pdev_be->tx_mon_mode = 2;
 		mon_pdev_be->tx_mon_filter_length = DMA_LENGTH_256B;
@@ -1189,12 +1207,17 @@ void dp_tx_ppdu_stats_detach_2_0(struct dp_pdev *pdev)
 QDF_STATUS
 dp_config_enh_tx_core_monitor_2_0(struct dp_pdev *pdev, uint8_t val)
 {
+	struct wlan_cfg_dp_soc_ctxt *soc_cfg_ctx;
 	struct dp_mon_pdev *mon_pdev = pdev->monitor_pdev;
 	struct dp_mon_pdev_be *mon_pdev_be =
 			dp_get_be_mon_pdev_from_dp_mon_pdev(mon_pdev);
 	struct dp_pdev_tx_monitor_be *tx_mon_be =
 			&mon_pdev_be->tx_monitor_be;
+	struct dp_soc *soc = pdev->soc;
+	uint16_t num_of_buffers;
+	QDF_STATUS status;
 
+	soc_cfg_ctx = soc->wlan_cfg_ctx;
 	switch (val) {
 	case TX_MON_BE_FRM_WRK_DISABLE:
 	{
@@ -1205,6 +1228,13 @@ dp_config_enh_tx_core_monitor_2_0(struct dp_pdev *pdev, uint8_t val)
 	}
 	case TX_MON_BE_FRM_WRK_FULL_CAPTURE:
 	{
+		num_of_buffers = wlan_cfg_get_dp_soc_tx_mon_buf_ring_size(soc_cfg_ctx);
+		status = dp_vdev_set_monitor_mode_buf_rings_tx_2_0(pdev,
+								   num_of_buffers);
+		if (status != QDF_STATUS_SUCCESS) {
+			dp_mon_err("Tx monitor buffer allocation failed");
+			return status;
+		}
 		tx_mon_be->mode = val;
 		qdf_mem_zero(&tx_mon_be->stats,
 			     sizeof(struct dp_tx_monitor_drop_stats));
@@ -1215,6 +1245,12 @@ dp_config_enh_tx_core_monitor_2_0(struct dp_pdev *pdev, uint8_t val)
 	}
 	case TX_MON_BE_FRM_WRK_128B_CAPTURE:
 	{
+		status = dp_vdev_set_monitor_mode_buf_rings_tx_2_0(pdev,
+								   DP_MON_RING_FILL_LEVEL_DEFAULT);
+		if (status != QDF_STATUS_SUCCESS) {
+			dp_mon_err("Tx monitor buffer allocation failed");
+			return status;
+		}
 		tx_mon_be->mode = val;
 		mon_pdev_be->tx_mon_mode = 1;
 		mon_pdev_be->tx_mon_filter_length = DMA_LENGTH_128B;

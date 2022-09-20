@@ -1130,6 +1130,7 @@ struct wlan_lmac_if_reg_tx_ops {
  * @dfs_ocac_abort_cmd:                 Send Off-Channel CAC abort command.
  * @dfs_is_pdev_5ghz:                   Check if the given pdev is 5GHz.
  * @dfs_set_phyerr_filter_offload:      Config phyerr filter offload.
+ * @dfs_is_tgt_bangradar_320_supp:      To check host DFS 320MHZ support or not
  * @dfs_is_tgt_radar_found_chan_freq_eq_center_freq:
  *                                      Check if chan_freq parameter of the
  *                                      radar found wmi event points to channel
@@ -1181,6 +1182,7 @@ struct wlan_lmac_if_dfs_tx_ops {
 			struct wlan_objmgr_pdev *pdev,
 			bool dfs_phyerr_filter_offload);
 	bool (*dfs_is_tgt_offload)(struct wlan_objmgr_psoc *psoc);
+	bool (*dfs_is_tgt_bangradar_320_supp)(struct wlan_objmgr_psoc *psoc);
 	bool (*dfs_is_tgt_radar_found_chan_freq_eq_center_freq)
 		 (struct wlan_objmgr_psoc *psoc);
 	QDF_STATUS (*dfs_send_offload_enable_cmd)(
@@ -1666,6 +1668,10 @@ struct wlan_lmac_if_mgmt_txrx_rx_ops {
 #endif
 };
 
+/**
+ * struct wlan_lmac_if_reg_rx_ops - structure of rx function pointers
+ * @reg_display_super_chan_list: function pointer to print super channel list
+ */
 struct wlan_lmac_if_reg_rx_ops {
 	QDF_STATUS (*master_list_handler)(struct cur_regulatory_info
 					  *reg_info);
@@ -1726,6 +1732,8 @@ struct wlan_lmac_if_reg_rx_ops {
 	QDF_STATUS
 	(*reg_set_disable_upper_6g_edge_ch_supp)(struct wlan_objmgr_psoc *psoc,
 						 bool val);
+	QDF_STATUS
+	(*reg_display_super_chan_list)(struct wlan_objmgr_pdev *pdev);
 #endif
 
 #ifdef CONFIG_AFC_SUPPORT
@@ -2089,6 +2097,9 @@ struct wlan_lmac_if_wifi_pos_rx_ops {
  * @dfs_set_bw_expand:                API to set BW Expansion feature.
  * @dfs_get_bw_expand:                API to get the status of BW Expansion
  *                                    feature.
+ * @dfs_set_dfs_puncture:             API to set DFS puncturing feature.
+ * @dfs_get_dfs_puncture:             API to get the status of DFS puncturing
+ *                                    feature.
  */
 struct wlan_lmac_if_dfs_rx_ops {
 	QDF_STATUS (*dfs_get_radars)(struct wlan_objmgr_pdev *pdev);
@@ -2208,6 +2219,14 @@ struct wlan_lmac_if_dfs_rx_ops {
 	QDF_STATUS (*dfs_get_bw_expand)(
 			struct wlan_objmgr_pdev *pdev,
 			bool *value);
+#ifdef QCA_DFS_BW_PUNCTURE
+	QDF_STATUS (*dfs_set_dfs_puncture)(
+			struct wlan_objmgr_pdev *pdev,
+			bool value);
+	QDF_STATUS (*dfs_get_dfs_puncture)(
+			struct wlan_objmgr_pdev *pdev,
+			bool *value);
+#endif
 	QDF_STATUS (*dfs_set_bw_reduction)(struct wlan_objmgr_pdev *pdev,
 			bool value);
 	QDF_STATUS (*dfs_is_bw_reduction_needed)(struct wlan_objmgr_pdev *pdev,

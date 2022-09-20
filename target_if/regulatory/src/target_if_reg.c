@@ -357,6 +357,22 @@ static QDF_STATUS tgt_if_regulatory_unregister_master_list_handler(
 }
 
 #ifdef CONFIG_BAND_6GHZ
+#ifdef CONFIG_REG_CLIENT
+/**
+ * tgt_mem_free_fcc_rules() - Free regulatory fcc rules
+ * @reg_info: Pointer to regulatory info
+ *
+ */
+static void tgt_reg_mem_free_fcc_rules(struct cur_regulatory_info *reg_info)
+{
+	qdf_mem_free(reg_info->fcc_rules_ptr);
+}
+#else
+static void tgt_reg_mem_free_fcc_rules(struct cur_regulatory_info *reg_info)
+{
+}
+#endif
+
 /**
  * tgt_reg_chan_list_ext_update_handler() - Extended channel list update handler
  * @handle: scn handle
@@ -433,6 +449,7 @@ static int tgt_reg_chan_list_ext_update_handler(ol_scn_t handle,
 clean:
 	qdf_mem_free(reg_info->reg_rules_2g_ptr);
 	qdf_mem_free(reg_info->reg_rules_5g_ptr);
+	tgt_reg_mem_free_fcc_rules(reg_info);
 
 	for (i = 0; i < REG_CURRENT_MAX_AP_TYPE; i++) {
 		qdf_mem_free(reg_info->reg_rules_6g_ap_ptr[i]);

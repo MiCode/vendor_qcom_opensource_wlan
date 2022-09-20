@@ -2667,6 +2667,7 @@ wlan_cfg_soc_attach(struct cdp_ctrl_objmgr_psoc *psoc)
 	wlan_cfg_ctx->max_peer_id = cfg_get(psoc, CFG_DP_MAX_PEER_ID);
 
 	wlan_cfg_ctx->tx_ring_size = cfg_get(psoc, CFG_DP_TX_RING_SIZE);
+	wlan_cfg_ctx->time_control_bp = cfg_get(psoc, CFG_DP_TIME_CONTROL_BP);
 	wlan_cfg_ctx->tx_comp_ring_size = cfg_get(psoc,
 						  CFG_DP_TX_COMPL_RING_SIZE);
 
@@ -3229,6 +3230,11 @@ int wlan_cfg_num_tx_comp_rings(struct wlan_cfg_dp_soc_ctxt *cfg)
 int wlan_cfg_tx_ring_size(struct wlan_cfg_dp_soc_ctxt *cfg)
 {
 	return cfg->tx_ring_size;
+}
+
+int wlan_cfg_time_control_bp(struct wlan_cfg_dp_soc_ctxt *cfg)
+{
+	return cfg->time_control_bp;
 }
 
 int wlan_cfg_tx_comp_ring_size(struct wlan_cfg_dp_soc_ctxt *cfg)
@@ -3923,6 +3929,8 @@ wlan_cfg_get_prealloc_cfg(struct cdp_ctrl_objmgr_psoc *ctrl_psoc,
 	if (!ctrl_psoc || !cfg)
 		return;
 
+	cfg->num_reo_dst_ring_entries = cfg_get(ctrl_psoc,
+						CFG_DP_RX_DESTINATION_RING);
 	cfg->num_tx_ring_entries = cfg_get(ctrl_psoc, CFG_DP_TX_RING_SIZE);
 	cfg->num_tx_comp_ring_entries = cfg_get(ctrl_psoc,
 						CFG_DP_TX_COMPL_RING_SIZE);
@@ -3934,6 +3942,8 @@ wlan_cfg_get_prealloc_cfg(struct cdp_ctrl_objmgr_psoc *ctrl_psoc,
 						     CFG_DP_REO_EXCEPTION_RING);
 	cfg->num_tx_desc = cfg_get(ctrl_psoc, CFG_DP_TX_DESC);
 	cfg->num_tx_ext_desc = cfg_get(ctrl_psoc, CFG_DP_TX_EXT_DESC);
+	cfg->num_rxdma_buf_ring_entries = cfg_get(ctrl_psoc,
+						  CFG_DP_RXDMA_BUF_RING);
 }
 
 #ifdef WLAN_FEATURE_PKT_CAPTURE_V2

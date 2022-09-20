@@ -22,6 +22,15 @@
 #ifndef __CFG_MLME_SCORE_PARAMS_H
 #define __CFG_MLME_SCORE_PARAMS_H
 
+#ifdef CONNECTION_ROAMING_CFG
+#define RoamAPScore_RSSIWeight_min 0
+#define RoamAPScore_RSSIWeight_max 100
+#define RoamAPScore_RSSIWeight_default 65
+#else
+#define RoamAPScore_RSSIWeight_min 0
+#define RoamAPScore_RSSIWeight_max 100
+#define RoamAPScore_RSSIWeight_default 20
+#endif
 /*
  * <ini>
  * rssi_weightage/RoamAPScore_RSSIWeight - RSSI Weightage to calculate best
@@ -43,9 +52,9 @@
  */
 #define CFG_SCORING_RSSI_WEIGHTAGE CFG_INI_UINT( \
 	"rssi_weightage RoamAPScore_RSSIWeight", \
-	0, \
-	100, \
-	20, \
+	RoamAPScore_RSSIWeight_min, \
+	RoamAPScore_RSSIWeight_max, \
+	RoamAPScore_RSSIWeight_default, \
 	CFG_VALUE_OR_DEFAULT, \
 	"RSSI Weightage")
 

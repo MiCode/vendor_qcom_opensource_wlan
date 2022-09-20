@@ -1400,6 +1400,7 @@ struct protocol_trace_count {
  * @punc_bw[MAX_PUNCTURED_MODE]: MSDU count for punctured BW
  * @release_src_not_tqm: Counter to keep track of release source is not TQM
  *			 in TX completion status processing
+ * @per: Packet error ratio
  */
 struct cdp_tx_stats {
 	struct cdp_pkt_info comp_pkt;
@@ -1518,6 +1519,7 @@ struct cdp_tx_stats {
 	uint32_t punc_bw[MAX_PUNCTURED_MODE];
 #endif
 	uint32_t release_src_not_tqm;
+	uint32_t per;
 };
 
 /* struct cdp_rx_stats - rx Level Stats
@@ -1676,7 +1678,7 @@ struct cdp_rx_stats {
 	uint32_t rx_discard;
 	uint32_t rx_ratecode;
 	uint32_t rx_flags;
-	uint32_t rx_snr_measured_time;
+	unsigned long rx_snr_measured_time;
 	uint8_t snr;
 	uint8_t last_snr;
 	uint32_t multipass_rx_pkt_drop;
@@ -2657,10 +2659,12 @@ struct cdp_soc_stats {
  * struct cdp_pdev_telemetry_stats- Structure to hold pdev telemetry stats
  * @tx_mpdu_failed: Tx mpdu failed
  * @tx_mpdu_total: Total tx mpdus
+ * @link_airtime: pdev airtime usage per ac per sec
  */
 struct cdp_pdev_telemetry_stats {
 	uint32_t tx_mpdu_failed;
 	uint32_t tx_mpdu_total;
+	uint32_t link_airtime[WME_AC_MAX];
 };
 
 /**
@@ -2677,7 +2681,7 @@ struct cdp_peer_telemetry_stats {
 	uint32_t tx_mpdu_total;
 	uint32_t rx_mpdu_retried;
 	uint32_t rx_mpdu_total;
-	uint8_t airtime_consumption;
+	uint8_t airtime_consumption[WME_AC_MAX];
 	uint8_t snr;
 };
 #endif

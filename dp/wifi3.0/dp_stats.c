@@ -284,6 +284,7 @@ const char *mu_reception_mode[TXRX_TYPE_MU_MAX] = {
 };
 
 #ifdef QCA_ENH_V3_STATS_SUPPORT
+#ifndef WLAN_CONFIG_TX_DELAY
 const char *fw_to_hw_delay_bucket[CDP_DELAY_BUCKET_MAX + 1] = {
 	"0 to 9 ms", "10 to 19 ms",
 	"20 to 29 ms", "30 to 39 ms",
@@ -292,6 +293,16 @@ const char *fw_to_hw_delay_bucket[CDP_DELAY_BUCKET_MAX + 1] = {
 	"80 to 89 ms", "90 to 99 ms",
 	"101 to 249 ms", "250 to 499 ms", "500+ ms"
 };
+#else
+const char *fw_to_hw_delay_bucket[CDP_DELAY_BUCKET_MAX + 1] = {
+	"0 to 250 us", "250 to 500 us",
+	"500 to 750 us", "750 to 1000 us",
+	"1000 to 1500 us", "1500 to 2000 us",
+	"2000 to 2500 us", "2500 to 5000 us",
+	"5000 to 6000 us", "6000 to 7000 ms",
+	"7000 to 8000 us", "8000 to 9000 us", "9000+ us"
+};
+#endif
 #elif defined(HW_TX_DELAY_STATS_ENABLE)
 const char *fw_to_hw_delay_bucket[CDP_DELAY_BUCKET_MAX + 1] = {
 	"0 to 2 ms", "2 to 4 ms",
@@ -304,6 +315,7 @@ const char *fw_to_hw_delay_bucket[CDP_DELAY_BUCKET_MAX + 1] = {
 #endif
 
 #ifdef QCA_ENH_V3_STATS_SUPPORT
+#ifndef WLAN_CONFIG_TX_DELAY
 const char *sw_enq_delay_bucket[CDP_DELAY_BUCKET_MAX + 1] = {
 	"0 to 1 ms", "1 to 2 ms",
 	"2 to 3 ms", "3 to 4 ms",
@@ -312,6 +324,16 @@ const char *sw_enq_delay_bucket[CDP_DELAY_BUCKET_MAX + 1] = {
 	"8 to 9 ms", "9 to 10 ms",
 	"10 to 11 ms", "11 to 12 ms", "12+ ms"
 };
+#else
+const char *sw_enq_delay_bucket[CDP_DELAY_BUCKET_MAX + 1] = {
+	"0 to 250 us", "250 to 500 us",
+	"500 to 750 us", "750 to 1000 us",
+	"1000 to 1500 us", "1500 to 2000 us",
+	"2000 to 2500 us", "2500 to 5000 us",
+	"5000 to 6000 us", "6000 to 7000 ms",
+	"7000 to 8000 us", "8000 to 9000 us", "9000+ us"
+};
+#endif
 
 const char *intfrm_delay_bucket[CDP_DELAY_BUCKET_MAX + 1] = {
 	"0 to 4 ms", "5 to 9 ms",
@@ -1877,7 +1899,6 @@ static void dp_print_tx_sounding_stats_tlv(uint32_t *tag_buf)
 		(htt_tx_sounding_stats_tlv *)tag_buf;
 	uint16_t i;
 	uint16_t max_bw = HTT_TX_PDEV_STATS_NUM_BW_COUNTERS;
-	bool cv_stats = false;
 
 	switch (dp_stats_buf->tx_sounding_mode) {
 	case HTT_TX_AC_SOUNDING_MODE:
@@ -1985,13 +2006,8 @@ static void dp_print_tx_sounding_stats_tlv(uint32_t *tag_buf)
 				dp_stats_buf->sounding[(i * max_bw) + 3],
 				dp_stats_buf->sounding_320[i]);
 		}
-		cv_stats = true;
 		break;
-	default:
-		break;
-	}
-
-	if (cv_stats) {
+	case HTT_TX_CMN_SOUNDING_MODE:
 		DP_PRINT_STATS("\n CV UPLOAD HANDLER STATS:");
 		DP_PRINT_STATS("cv_nc_mismatch_err         : %u",
 			       dp_stats_buf->cv_nc_mismatch_err);
@@ -2053,6 +2069,10 @@ static void dp_print_tx_sounding_stats_tlv(uint32_t *tag_buf)
 			       dp_stats_buf->cv_found_upload_in_progress);
 		DP_PRINT_STATS("cv_expired_during_query    : %u\n",
 			       dp_stats_buf->cv_expired_during_query);
+		break;
+	default:
+		break;
+
 	}
 }
 
@@ -5723,6 +5743,8 @@ void dp_print_soc_cfg_params(struct dp_soc *soc)
 		       soc_cfg_ctx->tcl_cmd_credit_ring);
 	DP_PRINT_STATS("TCL Status ring: %u ",
 		       soc_cfg_ctx->tcl_status_ring);
+	DP_PRINT_STATS("REO Destination ring: %u ",
+		       soc_cfg_ctx->reo_dst_ring_size);
 	DP_PRINT_STATS("REO Reinject ring: %u ",
 		       soc_cfg_ctx->reo_reinject_ring);
 	DP_PRINT_STATS("RX release ring: %u ",
@@ -5753,6 +5775,8 @@ void dp_print_soc_cfg_params(struct dp_soc *soc)
 		       soc_cfg_ctx->rx_flow_search_table_size);
 	DP_PRINT_STATS("RX Flow Search Table Per PDev : %u ",
 		       soc_cfg_ctx->is_rx_flow_search_table_per_pdev);
+	DP_PRINT_STATS("Rx desc pool size: %u ",
+		       soc_cfg_ctx->rx_sw_desc_num);
 }
 
 void
@@ -9034,10 +9058,17 @@ dp_get_pdev_telemetry_stats(struct cdp_soc_t *soc_hdl, uint8_t pdev_id,
 {
 	struct dp_soc *soc = (struct dp_soc *)soc_hdl;
 	struct dp_pdev *pdev = dp_get_pdev_from_soc_pdev_id_wifi3(soc, pdev_id);
+	uint8_t ac = 0;
 
 	if (!pdev)
 		return QDF_STATUS_E_FAILURE;
 
+	/* consumption is in micro seconds, convert it to seconds and
+	 * then calculate %age per sec
+	 */
+	for (ac = 0; ac < WME_AC_MAX; ac++)
+		stats->link_airtime[ac] =
+			((pdev->stats.telemetry_stats.link_airtime[ac] * 100) / 1000000);
 	stats->tx_mpdu_failed = pdev->stats.telemetry_stats.tx_mpdu_failed;
 	stats->tx_mpdu_total = pdev->stats.telemetry_stats.tx_mpdu_total;
 

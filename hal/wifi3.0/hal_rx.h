@@ -3018,4 +3018,25 @@ hal_rx_tlv_l3_type_get(hal_soc_handle_t hal_soc_hdl, uint8_t *buf)
 		hal_soc->ops->hal_rx_tlv_l3_type_get(buf) :
 			HAL_RX_TLV_L3_TYPE_INVALID;
 }
+
+/**
+ * hal_get_tsf_time() - Get tsf time
+ * @hal_soc_hdl: HAL soc handle
+ * @mac_id: mac_id
+ * @tsf: pointer to update tsf value
+ * @tsf_sync_soc_time: pointer to update tsf sync time
+ *
+ * Return: None.
+ */
+static inline void
+hal_get_tsf_time(hal_soc_handle_t hal_soc_hdl, uint32_t tsf_id,
+		 uint32_t mac_id, uint64_t *tsf,
+		 uint64_t *tsf_sync_soc_time)
+{
+	struct hal_soc *hal_soc = (struct hal_soc *)hal_soc_hdl;
+
+	if (hal_soc->ops->hal_get_tsf_time)
+		hal_soc->ops->hal_get_tsf_time(hal_soc_hdl, tsf_id, mac_id,
+					       tsf, tsf_sync_soc_time);
+}
 #endif /* _HAL_RX_H */

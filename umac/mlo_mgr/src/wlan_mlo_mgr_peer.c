@@ -788,6 +788,7 @@ QDF_STATUS wlan_mlo_peer_create(struct wlan_objmgr_vdev *vdev,
 	QDF_STATUS status;
 	uint16_t i;
 	struct wlan_objmgr_peer *assoc_peer;
+	bool is_ml_peer_attached = false;
 
 	/* get ML VDEV from VDEV */
 	ml_dev = vdev->mlo_dev_ctx;
@@ -851,10 +852,12 @@ QDF_STATUS wlan_mlo_peer_create(struct wlan_objmgr_vdev *vdev,
 		}
 	}
 
-	if (wlan_vdev_mlme_get_opmode(vdev) == QDF_STA_MODE)
+	if (wlan_vdev_mlme_get_opmode(vdev) == QDF_STA_MODE) {
 		ml_peer = wlan_mlo_get_mlpeer(ml_dev,
 				 (struct qdf_mac_addr *)&link_peer->mldaddr[0]);
-
+		if (ml_peer)
+			is_ml_peer_attached = true;
+	}
 	if (!ml_peer) {
 		/* Allocate MLO peer */
 		ml_peer = qdf_mem_malloc(sizeof(*ml_peer));
@@ -931,7 +934,7 @@ QDF_STATUS wlan_mlo_peer_create(struct wlan_objmgr_vdev *vdev,
 
 	if ((wlan_vdev_mlme_get_opmode(vdev) == QDF_SAP_MODE) ||
 		((wlan_vdev_mlme_get_opmode(vdev) == QDF_STA_MODE) &&
-			!wlan_vdev_mlme_is_mlo_link_vdev(vdev))) {
+			!is_ml_peer_attached)) {
 		/* Attach MLO peer to ML Peer table */
 		status = mlo_dev_mlpeer_attach(ml_dev, ml_peer);
 		if (status != QDF_STATUS_SUCCESS) {
@@ -946,6 +949,8 @@ QDF_STATUS wlan_mlo_peer_create(struct wlan_objmgr_vdev *vdev,
 			return status;
 		}
 	}
+
+	wlan_mlo_peer_get_ref(ml_peer);
 
 	if (wlan_vdev_mlme_get_opmode(vdev) == QDF_SAP_MODE) {
 		/* Notify other vdevs about link peer creation */
@@ -962,6 +967,15 @@ QDF_STATUS wlan_mlo_peer_create(struct wlan_objmgr_vdev *vdev,
 		}
 	}
 	mlo_dev_release_link_vdevs(link_vdevs);
+
+	if (ml_peer->mlpeer_state == ML_PEER_DISCONN_INITIATED) {
+		mlo_info("MLD ID %d ML Peer " QDF_MAC_ADDR_FMT " allocation failed",
+			 ml_dev->mld_id,
+			 QDF_MAC_ADDR_REF(ml_peer->peer_mld_addr.bytes));
+		wlan_mlo_peer_release_ref(ml_peer);
+		return QDF_STATUS_E_FAILURE;
+	}
+
 	mlo_info("MLD ID %d ML Peer " QDF_MAC_ADDR_FMT " allocated %pK",
 		 ml_dev->mld_id,
 		 QDF_MAC_ADDR_REF(ml_peer->peer_mld_addr.bytes),
@@ -980,6 +994,8 @@ QDF_STATUS wlan_mlo_peer_create(struct wlan_objmgr_vdev *vdev,
 				mlo_mlme_peer_assoc_resp(assoc_peer);
 		}
 	}
+
+	wlan_mlo_peer_release_ref(ml_peer);
 
 	return QDF_STATUS_SUCCESS;
 }

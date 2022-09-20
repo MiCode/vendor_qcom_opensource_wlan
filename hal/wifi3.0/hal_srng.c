@@ -132,13 +132,11 @@ static int hal_get_srng_ring_id(struct hal_soc *hal, int ring_type,
 		return -EINVAL;
 	}
 
-	/*
-	 * For BE, dmac_cmn_src_rxbuf_ring is set. If this is set
-	 * and ring is dst and also lmac ring then provide ring id per lmac
+	/**
+	 * Some DMAC rings share a common source ring, hence don't provide them
+	 * with separate ring IDs per LMAC.
 	 */
-	if (ring_config->lmac_ring &&
-	    (!hal->dmac_cmn_src_rxbuf_ring ||
-	     ring_config->ring_dir == HAL_SRNG_DST_RING)) {
+	if (ring_config->lmac_ring && !ring_config->dmac_cmn_ring) {
 		ring_id = (ring_config->start_ring_id + ring_num +
 			   (mac_id * HAL_MAX_RINGS_PER_LMAC));
 	} else {
@@ -980,6 +978,38 @@ static inline void hal_delayed_reg_write_deinit(struct hal_soc *hal)
 #endif
 
 #ifdef FEATURE_HAL_DELAYED_REG_WRITE
+#ifdef HAL_RECORD_SUSPEND_WRITE
+static struct hal_suspend_write_history
+		g_hal_suspend_write_history[HAL_SUSPEND_WRITE_HISTORY_MAX];
+
+static
+void hal_event_suspend_record(uint8_t ring_id, uint32_t value, uint32_t count)
+{
+	uint32_t index = qdf_atomic_read(g_hal_suspend_write_history.index) &
+					(HAL_SUSPEND_WRITE_HISTORY_MAX - 1);
+	struct hal_suspend_write_record *cur_event =
+					&hal_suspend_write_event.record[index];
+
+	cur_event->ts = qdf_get_log_timestamp();
+	cur_event->ring_id = ring_id;
+	cur_event->value = value;
+	cur_event->direct_wcount = count;
+	qdf_atomic_inc(g_hal_suspend_write_history.index);
+}
+
+static inline
+void hal_record_suspend_write(uint8_t ring_id, uint32_t value, uint32_t count)
+{
+	if (hif_rtpm_get_state() >= HIF_RTPM_STATE_SUSPENDING)
+		hal_event_suspend_record(ring_id, value, count);
+}
+#else
+static inline
+void hal_record_suspend_write(uint8_t ring_id, uint32_t value, uint32_t count)
+{
+}
+#endif
+
 #ifdef QCA_WIFI_QCA6750
 void hal_delayed_reg_write(struct hal_soc *hal_soc,
 			   struct hal_srng *srng,
@@ -1036,6 +1066,8 @@ void hal_delayed_reg_write(struct hal_soc *hal_soc,
 	} else {
 		hal_reg_write_enqueue(hal_soc, srng, addr, value);
 	}
+
+	hal_record_suspend_write(srng->ring_id, value, srng->wstats.direct);
 }
 #endif
 #endif
@@ -1067,6 +1099,7 @@ void *hal_attach(struct hif_opaque_softc *hif_handle, qdf_device_t qdf_dev)
 	hal->hif_handle = hif_handle;
 	hal->dev_base_addr = hif_get_dev_ba(hif_handle); /* UMAC */
 	hal->dev_base_addr_ce = hif_get_dev_ba_ce(hif_handle); /* CE */
+	hal->dev_base_addr_cmem = hif_get_dev_ba_cmem(hif_handle); /* CMEM */
 	hal->qdf_dev = qdf_dev;
 	hal->shadow_rdptr_mem_vaddr = (uint32_t *)qdf_mem_alloc_consistent(
 		qdf_dev, qdf_dev->dev, sizeof(*(hal->shadow_rdptr_mem_vaddr)) *

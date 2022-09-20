@@ -1313,6 +1313,14 @@ bool wlan_reg_is_punc_bitmap_valid(enum phy_ch_width bw,
 	return reg_is_punc_bitmap_valid(bw, puncture_bitmap);
 }
 
+#ifdef QCA_DFS_BW_PUNCTURE
+uint16_t wlan_reg_find_nearest_puncture_pattern(enum phy_ch_width bw,
+						uint16_t proposed_bitmap)
+{
+	return reg_find_nearest_puncture_pattern(bw, proposed_bitmap);
+}
+#endif /* QCA_DFS_BW_PUNCTURE */
+
 QDF_STATUS wlan_reg_extract_puncture_by_bw(enum phy_ch_width ori_bw,
 					   uint16_t ori_puncture_bitmap,
 					   qdf_freq_t freq,
@@ -1690,7 +1698,7 @@ QDF_STATUS
 wlan_reg_get_client_power_for_connecting_ap(struct wlan_objmgr_pdev *pdev,
 					    enum reg_6g_ap_type ap_type,
 					    qdf_freq_t chan_freq,
-					    bool *is_psd, uint16_t *tx_power,
+					    bool is_psd, uint16_t *tx_power,
 					    uint16_t *eirp_psd_power)
 {
 	return reg_get_client_power_for_connecting_ap(pdev, ap_type, chan_freq,
@@ -1897,4 +1905,10 @@ bool wlan_is_sup_chan_entry_afc_done(struct wlan_objmgr_pdev *pdev,
 }
 
 qdf_export_symbol(wlan_is_sup_chan_entry_afc_done);
+
+QDF_STATUS
+wlan_reg_display_super_chan_list(struct wlan_objmgr_pdev *pdev)
+{
+	return reg_display_super_chan_list(pdev);
+}
 #endif

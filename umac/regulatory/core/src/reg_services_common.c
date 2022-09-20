@@ -286,14 +286,14 @@ static const uint16_t chan_320mhz_puncture_bitmap[] = {
 	0xf0,
 	0xf00,
 	0xf000,
-	/* 80+40Mhz puncturing pattern: Right 80MHz punctured */
+	/* 80+40Mhz puncturing pattern: Left 80MHz punctured */
 	0x3f,
 	0xcf,
 	0x30f,
 	0xc0f,
 	0x300f,
 	0xc00f,
-	/* 80+40Mhz puncturing pattern: Left 80MHz punctured */
+	/* 80+40Mhz puncturing pattern: Right 80MHz punctured */
 	0xf003,
 	0xf00c,
 	0xf030,
@@ -4390,6 +4390,49 @@ bool reg_is_punc_bitmap_valid(enum phy_ch_width bw, uint16_t puncture_bitmap)
 	return is_punc_bitmap_valid;
 }
 
+#ifdef QCA_DFS_BW_PUNCTURE
+uint16_t reg_find_nearest_puncture_pattern(enum phy_ch_width bw,
+					   uint16_t proposed_bitmap)
+{
+	int i, num_bws;
+	const uint16_t *bonded_puncture_bitmap = NULL;
+	uint16_t array_size;
+	uint16_t final_bitmap;
+
+	/* An input pattern = 0 will match any pattern
+	 * Therefore, ignore '0' pattern and return '0', as '0' matches '0'.
+	 */
+	if (!proposed_bitmap)
+		return 0;
+
+	array_size = 0;
+	final_bitmap = 0;
+
+	num_bws = QDF_ARRAY_SIZE(bw_puncture_bitmap_pair_map);
+	for (i = 0; i < num_bws; i++) {
+		if (bw == bw_puncture_bitmap_pair_map[i].chwidth) {
+			bonded_puncture_bitmap =
+			    bw_puncture_bitmap_pair_map[i].puncture_bitmap_arr;
+			array_size = bw_puncture_bitmap_pair_map[i].array_size;
+			break;
+		}
+	}
+
+	if (array_size && bonded_puncture_bitmap) {
+		for (i = 0; i < array_size; i++) {
+			uint16_t valid_bitmap = bonded_puncture_bitmap[i];
+
+			if ((proposed_bitmap | valid_bitmap) == valid_bitmap) {
+				final_bitmap = valid_bitmap;
+				break;
+			}
+		}
+	}
+
+	return final_bitmap;
+}
+#endif /* QCA_DFS_BW_PUNCTURE */
+
 /**
  * reg_update_5g_bonded_channel_state_punc_for_freq() - update channel state
  * with static puncturing feature
@@ -6010,10 +6053,6 @@ update_bw:
 static void reg_copy_ch_params(struct ch_params *ch_params,
 			       struct reg_channel_list chan_list)
 {
-	/* Taking only first set of chan params*/
-	if (chan_list.chan_param[0].ch_width != CH_WIDTH_320MHZ)
-		reg_info("coud not find ch_params for 320MHz downgrading to %d",
-			 chan_list.chan_param[0].ch_width);
 	ch_params->center_freq_seg0 = chan_list.chan_param[0].center_freq_seg0;
 	ch_params->center_freq_seg1 = chan_list.chan_param[0].center_freq_seg1;
 	ch_params->mhz_freq_seg0 = chan_list.chan_param[0].mhz_freq_seg0;
@@ -7947,7 +7986,7 @@ QDF_STATUS reg_get_6g_chan_ap_power(struct wlan_objmgr_pdev *pdev,
 QDF_STATUS reg_get_client_power_for_connecting_ap(struct wlan_objmgr_pdev *pdev,
 						  enum reg_6g_ap_type ap_type,
 						  qdf_freq_t chan_freq,
-						  bool *is_psd,
+						  bool is_psd,
 						  uint16_t *tx_power,
 						  uint16_t *eirp_psd_power)
 {
@@ -7970,8 +8009,7 @@ QDF_STATUS reg_get_client_power_for_connecting_ap(struct wlan_objmgr_pdev *pdev,
 	reg_find_txpower_from_6g_list(chan_freq, master_chan_list,
 				      tx_power);
 
-	*is_psd = reg_is_6g_psd_power(pdev);
-	if (*is_psd)
+	if (is_psd)
 		status = reg_get_6g_chan_psd_eirp_power(chan_freq,
 							master_chan_list,
 							eirp_psd_power);
@@ -9494,5 +9532,54 @@ reg_is_sup_chan_entry_afc_done(struct wlan_objmgr_pdev *pdev,
 
 	return !(super_chan_ent->chan_flags_arr[in_6g_pwr_mode] &
 		 REGULATORY_CHAN_AFC_NOT_DONE);
+}
+#endif
+
+#ifdef CONFIG_BAND_6GHZ
+QDF_STATUS
+reg_display_super_chan_list(struct wlan_objmgr_pdev *pdev)
+{
+	struct wlan_regulatory_pdev_priv_obj *pdev_priv_obj;
+	struct super_chan_info *super_chan_list;
+	uint8_t i;
+
+	pdev_priv_obj = reg_get_pdev_obj(pdev);
+	if (!IS_VALID_PDEV_REG_OBJ(pdev_priv_obj)) {
+		reg_err_rl("pdev reg component is NULL");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	super_chan_list = pdev_priv_obj->super_chan_list;
+	for (i = 0; i < NUM_6GHZ_CHANNELS; i++) {
+		struct super_chan_info *chan_info = &super_chan_list[i];
+		struct regulatory_channel  cur_chan_list =
+			pdev_priv_obj->cur_chan_list[MIN_6GHZ_CHANNEL + i];
+		uint8_t j;
+
+		qdf_print("Freq = %d\tPower types = 0x%x\t"
+			  "Best power mode = 0x%x\n",
+			  cur_chan_list.center_freq, chan_info->power_types,
+			  chan_info->best_power_mode);
+		for (j = REG_AP_LPI; j <= REG_CLI_SUB_VLP; j++) {
+			bool afc_not_done_bit;
+
+			afc_not_done_bit = chan_info->chan_flags_arr[j] &
+						REGULATORY_CHAN_AFC_NOT_DONE;
+			qdf_print("Power mode = %d\tPSD flag = %d\t"
+				  "PSD power = %d\tEIRP power = %d\t"
+				  "Chan flags = 0x%x\tChannel state = %d\t"
+				  "Min bw = %d\tMax bw = %d\t"
+				  "AFC_NOT_DONE = %d\n",
+				  j, chan_info->reg_chan_pwr[j].psd_flag,
+				  chan_info->reg_chan_pwr[j].psd_eirp,
+				  chan_info->reg_chan_pwr[j].tx_power,
+				  chan_info->chan_flags_arr[j],
+				  chan_info->state_arr[j],
+				  chan_info->min_bw[j], chan_info->max_bw[j],
+				  afc_not_done_bit);
+		}
+	}
+
+	return QDF_STATUS_SUCCESS;
 }
 #endif

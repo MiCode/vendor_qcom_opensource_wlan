@@ -534,6 +534,33 @@ void ce_tasklet_kill(struct hif_softc *scn)
 	qdf_atomic_set(&scn->active_tasklet_cnt, 0);
 }
 
+/**
+ * ce_tasklet_entry_dump() - dump tasklet entries info
+ * @hif_ce_state: ce state
+ *
+ * This function will dump all tasklet entries info
+ *
+ * Return: None
+ */
+static void ce_tasklet_entry_dump(struct HIF_CE_state *hif_ce_state)
+{
+	struct ce_tasklet_entry *tasklet_entry;
+	int i;
+
+	if (hif_ce_state) {
+		for (i = 0; i < CE_COUNT_MAX; i++) {
+			tasklet_entry = &hif_ce_state->tasklets[i];
+
+			hif_info("%02d: ce_id=%d, inited=%d, hi_tasklet_ce=%d hif_ce_state=%pK",
+				 i,
+				 tasklet_entry->ce_id,
+				 tasklet_entry->inited,
+				 tasklet_entry->hi_tasklet_ce,
+				 tasklet_entry->hif_ce_state);
+		}
+	}
+}
+
 #define HIF_CE_DRAIN_WAIT_CNT          20
 /**
  * hif_drain_tasklets(): wait until no tasklet is pending
@@ -800,8 +827,16 @@ irqreturn_t ce_dispatch_interrupt(int ce_id,
 	struct hif_opaque_softc *hif_hdl = GET_HIF_OPAQUE_HDL(scn);
 
 	if (tasklet_entry->ce_id != ce_id) {
-		hif_err("ce_id (expect %d, received %d) does not match",
-			tasklet_entry->ce_id, ce_id);
+		bool rl;
+
+		rl = hif_err_rl("ce_id (expect %d, received %d) does not match, inited=%d, ce_count=%u",
+				tasklet_entry->ce_id, ce_id,
+				tasklet_entry->inited,
+				scn->ce_count);
+
+		if (!rl)
+			ce_tasklet_entry_dump(hif_ce_state);
+
 		return IRQ_NONE;
 	}
 	if (unlikely(ce_id >= CE_COUNT_MAX)) {

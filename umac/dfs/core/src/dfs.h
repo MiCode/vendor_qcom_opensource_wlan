@@ -1065,6 +1065,7 @@ struct dfs_rcac_params {
  * @dfs_cac_started_chan:            CAC started channel.
  * @dfs_pdev_obj:                    DFS pdev object.
  * @dfs_is_offload_enabled:          Set if DFS offload enabled.
+ * @dfs_is_bangradar_320_supported:  Set if DFS 320MHZ enabled.
  * @dfs_is_radar_found_chan_freq_eq_center_freq:
  *                                   Set if chan_freq parameter of the radar
  *                                   found wmi event indicates channel center.
@@ -1123,6 +1124,8 @@ struct dfs_rcac_params {
  *                                   bandwidth expansion feature.
  * @dfs_use_bw_expand:               User configured value for enabling or
  *                                   disabling BW Expansion feature.
+ * @dfs_use_puncture:                User configured value for enabling or
+ *                                   disabling DFS puncturing feature.
  * @dfs_agile_rcac_ucfg:             User configuration for Rolling CAC.
  * @dfs_fw_adfs_support_non_160:     Target Agile DFS support for non-160 BWs.
  * @dfs_fw_adfs_support_160:         Target Agile DFS support for 160 BW.
@@ -1275,6 +1278,7 @@ struct wlan_dfs {
 	uint16_t       dfs_agile_precac_freq_mhz;
 #endif
 	bool           dfs_is_offload_enabled;
+	bool           dfs_is_bangradar_320_supported;
 	bool           dfs_is_radar_found_chan_freq_eq_center_freq;
 	int            dfs_use_nol;
 	qdf_spinlock_t dfs_nol_lock;
@@ -1299,6 +1303,7 @@ struct wlan_dfs {
 	enum wlan_phymode dfs_bw_expand_des_mode;
 	bool           dfs_use_bw_expand;
 #endif
+	bool           dfs_use_puncture;
 	uint8_t        dfs_agile_precac_ucfg:1,
 #if defined(QCA_SUPPORT_ADFS_RCAC)
 		       dfs_agile_rcac_ucfg:1,

@@ -104,7 +104,8 @@ void dfs_process_cac_completion(void *context)
 				  dfs_curchan->dfs_ch_ieee,
 				  dfs_curchan->dfs_ch_freq,
 				  dfs_curchan->dfs_ch_mhz_freq_seg2,
-				  dfs_curchan->dfs_ch_flags);
+				  dfs_curchan->dfs_ch_flags,
+				  0);
 		dfs_debug(dfs, WLAN_DEBUG_DFS,
 			  "CAC timer on chan %u (%u MHz) stopped due to radar",
 			  dfs_curchan->dfs_ch_ieee,

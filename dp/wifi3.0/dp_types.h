@@ -1392,6 +1392,9 @@ struct rx_refill_buff_pool {
 
 #ifdef DP_TX_HW_DESC_HISTORY
 #define DP_TX_HW_DESC_HIST_MAX 6144
+#define DP_TX_HW_DESC_HIST_PER_SLOT_MAX 2048
+#define DP_TX_HW_DESC_HIST_MAX_SLOTS 3
+#define DP_TX_HW_DESC_HIST_SLOT_SHIFT 11
 
 struct dp_tx_hw_desc_evt {
 	uint8_t tcl_desc[HAL_TX_DESC_LEN_BYTES];
@@ -1405,8 +1408,10 @@ struct dp_tx_hw_desc_evt {
  * @entry: history entries
  */
 struct dp_tx_hw_desc_history {
-	uint64_t index;
-	struct dp_tx_hw_desc_evt entry[DP_TX_HW_DESC_HIST_MAX];
+	qdf_atomic_t index;
+	uint16_t num_entries_per_slot;
+	uint16_t allocated;
+	struct dp_tx_hw_desc_evt *entry[DP_TX_HW_DESC_HIST_MAX_SLOTS];
 };
 #endif
 
@@ -1556,7 +1561,15 @@ enum dp_tx_event_type {
 #ifdef WLAN_FEATURE_DP_TX_DESC_HISTORY
 /* Size must be in 2 power, for bitwise index rotation */
 #define DP_TX_TCL_HISTORY_SIZE 0x4000
+#define DP_TX_TCL_HIST_PER_SLOT_MAX 2048
+#define DP_TX_TCL_HIST_MAX_SLOTS 8
+#define DP_TX_TCL_HIST_SLOT_SHIFT 11
+
+/* Size must be in 2 power, for bitwise index rotation */
 #define DP_TX_COMP_HISTORY_SIZE 0x4000
+#define DP_TX_COMP_HIST_PER_SLOT_MAX 2048
+#define DP_TX_COMP_HIST_MAX_SLOTS 8
+#define DP_TX_COMP_HIST_SLOT_SHIFT 11
 
 struct dp_tx_desc_event {
 	qdf_nbuf_t skb;
@@ -1568,12 +1581,16 @@ struct dp_tx_desc_event {
 
 struct dp_tx_tcl_history {
 	qdf_atomic_t index;
-	struct dp_tx_desc_event entry[DP_TX_TCL_HISTORY_SIZE];
+	uint16_t num_entries_per_slot;
+	uint16_t allocated;
+	struct dp_tx_desc_event *entry[DP_TX_TCL_HIST_MAX_SLOTS];
 };
 
 struct dp_tx_comp_history {
 	qdf_atomic_t index;
-	struct dp_tx_desc_event entry[DP_TX_COMP_HISTORY_SIZE];
+	uint16_t num_entries_per_slot;
+	uint16_t allocated;
+	struct dp_tx_desc_event *entry[DP_TX_COMP_HIST_MAX_SLOTS];
 };
 #endif /* WLAN_FEATURE_DP_TX_DESC_HISTORY */
 
@@ -1807,6 +1824,7 @@ enum dp_context_type {
  * @txrx_set_vdev_param: target specific ops while setting vdev params
  * @dp_srng_test_and_update_nf_params: Check if the srng is in near full state
  *				and set the near-full params.
+ * @ipa_get_bank_id: Get TCL bank id used by IPA
  */
 struct dp_arch_ops {
 	/* INIT/DEINIT Arch Ops */
@@ -1904,7 +1922,9 @@ struct dp_arch_ops {
 
 	/* Misc Arch Ops */
 	qdf_size_t (*txrx_get_context_size)(enum dp_context_type);
+#ifdef WIFI_MONITOR_SUPPORT
 	qdf_size_t (*txrx_get_mon_context_size)(enum dp_context_type);
+#endif
 	int (*dp_srng_test_and_update_nf_params)(struct dp_soc *soc,
 						 struct dp_srng *dp_srng,
 						 int *max_reap_limit);
@@ -1959,6 +1979,10 @@ struct dp_arch_ops {
 				     uint16_t peer_id);
 	void (*dp_partner_chips_unmap)(struct dp_soc *soc,
 				       uint16_t peer_id);
+
+#ifdef IPA_OFFLOAD
+	int8_t (*ipa_get_bank_id)(struct dp_soc *soc);
+#endif
 };
 
 /**
@@ -2287,7 +2311,7 @@ struct dp_soc {
 	} ast_hash;
 
 #ifdef DP_TX_HW_DESC_HISTORY
-	struct dp_tx_hw_desc_history *tx_hw_desc_history;
+	struct dp_tx_hw_desc_history tx_hw_desc_history;
 #endif
 
 #ifdef WLAN_FEATURE_DP_RX_RING_HISTORY
@@ -2302,8 +2326,8 @@ struct dp_soc {
 #endif
 
 #ifdef WLAN_FEATURE_DP_TX_DESC_HISTORY
-	struct dp_tx_tcl_history *tx_tcl_history;
-	struct dp_tx_comp_history *tx_comp_history;
+	struct dp_tx_tcl_history tx_tcl_history;
+	struct dp_tx_comp_history tx_comp_history;
 #endif
 
 	qdf_spinlock_t ast_lock;
@@ -2596,8 +2620,17 @@ struct dp_ipa_resources {
  * be useful in debugging
  */
 #ifdef MAX_ALLOC_PAGE_SIZE
+#if PAGE_SIZE == 4096
 #define LINK_DESC_PAGE_ID_MASK  0x007FE0
 #define LINK_DESC_ID_SHIFT      5
+#define LINK_DESC_ID_START_21_BITS_COOKIE 0x8000
+#elif PAGE_SIZE == 65536
+#define LINK_DESC_PAGE_ID_MASK  0x007E00
+#define LINK_DESC_ID_SHIFT      9
+#define LINK_DESC_ID_START_21_BITS_COOKIE 0x800
+#else
+#error "Unsupported kernel PAGE_SIZE"
+#endif
 #define LINK_DESC_COOKIE(_desc_id, _page_id, _desc_id_start) \
 	((((_page_id) + (_desc_id_start)) << LINK_DESC_ID_SHIFT) | (_desc_id))
 #define LINK_DESC_COOKIE_PAGE_ID(_cookie) \
@@ -2609,8 +2642,8 @@ struct dp_ipa_resources {
 	((((_desc_id) + (_desc_id_start)) << LINK_DESC_ID_SHIFT) | (_page_id))
 #define LINK_DESC_COOKIE_PAGE_ID(_cookie) \
 	((_cookie) & LINK_DESC_PAGE_ID_MASK)
-#endif
 #define LINK_DESC_ID_START_21_BITS_COOKIE 0x8000
+#endif
 #define LINK_DESC_ID_START_20_BITS_COOKIE 0x4000
 
 /* same as ieee80211_nac_param */
@@ -2848,18 +2881,18 @@ struct dp_pdev {
 	 */
 
 	/* PDEV Id */
-	int pdev_id;
+	uint8_t pdev_id;
 
 	/* LMAC Id */
-	int lmac_id;
+	uint8_t lmac_id;
 
 	/* Target pdev  Id */
-	int target_pdev_id;
+	uint8_t target_pdev_id;
+
+	bool pdev_deinit;
 
 	/* TXRX SOC handle */
 	struct dp_soc *soc;
-
-	bool pdev_deinit;
 
 	/* pdev status down or up required to handle dynamic hw
 	 * mode switch between DBS and DBS_SBS.
@@ -2870,6 +2903,9 @@ struct dp_pdev {
 
 	/* Enhanced Stats is enabled */
 	bool enhanced_stats_en;
+
+	/* Flag to indicate fast RX */
+	bool rx_fast_flag;
 
 	/* Second ring used to replenish rx buffers */
 	struct dp_srng rx_refill_buf_ring2;
@@ -3957,7 +3993,7 @@ struct dp_peer_extd_rx_stats {
 	uint32_t rx_ratecode;
 
 	uint32_t avg_snr;
-	uint32_t rx_snr_measured_time;
+	unsigned long rx_snr_measured_time;
 	uint8_t snr;
 	uint8_t last_snr;
 

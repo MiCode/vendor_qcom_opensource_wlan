@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2016-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  *
  * Permission to use, copy, modify, and/or distribute this software for
@@ -53,14 +54,16 @@ void dfs_mlme_mark_dfs(struct wlan_objmgr_pdev *pdev,
 		uint8_t ieee,
 		uint16_t freq,
 		uint16_t vhtop_ch_freq_seg2,
-		uint64_t flags)
+		uint64_t flags,
+		uint16_t dfs_radar_bitmap)
 {
 	if (global_dfs_to_mlme.mlme_mark_dfs)
 		global_dfs_to_mlme.mlme_mark_dfs(pdev,
 				ieee,
 				freq,
 				vhtop_ch_freq_seg2,
-				flags);
+				flags,
+				dfs_radar_bitmap);
 }
 #else /* Else of ndef MCL_DFS_SUPPORT */
 static void dfs_send_radar_ind(struct wlan_objmgr_pdev *pdev,
@@ -84,7 +87,8 @@ void dfs_mlme_mark_dfs(struct wlan_objmgr_pdev *pdev,
 		uint8_t ieee,
 		uint16_t freq,
 		uint16_t vhtop_ch_freq_seg2,
-		uint64_t flags)
+		uint64_t flags,
+		uint16_t dfs_radar_bitmap)
 {
 	struct wlan_objmgr_vdev *vdev;
 

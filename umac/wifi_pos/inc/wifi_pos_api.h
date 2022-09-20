@@ -669,4 +669,22 @@ wifi_pos_register_osif_callbacks(struct wlan_objmgr_psoc *psoc,
 struct wifi_pos_osif_ops *
 wifi_pos_get_osif_callbacks(struct wlan_objmgr_psoc *psoc);
 #endif /* WIFI_POS_CONVERGED */
+
+#if defined(WIFI_POS_CONVERGED) && defined(WLAN_FEATURE_RTT_11AZ_SUPPORT)
+/**
+ * wifi_pos_set_rsta_sec_ltf_cap() - Set RSTA secure LTF capability
+ * @val: Value
+ *
+ * Return: None
+ **/
+void
+wifi_pos_set_rsta_sec_ltf_cap(uint32_t val);
+
+/**
+ * wifi_pos_get_rsta_sec_ltf_cap  - Get RSTA secure LTF capability
+ *
+ * Return: True or false
+ */
+bool wifi_pos_get_rsta_sec_ltf_cap(void);
+#endif
 #endif /* _WIFI_POS_API_H_ */

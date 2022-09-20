@@ -219,9 +219,16 @@ struct dp_htt_htc_pkt_union {
 	} u;
 };
 
+struct bp_handler {
+	unsigned long bp_start_tt;
+	unsigned long bp_last_tt;
+	unsigned long bp_duration;
+	unsigned long bp_counter;
+};
+
 struct dp_htt_timestamp {
-	long *umac_ttt;
-	long *lmac_ttt;
+	struct bp_handler *umac_path;
+	struct bp_handler *lmac_path;
 };
 
 struct htt_soc {

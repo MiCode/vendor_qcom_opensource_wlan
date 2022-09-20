@@ -683,6 +683,10 @@ struct cdp_cmn_ops {
 					       bool mlo_peers_only);
 #endif
 	QDF_STATUS (*txrx_umac_reset_deinit)(ol_txrx_soc_handle soc);
+	void (*txrx_get_tsf_time)(struct cdp_soc_t *soc_hdl, uint32_t tsf_id,
+				  uint32_t mac_id, uint64_t *tsf,
+				  uint64_t *tsf_sync_soc_time);
+
 };
 
 struct cdp_ctrl_ops {
@@ -1204,6 +1208,9 @@ struct cdp_host_stats_ops {
 				uint8_t *addr,
 				struct cdp_peer_telemetry_stats *stats);
 #endif
+	QDF_STATUS
+		(*txrx_get_peer_extd_rate_link_stats)
+				(struct cdp_soc_t *soc, uint8_t *mac_addr);
 };
 
 struct cdp_wds_ops {
@@ -1467,6 +1474,10 @@ struct ol_if_ops {
 	void (*dp_update_tx_hardstart)(struct cdp_ctrl_objmgr_psoc *psoc,
 				       uint8_t vdev_id,
 				       struct ol_txrx_hardtart_ctxt *ctxt);
+#endif
+#if defined(IPA_WDS_EASYMESH_FEATURE) && defined(FEATURE_AST)
+void (*peer_send_wds_disconnect)(struct cdp_ctrl_objmgr_psoc *psoc,
+				 uint8_t *mac_addr, uint8_t vdev_id);
 #endif
 };
 
@@ -1958,9 +1969,13 @@ struct cdp_ipa_ops {
 	bool (*ipa_rx_intrabss_fwd)(struct cdp_soc_t *soc_hdl, uint8_t vdev_id,
 				    qdf_nbuf_t nbuf, bool *fwd_success);
 	QDF_STATUS (*ipa_tx_buf_smmu_mapping)(struct cdp_soc_t *soc_hdl,
-					      uint8_t pdev_id);
+					      uint8_t pdev_id,
+					      const char *func,
+					      uint32_t line);
 	QDF_STATUS (*ipa_tx_buf_smmu_unmapping)(struct cdp_soc_t *soc_hdl,
-						uint8_t pdev_id);
+						uint8_t pdev_id,
+						const char *func,
+						uint32_t line);
 #ifdef IPA_WDS_EASYMESH_FEATURE
 	QDF_STATUS (*ipa_ast_create)(struct cdp_soc_t *soc_hdl,
 				     qdf_ipa_ast_info_type_t *data);

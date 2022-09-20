@@ -58,6 +58,15 @@
 #define HAL_RX_GET_SW_FRAME_GROUP_ID(rx_mpdu_start)	\
 	HAL_RX_GET(rx_mpdu_start, RX_MPDU_INFO, SW_FRAME_GROUP_ID)
 
+/*
+ * In Beryllium chipset msdu_start was removed and merged in msdu_end.
+ * Due to this valid contents will be present only in last msdu.
+ * After setting the 5th bit of spare control field, REO will copy the contents
+ * from last buffer to all the other buffers of MSDU.
+ */
+#define HAL_REO_MSDU_END_COPY		0x20
+#define HAL_REO_R0_MISC_CTL_SPARE_CONTROL_SHFT	0
+
 #define HAL_REO_R0_CONFIG(soc, reg_val, reo_params)		\
 	do {							\
 		reg_val &=					\
@@ -79,6 +88,11 @@
 		reg_val |= HAL_SM(HWIO_REO_R0_MISC_CTL,		\
 				  FRAGMENT_DEST_RING,		\
 				  (reo_params)->frag_dst_ring); \
+		reg_val |= ((HAL_REO_MSDU_END_COPY) <<		\
+			    HAL_REO_R0_MISC_CTL_SPARE_CONTROL_SHFT);	\
+		HAL_REG_WRITE(soc,					\
+			      HWIO_REO_R0_MISC_CTL_ADDR(REO_REG_REG_BASE), \
+			      reg_val);
 	} while (0)
 
 #define HAL_RX_MSDU_DESC_INFO_GET(msdu_details_ptr) \

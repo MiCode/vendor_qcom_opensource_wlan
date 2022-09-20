@@ -21,6 +21,7 @@
 #define _DP_INTERNAL_H_
 
 #include "dp_types.h"
+#include "dp_htt.h"
 
 #define RX_BUFFER_SIZE_PKTLOG_LITE 1024
 
@@ -562,8 +563,9 @@ static inline void dp_monitor_pktlogmod_exit(struct dp_pdev *pdev)
 }
 
 static inline
-void dp_monitor_vdev_set_monitor_mode_buf_rings(struct dp_pdev *pdev)
+QDF_STATUS dp_monitor_vdev_set_monitor_mode_buf_rings(struct dp_pdev *pdev)
 {
+	return QDF_STATUS_E_FAILURE;
 }
 
 static inline
@@ -717,6 +719,18 @@ dp_monitor_get_chan_band(struct dp_pdev *pdev)
 	return 0;
 }
 
+static inline int
+dp_monitor_get_chan_num(struct dp_pdev *pdev)
+{
+	return 0;
+}
+
+static inline qdf_freq_t
+dp_monitor_get_chan_freq(struct dp_pdev *pdev)
+{
+	return 0;
+}
+
 static inline void dp_monitor_get_mpdu_status(struct dp_pdev *pdev,
 					      struct dp_soc *soc,
 					      uint8_t *rx_tlv_hdr)
@@ -803,6 +817,104 @@ static inline bool dp_monitor_is_configured(struct dp_pdev *pdev)
 static inline void
 dp_mon_rx_hdr_length_set(struct dp_soc *soc, uint32_t *msg_word,
 			 struct htt_rx_ring_tlv_filter *tlv_filter)
+{
+}
+
+static inline void dp_monitor_soc_init(struct dp_soc *soc)
+{
+}
+
+static inline void dp_monitor_soc_deinit(struct dp_soc *soc)
+{
+}
+
+static inline
+QDF_STATUS dp_monitor_config_undecoded_metadata_capture(struct dp_pdev *pdev,
+							int val)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static inline QDF_STATUS
+dp_monitor_config_undecoded_metadata_phyrx_error_mask(struct dp_pdev *pdev,
+						      int mask1, int mask2)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static inline QDF_STATUS
+dp_monitor_get_undecoded_metadata_phyrx_error_mask(struct dp_pdev *pdev,
+						   int *mask, int *mask_cont)
+{
+	return QDF_STATUS_SUCCESS;
+}
+
+static inline QDF_STATUS dp_monitor_soc_htt_srng_setup(struct dp_soc *soc)
+{
+	return QDF_STATUS_E_FAILURE;
+}
+
+static inline bool dp_is_monitor_mode_using_poll(struct dp_soc *soc)
+{
+	return false;
+}
+
+static inline
+uint32_t dp_tx_mon_buf_refill(struct dp_intr *int_ctx)
+{
+	return 0;
+}
+
+static inline uint32_t
+dp_tx_mon_process(struct dp_soc *soc, struct dp_intr *int_ctx,
+		  uint32_t mac_id, uint32_t quota)
+{
+	return 0;
+}
+
+static inline
+uint32_t dp_rx_mon_buf_refill(struct dp_intr *int_ctx)
+{
+	return 0;
+}
+
+static inline bool dp_monitor_is_tx_cap_enabled(struct dp_peer *peer)
+{
+	return 0;
+}
+
+static inline bool dp_monitor_is_rx_cap_enabled(struct dp_peer *peer)
+{
+	return 0;
+}
+
+static inline void
+dp_rx_mon_enable(struct dp_soc *soc, uint32_t *msg_word,
+		 struct htt_rx_ring_tlv_filter *tlv_filter)
+{
+}
+
+static inline void
+dp_mon_rx_packet_length_set(struct dp_soc *soc, uint32_t *msg_word,
+			    struct htt_rx_ring_tlv_filter *tlv_filter)
+{
+}
+
+static inline void
+dp_mon_rx_enable_mpdu_logging(struct dp_soc *soc, uint32_t *msg_word,
+			      struct htt_rx_ring_tlv_filter *tlv_filter)
+{
+}
+
+static inline void
+dp_mon_rx_wmask_subscribe(struct dp_soc *soc, uint32_t *msg_word,
+			  struct htt_rx_ring_tlv_filter *tlv_filter)
+{
+}
+
+static inline
+void dp_monitor_peer_telemetry_stats(struct dp_peer *peer,
+				     struct cdp_peer_telemetry_stats *stats)
 {
 }
 #endif
@@ -1023,25 +1135,25 @@ void DP_PRINT_STATS(const char *fmt, ...);
 	defined(QCA_ENHANCED_STATS_SUPPORT)
 #define DP_PEER_TO_STACK_INCC_PKT(_handle, _count, _bytes, _cond) \
 { \
-	if (!(_handle->hw_txrx_stats_en) || _cond) \
+	if (_cond || !(_handle->hw_txrx_stats_en)) \
 		DP_PEER_STATS_FLAT_INC_PKT(_handle, to_stack, _count, _bytes); \
 }
 
 #define DP_PEER_TO_STACK_DECC(_handle, _count, _cond) \
 { \
-	if (!(_handle->hw_txrx_stats_en) || _cond) \
+	if (_cond || !(_handle->hw_txrx_stats_en)) \
 		DP_PEER_STATS_FLAT_DEC(_handle, to_stack.num, _count); \
 }
 
 #define DP_PEER_MC_INCC_PKT(_handle, _count, _bytes, _cond) \
 { \
-	if (!(_handle->hw_txrx_stats_en) || _cond) \
+	if (_cond || !(_handle->hw_txrx_stats_en)) \
 		DP_PEER_PER_PKT_STATS_INC_PKT(_handle, rx.multicast, _count, _bytes); \
 }
 
 #define DP_PEER_BC_INCC_PKT(_handle, _count, _bytes, _cond) \
 { \
-	if (!(_handle->hw_txrx_stats_en) || _cond) \
+	if (_cond || !(_handle->hw_txrx_stats_en)) \
 		DP_PEER_PER_PKT_STATS_INC_PKT(_handle, rx.bcast, _count, _bytes); \
 }
 #elif defined(QCA_VDEV_STATS_HW_OFFLOAD_SUPPORT)
@@ -3545,6 +3657,109 @@ void dp_desc_multi_pages_mem_free(struct dp_soc *soc,
 }
 #endif
 
+/**
+ * struct dp_frag_history_opaque_atomic - Opaque struct for adding a fragmented
+ *					  history.
+ * @index: atomic index
+ * @num_entries_per_slot: Number of entries per slot
+ * @allocated: is allocated or not
+ * @entry: pointers to array of records
+ */
+struct dp_frag_history_opaque_atomic {
+	qdf_atomic_t index;
+	uint16_t num_entries_per_slot;
+	uint16_t allocated;
+	void *entry[0];
+};
+
+static inline QDF_STATUS
+dp_soc_frag_history_attach(struct dp_soc *soc, void *history_hdl,
+			   uint32_t max_slots, uint32_t max_entries_per_slot,
+			   uint32_t entry_size,
+			   bool attempt_prealloc, enum dp_ctxt_type ctxt_type)
+{
+	struct dp_frag_history_opaque_atomic *history =
+			(struct dp_frag_history_opaque_atomic *)history_hdl;
+	size_t alloc_size = max_entries_per_slot * entry_size;
+	int i;
+
+	for (i = 0; i < max_slots; i++) {
+		if (attempt_prealloc)
+			history->entry[i] = dp_context_alloc_mem(soc, ctxt_type,
+								 alloc_size);
+		else
+			history->entry[i] = qdf_mem_malloc(alloc_size);
+
+		if (!history->entry[i])
+			goto exit;
+	}
+
+	qdf_atomic_init(&history->index);
+	history->allocated = 1;
+	history->num_entries_per_slot = max_entries_per_slot;
+
+	return QDF_STATUS_SUCCESS;
+exit:
+	for (i = i - 1; i >= 0; i--) {
+		if (attempt_prealloc)
+			dp_context_free_mem(soc, ctxt_type, history->entry[i]);
+		else
+			qdf_mem_free(history->entry[i]);
+	}
+
+	return QDF_STATUS_E_NOMEM;
+}
+
+static inline
+void dp_soc_frag_history_detach(struct dp_soc *soc,
+				void *history_hdl, uint32_t max_slots,
+				bool attempt_prealloc,
+				enum dp_ctxt_type ctxt_type)
+{
+	struct dp_frag_history_opaque_atomic *history =
+			(struct dp_frag_history_opaque_atomic *)history_hdl;
+	int i;
+
+	for (i = 0; i < max_slots; i++) {
+		if (attempt_prealloc)
+			dp_context_free_mem(soc, ctxt_type, history->entry[i]);
+		else
+			qdf_mem_free(history->entry[i]);
+	}
+
+	history->allocated = 0;
+}
+
+/**
+ * dp_get_frag_hist_next_atomic_idx() - get the next entry index to record an
+ *					entry in a fragmented history with
+ *					index being atomic.
+ * @curr_idx: address of the current index where the last entry was written
+ * @next_idx: pointer to update the next index
+ * @slot: pointer to update the history slot to be selected
+ * @slot_shift: BITwise shift mask for slot (in index)
+ * @max_entries_per_slot: Max number of entries in a slot of history
+ * @max_entries: Total number of entries in the history (sum of all slots)
+ *
+ * This function assumes that the "max_entries_per_slot" and "max_entries"
+ * are a power-of-2.
+ *
+ * Return: None
+ */
+static inline void
+dp_get_frag_hist_next_atomic_idx(qdf_atomic_t *curr_idx, uint32_t *next_idx,
+				 uint16_t *slot, uint32_t slot_shift,
+				 uint32_t max_entries_per_slot,
+				 uint32_t max_entries)
+{
+	uint32_t idx;
+
+	idx = qdf_do_div_rem(qdf_atomic_inc_return(curr_idx), max_entries);
+
+	*slot = idx >> slot_shift;
+	*next_idx = idx & (max_entries_per_slot - 1);
+}
+
 #ifdef FEATURE_RUNTIME_PM
 /**
  * dp_runtime_get() - Get dp runtime refcount
@@ -3980,4 +4195,13 @@ void dp_rx_err_send_pktlog(struct dp_soc *soc, struct dp_pdev *pdev,
 {
 }
 #endif
+
+/*
+ * dp_pdev_update_fast_rx_flag() - Update Fast rx flag for a PDEV
+ * @soc  : Data path soc handle
+ * @pdev : PDEV handle
+ *
+ * return: None
+ */
+void dp_pdev_update_fast_rx_flag(struct dp_soc *soc, struct dp_pdev *pdev);
 #endif /* #ifndef _DP_INTERNAL_H_ */

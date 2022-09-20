@@ -180,6 +180,11 @@ dp_tx_mon_enqueue_mpdu_nbuf(struct dp_pdev *pdev,
 	radiotap = qdf_nbuf_alloc(pdev->soc->osdev, MAX_MONITOR_HEADER,
 				  MAX_MONITOR_HEADER,
 				  4, FALSE);
+	if (qdf_unlikely(!radiotap)) {
+		qdf_err("Unable to allocate radiotap buffer\n");
+		qdf_nbuf_free(mpdu_nbuf);
+		return;
+	}
 
 	/* append ext list */
 	qdf_nbuf_append_ext_list(radiotap, mpdu_nbuf, qdf_nbuf_len(mpdu_nbuf));
@@ -973,6 +978,7 @@ dp_tx_mon_alloc_mpdu(struct dp_pdev *pdev, struct dp_tx_ppdu_info *tx_ppdu_info)
 	if (!mpdu_nbuf) {
 		qdf_err("%s: %d No memory to allocate mpdu_nbuf!!!!!\n",
 			__func__, __LINE__);
+		return;
 	}
 
 	usr_idx = TXMON_PPDU(tx_ppdu_info, cur_usr_idx);
@@ -1638,7 +1644,7 @@ dp_tx_mon_process_status_tlv(struct dp_soc *soc,
 {
 	struct dp_mon_pdev *mon_pdev;
 	struct dp_mon_pdev_be *mon_pdev_be;
-	struct dp_pdev_tx_monitor_be *tx_mon_be;
+	struct dp_pdev_tx_monitor_be *tx_mon_be = NULL;
 	uint8_t last_frag_q_idx = 0;
 
 	/* sanity check */
@@ -1731,7 +1737,9 @@ dp_tx_mon_process_status_tlv(struct dp_soc *soc,
 free_status_buffer:
 	dp_tx_mon_status_free_packet_buf(pdev, status_frag, end_offset,
 					 mon_desc_list_ref);
-	tx_mon_be->stats.status_buf_free++;
+	if (qdf_likely(tx_mon_be))
+		tx_mon_be->stats.status_buf_free++;
+
 	qdf_frag_free(status_frag);
 
 	return QDF_STATUS_E_NOMEM;

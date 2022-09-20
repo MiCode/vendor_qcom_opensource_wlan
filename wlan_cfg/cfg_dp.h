@@ -90,6 +90,8 @@
 #define WLAN_CFG_IPA_UC_RX_IND_RING_COUNT 0
 #endif /* IPA_OFFLOAD */
 
+#define WLAN_CFG_TIME_CONTROL_BP 3000
+
 #if defined(WLAN_MAX_PDEVS) && (WLAN_MAX_PDEVS == 1)
 #define WLAN_CFG_PER_PDEV_RX_RING 0
 #define WLAN_CFG_PER_PDEV_LMAC_RING 0
@@ -161,6 +163,9 @@
 
 #define WLAN_CFG_TX_RING_SIZE_MIN 512
 #define WLAN_CFG_TX_RING_SIZE_MAX 0x80000
+
+#define WLAN_CFG_TIME_CONTROL_BP_MIN 3000
+#define WLAN_CFG_TIME_CONTROL_BP_MAX 1800000
 
 #define WLAN_CFG_TX_COMP_RING_SIZE_MIN 512
 #define WLAN_CFG_TX_COMP_RING_SIZE_MAX 0x80000
@@ -391,7 +396,7 @@
 #define WLAN_CFG_RX_SW_DESC_WEIGHT_SIZE_MAX 3
 #define WLAN_CFG_RX_SW_DESC_NUM_SIZE 4096
 #define WLAN_CFG_RX_SW_DESC_NUM_SIZE_MIN 1024
-#define WLAN_CFG_RX_SW_DESC_NUM_SIZE_MAX 12288
+#define WLAN_CFG_RX_SW_DESC_NUM_SIZE_MAX 16384
 
 /**
  * AP use cases need to allocate more RX Descriptors than the number of
@@ -406,7 +411,7 @@
 #define WLAN_CFG_RX_SW_DESC_WEIGHT_SIZE_MAX 3
 #define WLAN_CFG_RX_SW_DESC_NUM_SIZE 12288
 #define WLAN_CFG_RX_SW_DESC_NUM_SIZE_MIN 4096
-#define WLAN_CFG_RX_SW_DESC_NUM_SIZE_MAX 12288
+#define WLAN_CFG_RX_SW_DESC_NUM_SIZE_MAX 16384
 #endif
 
 #define WLAN_CFG_RX_FLOW_SEARCH_TABLE_SIZE 16384
@@ -679,6 +684,13 @@
 		WLAN_CFG_PER_PDEV_LMAC_RING_MAX, \
 		WLAN_CFG_PER_PDEV_LMAC_RING, \
 		CFG_VALUE_OR_DEFAULT, "DP pdev LMAC ring")
+
+#define CFG_DP_TIME_CONTROL_BP \
+		CFG_INI_UINT("dp_time_control_bp", \
+		WLAN_CFG_TIME_CONTROL_BP_MIN,\
+		WLAN_CFG_TIME_CONTROL_BP_MAX,\
+		WLAN_CFG_TIME_CONTROL_BP,\
+		CFG_VALUE_OR_DEFAULT, "DP time control back pressure")
 /*
  * <ini>
  * dp_rx_pending_hl_threshold - High threshold of frame number to start
@@ -1222,7 +1234,7 @@
 			"DP Rx Flow Search Table Is Per PDev")
 
 #define CFG_DP_RX_MON_PROTOCOL_FLOW_TAG_ENABLE \
-	CFG_INI_BOOL("dp_rx_monitor_protocol_flow_tag_enable", false, \
+	CFG_INI_BOOL("dp_rx_monitor_protocol_flow_tag_enable", true, \
 		     "Enable/Disable Rx Protocol & Flow tags in Monitor mode")
 
 #define CFG_DP_TX_PER_PKT_VDEV_ID_CHECK \
@@ -1719,6 +1731,7 @@
 		CFG(CFG_DP_TX_RING_SIZE) \
 		CFG(CFG_DP_NSS_COMP_RING_SIZE) \
 		CFG(CFG_DP_PDEV_LMAC_RING) \
+		CFG(CFG_DP_TIME_CONTROL_BP) \
 		CFG(CFG_DP_BASE_HW_MAC_ID) \
 		CFG(CFG_DP_RX_HASH) \
 		CFG(CFG_DP_TSO) \
