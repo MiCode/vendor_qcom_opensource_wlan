@@ -177,8 +177,15 @@ void target_if_vdev_mgr_rsp_timer_cb(void *arg)
 		rsp_pos = RSO_STOP_RESPONSE_BIT;
 		recovery_reason = QDF_RSO_STOP_RSP_TIMEOUT;
 		target_if_vdev_mgr_rsp_timer_stop(psoc, vdev_rsp, rsp_pos);
-		target_if_vdev_mgr_handle_recovery(psoc, vdev_id,
-						   recovery_reason, rsp_pos);
+		/**
+		 * FW did not respond to rso stop cmd, as roaming is
+		 * disabled either due to race condition
+		 * that happened during previous disconnect OR
+		 * supplicant disabled roaming.
+		 * To solve this issue, skip recovery and host will
+		 * continue disconnect and cleanup rso state.
+		 */
+		mlme_debug("No rsp from FW received , continue with disconnect");
 		target_if_send_rso_stop_failure_rsp(psoc, vdev_id);
 	} else {
 		mlme_err("PSOC_%d VDEV_%d: Unknown error",

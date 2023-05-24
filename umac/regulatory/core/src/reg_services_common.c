@@ -6383,7 +6383,8 @@ bool reg_is_disable_for_pwrmode(struct wlan_objmgr_pdev *pdev, qdf_freq_t freq,
 						     freq,
 						     in_6g_pwr_mode);
 
-	return ch_state == CHANNEL_STATE_DISABLE;
+	return (ch_state == CHANNEL_STATE_DISABLE) ||
+		(ch_state == CHANNEL_STATE_INVALID);
 }
 #endif
 

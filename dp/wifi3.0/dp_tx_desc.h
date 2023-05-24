@@ -382,6 +382,7 @@ dp_tx_desc_alloc(struct dp_soc *soc, uint8_t desc_pool_id)
 		}
 		qdf_spin_unlock_bh(&pool->flow_pool_lock);
 	} else {
+		dp_err_rl("NULL desc pool pool_id %d", desc_pool_id);
 		soc->pool_stats.pkt_drop_no_pool++;
 	}
 

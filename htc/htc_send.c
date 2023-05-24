@@ -185,15 +185,15 @@ static void log_packet_info(HTC_TARGET *target, HTC_PACKET *pPacket)
 }
 
 /**
- * htc_inc_runtime_cnt: Increment htc runtime count
+ * htc_inc_htt_runtime_cnt: Increment htc htt runtime count
  * @target: handle of HTC context
  *
  * Return: None
  */
 static inline
-void htc_inc_runtime_cnt(HTC_TARGET *target)
+void htc_inc_htt_runtime_cnt(HTC_TARGET *target)
 {
-	qdf_atomic_inc(&target->htc_runtime_cnt);
+	qdf_atomic_inc(&target->htc_htt_runtime_cnt);
 }
 #else
 static void log_packet_info(HTC_TARGET *target, HTC_PACKET *pPacket)
@@ -201,7 +201,7 @@ static void log_packet_info(HTC_TARGET *target, HTC_PACKET *pPacket)
 }
 
 static inline
-void htc_inc_runtime_cnt(HTC_TARGET *target)
+void htc_inc_htt_runtime_cnt(HTC_TARGET *target)
 {
 }
 #endif
@@ -873,7 +873,7 @@ static QDF_STATUS htc_issue_packets(HTC_TARGET *target,
 		} else if (pPacket->PktInfo.AsTx.Tag ==
 			 HTC_TX_PACKET_TAG_RTPM_PUT_RC) {
 			rt_put_in_resp = true;
-			htc_inc_runtime_cnt(target);
+			htc_inc_htt_runtime_cnt(target);
 		}
 
 #if DEBUG_BUNDLE
@@ -895,7 +895,7 @@ static QDF_STATUS htc_issue_packets(HTC_TARGET *target,
 
 		if (status != QDF_STATUS_SUCCESS) {
 			if (rt_put_in_resp)
-				htc_dec_return_runtime_cnt((void *)target);
+				htc_dec_return_htt_runtime_cnt((void *)target);
 
 			if (pPacket->PktInfo.AsTx.Tag ==
 			    HTC_TX_PACKET_SYSTEM_SUSPEND)
@@ -1029,6 +1029,34 @@ static void queue_htc_pm_packets(HTC_ENDPOINT *endpoint,
 
 	HTC_PACKET_QUEUE_TRANSFER_TO_HEAD(&endpoint->TxQueue, queue);
 }
+
+/**
+ * htc_dec_wmi_runtime_cnt: Decrement htc wmi runtime count
+ * @target: HTC target
+ * @rtpm_code: RTPM code
+ *
+ * Return: None
+ */
+static inline
+void htc_dec_wmi_runtime_cnt(HTC_TARGET *target, uint8_t rtpm_code)
+{
+	if (rtpm_code == HIF_RTPM_ID_WMI)
+		qdf_atomic_dec(&target->htc_wmi_runtime_cnt);
+}
+
+/**
+ * htc_inc_wmi_runtime_cnt: Increment htc wmi runtime count
+ * @target: HTC target
+ * @rtpm_code: RTPM code
+ *
+ * Return: None
+ */
+static inline
+void htc_inc_wmi_runtime_cnt(HTC_TARGET *target, uint8_t rtpm_code)
+{
+	if (rtpm_code == HIF_RTPM_ID_WMI)
+		qdf_atomic_inc(&target->htc_wmi_runtime_cnt);
+}
 #else
 static void extract_htc_pm_packets(HTC_ENDPOINT *endpoint,
 		HTC_PACKET_QUEUE *queue)
@@ -1037,6 +1065,16 @@ static void extract_htc_pm_packets(HTC_ENDPOINT *endpoint,
 static void queue_htc_pm_packets(HTC_ENDPOINT *endpoint,
 		HTC_PACKET_QUEUE *queue)
 {}
+
+static inline
+void htc_dec_wmi_runtime_cnt(HTC_TARGET *target, uint8_t rtpm_code)
+{
+}
+
+static inline
+void htc_inc_wmi_runtime_cnt(HTC_TARGET *target, uint8_t rtpm_code)
+{
+}
 #endif
 
 /**
@@ -1168,21 +1206,26 @@ static void get_htc_send_packets_credit_based(HTC_TARGET *target,
 				log_packet_info(target, pPacket);
 				break;
 			}
+			htc_inc_wmi_runtime_cnt(target, rtpm_code);
 		}
 
 		sendFlags = 0;
 		/* get packet at head, but don't remove it */
 		pPacket = htc_get_pkt_at_head(tx_queue);
 		if (!pPacket) {
-			if (do_pm_get)
+			if (do_pm_get) {
 				hif_rtpm_put(HIF_RTPM_PUT_ASYNC, rtpm_code);
+				htc_dec_wmi_runtime_cnt(target, rtpm_code);
+			}
 			break;
 		}
 
 		if (sys_pm_check &&
 		    hif_system_pm_state_check(target->hif_dev)) {
-			if (do_pm_get)
+			if (do_pm_get) {
 				hif_rtpm_put(HIF_RTPM_PUT_ASYNC, rtpm_code);
+				htc_dec_wmi_runtime_cnt(target, rtpm_code);
+			}
 			break;
 		}
 
@@ -1225,9 +1268,12 @@ static void get_htc_send_packets_credit_based(HTC_TARGET *target,
 						 pEndpoint->TxCredits,
 						 creditsRequired));
 #endif
-				if (do_pm_get)
+				if (do_pm_get) {
 					hif_rtpm_put(HIF_RTPM_PUT_ASYNC,
 						     rtpm_code);
+					htc_dec_wmi_runtime_cnt(target,
+								rtpm_code);
+				}
 
 				break;
 			}
@@ -1324,6 +1370,7 @@ static void get_htc_send_packets(HTC_TARGET *target,
 				log_packet_info(target, pPacket);
 				break;
 			}
+			htc_inc_wmi_runtime_cnt(target, rtpm_code);
 
 		}
 
@@ -1331,6 +1378,7 @@ static void get_htc_send_packets(HTC_TARGET *target,
 		if (ret) {
 			if (do_pm_get) {
 				hif_rtpm_put(HIF_RTPM_PUT_ASYNC, rtpm_code);
+				htc_dec_wmi_runtime_cnt(target, rtpm_code);
 			}
 			break;
 		}
@@ -1339,6 +1387,7 @@ static void get_htc_send_packets(HTC_TARGET *target,
 		if (!pPacket) {
 			if (do_pm_get) {
 				hif_rtpm_put(HIF_RTPM_PUT_ASYNC, rtpm_code);
+				htc_dec_wmi_runtime_cnt(target, rtpm_code);
 			}
 			break;
 		}
@@ -1697,6 +1746,7 @@ static enum HTC_SEND_QUEUE_RESULT htc_try_send(HTC_TARGET *target,
 							pEndpoint->service_id);
 			for (i = HTC_PACKET_QUEUE_DEPTH(&sendQueue); i > 0; i--) {
 				hif_rtpm_put(HIF_RTPM_PUT_ASYNC, rtpm_code);
+				htc_dec_wmi_runtime_cnt(target, rtpm_code);
 			}
 
 			if (!pEndpoint->async_update) {
@@ -2451,8 +2501,10 @@ QDF_STATUS htc_tx_completion_handler(void *Context,
 		}
 		if (pPacket->PktInfo.AsTx.Tag != HTC_TX_PACKET_TAG_AUTO_PM &&
 		    pPacket->PktInfo.AsTx.Tag != HTC_TX_PACKET_TAG_RUNTIME_PUT &&
-		    pPacket->PktInfo.AsTx.Tag != HTC_TX_PACKET_TAG_RTPM_PUT_RC)
+		    pPacket->PktInfo.AsTx.Tag != HTC_TX_PACKET_TAG_RTPM_PUT_RC) {
 			hif_rtpm_put(HIF_RTPM_PUT_ASYNC, HIF_RTPM_ID_WMI);
+			htc_dec_wmi_runtime_cnt(target, HIF_RTPM_ID_WMI);
+		}
 
 
 		if (pPacket->PktInfo.AsTx.Tag == HTC_TX_PACKET_TAG_BUNDLED) {

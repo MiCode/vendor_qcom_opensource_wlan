@@ -145,6 +145,42 @@ void htc_ce_tasklet_debug_dump(HTC_HANDLE htc_handle)
 	hif_display_stats(target->hif_dev);
 }
 
+#ifdef FEATURE_RUNTIME_PM
+/**
+ * htc_dec_return_wmi_runtime_cnt: Decrement htc wmi runtime count
+ * @target: HTC target
+ *
+ * Return: value of runtime count after decrement
+ */
+static inline
+int32_t htc_dec_return_wmi_runtime_cnt(HTC_TARGET *target)
+{
+	return qdf_atomic_dec_return(&target->htc_wmi_runtime_cnt);
+}
+
+/**
+ * htc_init_wmi_runtime_cnt: Initialize htc wmi runtime count
+ * @target: HTC target
+ *
+ * Return: None
+ */
+static inline
+void htc_init_wmi_runtime_cnt(HTC_TARGET *target)
+{
+	qdf_atomic_init(&target->htc_wmi_runtime_cnt);
+}
+#else
+static inline
+int32_t htc_dec_return_wmi_runtime_cnt(HTC_TARGET *target)
+{
+	return -1;
+}
+
+static inline
+void htc_init_wmi_runtime_cnt(HTC_TARGET *target)
+{
+}
+#endif
 /* cleanup the HTC instance */
 static void htc_cleanup(HTC_TARGET *target)
 {
@@ -154,8 +190,11 @@ static void htc_cleanup(HTC_TARGET *target)
 	HTC_PACKET_QUEUE *pkt_queue;
 	qdf_nbuf_t netbuf;
 
-	while (htc_dec_return_runtime_cnt((void *)target) >= 0)
+	while (htc_dec_return_htt_runtime_cnt((void *)target) >= 0)
 		hif_rtpm_put(HIF_RTPM_PUT_ASYNC, HIF_RTPM_ID_HTT);
+
+	while (htc_dec_return_wmi_runtime_cnt((void *)target) >= 0)
+		hif_rtpm_put(HIF_RTPM_PUT_ASYNC, HIF_RTPM_ID_WMI);
 
 	if (target->hif_dev) {
 		hif_detach_htc(target->hif_dev);
@@ -277,30 +316,30 @@ static void htc_runtime_pm_deinit(HTC_TARGET *target)
 	qdf_destroy_work(0, &target->queue_kicker);
 }
 
-int32_t htc_dec_return_runtime_cnt(HTC_HANDLE htc)
+int32_t htc_dec_return_htt_runtime_cnt(HTC_HANDLE htc)
 {
 	HTC_TARGET *target = GET_HTC_TARGET_FROM_HANDLE(htc);
 
-	return qdf_atomic_dec_return(&target->htc_runtime_cnt);
+	return qdf_atomic_dec_return(&target->htc_htt_runtime_cnt);
 }
 
 /**
- * htc_init_runtime_cnt: Initialize htc runtime count
- * @htc: HTC handle
+ * htc_init_htt_runtime_cnt: Initialize htc htt runtime count
+ * @target: HTC target
  *
  * Return: None
  */
 static inline
-void htc_init_runtime_cnt(HTC_TARGET *target)
+void htc_init_htt_runtime_cnt(HTC_TARGET *target)
 {
-	qdf_atomic_init(&target->htc_runtime_cnt);
+	qdf_atomic_init(&target->htc_htt_runtime_cnt);
 }
 #else
 static inline void htc_runtime_pm_init(HTC_TARGET *target) { }
 static inline void htc_runtime_pm_deinit(HTC_TARGET *target) { }
 
 static inline
-void htc_init_runtime_cnt(HTC_TARGET *target)
+void htc_init_htt_runtime_cnt(HTC_TARGET *target)
 {
 }
 #endif
@@ -479,7 +518,8 @@ HTC_HANDLE htc_create(void *ol_sc, struct htc_init_info *pInfo,
 	} while (false);
 
 	htc_recv_init(target);
-	htc_init_runtime_cnt(target);
+	htc_init_htt_runtime_cnt(target);
+	htc_init_wmi_runtime_cnt(target);
 
 	HTC_TRACE("-htc_create: (0x%pK)", target);
 
@@ -503,10 +543,10 @@ void htc_destroy(HTC_HANDLE HTCHandle)
 	htc_hang_event_notifier_unregister();
 
 	if (target) {
-		hif_rtpm_deregister(HIF_RTPM_ID_HTT);
-		hif_rtpm_deregister(HIF_RTPM_ID_WMI);
 		hif_stop(htc_get_hif_device(HTCHandle));
 		htc_cleanup(target);
+		hif_rtpm_deregister(HIF_RTPM_ID_HTT);
+		hif_rtpm_deregister(HIF_RTPM_ID_WMI);
 	}
 	AR_DEBUG_PRINTF(ATH_DEBUG_TRC, ("-htc_destroy\n"));
 	htc_credit_history_deinit();

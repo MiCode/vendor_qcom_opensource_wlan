@@ -289,6 +289,21 @@ struct vdev_mlme_eht_ops_info {
 #endif
 
 /**
+ * enum mlme_vdev_dot11_mode - Dot11 mode of the vdev
+ * MLME_VDEV_DOT11_MODE_AUTO: vdev uses mlme_dot11_mode
+ * MLME_VDEV_DOT11_MODE_11N: vdev supports 11N mode
+ * MLME_VDEV_DOT11_MODE_11AC: vdev supports 11AC mode
+ * MLME_VDEV_DOT11_MODE_11AX: vdev supports 11AX mode
+ */
+enum mlme_vdev_dot11_mode {
+        MLME_VDEV_DOT11_MODE_AUTO,
+        MLME_VDEV_DOT11_MODE_11N,
+        MLME_VDEV_DOT11_MODE_11AC,
+        MLME_VDEV_DOT11_MODE_11AX,
+        MLME_VDEV_DOT11_MODE_11BE,
+};
+
+/**
  * struct vdev_mlme_he_ops_info - vdev protocol structure holding information
  * that is used in frames
  * @generic: generic protocol information
@@ -302,6 +317,7 @@ struct vdev_mlme_eht_ops_info {
  * @bss_color: 11ax HE BSS Color information
  */
 struct vdev_mlme_proto {
+	enum mlme_vdev_dot11_mode vdev_dot11_mode;
 	struct vdev_mlme_proto_generic generic;
 	struct vdev_mlme_proto_ap ap;
 	struct vdev_mlme_proto_sta sta;

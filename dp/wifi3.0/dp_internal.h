@@ -3368,6 +3368,14 @@ void dp_rx_fst_update_cmem_params(struct dp_soc *soc, uint16_t num_entries,
 
 void
 dp_rx_fst_update_pm_suspend_status(struct dp_soc *soc, bool suspended);
+
+/*
+ * dp_rx_fst_requeue_wq() - Re-queue pending work queue tasks
+ * @soc:		DP SoC context
+ *
+ * Return: None
+ */
+void dp_rx_fst_requeue_wq(struct dp_soc *soc);
 #else
 static inline void
 dp_rx_fst_update_cmem_params(struct dp_soc *soc, uint16_t num_entries,
@@ -3377,6 +3385,11 @@ dp_rx_fst_update_cmem_params(struct dp_soc *soc, uint16_t num_entries,
 
 static inline void
 dp_rx_fst_update_pm_suspend_status(struct dp_soc *soc, bool suspended)
+{
+}
+
+static inline void
+dp_rx_fst_requeue_wq(struct dp_soc *soc)
 {
 }
 

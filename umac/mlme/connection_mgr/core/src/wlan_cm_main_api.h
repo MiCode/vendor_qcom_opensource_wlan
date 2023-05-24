@@ -1193,4 +1193,12 @@ void cm_set_candidate_custom_sort_cb(
 				 qdf_list_t *list));
 
 #endif
+
+/**
+ * cm_is_connect_req_reassoc() - Is connect req for reassoc
+ * @req: connect req
+ *
+ * Return: void
+ */
+bool cm_is_connect_req_reassoc(struct wlan_cm_connect_req *req);
 #endif /* __WLAN_CM_MAIN_API_H__ */

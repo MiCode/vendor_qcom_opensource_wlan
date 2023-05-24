@@ -1631,7 +1631,8 @@ dp_tx_ring_access_end_wrapper(struct dp_soc *soc,
 
 	ret = hif_rtpm_get(HIF_RTPM_GET_ASYNC, HIF_RTPM_ID_DP);
 	if (QDF_IS_STATUS_SUCCESS(ret)) {
-		if (hif_system_pm_state_check(soc->hif_handle)) {
+		if (hif_system_pm_state_check(soc->hif_handle) ||
+					qdf_unlikely(soc->is_tx_pause)) {
 			dp_tx_hal_ring_access_end_reap(soc, hal_ring_hdl);
 			hal_srng_set_event(hal_ring_hdl, HAL_SRNG_FLUSH_EVENT);
 			hal_srng_inc_flush_cnt(hal_ring_hdl);
@@ -1656,7 +1657,8 @@ dp_tx_ring_access_end_wrapper(struct dp_soc *soc,
 			      hal_ring_handle_t hal_ring_hdl,
 			      int coalesce)
 {
-	if (hif_system_pm_state_check(soc->hif_handle)) {
+	if (hif_system_pm_state_check(soc->hif_handle) ||
+					qdf_unlikely(soc->is_tx_pause)) {
 		dp_tx_hal_ring_access_end_reap(soc, hal_ring_hdl);
 		hal_srng_set_event(hal_ring_hdl, HAL_SRNG_FLUSH_EVENT);
 		hal_srng_inc_flush_cnt(hal_ring_hdl);
@@ -2249,8 +2251,8 @@ dp_tx_send_msdu_single(struct dp_vdev *vdev, qdf_nbuf_t nbuf,
 	tx_desc = dp_tx_prepare_desc_single(vdev, nbuf, tx_q->desc_pool_id,
 			msdu_info, tx_exc_metadata);
 	if (!tx_desc) {
-		dp_err_rl("Tx_desc prepare Fail vdev %pK queue %d",
-			  vdev, tx_q->desc_pool_id);
+		dp_err_rl("Tx_desc prepare Fail vdev_id %d vdev %pK queue %d",
+			  vdev->vdev_id, vdev, tx_q->desc_pool_id);
 		drop_code = TX_DESC_ERR;
 		goto fail_return;
 	}

@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2012-2015,2020-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -133,5 +134,26 @@ osif_indicate_reassoc_results(struct wlan_objmgr_vdev *vdev,
  */
 QDF_STATUS osif_failed_candidate_handler(struct wlan_objmgr_vdev *vdev,
 					 struct wlan_cm_connect_resp *rsp);
+
+/**
+ * osif_cm_indicate_disconnect - notify osif that connection was dropped
+ *
+ * @vdev: pointer to vdev
+ * @dev: network device
+ * @reason: reason code for the disconnection, set it to 0 if unknown
+ * @locally_generated: disconnection was requested locally
+ * @ie: information elements of the deauth/disassoc frame (may be %NULL)
+ * @ie_len: length of IEs
+ * @gfp: allocation flags
+ *
+ * After it calls this function, the driver should enter an idle state
+ * and not try to connect to any AP any more.
+ */
+void
+osif_cm_indicate_disconnect(struct wlan_objmgr_vdev *vdev,
+			    struct net_device *dev,
+			    enum ieee80211_reasoncode reason,
+			    bool locally_generated, const u8 *ie,
+			    size_t ie_len, gfp_t gfp);
 
 #endif /* __OSIF_CM_RSP_H */

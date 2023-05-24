@@ -595,6 +595,8 @@ struct cdp_cmn_ops {
 	 */
 	ol_txrx_tx_fast_fp tx_fast_send;
 
+	void (*set_tx_pause)(ol_txrx_soc_handle soc, bool flag);
+
 	/**
 	 * txrx_get_os_rx_handles_from_vdev() - Return function, osif vdev
 	 *					to deliver pkt to stack.

@@ -551,6 +551,20 @@ QDF_STATUS mlme_cm_osif_pmksa_candidate_notify(struct wlan_objmgr_vdev *vdev,
 
 	return ret;
 }
+
+QDF_STATUS mlme_cm_osif_send_keys(struct wlan_objmgr_vdev *vdev,
+				  uint8_t key_index, bool pairwise,
+				  enum wlan_crypto_cipher_type cipher_type)
+{
+	QDF_STATUS ret = QDF_STATUS_SUCCESS;
+
+	if (glbl_cm_ops && glbl_cm_ops->mlme_cm_send_keys_cb)
+		ret = glbl_cm_ops->mlme_cm_send_keys_cb(vdev, key_index,
+							pairwise,
+							cipher_type);
+
+	return ret;
+}
 #endif
 
 #ifdef WLAN_FEATURE_ROAM_OFFLOAD

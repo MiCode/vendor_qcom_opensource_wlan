@@ -50,6 +50,7 @@ void wlan_cfg80211_translate_key(struct wlan_objmgr_vdev *vdev,
 	qdf_mem_copy(&crypto_key->keyval[0], params->key, params->key_len);
 	qdf_mem_copy(&crypto_key->keyrsc[0], params->seq, params->seq_len);
 
+	crypto_key->key_type = key_type;
 	crypto_key->cipher_type = osif_nl_to_crypto_cipher_type(params->cipher);
 	if (IS_WEP_CIPHER(crypto_key->cipher_type) && !mac_addr) {
 		/*

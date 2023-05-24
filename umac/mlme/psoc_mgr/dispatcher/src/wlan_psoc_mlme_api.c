@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2019-2021 The Linux Foundation. All rights reserved.
- * Copyright (c) 2021 Qualcomm Innovation Center, Inc. All rights reserved.
+ * Copyright (c) 2021-2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -27,6 +27,36 @@
 #include "cfg_ucfg_api.h"
 #include "wlan_vdev_mgr_tgt_if_rx_api.h"
 #include <qdf_platform.h>
+
+QDF_STATUS
+wlan_psoc_mlme_get_11be_capab(struct wlan_objmgr_psoc *psoc, bool *val)
+{
+	struct psoc_mlme_obj *psoc_mlme;
+
+	psoc_mlme = wlan_psoc_mlme_get_cmpt_obj(psoc);
+	if (!psoc_mlme) {
+		mlme_err("psoc_mlme is NULL");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	*val = psoc_mlme->psoc_cfg.phy_config.eht_cap;
+	return QDF_STATUS_SUCCESS;
+}
+
+QDF_STATUS
+wlan_psoc_mlme_set_11be_capab(struct wlan_objmgr_psoc *psoc, bool val)
+{
+	struct psoc_mlme_obj *psoc_mlme;
+
+	psoc_mlme = wlan_psoc_mlme_get_cmpt_obj(psoc);
+	if (!psoc_mlme) {
+		mlme_err("psoc_mlme is NULL");
+		return QDF_STATUS_E_FAILURE;
+	}
+
+	psoc_mlme->psoc_cfg.phy_config.eht_cap &= val;
+	return QDF_STATUS_SUCCESS;
+}
 
 struct psoc_mlme_obj *wlan_psoc_mlme_get_cmpt_obj(struct wlan_objmgr_psoc *psoc)
 {
@@ -94,6 +124,8 @@ static void mlme_init_cfg(struct wlan_objmgr_psoc *psoc)
 	wlan_cm_init_score_config(psoc, &mlme_psoc_obj->psoc_cfg.score_config);
 	mlme_psoc_obj->psoc_cfg.phy_config.max_chan_switch_ie =
 		cfg_get(psoc, CFG_MLME_MAX_CHAN_SWITCH_IE_ENABLE);
+	mlme_psoc_obj->psoc_cfg.phy_config.eht_cap =
+		cfg_default(CFG_MLME_11BE_TARGET_CAPAB);
 }
 
 QDF_STATUS mlme_psoc_open(struct wlan_objmgr_psoc *psoc)

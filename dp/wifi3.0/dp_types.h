@@ -2563,6 +2563,7 @@ struct dp_soc {
 	/* A flag using to decide the switch of rx link speed  */
 	bool high_throughput;
 #endif
+	bool is_tx_pause;
 };
 
 #ifdef IPA_OFFLOAD
@@ -4306,6 +4307,8 @@ struct dp_fisa_reo_mismatch_stats {
 struct dp_fisa_stats {
 	/* flow index invalid from RX HW TLV */
 	uint32_t invalid_flow_index;
+	/* workqueue deferred due to suspend */
+	uint32_t update_deferred;
 	struct dp_fisa_reo_mismatch_stats reo_mismatch;
 };
 
@@ -4432,7 +4435,8 @@ struct dp_rx_fst {
 	qdf_event_t cmem_resp_event;
 	bool flow_deletion_supported;
 	bool fst_in_cmem;
-	bool pm_suspended;
+	qdf_atomic_t pm_suspended;
+	bool fst_wq_defer;
 };
 
 #endif /* WLAN_SUPPORT_RX_FISA */

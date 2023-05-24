@@ -181,13 +181,13 @@ struct wlan_ml_vdev_aid_mgr {
 /*
  * struct wlan_mlo_key_mgmt - MLO key management
  * @link_mac_address: list of vdevs selected for connection with the MLAP
- * @ptk: Pairwise transition keys
- * @gtk: Group transition key
+ * @vdev_id: vdev id value
+ * @keys_saved: keys saved bool
  */
 struct wlan_mlo_key_mgmt {
 	struct qdf_mac_addr link_mac_address;
-	uint32_t ptk;
-	uint32_t gtk;
+	uint8_t vdev_id;
+	bool keys_saved;
 };
 
 /**

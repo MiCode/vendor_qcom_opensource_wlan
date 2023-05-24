@@ -681,6 +681,10 @@ static bool scm_check_dot11mode(struct scan_cache_entry *db_entry,
 		if (!util_scan_entry_hecap(db_entry))
 			return false;
 		break;
+	case ALLOW_11BE_ONLY:
+		if (!util_scan_entry_ehtcap(db_entry))
+			return false;
+		break;
 	default:
 		scm_debug("Invalid dot11mode filter passed %d",
 			  filter->dot11mode);
@@ -690,12 +694,14 @@ static bool scm_check_dot11mode(struct scan_cache_entry *db_entry,
 }
 
 #ifdef WLAN_FEATURE_11BE_MLO
-static bool util_mlo_filter_match(struct scan_filter *filter,
+static bool util_mlo_filter_match(struct wlan_objmgr_pdev *pdev,
+				  struct scan_filter *filter,
 				  struct scan_cache_entry *db_entry)
 {
 	uint8_t i, band_bitmap, assoc_band_bitmap;
 	enum reg_wifi_band band;
 	struct partner_link_info *partner_link;
+	bool is_disabled;
 
 	if (!db_entry->ie_list.multi_link)
 		return true;
@@ -716,10 +722,26 @@ static bool util_mlo_filter_match(struct scan_filter *filter,
 	for (i = 0; i < db_entry->ml_info.num_links; i++) {
 		partner_link = &db_entry->ml_info.link_info[i];
 		band = wlan_reg_freq_to_band(partner_link->freq);
-		if (band_bitmap & BIT(band)) {
-			scm_debug("partner freq %d  match band bitmap: 0x%x",
+
+		is_disabled = wlan_reg_is_disable_for_pwrmode(
+				    pdev,
+				    partner_link->freq,
+				    REG_BEST_PWR_MODE);
+		if (is_disabled) {
+			scm_debug("partner link id %d freq %d disabled : "QDF_MAC_ADDR_FMT,
+				  partner_link->link_id,
 				  partner_link->freq,
-				  filter->band_bitmap);
+				  QDF_MAC_ADDR_REF(
+				  partner_link->link_addr.bytes));
+			continue;
+		}
+		if (band_bitmap & BIT(band)) {
+			scm_debug("partner link id %d freq %d match band bitmap: 0x%x "QDF_MAC_ADDR_FMT,
+				  partner_link->link_id,
+				  partner_link->freq,
+				  filter->band_bitmap,
+				  QDF_MAC_ADDR_REF(
+				  partner_link->link_addr.bytes));
 			partner_link->is_valid_link = true;
 		}
 	}
@@ -727,7 +749,8 @@ static bool util_mlo_filter_match(struct scan_filter *filter,
 	return true;
 }
 #else
-static bool util_mlo_filter_match(struct scan_filter *filter,
+static bool util_mlo_filter_match(struct wlan_objmgr_pdev *pdev,
+				  struct scan_filter *filter,
 				  struct scan_cache_entry *db_entry)
 {
 	return true;
@@ -966,7 +989,7 @@ bool scm_filter_match(struct wlan_objmgr_psoc *psoc,
 		return false;
 	}
 
-	if (!util_mlo_filter_match(filter, db_entry)) {
+	if (!util_mlo_filter_match(pdev, filter, db_entry)) {
 		scm_debug(QDF_MAC_ADDR_FMT ": Ignore as mlo filter didn't match",
 			  QDF_MAC_ADDR_REF(db_entry->bssid.bytes));
 		return false;

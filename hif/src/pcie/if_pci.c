@@ -2342,9 +2342,9 @@ int hif_pci_bus_suspend(struct hif_softc *scn)
 	}
 
 	/*
-	 * In an unlikely case, if draining becomes infinite loop,
-	 * it returns an error, shall abort the bus suspend.
-	 */
+	* In an unlikely case, if draining becomes infinite loop,
+	* it returns an error, shall abort the bus suspend.
+	*/
 	ret = hif_drain_fw_diag_ce(scn);
 	if (ret) {
 		hif_err("draining fw_diag_ce goes infinite, so abort suspend");
@@ -4006,8 +4006,10 @@ int hif_force_wake_request(struct hif_opaque_softc *hif_handle)
 	else
 		timeout = 0;
 
-	if (pld_force_wake_request_sync(scn->qdf_dev->dev, timeout)) {
-		hif_err("force wake request send failed");
+	ret = pld_force_wake_request_sync(scn->qdf_dev->dev, timeout);
+	if (ret) {
+		hif_err("force wake request(timeout %u) send failed: %d",
+			timeout, ret);
 		HIF_STATS_INC(pci_scn, mhi_force_wake_failure, 1);
 		status = -EINVAL;
 		goto release_rtpm_ref;
@@ -4100,6 +4102,7 @@ int hif_force_wake_request(struct hif_opaque_softc *hif_handle)
 	struct hif_softc *scn = (struct hif_softc *)hif_handle;
 	struct hif_pci_softc *pci_scn = HIF_GET_PCI_SOFTC(scn);
 	uint32_t timeout;
+	int ret;
 
 	HIF_STATS_INC(pci_scn, mhi_force_wake_request_vote, 1);
 
@@ -4108,8 +4111,10 @@ int hif_force_wake_request(struct hif_opaque_softc *hif_handle)
 	else
 		timeout = 0;
 
-	if (pld_force_wake_request_sync(scn->qdf_dev->dev, timeout)) {
-		hif_err("force wake request send failed");
+	ret = pld_force_wake_request_sync(scn->qdf_dev->dev, timeout);
+	if (ret) {
+		hif_err("force wake request(timeout %u) send failed: %d",
+			timeout, ret);
 		HIF_STATS_INC(pci_scn, mhi_force_wake_failure, 1);
 		return -EINVAL;
 	}

@@ -409,6 +409,7 @@ typedef enum wlan_crypto_param_type {
  * @flags:          key flags
  * @keyix:          key id
  * @cipher_type:    cipher type being used for this key
+ * @key_type:       unicast or broadcast key
  * @mac_addr:       MAC address of the peer
  * @src_addr:       Source mac address associated with the key
  * @cipher_table:   table which stores cipher related info
@@ -431,6 +432,7 @@ struct wlan_crypto_key {
 	uint16_t    flags;
 	uint16_t    keyix;
 	enum wlan_crypto_cipher_type cipher_type;
+	enum wlan_crypto_key_type key_type;
 	uint8_t     macaddr[QDF_MAC_ADDR_SIZE];
 	struct qdf_mac_addr src_addr;
 	void        *cipher_table;

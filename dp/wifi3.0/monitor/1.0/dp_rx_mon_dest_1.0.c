@@ -171,7 +171,7 @@ dp_rx_mon_mpdu_pop(struct dp_soc *soc, uint32_t mac_id,
 	union dp_rx_desc_list_elem_t **tail)
 {
 	struct dp_pdev *dp_pdev = dp_get_pdev_for_lmac_id(soc, mac_id);
-	void *rx_desc_tlv;
+	void *rx_desc_tlv, *first_rx_desc_tlv = NULL;
 	void *rx_msdu_link_desc;
 	qdf_nbuf_t msdu;
 	qdf_nbuf_t last;
@@ -380,6 +380,7 @@ dp_rx_mon_mpdu_pop(struct dp_soc *soc, uint32_t mac_id,
 						    &frag_len,
 						    &l2_hdr_offset,
 						    rx_desc_tlv,
+						    &first_rx_desc_tlv,
 						    &is_frag_non_raw, data);
 			if (!is_frag)
 				msdu_cnt--;
@@ -1211,15 +1212,59 @@ dp_rx_pdev_mon_desc_pool_alloc(struct dp_pdev *pdev)
 	return status;
 }
 
+#ifdef QCA_WIFI_MONITOR_MODE_NO_MSDU_START_TLV_SUPPORT
+static inline void
+hal_rx_populate_buf_info(struct dp_soc *soc,
+			 struct hal_rx_mon_dest_buf_info *buf_info,
+			 void *rx_desc)
+{
+	hal_rx_priv_info_get_from_tlv(soc->hal_soc, rx_desc,
+				      (uint8_t *)buf_info,
+				      sizeof(*buf_info));
+}
+
+static inline uint8_t
+hal_rx_frag_msdu_get_l2_hdr_offset(struct dp_soc *soc,
+				   struct hal_rx_mon_dest_buf_info *buf_info,
+				   void *rx_desc, bool is_first_frag)
+{
+	if (is_first_frag)
+		return buf_info->l2_hdr_pad;
+	else
+		return DP_RX_MON_RAW_L2_HDR_PAD_BYTE;
+}
+#else
+static inline void
+hal_rx_populate_buf_info(struct dp_soc *soc,
+			 struct hal_rx_mon_dest_buf_info *buf_info,
+			 void *rx_desc)
+{
+	if (hal_rx_tlv_decap_format_get(soc->hal_soc, rx_desc) ==
+	    HAL_HW_RX_DECAP_FORMAT_RAW)
+		buf_info->is_decap_raw = 1;
+
+	if (hal_rx_tlv_mpdu_len_err_get(soc->hal_soc, rx_desc))
+		buf_info->mpdu_len_err = 1;
+}
+
+static inline uint8_t
+hal_rx_frag_msdu_get_l2_hdr_offset(struct dp_soc *soc,
+				   struct hal_rx_mon_dest_buf_info *buf_info,
+				   void *rx_desc, bool is_first_frag)
+{
+	return hal_rx_msdu_end_l3_hdr_padding_get(soc->hal_soc, rx_desc);
+}
+#endif
+
 static inline
-void dp_rx_msdus_set_payload(struct dp_soc *soc, qdf_nbuf_t msdu)
+void dp_rx_msdus_set_payload(struct dp_soc *soc, qdf_nbuf_t msdu,
+			     uint8_t l2_hdr_offset)
 {
 	uint8_t *data;
-	uint32_t rx_pkt_offset, l2_hdr_offset;
+	uint32_t rx_pkt_offset;
 
 	data = qdf_nbuf_data(msdu);
 	rx_pkt_offset = soc->rx_mon_pkt_tlv_size;
-	l2_hdr_offset = hal_rx_msdu_end_l3_hdr_padding_get(soc->hal_soc, data);
 	qdf_nbuf_pull_head(msdu, rx_pkt_offset + l2_hdr_offset);
 }
 
@@ -1231,7 +1276,7 @@ dp_rx_mon_restitch_mpdu_from_msdus(struct dp_soc *soc,
 				   struct cdp_mon_status *rx_status)
 {
 	qdf_nbuf_t msdu, mpdu_buf, prev_buf, msdu_orig, head_frag_list;
-	uint32_t decap_format, wifi_hdr_len, sec_hdr_len, msdu_llc_len,
+	uint32_t wifi_hdr_len, sec_hdr_len, msdu_llc_len,
 		mpdu_buf_len, decap_hdr_pull_bytes, frag_list_sum_len, dir,
 		is_amsdu, is_first_frag, amsdu_pad;
 	void *rx_desc;
@@ -1241,6 +1286,8 @@ dp_rx_mon_restitch_mpdu_from_msdus(struct dp_soc *soc,
 	struct ieee80211_qoscntl *qos;
 	struct dp_pdev *dp_pdev = dp_get_pdev_for_lmac_id(soc, mac_id);
 	struct dp_mon_pdev *mon_pdev;
+	struct hal_rx_mon_dest_buf_info buf_info;
+	uint8_t l2_hdr_offset;
 
 	head_frag_list = NULL;
 	mpdu_buf = NULL;
@@ -1262,8 +1309,10 @@ dp_rx_mon_restitch_mpdu_from_msdus(struct dp_soc *soc,
 	msdu_orig = head_msdu;
 
 	rx_desc = qdf_nbuf_data(msdu_orig);
+	qdf_mem_zero(&buf_info, sizeof(buf_info));
+	hal_rx_populate_buf_info(soc, &buf_info, rx_desc);
 
-	if (hal_rx_tlv_mpdu_len_err_get(soc->hal_soc, rx_desc)) {
+	if (buf_info.mpdu_len_err) {
 		/* It looks like there is some issue on MPDU len err */
 		/* Need further investigate if drop the packet */
 		DP_STATS_INC(dp_pdev, dropped.mon_rx_drop, 1);
@@ -1281,21 +1330,23 @@ dp_rx_mon_restitch_mpdu_from_msdus(struct dp_soc *soc,
 
 	rx_desc = qdf_nbuf_data(head_msdu);
 
-	decap_format = hal_rx_tlv_decap_format_get(soc->hal_soc, rx_desc);
-
 	/* Easy case - The MSDU status indicates that this is a non-decapped
 	 * packet in RAW mode.
 	 */
-	if (decap_format == HAL_HW_RX_DECAP_FORMAT_RAW) {
+	if (buf_info.is_decap_raw) {
 		/* Note that this path might suffer from headroom unavailabilty
 		 * - but the RX status is usually enough
 		 */
 
-		dp_rx_msdus_set_payload(soc, head_msdu);
+		l2_hdr_offset = hal_rx_frag_msdu_get_l2_hdr_offset(soc,
+								   &buf_info,
+								   rx_desc,
+								   true);
+		dp_rx_msdus_set_payload(soc, head_msdu, l2_hdr_offset);
 
-			dp_rx_mon_dest_debug("%pK: decap format raw head %pK head->next %pK last_msdu %pK last_msdu->next %pK",
-					     soc, head_msdu, head_msdu->next,
-					     last_msdu, last_msdu->next);
+		dp_rx_mon_dest_debug("%pK: decap format raw head %pK head->next %pK last_msdu %pK last_msdu->next %pK",
+				     soc, head_msdu, head_msdu->next,
+				     last_msdu, last_msdu->next);
 
 		mpdu_buf = head_msdu;
 
@@ -1306,8 +1357,10 @@ dp_rx_mon_restitch_mpdu_from_msdus(struct dp_soc *soc,
 		is_first_frag = 1;
 
 		while (msdu) {
-
-			dp_rx_msdus_set_payload(soc, msdu);
+			l2_hdr_offset = hal_rx_frag_msdu_get_l2_hdr_offset(
+							soc, &buf_info,
+							rx_desc, false);
+			dp_rx_msdus_set_payload(soc, msdu, l2_hdr_offset);
 
 			if (is_first_frag) {
 				is_first_frag = 0;
@@ -1463,7 +1516,11 @@ dp_rx_mon_restitch_mpdu_from_msdus(struct dp_soc *soc,
 		dest += amsdu_pad;
 		qdf_mem_copy(dest, hdr_desc, msdu_llc_len);
 
-		dp_rx_msdus_set_payload(soc, msdu);
+		l2_hdr_offset = hal_rx_frag_msdu_get_l2_hdr_offset(soc,
+								   &buf_info,
+								   rx_desc,
+								   true);
+		dp_rx_msdus_set_payload(soc, msdu, l2_hdr_offset);
 
 		/* Push the MSDU buffer beyond the decap header */
 		qdf_nbuf_pull_head(msdu, decap_hdr_pull_bytes);
@@ -1518,7 +1575,7 @@ mpdu_stitch_done:
 	return mpdu_buf;
 
 mpdu_stitch_fail:
-	if ((mpdu_buf) && (decap_format != HAL_HW_RX_DECAP_FORMAT_RAW)) {
+	if ((mpdu_buf) && !buf_info.is_decap_raw) {
 		dp_rx_mon_dest_err("%pK: mpdu_stitch_fail mpdu_buf %pK",
 				   soc, mpdu_buf);
 		/* Free the head buffer */

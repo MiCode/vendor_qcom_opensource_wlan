@@ -3371,7 +3371,7 @@ static void dp_htt_t2h_msg_handler(void *context, HTC_PACKET *pkt)
 			 * did not process this indication runtime_put happens
 			 * properly in the cleanup path.
 			 */
-			if (htc_dec_return_runtime_cnt(soc->htc_soc) >= 0)
+			if (htc_dec_return_htt_runtime_cnt(soc->htc_soc) >= 0)
 				htc_pm_runtime_put(soc->htc_soc);
 			else
 				soc->stats.htt_ver_req_put_skip++;

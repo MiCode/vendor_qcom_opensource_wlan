@@ -263,8 +263,10 @@ typedef struct _HTC_TARGET {
 	bool htc_pkt_dbg;
 
 #ifdef FEATURE_RUNTIME_PM
-	/* Runtime count for H2T msg with response */
-	qdf_atomic_t htc_runtime_cnt;
+	/* Runtime count for H2T HTT msg with response */
+	qdf_atomic_t htc_htt_runtime_cnt;
+	/* Runtime count for WMI msg*/
+	qdf_atomic_t htc_wmi_runtime_cnt;
 #endif
 	/* Non flow ctrl enabled endpoints nbuf map unmap count */
 	uint32_t nbuf_nfc_map_count;

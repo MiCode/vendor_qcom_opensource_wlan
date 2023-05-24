@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2019-2020 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -88,4 +89,23 @@ QDF_STATUS mlme_psoc_open(struct wlan_objmgr_psoc *psoc);
  */
 QDF_STATUS mlme_psoc_close(struct wlan_objmgr_psoc *psoc);
 
+/**
+ * wlan_psoc_mlme_get_11be_capab() - Get the 11be capability for target
+ * @psoc: psoc handle
+ * @val: pointer to the output variable
+ *
+ * return: QDF_STATUS
+ */
+QDF_STATUS
+wlan_psoc_mlme_get_11be_capab(struct wlan_objmgr_psoc *psoc, bool *val);
+
+/**
+ * wlan_psoc_mlme_set_11be_capab() - Set the 11be capability for target
+ * @psoc: psoc handle
+ * @val: pointer to the output variable
+ *
+ * return: QDF_STATUS
+ */
+QDF_STATUS
+wlan_psoc_mlme_set_11be_capab(struct wlan_objmgr_psoc *psoc, bool val);
 #endif

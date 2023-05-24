@@ -324,6 +324,25 @@ osif_pmksa_candidate_notify_cb(struct wlan_objmgr_vdev *vdev,
 {
 	return osif_pmksa_candidate_notify(vdev, bssid, index, preauth);
 }
+
+/**
+ * osif_cm_send_keys_cb() - Send keys callback
+ * @vdev: vdev pointer
+ *
+ * This callback indicates os_if that
+ * so that os_if can stop all the activity on this connection
+ *
+ * Return: QDF_STATUS
+ */
+static QDF_STATUS
+osif_cm_send_keys_cb(struct wlan_objmgr_vdev *vdev, uint8_t key_index,
+		     bool pairwise, enum wlan_crypto_cipher_type cipher_type)
+{
+	return osif_cm_send_vdev_keys(vdev,
+				       key_index,
+				       pairwise,
+				       cipher_type);
+}
 #else
 static inline QDF_STATUS
 osif_cm_disable_netif_queue(struct wlan_objmgr_vdev *vdev)
@@ -468,6 +487,7 @@ static struct mlme_cm_ops cm_ops = {
 #ifdef CONN_MGR_ADV_FEATURE
 	.mlme_cm_roam_sync_cb = osif_cm_roam_sync_cb,
 	.mlme_cm_pmksa_candidate_notify_cb = osif_pmksa_candidate_notify_cb,
+	.mlme_cm_send_keys_cb = osif_cm_send_keys_cb,
 #endif
 #ifdef WLAN_FEATURE_ROAM_OFFLOAD
 	.mlme_cm_roam_start_cb = osif_cm_roam_start_cb,
@@ -624,6 +644,22 @@ QDF_STATUS osif_cm_save_gtk(struct wlan_objmgr_vdev *vdev,
 		ret = cb(vdev, rsp);
 
 	return ret;
+}
+
+QDF_STATUS
+osif_cm_send_vdev_keys(struct wlan_objmgr_vdev *vdev,
+		       uint8_t key_index,
+		       bool pairwise,
+		       enum wlan_crypto_cipher_type cipher_type)
+{
+	osif_cm_send_vdev_keys_cb cb = NULL;
+
+	if (osif_cm_legacy_ops)
+		cb = osif_cm_legacy_ops->send_vdev_keys_cb;
+	if (cb)
+		return cb(vdev, key_index, pairwise, cipher_type);
+
+	return QDF_STATUS_E_FAILURE;
 }
 #endif
 

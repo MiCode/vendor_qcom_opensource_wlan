@@ -798,7 +798,16 @@ dp_rxdma_ring_sel_cfg_be(struct dp_soc *soc)
 	htt_tlv_filter.rx_msdu_start_offset = 0;
 	htt_tlv_filter.rx_attn_offset = 0;
 
-	htt_tlv_filter.rx_packet_offset = soc->rx_pkt_tlv_size;
+	/*
+	 * For monitor mode, the packet hdr tlv is enabled later during
+	 * filter update
+	 */
+	if (soc->cdp_soc.ol_ops->get_con_mode &&
+	    soc->cdp_soc.ol_ops->get_con_mode() == QDF_GLOBAL_MONITOR_MODE)
+		htt_tlv_filter.rx_packet_offset = soc->rx_mon_pkt_tlv_size;
+	else
+		htt_tlv_filter.rx_packet_offset = soc->rx_pkt_tlv_size;
+
 	/*Not subscribing rx_pkt_header*/
 	htt_tlv_filter.rx_header_offset = 0;
 	htt_tlv_filter.rx_mpdu_start_offset =
@@ -891,7 +900,16 @@ dp_rxdma_ring_sel_cfg_be(struct dp_soc *soc)
 	htt_tlv_filter.rx_msdu_start_offset = 0;
 	htt_tlv_filter.rx_attn_offset = 0;
 
-	htt_tlv_filter.rx_packet_offset = soc->rx_pkt_tlv_size;
+	/*
+	 * For monitor mode, the packet hdr tlv is enabled later during
+	 * filter update
+	 */
+	if (soc->cdp_soc.ol_ops->get_con_mode &&
+	    soc->cdp_soc.ol_ops->get_con_mode() == QDF_GLOBAL_MONITOR_MODE)
+		htt_tlv_filter.rx_packet_offset = soc->rx_mon_pkt_tlv_size;
+	else
+		htt_tlv_filter.rx_packet_offset = soc->rx_pkt_tlv_size;
+
 	htt_tlv_filter.rx_header_offset =
 				hal_rx_pkt_tlv_offset_get(soc->hal_soc);
 	htt_tlv_filter.rx_mpdu_start_offset =

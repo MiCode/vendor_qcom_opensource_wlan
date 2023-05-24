@@ -1080,13 +1080,14 @@ QDF_STATUS osif_connect_handler(struct wlan_objmgr_vdev *vdev,
 	struct vdev_osif_priv *osif_priv  = wlan_vdev_get_ospriv(vdev);
 	QDF_STATUS status;
 
-	osif_nofl_info("%s(vdevid-%d): " QDF_MAC_ADDR_FMT " Connect with " QDF_MAC_ADDR_FMT " SSID \"%.*s\" is %s cm_id 0x%x cm_reason %d status_code %d is_reassoc %d",
+	osif_nofl_info("%s(vdevid-%d): " QDF_MAC_ADDR_FMT " Connect with " QDF_MAC_ADDR_FMT " SSID \"%.*s\" is %s cm_id 0x%x cm_reason %d status_code %d is_reassoc %d send discon %d",
 		       osif_priv->wdev->netdev->name, rsp->vdev_id,
 		       QDF_MAC_ADDR_REF(wlan_vdev_mlme_get_macaddr(vdev)),
 		       QDF_MAC_ADDR_REF(rsp->bssid.bytes),
 		       rsp->ssid.length, rsp->ssid.ssid,
 		       rsp->connect_status ? "FAILURE" : "SUCCESS", rsp->cm_id,
-		       rsp->reason, rsp->status_code, rsp->is_reassoc);
+		       rsp->reason, rsp->status_code, rsp->is_reassoc,
+		       rsp->send_disconnect);
 
 	osif_check_and_unlink_bss(vdev, osif_priv, rsp);
 
@@ -1097,8 +1098,34 @@ QDF_STATUS osif_connect_handler(struct wlan_objmgr_vdev *vdev,
 	}
 
 	osif_cm_connect_comp_ind(vdev, rsp, OSIF_PRE_USERSPACE_UPDATE);
+
+	/*
+	 * To fix issue that scan with random address failed since wdev keeps
+	 * connected, rsp->send_disconnect is added.
+	 * Reproduce steps:
+	 *  1.  Connect from OSIF success, wdev->connected = true;
+	 *  2.  Disconnect from target if and reassoc from OSIF happens back to
+	 *	back.
+	 *  3.  Disconnect event is not sent to kernel, wdev->connected keeps
+	 *	true, isn't cleared.
+	 *  4.  Connect from OSIF failed too, wdev->connected keeps true,  isn't
+	 *	cleared.
+	 *  5.  Scan with random address failed since wdev->connected is true.
+	 *
+	 * To fix it, if connect req was a reassoc req and received in not
+	 * connected state for race between disconnect from target if and
+	 * reassoc connect from OSIF, set reassoc_in_non_connected to send
+	 * disconnect instead of connect rsp to kernel to cleanup kernel flags
+	 * like: wdev->connected.
+	 */
 	if (rsp->is_reassoc)
 		osif_indicate_reassoc_results(vdev, osif_priv, rsp);
+	else if (rsp->send_disconnect &&
+		 QDF_IS_STATUS_ERROR(rsp->connect_status))
+		osif_cm_indicate_disconnect(vdev, osif_priv->wdev->netdev,
+					    WLAN_REASON_UNSPECIFIED,
+					    false, NULL, 0,
+					    qdf_mem_malloc_flags());
 	else
 		osif_indcate_connect_results(vdev, osif_priv, rsp);
 	osif_cm_connect_comp_ind(vdev, rsp, OSIF_POST_USERSPACE_UPDATE);

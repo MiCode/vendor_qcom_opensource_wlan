@@ -1987,22 +1987,38 @@ void dp_rx_flush_rx_cached(struct dp_peer *peer, bool drop)
 /**
  * dp_rx_enqueue_rx() - cache rx frames
  * @peer: peer
+ * @txrx_peer: DP txrx_peer
  * @rx_buf_list: cache buffer list
  *
  * Return: None
  */
 static QDF_STATUS
-dp_rx_enqueue_rx(struct dp_txrx_peer *txrx_peer, qdf_nbuf_t rx_buf_list)
+dp_rx_enqueue_rx(struct dp_peer *peer,
+		 struct dp_txrx_peer *txrx_peer,
+		 qdf_nbuf_t rx_buf_list)
 {
 	struct dp_rx_cached_buf *cache_buf;
 	struct dp_peer_cached_bufq *bufqi = &txrx_peer->bufq_info;
 	int num_buff_elem;
 	QDF_STATUS ret = QDF_STATUS_SUCCESS;
 	struct dp_soc *soc = txrx_peer->vdev->pdev->soc;
-	struct dp_peer *peer = dp_peer_get_ref_by_id(soc, txrx_peer->peer_id,
-						     DP_MOD_ID_RX);
+	struct dp_peer *ta_peer = NULL;
 
-	if (!peer) {
+	/*
+	 * If peer id is invalid which likely peer map has not completed,
+	 * then need caller provide dp_peer pointer, else it's ok to use
+	 * txrx_peer->peer_id to get dp_peer.
+	 */
+	if (peer) {
+		if (QDF_STATUS_SUCCESS ==
+		    dp_peer_get_ref(soc, peer, DP_MOD_ID_RX))
+			ta_peer = peer;
+	} else {
+		ta_peer = dp_peer_get_ref_by_id(soc, txrx_peer->peer_id,
+						DP_MOD_ID_RX);
+	}
+
+	if (!ta_peer) {
 		bufqi->dropped = dp_rx_drop_nbuf_list(txrx_peer->vdev->pdev,
 						      rx_buf_list);
 		return QDF_STATUS_E_INVAL;
@@ -2010,7 +2026,7 @@ dp_rx_enqueue_rx(struct dp_txrx_peer *txrx_peer, qdf_nbuf_t rx_buf_list)
 
 	dp_debug_rl("bufq->curr %d bufq->drops %d", bufqi->entries,
 		    bufqi->dropped);
-	if (!peer->valid) {
+	if (!ta_peer->valid) {
 		bufqi->dropped = dp_rx_drop_nbuf_list(txrx_peer->vdev->pdev,
 						      rx_buf_list);
 		ret = QDF_STATUS_E_INVAL;
@@ -2048,7 +2064,7 @@ dp_rx_enqueue_rx(struct dp_txrx_peer *txrx_peer, qdf_nbuf_t rx_buf_list)
 	qdf_spin_unlock_bh(&bufqi->bufq_lock);
 
 fail:
-	dp_peer_unref_delete(peer, DP_MOD_ID_RX);
+	dp_peer_unref_delete(ta_peer, DP_MOD_ID_RX);
 	return ret;
 }
 
@@ -2065,7 +2081,9 @@ bool dp_rx_is_peer_cache_bufq_supported(void)
 }
 
 static inline QDF_STATUS
-dp_rx_enqueue_rx(struct dp_txrx_peer *txrx_peer, qdf_nbuf_t rx_buf_list)
+dp_rx_enqueue_rx(struct dp_peer *peer,
+		 struct dp_txrx_peer *txrx_peer,
+		 qdf_nbuf_t rx_buf_list)
 {
 	return QDF_STATUS_SUCCESS;
 }
@@ -2175,7 +2193,7 @@ dp_rx_validate_rx_callbacks(struct dp_soc *soc,
 	 */
 	if (qdf_unlikely(!vdev->osif_rx)) {
 		if (txrx_peer && dp_rx_is_peer_cache_bufq_supported()) {
-			dp_rx_enqueue_rx(txrx_peer, nbuf_head);
+			dp_rx_enqueue_rx(NULL, txrx_peer, nbuf_head);
 		} else {
 			num_nbuf = dp_rx_drop_nbuf_list(vdev->pdev,
 							nbuf_head);
@@ -2601,6 +2619,8 @@ void dp_rx_deliver_to_stack_no_peer(struct dp_soc *soc, qdf_nbuf_t nbuf)
 	uint8_t *rx_tlv_hdr;
 	uint32_t frame_mask = FRAME_MASK_IPV4_ARP | FRAME_MASK_IPV4_DHCP |
 				FRAME_MASK_IPV4_EAPOL | FRAME_MASK_IPV6_DHCP;
+	bool is_special_frame = false;
+	struct dp_peer *peer = NULL;
 
 	peer_id = QDF_NBUF_CB_RX_PEER_ID(nbuf);
 	if (peer_id > soc->max_peer_id)
@@ -2608,7 +2628,7 @@ void dp_rx_deliver_to_stack_no_peer(struct dp_soc *soc, qdf_nbuf_t nbuf)
 
 	vdev_id = QDF_NBUF_CB_RX_VDEV_ID(nbuf);
 	vdev = dp_vdev_get_ref_by_id(soc, vdev_id, DP_MOD_ID_RX);
-	if (!vdev || vdev->delete.pending || !vdev->osif_rx)
+	if (!vdev || vdev->delete.pending)
 		goto deliver_fail;
 
 	if (qdf_unlikely(qdf_nbuf_is_frag(nbuf)))
@@ -2625,15 +2645,54 @@ void dp_rx_deliver_to_stack_no_peer(struct dp_soc *soc, qdf_nbuf_t nbuf)
 	qdf_nbuf_set_pktlen(nbuf, pkt_len);
 	qdf_nbuf_pull_head(nbuf, soc->rx_pkt_tlv_size + l2_hdr_offset);
 
-	if (dp_rx_is_special_frame(nbuf, frame_mask) ||
-	    dp_rx_is_udp_allowed_over_roam_peer(vdev, rx_tlv_hdr, nbuf)) {
-		qdf_nbuf_set_exc_frame(nbuf, 1);
-		if (QDF_STATUS_SUCCESS !=
-		    vdev->osif_rx(vdev->osif_vdev, nbuf))
+	is_special_frame = dp_rx_is_special_frame(nbuf, frame_mask);
+	if (qdf_likely(vdev->osif_rx)) {
+		if (is_special_frame ||
+		    dp_rx_is_udp_allowed_over_roam_peer(vdev, rx_tlv_hdr,
+							nbuf)) {
+			qdf_nbuf_set_exc_frame(nbuf, 1);
+			if (QDF_STATUS_SUCCESS !=
+			    vdev->osif_rx(vdev->osif_vdev, nbuf))
+				goto deliver_fail;
+
+			DP_STATS_INC(soc, rx.err.pkt_delivered_no_peer, 1);
+			dp_vdev_unref_delete(soc, vdev, DP_MOD_ID_RX);
+			return;
+		}
+	} else if (is_special_frame) {
+		/*
+		 * If MLO connection, txrx_peer for link peer does not exist,
+		 * try to store these RX packets to txrx_peer's bufq of MLD
+		 * peer until vdev->osif_rx is registered from CP and flush
+		 * them to stack.
+		 */
+		peer = dp_peer_get_tgt_peer_by_id(soc, peer_id,
+						  DP_MOD_ID_RX);
+		if (!peer)
 			goto deliver_fail;
-		DP_STATS_INC(soc, rx.err.pkt_delivered_no_peer, 1);
-		dp_vdev_unref_delete(soc, vdev, DP_MOD_ID_RX);
-		return;
+
+		/* only check for MLO connection */
+		if (IS_MLO_DP_MLD_PEER(peer) && peer->txrx_peer &&
+		    dp_rx_is_peer_cache_bufq_supported()) {
+			qdf_nbuf_set_exc_frame(nbuf, 1);
+
+			if (QDF_STATUS_SUCCESS ==
+			    dp_rx_enqueue_rx(peer, peer->txrx_peer, nbuf)) {
+				DP_STATS_INC(soc,
+					     rx.err.pkt_delivered_no_peer,
+					     1);
+			} else {
+				DP_STATS_INC(soc,
+					     rx.err.rx_invalid_peer.num,
+					     1);
+			}
+
+			dp_vdev_unref_delete(soc, vdev, DP_MOD_ID_RX);
+			dp_peer_unref_delete(peer, DP_MOD_ID_RX);
+			return;
+		}
+
+		dp_peer_unref_delete(peer, DP_MOD_ID_RX);
 	}
 
 deliver_fail:

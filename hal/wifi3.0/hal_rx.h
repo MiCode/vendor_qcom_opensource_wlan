@@ -132,7 +132,9 @@ struct hal_rx_mon_dest_buf_info {
 	uint8_t first_buffer:1,
 		last_buffer:1,
 		is_decap_raw:1,
-		reserved_1:5;
+		mpdu_len_err:1,
+		l2_hdr_pad:2,
+		reserved_1:2;
 };
 
 /**

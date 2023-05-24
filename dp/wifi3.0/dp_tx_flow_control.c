@@ -349,12 +349,16 @@ struct dp_tx_desc_pool_s *dp_tx_create_flow_pool(struct dp_soc *soc,
 
 	if (dp_tx_desc_pool_alloc(soc, flow_pool_id, flow_pool_size)) {
 		qdf_spin_unlock_bh(&pool->flow_pool_lock);
+		dp_err("dp_tx_desc_pool_alloc failed flow_pool_id: %d",
+		       flow_pool_id);
 		return NULL;
 	}
 
 	if (dp_tx_desc_pool_init(soc, flow_pool_id, flow_pool_size)) {
 		dp_tx_desc_pool_free(soc, flow_pool_id);
 		qdf_spin_unlock_bh(&pool->flow_pool_lock);
+		dp_err("dp_tx_desc_pool_init failed flow_pool_id: %d",
+		       flow_pool_id);
 		return NULL;
 	}
 
@@ -373,6 +377,43 @@ struct dp_tx_desc_pool_s *dp_tx_create_flow_pool(struct dp_soc *soc,
 	qdf_spin_unlock_bh(&pool->flow_pool_lock);
 
 	return pool;
+}
+
+/**
+ * dp_is_tx_flow_pool_delete_allowed() - Can flow pool be deleted
+ * @soc: Handle to struct dp_soc
+ * @vdev_id: vdev_id corresponding to flow pool
+ *
+ * Check if it is OK to go ahead delete the flow pool. One of the case is
+ * MLO where it is not OK to delete the flow pool when link switch happens.
+ *
+ * Return: 0 for success or error
+ */
+static bool dp_is_tx_flow_pool_delete_allowed(struct dp_soc *soc,
+					      uint8_t vdev_id)
+{
+	struct dp_vdev *vdev = NULL;
+	bool is_allow = true;
+
+	vdev = dp_vdev_get_ref_by_id(soc, vdev_id, DP_MOD_ID_MISC);
+
+	/* only check for sta mode */
+	if (!vdev || vdev->opmode != wlan_op_mode_sta)
+		goto comp_ret;
+
+	/*
+	 * Only if current vdev is belong to MLO connection and connected,
+	 * then it's not allowed to delete current pool, for legacy
+	 * connection, allowed always.
+	 */
+	is_allow = policy_mgr_is_mlo_sta_disconnected(
+			(struct wlan_objmgr_psoc *)soc->ctrl_psoc,
+			vdev_id);
+comp_ret:
+	if (vdev)
+		dp_vdev_unref_delete(soc, vdev, DP_MOD_ID_MISC);
+
+	return is_allow;
 }
 
 /**
@@ -400,9 +441,16 @@ int dp_tx_delete_flow_pool(struct dp_soc *soc, struct dp_tx_desc_pool_s *pool,
 		return ENOMEM;
 	}
 
-	dp_info("pool create_cnt=%d, avail_desc=%d, size=%d, status=%d",
-		pool->pool_create_cnt, pool->avail_desc,
+	dp_info("pool_id %d create_cnt=%d, avail_desc=%d, size=%d, status=%d",
+		pool->flow_pool_id, pool->pool_create_cnt, pool->avail_desc,
 		pool->pool_size, pool->status);
+
+	if (!dp_is_tx_flow_pool_delete_allowed(soc, pool->flow_pool_id)) {
+		dp_info("skip pool id %d delete as it's not allowed",
+			pool->flow_pool_id);
+		return -EAGAIN;
+	}
+
 	qdf_spin_lock_bh(&pool->flow_pool_lock);
 	if (!pool->pool_create_cnt) {
 		qdf_spin_unlock_bh(&pool->flow_pool_lock);
@@ -568,22 +616,21 @@ void dp_tx_flow_pool_unmap_handler(struct dp_pdev *pdev, uint8_t flow_id,
 	struct dp_tx_desc_pool_s *pool;
 	enum htt_flow_type type = flow_type;
 
-	QDF_TRACE(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_DEBUG,
-		  "%s: flow_id %d flow_type %d flow_pool_id %d",
-		  __func__, flow_id, flow_type, flow_pool_id);
+	dp_info("flow_id %d flow_type %d flow_pool_id %d", flow_id, flow_type,
+		flow_pool_id);
 
 	if (qdf_unlikely(!pdev)) {
-		QDF_TRACE(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_ERROR,
-			"%s: pdev is NULL", __func__);
+		dp_err("pdev is NULL");
 		return;
 	}
 	soc->pool_stats.pool_unmap_count++;
 
 	pool = &soc->tx_desc[flow_pool_id];
-	if (!pool) {
-		QDF_TRACE(QDF_MODULE_ID_DP, QDF_TRACE_LEVEL_ERROR,
-		   "%s: flow_pool not available flow_pool_id %d",
-		   __func__, type);
+	dp_info("pool status: %d", pool->status);
+
+	if (pool->status == FLOW_POOL_INACTIVE) {
+		dp_err("flow pool id: %d is inactive, ignore unmap",
+		       flow_pool_id);
 		return;
 	}
 

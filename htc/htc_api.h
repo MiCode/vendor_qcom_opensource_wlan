@@ -813,18 +813,18 @@ int htc_pm_runtime_get(HTC_HANDLE htc_handle);
 int htc_pm_runtime_put(HTC_HANDLE htc_handle);
 
 /**
- * htc_dec_return_runtime_cnt: Decrement htc runtime count
+ * htc_dec_return_htt_runtime_cnt: Decrement htc htt runtime count
  * @htc: HTC handle
  *
  * Return: value of runtime count after decrement
  */
-int32_t htc_dec_return_runtime_cnt(HTC_HANDLE htc);
+int32_t htc_dec_return_htt_runtime_cnt(HTC_HANDLE htc);
 #else
 static inline int htc_pm_runtime_get(HTC_HANDLE htc_handle) { return 0; }
 static inline int htc_pm_runtime_put(HTC_HANDLE htc_handle) { return 0; }
 
 static inline
-int32_t htc_dec_return_runtime_cnt(HTC_HANDLE htc)
+int32_t htc_dec_return_htt_runtime_cnt(HTC_HANDLE htc)
 {
 	return -1;
 }

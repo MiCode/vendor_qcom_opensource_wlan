@@ -703,12 +703,14 @@ typedef struct filter_arg *bss_filter_arg_t;
  * @ALLOW_11N_ONLY: allow only 11n AP
  * @ALLOW_11AC_ONLY: allow only 11ac AP
  * @ALLOW_11AX_ONLY: allow only 11ax AP
+ * @ALLOW_11BE_ONLY: allow only 11be AP
  */
 enum dot11_mode_filter {
 	ALLOW_ALL,
 	ALLOW_11N_ONLY,
 	ALLOW_11AC_ONLY,
 	ALLOW_11AX_ONLY,
+	ALLOW_11BE_ONLY,
 };
 
 /**

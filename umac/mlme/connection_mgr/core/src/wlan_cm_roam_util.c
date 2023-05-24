@@ -72,9 +72,7 @@ QDF_STATUS cm_check_and_prepare_roam_req(struct cnx_mgr *cm_ctx,
 	 * Reject re-assoc unless freq along with prev bssid and one
 	 * of bssid or bssid hint is present.
 	 */
-	if (!freq || qdf_is_macaddr_zero(&req->prev_bssid) ||
-	    (qdf_is_macaddr_zero(&req->bssid) &&
-	     qdf_is_macaddr_zero(&req->bssid_hint)))
+	if (!cm_is_connect_req_reassoc(req))
 		return QDF_STATUS_E_FAILURE;
 
 	wlan_vdev_get_bss_peer_mac(cm_ctx->vdev, &bssid);

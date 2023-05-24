@@ -1848,6 +1848,11 @@ static int cm_calculate_mlo_bss_score(struct wlan_objmgr_psoc *psoc,
 	struct partner_link_info *link;
 	struct wlan_objmgr_pdev *pdev;
 	bool rssi_bad_zone;
+	bool eht_capab;
+
+	wlan_psoc_mlme_get_11be_capab(psoc, &eht_capab);
+	if (!eht_capab)
+		return 0;
 
 	weight_config = &score_params->weight_config;
 	freq_entry = entry->channel.chan_freq;

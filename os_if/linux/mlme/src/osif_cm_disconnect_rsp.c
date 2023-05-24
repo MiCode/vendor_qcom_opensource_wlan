@@ -1,5 +1,6 @@
 /*
  * Copyright (c) 2012-2015, 2020-2021 The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022 Qualcomm Innovation Center, Inc. All rights reserved.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -81,7 +82,7 @@ rel_lock:
 (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 2, 0))
 #ifdef WLAN_FEATURE_11BE_MLO
 #ifdef WLAN_FEATURE_11BE_MLO_ADV_FEATURE
-static void
+void
 osif_cm_indicate_disconnect(struct wlan_objmgr_vdev *vdev,
 			    struct net_device *dev,
 			    enum ieee80211_reasoncode reason,
@@ -98,7 +99,7 @@ osif_cm_indicate_disconnect(struct wlan_objmgr_vdev *vdev,
 	}
 }
 #else /* WLAN_FEATURE_11BE_MLO_ADV_FEATURE */
-static void
+void
 osif_cm_indicate_disconnect(struct wlan_objmgr_vdev *vdev,
 			    struct net_device *dev,
 			    enum ieee80211_reasoncode reason,
@@ -128,7 +129,7 @@ osif_cm_indicate_disconnect(struct wlan_objmgr_vdev *vdev,
 }
 #endif /* WLAN_FEATURE_11BE_MLO_ADV_FEATURE */
 #else /* WLAN_FEATURE_11BE_MLO */
-static void
+void
 osif_cm_indicate_disconnect(struct wlan_objmgr_vdev *vdev,
 			    struct net_device *dev,
 			    enum ieee80211_reasoncode reason,
@@ -139,7 +140,7 @@ osif_cm_indicate_disconnect(struct wlan_objmgr_vdev *vdev,
 }
 #endif /* WLAN_FEATURE_11BE_MLO */
 #else
-static void
+void
 osif_cm_indicate_disconnect(struct wlan_objmgr_vdev *vdev,
 			    struct net_device *dev,
 			    enum ieee80211_reasoncode reason,

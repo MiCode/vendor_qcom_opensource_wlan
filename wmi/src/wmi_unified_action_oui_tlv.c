@@ -60,7 +60,9 @@ bool wmi_get_action_oui_id(enum action_oui_id action_id,
 	case ACTION_OUI_EXTEND_WOW_ITO:
 		*id = WMI_VENDOR_OUI_ACTION_EXTEND_WOW_ITO;
 		return true;
-
+	case ACTION_OUI_11BE_OUI_ALLOW:
+		*id = WMI_VENDOR_OUI_ACTION_ALLOW_11BE;
+		return true;
 	default:
 		return false;
 	}
@@ -217,8 +219,7 @@ send_action_oui_cmd_tlv(wmi_unified_t wmi_handle,
 	len = sizeof(*cmd);
 	len += WMI_TLV_HDR_SIZE; /* Array of wmi_vendor_oui_ext structures */
 
-	if (!no_oui_extns ||
-	    no_oui_extns > WMI_MAX_VENDOR_OUI_ACTION_SUPPORTED_PER_ACTION ||
+	if (no_oui_extns > WMI_MAX_VENDOR_OUI_ACTION_SUPPORTED_PER_ACTION ||
 	    (total_no_oui_extns > WMI_VENDOR_OUI_ACTION_MAX_ACTION_ID *
 	     WMI_MAX_VENDOR_OUI_ACTION_SUPPORTED_PER_ACTION)) {
 		wmi_err("Invalid number of action oui extensions");
@@ -230,6 +231,8 @@ send_action_oui_cmd_tlv(wmi_unified_t wmi_handle,
 		wmi_err("Invalid action id");
 		return QDF_STATUS_E_INVAL;
 	}
+	wmi_debug("wmi action_id %d num %d total_num %d", action_id,
+		  no_oui_extns, total_no_oui_extns);
 
 	len += no_oui_extns * sizeof(*cmd_ext);
 	len += WMI_TLV_HDR_SIZE; /* Variable length buffer */
@@ -284,6 +287,7 @@ send_action_oui_cmd_tlv(wmi_unified_t wmi_handle,
 	if (!QDF_IS_STATUS_SUCCESS(status)) {
 		wmi_buf_free(wmi_buf);
 		wmi_buf = NULL;
+		wmi_err("failed to fill oui ext status %d", status);
 		return QDF_STATUS_E_INVAL;
 	}
 

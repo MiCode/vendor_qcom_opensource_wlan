@@ -385,6 +385,7 @@ dp_rx_mon_parse_desc_buffer(struct dp_soc *dp_soc,
 			    bool *is_frag_p, uint32_t *total_frag_len_p,
 			    uint32_t *frag_len_p, uint16_t *l2_hdr_offset_p,
 			    qdf_frag_t rx_desc_tlv,
+			    void **first_rx_desc_tlv,
 			    bool *is_frag_non_raw_p, void *data)
 {
 	struct hal_rx_mon_dest_buf_info frame_info;
@@ -697,12 +698,88 @@ QDF_STATUS dp_rx_mon_alloc_parent_buffer(qdf_nbuf_t *head_msdu)
 	return QDF_STATUS_SUCCESS;
 }
 
+#ifdef QCA_WIFI_MONITOR_MODE_NO_MSDU_START_TLV_SUPPORT
+
+#define RXDMA_DATA_DMA_BLOCK_SIZE 128
 static inline void
 dp_rx_mon_parse_desc_buffer(struct dp_soc *dp_soc,
 			    struct hal_rx_msdu_desc_info *msdu_info,
 			    bool *is_frag_p, uint32_t *total_frag_len_p,
-			    uint32_t *frag_len_p, uint16_t *l2_hdr_offset_p,
+			    uint32_t *frag_len_p,
+			    uint16_t *l2_hdr_offset_p,
 			    qdf_frag_t rx_desc_tlv,
+			    void **first_rx_desc_tlv,
+			    bool *is_frag_non_raw_p, void *data)
+{
+	struct hal_rx_mon_dest_buf_info frame_info;
+	uint32_t rx_pkt_tlv_len = dp_soc->rx_mon_pkt_tlv_size;
+
+	/*
+	 * HW structures call this L3 header padding
+	 * -- even though this is actually the offset
+	 * from the buffer beginning where the L2
+	 * header begins.
+	 */
+	*l2_hdr_offset_p =
+	hal_rx_msdu_end_l3_hdr_padding_get(dp_soc->hal_soc, data);
+
+	if (msdu_info->msdu_flags & HAL_MSDU_F_MSDU_CONTINUATION) {
+		/*
+		 * Set l3_hdr_pad for first frag. This can be later
+		 * changed based on decap format, detected in last frag
+		 */
+		*l2_hdr_offset_p = DP_RX_MON_RAW_L2_HDR_PAD_BYTE;
+		if (!(*is_frag_p)) {
+			*l2_hdr_offset_p = DP_RX_MON_RAW_L2_HDR_PAD_BYTE;
+			*first_rx_desc_tlv = rx_desc_tlv;
+		}
+
+		*is_frag_p = true;
+		*frag_len_p = (RX_MONITOR_BUFFER_SIZE - rx_pkt_tlv_len -
+			       *l2_hdr_offset_p) &
+			      (RXDMA_DATA_DMA_BLOCK_SIZE - 1);
+		*total_frag_len_p += *frag_len_p;
+	} else {
+		if (hal_rx_tlv_decap_format_get(dp_soc->hal_soc, rx_desc_tlv) ==
+		    HAL_HW_RX_DECAP_FORMAT_RAW)
+			frame_info.is_decap_raw = 1;
+
+		if (hal_rx_tlv_mpdu_len_err_get(dp_soc->hal_soc, rx_desc_tlv))
+			frame_info.mpdu_len_err = 1;
+
+		frame_info.l2_hdr_pad = hal_rx_msdu_end_l3_hdr_padding_get(
+						dp_soc->hal_soc, rx_desc_tlv);
+
+		if (*is_frag_p) {
+			/* Last fragment of msdu */
+			*frag_len_p = msdu_info->msdu_len - *total_frag_len_p;
+
+			/* Set this in the first frag priv data */
+			hal_rx_priv_info_set_in_tlv(dp_soc->hal_soc,
+						    *first_rx_desc_tlv,
+						    (uint8_t *)&frame_info,
+						    sizeof(frame_info));
+		} else {
+			*frag_len_p = msdu_info->msdu_len;
+			hal_rx_priv_info_set_in_tlv(dp_soc->hal_soc,
+						    rx_desc_tlv,
+						    (uint8_t *)&frame_info,
+						    sizeof(frame_info));
+		}
+		*is_frag_p = false;
+		*first_rx_desc_tlv = NULL;
+	}
+}
+#else
+
+static inline void
+dp_rx_mon_parse_desc_buffer(struct dp_soc *dp_soc,
+			    struct hal_rx_msdu_desc_info *msdu_info,
+			    bool *is_frag_p, uint32_t *total_frag_len_p,
+			    uint32_t *frag_len_p,
+			    uint16_t *l2_hdr_offset_p,
+			    qdf_frag_t rx_desc_tlv,
+			    qdf_frag_t first_rx_desc_tlv,
 			    bool *is_frag_non_raw_p, void *data)
 {
 	/*
@@ -732,6 +809,7 @@ dp_rx_mon_parse_desc_buffer(struct dp_soc *dp_soc,
 		*is_frag_p = false;
 	}
 }
+#endif
 
 static inline void dp_rx_mon_buffer_set_pktlen(qdf_nbuf_t msdu, uint32_t size)
 {

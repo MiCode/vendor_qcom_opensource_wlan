@@ -188,6 +188,7 @@ enum wlan_cm_source {
  * for production.
  * @is_wps_connection: if its wps connection
  * @is_osen_connection: if its osen connection
+ * @reassoc_in_non_connected: if reassoc received in non connected
  * @dot11mode_filter: dot11mode filter used to restrict connection to
  * 11n/11ac/11ax.
  * @sae_pwe: SAE mechanism for PWE derivation
@@ -216,7 +217,8 @@ struct wlan_cm_connect_req {
 	struct element_info scan_ie;
 	uint8_t force_rsne_override:1,
 		is_wps_connection:1,
-		is_osen_connection:1;
+		is_osen_connection:1,
+		reassoc_in_non_connected:1;
 	enum dot11_mode_filter dot11mode_filter;
 	uint8_t sae_pwe;
 	uint16_t ht_caps;
@@ -483,6 +485,8 @@ struct wlan_roam_sync_info {
  * @is_reassoc: if response is for reassoc/roam
  * @is_ft: is FT reassoc
  * @is_assoc: if response is for assoc
+ * @send_disconnect: if disconnect needed to sent to kernel, for reassoc
+ * received in non connected state, this is to cleanup kernel
  * @cm_id: Connect manager id
  * @bssid: BSSID of the ap
  * @ssid: SSID of the connection
@@ -502,7 +506,8 @@ struct wlan_cm_connect_resp {
 		is_osen_connection:1,
 		is_reassoc:1,
 		is_ft:1,
-		is_assoc:1;
+		is_assoc:1,
+		send_disconnect:1;
 	wlan_cm_id cm_id;
 	struct qdf_mac_addr bssid;
 	struct wlan_ssid ssid;
