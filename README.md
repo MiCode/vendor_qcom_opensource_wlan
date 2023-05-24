@@ -64,3 +64,5 @@
 | mayfly-s-oss | Xiaomi 12S | Android S | LA.VENDOR.1.0.r1-13100-r1.0.r1_00037.0 | [mayfly-s-oss](https://github.com/MiCode/vendor_qcom_opensource_wlan/tree/mayfly-s-oss) |
 | mondrian-s-oss | Redmi K60 | Android S | LA.VENDOR.1.0.r1-11900-r1.0.r1_00029.0 | [mondrian-s-oss](https://github.com/MiCode/vendor_qcom_opensource_wlan/tree/mondrian-s-oss) |
 | spes-r-oss | Redmi note 11 | Android R | Snapdragon_Mid_2020.SPF.1.0.1R_r00024.0 |[spes-r-oss](https://github.com/MiCode/vendor_qcom_opensource_wlan/tree/spes-r-oss) |
+| socrates-t-oss | Redmi K60 Pro | Android T | LA.VENDOR.13.2.0.r1-07300-r1.0.r1_00020.0 |[socrates-t-oss](https://github.com/MiCode/vendor_qcom_opensource_wlan/tree/socrates-t-oss) |
+
