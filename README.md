@@ -64,6 +64,7 @@
 | ziyi-s-oss | Xiaomi civi2 | Android S | LA.VENDOR.1.0.r1-13100-r1.0.r1_00037.0 | [ziyi-s-oss](https://github.com/MiCode/vendor_qcom_opensource_wlan/tree/ziyi-s-oss) |
 | mayfly-s-oss | Xiaomi 12S | Android S | LA.VENDOR.1.0.r1-13100-r1.0.r1_00037.0 | [mayfly-s-oss](https://github.com/MiCode/vendor_qcom_opensource_wlan/tree/mayfly-s-oss) |
 | mondrian-s-oss | Redmi K60 | Android S | LA.VENDOR.1.0.r1-11900-r1.0.r1_00029.0 | [mondrian-s-oss](https://github.com/MiCode/vendor_qcom_opensource_wlan/tree/mondrian-s-oss) |
+| sky-t-oss | Redmi Note 12R | Android T | LA.VENDOR.1.0.r1-21200-WAIPIO.QSSI13.0-1 | [sky-t-oss](https://github.com/MiCode/vendor_qcom_opensource_wlan/tree/sky-t-oss) |
 | spes-r-oss | Redmi note 11 | Android R | Snapdragon_Mid_2020.SPF.1.0.1R_r00024.0 |[spes-r-oss](https://github.com/MiCode/vendor_qcom_opensource_wlan/tree/spes-r-oss) |
 | socrates-t-oss | Redmi K60 Pro | Android T | LA.VENDOR.13.2.0.r1-07300-r1.0.r1_00020.0 |[socrates-t-oss](https://github.com/MiCode/vendor_qcom_opensource_wlan/tree/socrates-t-oss) |
 | marble-s-oss | Redmi Note 12 Turbo | Android S | LA.VENDOR.1.0.r1-19000-r2.0.r1_00029.0 |[marble-s-oss](https://github.com/MiCode/vendor_qcom_opensource_wlan/tree/marble-s-oss) |
