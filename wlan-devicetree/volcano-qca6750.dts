@@ -1,0 +1,17 @@
+// SPDX-License-Identifier: BSD-3-Clause
+
+/*
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ */
+
+/dts-v1/;
+/plugin/;
+
+#include "volcano-qca6750.dtsi"
+
+/ {
+	model = "Qualcomm Technologies, Inc. Volcano SoC";
+	compatible = "qcom,volcano";
+	qcom,msm-id = <636 0x10000>, <640 0x10000>, <0x4000291 0x10000>, <0x8000291 0x10000>,  <0xc000291 0x10000>, <0x10000291 0x10000>, <0x4000292 0x10000>, <0x8000292 0x10000>, <0xc000292 0x10000>, <0x10000292 0x10000>;
+	qcom,board-id = <33 0>, <34 0>, <34 1>, <8 0>, <8 1>, <8 7>, <8 8>, <11 0>, <11 1>;
+};

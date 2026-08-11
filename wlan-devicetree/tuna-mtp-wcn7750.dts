@@ -1,0 +1,18 @@
+// SPDX-License-Identifier: BSD-3-Clause
+/*
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ */
+
+/dts-v1/;
+/plugin/;
+
+#include "tuna-wcn7750.dtsi"
+
+/ {
+
+	model = "Qualcomm Technologies, Inc. Tuna MTP";
+	compatible = "qcom,tuna-mtp", "qcom,tuna", "qcom,mtp", "qcom,tunap-mtp",
+			"qcom,tunap";
+	qcom,msm-id = <655 0x10000>, <681 0x10000>, <694 0x10000>;
+	qcom,board-id = <8 0>, <8 4>;
+};

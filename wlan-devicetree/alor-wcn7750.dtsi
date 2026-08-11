@@ -1,0 +1,155 @@
+// SPDX-License-Identifier: BSD-3-Clause
+
+/*
+ * Copyright (c) 2024-2025 Qualcomm Innovation Center, Inc. All rights reserved.
+ */
+
+#include <dt-bindings/interrupt-controller/arm-gic.h>
+#include <dt-bindings/interconnect/qcom,alor.h>
+
+&tlmm {
+	icnss_sw_ctrl: icnss_sw_ctrl {
+		mux {
+			pins = "gpio18";
+			function = "wcn_sw_ctrl";
+		};
+	};
+};
+
+&soc {
+	qcom,smp2p-wpss {
+		smp2p_wlan_1_in: qcom,smp2p-wlan-1-in {
+			qcom,entry-name = "wlan";
+			interrupt-controller;
+			#interrupt-cells = <2>;
+		};
+
+		smp2p_wlan_1_out: qcom,smp2p-wlan-1-out {
+			qcom,entry-name = "wlan";
+			#qcom,smem-state-cells = <1>;
+		};
+
+		smp2p_wlan_2_in: qcom,smp2p-wlan-2-in {
+			qcom,entry-name = "wlan_soc_wake";
+			interrupt-controller;
+			#interrupt-cells = <2>;
+		};
+
+		smp2p_wlan_2_out: qcom,smp2p-wlan-2-out {
+			qcom,entry-name = "wlan_soc_wake";
+			#qcom,smem-state-cells = <1>;
+		};
+
+		smp2p_wlan_3_out: qcom,smp2p-wlan-3-out {
+			qcom,entry-name = "wlan_ep_power_save";
+			#qcom,smem-state-cells = <1>;
+		};
+	};
+
+	icnss2_direct_link_iommu_group0: icnss2_direct_link_iommu_group0 {
+		qcom,iommu-dma-addr-pool = <0x0 0xb0000000 0x0 0x10000000>;
+		qcom,iommu-geometry = <0x0 0xb0000000 0x0 0x10010000>;
+		qcom,iommu-dma = "fastmap";
+		qcom,iommu-faults = "stall-disable", "HUPCF", "non-fatal";
+	};
+
+	icnss2: qcom,wcn7750 {
+		compatible = "qcom,wcn7750";
+		reg = <0x0 0x17010040 0x0 0x0>,
+		      <0x0 0xc0000000 0x0 0x10000>;
+		reg-names = "msi_addr", "smmu_iova_ipa";
+		qcom,rproc-handle = <&wpss_pas>;
+		iommus = <&apps_smmu 0x1400 0x1>;
+		wlan-en-gpio =<35>;
+		host-sol-gpio =<95>;
+		dev-sol-gpio =<17>;
+		sw-ctrl-gpio =<18>;
+		/* List of GPIOs to be setup for interrupt wakeup capable */
+		mpm_wake_set_gpios = <18>;
+		pinctrl-names = "sw_ctrl";
+		pinctrl-0 = <&icnss_sw_ctrl>;
+
+		interrupts = <GIC_SPI 896 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 897 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 898 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 899 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 900 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 901 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 902 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 903 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 904 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 905 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 906 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 907 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 908 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 909 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 910 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 911 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 912 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 913 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 914 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 915 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 916 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 917 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 918 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 919 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 920 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 921 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 923 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 924 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 925 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 926 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 927 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 928 IRQ_TYPE_EDGE_RISING>;
+
+		qcom,iommu-group = <&icnss2_direct_link_iommu_group0>;
+		dma-coherent;
+		pin-ctrl-support;
+		qcom,fw-prefix;
+		qcom,wlan;
+		tsens = "sys-therm-3";//TODO VERIFY from thermal team
+		wcn-hw-version = "wcn7750";
+		qcom,wlan-msa-fixed-region = <&wlan_msa_mem>;
+
+		//TODO REGULATOR VOTING
+
+		qcom,smem-states = <&smp2p_wlan_1_out 0>,
+				   <&smp2p_wlan_2_out 0>,
+				   <&smp2p_wlan_3_out 0>;
+		qcom,smem-state-names = "wlan-smp2p-out",
+					"wlan-soc-wake-smp2p-out",
+					"wlan-ep-powersave-smp2p-out";
+
+		qcom,qmp = <&aoss_qmp>;
+		qcom,vreg_ol_cpr ="s2d";
+
+		//TODO BUS BW
+
+		icnss_cdev_apss: icnss_cdev1 {
+			#cooling-cells = <2>;
+		};
+
+		icnss_cdev_wpss: icnss_cdev2 {
+			#cooling-cells = <2>;
+		};
+
+		qcom,smp2p_map_wlan_1_in {
+			interrupts-extended = <&smp2p_wlan_1_in 0 0>,
+					      <&smp2p_wlan_1_in 1 0>;
+			interrupt-names = "qcom,smp2p-force-fatal-error",
+					  "qcom,smp2p-early-crash-ind";
+		};
+
+		qcom,smp2p_map_wlan_2_in {
+			interrupts-extended = <&smp2p_wlan_2_in 0 0>;
+			interrupt-names = "qcom,smp2p-soc-wake-ack";
+		};
+	};
+
+	wlan_direct_link: qcom,icnss-direct-link {
+		compatible = "qcom,icnss-direct-link";
+		iommus = <&apps_smmu 0x100f 0x0>;
+		qcom,iommu-group = <&icnss2_direct_link_iommu_group0>;
+		dma-coherent;
+	};
+};

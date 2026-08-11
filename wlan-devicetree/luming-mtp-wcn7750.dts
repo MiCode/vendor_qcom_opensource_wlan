@@ -1,0 +1,18 @@
+// SPDX-License-Identifier: BSD-3-Clause
+/*
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ */
+
+/dts-v1/;
+/plugin/;
+
+#include "tuna-wcn7750.dtsi"
+
+/ {
+	model = "Qualcomm Technologies, Inc. Luming based on SM8735";
+	compatible = "qcom,tuna-mtp", "qcom,tuna", "qcom,mtp";
+	qcom,msm-id = <655 0x10000>, <681 0x10000>;
+	qcom,board-id = <8 0>, <8 4>;
+	xiaomi,miboard-id = <0x8 0>;
+};
+
