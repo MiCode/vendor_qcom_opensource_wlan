@@ -1,0 +1,16 @@
+// SPDX-License-Identifier: BSD-3-Clause
+/*
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ */
+
+/dts-v1/;
+/plugin/;
+
+#include "kera-qna-qca6750.dtsi"
+
+/ {
+	model = "Qualcomm Technologies, Inc. Kera ATP";
+	compatible = "qcom,kerap-qna";
+	qcom,msm-id = <721 0x10000>;
+	qcom,board-id = <0x000021 0>;
+};

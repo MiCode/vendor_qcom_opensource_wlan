@@ -1,0 +1,23 @@
+// SPDX-License-Identifier: BSD-3-Clause
+
+/*
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ */
+
+/dts-v1/;
+/plugin/;
+
+#include "canoe-kiwi-cnss.dtsi"
+
+/ {
+	model = "Qualcomm Technologies, Inc. Canoe SoCs";
+	compatible = "qcom,canoe", "qcom,canoep", "qcom,canoe-mtp", "qcom,canoe-cdp";
+	qcom,msm-id = <0x294 0x10000>, <0x294 0x20000>, <0x295 0x10000>, <0x295 0x20000>,
+			<0x1000294 0x10000>, <0x1000294 0x20000>,
+			<0x1000295 0x10000>, <0x1000295 0x20000>,
+			<704 0x10000>, <704 0x20000>,
+			<0x10002C0 0x10000>, <0x10002C0 0x20000>,
+			<722 0x30000>, <723 0x30000>,
+			<743 0x10000>, <743 0x20000>;
+	qcom,board-id = <0x30001 0>, <0x20008 0>, <0x30015 0>;
+};

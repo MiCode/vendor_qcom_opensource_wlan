@@ -1,0 +1,16 @@
+// SPDX-License-Identifier: BSD-3-Clause
+
+/*
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ */
+
+/dts-v1/;
+/plugin/;
+/include/ "sdxecho-fig-cnss.dtsi"
+
+/ {
+	model = "Qualcomm Technologies, Inc. SDXECHO SoC";
+	compatible = "qcom,sdxecho";
+	qcom,msm-id = <701 0x10000>;
+	qcom,board-id = <0x10022 0x0>, <0x10021 0x0>, <0x20015 0x0>, <0x1010022 0x401>;
+};

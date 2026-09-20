@@ -1,0 +1,97 @@
+// SPDX-License-Identifier: BSD-3-Clause
+//Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+#include <dt-bindings/interconnect/qcom,sdxpinn.h>
+
+&reserved_memory {
+	#address-cells = <2>;
+	#size-cells = <2>;
+	ranges;
+
+	cnss_wlan_mem: cnss_wlan_region {
+		compatible = "shared-dma-pool";
+		alloc-ranges = <0x0 0x00000000 0x0 0xffffffff>;
+		reusable;
+		alignment = <0x0 0x400000>;
+		size = <0x0 0x1400000>;
+	};
+};
+
+&soc {
+	wlan: qcom,cnss-qca-converged {
+		compatible = "qcom,cnss-qca-converged";
+		qcom,wlan;
+		qcom,multi-wlan-exchg;
+		qcom,wlan-rc-num = <2>;
+		qcom,bus-type=<0>;
+		qcom,notify-modem-status;
+
+		reg = <0xb0000000 0x10000>;
+		reg-names = "smmu_iova_ipa";
+
+		vdd-wlan-ctrl1-supply = <&vreg_conn_pa>;
+		vdd-wlan-io-supply = <&pmx75_l6>;
+		vdd-wlan-rfa1-supply = <&pmx75_s7>;
+		vdd-wlan-rfa2-supply = <&pmx75_s2>;
+		vdd-wlan-rfa3-supply = <&pmx75_s4>;
+
+		wlan_vregs = "vdd-wlan-ctrl1", "vdd-wlan-io", "vdd-wlan-rfa1",
+				"vdd-wlan-rfa2", "vdd-wlan-rfa3";
+		qcom,vdd-wlan-ctrl1-config = <0 0 0 0 0>;
+		qcom,vdd-wlan-io-config = <1800000 1800000 0 0 0>;
+		qcom,vdd-wlan-rfa1-config = <1000000 1000000 0 0 0>;
+		qcom,vdd-wlan-rfa2-config = <1300000 1300000 0 0 0>;
+		qcom,vdd-wlan-rfa3-config = <1904000 1904000 450000 0 0>;
+		wlan-en-gpio = <&pmk8550_gpios 3 0>;
+		pinctrl-names = "wlan_en_active", "wlan_en_sleep";
+		pinctrl-0 = <&wlan_en_active>;
+		pinctrl-1 = <&wlan_en_sleep>;
+
+		chip_cfg@0 {
+			supported-ids = <0x003e>;
+			qcom,wlan-ramdump-dynamic = <0x400000>;
+		};
+
+		chip_cfg@1 {
+			supported-ids = <0x1103>;
+			qcom,wlan-ramdump-dynamic = <0x420000>;
+			qcom,smmu-s1-enable;
+			qcom,sleep-clk-support;
+			pcie-disable-l1ss;
+		};
+
+		chip_cfg@2 {
+			supported-ids = <0x1107>;
+			qcom,no-bwscale;
+			qcom,wlan-ramdump-dynamic = <0x600000>;
+			qcom,smmu-s1-enable;
+			pcie-disable-l1ss;
+		};
+	};
+};
+
+&pcie2_rp {
+	#address-cells = <5>;
+	#size-cells = <0>;
+	cnss_pci: cnss_pci {
+		reg = <0 0 0 0 0>;
+		qcom,iommu-group = <&cnss_pci_iommu_group>;
+		memory-region = <&cnss_wlan_mem>;
+
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+		cnss_pci_iommu_group: cnss_pci_iommu_group {
+			qcom,iommu-dma-addr-pool = <0xa0000000 0x10000000>;
+			qcom,iommu-geometry = <0xa0000000 0x10010000>;
+			qcom,iommu-dma = "fastmap";
+			qcom,iommu-pagetable = "coherent";
+			qcom,iommu-faults = "stall-disable", "no-CFRE", "HUPCF",
+					    "non-fatal";
+		};
+	};
+};
+
+&pcie2 {
+	qcom,boot-option = <0x1>;
+	status = "ok";
+};

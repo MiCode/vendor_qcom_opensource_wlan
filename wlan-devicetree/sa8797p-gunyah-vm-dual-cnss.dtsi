@@ -1,0 +1,72 @@
+// SPDX-License-Identifier: BSD-3-Clause
+
+/*
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ */
+
+&soc {
+	cnss_pcie1: qcom,cnss-qca-converged1 {
+		compatible = "qcom,cnss-qca-converged";
+		qcom,wlan-rc-num = <3>;
+		qcom,wlan;
+		qcom,multi-wlan-exchg;
+		qcom,bus-type=<0>;
+		qcom,notify-modem-status;
+		firmware-managed-resources;
+		gunyah-hypervisor;
+		qcom,pld_bus_ops_name = "pld_pcie_qca6490_cnss2";
+
+		#address-cells=<1>;
+		#size-cells=<1>;
+		ranges = <0xb0000000 0xb0000000 0x10000>;
+
+		power-domains = <&scmi_power 20>, <&scmi_power 23>;
+		power-domain-names = "wlan_ldo", "wlan_gpio";
+
+		chip_cfg@0 {
+			supported-ids = <0x1101>;
+			qcom,wlan-ramdump-dynamic = <0x400000>;
+		};
+
+		chip_cfg@1 {
+			supported-ids = <0x1102>;
+			qcom,wlan-ramdump-dynamic = <0x400000>;
+		};
+
+		chip_cfg@2 {
+			supported-ids = <0x1103>;
+			wlan_vregs;
+			qcom,qrtr_node_id = <0x10>;
+			qcom,wlan-ramdump-dynamic = <0x420000>;
+			qcom,no-bwscale;
+			qcom,sleep-clk-support;
+		};
+
+		chip_cfg@3 {
+			supported-ids = <0x1107>;
+			qcom,wlan-ramdump-dynamic = <0x600000>;
+		};
+	};
+};
+
+&reserved_memory {
+	cnss_wlan_mem1: cnss_wlan_region1 {
+		compatible = "shared-dma-pool";
+		alloc-ranges = <0x0 0x00000000 0x0 0xffffffff>;
+		reusable;
+		alignment = <0x0 0x400000>;
+		size = <0x0 0x2000000>;
+	};
+};
+
+&pcie3 {
+	pcie3_rp: pcie3_rp {
+		reg = <0 0 0 0 0>;
+		#address-cells = <5>;
+		#size-cells = <0>;
+		cnss_pci1: cnss_pci1 {
+			reg = <0 0 0 0 0>;
+			memory-region = <&cnss_wlan_mem1>;
+		};
+	};
+};

@@ -1,0 +1,19 @@
+// SPDX-License-Identifier: BSD-3-Clause
+
+/*
+ * Copyright (c) 2024-2025 Qualcomm Innovation Center, Inc. All rights reserved.
+ */
+
+/dts-v1/;
+/plugin/;
+
+#include "volcano6i-peach-cnss.dtsi"
+
+/ {
+	model = "Qualcomm Technologies, Inc. Volcano6I IOT SOC + Ganges/Brahma";
+	compatible = "qcom,volcano-idp", "qcom,volcano", "qcom,volcanop-idp",
+			"qcom,volcanop", "qcom,idp", "qcom,volcano-mtp",
+			"qcom,volcanop-mtp", "qcom,mtp";
+	qcom,msm-id = <0x4000291 0x10000>, <0x8000291 0x10000>,  <0xc000291 0x10000>, <0x10000291 0x10000>, <0x4000292 0x10000>, <0x8000292 0x10000>, <0xc000292 0x10000>, <0x10000292 0x10000>;
+	qcom,board-id = <8 2>, <8 3>, <8 4>, <8 5>, <8 6>, <34 2>, <34 3>, <8 11>;
+};

@@ -1,0 +1,13 @@
+// SPDX-License-Identifier: BSD-3-Clause
+
+/*
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ */
+
+#include "canoe-peach-cnss.dtsi"
+
+&wlan_peach {
+	/delete-property/ vdd-wlan-ant-share-supply;
+	/delete-property/ qcom,vdd-wlan-ant-share-config;
+	/delete-property/ qcom,pdc_mode_vote_table;
+};

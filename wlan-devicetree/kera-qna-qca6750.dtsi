@@ -1,0 +1,18 @@
+// SPDX-License-Identifier: BSD-3-Clause
+
+/*
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ */
+
+
+&wlan_msa_mem {
+	status = "disabled";
+};
+
+&wpss_mem {
+	status = "disabled";
+};
+
+&wpss_pas {
+	status = "disabled";
+};
