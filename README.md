@@ -108,3 +108,4 @@
 | ruan-u-oss | POCO Pad 5G / Redmi Pad Pro 5G | Android U | LA.VENDOR.1.0.r1-23800_r2.0.1.r1_00007.0 |[ruan-u-oss](https://github.com/MiCode/vendor_qcom_opensource_wlan/tree/ruan-u-oss) |
 | warsaw-w-oss | REDMI K90 Ultra | Android W | LA.VENDOR.15.4.0.r1-15000-r1.0.r1_00044.1 |[warsaw-w-oss](https://github.com/MiCode/vendor_qcom_opensource_wlan/tree/warsaw-w-oss) |
 | mist-w-oss | REDMI Note 17 5G/REDMI Note 17/POCO M8 Power 5G | Android W | snapdragon-high-mid-2024-spf-2-0_amss_standard_oem r2.0.r1_00009.1 |[mist-w-oss](https://github.com/MiCode/vendor_qcom_opensource_wlan/tree/mist-w-oss) |
+| zephyr-w-oss | REDMI Note 17 | Android W | Snapdragon_Mid_2022.SPF.2.0.2 r2.0.2_00004.0.141968.3 |[zephyr-w-oss](https://github.com/MiCode/vendor_qcom_opensource_wlan/tree/zephyr-w-oss) |
