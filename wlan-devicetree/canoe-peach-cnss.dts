@@ -1,0 +1,21 @@
+// SPDX-License-Identifier: BSD-3-Clause
+
+/*
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ */
+
+/dts-v1/;
+/plugin/;
+
+#include "canoe-peach-cnss.dtsi"
+
+/ {
+	model = "Qualcomm Technologies, Inc. Canoe SoCs";
+	compatible = "qcom,canoe", "qcom,canoep";
+	qcom,msm-id = <0x294 0x10000>, <0x294 0x20000>, <0x295 0x10000>, <0x295 0x20000>,
+		      <0x1000294 0x10000>, <0x1000294 0x20000>, <0x1000295 0x10000>,
+		      <0x1000295 0x20000>;
+	qcom,board-id = <1 0>, <0x20001 0>, <8 0>, <0x30008 0>, <0x40008 0>,
+			<0x50008 0>, <0x60008 0>, <0x21 0>, <11 0>,
+			<0x2000B 0>, <0x15 0>, <0x20015 0>, <0x30015 0>;
+};

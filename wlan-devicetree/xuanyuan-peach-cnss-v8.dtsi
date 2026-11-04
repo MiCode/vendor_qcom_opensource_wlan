@@ -1,0 +1,7 @@
+#include <dt-bindings/interconnect/qcom,sun.h>
+#include <dt-bindings/clock/qcom,rpmh.h>
+
+&wlan_peach {
+	clocks = <&rpmhcc  RPMH_RF_CLK1>;
+	clock-names = "rf_clk";
+};
