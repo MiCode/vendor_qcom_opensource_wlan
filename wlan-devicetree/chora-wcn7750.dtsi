@@ -1,0 +1,231 @@
+// SPDX-License-Identifier: BSD-3-Clause
+
+/*
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ */
+
+#include <dt-bindings/interrupt-controller/arm-gic.h>
+
+&tlmm {
+	icnss_sw_ctrl: icnss_sw_ctrl {
+		mux {
+			pins = "gpio40";
+			function = "wcn_sw_ctrl";
+		};
+	};
+
+	icnss_wlan_en_active: icnss_wlan_en_active {
+		mux {
+			pins = "gpio41";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio41";
+			drive-strength = <16>;
+			output-high;
+			bias-pull-up;
+		};
+	};
+
+	icnss_wlan_en_sleep: icnss_wlan_en_sleep {
+		mux {
+			pins = "gpio41";
+			function = "gpio";
+		};
+
+		config {
+			pins = "gpio41";
+			drive-strength = <2>;
+			output-low;
+			bias-pull-down;
+		};
+	};
+};
+
+&soc {
+	qcom,smp2p-wpss {
+		chora_wcn7750_smp2p_wlan_1_in: qcom,smp2p-wlan-1-in {
+			qcom,entry-name = "wlan";
+			interrupt-controller;
+			#interrupt-cells = <2>;
+		};
+
+		chora_wcn7750_smp2p_wlan_1_out: qcom,smp2p-wlan-1-out {
+			qcom,entry-name = "wlan";
+			#qcom,smem-state-cells = <1>;
+		};
+
+		smp2p_wlan_2_in: qcom,smp2p-wlan-2-in {
+			qcom,entry-name = "wlan_soc_wake";
+			interrupt-controller;
+			#interrupt-cells = <2>;
+		};
+
+		smp2p_wlan_2_out: qcom,smp2p-wlan-2-out {
+			qcom,entry-name = "wlan_soc_wake";
+			#qcom,smem-state-cells = <1>;
+		};
+
+		smp2p_wlan_3_out: qcom,smp2p-wlan-3-out {
+			qcom,entry-name = "wlan_ep_power_save";
+			#qcom,smem-state-cells = <1>;
+		};
+	};
+
+	wpss_pas: remoteproc-wpss@99300000  {
+		firmware-name = "wcn7750/wpss.mdt";
+	};
+
+
+	icnss2_direct_link_iommu_group0: icnss2_direct_link_iommu_group0 {
+		qcom,iommu-geometry = <0x0 0xb0000000 0x0 0x10010000>;
+		qcom,iommu-dma = "fastmap";
+		qcom,iommu-faults = "stall-disable", "HUPCF", "non-fatal";
+	};
+
+	icnss2: qcom,wcn7750 {
+		compatible = "qcom,wcn7750";
+		reg = <0x0 0x17210040 0x0 0x0>,
+		      <0x0 0xc0000000 0x0 0x10000>;
+		reg-names = "msi_addr", "smmu_iova_ipa";
+		qcom,rproc-handle = <&wpss_pas>;
+		iommus = <&apps_smmu 0x0c00 0x1>;
+		wlan-en-gpio = <41 0 0 0 2 0 1 4 0 0 1 255 0 0 1 1>;
+		bt-en-gpio = <2 1 2 1 2 0 1 4 0 0 0 255 0 0 1 1>;
+		host-sol-gpio = <42 2 0 0 5 0 1 4 0 0 1 255 0 0 1 1>;
+		dev-sol-gpio = <43 3 0 0 2 0 1 4 0 0 1 4 1 0 1 1>;
+		sw-ctrl-gpio = <40 4 0 0 2 0 1 4 0 0 1 255 0 0 1 1>;
+		/* List of GPIOs to be setup for interrupt wakeup capable */
+		mpm_wake_set_gpios = <40>;
+		pin_wlan-en-gpio = <&tlmm 41 0>;
+		pin_sw-ctrl-gpio = <&tlmm 40 0>;
+		pinctrl-names = "sw_ctrl", "wlan_en_active", "wlan_en_sleep";
+		pinctrl-0 = <&icnss_sw_ctrl>;
+		pinctrl-1 = <&icnss_wlan_en_active>;
+		pinctrl-2 = <&icnss_wlan_en_sleep>;
+
+		interrupts = <GIC_SPI 768 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 769 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 770 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 771 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 772 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 773 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 774 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 775 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 776 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 777 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 778 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 779 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 780 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 781 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 782 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 783 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 784 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 785 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 786 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 787 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 788 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 789 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 790 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 791 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 792 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 793 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 794 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 795 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 796 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 797 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 798 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 799 IRQ_TYPE_EDGE_RISING>;
+
+		qcom,iommu-group = <&icnss2_direct_link_iommu_group0>;
+		dma-coherent;
+		memory-region = <&icnss2_iommu_region_partition>;
+		pin-ctrl-support;
+		qcom,fw-prefix;
+		qcom,wlan;
+		tsens = "sys-therm-3";
+		wcn-hw-version = "wcn7750";
+		qcom,wlan-msa-fixed-region = <&wlan_msa_mem>;
+
+		vdd-cx-mx-supply = <&S3B>;
+		qcom,vdd-cx-mx-config = <696000 1012000 0 0 0>;
+		vdd-1.8-xo-supply = <&S1B>;
+		qcom,vdd-1.8-xo-config = <1824000 1864000 0 0 0>;
+		vdd-1.3-rfa-supply = <&S2B>;
+		qcom,vdd-1.3-rfa-config = <1256000 1316000 0 0 0>;
+		vdd-1.8-io-supply = <&L1B>;
+		qcom,vdd-1.8-io-config = <1800000 1800000 0 0 0>;
+		vdd-1.2-io-supply = <&L9F>;
+		qcom,vdd-1.2-io-config = <1200000 1200000 0 0 0>;
+		vdd-2p2-ext-supply = <&S6B_EXT>;
+		qcom,vdd-2p2-ext-config = <2200000 2200000 0 0 0>;
+
+		qcom,smem-states = <&chora_wcn7750_smp2p_wlan_1_out 0>,
+				   <&smp2p_wlan_2_out 0>,
+				   <&smp2p_wlan_3_out 0>;
+		qcom,smem-state-names = "wlan-smp2p-out",
+					"wlan-soc-wake-smp2p-out",
+					"wlan-ep-powersave-smp2p-out";
+
+		qcom,qmp = <&aoss_qmp>;
+		qcom,vreg_ol_cpr ="S3B0";
+
+		nvmem-cells = <&wcn_info>;
+		nvmem-cell-names = "wcn_info_reg";
+
+		qcom,pdc_init_table =
+			 " {class: wlan_pdc, ss: rf, res: S1B0.v, upval: 1864}",
+			 " {class: wlan_pdc, ss: rf, res: S2B0.v, upval: 1316}",
+			 " {class: wlan_pdc, ss: rf, res: S3B0.v, upval: 1012}",
+			 " {class: wlan_pdc, ss: rf, res: L3F0.m, enable: 0}",
+			 " {class: wlan_pdc, ss: rf, res: L3F0.v, enable: 0}",
+			 " {class: wlan_pdc, ss: rf, res: S6B0.m, enable: 1}",
+			 " {class: wlan_pdc, ss: rf, res: S6B0.v, enable: 1}";
+
+		qcom,pdc_init_table_v1 =
+			 " {class: wlan_pdc, ss: rf, res: S1B0.v, upval: 1864}",
+			 " {class: wlan_pdc, ss: rf, res: S2B0.v, upval: 1316}",
+			 " {class: wlan_pdc, ss: rf, res: S3B0.v, upval: 1012}",
+			 " {class: wlan_pdc, ss: rf, res: L3F0.m, enable: 0}",
+			 " {class: wlan_pdc, ss: rf, res: L3F0.v, enable: 0}";
+
+		icnss_cdev_apss: icnss_cdev1 {
+			#cooling-cells = <2>;
+		};
+
+		icnss_cdev_wpss: icnss_cdev2 {
+			#cooling-cells = <2>;
+		};
+
+		qcom,smp2p_map_wlan_1_in {
+			interrupts-extended = <&chora_wcn7750_smp2p_wlan_1_in 0 0>,
+					      <&chora_wcn7750_smp2p_wlan_1_in 1 0>;
+			interrupt-names = "qcom,smp2p-force-fatal-error",
+					  "qcom,smp2p-early-crash-ind";
+		};
+
+		qcom,smp2p_map_wlan_2_in {
+			interrupts-extended = <&smp2p_wlan_2_in 0 0>;
+			interrupt-names = "qcom,smp2p-soc-wake-ack";
+		};
+
+		icnss2_iommu_region_partition: icnss2_iommu_region_partition {
+			iommu-addresses = <&icnss2 0x0 0x0 0x0 0xb0000000>,
+				<&icnss2 0x0 0xc0000000 0x0 0x40000000>;
+		};
+	};
+
+	wlan_direct_link: qcom,icnss-direct-link {
+		compatible = "qcom,icnss-direct-link";
+		iommus = <&apps_smmu 0x080f 0x0>;
+		qcom,iommu-group = <&icnss2_direct_link_iommu_group0>;
+		memory-region = <&direct_link_iommu_region_partition>;
+		dma-coherent;
+
+		direct_link_iommu_region_partition: direct_link_iommu_region_partition {
+			iommu-addresses = <&wlan_direct_link 0x0 0x0 0x0 0xb0000000>,
+				<&wlan_direct_link 0x0 0xc0000000 0x0 0x40000000>;
+		};
+	};
+};

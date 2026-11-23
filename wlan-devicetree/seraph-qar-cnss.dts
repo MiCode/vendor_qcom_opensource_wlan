@@ -1,0 +1,17 @@
+// SPDX-License-Identifier: BSD-3-Clause
+
+/*
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ */
+
+/dts-v1/;
+/plugin/;
+
+#include "seraph-qar-cnss.dtsi"
+
+/ {
+	model = "Qualcomm Technologies, Inc. SeraphP QAR WLAN";
+	compatible = "qcom,seraphp-qar", "qcom,seraphp", "qcom,qar";
+	qcom,msm-id = <673 0x10000>;
+	qcom,board-id = <0x1002C 0>, <0x1002C 1>;
+};

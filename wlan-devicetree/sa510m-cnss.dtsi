@@ -1,0 +1,131 @@
+// SPDX-License-Identifier: BSD-3-Clause
+
+/*
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ */
+
+#include <dt-bindings/interconnect/qcom,sdxbaagha.h>
+#include <dt-bindings/clock/qcom,rpmh.h>
+#include <dt-bindings/iio/qcom,spmi-adc5-gen3-pmx35.h>
+#include <dt-bindings/pinctrl/qcom,pmic-gpio.h>
+&tlmm {
+	cnss_pins {
+		wlan_en_active: wlan_en_active {
+			mux {
+				pins = "gpio95";
+				function = "gpio";
+			};
+
+			config {
+				pins = "gpio95";
+				drive-strength = <16>;
+				output-high;
+				bias-pull-up;
+				};
+		};
+
+		wlan_en_sleep: wlan_en_sleep {
+			mux {
+				pins = "gpio95";
+				function = "gpio";
+			};
+
+			config {
+				pins = "gpio95";
+				drive-strength = <2>;
+				output-low;
+				bias-pull-down;
+			};
+		};
+	};
+};
+
+&reserved_memory {
+	#address-cells = <1>;
+	#size-cells = <1>;
+	ranges;
+
+	cnss_wlan_mem: cnss_wlan_region {
+		compatible = "shared-dma-pool";
+		alloc-ranges = <0x00000000 0xffffffff>;
+		reusable;
+		alignment = <0x400000>;
+		size = <0x1400000>;
+	};
+};
+
+&soc {
+	wlan: qcom,cnss-qca-converged {
+		compatible = "qcom,cnss-qca-converged";
+		qcom,wlan;
+		qcom,multi-wlan-exchg;
+		qcom,wlan-rc-num = <0>;
+		qcom,bus-type=<0>;
+		qcom,notify-modem-status;
+
+		vdd-wlan-io-supply = <&L6A>;
+		vdd-wlan-rfa2-supply = <&S2A>;
+		vdd-wlan-rfa3-supply = <&S4A>;
+		wlan_vregs = "vdd-wlan-io", "vdd-wlan-ctrl1",
+				"vdd-wlan-rfa2", "vdd-wlan-rfa3";
+		qcom,vdd-wlan-io-config = <1800000 1800000 0 0 1>;
+		qcom,vdd-wlan-ctrl1-config = <0 0 0 0 0>;
+		qcom,vdd-wlan-rfa2-config = <1350000 1350000 0 0 0>;
+		qcom,vdd-wlan-rfa3-config = <1950000 1950000 450000 0 0>;
+		wlan-en-gpio = <&tlmm 95 0>;
+		pinctrl-names = "wlan_en_active", "wlan_en_sleep";
+		pinctrl-0 = <&wlan_en_active &display_bl_en>;
+		pinctrl-1 = <&wlan_en_sleep>;
+
+		chip_cfg@0 {
+			supported-ids = <0x003e>;
+			qcom,wlan-ramdump-dynamic = <0x200000>;
+		};
+
+		chip_cfg@1 {
+			supported-ids = <0x1103>;
+			qcom,wlan-ramdump-dynamic = <0x420000>;
+			qcom,smmu-s1-enable;
+			qcom,sleep-clk-support;
+			pcie-disable-l1ss;
+		};
+	};
+	cnss_sdio: qcom,cnss-sdio {
+		compatible = "qcom,cnss_sdio";
+		qcom,wlan-ramdump-dynamic = <0x200000>;
+		subsys-name = "AR6320";
+		vdd-wlan-supply = <&vreg_conn_pa>;
+		vdd-wlan-io-supply = <&L6A>;
+		vdd-wlan-xtal-supply = <&L6A>;
+	};
+};
+
+&pcie0 {
+	qcom,no-l0s-supported;
+	qcom,no-l1-supported;
+	qcom,no-l1ss-supported;
+	qcom,boot-option = <0x1>;
+	status = "ok";
+};
+
+&pcie0_rp {
+	#address-cells = <5>;
+	#size-cells = <0>;
+	cnss_pci: cnss_pci {
+		reg = <0 0 0 0 0>;
+		qcom,iommu-group = <&cnss_pci_iommu_group>;
+		memory-region = <&cnss_wlan_mem>;
+
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+		cnss_pci_iommu_group: cnss_pci_iommu_group {
+			qcom,iommu-dma-addr-pool = <0xa0000000 0x10000000>;
+			qcom,iommu-geometry = <0xa0000000 0x10010000>;
+			qcom,iommu-dma = "atomic";
+			qcom,iommu-faults = "stall-disable", "no-CFRE", "HUPCF",
+					    "non-fatal";
+		};
+	};
+};
+

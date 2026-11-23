@@ -1,0 +1,16 @@
+// SPDX-License-Identifier: BSD-3-Clause
+/*
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ */
+
+/dts-v1/;
+/plugin/;
+
+#include "pebble-fig-cnss.dtsi"
+
+/ {
+	model = "Qualcomm Technologies, Inc. Pebble RCM + Fig WLAN";
+	compatible = "qcom,pebble-rcm", "qcom,pebblep-rcm", "qcom,rcm", "qcom,pebble", "qcom,pebblep";
+	qcom,msm-id = <735 0x10000>, <741 0x10000>;
+	qcom,board-id = <0x10015 0x0>, <0x20015 0x0>;
+};

@@ -1,0 +1,124 @@
+// SPDX-License-Identifier: BSD-3-Clause
+
+/*
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ */
+
+#include <dt-bindings/interrupt-controller/arm-gic.h>
+
+&soc {
+	icnss2: qcom,wcn6450 {
+		compatible = "qcom,wcn6450";
+		reg = <0x17110040 0x0>,
+		      <0xc0000000 0x10000>;
+		reg-names = "msi_addr", "smmu_iova_ipa";
+		dma-coherent;
+		iommus = <&apps_smmu 0x1400 0x1>;
+		interrupts = <GIC_SPI 768 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 769 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 770 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 771 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 772 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 773 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 774 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 775 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 776 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 777 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 778 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 779 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 780 IRQ_TYPE_EDGE_RISING>,
+			     <GIC_SPI 781 IRQ_TYPE_EDGE_RISING>;
+		tsens = "sys-therm-3";
+		vdd-1.2-rfa-supply = <&S2B>;
+		vdd-1.8-io-supply = <&L1B>;
+		vdd-1.8-rfa-supply = <&S1B>;
+		vdd-aon-supply = <&S3B>;
+		vdd-cx-supply = <&L3F>;
+
+		qcom,fw-prefix;
+		qcom,iommu-dma = "fastmap";
+		qcom,iommu-dma-addr-pool = <0xb0000000 0x10000000>;
+		qcom,iommu-faults = "stall-disable", "HUPCF", "non-fatal";
+		qcom,iommu-geometry = <0xb0000000 0x10010000>;
+		qcom,pdc_init_table =
+			" {class: wlan_pdc, ss: rf, res: s3b.v, dwnval: 920}",
+			" {class: wlan_pdc, ss: rf, res: s1b.v, dwnval: 1856}",
+			" {class: wlan_pdc, ss: rf, res: s3b.v, upval: 1040}",
+			" {class: wlan_pdc, ss: rf, res: s1b.v, upval: 2040}",
+			" {class: wlan_pdc, ss: rf, res: s2b.v, upval: 1408}",
+			" {class: wlan_pdc, ss: rf, res: l5b.m, enable: 1}",
+			" {class: wlan_pdc, ss: rf, res: l3f.m, enable: 1}",
+			" {class: wlan_pdc, ss: rf, res: l3f.v, enable: 1}",
+			" {class: wlan_pdc, ss: rf, res: g1f.e, enable: 0}",
+			" {class: wlan_pdc, ss: rf, res: l1b.m, enable: 1}";
+		qcom,qmp = <&aoss_qmp>;
+		qcom,rproc-handle = <&wpss_pas>;
+		qcom,smem-state-names = "wlan-smp2p-out",
+					"wlan-soc-wake-smp2p-out",
+					"wlan-ep-powersave-smp2p-out";
+		qcom,smem-states = <&smp2p_wlan_1_out 0>,
+				   <&smp2p_wlan_2_out 0>,
+				   <&smp2p_wlan_3_out 0>;
+		qcom,vdd-1.2-rfa-config = <1256000 1408000 0 0 0>;
+		qcom,vdd-1.8-io-config = <1800000 1800000 0 0 0>;
+		qcom,vdd-1.8-rfa-config = <1856000 2040000 0 0 0>;
+		qcom,vdd-aon-config = <920000 1040000 0 0 1>;
+		qcom,vdd-cx-config = <620000 1050000 28000 0 0>;
+		qcom,vreg_ol_cpr ="l3f";
+		qcom,wlan;
+		qcom,wlan-msa-fixed-region = <&wlan_msa_mem>;
+
+		icnss_cdev_apss: qcom,icnss_cdev1 {
+			#cooling-cells = <2>;
+		};
+
+		icnss_cdev_wpss: qcom,icnss_cdev2 {
+			#cooling-cells = <2>;
+		};
+
+		qcom,smp2p_map_wlan_1_in {
+			interrupts-extended = <&smp2p_wlan_1_in 0 0>,
+					      <&smp2p_wlan_1_in 1 0>;
+			interrupt-names = "qcom,smp2p-force-fatal-error",
+					  "qcom,smp2p-early-crash-ind";
+		};
+
+		qcom,smp2p_map_wlan_2_in {
+			interrupts-extended = <&smp2p_wlan_2_in 0 0>;
+			interrupt-names = "qcom,smp2p-soc-wake-ack";
+		};
+	};
+
+	qcom,smp2p-wpss {
+		smp2p_wlan_1_in: qcom,smp2p-wlan-1-in {
+			interrupt-controller;
+			#interrupt-cells = <2>;
+			qcom,entry-name = "wlan";
+		};
+
+		smp2p_wlan_1_out: qcom,smp2p-wlan-1-out {
+			qcom,entry-name = "wlan";
+			#qcom,smem-state-cells = <1>;
+		};
+
+		smp2p_wlan_2_in: qcom,smp2p-wlan-2-in {
+			interrupt-controller;
+			#interrupt-cells = <2>;
+			qcom,entry-name = "wlan_soc_wake";
+		};
+
+		smp2p_wlan_2_out: qcom,smp2p-wlan-2-out {
+			qcom,entry-name = "wlan_soc_wake";
+			#qcom,smem-state-cells = <1>;
+		};
+
+		smp2p_wlan_3_out: qcom,smp2p-wlan-3-out {
+			qcom,entry-name = "wlan_ep_power_save";
+			#qcom,smem-state-cells = <1>;
+		};
+	};
+
+	wpss_pas: remoteproc-wpss@9bb00000 {
+		firmware-name = "wcn6450/wpss.mdt";
+	};
+};

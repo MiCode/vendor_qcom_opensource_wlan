@@ -1,0 +1,17 @@
+// SPDX-License-Identifier: BSD-3-Clause
+
+/*
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ */
+
+/dts-v1/;
+/plugin/;
+
+#include "hamoa_la-kiwi-cnss.dtsi"
+
+/ {
+	model = "Qualcomm Technologies, Inc. hamoa_la SoC";
+	compatible = "qcom,hamoa_la";
+	qcom,msm-id = <0x22b 0x10000>, <0x22b 0x20000>;
+	qcom,board-id = <0x28 0x0>;
+};

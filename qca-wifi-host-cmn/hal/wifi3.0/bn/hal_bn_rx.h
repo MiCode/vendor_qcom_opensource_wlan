@@ -1,0 +1,43 @@
+/*
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ *
+ * Permission to use, copy, modify, and/or distribute this software for
+ * any purpose with or without fee is hereby granted, provided that the
+ * above copyright notice and this permission notice appear in all
+ * copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
+ * WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
+ * AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL
+ * DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
+ * PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+ * TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+ * PERFORMANCE OF THIS SOFTWARE.
+ */
+
+#ifndef _HAL_BN_RX_H_
+#define _HAL_BN_RX_H_
+
+#include "hal_be_hw_headers.h"
+#include "hal_be_rx_tlv.h"
+#include "hal_rx.h"
+
+#define HAL_RX_REO_CC_STATUS_GET_BN(reo_desc) (((*(((uint32_t *)reo_desc) + \
+		(REO_DESTINATION_RING_COOKIE_CONVERSION_STATUS_OFFSET >> 2))) & \
+		REO_DESTINATION_RING_COOKIE_CONVERSION_STATUS_MASK) >> \
+		REO_DESTINATION_RING_COOKIE_CONVERSION_STATUS_LSB)
+
+#define HAL_RX_RXDMA_ERR_STATUS_GET_BN(reo_desc)		\
+	(_HAL_MS((*_OFFSET_TO_WORD_PTR(reo_desc,		\
+		REO_DESTINATION_RING_RXDMA_PUSH_REASON_OFFSET)),\
+		REO_DESTINATION_RING_RXDMA_PUSH_REASON_MASK,	\
+		REO_DESTINATION_RING_RXDMA_PUSH_REASON_LSB))
+
+#define HAL_RX_RXDMA_ERR_CODE_GET_BN(reo_desc)                 \
+	(_HAL_MS((*_OFFSET_TO_WORD_PTR(reo_desc,               \
+		REO_DESTINATION_RING_RXDMA_ERROR_CODE_OFFSET)),\
+		REO_DESTINATION_RING_RXDMA_ERROR_CODE_MASK,    \
+		REO_DESTINATION_RING_RXDMA_ERROR_CODE_LSB))    \
+
+#endif /* _HAL_BN_RX_H_ */
