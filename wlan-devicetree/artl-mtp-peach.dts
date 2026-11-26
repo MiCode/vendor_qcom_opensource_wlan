@@ -1,0 +1,16 @@
+// SPDX-License-Identifier: BSD-3-Clause
+/*
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ */
+
+/dts-v1/;
+/plugin/;
+
+#include "art-peach-cnss.dtsi"
+
+/ {
+	model = "Qualcomm Technologies, Inc. Artl MTP + Peach WLAN";
+	compatible = "qcom,art-mtp", "qcom,artl-mtp", "qcom,mtp", "qcom,artl", "qcom,pebble";
+	qcom,msm-id = <755 0x10000>;
+	qcom,board-id = <0x30008 0x0>;
+};

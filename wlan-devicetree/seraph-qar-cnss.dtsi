@@ -1,0 +1,18 @@
+// SPDX-License-Identifier: BSD-3-Clause
+
+/*
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ */
+
+#include "seraph-peach-cnss.dtsi"
+
+&wlan_peach {
+	/delete-property/ vdd-wlan-rfa1-supply;
+	/delete-property/ qcom,vdd-wlan-rfa1-config;
+
+	/delete-property/ vdd-wlan-rfa2-supply;
+	/delete-property/ qcom,vdd-wlan-rfa2-config;
+
+	/delete-property/ vdd-wlan-dig-supply;
+	/delete-property/ qcom,vdd-wlan-dig-config;
+};

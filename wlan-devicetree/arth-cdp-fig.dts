@@ -1,0 +1,17 @@
+// SPDX-License-Identifier: BSD-3-Clause
+/*
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ */
+
+/dts-v1/;
+/plugin/;
+
+#include "art-fig-cnss.dtsi"
+
+/ {
+	model = "Qualcomm Technologies, Inc. Arth CDP + Fig WLAN";
+	compatible = "qcom,pebble-cdp", "qcom,arth-cdp", "qcom,cdp", "qcom,arth", "qcom,pebble";
+	qcom,msm-id = <760 0x10000>;
+	qcom,board-id = <0x50001 0x0>;
+};
+

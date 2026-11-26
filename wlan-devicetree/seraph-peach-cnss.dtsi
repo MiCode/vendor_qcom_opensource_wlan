@@ -1,0 +1,137 @@
+// SPDX-License-Identifier: BSD-3-Clause
+
+/*
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ */
+
+#include <dt-bindings/interconnect/qcom,seraph.h>
+
+&pcie0 {
+	status = "ok";
+};
+
+&pcie0_msi {
+	status = "ok";
+};
+
+&tlmm {
+	cnss_pins {
+		cnss_wlan_en_active: cnss_wlan_en_active {
+			mux {
+				pins = "gpio31";
+				function = "gpio";
+			};
+
+			config {
+				pins = "gpio31";
+				drive-strength = <16>;
+				output-high;
+				bias-pull-up;
+			};
+		};
+
+		cnss_wlan_en_sleep: cnss_wlan_en_sleep {
+			mux {
+				pins = "gpio31";
+				function = "gpio";
+			};
+
+			config {
+				pins = "gpio31";
+				drive-strength = <2>;
+				output-low;
+				bias-pull-down;
+			};
+		};
+
+		cnss_wlan_sw_ctrl: cnss_wlan_sw_ctrl {
+			mux {
+				pins = "gpio33";
+				function = "wcn_sw_ctrl";
+			};
+		};
+
+		cnss_host_sol_default: cnss_host_sol_default {
+			mux {
+				pins = "gpio73";
+				function = "gpio";
+			};
+
+			config {
+				pins = "gpio73";
+				drive-strength = <4>;
+				bias-pull-down;
+			};
+		};
+	};
+};
+
+&reserved_memory {
+	cnss_wlan_mem: cnss_wlan_region {
+		compatible = "shared-dma-pool";
+		alloc-ranges = <0x0 0x00000000 0x0 0xffffffff>;
+		reusable;
+		alignment = <0x0 0x400000>;
+		size = <0x0 0x2000000>;
+	};
+};
+
+&soc {
+	wlan_peach: qcom,cnss-peach@b0000000 {
+		compatible = "qcom,cnss-peach";
+		reg = <0xb0000000 0x10000>;
+		reg-names = "smmu_iova_ipa";
+
+		supported-ids = <0x110E>;
+		wlan-en-gpio = <&tlmm 31 0>;
+		qcom,bt-en-gpio = <&tlmm 32 0>;
+		qcom,sw-ctrl-gpio = <&tlmm 33 0>;
+		wlan-host-sol-gpio = <&tlmm 73 0>;
+		wlan-dev-sol-gpio = <&tlmm 74 0>;
+		/* List of GPIOs to be setup for interrupt wakeup capable */
+		mpm_wake_set_gpios = <33>;
+		pinctrl-names = "wlan_en_active", "wlan_en_sleep", "sw_ctrl",
+				"sol_default";
+		pinctrl-0 = <&cnss_wlan_en_active>;
+		pinctrl-1 = <&cnss_wlan_en_sleep>;
+		pinctrl-2 = <&cnss_wlan_sw_ctrl>;
+		pinctrl-3 = <&cnss_host_sol_default>;
+		qcom,wlan;
+		qcom,wlan-rc-num = <0>;
+		qcom,wlan-ramdump-dynamic = <0x780000>;
+		cnss-enable-self-recovery;
+		use-pm-domain;
+		qcom,same-dt-multi-dev;
+		/* For AOP communication, use direct QMP instead of mailbox */
+		qcom,qmp = <&aoss_qmp>;
+		msix-match-addr = <0x3000>;
+
+		vdd-wlan-io-supply = <&L3A>;
+		qcom,vdd-wlan-io-config = <1800000 2100000 0 0 1>;
+		vdd-wlan-rfa1-supply = <&S7A>;
+		qcom,vdd-wlan-rfa1-config = <1900000 2100000 0 0 1>;
+		vdd-wlan-rfa2-supply = <&S8A>;
+		qcom,vdd-wlan-rfa2-config = <1350000 2100000 0 0 1>;
+		vdd-wlan-dig-supply = <&S3A>;
+		qcom,vdd-wlan-dig-config = <915000 2100000 0 0 1>;
+	};
+};
+
+&pcie0_rp {
+
+	cnss_pci0: cnss_pci0 {
+		reg = <0 0 0 0 0>;
+		qcom,iommu-group = <&cnss_ipa_wlan_iommu_group0>;
+		memory-region = <&cnss_wlan_mem &cnss_pci0_iommu_region_partition>;
+		qcom,shared-cb;
+
+		#address-cells = <1>;
+		#size-cells = <1>;
+		cnss_pci0_iommu_region_partition: cnss_pci0_iommu_region_partition {
+			/* address-cells =3 size-cells=2 from seraph-pcie.dtsi */
+			iommu-addresses = <&cnss_pci0 0x0 0x0 0x0 0x0 0x98000000>,
+					  <&cnss_pci0 0x0 0x0 0xB0000000 0x0 0x50000000>;
+		};
+
+	};
+};

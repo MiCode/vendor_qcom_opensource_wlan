@@ -1,0 +1,17 @@
+// SPDX-License-Identifier: BSD-3-Clause
+
+/*
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ */
+
+/dts-v1/;
+/plugin/;
+
+#include "x1e80100-kiwi-cnss.dtsi"
+
+/ {
+	model = "Qualcomm Technologies, Inc. X1E80100 SoC";
+	compatible = "qcom,x1e80100";
+	qcom,msm-id = <0x22b 0x10000>, <0x22b 0x20000>;
+	qcom,board-id = <0x28 0x0>;
+};

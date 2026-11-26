@@ -1,0 +1,16 @@
+// SPDX-License-Identifier: BSD-3-Clause
+/*
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ */
+
+/dts-v1/;
+/plugin/;
+
+#include "art-fig-cnss.dtsi"
+
+/ {
+	model = "Qualcomm Technologies, Inc. Artl QRD + Fig WLAN";
+	compatible = "qcom,art-qrd", "qcom,artl-qrd", "qcom,qrd", "qcom,artl", "qcom,pebble";
+	qcom,msm-id = <755 0x10000>;
+	qcom,board-id = <0x1000b 0x0>, <0x2000b 0x0>;
+};

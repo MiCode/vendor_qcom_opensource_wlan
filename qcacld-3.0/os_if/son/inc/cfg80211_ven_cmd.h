@@ -1,0 +1,130 @@
+/*
+ * Copyright (c) 2020-2021, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2022-2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ *
+ * Permission to use, copy, modify, and/or distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+ * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ */
+
+#ifndef _CFG80211_VEN_CMD_
+#define _CFG80211_VEN_CMD_
+
+#include <ieee80211_external_config.h>
+
+#define OL_ATH_PARAM_SHIFT     0x1000
+
+/**
+ * enum wlan_son_ieee80211_param - ieee80211 parameters.
+ * @IEEE80211_PARAM_MACCMD:
+ * @IEEE80211_PARAM_WDS: Enable 4 address processing
+ * @IEEE80211_PARAM_CHEXTOFFSET:
+ * @IEEE80211_PARAM_CHWIDTH:
+ * @IEEE80211_PARAM_RRM_CAP:
+ * @IEEE80211_PARAM_CHAN_UTIL: Get Channel Utilization value (scale: 0 - 255)
+ * @IEEE80211_PARAM_DFS_CACTIMEOUT: Override CAC timeout
+ * @IEEE80211_PARAM_PARENT_IFINDEX: Parent net_device ifindex for this VAP
+ * @IEEE80211_PARAM_ENABLE_OL_STATS: Enables/Disables the stats in the Host
+ *                                   and in the FW
+ * @IEEE80211_PARAM_GET_ACS: To get status of acs
+ * @IEEE80211_PARAM_GET_CAC: To get status of CAC period
+ * @IEEE80211_PARAM_START_ACS_REPORT: To start acs scan report
+ * @IEEE80211_PARAM_MIN_DWELL_ACS_REPORT: Min dwell time for  acs scan report
+ * @IEEE80211_PARAM_BANDWIDTH:
+ * @IEEE80211_PARAM_ATF_OPT: Set airtime feature
+ * @IEEE80211_PARAM_STA_COUNT: TO get number of station associated
+ * @IEEE80211_PARAM_DSCP_MAP_ID:
+ * @IEEE80211_PARAM_DSCP_TID_MAP:
+ * @IEEE80211_PARAM_SECOND_CENTER_FREQ:
+ * @IEEE80211_PARAM_VAP_ENHIND: Independent VAP mode for Repeater and
+ *                              AP-STA config
+ * @IEEE80211_PARAM_ATF_SSID_GROUP: Support to enable/disable SSID grouping
+ * @IEEE80211_PARAM_RX_FILTER_SMART_MONITOR: Get per vap smart monitor stats
+ * @IEEE80211_PARAM_GET_FREQUENCY: Get Frequency
+ * @IEEE80211_PARAM_GET_MAX_RATE: Get Max supported BitRate on Kbps
+ * @IEEE80211_PARAM_GET_SIGNAL_LEVEL: Get Signal level on dBm
+ * @IEEE80211_PARAM_RRM_FILTER: Send RRM packet to application
+ * @IEEE80211_PARAM_WNM_FILTER: Send WNM packet to application
+ * @IEEE80211_PARAM_ENABLE_MSCS: Enable MSCS
+ * @IEEE80211_PARAM_HLOS_TID_OVERRIDE: Enable/disable hlos tid override
+ *                                     support per vap
+ * @IEEE80211_PARAM_6G_SECURITY_COMP: 6G Security Compliance on/off
+ * @IEEE80211_PARAM_ENABLE_SCS: Enable SCS Procedures
+ * @IEEE80211_PARAM_IEEE_LINK_ID:
+ */
+enum wlan_son_ieee80211_param {
+	IEEE80211_PARAM_MACCMD         = 17,
+	IEEE80211_PARAM_WDS            = 39,
+	IEEE80211_PARAM_CHEXTOFFSET    = 118,
+	IEEE80211_PARAM_CHWIDTH        = 122,
+	IEEE80211_PARAM_RRM_CAP        = 195,
+	IEEE80211_PARAM_CHAN_UTIL           = 261,
+	IEEE80211_PARAM_DFS_CACTIMEOUT      = 298,
+	IEEE80211_PARAM_PARENT_IFINDEX          = 304,
+	IEEE80211_PARAM_ENABLE_OL_STATS         = 306,
+	IEEE80211_PARAM_GET_ACS             = 309,
+	IEEE80211_PARAM_GET_CAC             = 310,
+	IEEE80211_PARAM_START_ACS_REPORT        = 318,
+	IEEE80211_PARAM_MIN_DWELL_ACS_REPORT    = 319,
+	IEEE80211_PARAM_BANDWIDTH               = 336,
+#if defined(QCA_AIRTIME_FAIRNESS) && (QCA_AIRTIME_FAIRNESS != 0)
+	IEEE80211_PARAM_ATF_OPT                 = 380,
+#endif
+	IEEE80211_PARAM_STA_COUNT               = 386,
+#if ATH_SUPPORT_DSCP_OVERRIDE
+	IEEE80211_PARAM_DSCP_MAP_ID             = 388,
+	IEEE80211_PARAM_DSCP_TID_MAP            = 389,
+#endif
+	IEEE80211_PARAM_SECOND_CENTER_FREQ      = 391,
+	IEEE80211_PARAM_VAP_ENHIND              = 399,
+#if defined(QCA_AIRTIME_FAIRNESS) && (QCA_AIRTIME_FAIRNESS != 0)
+	IEEE80211_PARAM_ATF_SSID_GROUP          = 424,
+#endif
+	IEEE80211_PARAM_RX_FILTER_SMART_MONITOR    = 523,
+	IEEE80211_PARAM_GET_FREQUENCY              = 612,
+	IEEE80211_PARAM_GET_MAX_RATE               = 675,
+	IEEE80211_PARAM_GET_SIGNAL_LEVEL           = 676,
+	IEEE80211_PARAM_RRM_FILTER                 = 680,
+	IEEE80211_PARAM_WNM_FILTER                 = 681,
+	IEEE80211_PARAM_ENABLE_MSCS                = 699,
+	IEEE80211_PARAM_HLOS_TID_OVERRIDE          = 712,
+	IEEE80211_PARAM_6G_SECURITY_COMP           = 714,
+	IEEE80211_PARAM_ENABLE_SCS                 = 741,
+	IEEE80211_PARAM_IEEE_LINK_ID               = 801,
+};
+
+enum _ol_ath_param_t {
+#if defined(QCA_AIRTIME_FAIRNESS) && (QCA_AIRTIME_FAIRNESS != 0)
+	OL_ATH_PARAM_ATF_STRICT_SCHED = 301,
+	OL_ATH_PARAM_ATF_GROUP_POLICY = 302,
+#endif
+#if defined(QCA_AIRTIME_FAIRNESS) && (QCA_AIRTIME_FAIRNESS != 0)
+	OL_ATH_PARAM_ATF_OBSS_SCHED = 307,
+#endif
+	OL_ATH_PARAM_WIDE_BAND_SCAN = 362,
+	OL_ATH_PARAM_CBS = 380,
+	OL_ATH_PARAM_CBS_DWELL_SPLIT_TIME = 382,
+	OL_ATH_PARAM_CBS_WAIT_TIME = 384,
+	OL_ATH_PARAM_CHAN_AP_RX_UTIL = 389,
+	OL_ATH_PARAM_CHAN_AP_TX_UTIL = 391,
+	OL_ATH_PARAM_CHAN_OBSS_RX_UTIL = 392,
+	OL_ATH_PARAM_BAND_INFO = 399,
+	/* Set/Get next frequency for radar */
+	OL_ATH_PARAM_NXT_RDR_FREQ = 444,
+	/* Display the current 6G AP power type */
+	OL_ATH_PARAM_DISPLAY_AP_PWR_TYPE = 473,
+	/* Set 6G AP power type */
+	OL_ATH_PARAM_SET_AP_PWR_TYPE = 474,
+	OL_ATH_PARAM_SET_AWGN_EVENT = 541,
+	OL_ATH_PARAM_ALL_CHAN_UTIL = 551,
+};
+
+#endif

@@ -1,0 +1,165 @@
+// SPDX-License-Identifier: BSD-3-Clause
+
+/*
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ */
+
+&tlmm {
+	cnss_pins {
+		cnss_wlan_en_active: cnss_wlan_en_active {
+			mux {
+				pins = "gpio76";
+				function = "gpio";
+			};
+
+			config {
+				pins = "gpio76";
+				drive-strength = <16>;
+				output-high;
+				bias-pull-up;
+			};
+		};
+
+		cnss_wlan_en_sleep: cnss_wlan_en_sleep {
+			mux {
+				pins = "gpio76";
+				function = "gpio";
+			};
+
+			config {
+				pins = "gpio76";
+				drive-strength = <2>;
+				output-low;
+				bias-pull-down;
+			};
+		};
+
+		cnss_wlan_sw_ctrl: cnss_wlan_sw_ctrl {
+			mux {
+				pins = "gpio40";
+				function = "wcn_sw_ctrl";
+			};
+		};
+
+		cnss_wlan_sw_ctrl_wl_cx: cnss_wlan_sw_ctrl_wl_cx {
+			mux {
+				pins = "gpio41";
+				function = "wcn_sw";
+			};
+		};
+
+		cnss_host_sol_default: cnss_host_sol_default {
+			mux {
+				pins = "gpio81";
+				function = "gpio";
+			};
+
+			config {
+				pins = "gpio81";
+				drive-strength = <4>;
+				bias-pull-down;
+			};
+		};
+	};
+};
+
+&reserved_memory {
+	cnss_wlan_mem: cnss_wlan_region {
+		compatible = "shared-dma-pool";
+		alloc-ranges = <0x0 0x00000000 0x0 0xffffffff>;
+		reusable;
+		alignment = <0x0 0x400000>;
+		size = <0x0 0x1C00000>;
+	};
+};
+
+&soc {
+	wlan_fig: qcom,cnss-fig@b0000000 {
+		compatible = "qcom,cnss-fig";
+		reg = <0x0 0xb0000000 0x0 0x10000>;
+		reg-names = "smmu_iova_ipa";
+
+		supported-ids = <0x1111>;
+		qcom,sw-ctrl-gpio = <&tlmm 40 0>;
+		qcom,wlan-sw-ctrl-gpio = <&tlmm 41 0>;
+		wlan-en-gpio = <&tlmm 76 0>;
+		wlan-dev-sol-gpio = <&tlmm 80 0>;
+		cnss-direct-cx-host-sol-init-gpio = <&tlmm 81 0>;
+		/* List of GPIOs to be setup for interrupt wakeup capable */
+		mpm_wake_set_gpios = <40 41>;
+		pinctrl-names = "wlan_en_active", "wlan_en_sleep", "sw_ctrl",
+				"sw_ctrl_wl_cx", "sol_default";
+		pinctrl-0 = <&cnss_wlan_en_active>;
+		pinctrl-1 = <&cnss_wlan_en_sleep>;
+		pinctrl-2 = <&cnss_wlan_sw_ctrl>;
+		pinctrl-3 = <&cnss_wlan_sw_ctrl_wl_cx>;
+		pinctrl-4 = <&cnss_host_sol_default>;
+		qcom,wlan;
+		qcom,wlan-rc-num = <0>;
+		qcom,wlan-ramdump-dynamic = <0x780000>;
+		use-pm-domain;
+		platform-name-required;
+		qcom,same-dt-multi-dev;
+
+		cx-mode = <0>;
+		vdd-wlan-io-supply = <&vreg_l6b_1p8>;
+		qcom,vdd-wlan-io-config = <1800000 1800000 30000 0 0>;
+		vdd-wlan-io12-supply = <&vreg_l15b_1p2>;
+		qcom,vdd-wlan-io12-config = <1200000 1200000 30000 0 0>;
+		vdd-wlan-cx-supply = <&vreg_s1k_0p9>;
+		qcom,vdd-wlan-cx-config = <892000 1000000 0 0 0>;
+		vdd-wlan-aon-supply = <&vreg_s7b_0p9>;
+		qcom,vdd-wlan-aon-config = <950000 1060000 0 0 0>;
+		vdd-wlan-rfa1-supply = <&vreg_s4b_1p8>;
+		qcom,vdd-wlan-rfa1-config = <1876000 2000000 0 0 0>;
+		vdd-wlan-rfa2-supply = <&vreg_s2b_1p2>;
+		qcom,vdd-wlan-rfa2-config = <1328000 1340000 0 0 0>;
+
+		qcom,qmp = <&aoss_qmp>;
+		qcom,pdc_init_table =
+			" {class: wlan_pdc, ss: bb, res: pdc, enable: 1}",
+			" {class: wlan_pdc, ss: bb, res: S1K0.v, upval: 890}",
+			" {class: wlan_pdc, ss: bb, res: S1K0.v, dwnval: 420}",
+			" {class: wlan_pdc, ss: bb, res: S1K0.e, enable: 1}";
+
+		cnss_cdev_apss: qcom,cnss_cdev1 {
+			#cooling-cells = <2>;
+		};
+	};
+};
+
+&pcie0_port0 {
+	cnss_pci0: cnss_pci0 {
+		reg = <0 0 0 0 0>;
+		qcom,iommu-group = <&cnss_pci_iommu_group0>;
+		memory-region = <&cnss_wlan_mem &cnss_pci0_iommu_region_partition>;
+		#address-cells = <1>;
+		#size-cells = <1>;
+		cnss_pci0_iommu_region_partition: cnss_pci0_iommu_region_partition {
+			/* address-cells =3 size-cells=2 from sdxkova-pcie.dtsi */
+			iommu-addresses = <&cnss_pci0 0x0 0x0 0x0 0x0 0xA0000000>,
+					  <&cnss_pci0 0x0 0x0 0xB0000000 0x0 0x50000000>;
+		};
+
+		cnss_pci_iommu_group0: cnss_pci_iommu_group0 {
+			qcom,iommu-msi-size = <0x1000>;
+			qcom,iommu-geometry = <0xa0000000 0x10010000>;
+			qcom,iommu-dma = "fastmap";
+			qcom,iommu-pagetable = "coherent";
+			qcom,iommu-faults = "stall-disable", "HUPCF", "no-CFRE",
+					    "non-fatal";
+		};
+	};
+};
+
+&pcie0 {
+	qcom,boot-option = <0x1>;
+	status = "ok";
+
+	/* Ensure that PCIe RC driver probe is deferred until CNSS is probed */
+	dummy-supply = <&wlan_fig>;
+};
+
+&pcie0_phy {
+	status = "ok";
+};

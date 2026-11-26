@@ -1,0 +1,17 @@
+// SPDX-License-Identifier: BSD-3-Clause
+/*
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ */
+
+/dts-v1/;
+/plugin/;
+
+#include "malabar-adrastea.dtsi"
+
+/ {
+	model = "Qualcomm Technologies, Inc. Malabar Adrastea";
+	compatible = "qcom,malabar", "qcom,malabarp";
+
+	qcom,msm-id = <733 0x10000>, <757 0x10000>;
+	qcom,board-id = <0 0>, <0 0x600>;
+};

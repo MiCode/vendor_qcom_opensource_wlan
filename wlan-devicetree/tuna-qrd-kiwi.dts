@@ -1,0 +1,18 @@
+// SPDX-License-Identifier: BSD-3-Clause
+/*
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ */
+
+/dts-v1/;
+/plugin/;
+
+#include "tuna-kiwi-cnss.dtsi"
+
+/ {
+
+	model = "Qualcomm Technologies, Inc. Tuna QRD + kiwi WLAN";
+	compatible = "qcom,tuna-qrd", "qcom,tuna", "qcom,qrd", "qcom,tunap-qrd",
+			"qcom,tunap";
+	qcom,msm-id = <655 0x10000>, <681 0x10000>, <694 0x10000>;
+	qcom,board-id = <11 1>;
+};

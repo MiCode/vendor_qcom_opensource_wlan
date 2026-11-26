@@ -1,0 +1,17 @@
+// SPDX-License-Identifier: BSD-3-Clause
+
+/*
+ * Copyright (c) Qualcomm Technologies, Inc. and/or its subsidiaries.
+ */
+
+/dts-v1/;
+/plugin/;
+
+#include "sa510m-cnss.dtsi"
+
+/ {
+	model = "Qualcomm Technologies, Inc. SA510M";
+	compatible = "qcom,sa510m";
+	qcom,msm-id = <697 0x10000>;
+	qcom,board-id = <0x22 0x200>, <0x22 0x300>, <0x22 0x201>, <0x22 0x301>;
+};

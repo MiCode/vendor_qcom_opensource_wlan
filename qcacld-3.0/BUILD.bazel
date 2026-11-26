@@ -1,0 +1,25 @@
+load("//build/kernel/kleaf:kernel.bzl", "ddk_headers")
+ddk_headers(
+    name = "wlan_uapi_headers",
+    hdrs = glob([
+        "uapi/linux/*.h"
+    ]),
+    includes = ["uapi/linux"]
+)
+
+config_setting(
+    name = "wonder_enabled",
+    define_values = {
+        "CONFIG_WONDER_SUPPORT": "y",
+    },
+)
+
+load(":wlan_qcacld3_modules.bzl", "define_modules")
+
+package(
+    default_visibility = [
+        "//visibility:public",
+    ],
+)
+
+define_modules()

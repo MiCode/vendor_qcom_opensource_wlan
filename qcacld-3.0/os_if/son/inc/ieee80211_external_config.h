@@ -1,0 +1,63 @@
+/*
+ * Copyright (c) 2024 Qualcomm Innovation Center, Inc. All rights reserved.
+ *
+ * Permission to use, copy, modify, and/or distribute this software for any
+ * purpose with or without fee is hereby granted, provided that the above
+ * copyright notice and this permission notice appear in all copies.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+ * WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ * MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ * ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ * WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ * ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+ * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ */
+
+#ifndef __IEEE80211_EXTERNAL_CONFIG__H
+#define __IEEE80211_EXTERNAL_CONFIG__H
+
+#ifndef ATH_SUPPORT_DSCP_OVERRIDE
+#define ATH_SUPPORT_DSCP_OVERRIDE 1
+#endif
+
+#ifndef ATH_SUPPORT_EXT_STAT
+#define ATH_SUPPORT_EXT_STAT 1
+#endif
+
+#ifndef CONFIG_AFC_SUPPORT
+#define CONFIG_AFC_SUPPORT 1
+#endif
+
+#ifndef OBSS_PD
+#define OBSS_PD 1
+#endif
+
+#ifndef QCA_LTEU_SUPPORT
+#define QCA_LTEU_SUPPORT 1
+#endif
+
+#ifndef UMAC_SUPPORT_VI_DBG
+#define UMAC_SUPPORT_VI_DBG 1
+#endif
+
+#ifndef WLAN_FEATURE_11BE
+#define WLAN_FEATURE_11BE 1
+#endif
+
+#ifndef WLAN_FEATURE_11BE_MLO
+#define WLAN_FEATURE_11BE_MLO 1
+#endif
+
+#ifndef WLAN_SUPPORT_DAP
+#define WLAN_SUPPORT_DAP 1
+#endif
+
+#ifndef WLAN_SUPPORT_PRIMARY_ALLOWED_CHAN
+#define WLAN_SUPPORT_PRIMARY_ALLOWED_CHAN 1
+#endif
+
+#ifndef QCA_SUPPORT_SCAN_SPCL_VAP_STATS
+#define QCA_SUPPORT_SCAN_SPCL_VAP_STATS 1
+#endif
+#endif
